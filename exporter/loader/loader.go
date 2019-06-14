@@ -6,7 +6,7 @@ import (
 	"plugin"
 	"time"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
 // TODO add buffer support directly, eliminate stdout

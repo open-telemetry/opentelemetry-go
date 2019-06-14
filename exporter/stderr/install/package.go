@@ -1,13 +1,13 @@
 package install
 
 import (
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/stderr"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/stderr"
 )
 
 // Use this import:
 //
-//   import _ "github.com/lightstep/opentelemetry-golang-prototype/exporter/stderr/install"
+//   import _ "github.com/open-telemetry/opentelemetry-go/exporter/stderr/install"
 //
 // to include the stderr exporter by default.
 

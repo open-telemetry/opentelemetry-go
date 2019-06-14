@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/log"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/scope"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/stats"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/log"
+	"github.com/open-telemetry/opentelemetry-go/api/scope"
+	"github.com/open-telemetry/opentelemetry-go/api/stats"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type (

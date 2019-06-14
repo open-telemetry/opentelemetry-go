@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
 type (

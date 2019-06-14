@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
 type (

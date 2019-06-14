@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lightstep/opentelemetry-golang-prototype/exporter/stderr"
+import "github.com/open-telemetry/opentelemetry-go/exporter/stderr"
 
 var (
 	Observer = stderr.New()

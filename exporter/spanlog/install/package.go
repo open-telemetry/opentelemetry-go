@@ -1,13 +1,13 @@
 package install
 
 import (
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/spanlog"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/spanlog"
 )
 
 // Use this import:
 //
-//   import _ "github.com/lightstep/opentelemetry-golang-prototype/exporter/spanlog/install"
+//   import _ "github.com/open-telemetry/opentelemetry-go/exporter/spanlog/install"
 //
 // to include the spanlog exporter by default.
 

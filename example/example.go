@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/log"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/metric"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/stats"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/tag"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/api/log"
+	"github.com/open-telemetry/opentelemetry-go/api/metric"
+	"github.com/open-telemetry/opentelemetry-go/api/stats"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/exporter/loader"
 )
 
 var (

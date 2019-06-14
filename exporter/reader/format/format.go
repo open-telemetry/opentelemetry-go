@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/trace"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/reader"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
 )
 
 func AppendEvent(buf *strings.Builder, data reader.Event) {

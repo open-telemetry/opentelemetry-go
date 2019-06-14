@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
 )
 
 // Client

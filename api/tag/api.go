@@ -3,8 +3,8 @@ package tag
 import (
 	"context"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/unit"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
 type (

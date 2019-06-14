@@ -3,9 +3,9 @@ package stderr
 import (
 	"os"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/reader"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/reader/format"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
+	"github.com/open-telemetry/opentelemetry-go/exporter/reader/format"
 )
 
 type (

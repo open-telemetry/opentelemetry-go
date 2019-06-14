@@ -4,10 +4,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/buffer"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/spandata"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/spandata/format"
+	"github.com/open-telemetry/opentelemetry-go/exporter/buffer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/spandata"
+	"github.com/open-telemetry/opentelemetry-go/exporter/spandata/format"
 )
 
 type (

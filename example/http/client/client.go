@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/tag"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/trace"
-	"github.com/lightstep/opentelemetry-golang-prototype/plugin/httptrace"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
 
-	_ "github.com/lightstep/opentelemetry-golang-prototype/exporter/loader"
+	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
 )
 
 var (

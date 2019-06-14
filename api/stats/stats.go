@@ -3,9 +3,9 @@ package stats
 import (
 	"context"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/scope"
-	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/scope"
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
 type (

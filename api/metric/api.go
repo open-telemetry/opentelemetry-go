@@ -1,9 +1,9 @@
 package metric
 
 import (
-	"github.com/lightstep/opentelemetry-golang-prototype/api/core"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/tag"
-	"github.com/lightstep/opentelemetry-golang-prototype/api/unit"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
 type (

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lightstep/opentelemetry-golang-prototype/exporter/spanlog"
+import "github.com/open-telemetry/opentelemetry-go/exporter/spanlog"
 
 var (
 	Observer = spanlog.New()

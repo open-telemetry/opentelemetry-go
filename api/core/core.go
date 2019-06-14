@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lightstep/opentelemetry-golang-prototype/api/unit"
+	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
 type (

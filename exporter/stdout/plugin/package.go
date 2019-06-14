@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lightstep/opentelemetry-golang-prototype/exporter/stdout"
+import "github.com/open-telemetry/opentelemetry-go/exporter/stdout"
 
 var (
 	Observer = stdout.New()
