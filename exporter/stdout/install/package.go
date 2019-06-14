@@ -1,4 +1,4 @@
-package impl
+package install
 
 import (
 	"github.com/lightstep/opentelemetry-golang-prototype/exporter/observer"
@@ -7,7 +7,7 @@ import (
 
 // Use this import:
 //
-//   import _ "github.com/lightstep/opentelemetry-golang-prototype/exporter/stdout/impl"
+//   import _ "github.com/lightstep/opentelemetry-golang-prototype/exporter/stdout/install"
 //
 // to include the stderr exporter by default.
 
