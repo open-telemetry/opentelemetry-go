@@ -58,17 +58,30 @@ type (
 		Tracer() Tracer
 
 		Finish()
+
+		// IsRecordingEvents returns true is the span is active and recording events is enabled.
+		IsRecordingEvents() bool
+
+		// SpancContext returns span context of the span. Return SpanContext is usable
+		// even after the span is finished.
+		SpanContext() core.SpanContext
+
+		SetStatus(core.Status)
 	}
 
 	Injector interface {
 		Inject(core.SpanContext, tag.Map)
 	}
 
-	Option struct {
-		attribute  core.KeyValue
-		attributes []core.KeyValue
-		startTime  time.Time
-		reference  Reference
+	// Option apply changes to SpanOptions.
+    Option func(*SpanOptions)
+
+	SpanOptions struct {
+		attribute   core.KeyValue
+		attributes  []core.KeyValue
+		startTime   time.Time
+		reference   Reference
+		recordEvent bool
 	}
 
 	Reference struct {
@@ -122,37 +135,37 @@ func Inject(ctx context.Context, injector Injector) {
 }
 
 func WithStartTime(t time.Time) Option {
-	return Option{
-		startTime: t,
+	return func(o* SpanOptions) {
+		o.startTime = t
 	}
 }
 
 func WithAttributes(attrs ...core.KeyValue) Option {
-	return Option{
-		attributes: attrs,
+	return func(o* SpanOptions) {
+		o.attributes = attrs
 	}
 }
 
-func WithAttribute(attr core.KeyValue) Option {
-	return Option{
-		attribute: attr,
+func WithRecordEvents() Option {
+	return func(o* SpanOptions) {
+		o.recordEvent = true
 	}
 }
 
 func ChildOf(sc core.SpanContext) Option {
-	return Option{
-		reference: Reference{
+	return func(o* SpanOptions) {
+		o.reference =  Reference{
 			SpanContext:      sc,
 			RelationshipType: ChildOfRelationship,
-		},
+		}
 	}
 }
 
 func FollowsFrom(sc core.SpanContext) Option {
-	return Option{
-		reference: Reference{
+	return func(o* SpanOptions) {
+		o.reference = Reference{
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
-		},
+		}
 	}
 }

@@ -43,6 +43,7 @@ type (
 		Mutators   []core.Mutator  // SET_ATTRIBUTES
 		Arguments  []interface{}   // LOGF_EVENT
 		Recovered  interface{}     // FINISH_SPAN
+		Status     core.Status     // SET_STATUS
 
 		// Values
 		String  string // START_SPAN, EVENT, ...
@@ -72,6 +73,7 @@ const (
 	NEW_METRIC
 	MODIFY_ATTR
 	RECORD_STATS
+	SET_STATUS
 )
 
 var (

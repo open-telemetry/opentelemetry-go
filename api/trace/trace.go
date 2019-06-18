@@ -19,8 +19,6 @@ import (
 	"math/rand"
 	"sync"
 	"sync/atomic"
-	"time"
-
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
@@ -35,6 +33,8 @@ type (
 		lock        sync.Mutex
 		eventID     core.EventID
 		finishOnce  sync.Once
+		recordEvent bool
+		status      core.Status
 	}
 
 	tracer struct {
@@ -98,29 +98,16 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...Option) (contex
 
 	child.SpanID = rand.Uint64()
 
-	var startTime time.Time
-	var attributes []core.KeyValue
-	var reference Reference
+	o := &SpanOptions{}
 
 	for _, opt := range opts {
-		if !opt.startTime.IsZero() {
-			startTime = opt.startTime
-		}
-		if len(opt.attributes) != 0 {
-			attributes = append(opt.attributes, attributes...)
-		}
-		if opt.attribute.Key != nil {
-			attributes = append(attributes, opt.attribute)
-		}
-		if opt.reference.HasTraceID() {
-			reference = opt.reference
-		}
+		opt(o)
 	}
 
 	var parentScope core.ScopeID
 
-	if reference.HasTraceID() {
-		parentScope = reference.Scope()
+	if o.reference.HasTraceID() {
+		parentScope = o.reference.Scope()
 	} else {
 		parentScope = Active(ctx).ScopeID()
 	}
@@ -142,10 +129,11 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...Option) (contex
 	span := &span{
 		spanContext: child,
 		tracer:      t,
+		recordEvent: o.recordEvent,
 		eventID: observer.Record(observer.Event{
-			Time:    startTime,
+			Time:    o.startTime,
 			Type:    observer.START_SPAN,
-			Scope:   scope.New(childScope, attributes...).ScopeID(),
+			Scope:   scope.New(childScope, o.attributes...).ScopeID(),
 			Context: ctx,
 			Parent:  parentScope,
 			String:  name,

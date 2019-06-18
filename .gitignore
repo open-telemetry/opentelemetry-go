@@ -1,1 +1,4 @@
 .tools/
+.idea/
+*.iml
+*.so

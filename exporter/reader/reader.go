@@ -49,6 +49,7 @@ type (
 		Duration time.Duration
 		Name     string
 		Message  string
+		Status   core.Status
 	}
 
 	Measurement struct {
@@ -75,6 +76,7 @@ type (
 		start       time.Time
 		startTags   tag.Map
 		spanContext core.SpanContext
+		status      core.Status
 
 		*readerScope
 	}
@@ -106,6 +108,7 @@ const (
 	LOGF_EVENT
 	MODIFY_ATTR
 	RECORD_STATS
+	SET_STATUS
 )
 
 // NewReaderObserver returns an implementation that computes the
@@ -289,6 +292,15 @@ func (ro *readerObserver) Observe(event observer.Event) {
 		}
 		if event.Stat.Measure != nil {
 			ro.addMeasurement(&read, event.Stat)
+		}
+
+	case observer.SET_STATUS:
+		read.Type = SET_STATUS
+		read.Status = event.Status
+		_, span := ro.readScope(event.Scope)
+		if span != nil {
+			span.status = event.Status
+			read.SpanContext = span.spanContext
 		}
 
 	default:
