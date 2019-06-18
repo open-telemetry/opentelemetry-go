@@ -18,10 +18,10 @@ import (
 	"encoding/binary"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/lightstep/tracecontext.go"
 	"github.com/lightstep/tracecontext.go/tracestate"
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 const (
@@ -41,7 +41,7 @@ var (
 	encoding = binary.BigEndian
 )
 
-// Returns the Attributes, Context Tags, and SpanContext that were encoded by Inject.
+// Extract returns the Attributes, Context Tags, and SpanContext that were encoded by Inject
 func Extract(req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
 	tc, err := tracecontext.FromHeaders(req.Header)
 
