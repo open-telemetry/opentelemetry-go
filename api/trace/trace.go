@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	"sync"
 	"sync/atomic"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"

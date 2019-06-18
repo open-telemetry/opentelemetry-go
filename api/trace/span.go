@@ -45,10 +45,10 @@ func (sp *span) SetStatus(status core.Status) {
 	sid := sp.ScopeID()
 
 	observer.Record(observer.Event{
-		Type:      observer.SET_STATUS,
-		Scope:     sid,
-		Sequence:  sid.EventID,
-		Status: status,
+		Type:     observer.SET_STATUS,
+		Scope:    sid,
+		Sequence: sid.EventID,
+		Status:   status,
 	})
 	sp.status = status
 }

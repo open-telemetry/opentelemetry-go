@@ -24,8 +24,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
 
-	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
 )
 
 var (

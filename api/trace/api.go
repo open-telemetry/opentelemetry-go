@@ -74,7 +74,7 @@ type (
 	}
 
 	// Option apply changes to SpanOptions.
-    Option func(*SpanOptions)
+	Option func(*SpanOptions)
 
 	SpanOptions struct {
 		attribute   core.KeyValue
@@ -135,26 +135,26 @@ func Inject(ctx context.Context, injector Injector) {
 }
 
 func WithStartTime(t time.Time) Option {
-	return func(o* SpanOptions) {
+	return func(o *SpanOptions) {
 		o.startTime = t
 	}
 }
 
 func WithAttributes(attrs ...core.KeyValue) Option {
-	return func(o* SpanOptions) {
+	return func(o *SpanOptions) {
 		o.attributes = attrs
 	}
 }
 
 func WithRecordEvents() Option {
-	return func(o* SpanOptions) {
+	return func(o *SpanOptions) {
 		o.recordEvent = true
 	}
 }
 
 func ChildOf(sc core.SpanContext) Option {
-	return func(o* SpanOptions) {
-		o.reference =  Reference{
+	return func(o *SpanOptions) {
+		o.reference = Reference{
 			SpanContext:      sc,
 			RelationshipType: ChildOfRelationship,
 		}
@@ -162,7 +162,7 @@ func ChildOf(sc core.SpanContext) Option {
 }
 
 func FollowsFrom(sc core.SpanContext) Option {
-	return func(o* SpanOptions) {
+	return func(o *SpanOptions) {
 		o.reference = Reference{
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
