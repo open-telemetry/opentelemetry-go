@@ -71,11 +71,11 @@ func (t *tracer) WithResources(attributes ...core.KeyValue) Tracer {
 	}
 }
 
-func (g *tracer) WithComponent(name string) Tracer {
+func (t *tracer) WithComponent(name string) Tracer {
 	return g.WithResources(ComponentKey.String(name))
 }
 
-func (g *tracer) WithService(name string) Tracer {
+func (t *tracer) WithService(name string) Tracer {
 	return g.WithResources(ServiceKey.String(name))
 }
 
