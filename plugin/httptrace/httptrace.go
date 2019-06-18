@@ -18,10 +18,11 @@ import (
 	"encoding/binary"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/lightstep/tracecontext.go"
 	"github.com/lightstep/tracecontext.go/tracestate"
+
+	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 const (
