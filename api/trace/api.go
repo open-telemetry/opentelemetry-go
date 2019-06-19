@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
@@ -50,8 +49,6 @@ type (
 
 	Span interface {
 		scope.Mutable
-
-		log.Interface
 
 		stats.Interface
 
