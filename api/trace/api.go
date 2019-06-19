@@ -23,6 +23,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"google.golang.org/grpc/codes"
 )
 
 type (
@@ -66,7 +67,7 @@ type (
 		// even after the span is finished.
 		SpanContext() core.SpanContext
 
-		SetStatus(core.Status)
+		SetStatus(codes.Code)
 	}
 
 	Injector interface {
@@ -77,7 +78,6 @@ type (
 	Option func(*SpanOptions)
 
 	SpanOptions struct {
-		attribute   core.KeyValue
 		attributes  []core.KeyValue
 		startTime   time.Time
 		reference   Reference

@@ -94,7 +94,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		}
 	case reader.SET_STATUS:
 		buf.WriteString("set status ")
-		buf.WriteString(core.StatusToString(data.Status))
+		buf.WriteString(core.GrpcCodeToString(data.Status))
 
 	default:
 		buf.WriteString(fmt.Sprintf("WAT? %d", data.Type))

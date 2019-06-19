@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"google.golang.org/grpc/codes"
 )
 
 type (
@@ -43,7 +44,7 @@ type (
 		Mutators   []core.Mutator  // SET_ATTRIBUTES
 		Arguments  []interface{}   // LOGF_EVENT
 		Recovered  interface{}     // FINISH_SPAN
-		Status     core.Status     // SET_STATUS
+		Status     codes.Code     // SET_STATUS
 
 		// Values
 		String  string // START_SPAN, EVENT, ...

@@ -25,6 +25,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"google.golang.org/grpc/codes"
 )
 
 type (
@@ -49,7 +50,7 @@ type (
 		Duration time.Duration
 		Name     string
 		Message  string
-		Status   core.Status
+		Status   codes.Code
 	}
 
 	Measurement struct {
@@ -76,7 +77,7 @@ type (
 		start       time.Time
 		startTags   tag.Map
 		spanContext core.SpanContext
-		status      core.Status
+		status      codes.Code
 
 		*readerScope
 	}

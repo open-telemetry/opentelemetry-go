@@ -21,6 +21,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"google.golang.org/grpc/codes"
 )
 
 // SpancContext returns span context of the span. Return SpanContext is usable
@@ -38,7 +39,7 @@ func (sp *span) IsRecordingEvents() bool {
 }
 
 // SetStatus sets the status of the span.
-func (sp *span) SetStatus(status core.Status) {
+func (sp *span) SetStatus(status codes.Code) {
 	if sp == nil {
 		return
 	}

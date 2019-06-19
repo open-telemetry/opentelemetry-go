@@ -25,6 +25,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"google.golang.org/grpc/codes"
 )
 
 type (
@@ -35,7 +36,7 @@ type (
 		eventID     core.EventID
 		finishOnce  sync.Once
 		recordEvent bool
-		status      core.Status
+		status      codes.Code
 	}
 
 	tracer struct {
