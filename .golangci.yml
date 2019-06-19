@@ -1,0 +1,4 @@
+# See https://github.com/golangci/golangci-lint#config-file
+run:
+  issues-exit-code: 1 #Default
+  tests: true #Default
