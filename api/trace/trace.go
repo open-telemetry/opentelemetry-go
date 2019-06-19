@@ -95,7 +95,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	return nil
 }
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...Option) (context.Context, Span) {
+func (t *tracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	var child core.SpanContext
 
 	child.SpanID = rand.Uint64()

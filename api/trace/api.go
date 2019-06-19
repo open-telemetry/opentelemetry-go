@@ -28,7 +28,7 @@ import (
 
 type (
 	Tracer interface {
-		Start(context.Context, string, ...Option) (context.Context, Span)
+		Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
 		WithSpan(
 			ctx context.Context,
@@ -74,8 +74,8 @@ type (
 		Inject(core.SpanContext, tag.Map)
 	}
 
-	// Option apply changes to SpanOptions.
-	Option func(*SpanOptions)
+	// SpanOption apply changes to SpanOptions.
+	SpanOption func(*SpanOptions)
 
 	SpanOptions struct {
 		attributes  []core.KeyValue
@@ -108,7 +108,7 @@ func SetGlobalTracer(t Tracer) {
 	global.Store(t)
 }
 
-func Start(ctx context.Context, name string, opts ...Option) (context.Context, Span) {
+func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	return GlobalTracer().Start(ctx, name, opts...)
 }
 
@@ -134,25 +134,25 @@ func Inject(ctx context.Context, injector Injector) {
 	span.Tracer().Inject(ctx, span, injector)
 }
 
-func WithStartTime(t time.Time) Option {
+func WithStartTime(t time.Time) SpanOption {
 	return func(o *SpanOptions) {
 		o.startTime = t
 	}
 }
 
-func WithAttributes(attrs ...core.KeyValue) Option {
+func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
 		o.attributes = attrs
 	}
 }
 
-func WithRecordEvents() Option {
+func WithRecordEvents() SpanOption {
 	return func(o *SpanOptions) {
 		o.recordEvent = true
 	}
 }
 
-func ChildOf(sc core.SpanContext) Option {
+func ChildOf(sc core.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
 		o.reference = Reference{
 			SpanContext:      sc,
@@ -161,7 +161,7 @@ func ChildOf(sc core.SpanContext) Option {
 	}
 }
 
-func FollowsFrom(sc core.SpanContext) Option {
+func FollowsFrom(sc core.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
 		o.reference = Reference{
 			SpanContext:      sc,
