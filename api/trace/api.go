@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
@@ -27,7 +29,7 @@ import (
 
 type (
 	Tracer interface {
-		Start(context.Context, string, ...Option) (context.Context, Span)
+		Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
 		WithSpan(
 			ctx context.Context,
@@ -58,17 +60,29 @@ type (
 		Tracer() Tracer
 
 		Finish()
+
+		// IsRecordingEvents returns true is the span is active and recording events is enabled.
+		IsRecordingEvents() bool
+
+		// SpancContext returns span context of the span. Return SpanContext is usable
+		// even after the span is finished.
+		SpanContext() core.SpanContext
+
+		SetStatus(codes.Code)
 	}
 
 	Injector interface {
 		Inject(core.SpanContext, tag.Map)
 	}
 
-	Option struct {
-		attribute  core.KeyValue
-		attributes []core.KeyValue
-		startTime  time.Time
-		reference  Reference
+	// SpanOption apply changes to SpanOptions.
+	SpanOption func(*SpanOptions)
+
+	SpanOptions struct {
+		attributes  []core.KeyValue
+		startTime   time.Time
+		reference   Reference
+		recordEvent bool
 	}
 
 	Reference struct {
@@ -95,7 +109,7 @@ func SetGlobalTracer(t Tracer) {
 	global.Store(t)
 }
 
-func Start(ctx context.Context, name string, opts ...Option) (context.Context, Span) {
+func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	return GlobalTracer().Start(ctx, name, opts...)
 }
 
@@ -121,38 +135,38 @@ func Inject(ctx context.Context, injector Injector) {
 	span.Tracer().Inject(ctx, span, injector)
 }
 
-func WithStartTime(t time.Time) Option {
-	return Option{
-		startTime: t,
+func WithStartTime(t time.Time) SpanOption {
+	return func(o *SpanOptions) {
+		o.startTime = t
 	}
 }
 
-func WithAttributes(attrs ...core.KeyValue) Option {
-	return Option{
-		attributes: attrs,
+func WithAttributes(attrs ...core.KeyValue) SpanOption {
+	return func(o *SpanOptions) {
+		o.attributes = attrs
 	}
 }
 
-func WithAttribute(attr core.KeyValue) Option {
-	return Option{
-		attribute: attr,
+func WithRecordEvents() SpanOption {
+	return func(o *SpanOptions) {
+		o.recordEvent = true
 	}
 }
 
-func ChildOf(sc core.SpanContext) Option {
-	return Option{
-		reference: Reference{
+func ChildOf(sc core.SpanContext) SpanOption {
+	return func(o *SpanOptions) {
+		o.reference = Reference{
 			SpanContext:      sc,
 			RelationshipType: ChildOfRelationship,
-		},
+		}
 	}
 }
 
-func FollowsFrom(sc core.SpanContext) Option {
-	return Option{
-		reference: Reference{
+func FollowsFrom(sc core.SpanContext) SpanOption {
+	return func(o *SpanOptions) {
+		o.reference = Reference{
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
-		},
+		}
 	}
 }

@@ -8,4 +8,5 @@ require (
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	golang.org/x/tools v0.0.0-20190521203540-521d6ed310dd
+	google.golang.org/grpc v1.21.1
 )

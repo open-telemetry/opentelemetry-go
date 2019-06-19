@@ -17,6 +17,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"strconv"
+
+	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
@@ -132,6 +135,12 @@ const (
 	DELETE
 )
 
+var (
+	// INVALID_SPAN_CONTEXT is meant for internal use to return invalid span context during error
+	// conditions.
+	INVALID_SPAN_CONTEXT = SpanContext{}
+)
+
 func (sc SpanContext) HasTraceID() bool {
 	return sc.TraceIDHigh != 0 || sc.TraceIDLow != 0
 }
@@ -190,4 +199,45 @@ func (s SpanContext) Scope() ScopeID {
 func (m Measurement) With(id ScopeID) Measurement {
 	m.ScopeID = id
 	return m
+}
+
+func GrpcCodeToString(s codes.Code) string {
+	switch c := s; c {
+	case codes.OK:
+		return "OK"
+	case codes.Canceled:
+		return "CANCELLED"
+	case codes.Unknown:
+		return "UNKNOWN"
+	case codes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	case codes.DeadlineExceeded:
+		return "DEADLINE_EXCEEDED"
+	case codes.NotFound:
+		return "NOT_FOUND"
+	case codes.AlreadyExists:
+		return "ALREADY_EXISTS"
+	case codes.PermissionDenied:
+		return "PERMISSION_DENIED"
+	case codes.ResourceExhausted:
+		return "RESOURCE_EXHAUSTED"
+	case codes.FailedPrecondition:
+		return "FAILED_PRECONDITION"
+	case codes.Aborted:
+		return "ABORTED"
+	case codes.OutOfRange:
+		return "OUT_OF_RANGE"
+	case codes.Unimplemented:
+		return "UNIMPLEMENTED"
+	case codes.Internal:
+		return "INTERNAL"
+	case codes.Unavailable:
+		return "UNAVAILABLE"
+	case codes.DataLoss:
+		return "DATA_LOSS"
+	case codes.Unauthenticated:
+		return "UNAUTHENTICATED"
+	default:
+		return "STATUS_" + strconv.FormatInt(int64(c), 10)
+	}
 }

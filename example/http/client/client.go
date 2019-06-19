@@ -24,6 +24,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
 
+	"google.golang.org/grpc/codes"
+
 	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
 )
 
@@ -59,6 +61,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			res.Body.Close()
+			trace.Active(ctx).SetStatus(codes.OK)
 
 			return err
 		})

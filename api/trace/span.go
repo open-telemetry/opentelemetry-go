@@ -17,11 +17,43 @@ package trace
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
+
+// SpancContext returns span context of the span. Return SpanContext is usable
+// even after the span is finished.
+func (sp *span) SpanContext() core.SpanContext {
+	if sp == nil {
+		return core.INVALID_SPAN_CONTEXT
+	}
+	return sp.spanContext
+}
+
+// IsRecordingEvents returns true is the span is active and recording events is enabled.
+func (sp *span) IsRecordingEvents() bool {
+	return false
+}
+
+// SetStatus sets the status of the span.
+func (sp *span) SetStatus(status codes.Code) {
+	if sp == nil {
+		return
+	}
+	sid := sp.ScopeID()
+
+	observer.Record(observer.Event{
+		Type:     observer.SET_STATUS,
+		Scope:    sid,
+		Sequence: sid.EventID,
+		Status:   status,
+	})
+	sp.status = status
+}
 
 func (sp *span) ScopeID() core.ScopeID {
 	if sp == nil {
