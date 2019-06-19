@@ -20,8 +20,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"google.golang.org/grpc/codes"
+
+	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
 type (
@@ -44,7 +45,7 @@ type (
 		Mutators   []core.Mutator  // SET_ATTRIBUTES
 		Arguments  []interface{}   // LOGF_EVENT
 		Recovered  interface{}     // FINISH_SPAN
-		Status     codes.Code     // SET_STATUS
+		Status     codes.Code      // SET_STATUS
 
 		// Values
 		String  string // START_SPAN, EVENT, ...

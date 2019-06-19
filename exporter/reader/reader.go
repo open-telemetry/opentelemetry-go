@@ -19,13 +19,14 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/metric"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"google.golang.org/grpc/codes"
 )
 
 type (

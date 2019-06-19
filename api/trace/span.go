@@ -17,11 +17,12 @@ package trace
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"google.golang.org/grpc/codes"
 )
 
 // SpancContext returns span context of the span. Return SpanContext is usable

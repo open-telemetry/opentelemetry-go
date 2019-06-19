@@ -20,12 +20,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"google.golang.org/grpc/codes"
 )
 
 type (

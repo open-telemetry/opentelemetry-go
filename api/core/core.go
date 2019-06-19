@@ -16,11 +16,12 @@ package core
 
 import (
 	"context"
-	"strconv"
 	"fmt"
+	"strconv"
+
+	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
-	"google.golang.org/grpc/codes"
 )
 
 type (
