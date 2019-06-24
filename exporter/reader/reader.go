@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/metric"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
@@ -43,6 +44,7 @@ type (
 		SpanContext core.SpanContext
 		Tags        tag.Map
 		Attributes  tag.Map
+		Event       event.Event
 		Stats       []Measurement
 
 		Parent           core.SpanContext
@@ -107,7 +109,6 @@ const (
 	START_SPAN
 	FINISH_SPAN
 	ADD_EVENT
-	ADD_EVENTF
 	MODIFY_ATTR
 	RECORD_STATS
 	SET_STATUS
@@ -262,22 +263,10 @@ func (ro *readerObserver) Observe(event observer.Event) {
 
 	case observer.ADD_EVENT:
 		read.Type = ADD_EVENT
-
-		read.Message = event.String
+		read.Event = event.Event
 
 		attrs, span := ro.readScope(event.Scope)
 		read.Attributes = attrs.Apply(core.KeyValue{}, event.Attributes, core.Mutator{}, nil)
-		if span != nil {
-			read.SpanContext = span.spanContext
-		}
-
-	case observer.ADD_EVENTF:
-		// TODO: this can't be done lazily, must be done before Record()
-		read.Message = fmt.Sprintf(event.String, event.Arguments...)
-
-		read.Type = ADD_EVENTF
-		attrs, span := ro.readScope(event.Scope)
-		read.Attributes = attrs
 		if span != nil {
 			read.SpanContext = span.spanContext
 		}

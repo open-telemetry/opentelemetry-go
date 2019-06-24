@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
@@ -89,7 +90,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 
 	if err := body(ctx); err != nil {
 		span.SetAttribute(ErrorKey.Bool(true))
-		span.AddEvent(ctx, "span error", MessageKey.String(err.Error()))
+		span.AddEvent(ctx, event.WithAttr("span error", MessageKey.String(err.Error())))
 		return err
 	}
 	return nil

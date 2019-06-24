@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
@@ -166,23 +167,12 @@ func (sp *span) Tracer() Tracer {
 	return sp.tracer
 }
 
-func (sp *span) AddEvent(ctx context.Context, msg string, attributes ...core.KeyValue) {
+func (sp *span) AddEvent(ctx context.Context, event event.Event) {
 
 	observer.Record(observer.Event{
-		Type:       observer.ADD_EVENT,
-		String:     msg,
-		Attributes: attributes,
-		Context:    ctx,
-	})
-}
-
-func (sp *span) AddEventf(ctx context.Context, fmt string, args ...interface{}) {
-
-	observer.Record(observer.Event{
-		Type:      observer.ADD_EVENTF,
-		String:    fmt,
-		Arguments: args,
-		Context:   ctx,
+		Type:    observer.ADD_EVENT,
+		Event:   event,
+		Context: ctx,
 	})
 }
 

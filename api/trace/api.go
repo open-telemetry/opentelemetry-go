@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
@@ -58,8 +59,8 @@ type (
 
 		Finish()
 
-		AddEvent(ctx context.Context, msg string, fields ...core.KeyValue)
-		AddEventf(ctx context.Context, fmt string, args ...interface{})
+		// AddEvent adds an event to the span.
+		AddEvent(ctx context.Context, event event.Event)
 
 		// IsRecordingEvents returns true is the span is active and recording events is enabled.
 		IsRecordingEvents() bool

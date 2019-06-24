@@ -23,11 +23,13 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/event"
 )
 
 type (
 	EventType int
 
+	// TODO: this Event is confusing with event.Event.
 	Event struct {
 		// Automatic fields
 		Sequence core.EventID // Auto-filled
@@ -40,10 +42,10 @@ type (
 
 		// Arguments (type-specific)
 		Attribute  core.KeyValue   // SET_ATTRIBUTE
-		Attributes []core.KeyValue // SET_ATTRIBUTES, ADD_EVENT
+		Attributes []core.KeyValue // SET_ATTRIBUTES
 		Mutator    core.Mutator    // SET_ATTRIBUTE
 		Mutators   []core.Mutator  // SET_ATTRIBUTES
-		Arguments  []interface{}   // ADD_EVENTF
+		Event      event.Event     // ADD_EVENT
 		Recovered  interface{}     // FINISH_SPAN
 		Status     codes.Code      // SET_STATUS
 
