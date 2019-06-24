@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
@@ -164,6 +165,14 @@ func (sp *span) Finish() {
 
 func (sp *span) Tracer() Tracer {
 	return sp.tracer
+}
+
+func (sp *span) Log(ctx context.Context, msg string, args ...core.KeyValue) {
+	log.With(sp).Log(ctx, msg, args...)
+}
+
+func (sp *span) Logf(ctx context.Context, fmt string, args ...interface{}) {
+	log.With(sp).Logf(ctx, fmt, args...)
 }
 
 func (sp *span) Record(ctx context.Context, m ...core.Measurement) {

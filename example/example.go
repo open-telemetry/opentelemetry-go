@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 
+	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/metric"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
@@ -63,6 +64,8 @@ func main() {
 
 		trace.SetError(ctx, true)
 
+		log.Log(ctx, "Nice operation!", tag.New("bogons").Int(100))
+
 		trace.Active(ctx).SetAttributes(anotherKey.String("yes"))
 
 		gauge.Set(ctx, 1)
@@ -72,6 +75,8 @@ func main() {
 			"Sub operation...",
 			func(ctx context.Context) error {
 				trace.Active(ctx).SetAttribute(lemonsKey.String("five"))
+
+				log.Logf(ctx, "Format schmormat %d!", 100)
 
 				stats.Record(ctx, measureTwo.M(1.3))
 
