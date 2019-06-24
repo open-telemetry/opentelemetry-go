@@ -64,10 +64,10 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Duration.String())
 		buf.WriteString(")")
 
-	case reader.LOG_EVENT:
+	case reader.ADD_EVENT:
 		buf.WriteString(data.Message)
 
-	case reader.LOGF_EVENT:
+	case reader.ADD_EVENTF:
 		buf.WriteString(data.Message)
 
 	case reader.MODIFY_ATTR:

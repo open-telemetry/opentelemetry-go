@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
@@ -50,7 +49,7 @@ func main() {
 		)
 		defer span.Finish()
 
-		log.Log(ctx, "handling this...")
+		span.AddEvent(ctx, "handling this...")
 
 		io.WriteString(w, "Hello, world!\n")
 	}

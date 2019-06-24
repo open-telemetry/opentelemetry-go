@@ -40,10 +40,10 @@ type (
 
 		// Arguments (type-specific)
 		Attribute  core.KeyValue   // SET_ATTRIBUTE
-		Attributes []core.KeyValue // SET_ATTRIBUTES, LOG_EVENT
+		Attributes []core.KeyValue // SET_ATTRIBUTES, ADD_EVENT
 		Mutator    core.Mutator    // SET_ATTRIBUTE
 		Mutators   []core.Mutator  // SET_ATTRIBUTES
-		Arguments  []interface{}   // LOGF_EVENT
+		Arguments  []interface{}   // ADD_EVENTF
 		Recovered  interface{}     // FINISH_SPAN
 		Status     codes.Code      // SET_STATUS
 
@@ -68,8 +68,8 @@ const (
 	INVALID EventType = iota
 	START_SPAN
 	FINISH_SPAN
-	LOG_EVENT
-	LOGF_EVENT
+	ADD_EVENT
+	ADD_EVENTF
 	NEW_SCOPE
 	NEW_MEASURE
 	NEW_METRIC

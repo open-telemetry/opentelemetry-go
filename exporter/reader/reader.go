@@ -106,8 +106,8 @@ const (
 	INVALID EventType = iota
 	START_SPAN
 	FINISH_SPAN
-	LOG_EVENT
-	LOGF_EVENT
+	ADD_EVENT
+	ADD_EVENTF
 	MODIFY_ATTR
 	RECORD_STATS
 	SET_STATUS
@@ -260,8 +260,8 @@ func (ro *readerObserver) Observe(event observer.Event) {
 		ro.metrics.Store(event.Sequence, metric)
 		return
 
-	case observer.LOG_EVENT:
-		read.Type = LOG_EVENT
+	case observer.ADD_EVENT:
+		read.Type = ADD_EVENT
 
 		read.Message = event.String
 
@@ -271,11 +271,11 @@ func (ro *readerObserver) Observe(event observer.Event) {
 			read.SpanContext = span.spanContext
 		}
 
-	case observer.LOGF_EVENT:
+	case observer.ADD_EVENTF:
 		// TODO: this can't be done lazily, must be done before Record()
 		read.Message = fmt.Sprintf(event.String, event.Arguments...)
 
-		read.Type = LOGF_EVENT
+		read.Type = ADD_EVENTF
 		attrs, span := ro.readScope(event.Scope)
 		read.Attributes = attrs
 		if span != nil {
