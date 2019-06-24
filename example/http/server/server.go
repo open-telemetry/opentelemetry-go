@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/log"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
@@ -41,13 +42,15 @@ func main() {
 
 		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(core.KeyValue{}, tags, core.Mutator{}, nil)))
 
-		_, span := tracer.Start(
+		ctx, span := tracer.Start(
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),
 			trace.ChildOf(spanCtx),
 		)
 		defer span.Finish()
+
+		log.Log(ctx, "handling this...")
 
 		io.WriteString(w, "Hello, world!\n")
 	}
