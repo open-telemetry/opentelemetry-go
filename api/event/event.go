@@ -37,6 +37,8 @@ type (
 	}
 )
 
+var _ Event = (*event)(nil)
+
 // WithAttr creates an Event with Attributes and a message.
 // Attributes are immutable.
 func WithAttr(msg string, attributes ...core.KeyValue) Event {
