@@ -22,6 +22,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
+	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
@@ -163,7 +164,7 @@ func (sp *span) Finish() {
 	}
 }
 
-func (sp *span) Tracer() Tracer {
+func (sp *span) Tracer() apitrace.Tracer {
 	return sp.tracer
 }
 

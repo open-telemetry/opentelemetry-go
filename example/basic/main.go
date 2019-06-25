@@ -62,8 +62,6 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.SetError(ctx, true)
-
 		trace.Active(ctx).AddEvent(ctx, event.WithAttr("Nice operation!", tag.New("bogons").Int(100)))
 
 		trace.Active(ctx).SetAttributes(anotherKey.String("yes"))

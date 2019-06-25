@@ -19,8 +19,13 @@ import (
 	"strings"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
+	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
+)
+
+var (
+	parentSpanIDKey = tag.New("parent_span_id")
 )
 
 func AppendEvent(buf *strings.Builder, data reader.Event) {
@@ -48,7 +53,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		} else {
 			buf.WriteString(" <")
 			if data.Parent.HasSpanID() {
-				f(false)(trace.ParentSpanIDKey.String(data.SpanContext.SpanIDString()))
+				f(false)(parentSpanIDKey.String(data.SpanContext.SpanIDString()))
 			}
 			if data.ParentAttributes != nil {
 				data.ParentAttributes.Foreach(f(false))
