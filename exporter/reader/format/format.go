@@ -64,11 +64,14 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Duration.String())
 		buf.WriteString(")")
 
-	case reader.LOG_EVENT:
-		buf.WriteString(data.Message)
-
-	case reader.LOGF_EVENT:
-		buf.WriteString(data.Message)
+	case reader.ADD_EVENT:
+		buf.WriteString("event: ")
+		buf.WriteString(data.Event.Message())
+		buf.WriteString(" (")
+		for _, kv := range data.Event.Attributes() {
+			buf.WriteString(" " + kv.Key.Name() + "=" + kv.Value.Emit())
+		}
+		buf.WriteString(")")
 
 	case reader.MODIFY_ATTR:
 		buf.WriteString("modify attr")
