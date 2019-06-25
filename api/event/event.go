@@ -15,17 +15,10 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
 type (
-	event struct {
-		message    string
-		attributes []core.KeyValue
-	}
-
 	// Event interface provides methods to retrieve Event properties.
 	Event interface {
 
@@ -36,24 +29,3 @@ type (
 		Attributes() []core.KeyValue
 	}
 )
-
-var _ Event = (*event)(nil)
-
-// WithAttr creates an Event with Attributes and a message.
-// Attributes are immutable.
-func WithAttr(msg string, attributes ...core.KeyValue) Event {
-	return event{message: msg, attributes: attributes}
-}
-
-// WithString creates an Event with formatted string.
-func WithString(f string, args ...interface{}) Event {
-	return event{message: fmt.Sprint(f, args), attributes: nil}
-}
-
-func (e event) Message() string {
-	return e.message
-}
-
-func (e event) Attributes() []core.KeyValue {
-	return append(e.attributes[:0:0], e.attributes...)
-}
