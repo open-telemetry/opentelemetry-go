@@ -21,15 +21,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 )
 
-type (
-	Float64Gauge struct {
-		baseMetric
-	}
+type Float64Gauge struct {
+	baseMetric
+}
 
-	Float64Entry struct {
-		baseEntry
-	}
-)
+type Float64Entry struct {
+	baseEntry
+}
 
 func NewFloat64Gauge(name string, mos ...Option) *Float64Gauge {
 	m := initBaseMetric(name, GaugeFloat64, mos, &Float64Gauge{}).(*Float64Gauge)

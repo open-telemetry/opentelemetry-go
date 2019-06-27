@@ -20,20 +20,18 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
 )
 
-type (
-	Reader interface {
-		Read(*Span)
-	}
+type Reader interface {
+	Read(*Span)
+}
 
-	Span struct {
-		Events []reader.Event
-	}
+type Span struct {
+	Events []reader.Event
+}
 
-	spanReader struct {
-		spans   map[core.SpanContext]*Span
-		readers []Reader
-	}
-)
+type spanReader struct {
+	spans   map[core.SpanContext]*Span
+	readers []Reader
+}
 
 func NewReaderObserver(readers ...Reader) observer.Observer {
 	return reader.NewReaderObserver(&spanReader{

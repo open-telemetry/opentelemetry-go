@@ -24,98 +24,96 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type (
-	ScopeID struct {
-		EventID
-		SpanContext
-	}
+type ScopeID struct {
+	EventID
+	SpanContext
+}
 
-	SpanContext struct {
-		TraceIDHigh uint64
-		TraceIDLow  uint64
-		SpanID      uint64
-	}
+type SpanContext struct {
+	TraceIDHigh uint64
+	TraceIDLow  uint64
+	SpanID      uint64
+}
 
-	EventID uint64
+type EventID uint64
 
-	BaseMeasure interface {
-		Name() string
-		Description() string
-		Unit() unit.Unit
+type BaseMeasure interface {
+	Name() string
+	Description() string
+	Unit() unit.Unit
 
-		DefinitionID() EventID
-	}
+	DefinitionID() EventID
+}
 
-	Measure interface {
-		BaseMeasure
+type Measure interface {
+	BaseMeasure
 
-		M(float64) Measurement
-		V(float64) KeyValue
-	}
+	M(float64) Measurement
+	V(float64) KeyValue
+}
 
-	Measurement struct {
-		// NOTE: If we add a ScopeID field this can carry
-		// pre-aggregated measures via the stats.Record API.
-		Measure Measure
-		Value   float64
-		ScopeID ScopeID
-	}
+type Measurement struct {
+	// NOTE: If we add a ScopeID field this can carry
+	// pre-aggregated measures via the stats.Record API.
+	Measure Measure
+	Value   float64
+	ScopeID ScopeID
+}
 
-	Key interface {
-		BaseMeasure
+type Key interface {
+	BaseMeasure
 
-		Value(ctx context.Context) KeyValue
+	Value(ctx context.Context) KeyValue
 
-		Bool(v bool) KeyValue
+	Bool(v bool) KeyValue
 
-		Int(v int) KeyValue
-		Int32(v int32) KeyValue
-		Int64(v int64) KeyValue
+	Int(v int) KeyValue
+	Int32(v int32) KeyValue
+	Int64(v int64) KeyValue
 
-		Uint(v uint) KeyValue
-		Uint32(v uint32) KeyValue
-		Uint64(v uint64) KeyValue
+	Uint(v uint) KeyValue
+	Uint32(v uint32) KeyValue
+	Uint64(v uint64) KeyValue
 
-		Float32(v float32) KeyValue
-		Float64(v float64) KeyValue
+	Float32(v float32) KeyValue
+	Float64(v float64) KeyValue
 
-		String(v string) KeyValue
-		Bytes(v []byte) KeyValue
-	}
+	String(v string) KeyValue
+	Bytes(v []byte) KeyValue
+}
 
-	KeyValue struct {
-		Key   Key
-		Value Value
-	}
+type KeyValue struct {
+	Key   Key
+	Value Value
+}
 
-	ValueType int
+type ValueType int
 
-	Value struct {
-		Type    ValueType
-		Bool    bool
-		Int64   int64
-		Uint64  uint64
-		Float64 float64
-		String  string
-		Bytes   []byte
+type Value struct {
+	Type    ValueType
+	Bool    bool
+	Int64   int64
+	Uint64  uint64
+	Float64 float64
+	String  string
+	Bytes   []byte
 
-		// TODO Lazy value type?
-	}
+	// TODO Lazy value type?
+}
 
-	MutatorOp int
+type MutatorOp int
 
-	Mutator struct {
-		MutatorOp
-		KeyValue
-		MeasureMetadata
-	}
+type Mutator struct {
+	MutatorOp
+	KeyValue
+	MeasureMetadata
+}
 
-	MeasureMetadata struct {
-		MaxHops int // -1 == infinite, 0 == do not propagate
+type MeasureMetadata struct {
+	MaxHops int // -1 == infinite, 0 == do not propagate
 
-		// TODO time to live?
-	}
-)
+	// TODO time to live?
+}
 
 const (
 	INVALID ValueType = iota

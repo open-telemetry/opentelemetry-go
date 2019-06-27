@@ -26,43 +26,41 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 )
 
-type (
-	EventType int
+type EventType int
 
-	// TODO: this Event is confusing with event.Event.
-	Event struct {
-		// Automatic fields
-		Sequence core.EventID // Auto-filled
-		Time     time.Time    // Auto-filled
+// TODO: this Event is confusing with event.Event.
+type Event struct {
+	// Automatic fields
+	Sequence core.EventID // Auto-filled
+	Time     time.Time    // Auto-filled
 
-		// Type, Scope, Context
-		Type    EventType       // All events
-		Scope   core.ScopeID    // All events
-		Context context.Context // core.FromContext() and scope.Active()
+	// Type, Scope, Context
+	Type    EventType       // All events
+	Scope   core.ScopeID    // All events
+	Context context.Context // core.FromContext() and scope.Active()
 
-		// Arguments (type-specific)
-		Attribute  core.KeyValue   // SET_ATTRIBUTE
-		Attributes []core.KeyValue // SET_ATTRIBUTES
-		Mutator    core.Mutator    // SET_ATTRIBUTE
-		Mutators   []core.Mutator  // SET_ATTRIBUTES
-		Event      event.Event     // ADD_EVENT
-		Recovered  interface{}     // FINISH_SPAN
-		Status     codes.Code      // SET_STATUS
+	// Arguments (type-specific)
+	Attribute  core.KeyValue   // SET_ATTRIBUTE
+	Attributes []core.KeyValue // SET_ATTRIBUTES
+	Mutator    core.Mutator    // SET_ATTRIBUTE
+	Mutators   []core.Mutator  // SET_ATTRIBUTES
+	Event      event.Event     // ADD_EVENT
+	Recovered  interface{}     // FINISH_SPAN
+	Status     codes.Code      // SET_STATUS
 
-		// Values
-		String  string // START_SPAN, EVENT, ...
-		Float64 float64
-		Parent  core.ScopeID // START_SPAN
-		Stats   []core.Measurement
-		Stat    core.Measurement
-	}
+	// Values
+	String  string // START_SPAN, EVENT, ...
+	Float64 float64
+	Parent  core.ScopeID // START_SPAN
+	Stats   []core.Measurement
+	Stat    core.Measurement
+}
 
-	Observer interface {
-		Observe(data Event)
-	}
+type Observer interface {
+	Observe(data Event)
+}
 
-	observersMap map[Observer]struct{}
-)
+type observersMap map[Observer]struct{}
 
 //go:generate stringer -type=EventType
 const (
