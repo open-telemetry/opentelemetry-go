@@ -21,12 +21,11 @@ import (
 	"net/textproto"
 	"strings"
 
+	"google.golang.org/grpc/codes"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
-
-	"google.golang.org/grpc/codes"
-
 	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
@@ -49,7 +48,7 @@ var (
 	HTTPHeaderMIME = tag.New("http.mime")
 	HTTPRemoteAddr = tag.New("http.remote")
 	HTTPLocalAddr  = tag.New("http.local")
-	messageKey     = tag.New("message",
+	MessageKey     = tag.New("message",
 		tag.WithDescription("message text: info, error, etc"),
 	)
 )
@@ -103,7 +102,7 @@ func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
 
 func (ct *clientTracer) putIdleConn(err error) {
 	if err != nil {
-		ct.current().SetAttribute(messageKey.String(err.Error()))
+		ct.current().SetAttribute(MessageKey.String(err.Error()))
 		ct.current().SetStatus(codes.Unknown)
 	}
 	ct.close("http.receive")
@@ -150,7 +149,7 @@ func (ct *clientTracer) wroteHeaders() {
 
 func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 	if info.Err != nil {
-		ct.levels[0].SetAttribute(messageKey.String(info.Err.Error()))
+		ct.levels[0].SetAttribute(MessageKey.String(info.Err.Error()))
 		ct.levels[0].SetStatus(codes.Unknown)
 	}
 	ct.close("http.send")

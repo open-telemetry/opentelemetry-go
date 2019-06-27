@@ -23,6 +23,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 )
 
+var _ Span = (*noopSpan)(nil)
+
 // SpancContext returns an invalid span context.
 func (sp *noopSpan) SpanContext() core.SpanContext {
 	return core.INVALID_SPAN_CONTEXT

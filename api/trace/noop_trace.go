@@ -30,6 +30,8 @@ type (
 	}
 )
 
+var _ Tracer = (*noopTracer)(nil)
+
 var t = &noopTracer{}
 
 // ScopeID returns an empty instance of ScopeID

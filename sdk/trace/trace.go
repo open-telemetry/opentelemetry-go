@@ -26,7 +26,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-
 	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 

@@ -20,13 +20,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
-
 	"google.golang.org/grpc/codes"
 
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
 	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
 )
 
