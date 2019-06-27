@@ -20,17 +20,17 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
-
 	"google.golang.org/grpc/codes"
 
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
+	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
 )
 
 var (
-	tracer = trace.GlobalTracer().
+	tracer = trace.Register().
 		WithService("client").
 		WithComponent("main").
 		WithResources(
@@ -39,8 +39,8 @@ var (
 )
 
 func main() {
+	fmt.Printf("Tracer %v\n", tracer)
 	client := http.DefaultClient
-
 	ctx := tag.NewContext(context.Background(),
 		tag.Insert(tag.New("username").String("donuts")),
 	)
@@ -53,7 +53,7 @@ func main() {
 
 			ctx, req, inj := httptrace.W3C(ctx, req)
 
-			trace.Inject(ctx, inj)
+			apitrace.Inject(ctx, inj)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -61,7 +61,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			res.Body.Close()
-			trace.Active(ctx).SetStatus(codes.OK)
+			apitrace.Active(ctx).SetStatus(codes.OK)
 
 			return err
 		})

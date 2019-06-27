@@ -20,15 +20,16 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
 
-	"github.com/open-telemetry/opentelemetry-go/api/event"
 	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/sdk/event"
+	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
 )
 
 var (
-	tracer = trace.GlobalTracer().
+	tracer = trace.Register().
 		WithService("server").
 		WithComponent("main").
 		WithResources(
@@ -45,8 +46,8 @@ func main() {
 		ctx, span := tracer.Start(
 			req.Context(),
 			"hello",
-			trace.WithAttributes(attrs...),
-			trace.ChildOf(spanCtx),
+			apitrace.WithAttributes(attrs...),
+			apitrace.ChildOf(spanCtx),
 		)
 		defer span.Finish()
 

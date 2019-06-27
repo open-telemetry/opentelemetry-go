@@ -18,15 +18,15 @@ import (
 	"context"
 	"math/rand"
 	"sync"
-	"sync/atomic"
 
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
 type (
@@ -46,40 +46,41 @@ type (
 )
 
 var (
-	ServiceKey      = tag.New("service")
-	ComponentKey    = tag.New("component")
-	ErrorKey        = tag.New("error")
-	SpanIDKey       = tag.New("span_id")
-	TraceIDKey      = tag.New("trace_id")
-	ParentSpanIDKey = tag.New("parent_span_id")
-	MessageKey      = tag.New("message",
+	ServiceKey   = tag.New("service")
+	ComponentKey = tag.New("component")
+	ErrorKey     = tag.New("error")
+	SpanIDKey    = tag.New("span_id")
+	TraceIDKey   = tag.New("trace_id")
+	MessageKey   = tag.New("message",
 		tag.WithDescription("message text: info, error, etc"),
 	)
-
-	// The process global tracer could have process-wide resource
-	// tags applied directly, or we can have a SetGlobal tracer to
-	// install a default tracer w/ resources.
-	global atomic.Value
-	empty  = &tracer{}
 )
+
+var t = &tracer{}
+
+// Register registers tracer to global registry and returns the registered tracer.
+func Register() apitrace.Tracer {
+	apitrace.SetGlobalTracer(t)
+	return t
+}
 
 func (t *tracer) ScopeID() core.ScopeID {
 	return t.resources.Scope()
 }
 
-func (t *tracer) WithResources(attributes ...core.KeyValue) Tracer {
+func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
 	s := scope.New(t.resources.Scope(), attributes...)
 	return &tracer{
 		resources: s.ScopeID().EventID,
 	}
 }
 
-func (g *tracer) WithComponent(name string) Tracer {
-	return g.WithResources(ComponentKey.String(name))
+func (t *tracer) WithComponent(name string) apitrace.Tracer {
+	return t.WithResources(ComponentKey.String(name))
 }
 
-func (g *tracer) WithService(name string) Tracer {
-	return g.WithResources(ServiceKey.String(name))
+func (t *tracer) WithService(name string) apitrace.Tracer {
+	return t.WithResources(ServiceKey.String(name))
 }
 
 func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
@@ -96,12 +97,18 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	return nil
 }
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+// Start starts a new span with provided name and span options.
+// If parent span reference is provided in the span option then it is used as as parent.
+// Otherwise, parent span reference is retrieved from current context.
+// The new span uses the same TraceID as parent.
+// If no parent is found then a root span is created and started with random TraceID.
+// TODO: Add sampling logic.
+func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOption) (context.Context, apitrace.Span) {
 	var child core.SpanContext
 
 	child.SpanID = rand.Uint64()
 
-	o := &SpanOptions{}
+	o := &apitrace.SpanOptions{}
 
 	for _, opt := range opts {
 		opt(o)
@@ -109,10 +116,11 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...SpanOption) (co
 
 	var parentScope core.ScopeID
 
-	if o.reference.HasTraceID() {
-		parentScope = o.reference.Scope()
+	if o.Reference.HasTraceID() {
+		parentScope = o.Reference.Scope()
 	} else {
-		parentScope = Active(ctx).ScopeID()
+		parentSpan, _ := apitrace.Active(ctx).(*span)
+		parentScope = parentSpan.ScopeID()
 	}
 
 	if parentScope.HasTraceID() {
@@ -132,11 +140,11 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...SpanOption) (co
 	span := &span{
 		spanContext: child,
 		tracer:      t,
-		recordEvent: o.recordEvent,
+		recordEvent: o.RecordEvent,
 		eventID: observer.Record(observer.Event{
-			Time:    o.startTime,
+			Time:    o.StartTime,
 			Type:    observer.START_SPAN,
-			Scope:   scope.New(childScope, o.attributes...).ScopeID(),
+			Scope:   scope.New(childScope, o.Attributes...).ScopeID(),
 			Context: ctx,
 			Parent:  parentScope,
 			String:  name,
@@ -145,6 +153,6 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...SpanOption) (co
 	return scope.SetActive(ctx, span), span
 }
 
-func (t *tracer) Inject(ctx context.Context, span Span, injector Injector) {
+func (t *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
 	injector.Inject(span.ScopeID().SpanContext, tag.FromContext(ctx))
 }

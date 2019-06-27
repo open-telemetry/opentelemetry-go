@@ -22,8 +22,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 
-	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
 var (
@@ -61,8 +61,6 @@ func main() {
 	)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
-
-		trace.SetError(ctx, true)
 
 		trace.Active(ctx).AddEvent(ctx, event.WithAttr("Nice operation!", tag.New("bogons").Int(100)))
 
