@@ -26,6 +26,16 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
+type span struct {
+	tracer      *tracer
+	spanContext core.SpanContext
+	lock        sync.Mutex
+	eventID     core.EventID
+	finishOnce  sync.Once
+	recordEvent bool
+	status      codes.Code
+}
+
 // SpancContext returns span context of the span. Return SpanContext is usable
 // even after the span is finished.
 func (sp *span) SpanContext() core.SpanContext {

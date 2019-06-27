@@ -29,21 +29,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
-type (
-	span struct {
-		tracer      *tracer
-		spanContext core.SpanContext
-		lock        sync.Mutex
-		eventID     core.EventID
-		finishOnce  sync.Once
-		recordEvent bool
-		status      codes.Code
-	}
-
-	tracer struct {
-		resources core.EventID
-	}
-)
+type tracer struct {
+	resources core.EventID
+}
 
 var (
 	ServiceKey   = tag.New("service")

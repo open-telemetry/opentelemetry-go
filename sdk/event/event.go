@@ -21,12 +21,10 @@ import (
 	apievent "github.com/open-telemetry/opentelemetry-go/api/event"
 )
 
-type (
-	event struct {
-		message    string
-		attributes []core.KeyValue
-	}
-)
+type event struct {
+	message    string
+	attributes []core.KeyValue
+}
 
 var _ apievent.Event = (*event)(nil)
 
