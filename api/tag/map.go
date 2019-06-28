@@ -21,14 +21,12 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
-type (
-	tagMap map[core.Key]tagContent
+type tagMap map[core.Key]tagContent
 
-	tagContent struct {
-		value core.Value
-		meta  core.MeasureMetadata
-	}
-)
+type tagContent struct {
+	value core.Value
+	meta  core.MeasureMetadata
+}
 
 func (m tagMap) HasValue(k core.Key) bool {
 	_, has := m.Value(k)

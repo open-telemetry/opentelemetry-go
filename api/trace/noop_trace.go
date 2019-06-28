@@ -21,14 +21,12 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 )
 
-type (
-	noopSpan struct {
-	}
+type noopSpan struct {
+}
 
-	noopTracer struct {
-		resources core.EventID
-	}
-)
+type noopTracer struct {
+	resources core.EventID
+}
 
 var _ Tracer = (*noopTracer)(nil)
 

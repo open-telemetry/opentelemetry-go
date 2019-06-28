@@ -23,20 +23,18 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	registeredKey struct {
-		name    string
-		desc    string
-		unit    unit.Unit
-		eventID core.EventID
-	}
+type registeredKey struct {
+	name    string
+	desc    string
+	unit    unit.Unit
+	eventID core.EventID
+}
 
-	ctxTagsType struct{}
+type ctxTagsType struct{}
 
-	measure struct {
-		rk *registeredKey
-	}
-)
+type measure struct {
+	rk *registeredKey
+}
 
 var (
 	ctxTagsKey = &ctxTagsType{}

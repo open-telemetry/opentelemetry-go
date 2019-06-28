@@ -21,22 +21,20 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	baseMetric struct {
-		measure core.Measure
+type baseMetric struct {
+	measure core.Measure
 
-		mtype   MetricType
-		keys    []core.Key
-		eventID core.EventID
-		status  error // Indicates registry conflict
-	}
+	mtype   MetricType
+	keys    []core.Key
+	eventID core.EventID
+	status  error // Indicates registry conflict
+}
 
-	baseEntry struct {
-		base    *baseMetric
-		metric  Metric
-		eventID core.EventID
-	}
-)
+type baseEntry struct {
+	base    *baseMetric
+	metric  Metric
+	eventID core.EventID
+}
 
 func initBaseMetric(name string, mtype MetricType, opts []Option, init Metric) Metric {
 	var tagOpts []tag.Option

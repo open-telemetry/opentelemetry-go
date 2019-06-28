@@ -22,9 +22,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/reader/format"
 )
 
-type (
-	stderrLog struct{}
-)
+type stderrLog struct{}
 
 func New() observer.Observer {
 	return reader.NewReaderObserver(&stderrLog{})

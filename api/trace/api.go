@@ -28,90 +28,88 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
-type (
-	Tracer interface {
-		Start(context.Context, string, ...SpanOption) (context.Context, Span)
+type Tracer interface {
+	Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
-		// WithSpan wraps the execution of the function body with a span.
-		// It starts a new span and sets it as an active span in the context.
-		// It then executes the body. It closes the span before returning the execution result.
-		// TODO: Should it restore the previous span?
-		WithSpan(
-			ctx context.Context,
-			operation string,
-			body func(ctx context.Context) error,
-		) error
+	// WithSpan wraps the execution of the function body with a span.
+	// It starts a new span and sets it as an active span in the context.
+	// It then executes the body. It closes the span before returning the execution result.
+	// TODO: Should it restore the previous span?
+	WithSpan(
+		ctx context.Context,
+		operation string,
+		body func(ctx context.Context) error,
+	) error
 
-		// TODO: Do we need WithService and WithComponent?
-		WithService(name string) Tracer
-		WithComponent(name string) Tracer
+	// TODO: Do we need WithService and WithComponent?
+	WithService(name string) Tracer
+	WithComponent(name string) Tracer
 
-		// WithResources attaches resource attributes to the Tracer.
-		WithResources(res ...core.KeyValue) Tracer
+	// WithResources attaches resource attributes to the Tracer.
+	WithResources(res ...core.KeyValue) Tracer
 
-		// Note: see https://github.com/opentracing/opentracing-go/issues/127
-		Inject(context.Context, Span, Injector)
+	// Note: see https://github.com/opentracing/opentracing-go/issues/127
+	Inject(context.Context, Span, Injector)
 
-		// ScopeID returns the resource scope of this tracer.
-		scope.Scope
-	}
+	// ScopeID returns the resource scope of this tracer.
+	scope.Scope
+}
 
-	Span interface {
-		scope.Mutable
+type Span interface {
+	scope.Mutable
 
-		stats.Interface
+	stats.Interface
 
-		// Tracer returns tracer used to create this span. Tracer cannot be nil.
-		Tracer() Tracer
+	// Tracer returns tracer used to create this span. Tracer cannot be nil.
+	Tracer() Tracer
 
-		// Finish completes the span. No updates are allowed to span after it
-		// finishes. The only exception is setting status of the span.
-		Finish()
+	// Finish completes the span. No updates are allowed to span after it
+	// finishes. The only exception is setting status of the span.
+	Finish()
 
-		// AddEvent adds an event to the span.
-		AddEvent(ctx context.Context, event event.Event)
+	// AddEvent adds an event to the span.
+	AddEvent(ctx context.Context, event event.Event)
 
-		// IsRecordingEvents returns true if the span is active and recording events is enabled.
-		IsRecordingEvents() bool
+	// IsRecordingEvents returns true if the span is active and recording events is enabled.
+	IsRecordingEvents() bool
 
-		// SpancContext returns span context of the span. Return SpanContext is usable
-		// even after the span is finished.
-		SpanContext() core.SpanContext
+	// SpancContext returns span context of the span. Return SpanContext is usable
+	// even after the span is finished.
+	SpanContext() core.SpanContext
 
-		// SetStatus sets the status of the span. The status of the span can be updated
-		// even after span is finished.
-		SetStatus(codes.Code)
-	}
+	// SetStatus sets the status of the span. The status of the span can be updated
+	// even after span is finished.
+	SetStatus(codes.Code)
+}
 
-	Injector interface {
-		// Inject serializes span context and tag.Map and inserts them in to
-		// carrier associated with the injector. For example in case of http request,
-		// span context could added to the request (carrier) as W3C Trace context header.
-		Inject(core.SpanContext, tag.Map)
-	}
+type Injector interface {
+	// Inject serializes span context and tag.Map and inserts them in to
+	// carrier associated with the injector. For example in case of http request,
+	// span context could added to the request (carrier) as W3C Trace context header.
+	Inject(core.SpanContext, tag.Map)
+}
 
-	// SpanOption apply changes to SpanOptions.
-	SpanOption func(*SpanOptions)
+// SpanOption apply changes to SpanOptions.
+type SpanOption func(*SpanOptions)
 
-	// SpanOptions provides options to set properties of span at the time of starting
-	// a new span.
-	SpanOptions struct {
-		Attributes  []core.KeyValue
-		StartTime   time.Time
-		Reference   Reference
-		RecordEvent bool
-	}
+// SpanOptions provides options to set properties of span at the time of starting
+// a new span.
+type SpanOptions struct {
+	Attributes  []core.KeyValue
+	StartTime   time.Time
+	Reference   Reference
+	RecordEvent bool
+}
 
-	// Reference is used to establish relationship between newly created span and the
-	// other span. The other span could be related as a parent or linked or any other
-	// future relationship type.
-	Reference struct {
-		core.SpanContext
-		RelationshipType
-	}
+// Reference is used to establish relationship between newly created span and the
+// other span. The other span could be related as a parent or linked or any other
+// future relationship type.
+type Reference struct {
+	core.SpanContext
+	RelationshipType
+}
 
-	RelationshipType int
-)
+type RelationshipType int
 
 var (
 	// The process global tracer could have process-wide resource

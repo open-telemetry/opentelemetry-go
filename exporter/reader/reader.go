@@ -30,79 +30,77 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	Reader interface {
-		Read(Event)
-	}
+type Reader interface {
+	Read(Event)
+}
 
-	EventType int
+type EventType int
 
-	Event struct {
-		Type        EventType
-		Time        time.Time
-		Sequence    core.EventID
-		SpanContext core.SpanContext
-		Tags        tag.Map
-		Attributes  tag.Map
-		Event       event.Event
-		Stats       []Measurement
+type Event struct {
+	Type        EventType
+	Time        time.Time
+	Sequence    core.EventID
+	SpanContext core.SpanContext
+	Tags        tag.Map
+	Attributes  tag.Map
+	Event       event.Event
+	Stats       []Measurement
 
-		Parent           core.SpanContext
-		ParentAttributes tag.Map
+	Parent           core.SpanContext
+	ParentAttributes tag.Map
 
-		Duration time.Duration
-		Name     string
-		Message  string
-		Status   codes.Code
-	}
+	Duration time.Duration
+	Name     string
+	Message  string
+	Status   codes.Code
+}
 
-	Measurement struct {
-		Measure core.Measure
-		Value   float64
-		Tags    tag.Map
-	}
+type Measurement struct {
+	Measure core.Measure
+	Value   float64
+	Tags    tag.Map
+}
 
-	readerObserver struct {
-		readers []Reader
+type readerObserver struct {
+	readers []Reader
 
-		// core.EventID -> *readerSpan or *readerScope
-		scopes sync.Map
+	// core.EventID -> *readerSpan or *readerScope
+	scopes sync.Map
 
-		// core.EventID -> *readerMeasure
-		measures sync.Map
+	// core.EventID -> *readerMeasure
+	measures sync.Map
 
-		// core.EventID -> *readerMetric
-		metrics sync.Map
-	}
+	// core.EventID -> *readerMetric
+	metrics sync.Map
+}
 
-	readerSpan struct {
-		name        string
-		start       time.Time
-		startTags   tag.Map
-		spanContext core.SpanContext
-		status      codes.Code
+type readerSpan struct {
+	name        string
+	start       time.Time
+	startTags   tag.Map
+	spanContext core.SpanContext
+	status      codes.Code
 
-		*readerScope
-	}
+	*readerScope
+}
 
-	readerMeasure struct {
-		name string
-		desc string
-		unit unit.Unit
-	}
+type readerMeasure struct {
+	name string
+	desc string
+	unit unit.Unit
+}
 
-	readerMetric struct {
-		*readerMeasure
-		mtype  metric.MetricType
-		fields []core.Measure
-	}
+type readerMetric struct {
+	*readerMeasure
+	mtype  metric.MetricType
+	fields []core.Measure
+}
 
-	readerScope struct {
-		span       *readerSpan
-		parent     core.EventID
-		attributes tag.Map
-	}
-)
+type readerScope struct {
+	span       *readerSpan
+	parent     core.EventID
+	attributes tag.Map
+}
 
 const (
 	INVALID EventType = iota

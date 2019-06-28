@@ -22,16 +22,14 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	Interface interface {
-		Record(ctx context.Context, m ...core.Measurement)
-		RecordSingle(ctx context.Context, m core.Measurement)
-	}
+type Interface interface {
+	Record(ctx context.Context, m ...core.Measurement)
+	RecordSingle(ctx context.Context, m core.Measurement)
+}
 
-	Recorder struct {
-		core.ScopeID
-	}
-)
+type Recorder struct {
+	core.ScopeID
+}
 
 func With(scope scope.Scope) Recorder {
 	return Recorder{scope.ScopeID()}

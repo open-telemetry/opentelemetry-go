@@ -21,27 +21,25 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	Scope interface {
-		ScopeID() core.ScopeID
-	}
+type Scope interface {
+	ScopeID() core.ScopeID
+}
 
-	Mutable interface {
-		Scope
+type Mutable interface {
+	Scope
 
-		SetAttribute(core.KeyValue)
-		SetAttributes(...core.KeyValue)
+	SetAttribute(core.KeyValue)
+	SetAttributes(...core.KeyValue)
 
-		ModifyAttribute(core.Mutator)
-		ModifyAttributes(...core.Mutator)
-	}
+	ModifyAttribute(core.Mutator)
+	ModifyAttributes(...core.Mutator)
+}
 
-	scopeIdent struct {
-		id core.ScopeID
-	}
+type scopeIdent struct {
+	id core.ScopeID
+}
 
-	scopeKeyType struct{}
-)
+type scopeKeyType struct{}
 
 var (
 	scopeKey   = &scopeKeyType{}

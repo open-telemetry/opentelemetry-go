@@ -29,19 +29,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
-type (
-	clientLevel struct {
-		trace.Span
-		ident string
-	}
-
-	clientTracer struct {
-		context.Context
-		httptrace.ClientTrace
-
-		levels []clientLevel
-	}
-)
+type clientLevel struct {
+	trace.Span
+	ident string
+}
 
 var (
 	HTTPStatus     = tag.New("http.status")
@@ -52,6 +43,13 @@ var (
 		tag.WithDescription("message text: info, error, etc"),
 	)
 )
+
+type clientTracer struct {
+	context.Context
+	httptrace.ClientTrace
+
+	levels []clientLevel
+}
 
 func newClientTracer(ctx context.Context) *clientTracer {
 	ct := &clientTracer{
