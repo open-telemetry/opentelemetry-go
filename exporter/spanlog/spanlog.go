@@ -24,9 +24,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/spandata/format"
 )
 
-type (
-	spanLog struct{}
-)
+type spanLog struct{}
 
 func New() observer.Observer {
 	return buffer.NewBuffer(1000, spandata.NewReaderObserver(&spanLog{}))

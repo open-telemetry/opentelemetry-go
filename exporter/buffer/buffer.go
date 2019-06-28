@@ -21,15 +21,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type (
-	Buffer struct {
-		observers []observer.Observer
-		events    chan observer.Event
-		dropped   uint64
-		wait      sync.WaitGroup
-		close     chan struct{}
-	}
-)
+type Buffer struct {
+	observers []observer.Observer
+	events    chan observer.Event
+	dropped   uint64
+	wait      sync.WaitGroup
+	close     chan struct{}
+}
 
 func NewBuffer(size int, observers ...observer.Observer) *Buffer {
 	b := &Buffer{

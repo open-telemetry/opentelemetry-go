@@ -33,18 +33,16 @@ import (
 	"sync"
 )
 
-type (
-	// Registry is a mechanism for avoiding duplicate registration
-	// of different-type pre-aggregated metrics (in one process).
-	Registry interface {
-		RegisterMetric(Metric) (Metric, error)
-		ForeachMetric(func(string, Metric))
-	}
+// Registry is a mechanism for avoiding duplicate registration
+// of different-type pre-aggregated metrics (in one process).
+type Registry interface {
+	RegisterMetric(Metric) (Metric, error)
+	ForeachMetric(func(string, Metric))
+}
 
-	registry struct {
-		nameType sync.Map // map[string]Metric
-	}
-)
+type registry struct {
+	nameType sync.Map // map[string]Metric
+}
 
 var (
 	registryLock   sync.Mutex

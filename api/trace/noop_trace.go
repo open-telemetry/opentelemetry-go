@@ -21,14 +21,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 )
 
-type (
-	noopSpan struct {
-	}
-
-	noopTracer struct {
-		resources core.EventID
-	}
-)
+type noopTracer struct {
+	resources core.EventID
+}
 
 var _ Tracer = (*noopTracer)(nil)
 
@@ -74,3 +69,5 @@ func (t *noopTracer) Start(ctx context.Context, name string, opts ...SpanOption)
 // Inject does nothing.
 func (t *noopTracer) Inject(ctx context.Context, span Span, injector Injector) {
 }
+
+var _ Injector = (*noopTracer)(nil)

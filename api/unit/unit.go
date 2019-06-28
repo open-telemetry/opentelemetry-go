@@ -14,9 +14,7 @@
 
 package unit
 
-type (
-	Unit string
-)
+type Unit string
 
 const (
 	Dimensionless Unit = "1"

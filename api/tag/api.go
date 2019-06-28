@@ -21,21 +21,19 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type (
-	Map interface {
-		// TODO combine these four into a struct
-		Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map
+type Map interface {
+	// TODO combine these four into a struct
+	Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map
 
-		Value(core.Key) (core.Value, bool)
-		HasValue(core.Key) bool
+	Value(core.Key) (core.Value, bool)
+	HasValue(core.Key) bool
 
-		Len() int
+	Len() int
 
-		Foreach(func(kv core.KeyValue) bool)
-	}
+	Foreach(func(kv core.KeyValue) bool)
+}
 
-	Option func(*registeredKey)
-)
+type Option func(*registeredKey)
 
 var (
 	EmptyMap = NewMap(core.KeyValue{}, nil, core.Mutator{}, nil)

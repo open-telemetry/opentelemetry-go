@@ -18,7 +18,6 @@ import (
 	"encoding/binary"
 	"net/http"
 
-	"github.com/lightstep/tracecontext.go"
 	"github.com/lightstep/tracecontext.go/tracestate"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
@@ -27,12 +26,6 @@ import (
 
 const (
 	Vendor = "ot"
-)
-
-type (
-	hinjector struct {
-		*http.Request
-	}
 )
 
 var (
@@ -72,6 +65,10 @@ func Extract(req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanCont
 	}
 
 	return attrs, tags, sc
+}
+
+type hinjector struct {
+	*http.Request
 }
 
 func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {

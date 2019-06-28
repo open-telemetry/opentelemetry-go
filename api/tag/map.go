@@ -21,14 +21,12 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
-type (
-	tagMap map[core.Key]tagContent
+type tagMap map[core.Key]tagContent
 
-	tagContent struct {
-		value core.Value
-		meta  core.MeasureMetadata
-	}
-)
+type tagContent struct {
+	value core.Value
+	meta  core.MeasureMetadata
+}
 
 func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
 	m := make(tagMap, len(t)+len(attributes)+len(mutators))
