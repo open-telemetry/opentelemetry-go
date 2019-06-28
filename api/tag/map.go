@@ -28,9 +28,28 @@ type tagContent struct {
 	meta  core.MeasureMetadata
 }
 
-func (m tagMap) HasValue(k core.Key) bool {
-	_, has := m.Value(k)
-	return has
+func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
+	m := make(tagMap, len(t)+len(attributes)+len(mutators))
+	for k, v := range t {
+		m[k] = v
+	}
+	if a1.Key != nil {
+		m[a1.Key] = tagContent{
+			value: a1.Value,
+		}
+	}
+	for _, kv := range attributes {
+		m[kv.Key] = tagContent{
+			value: kv.Value,
+		}
+	}
+	if m1.KeyValue.Key != nil {
+		m.apply(m1)
+	}
+	for _, mutator := range mutators {
+		m.apply(mutator)
+	}
+	return m
 }
 
 func (m tagMap) Value(k core.Key) (core.Value, bool) {
@@ -40,6 +59,28 @@ func (m tagMap) Value(k core.Key) (core.Value, bool) {
 	}
 	return entry.value, ok
 }
+
+func (m tagMap) HasValue(k core.Key) bool {
+	_, has := m.Value(k)
+	return has
+}
+
+func (m tagMap) Len() int {
+	return len(m)
+}
+
+func (m tagMap) Foreach(f func(kv core.KeyValue) bool) {
+	for k, v := range m {
+		if !f(core.KeyValue{
+			Key:   k,
+			Value: v.value,
+		}) {
+			return
+		}
+	}
+}
+
+var _ Map = (*tagMap)(nil)
 
 func (m tagMap) apply(mutator core.Mutator) {
 	if m == nil {
@@ -105,19 +146,4 @@ func Do(ctx context.Context, f func(ctx context.Context)) {
 		keyvals = append(keyvals, k.Name(), v.value.Emit())
 	}
 	pprof.Do(ctx, pprof.Labels(keyvals...), f)
-}
-
-func (m tagMap) Foreach(f func(kv core.KeyValue) bool) {
-	for k, v := range m {
-		if !f(core.KeyValue{
-			Key:   k,
-			Value: v.value,
-		}) {
-			return
-		}
-	}
-}
-
-func (m tagMap) Len() int {
-	return len(m)
 }

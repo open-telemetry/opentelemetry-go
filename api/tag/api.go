@@ -54,30 +54,6 @@ func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutat
 	return t.Apply(a1, attributes, m1, mutators)
 }
 
-func (input tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
-	m := make(tagMap, len(input)+len(attributes)+len(mutators))
-	for k, v := range input {
-		m[k] = v
-	}
-	if a1.Key != nil {
-		m[a1.Key] = tagContent{
-			value: a1.Value,
-		}
-	}
-	for _, kv := range attributes {
-		m[kv.Key] = tagContent{
-			value: kv.Value,
-		}
-	}
-	if m1.KeyValue.Key != nil {
-		m.apply(m1)
-	}
-	for _, mutator := range mutators {
-		m.apply(mutator)
-	}
-	return m
-}
-
 func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxTagsKey, m)
 }
