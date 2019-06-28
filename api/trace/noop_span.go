@@ -23,6 +23,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 )
 
+type noopSpan struct {
+}
+
 var _ Span = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
