@@ -17,9 +17,6 @@ package trace
 import (
 	"context"
 	"math/rand"
-	"sync"
-
-	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
