@@ -47,7 +47,7 @@ func NewMeasure(name string, opts ...Option) core.Measure {
 
 func NewEmptyMap() Map {
 	var t tagMap
-	t.Apply(core.KeyValue{}, nil, core.Mutator{}, nil)
+	return t.Apply(core.KeyValue{}, nil, core.Mutator{}, nil)
 }
 
 func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
