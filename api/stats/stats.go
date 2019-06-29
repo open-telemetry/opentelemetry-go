@@ -31,6 +31,8 @@ type Recorder struct {
 	core.ScopeID
 }
 
+var _ Interface = (*Recorder)(nil)
+
 func With(scope scope.Scope) Recorder {
 	return Recorder{scope.ScopeID()}
 }
