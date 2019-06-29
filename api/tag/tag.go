@@ -23,6 +23,12 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
+type ctxTagsType struct{}
+
+var (
+	ctxTagsKey = &ctxTagsType{}
+)
+
 type registeredKey struct {
 	name    string
 	desc    string
@@ -30,15 +36,7 @@ type registeredKey struct {
 	eventID core.EventID
 }
 
-type ctxTagsType struct{}
-
-type measure struct {
-	rk *registeredKey
-}
-
-var (
-	ctxTagsKey = &ctxTagsType{}
-)
+var _ core.Key = (*registeredKey)(nil)
 
 func register(name string, opts []Option) *registeredKey {
 	rk := &registeredKey{
@@ -195,6 +193,12 @@ func (k *registeredKey) Value(ctx context.Context) core.KeyValue {
 	}
 }
 
+type measure struct {
+	rk *registeredKey
+}
+
+var _ core.Mearsure = (*measure)(nil)
+
 func (m measure) M(v float64) core.Measurement {
 	return core.Measurement{
 		Measure: m,
@@ -206,7 +210,18 @@ func (m measure) V(v float64) core.KeyValue {
 	return m.rk.Float64(v)
 }
 
-func (m measure) Name() string               { return m.rk.Name() }
-func (m measure) Description() string        { return m.rk.Description() }
-func (m measure) Unit() unit.Unit            { return m.rk.Unit() }
-func (m measure) DefinitionID() core.EventID { return m.rk.DefinitionID() }
+func (m measure) Name() string {
+	return m.rk.Name()
+}
+
+func (m measure) Description() string {
+	return m.rk.Description()
+}
+
+func (m measure) Unit() unit.Unit {
+	return m.rk.Unit()
+}
+
+func (m measure) DefinitionID() core.EventID {
+	return m.rk.DefinitionID()
+}
