@@ -36,6 +36,8 @@ type baseEntry struct {
 	eventID core.EventID
 }
 
+var _ Metric = (*baseMetric)(nil)
+
 func initBaseMetric(name string, mtype MetricType, opts []Option, init Metric) Metric {
 	var tagOpts []tag.Option
 	bm := init.base()
