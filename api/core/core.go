@@ -23,19 +23,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type ScopeID struct {
-	EventID
-	SpanContext
-}
-
-type SpanContext struct {
-	TraceIDHigh uint64
-	TraceIDLow  uint64
-	SpanID      uint64
-}
-
-type EventID uint64
-
 type BaseMeasure interface {
 	Name() string
 	Description() string
@@ -49,14 +36,6 @@ type Measure interface {
 
 	M(float64) Measurement
 	V(float64) KeyValue
-}
-
-type Measurement struct {
-	// NOTE: If we add a ScopeID field this can carry
-	// pre-aggregated measures via the stats.Record API.
-	Measure Measure
-	Value   float64
-	ScopeID ScopeID
 }
 
 type Key interface {
@@ -132,31 +111,6 @@ const (
 	DELETE
 )
 
-var (
-	// INVALID_SPAN_CONTEXT is meant for internal use to return invalid span context during error
-	// conditions.
-	INVALID_SPAN_CONTEXT = SpanContext{}
-)
-
-func (sc SpanContext) HasTraceID() bool {
-	return sc.TraceIDHigh != 0 || sc.TraceIDLow != 0
-}
-
-func (sc SpanContext) HasSpanID() bool {
-	return sc.SpanID != 0
-}
-
-func (sc SpanContext) SpanIDString() string {
-	p := fmt.Sprintf("%.16x", sc.SpanID)
-	return p[0:3] + ".." + p[13:16]
-}
-
-func (sc SpanContext) TraceIDString() string {
-	p1 := fmt.Sprintf("%.16x", sc.TraceIDHigh)
-	p2 := fmt.Sprintf("%.16x", sc.TraceIDLow)
-	return p1[0:3] + ".." + p2[13:16]
-}
-
 // TODO make this a lazy one-time conversion.
 func (v Value) Emit() string {
 	switch v.Type {
@@ -181,16 +135,12 @@ func (m Mutator) WithMaxHops(hops int) Mutator {
 	return m
 }
 
-func (e EventID) Scope() ScopeID {
-	return ScopeID{
-		EventID: e,
-	}
-}
-
-func (s SpanContext) Scope() ScopeID {
-	return ScopeID{
-		SpanContext: s,
-	}
+type Measurement struct {
+	// NOTE: If we add a ScopeID field this can carry
+	// pre-aggregated measures via the stats.Record API.
+	Measure Measure
+	Value   float64
+	ScopeID ScopeID
 }
 
 func (m Measurement) With(id ScopeID) Measurement {
