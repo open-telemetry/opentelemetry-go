@@ -17,7 +17,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"google.golang.org/grpc/codes"
 
@@ -199,43 +198,6 @@ func (m Measurement) With(id ScopeID) Measurement {
 	return m
 }
 
-func GrpcCodeToString(s codes.Code) string {
-	switch c := s; c {
-	case codes.OK:
-		return "OK"
-	case codes.Canceled:
-		return "CANCELLED"
-	case codes.Unknown:
-		return "UNKNOWN"
-	case codes.InvalidArgument:
-		return "INVALID_ARGUMENT"
-	case codes.DeadlineExceeded:
-		return "DEADLINE_EXCEEDED"
-	case codes.NotFound:
-		return "NOT_FOUND"
-	case codes.AlreadyExists:
-		return "ALREADY_EXISTS"
-	case codes.PermissionDenied:
-		return "PERMISSION_DENIED"
-	case codes.ResourceExhausted:
-		return "RESOURCE_EXHAUSTED"
-	case codes.FailedPrecondition:
-		return "FAILED_PRECONDITION"
-	case codes.Aborted:
-		return "ABORTED"
-	case codes.OutOfRange:
-		return "OUT_OF_RANGE"
-	case codes.Unimplemented:
-		return "UNIMPLEMENTED"
-	case codes.Internal:
-		return "INTERNAL"
-	case codes.Unavailable:
-		return "UNAVAILABLE"
-	case codes.DataLoss:
-		return "DATA_LOSS"
-	case codes.Unauthenticated:
-		return "UNAUTHENTICATED"
-	default:
-		return "STATUS_" + strconv.FormatInt(int64(c), 10)
-	}
+func GrpcCodeToString(c codes.Code) string {
+	return c.String()
 }
