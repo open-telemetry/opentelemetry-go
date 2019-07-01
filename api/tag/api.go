@@ -35,10 +35,6 @@ type Map interface {
 
 type Option func(*registeredKey)
 
-var (
-	EmptyMap = NewMap(core.KeyValue{}, nil, core.Mutator{}, nil)
-)
-
 func New(name string, opts ...Option) core.Key { // TODO rename NewKey?
 	return register(name, opts)
 }
@@ -47,6 +43,11 @@ func NewMeasure(name string, opts ...Option) core.Measure {
 	return measure{
 		rk: register(name, opts),
 	}
+}
+
+func NewEmptyMap() Map {
+	var t tagMap
+	return t.Apply(core.KeyValue{}, nil, core.Mutator{}, nil)
 }
 
 func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {

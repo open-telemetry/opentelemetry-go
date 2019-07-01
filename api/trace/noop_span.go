@@ -21,12 +21,16 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
+	"github.com/open-telemetry/opentelemetry-go/api/scope"
+	"github.com/open-telemetry/opentelemetry-go/api/stats"
 )
 
 type noopSpan struct {
 }
 
 var _ Span = (*noopSpan)(nil)
+var _ stats.Interface = (*noopSpan)(nil)
+var _ scope.Mutable = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
 func (sp *noopSpan) SpanContext() core.SpanContext {

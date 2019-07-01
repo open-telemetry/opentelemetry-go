@@ -29,6 +29,9 @@ import (
 )
 
 type Tracer interface {
+	// ScopeID returns the resource scope of this tracer.
+	scope.Scope
+
 	Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
 	// WithSpan wraps the execution of the function body with a span.
@@ -50,9 +53,6 @@ type Tracer interface {
 
 	// Note: see https://github.com/opentracing/opentracing-go/issues/127
 	Inject(context.Context, Span, Injector)
-
-	// ScopeID returns the resource scope of this tracer.
-	scope.Scope
 }
 
 type Span interface {
@@ -111,6 +111,11 @@ type Reference struct {
 
 type RelationshipType int
 
+const (
+	ChildOfRelationship RelationshipType = iota
+	FollowsFromRelationship
+)
+
 var (
 	// The process global tracer could have process-wide resource
 	// tags applied directly, or we can have a SetGlobal tracer to
@@ -119,11 +124,6 @@ var (
 
 	// TODO: create NOOP Tracer and register it instead of creating empty tracer here.
 	nt = &noopTracer{}
-)
-
-const (
-	ChildOfRelationship RelationshipType = iota
-	FollowsFromRelationship
 )
 
 // GlobalTracer return tracer registered with global registry.
