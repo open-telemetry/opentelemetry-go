@@ -39,6 +39,8 @@ type scopeIdent struct {
 	id core.ScopeID
 }
 
+var _ Scope = (*scopeIdent)(nil)
+
 type scopeKeyType struct{}
 
 var (

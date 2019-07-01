@@ -27,8 +27,6 @@ type noopTracer struct {
 
 var _ Tracer = (*noopTracer)(nil)
 
-var t = &noopTracer{}
-
 // ScopeID returns an empty instance of ScopeID
 func (t *noopTracer) ScopeID() core.ScopeID {
 	return t.resources.Scope()

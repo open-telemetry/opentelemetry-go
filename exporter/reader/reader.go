@@ -126,8 +126,8 @@ func (ro *readerObserver) Observe(event observer.Event) {
 	read := Event{
 		Time:       event.Time,
 		Sequence:   event.Sequence,
-		Attributes: tag.EmptyMap,
-		Tags:       tag.EmptyMap,
+		Attributes: tag.NewEmptyMap(),
+		Tags:       tag.NewEmptyMap(),
 	}
 
 	if event.Context != nil {
@@ -201,7 +201,7 @@ func (ro *readerObserver) Observe(event observer.Event) {
 			sid = event.Scope
 		}
 		if sid.EventID == 0 {
-			m = tag.EmptyMap
+			m = tag.NewEmptyMap()
 		} else {
 			parentI, has := ro.scopes.Load(sid.EventID)
 			if !has {
@@ -316,7 +316,7 @@ func (ro *readerObserver) addMeasurement(e *Event, m core.Measurement) {
 
 func (ro *readerObserver) readScope(id core.ScopeID) (tag.Map, *readerSpan) {
 	if id.EventID == 0 {
-		return tag.EmptyMap, nil
+		return tag.NewEmptyMap(), nil
 	}
 	ev, has := ro.scopes.Load(id.EventID)
 	if !has {
@@ -327,7 +327,7 @@ func (ro *readerObserver) readScope(id core.ScopeID) (tag.Map, *readerSpan) {
 	} else if sp, ok := ev.(*readerSpan); ok {
 		return sp.attributes, sp
 	}
-	return tag.EmptyMap, nil
+	return tag.NewEmptyMap(), nil
 }
 
 func (ro *readerObserver) cleanupSpan(id core.EventID) {

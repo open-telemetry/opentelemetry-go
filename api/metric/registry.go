@@ -44,6 +44,8 @@ type registry struct {
 	nameType sync.Map // map[string]Metric
 }
 
+var _ Registry = (*registry)(nil)
+
 var (
 	registryLock   sync.Mutex
 	registryGlobal Registry = &registry{}
