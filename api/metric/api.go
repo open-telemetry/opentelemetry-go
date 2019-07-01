@@ -20,17 +20,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type Metric interface {
-	Measure() core.Measure
-
-	DefinitionID() core.EventID
-
-	Type() MetricType
-	Fields() []core.Key
-	Err() error
-
-	base() *baseMetric
-}
 type MetricType int
 
 const (
@@ -44,6 +33,18 @@ const (
 	DerivedCumulativeInt64
 	DerivedCumulativeFloat64
 )
+
+type Metric interface {
+	Measure() core.Measure
+
+	DefinitionID() core.EventID
+
+	Type() MetricType
+	Fields() []core.Key
+	Err() error
+
+	base() *baseMetric
+}
 
 type Option func(*baseMetric, *[]tag.Option)
 
