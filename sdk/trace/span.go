@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"sync"
 
 	"google.golang.org/grpc/codes"
 
