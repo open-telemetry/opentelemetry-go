@@ -21,8 +21,8 @@ import (
 type EventID uint64
 
 type TraceID struct {
-	IDHigh uint64
-	IDLow  uint64
+	TraceIDHigh uint64
+	TraceIDLow  uint64
 }
 
 type SpanContext struct {
@@ -48,7 +48,7 @@ var (
 )
 
 func (sc SpanContext) HasTraceID() bool {
-	return sc.IDHigh != 0 || sc.IDLow != 0
+	return sc.TraceIDHigh != 0 || sc.TraceIDLow != 0
 }
 
 func (sc SpanContext) HasSpanID() bool {
@@ -61,8 +61,8 @@ func (sc SpanContext) SpanIDString() string {
 }
 
 func (sc SpanContext) TraceIDString() string {
-	p1 := fmt.Sprintf("%.16x", sc.IDHigh)
-	p2 := fmt.Sprintf("%.16x", sc.IDLow)
+	p1 := fmt.Sprintf("%.16x", sc.TraceIDHigh)
+	p2 := fmt.Sprintf("%.16x", sc.TraceIDLow)
 	return p1[0:3] + ".." + p2[13:16]
 }
 
