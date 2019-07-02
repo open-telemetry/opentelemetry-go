@@ -16,11 +16,6 @@ jobs:
             - v1-pkg-{{ checksum "go.sum" }}
 
       - run:
-          name: "Install tools"
-          command: |
-            make install-tools
-
-      - run:
           name: "Precommit and Coverage Report"
           command: |
             make circle-ci

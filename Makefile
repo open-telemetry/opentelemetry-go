@@ -58,8 +58,3 @@ all-test-pkgs:
 
 all-test-srcs:
 	@echo $(ALL_TEST_SRC) | tr ' ' '\n' | sort
-
-.PHONY: install-tools
-install-tools:
-	go get -u golang.org/x/tools/cmd/goimports
-	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
