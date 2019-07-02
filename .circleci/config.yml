@@ -3,13 +3,6 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.12 #
-        environment:
-          GO111MODULE: "ON"
-
-    working_directory: /go/src/github.com/open-telemetry/opentelemetry-go
-
-    environment:
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 
     steps:
       - checkout
@@ -17,7 +10,7 @@ jobs:
 
       - restore_cache: # restores saved cache if no changes are detected since last run
           keys:
-            - v1-pkg-cache
+            - v1-pkg-{{ checksum "go.sum" }}
 
       - run: go get golang.org/x/tools/cmd/goimports
       - run: go get github.com/golangci/golangci-lint/cmd/golangci-lint
@@ -26,9 +19,9 @@ jobs:
       - run: make precommit
 
       - save_cache:
-          key: v1-pkg-cache
+          key: v1-pkg-{{ checksum "go.sum" }}
           paths:
-            - "/go/pkg"
+            - "~/go/pkg/mod"
 
       - store_artifacts:
           path: /tmp/test-results
