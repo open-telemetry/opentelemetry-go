@@ -14,11 +14,19 @@
 
 package main
 
-import "github.com/open-telemetry/opentelemetry-go/exporter/stderr"
-
-var (
-	Observer = stderr.New()
+import (
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/stderr"
 )
 
+var (
+	stderrObs = stderr.New()
+)
+
+func Observer() observer.Observer {
+	return stderrObs
+}
+
 func main() {
+	_ = Observer()
 }

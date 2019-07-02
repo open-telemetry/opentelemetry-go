@@ -53,7 +53,7 @@ func main() {
 
 		span.AddEvent(ctx, event.WithString("handling this..."))
 
-		io.WriteString(w, "Hello, world!\n")
+		_, _ = io.WriteString(w, "Hello, world!\n")
 	}
 
 	http.HandleFunc("/hello", helloHandler)

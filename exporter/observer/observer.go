@@ -130,7 +130,7 @@ func Record(event Event) core.EventID {
 	}
 
 	observers, _ := observers.Load().(observersMap)
-	for observer, _ := range observers {
+	for observer := range observers {
 		observer.Observe(event)
 	}
 	return event.Sequence
@@ -138,7 +138,7 @@ func Record(event Event) core.EventID {
 
 func Foreach(f func(Observer)) {
 	observers, _ := observers.Load().(observersMap)
-	for observer, _ := range observers {
+	for observer := range observers {
 		f(observer)
 	}
 }
