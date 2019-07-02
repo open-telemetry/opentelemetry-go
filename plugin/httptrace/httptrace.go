@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"net/http"
 
+	"github.com/lightstep/tracecontext.go"
 	"github.com/lightstep/tracecontext.go/tracestate"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
@@ -45,8 +46,8 @@ func Extract(req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanCont
 
 	var sc core.SpanContext
 	sc.SpanID = encoding.Uint64(tc.TraceParent.SpanID[0:8])
-	sc.TraceIDHigh = encoding.Uint64(tc.TraceParent.TraceID[0:8])
-	sc.TraceIDLow = encoding.Uint64(tc.TraceParent.TraceID[8:16])
+	sc.TraceID.High = encoding.Uint64(tc.TraceParent.TraceID[0:8])
+	sc.TraceID.Low = encoding.Uint64(tc.TraceParent.TraceID[8:16])
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
@@ -77,8 +78,8 @@ func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {
 	var tid [16]byte
 
 	encoding.PutUint64(sid[0:8], sc.SpanID)
-	encoding.PutUint64(tid[0:8], sc.TraceIDHigh)
-	encoding.PutUint64(tid[8:16], sc.TraceIDLow)
+	encoding.PutUint64(tid[0:8], sc.TraceID.High)
+	encoding.PutUint64(tid[8:16], sc.TraceID.Low)
 
 	tc.TraceParent.Version = tracecontext.Version
 	tc.TraceParent.TraceID = tid

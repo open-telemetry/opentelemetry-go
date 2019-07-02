@@ -65,6 +65,10 @@ func (bm *baseMetric) base() *baseMetric {
 	return bm
 }
 
+func (bm *baseMetric) DefinitionID() core.EventID {
+	return bm.eventID
+}
+
 func (bm *baseMetric) Measure() core.Measure {
 	return bm.measure
 }

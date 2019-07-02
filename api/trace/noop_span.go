@@ -44,7 +44,6 @@ func (sp *noopSpan) IsRecordingEvents() bool {
 
 // SetStatus does nothing.
 func (sp *noopSpan) SetStatus(status codes.Code) {
-	return
 }
 
 // ScopeID returns and empty ScopeID.
@@ -54,37 +53,31 @@ func (sp *noopSpan) ScopeID() core.ScopeID {
 
 // SetError does nothing.
 func (sp *noopSpan) SetError(v bool) {
-	return
 }
 
 // SetAttribute does nothing.
 func (sp *noopSpan) SetAttribute(attribute core.KeyValue) {
-	return
 }
 
 // SetAttributes does nothing.
 func (sp *noopSpan) SetAttributes(attributes ...core.KeyValue) {
-	return
 }
 
 // ModifyAttribute does nothing.
 func (sp *noopSpan) ModifyAttribute(mutator core.Mutator) {
-	return
 }
 
 // ModifyAttributes does nothing.
 func (sp *noopSpan) ModifyAttributes(mutators ...core.Mutator) {
-	return
 }
 
 // Finish does nothing.
 func (sp *noopSpan) Finish() {
-	return
 }
 
 // Tracer returns noop implementation of Tracer.
 func (sp *noopSpan) Tracer() Tracer {
-	return t
+	return nt
 }
 
 // AddEvent does nothing.

@@ -197,7 +197,7 @@ type measure struct {
 	rk *registeredKey
 }
 
-var _ core.Mearsure = (*measure)(nil)
+var _ core.Measure = (*measure)(nil)
 
 func (m measure) M(v float64) core.Measurement {
 	return core.Measurement{

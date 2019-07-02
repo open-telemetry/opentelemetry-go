@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package trace
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/exporter/stderr"
+	"testing"
 )
 
-var (
-	stderrObs = stderr.New()
-)
-
-func Observer() observer.Observer {
-	return stderrObs
-}
-
-func main() {
-	_ = Observer()
+// GlobalTracer return tracer registered with global registry.
+// If no tracer is registered then an instance of noop Tracer is returned.
+func TestGlobalTracer(t *testing.T) {
+	tracer := GlobalTracer()
+	if tracer == nil {
+		t.Fatalf("Failed to get tracer\n")
+	}
 }

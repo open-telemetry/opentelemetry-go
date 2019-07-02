@@ -14,11 +14,19 @@
 
 package main
 
-import "github.com/open-telemetry/opentelemetry-go/exporter/stdout"
-
-var (
-	Observer = stdout.New()
+import (
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/stdout"
 )
 
+var (
+	stdoutObs = stdout.New()
+)
+
+func Observer() observer.Observer {
+	return stdoutObs
+}
+
 func main() {
+	_ = Observer()
 }
