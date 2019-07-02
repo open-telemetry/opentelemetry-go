@@ -14,11 +14,19 @@
 
 package main
 
-import "github.com/open-telemetry/opentelemetry-go/exporter/spanlog"
-
-var (
-	Observer = spanlog.New()
+import (
+	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/exporter/spanlog"
 )
 
+var (
+	spanlogObs = spanlog.New()
+)
+
+func Observer() observer.Observer {
+	return spanlogObs
+}
+
 func main() {
+	_ = Observer()
 }
