@@ -110,11 +110,11 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 
 	if parentScope.HasTraceID() {
 		parent := parentScope.SpanContext
-		child.TraceIDHigh = parent.TraceIDHigh
-		child.TraceIDLow = parent.TraceIDLow
+		child.TraceID.High = parent.TraceID.High
+		child.TraceID.Low = parent.TraceID.Low
 	} else {
-		child.TraceIDHigh = rand.Uint64()
-		child.TraceIDLow = rand.Uint64()
+		child.TraceID.High = rand.Uint64()
+		child.TraceID.Low = rand.Uint64()
 	}
 
 	childScope := core.ScopeID{
