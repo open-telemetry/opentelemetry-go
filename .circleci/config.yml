@@ -16,15 +16,15 @@ jobs:
             - v1-pkg-{{ checksum "go.sum" }}
 
       - run:
-         name: "Install tools"
-           command: |
-             make install-tools
+          name: "Install tools"
+          command: |
+            make install-tools
 
       - run:
-         name: "Precommit and Coverage Report"
-           command: |
-             make circle-ci
-             mv coverage.html $TEST_RESULTS/
+          name: "Precommit and Coverage Report"
+          command: |
+            make circle-ci
+            mv coverage.html $TEST_RESULTS/
 
       - save_cache:
           key: v1-pkg-{{ checksum "go.sum" }}
