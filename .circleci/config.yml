@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12 #
+
+    environment:
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS # create the test results directory
+
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - v1-pkg-{{ checksum "go.sum" }}
+
+      - run:
+          name: "Precommit and Coverage Report"
+          command: |
+            make circle-ci
+            mv coverage.html $TEST_RESULTS/
+
+      - save_cache:
+          key: v1-pkg-{{ checksum "go.sum" }}
+          paths:
+            - "~/go/pkg/mod"
+
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: opentelemetry-go-test-output
+
+      - store_test_results:
+          path: /tmp/test-results

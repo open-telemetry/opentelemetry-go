@@ -68,4 +68,4 @@ func (t *noopTracer) Start(ctx context.Context, name string, opts ...SpanOption)
 func (t *noopTracer) Inject(ctx context.Context, span Span, injector Injector) {
 }
 
-var _ Injector = (*noopTracer)(nil)
+var _ Tracer = (*noopTracer)(nil)

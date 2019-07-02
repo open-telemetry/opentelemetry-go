@@ -21,13 +21,13 @@ import (
 type EventID uint64
 
 type TraceID struct {
-	IDHigh uint64
-	IDLow  uint64
+	High uint64
+	Low  uint64
 }
 
 type SpanContext struct {
-	TraceID
-	SpanID uint64
+	TraceID TraceID
+	SpanID  uint64
 }
 
 type ScopeID struct {
@@ -48,7 +48,7 @@ var (
 )
 
 func (sc SpanContext) HasTraceID() bool {
-	return sc.TraceIDHigh != 0 || sc.TraceIDLow != 0
+	return sc.TraceID.High != 0 || sc.TraceID.Low != 0
 }
 
 func (sc SpanContext) HasSpanID() bool {
@@ -61,8 +61,8 @@ func (sc SpanContext) SpanIDString() string {
 }
 
 func (sc SpanContext) TraceIDString() string {
-	p1 := fmt.Sprintf("%.16x", sc.TraceIDHigh)
-	p2 := fmt.Sprintf("%.16x", sc.TraceIDLow)
+	p1 := fmt.Sprintf("%.16x", sc.TraceID.High)
+	p2 := fmt.Sprintf("%.16x", sc.TraceID.Low)
 	return p1[0:3] + ".." + p2[13:16]
 }
 

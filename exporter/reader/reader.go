@@ -23,10 +23,8 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/metric"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
@@ -86,14 +84,16 @@ type readerSpan struct {
 
 type readerMeasure struct {
 	name string
-	desc string
-	unit unit.Unit
+	// TODO[rghetia]: comment to avoid compile errors. Remove it if not required
+	// desc string
+	// unit unit.Unit
 }
 
 type readerMetric struct {
 	*readerMeasure
-	mtype  metric.MetricType
-	fields []core.Measure
+	// TODO[rghetia]: comment to avoid compile errors. Remove it if not required
+	// mtype  metric.MetricType
+	// fields []core.Measure
 }
 
 type readerScope struct {

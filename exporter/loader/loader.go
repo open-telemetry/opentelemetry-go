@@ -42,12 +42,14 @@ func init() {
 		return
 	}
 
-	obs, ok := obsPlugin.(*observer.Observer)
+	f, ok := obsPlugin.(func() observer.Observer)
+	//obs, ok := obsPlugin.(*observer.Observer)
 	if !ok {
 		fmt.Printf("Observer not valid\n")
 		return
 	}
-	observer.RegisterObserver(*obs)
+	//observer.RegisterObserver(*obs)
+	observer.RegisterObserver(f())
 }
 
 func Flush() {
