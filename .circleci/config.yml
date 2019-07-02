@@ -20,6 +20,9 @@ jobs: # basic units of work in a run
           keys:
             - v1-pkg-cache
 
+      - run: go get golang.org/x/tools/cmd/goimports
+      - run: go get github.com/golangci/golangci-lint/cmd/golangci-lint
+
       - run: make precommit # pull and build dependencies for the project
 
       - save_cache: # Store cache in the /go/pkg directory
