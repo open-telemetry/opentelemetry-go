@@ -4,6 +4,9 @@ jobs:
     docker:
       - image: circleci/golang:1.12 #
 
+    environment:
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS # create the test results directory
