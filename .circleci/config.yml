@@ -15,10 +15,16 @@ jobs:
           keys:
             - v1-pkg-{{ checksum "go.sum" }}
 
-      - run: go get golang.org/x/tools/cmd/goimports
-      - run: go get github.com/golangci/golangci-lint/cmd/golangci-lint
+      - run:
+         name: "Install tools"
+           command: |
+             make install-tools
 
-      - run: make precommit
+      - run:
+         name: "Precommit and Coverage Report"
+           command: |
+             make circle-ci
+             mv coverage.html $TEST_RESULTS/
 
       - save_cache:
           key: v1-pkg-{{ checksum "go.sum" }}
