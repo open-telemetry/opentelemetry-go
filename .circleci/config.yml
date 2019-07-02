@@ -20,15 +20,6 @@ jobs: # basic units of work in a run
           keys:
             - v1-pkg-cache
 
-      - run:
-          name: Run unit tests
-          environment: # environment variables for the database url and path to migration files
-            SOME_TEST_ENV_VARIABLES: "not-required"
-          # Store the results of our tests in the $TEST_RESULTS directory
-          command: |
-            trap "echo 'some test command'" EXIT
-            make test | tee ${TEST_RESULTS}/go-test.out
-
       - run: make precommit # pull and build dependencies for the project
 
       - save_cache: # Store cache in the /go/pkg directory
