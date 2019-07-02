@@ -1,15 +1,5 @@
-ALL_SRC := $(shell find . -name '*.go' \
-								-not -path './vendor/*' \
-								-not -path '*/gen-go/*' \
-								-type f | sort)
+ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 ALL_PKGS := $(shell go list $(sort $(dir $(ALL_SRC))))
-
-# TODO:[rghetia] eventually remove this as all pkgs needs test coverage
-ALL_TEST_SRC := $(shell find . -name '*_test.go' \
-								-not -path './vendor/*' \
-								-not -path '*/gen-go/*' \
-								-type f | sort)
-ALL_TEST_PKGS := $(shell go list $(sort $(dir $(ALL_TEST_SRC))))
 
 GOTEST=go test
 GOTEST_OPT?=-v -race -timeout 30s
@@ -33,7 +23,7 @@ precommit: $(TOOLS_DIR)/goimports $(TOOLS_DIR)/golangci-lint
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	$(GOTEST) $(GOTEST_OPT_WITH_COVERAGE) $(ALL_TEST_PKGS)
+	$(GOTEST) $(GOTEST_OPT_WITH_COVERAGE) $(ALL_PKGS)
 	go tool cover -html=coverage.txt -o coverage.html
 
 .PHONY: circle-ci
@@ -41,20 +31,14 @@ circle-ci: precommit test-with-coverage test-386
 
 .PHONY: test
 test:
-	$(GOTEST) $(GOTEST_OPT) $(ALL_TEST_PKGS)
+	$(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
 
 .PHONY: test-386
 test-386:
-	GOARCH=386 $(GOTEST) -v -timeout 30s $(ALL_TEST_PKGS)
+	GOARCH=386 $(GOTEST) -v -timeout 30s $(ALL_PKGS)
 
 all-pkgs:
 	@echo $(ALL_PKGS) | tr ' ' '\n' | sort
 
 all-srcs:
 	@echo $(ALL_SRC) | tr ' ' '\n' | sort
-
-all-test-pkgs:
-	@echo $(ALL_TEST_PKGS) | tr ' ' '\n' | sort
-
-all-test-srcs:
-	@echo $(ALL_TEST_SRC) | tr ' ' '\n' | sort
