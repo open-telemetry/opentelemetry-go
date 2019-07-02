@@ -84,7 +84,7 @@ func (sp *noopSpan) Finish() {
 
 // Tracer returns noop implementation of Tracer.
 func (sp *noopSpan) Tracer() Tracer {
-	return t
+	return nt
 }
 
 // AddEvent does nothing.
