@@ -1,3 +1,4 @@
+[![Circle CI](https://circleci.com/gh/open-telemetry/opentelemetry-go.svg?style=svg)](https://circleci.com/gh/open-telemetry/opentelemetry-go)
 [![Docs](https://godoc.org/github.com/open-telemetry/opentelemetry-go?status.svg)](http://godoc.org/github.com/open-telemetry/opentelemetry-go)
 
 This is a prototype *intended to be modified* into the opentelemetry-go implementation. The `api` directory here should be used as a starting point to introduce a new OpenTelemetry exporter, wherease the existing `exporter/observer` streaming model should be help verify the api 
