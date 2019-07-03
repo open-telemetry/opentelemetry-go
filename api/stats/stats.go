@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
@@ -33,16 +32,17 @@ type Recorder struct {
 
 var _ Interface = (*Recorder)(nil)
 
-func With(scope scope.Scope) Recorder {
-	return Recorder{scope.ScopeID()}
-}
+// @@@
+// func With(scope scope.Scope) Recorder {
+// 	return Recorder{scope.ScopeID()}
+// }
 
 func Record(ctx context.Context, m ...core.Measurement) {
-	With(scope.Active(ctx)).Record(ctx, m...)
+	Recorder{}.Record(ctx, m...)
 }
 
 func RecordSingle(ctx context.Context, m core.Measurement) {
-	With(scope.Active(ctx)).RecordSingle(ctx, m)
+	Recorder{}.RecordSingle(ctx, m)
 }
 
 func (r Recorder) Record(ctx context.Context, m ...core.Measurement) {

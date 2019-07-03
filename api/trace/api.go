@@ -24,7 +24,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
@@ -57,8 +56,6 @@ type Tracer interface {
 
 type Span interface {
 	scope.Mutable
-
-	stats.Interface
 
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
@@ -145,17 +142,11 @@ func Start(ctx context.Context, name string, opts ...SpanOption) (context.Contex
 	return GlobalTracer().Start(ctx, name, opts...)
 }
 
-// Active returns current span from the context.
-func Active(ctx context.Context) Span {
-	span, _ := scope.Active(ctx).(Span)
-	return span
-}
-
 // Inject is convenient function to inject current span context using injector.
 // Injector is expected to serialize span context and inject it in to a carrier.
 // An example of a carrier is http request.
 func Inject(ctx context.Context, injector Injector) {
-	span := Active(ctx)
+	span := CurrentSpan(ctx)
 	if span == nil {
 		return
 	}

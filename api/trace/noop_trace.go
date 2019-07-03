@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
 )
 
 type noopTracer struct {
@@ -60,8 +59,8 @@ func (t *noopTracer) WithSpan(ctx context.Context, name string, body func(contex
 
 // Start starts a noop span.
 func (t *noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := &noopSpan{}
-	return scope.SetActive(ctx, span), span
+	span := singletonNoopSpan
+	return SetCurrentSpan(ctx, span), span
 }
 
 // Inject does nothing.

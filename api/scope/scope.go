@@ -15,8 +15,6 @@
 package scope
 
 import (
-	"context"
-
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
@@ -37,26 +35,6 @@ type Mutable interface {
 
 type scopeIdent struct {
 	id core.ScopeID
-}
-
-var _ Scope = (*scopeIdent)(nil)
-
-type scopeKeyType struct{}
-
-var (
-	scopeKey   = &scopeKeyType{}
-	emptyScope = &scopeIdent{}
-)
-
-func SetActive(ctx context.Context, scope Scope) context.Context {
-	return context.WithValue(ctx, scopeKey, scope)
-}
-
-func Active(ctx context.Context) Scope {
-	if scope, has := ctx.Value(scopeKey).(Scope); has {
-		return scope
-	}
-	return emptyScope
 }
 
 func (s *scopeIdent) ScopeID() core.ScopeID {

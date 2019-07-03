@@ -62,9 +62,9 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.Active(ctx).AddEvent(ctx, event.WithAttr("Nice operation!", tag.New("bogons").Int(100)))
+		trace.CurrentSpan(ctx).AddEvent(ctx, event.WithAttr("Nice operation!", tag.New("bogons").Int(100)))
 
-		trace.Active(ctx).SetAttributes(anotherKey.String("yes"))
+		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
 		gauge.Set(ctx, 1)
 
@@ -72,9 +72,9 @@ func main() {
 			ctx,
 			"Sub operation...",
 			func(ctx context.Context) error {
-				trace.Active(ctx).SetAttribute(lemonsKey.String("five"))
+				trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-				trace.Active(ctx).AddEvent(ctx, event.WithString("Format schmormat %d!", 100))
+				trace.CurrentSpan(ctx).AddEvent(ctx, event.WithString("Format schmormat %d!", 100))
 
 				stats.Record(ctx, measureTwo.M(1.3))
 

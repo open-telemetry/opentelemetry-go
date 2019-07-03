@@ -61,7 +61,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			res.Body.Close()
-			apitrace.Active(ctx).SetStatus(codes.OK)
+			apitrace.CurrentSpan(ctx).SetStatus(codes.OK)
 
 			return err
 		})

@@ -21,6 +21,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 	"github.com/open-telemetry/opentelemetry-go/sdk/event"
@@ -104,7 +105,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	if o.Reference.HasTraceID() {
 		parentScope = o.Reference.Scope()
 	} else {
-		parentSpan, _ := apitrace.Active(ctx).(*span)
+		parentSpan, _ := apitrace.CurrentSpan(ctx).(*span)
 		parentScope = parentSpan.ScopeID()
 	}
 
@@ -135,7 +136,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 			String:  name,
 		}),
 	}
-	return scope.SetActive(ctx, span), span
+	return trace.SetCurrentSpan(ctx, span), span
 }
 
 func (t *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
