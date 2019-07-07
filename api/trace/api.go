@@ -23,14 +23,11 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type Tracer interface {
-	// ScopeID returns the resource scope of this tracer.
-	scope.Scope
-
+	// Start a span.
 	Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
 	// WithSpan wraps the execution of the function body with a span.
@@ -55,8 +52,6 @@ type Tracer interface {
 }
 
 type Span interface {
-	scope.Mutable
-
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
 
@@ -77,6 +72,14 @@ type Span interface {
 	// SetStatus sets the status of the span. The status of the span can be updated
 	// even after span is finished.
 	SetStatus(codes.Code)
+
+	// Set span attributes
+	SetAttribute(core.KeyValue)
+	SetAttributes(...core.KeyValue)
+
+	// Modify and delete span attributes
+	ModifyAttribute(core.Mutator)
+	ModifyAttributes(...core.Mutator)
 }
 
 type Injector interface {
@@ -120,7 +123,7 @@ var (
 	global atomic.Value
 
 	// TODO: create NOOP Tracer and register it instead of creating empty tracer here.
-	nt = &noopTracer{}
+	singletonNoopTracer = &noopTracer{}
 )
 
 // GlobalTracer return tracer registered with global registry.
@@ -129,7 +132,7 @@ func GlobalTracer() Tracer {
 	if t := global.Load(); t != nil {
 		return t.(Tracer)
 	}
-	return nt
+	return singletonNoopSpan
 }
 
 // SetGlobalTracer sets provided tracer as a global tracer.

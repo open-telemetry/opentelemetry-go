@@ -15,6 +15,8 @@
 package metric
 
 import (
+	"sync/atomic"
+
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
@@ -34,6 +36,9 @@ const (
 	DerivedCumulativeFloat64
 )
 
+type Meter interface {
+}
+
 type Metric interface {
 	Measure() core.Measure
 
@@ -44,6 +49,28 @@ type Metric interface {
 	Err() error
 
 	base() *baseMetric
+}
+
+type noopMeter struct {
+}
+
+var (
+	global             atomic.Value
+	singletonNoopMeter = &noopMeter{}
+)
+
+// GlobalMeter return meter registered with global registry.
+// If no meter is registered then an instance of noop Meter is returned.
+func GlobalMeter() Meter {
+	if t := global.Load(); t != nil {
+		return t.(Meter)
+	}
+	return singletonNoopMeter
+}
+
+// SetGlobalMeter sets provided meter as a global meter.
+func SetGlobalMeter(t Meter) {
+	global.Store(t)
 }
 
 type Option func(*baseMetric, *[]tag.Option)

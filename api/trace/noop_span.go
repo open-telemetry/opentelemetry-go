@@ -21,16 +21,12 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
 )
 
 type noopSpan struct {
 }
 
 var _ Span = (*noopSpan)(nil)
-var _ stats.Interface = (*noopSpan)(nil)
-var _ scope.Mutable = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
 func (sp *noopSpan) SpanContext() core.SpanContext {
@@ -82,12 +78,4 @@ func (sp *noopSpan) Tracer() Tracer {
 
 // AddEvent does nothing.
 func (sp *noopSpan) AddEvent(ctx context.Context, event event.Event) {
-}
-
-// Record does nothing.
-func (sp *noopSpan) Record(ctx context.Context, m ...core.Measurement) {
-}
-
-// RecordSingle does nothing.
-func (sp *noopSpan) RecordSingle(ctx context.Context, m core.Measurement) {
 }
