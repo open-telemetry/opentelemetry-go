@@ -16,17 +16,16 @@ package metric
 
 import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/registry"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
 type baseMetric struct {
-	measure core.Measure
+	variable registry.Registration
 
-	mtype   MetricType
-	keys    []core.Key
-	eventID core.EventID
-	status  error // Indicates registry conflict
+	mtype MetricType
+	keys  []core.Key
 }
 
 type baseEntry struct {
@@ -53,7 +52,7 @@ func initBaseMetric(name string, mtype MetricType, opts []Option, init Metric) M
 		Scope: bm.measure.DefinitionID().Scope(),
 	})
 
-	other, err := GetRegistry().RegisterMetric(init)
+	reg, err := registry.Register(init)
 	if err != nil {
 		bm.status = err
 	}

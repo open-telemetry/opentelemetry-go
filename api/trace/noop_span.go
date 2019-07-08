@@ -73,7 +73,7 @@ func (sp *noopSpan) Finish() {
 
 // Tracer returns noop implementation of Tracer.
 func (sp *noopSpan) Tracer() Tracer {
-	return nt
+	return singletonNoopTracer
 }
 
 // AddEvent does nothing.

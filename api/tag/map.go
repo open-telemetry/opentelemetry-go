@@ -35,7 +35,7 @@ func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Muta
 	for k, v := range t {
 		m[k] = v
 	}
-	if a1.Key != nil {
+	if a1.Key.Defined() {
 		m[a1.Key] = tagContent{
 			value: a1.Value,
 		}
@@ -45,7 +45,7 @@ func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Muta
 			value: kv.Value,
 		}
 	}
-	if m1.KeyValue.Key != nil {
+	if m1.KeyValue.Key.Defined() {
 		m.apply(m1)
 	}
 	for _, mutator := range mutators {
@@ -143,7 +143,7 @@ func Do(ctx context.Context, f func(ctx context.Context)) {
 	m := FromContext(ctx).(tagMap)
 	keyvals := make([]string, 0, 2*len(m))
 	for k, v := range m {
-		keyvals = append(keyvals, k.Name(), v.value.Emit())
+		keyvals = append(keyvals, k.Variable.Name, v.value.Emit())
 	}
 	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }

@@ -14,60 +14,21 @@
 
 package registry
 
-// Registry is a mechanism for avoiding duplicate registration
-// of different-type pre-aggregated metrics (in one process).
-type Registry interface {
-	// RegisteMetric(Metric) (Metric, error)
-	// ForeachMetric(func(string, Metric))
+import "github.com/open-telemetry/opentelemetry-go/api/core"
+
+type RegistrationID uint64
+
+type Registration struct {
+	core.Variable
+
+	ID     RegistrationID
+	Status error // Indicates registry conflict
 }
 
-// type registry struct {
-// 	nameType sync.Map // map[string]Metric
-// }
-
-// var _ Registry = (*registry)(nil)
-
-// var (
-// 	registryLock   sync.Mutex
-// 	registryGlobal Registry = &registry{}
-
-// 	errDuplicateMetricTypeConflict = errors.New("Duplicate metric registration with conflicting type")
-// )
-
-// // SetRegistry may be used to reset the global metric registry, which should not be
-// // needed unless for testing purposes.
-// func SetRegistry(r Registry) {
-// 	registryLock.Lock()
-// 	defer registryLock.Unlock()
-// 	registryGlobal = r
-// }
-
-// // GetRegistry may be used to access a global list of metric definitions.
-// func GetRegistry() Registry {
-// 	registryLock.Lock()
-// 	defer registryLock.Unlock()
-// 	return registryGlobal
-// }
-
-// func (r *registry) RegisterMetric(newMet Metric) (Metric, error) {
-// 	name := newMet.Measure().Name()
-// 	has, ok := r.nameType.Load(name)
-
-// 	if ok {
-// 		m := has.(Metric)
-// 		if m.Type() != newMet.Type() {
-// 			return nil, errDuplicateMetricTypeConflict
-// 		}
-// 		return m, nil
-// 	}
-
-// 	r.nameType.Store(name, newMet)
-// 	return newMet, nil
-// }
-
-// func (r *registry) ForeachMetric(f func(string, Metric)) {
-// 	r.nameType.Range(func(key, value interface{}) bool {
-// 		f(key.(string), value.(Metric))
-// 		return true
-// 	})
-// }
+func Register(v core.Variable) Registration {
+	return Registration{
+		Variable: v,
+		ID:       0, // @@@
+		Status:   nil,
+	}
+}

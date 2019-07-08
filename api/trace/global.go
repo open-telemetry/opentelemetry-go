@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package trace
+
 import "sync/atomic"
 
 var (
@@ -34,4 +36,3 @@ func GlobalTracer() Tracer {
 func SetGlobalTracer(t Tracer) {
 	global.Store(t)
 }
-

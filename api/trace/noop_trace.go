@@ -24,7 +24,11 @@ type noopTracer struct {
 	resources core.EventID
 }
 
-var _ Tracer = (*noopTracer)(nil)
+var (
+	_ Tracer = (*noopTracer)(nil)
+
+	singletonNoopTracer = &noopTracer{}
+)
 
 // ScopeID returns an empty instance of ScopeID
 func (t *noopTracer) ScopeID() core.ScopeID {

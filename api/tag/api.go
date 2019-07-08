@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
 type Map interface {
@@ -31,18 +30,6 @@ type Map interface {
 	Len() int
 
 	Foreach(func(kv core.KeyValue) bool)
-}
-
-type Option func(*registeredKey)
-
-func New(name string, opts ...Option) core.Key { // TODO rename NewKey?
-	return register(name, opts)
-}
-
-func NewMeasure(name string, opts ...Option) core.Measure {
-	return measure{
-		rk: register(name, opts),
-	}
 }
 
 func NewEmptyMap() Map {
@@ -71,18 +58,4 @@ func FromContext(ctx context.Context) Map {
 		return m
 	}
 	return tagMap{}
-}
-
-// WithDescription applies provided description.
-func WithDescription(desc string) Option {
-	return func(rk *registeredKey) {
-		rk.desc = desc
-	}
-}
-
-// WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) Option {
-	return func(rk *registeredKey) {
-		rk.unit = unit
-	}
 }

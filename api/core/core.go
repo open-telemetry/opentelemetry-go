@@ -15,7 +15,6 @@
 package core
 
 import (
-	"context"
 	"fmt"
 
 	"google.golang.org/grpc/codes"
@@ -23,41 +22,20 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type BaseMeasure interface {
-	Name() string
-	Description() string
-	Unit() unit.Unit
+type Option func(Variable) Variable
 
-	DefinitionID() EventID
+type Variable struct {
+	Name        string
+	Description string
+	Unit        unit.Unit
 }
 
-type Measure interface {
-	BaseMeasure
-
-	M(float64) Measurement
-	V(float64) KeyValue
+type Measure struct {
+	Variable Variable
 }
 
-type Key interface {
-	BaseMeasure
-
-	Value(ctx context.Context) KeyValue
-
-	Bool(v bool) KeyValue
-
-	Int(v int) KeyValue
-	Int32(v int32) KeyValue
-	Int64(v int64) KeyValue
-
-	Uint(v uint) KeyValue
-	Uint32(v uint32) KeyValue
-	Uint64(v uint64) KeyValue
-
-	Float32(v float32) KeyValue
-	Float64(v float64) KeyValue
-
-	String(v string) KeyValue
-	Bytes(v []byte) KeyValue
+type Key struct {
+	Variable Variable
 }
 
 type KeyValue struct {
@@ -150,4 +128,30 @@ func (m Measurement) With(id ScopeID) Measurement {
 
 func GrpcCodeToString(c codes.Code) string {
 	return c.String()
+}
+
+func MakeVariable(name string, opts ...Option) Variable {
+	v := Variable{
+		Name: name,
+	}
+	for _, o := range opts {
+		v = o(v)
+	}
+	return v
+}
+
+// WithDescription applies the provided description.
+func WithDescription(desc string) Option {
+	return func(v Variable) Variable {
+		v.Description = desc
+		return v
+	}
+}
+
+// WithUnit applies the provided unit.
+func WithUnit(unit unit.Unit) Option {
+	return func(v Variable) Variable {
+		v.Unit = unit
+		return v
+	}
 }

@@ -16,7 +16,6 @@ package trace
 
 import (
 	"context"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -41,6 +40,7 @@ type Tracer interface {
 	) error
 
 	// TODO: Do we need WithService and WithComponent?
+	// TODO: Can we make these helpers (based on WithResources)?
 	WithService(name string) Tracer
 	WithComponent(name string) Tracer
 
@@ -115,30 +115,6 @@ const (
 	ChildOfRelationship RelationshipType = iota
 	FollowsFromRelationship
 )
-
-var (
-	// The process global tracer could have process-wide resource
-	// tags applied directly, or we can have a SetGlobal tracer to
-	// install a default tracer w/ resources.
-	global atomic.Value
-
-	// TODO: create NOOP Tracer and register it instead of creating empty tracer here.
-	singletonNoopTracer = &noopTracer{}
-)
-
-// GlobalTracer return tracer registered with global registry.
-// If no tracer is registered then an instance of noop Tracer is returned.
-func GlobalTracer() Tracer {
-	if t := global.Load(); t != nil {
-		return t.(Tracer)
-	}
-	return singletonNoopSpan
-}
-
-// SetGlobalTracer sets provided tracer as a global tracer.
-func SetGlobalTracer(t Tracer) {
-	global.Store(t)
-}
 
 // Start starts a new span using registered global tracer.
 func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
