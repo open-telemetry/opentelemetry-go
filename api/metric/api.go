@@ -16,7 +16,6 @@ package metric
 
 import (
 	"context"
-	"sync/atomic"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
@@ -45,27 +44,6 @@ type Handle struct {
 
 	Type MetricType
 	Keys []core.Key
-}
-
-type noopMeter struct {
-}
-
-var (
-	global atomic.Value
-)
-
-// GlobalMeter return meter registered with global registry.
-// If no meter is registered then an instance of noop Meter is returned.
-func GlobalMeter() Meter {
-	if t := global.Load(); t != nil {
-		return t.(Meter)
-	}
-	return noopMeter{}
-}
-
-// SetGlobalMeter sets provided meter as a global meter.
-func SetGlobalMeter(t Meter) {
-	global.Store(t)
 }
 
 type Option func(*Handle, *[]registry.Option)
