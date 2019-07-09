@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+// TODO move to `api/tag`
 type MutatorOp int
 
 const (
@@ -44,6 +45,7 @@ func (m Mutator) WithMaxHops(hops int) Mutator {
 	return m
 }
 
+// TODO why not call `c.String()` inline?
 func GrpcCodeToString(c codes.Code) string {
 	return c.String()
 }
