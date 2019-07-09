@@ -36,7 +36,7 @@ type Measurement struct {
 }
 
 type Recorder interface {
-	// As in rfc 0001, allow raw Measures to have pre-defined labels:
+	// TODO: Note as in rfc 0001, allow raw Measures to have pre-defined labels:
 	GetMeasure(ctx context.Context, measure *MeasureHandle, labels ...core.KeyValue) Measure
 
 	Record(ctx context.Context, m ...Measurement)
@@ -46,9 +46,7 @@ type Recorder interface {
 type noopRecorder struct{}
 type noopMeasure struct{}
 
-var (
-	global atomic.Value
-)
+var global atomic.Value
 
 // GlobalRecorder return meter registered with global registry.
 // If no meter is registered then an instance of noop Recorder is returned.
@@ -77,6 +75,11 @@ type AnyStatistic struct{}
 func (AnyStatistic) String() string {
 	return "AnyStatistic"
 }
+
+var (
+	WithDescription = registry.WithDescription
+	WithUnit        = registry.WithUnit
+)
 
 func NewMeasure(name string, opts ...registry.Option) *MeasureHandle {
 	return &MeasureHandle{
