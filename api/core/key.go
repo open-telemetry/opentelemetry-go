@@ -1,7 +1,46 @@
 package core
 
 import (
+	"fmt"
 	"unsafe"
+
+	"github.com/open-telemetry/opentelemetry-go/api/registry"
+)
+
+type Key struct {
+	Variable registry.Variable
+}
+
+type KeyValue struct {
+	Key   Key
+	Value Value
+}
+
+type ValueType int
+
+type Value struct {
+	Type    ValueType
+	Bool    bool
+	Int64   int64
+	Uint64  uint64
+	Float64 float64
+	String  string
+	Bytes   []byte
+
+	// TODO Lazy value type?
+}
+
+const (
+	INVALID ValueType = iota
+	BOOL
+	INT32
+	INT64
+	UINT32
+	UINT64
+	FLOAT32
+	FLOAT64
+	STRING
+	BYTES
 )
 
 func (k *Key) Bool(v bool) KeyValue {
@@ -108,18 +147,25 @@ func (k *Key) Uint(v uint) KeyValue {
 	return k.Uint64(uint64(v))
 }
 
-func (m *Measure) M(v float64) Measurement {
-	return Measurement{
-		Measure: *m,
-		Value:   v,
-	}
-}
-
-func (m *Measure) V(v float64) KeyValue {
-	k := Key{Variable: m.Variable}
-	return k.Float64(v)
-}
-
 func (k *Key) Defined() bool {
-	return len(k.Variable.Name) != 0
+	return k.Variable.Defined()
+}
+
+// TODO make this a lazy one-time conversion.
+func (v Value) Emit() string {
+	switch v.Type {
+	case BOOL:
+		return fmt.Sprint(v.Bool)
+	case INT32, INT64:
+		return fmt.Sprint(v.Int64)
+	case UINT32, UINT64:
+		return fmt.Sprint(v.Uint64)
+	case FLOAT32, FLOAT64:
+		return fmt.Sprint(v.Float64)
+	case STRING:
+		return v.String
+	case BYTES:
+		return string(v.Bytes)
+	}
+	return "unknown"
 }

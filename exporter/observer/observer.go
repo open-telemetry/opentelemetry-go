@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opencensus.io/stats"
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
@@ -52,8 +53,8 @@ type Event struct {
 	String  string // START_SPAN, EVENT, ...
 	Float64 float64
 	Parent  core.ScopeID // START_SPAN
-	Stats   []core.Measurement
-	Stat    core.Measurement
+	Stats   []stats.Measurement
+	Stat    stats.Measurement
 }
 
 type Observer interface {

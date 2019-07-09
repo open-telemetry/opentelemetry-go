@@ -15,49 +15,17 @@
 package core
 
 import (
-	"fmt"
-
 	"google.golang.org/grpc/codes"
-
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
-type Option func(Variable) Variable
-
-type Variable struct {
-	Name        string
-	Description string
-	Unit        unit.Unit
-}
-
-type Measure struct {
-	Variable Variable
-}
-
-type Key struct {
-	Variable Variable
-}
-
-type KeyValue struct {
-	Key   Key
-	Value Value
-}
-
-type ValueType int
-
-type Value struct {
-	Type    ValueType
-	Bool    bool
-	Int64   int64
-	Uint64  uint64
-	Float64 float64
-	String  string
-	Bytes   []byte
-
-	// TODO Lazy value type?
-}
-
 type MutatorOp int
+
+const (
+	INSERT MutatorOp = iota
+	UPDATE
+	UPSERT
+	DELETE
+)
 
 type Mutator struct {
 	MutatorOp
@@ -71,87 +39,11 @@ type MeasureMetadata struct {
 	// TODO time to live?
 }
 
-const (
-	INVALID ValueType = iota
-	BOOL
-	INT32
-	INT64
-	UINT32
-	UINT64
-	FLOAT32
-	FLOAT64
-	STRING
-	BYTES
-
-	INSERT MutatorOp = iota
-	UPDATE
-	UPSERT
-	DELETE
-)
-
-// TODO make this a lazy one-time conversion.
-func (v Value) Emit() string {
-	switch v.Type {
-	case BOOL:
-		return fmt.Sprint(v.Bool)
-	case INT32, INT64:
-		return fmt.Sprint(v.Int64)
-	case UINT32, UINT64:
-		return fmt.Sprint(v.Uint64)
-	case FLOAT32, FLOAT64:
-		return fmt.Sprint(v.Float64)
-	case STRING:
-		return v.String
-	case BYTES:
-		return string(v.Bytes)
-	}
-	return "unknown"
-}
-
 func (m Mutator) WithMaxHops(hops int) Mutator {
 	m.MaxHops = hops
 	return m
 }
 
-type Measurement struct {
-	// NOTE: If we add a ScopeID field this can carry
-	// pre-aggregated measures via the stats.Record API.
-	Measure Measure
-	Value   float64
-	ScopeID ScopeID
-}
-
-func (m Measurement) With(id ScopeID) Measurement {
-	m.ScopeID = id
-	return m
-}
-
 func GrpcCodeToString(c codes.Code) string {
 	return c.String()
-}
-
-func MakeVariable(name string, opts ...Option) Variable {
-	v := Variable{
-		Name: name,
-	}
-	for _, o := range opts {
-		v = o(v)
-	}
-	return v
-}
-
-// WithDescription applies the provided description.
-func WithDescription(desc string) Option {
-	return func(v Variable) Variable {
-		v.Description = desc
-		return v
-	}
-}
-
-// WithUnit applies the provided unit.
-func WithUnit(unit unit.Unit) Option {
-	return func(v Variable) Variable {
-		v.Unit = unit
-		return v
-	}
 }

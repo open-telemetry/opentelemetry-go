@@ -18,16 +18,22 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/api/registry"
 )
 
+type Measurement struct {
+	Variable registry.Variable
+	Value    float64
+	Scope    core.ScopeID
+}
+
 type Interface interface {
-	Record(ctx context.Context, m ...core.Measurement)
-	RecordSingle(ctx context.Context, m core.Measurement)
+	Record(ctx context.Context, m ...Measurement)
+	RecordSingle(ctx context.Context, m Measurement)
 }
 
 type Recorder struct {
-	core.ScopeID
+	Scope core.ScopeID
 }
 
 var _ Interface = (*Recorder)(nil)
@@ -37,28 +43,28 @@ var _ Interface = (*Recorder)(nil)
 // 	return Recorder{scope.ScopeID()}
 // }
 
-func Record(ctx context.Context, m ...core.Measurement) {
+func Record(ctx context.Context, m ...Measurement) {
 	Recorder{}.Record(ctx, m...)
 }
 
-func RecordSingle(ctx context.Context, m core.Measurement) {
+func RecordSingle(ctx context.Context, m Measurement) {
 	Recorder{}.RecordSingle(ctx, m)
 }
 
-func (r Recorder) Record(ctx context.Context, m ...core.Measurement) {
-	observer.Record(observer.Event{
-		Type:    observer.RECORD_STATS,
-		Scope:   r.ScopeID,
-		Context: ctx,
-		Stats:   m,
-	})
+func (r Recorder) Record(ctx context.Context, m ...Measurement) {
+	// observer.Record(observer.Event{
+	// 	Type:    observer.RECORD_STATS,
+	// 	Scope:   r.ScopeID,
+	// 	Context: ctx,
+	// 	Stats:   m,
+	// })
 }
 
-func (r Recorder) RecordSingle(ctx context.Context, m core.Measurement) {
-	observer.Record(observer.Event{
-		Type:    observer.RECORD_STATS,
-		Scope:   r.ScopeID,
-		Context: ctx,
-		Stat:    m,
-	})
+func (r Recorder) RecordSingle(ctx context.Context, m Measurement) {
+	// observer.Record(observer.Event{
+	// 	Type:    observer.RECORD_STATS,
+	// 	Scope:   r.ScopeID,
+	// 	Context: ctx,
+	// 	Stat:    m,
+	// })
 }

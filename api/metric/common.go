@@ -15,76 +15,16 @@
 package metric
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
 
-type baseMetric struct {
-	variable registry.Registration
-
-	mtype MetricType
-	keys  []core.Key
-}
-
-type baseEntry struct {
-	base    *baseMetric
-	metric  Metric
-	eventID core.EventID
-}
-
-var _ Metric = (*baseMetric)(nil)
-
-func initBaseMetric(name string, mtype MetricType, opts []Option, init Metric) Metric {
-	var tagOpts []tag.Option
-	bm := init.base()
+func registerMetric(name string, mtype MetricType, opts []Option, metric *Registration) {
+	var varOpts []registry.Option
 
 	for _, opt := range opts {
-		opt(bm, &tagOpts)
+		opt(metric, &varOpts)
 	}
 
-	bm.measure = tag.NewMeasure(name, tagOpts...)
-	bm.mtype = mtype
-
-	bm.eventID = observer.Record(observer.Event{
-		Type:  observer.NEW_METRIC,
-		Scope: bm.measure.DefinitionID().Scope(),
-	})
-
-	reg, err := registry.Register(init)
-	if err != nil {
-		bm.status = err
-	}
-	return other
-}
-
-func (bm *baseMetric) base() *baseMetric {
-	return bm
-}
-
-func (bm *baseMetric) DefinitionID() core.EventID {
-	return bm.eventID
-}
-
-func (bm *baseMetric) Measure() core.Measure {
-	return bm.measure
-}
-
-func (bm *baseMetric) Type() MetricType {
-	return bm.mtype
-}
-
-func (bm *baseMetric) Fields() []core.Key {
-	return bm.keys
-}
-
-func (bm *baseMetric) Err() error {
-	return bm.status
-}
-
-func (e *baseEntry) init(m Metric, values []core.KeyValue) {
-	e.base = m.base()
-	e.metric = m
-	e.eventID = scope.New(core.ScopeID{}, values...).ScopeID().EventID
+	metric.Variable = registry.Register(name, mtype, varOpts...)
+	metric.Type = mtype
 }
