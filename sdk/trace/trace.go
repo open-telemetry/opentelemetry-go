@@ -28,7 +28,7 @@ import (
 )
 
 type tracer struct {
-	resources core.EventID
+	resources observer.EventID
 }
 
 var (
@@ -48,10 +48,6 @@ var t = &tracer{}
 func Register() apitrace.Tracer {
 	apitrace.SetGlobalTracer(t)
 	return t
-}
-
-func (t *tracer) ScopeID() core.ScopeID {
-	return t.resources.Scope()
 }
 
 func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
@@ -100,7 +96,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 		opt(o)
 	}
 
-	var parentScope core.ScopeID
+	var parentScope observer.ScopeID
 
 	if o.Reference.HasTraceID() {
 		parentScope = o.Reference.Scope()
@@ -118,7 +114,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 		child.TraceID.Low = rand.Uint64()
 	}
 
-	childScope := core.ScopeID{
+	childScope := observer.ScopeID{
 		SpanContext: child,
 		EventID:     t.resources,
 	}

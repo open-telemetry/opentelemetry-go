@@ -30,7 +30,7 @@ type span struct {
 	tracer      *tracer
 	spanContext core.SpanContext
 	lock        sync.Mutex
-	eventID     core.EventID
+	eventID     observer.EventID
 	finishOnce  sync.Once
 	recordEvent bool
 	status      codes.Code
@@ -66,12 +66,12 @@ func (sp *span) SetStatus(status codes.Code) {
 	sp.status = status
 }
 
-func (sp *span) ScopeID() core.ScopeID {
+func (sp *span) ScopeID() observer.ScopeID {
 	if sp == nil {
-		return core.ScopeID{}
+		return observer.ScopeID{}
 	}
 	sp.lock.Lock()
-	sid := core.ScopeID{
+	sid := observer.ScopeID{
 		EventID:     sp.eventID,
 		SpanContext: sp.spanContext,
 	}
@@ -79,11 +79,11 @@ func (sp *span) ScopeID() core.ScopeID {
 	return sid
 }
 
-func (sp *span) updateScope() (core.ScopeID, core.EventID) {
+func (sp *span) updateScope() (observer.ScopeID, observer.EventID) {
 	next := observer.NextEventID()
 
 	sp.lock.Lock()
-	sid := core.ScopeID{
+	sid := observer.ScopeID{
 		EventID:     sp.eventID,
 		SpanContext: sp.spanContext,
 	}

@@ -20,20 +20,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
-type noopTracer struct {
-	resources core.EventID
-}
+type noopTracer struct{}
 
 var (
 	_ Tracer = (*noopTracer)(nil)
 
 	singletonNoopTracer = &noopTracer{}
 )
-
-// ScopeID returns an empty instance of ScopeID
-func (t *noopTracer) ScopeID() core.ScopeID {
-	return t.resources.Scope()
-}
 
 // WithResources does nothing and returns noop implementation of Tracer.
 func (t *noopTracer) WithResources(attributes ...core.KeyValue) Tracer {

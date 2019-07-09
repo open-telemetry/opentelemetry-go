@@ -42,11 +42,6 @@ func (sp *noopSpan) IsRecordingEvents() bool {
 func (sp *noopSpan) SetStatus(status codes.Code) {
 }
 
-// ScopeID returns and empty ScopeID.
-func (sp *noopSpan) ScopeID() core.ScopeID {
-	return core.ScopeID{}
-}
-
 // SetError does nothing.
 func (sp *noopSpan) SetError(v bool) {
 }

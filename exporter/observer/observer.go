@@ -29,15 +29,22 @@ import (
 
 type EventType int
 
+type EventID uint64
+
+type ScopeID struct {
+	EventID
+	core.SpanContext
+}
+
 // TODO: this Event is confusing with event.Event.
 type Event struct {
 	// Automatic fields
-	Sequence core.EventID // Auto-filled
-	Time     time.Time    // Auto-filled
+	Sequence EventID   // Auto-filled
+	Time     time.Time // Auto-filled
 
 	// Type, Scope, Context
 	Type    EventType       // All events
-	Scope   core.ScopeID    // All events
+	Scope   ScopeID         // All events
 	Context context.Context // core.FromContext() and scope.Active()
 
 	// Arguments (type-specific)
@@ -52,7 +59,7 @@ type Event struct {
 	// Values
 	String  string // START_SPAN, EVENT, ...
 	Float64 float64
-	Parent  core.ScopeID // START_SPAN
+	Parent  ScopeID // START_SPAN
 	Stats   []stats.Measurement
 	Stat    stats.Measurement
 }
@@ -86,8 +93,8 @@ var (
 	sequenceNum uint64
 )
 
-func NextEventID() core.EventID {
-	return core.EventID(atomic.AddUint64(&sequenceNum, 1))
+func NextEventID() EventID {
+	return EventID(atomic.AddUint64(&sequenceNum, 1))
 }
 
 // RegisterObserver adds to the list of Observers that will receive sampled
@@ -122,7 +129,7 @@ func UnregisterObserver(e Observer) {
 	observerMu.Unlock()
 }
 
-func Record(event Event) core.EventID {
+func Record(event Event) EventID {
 	if event.Sequence == 0 {
 		event.Sequence = NextEventID()
 	}

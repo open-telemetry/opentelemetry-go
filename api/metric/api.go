@@ -32,6 +32,7 @@ const (
 )
 
 type Meter interface {
+	// TODO more Metric types
 	GetFloat64Gauge(gauge *Float64GaugeRegistration, labels ...core.KeyValue) Float64Gauge
 }
 
