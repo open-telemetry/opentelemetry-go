@@ -14,12 +14,12 @@
 
 package metric
 
-type Float64GaugeRegistration struct {
-	Registration
+type Float64GaugeHandle struct {
+	Handle
 }
 
-func NewFloat64Gauge(name string, mos ...Option) *Float64GaugeRegistration {
-	g := &Float64GaugeRegistration{}
-	registerMetric(name, Gauge, mos, &g.Registration)
+func NewFloat64Gauge(name string, mos ...Option) *Float64GaugeHandle {
+	g := &Float64GaugeHandle{}
+	registerMetric(name, Gauge, mos, &g.Handle)
 	return g
 }

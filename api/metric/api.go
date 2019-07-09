@@ -33,14 +33,14 @@ const (
 
 type Meter interface {
 	// TODO more Metric types
-	GetFloat64Gauge(gauge *Float64GaugeRegistration, labels ...core.KeyValue) Float64Gauge
+	GetFloat64Gauge(ctx context.Context, gauge *Float64GaugeHandle, labels ...core.KeyValue) Float64Gauge
 }
 
 type Float64Gauge interface {
 	Set(ctx context.Context, value float64, labels ...core.KeyValue)
 }
 
-type Registration struct {
+type Handle struct {
 	Variable registry.Variable
 
 	Type MetricType
@@ -68,25 +68,25 @@ func SetGlobalMeter(t Meter) {
 	global.Store(t)
 }
 
-type Option func(*Registration, *[]registry.Option)
+type Option func(*Handle, *[]registry.Option)
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
-	return func(_ *Registration, to *[]registry.Option) {
+	return func(_ *Handle, to *[]registry.Option) {
 		*to = append(*to, registry.WithDescription(desc))
 	}
 }
 
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) Option {
-	return func(_ *Registration, to *[]registry.Option) {
+	return func(_ *Handle, to *[]registry.Option) {
 		*to = append(*to, registry.WithUnit(unit))
 	}
 }
 
 // WithKeys applies the provided dimension keys.
 func WithKeys(keys ...core.Key) Option {
-	return func(m *Registration, _ *[]registry.Option) {
+	return func(m *Handle, _ *[]registry.Option) {
 		m.Keys = keys
 	}
 }

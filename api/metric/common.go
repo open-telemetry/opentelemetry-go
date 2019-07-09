@@ -18,7 +18,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
 )
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Registration) {
+func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
 	var varOpts []registry.Option
 
 	for _, opt := range opts {

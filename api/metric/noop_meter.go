@@ -8,7 +8,7 @@ import (
 
 type noopMetric struct{}
 
-func (noopMeter) GetFloat64Gauge(gauge *Float64GaugeRegistration, labels ...core.KeyValue) Float64Gauge {
+func (noopMeter) GetFloat64Gauge(ctx context.Context, gauge *Float64GaugeHandle, labels ...core.KeyValue) Float64Gauge {
 	return noopMetric{}
 }
 

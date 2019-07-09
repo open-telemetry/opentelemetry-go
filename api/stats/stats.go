@@ -16,61 +16,60 @@ package stats
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
 )
 
-type Measure struct {
+type MeasureHandle struct {
 	Variable registry.Variable
+}
+
+type Measure interface {
+	M(value float64) Measurement
 }
 
 type Measurement struct {
 	Measure Measure
 	Value   float64
-	Scope   core.ScopeID
 }
 
-type Interface interface {
+type Recorder interface {
+	// As in rfc 0001, allow raw Measures to have pre-defined labels:
+	GetMeasure(ctx context.Context, measure *MeasureHandle, labels ...core.KeyValue) Measure
+
 	Record(ctx context.Context, m ...Measurement)
 	RecordSingle(ctx context.Context, m Measurement)
 }
 
-type Recorder struct {
-	Scope core.ScopeID
+type noopRecorder struct{}
+type noopMeasure struct{}
+
+var (
+	global atomic.Value
+)
+
+// GlobalRecorder return meter registered with global registry.
+// If no meter is registered then an instance of noop Recorder is returned.
+func GlobalRecorder() Recorder {
+	if t := global.Load(); t != nil {
+		return t.(Recorder)
+	}
+	return noopRecorder{}
 }
 
-var _ Interface = (*Recorder)(nil)
-
-// TODO
-// func With(scope scope.Scope) Recorder {
-// 	return Recorder{scope.ScopeID()}
-// }
+// SetGlobalRecorder sets provided meter as a global meter.
+func SetGlobalRecorder(t Recorder) {
+	global.Store(t)
+}
 
 func Record(ctx context.Context, m ...Measurement) {
-	Recorder{}.Record(ctx, m...)
+	GlobalRecorder().Record(ctx, m...)
 }
 
 func RecordSingle(ctx context.Context, m Measurement) {
-	Recorder{}.RecordSingle(ctx, m)
-}
-
-func (r Recorder) Record(ctx context.Context, m ...Measurement) {
-	// observer.Record(observer.Event{
-	// 	Type:    observer.RECORD_STATS,
-	// 	Scope:   r.ScopeID,
-	// 	Context: ctx,
-	// 	Stats:   m,
-	// })
-}
-
-func (r Recorder) RecordSingle(ctx context.Context, m Measurement) {
-	// observer.Record(observer.Event{
-	// 	Type:    observer.RECORD_STATS,
-	// 	Scope:   r.ScopeID,
-	// 	Context: ctx,
-	// 	Stat:    m,
-	// })
+	GlobalRecorder().RecordSingle(ctx, m)
 }
 
 type AnyStatistic struct{}
@@ -79,15 +78,29 @@ func (AnyStatistic) String() string {
 	return "AnyStatistic"
 }
 
-func NewMeasure(name string, opts ...registry.Option) Measure {
-	return Measure{
+func NewMeasure(name string, opts ...registry.Option) *MeasureHandle {
+	return &MeasureHandle{
 		Variable: registry.Register(name, AnyStatistic{}, opts...),
 	}
 }
 
-func (m Measure) M(value float64) Measurement {
+func (m *MeasureHandle) M(value float64) Measurement {
 	return Measurement{
 		Measure: m,
 		Value:   value,
 	}
+}
+
+func (noopRecorder) Record(ctx context.Context, m ...Measurement) {
+}
+
+func (noopRecorder) RecordSingle(ctx context.Context, m Measurement) {
+}
+
+func (noopRecorder) GetMeasure(ctx context.Context, handle *MeasureHandle, labels ...core.KeyValue) Measure {
+	return noopMeasure{}
+}
+
+func (noopMeasure) M(float64) Measurement {
+	return Measurement{}
 }

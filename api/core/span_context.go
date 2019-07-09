@@ -18,8 +18,6 @@ import (
 	"fmt"
 )
 
-// type EventID uint64
-
 type TraceID struct {
 	High uint64
 	Low  uint64
