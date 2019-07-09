@@ -50,9 +50,15 @@ func (m Mutator) WithTTL(hops int) Mutator {
 	return m
 }
 
+type MapUpdate struct {
+	SingleKV      core.KeyValue
+	MultiKV       []core.KeyValue
+	SingleMutator Mutator
+	MultiMutator  []Mutator
+}
+
 type Map interface {
-	// TODO combine these four into a struct
-	Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 Mutator, mutators []Mutator) Map
+	Apply(MapUpdate) Map
 
 	Value(core.Key) (core.Value, bool)
 	HasValue(core.Key) bool
@@ -63,13 +69,11 @@ type Map interface {
 }
 
 func NewEmptyMap() Map {
-	var t tagMap
-	return t.Apply(core.KeyValue{}, nil, Mutator{}, nil)
+	return tagMap{}
 }
 
-func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 Mutator, mutators []Mutator) Map {
-	var t tagMap
-	return t.Apply(a1, attributes, m1, mutators)
+func NewMap(update MapUpdate) Map {
+	return NewEmptyMap().Apply(update)
 }
 
 func WithMap(ctx context.Context, m Map) context.Context {
@@ -77,10 +81,9 @@ func WithMap(ctx context.Context, m Map) context.Context {
 }
 
 func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
-	return WithMap(ctx, FromContext(ctx).Apply(
-		core.KeyValue{}, nil,
-		Mutator{}, mutators,
-	))
+	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
+		MultiMutator: mutators,
+	}))
 }
 
 func FromContext(ctx context.Context) Map {

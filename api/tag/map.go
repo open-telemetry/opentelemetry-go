@@ -28,27 +28,27 @@ type tagContent struct {
 
 type tagMap map[core.Key]tagContent
 
-var _ Map = (*tagMap)(nil)
+var _ Map = tagMap{}
 
-func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 Mutator, mutators []Mutator) Map {
-	m := make(tagMap, len(t)+len(attributes)+len(mutators))
+func (t tagMap) Apply(update MapUpdate) Map {
+	m := make(tagMap, len(t)+len(update.MultiKV)+len(update.MultiMutator))
 	for k, v := range t {
 		m[k] = v
 	}
-	if a1.Key.Defined() {
-		m[a1.Key] = tagContent{
-			value: a1.Value,
+	if update.SingleKV.Key.Defined() {
+		m[update.SingleKV.Key] = tagContent{
+			value: update.SingleKV.Value,
 		}
 	}
-	for _, kv := range attributes {
+	for _, kv := range update.MultiKV {
 		m[kv.Key] = tagContent{
 			value: kv.Value,
 		}
 	}
-	if m1.KeyValue.Key.Defined() {
-		m.apply(m1)
+	if update.SingleMutator.Key.Defined() {
+		m.apply(update.SingleMutator)
 	}
-	for _, mutator := range mutators {
+	for _, mutator := range update.MultiMutator {
 		m.apply(mutator)
 	}
 	return m
