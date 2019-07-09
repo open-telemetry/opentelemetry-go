@@ -17,9 +17,9 @@ package stdout
 import (
 	"os"
 
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
-	"github.com/open-telemetry/opentelemetry-go/exporter/reader/format"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader/format"
 )
 
 type stdoutLog struct{}

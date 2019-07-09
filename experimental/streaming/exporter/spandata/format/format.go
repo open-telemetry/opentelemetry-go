@@ -17,8 +17,8 @@ package format
 import (
 	"strings"
 
-	"github.com/open-telemetry/opentelemetry-go/exporter/reader/format"
-	"github.com/open-telemetry/opentelemetry-go/exporter/spandata"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader/format"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spandata"
 )
 
 func AppendSpan(buf *strings.Builder, data *spandata.Span) {

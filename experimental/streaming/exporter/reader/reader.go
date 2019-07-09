@@ -23,11 +23,9 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
 )
 
 type Reader interface {
@@ -39,7 +37,7 @@ type EventType int
 type Event struct {
 	Type        EventType
 	Time        time.Time
-	Sequence    core.EventID
+	Sequence    observer.EventID
 	SpanContext core.SpanContext
 	Tags        tag.Map
 	Attributes  tag.Map
@@ -56,9 +54,9 @@ type Event struct {
 }
 
 type Measurement struct {
-	Variable registry.Variable
-	Value    float64
-	Tags     tag.Map
+	Measure stats.Measure
+	Value   float64
+	Tags    tag.Map
 }
 
 type readerObserver struct {
@@ -94,7 +92,7 @@ type readerMetric struct {
 
 type readerScope struct {
 	span       *readerSpan
-	parent     core.EventID
+	parent     observer.EventID
 	attributes tag.Map
 }
 
@@ -187,15 +185,9 @@ func (ro *readerObserver) Observe(event observer.Event) {
 	case observer.NEW_SCOPE, observer.MODIFY_ATTR:
 		var span *readerSpan
 		var m tag.Map
-		var sid core.ScopeID
 
-		if event.Scope.EventID == 0 {
-			// TODO: This is racey. Do this at the call
-			// site via Resources.
-			sid = trace.GlobalTracer().ScopeID()
-		} else {
-			sid = event.Scope
-		}
+		sid := event.Scope
+
 		if sid.EventID == 0 {
 			m = tag.NewEmptyMap()
 		} else {
@@ -216,10 +208,12 @@ func (ro *readerObserver) Observe(event observer.Event) {
 			span:   span,
 			parent: sid.EventID,
 			attributes: m.Apply(
-				event.Attribute,
-				event.Attributes,
-				event.Mutator,
-				event.Mutators,
+				tag.MapUpdate{
+					SingleKV:      event.Attribute,
+					MultiKV:       event.Attributes,
+					SingleMutator: event.Mutator,
+					MultiMutator:  event.Mutators,
+				},
 			),
 		}
 
@@ -260,7 +254,9 @@ func (ro *readerObserver) Observe(event observer.Event) {
 		read.Event = event.Event
 
 		attrs, span := ro.readScope(event.Scope)
-		read.Attributes = attrs.Apply(core.KeyValue{}, event.Attributes, core.Mutator{}, nil)
+		read.Attributes = attrs.Apply(tag.MapUpdate{
+			MultiKV: event.Attributes,
+		})
 		if span != nil {
 			read.SpanContext = span.spanContext
 		}
@@ -302,7 +298,7 @@ func (ro *readerObserver) Observe(event observer.Event) {
 }
 
 func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
-	attrs, _ := ro.readScope(m.ScopeID)
+	attrs, _ := ro.readMeasureScope(m.Measure)
 	e.Stats = append(e.Stats, Measurement{
 		Measure: m.Measure,
 		Value:   m.Value,
@@ -310,7 +306,12 @@ func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
 	})
 }
 
-func (ro *readerObserver) readScope(id core.ScopeID) (tag.Map, *readerSpan) {
+func (ro *readerObserver) readMeasureScope(m stats.Measure) (tag.Map, *readerSpan) {
+	// TODO
+	return nil, nil
+}
+
+func (ro *readerObserver) readScope(id observer.ScopeID) (tag.Map, *readerSpan) {
 	if id.EventID == 0 {
 		return tag.NewEmptyMap(), nil
 	}
@@ -326,7 +327,7 @@ func (ro *readerObserver) readScope(id core.ScopeID) (tag.Map, *readerSpan) {
 	return tag.NewEmptyMap(), nil
 }
 
-func (ro *readerObserver) cleanupSpan(id core.EventID) {
+func (ro *readerObserver) cleanupSpan(id observer.EventID) {
 	for id != 0 {
 		ev, has := ro.scopes.Load(id)
 		if !has {

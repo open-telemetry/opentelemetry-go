@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
 )
 
 type Buffer struct {

@@ -24,7 +24,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
 )
 
 type span struct {

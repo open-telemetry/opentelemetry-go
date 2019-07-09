@@ -23,8 +23,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/sdk/event"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/event"
 )
 
 type tracer struct {
@@ -51,10 +51,11 @@ func Register() apitrace.Tracer {
 }
 
 func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
-	s := scope.New(t.resources.Scope(), attributes...)
-	return &tracer{
-		resources: s.ScopeID().EventID,
-	}
+	return t
+	// s := scope.New(t.resources.Scope(), attributes...)
+	// return &tracer{
+	// 	resources: s.ScopeID().EventID,
+	// }
 }
 
 func (t *tracer) WithComponent(name string) apitrace.Tracer {
@@ -99,7 +100,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	var parentScope observer.ScopeID
 
 	if o.Reference.HasTraceID() {
-		parentScope = o.Reference.Scope()
+		parentScope.SpanContext = o.Reference.SpanContext
 	} else {
 		parentSpan, _ := apitrace.CurrentSpan(ctx).(*span)
 		parentScope = parentSpan.ScopeID()
@@ -126,7 +127,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 		eventID: observer.Record(observer.Event{
 			Time:    o.StartTime,
 			Type:    observer.START_SPAN,
-			Scope:   scope.New(childScope, o.Attributes...).ScopeID(),
+			Scope:   observer.NewScope(childScope, o.Attributes...),
 			Context: ctx,
 			Parent:  parentScope,
 			String:  name,
@@ -136,5 +137,5 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 }
 
 func (t *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
-	injector.Inject(span.ScopeID().SpanContext, tag.FromContext(ctx))
+	injector.Inject(span.SpanContext(), tag.FromContext(ctx))
 }

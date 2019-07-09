@@ -20,11 +20,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opencensus.io/stats"
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
+	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
@@ -150,4 +150,9 @@ func Foreach(f func(Observer)) {
 	for observer := range observers {
 		f(observer)
 	}
+}
+
+func NewScope(parent ScopeID, kv ...core.KeyValue) ScopeID {
+	// TODO
+	return parent
 }

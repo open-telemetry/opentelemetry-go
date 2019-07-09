@@ -20,7 +20,7 @@ import (
 	"plugin"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
 )
 
 // TODO add buffer support directly, eliminate stdout

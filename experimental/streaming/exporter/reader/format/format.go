@@ -19,13 +19,13 @@ import (
 	"strings"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/exporter/reader"
-	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
+	"github.com/open-telemetry/opentelemetry-go/api/key"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/trace"
 )
 
 var (
-	parentSpanIDKey = tag.New("parent_span_id")
+	parentSpanIDKey = key.New("parent_span_id")
 )
 
 func AppendEvent(buf *strings.Builder, data reader.Event) {
@@ -35,7 +35,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			if skipIf && data.Attributes.HasValue(kv.Key) {
 				return true
 			}
-			buf.WriteString(" " + kv.Key.Name() + "=" + kv.Value.Emit())
+			buf.WriteString(" " + kv.Key.Variable.Name + "=" + kv.Value.Emit())
 			return true
 		}
 	}
@@ -74,7 +74,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Event.Message())
 		buf.WriteString(" (")
 		for _, kv := range data.Event.Attributes() {
-			buf.WriteString(" " + kv.Key.Name() + "=" + kv.Value.Emit())
+			buf.WriteString(" " + kv.Key.Variable.Name + "=" + kv.Value.Emit())
 		}
 		buf.WriteString(")")
 
@@ -84,7 +84,9 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString("record")
 
 		for _, s := range data.Stats {
-			f(false)(s.Measure.V(s.Value))
+			f(false)(core.Key{
+				Variable: s.Measure.V(),
+			}.Float64(s.Value))
 
 			buf.WriteString(" {")
 			i := 0
@@ -93,7 +95,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 					buf.WriteString(",")
 				}
 				i++
-				buf.WriteString(kv.Key.Name())
+				buf.WriteString(kv.Key.Variable.Name)
 				buf.WriteString("=")
 				buf.WriteString(kv.Value.Emit())
 				return true

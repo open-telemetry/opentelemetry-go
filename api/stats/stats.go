@@ -27,6 +27,7 @@ type MeasureHandle struct {
 }
 
 type Measure interface {
+	V() registry.Variable
 	M(value float64) Measurement
 }
 
@@ -94,6 +95,10 @@ func (m *MeasureHandle) M(value float64) Measurement {
 	}
 }
 
+func (m *MeasureHandle) V() registry.Variable {
+	return m.Variable
+}
+
 func (noopRecorder) Record(ctx context.Context, m ...Measurement) {
 }
 
@@ -106,4 +111,8 @@ func (noopRecorder) GetMeasure(ctx context.Context, handle *MeasureHandle, label
 
 func (noopMeasure) M(float64) Measurement {
 	return Measurement{}
+}
+
+func (noopMeasure) V() registry.Variable {
+	return registry.Variable{}
 }

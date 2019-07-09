@@ -15,13 +15,13 @@
 package install
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/exporter/spanlog"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spanlog"
 )
 
 // Use this import:
 //
-//   import _ "github.com/open-telemetry/opentelemetry-go/exporter/spanlog/install"
+//   import _ "github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spanlog/install"
 //
 // to include the spanlog exporter by default.
 
