@@ -251,7 +251,7 @@ func (ro *readerObserver) Observe(event observer.Event) {
 
 	case observer.ADD_EVENT:
 		read.Type = ADD_EVENT
-		read.Event = event.Event
+		read.Message = event.String
 
 		attrs, span := ro.readScope(event.Scope)
 		read.Attributes = attrs.Apply(tag.MapUpdate{

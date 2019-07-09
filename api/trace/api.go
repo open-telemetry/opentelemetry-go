@@ -60,6 +60,8 @@ type Span interface {
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, event event.Event)
+	// AddEvent records an event to the span.
+	Event(ctx context.Context, msg string, attrs ...core.KeyValue)
 
 	// IsRecordingEvents returns true if the span is active and recording events is enabled.
 	IsRecordingEvents() bool

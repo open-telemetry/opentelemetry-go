@@ -22,6 +22,7 @@ import (
 	"github.com/lightstep/tracecontext.go/tracestate"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/key"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
@@ -30,8 +31,8 @@ const (
 )
 
 var (
-	HostKey = tag.New("http.host")
-	URLKey  = tag.New("http.url")
+	HostKey = key.New("http.host")
+	URLKey  = key.New("http.url")
 
 	encoding = binary.BigEndian
 )
@@ -62,7 +63,7 @@ func Extract(req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanCont
 		}
 		// TODO: max-hops, type conversion questions answered,
 		// case-conversion questions.
-		tags = append(tags, tag.New(ts.Tenant).String(ts.Value))
+		tags = append(tags, key.New(ts.Tenant).String(ts.Value))
 	}
 
 	return attrs, tags, sc
@@ -90,7 +91,7 @@ func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {
 		// TODO: implement MaxHops
 		tc.TraceState = append(tc.TraceState, tracestate.Member{
 			Vendor: Vendor,
-			Tenant: kv.Key.Name(),
+			Tenant: kv.Key.Variable.Name,
 			Value:  kv.Value.Emit(),
 		})
 		return true

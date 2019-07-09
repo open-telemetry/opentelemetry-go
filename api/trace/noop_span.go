@@ -75,3 +75,7 @@ func (noopSpan) Tracer() Tracer {
 // AddEvent does nothing.
 func (noopSpan) AddEvent(ctx context.Context, event event.Event) {
 }
+
+// Event does nothing.
+func (noopSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+}

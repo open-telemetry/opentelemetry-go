@@ -180,10 +180,19 @@ func (sp *span) Tracer() apitrace.Tracer {
 }
 
 func (sp *span) AddEvent(ctx context.Context, event event.Event) {
-
 	observer.Record(observer.Event{
-		Type:    observer.ADD_EVENT,
-		Event:   event,
-		Context: ctx,
+		Type:       observer.ADD_EVENT,
+		String:     event.Message(),
+		Attributes: event.Attributes(),
+		Context:    ctx,
+	})
+}
+
+func (sp *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+	observer.Record(observer.Event{
+		Type:       observer.ADD_EVENT,
+		String:     msg,
+		Attributes: attrs,
+		Context:    ctx,
 	})
 }

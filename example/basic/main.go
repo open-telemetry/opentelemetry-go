@@ -23,9 +23,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
-
-	"github.com/open-telemetry/opentelemetry-go/exporter/loader"
-	"github.com/open-telemetry/opentelemetry-go/sdk/event"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/event"
 )
 
 var (
@@ -59,6 +57,7 @@ func main() {
 	)
 
 	gauge := meter.GetFloat64Gauge(
+		ctx,
 		oneMetric,
 		lemonsKey.Int(10),
 	)
@@ -89,5 +88,6 @@ func main() {
 		panic(err)
 	}
 
-	loader.Flush()
+	// TODO: How to flush?
+	// loader.Flush()
 }

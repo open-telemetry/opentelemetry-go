@@ -24,9 +24,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"github.com/open-telemetry/opentelemetry-go/api/key"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/sdk/event"
 )
 
 type clientLevel struct {
@@ -35,12 +34,12 @@ type clientLevel struct {
 }
 
 var (
-	HTTPStatus     = tag.New("http.status")
-	HTTPHeaderMIME = tag.New("http.mime")
-	HTTPRemoteAddr = tag.New("http.remote")
-	HTTPLocalAddr  = tag.New("http.local")
-	MessageKey     = tag.New("message",
-		tag.WithDescription("message text: info, error, etc"),
+	HTTPStatus     = key.New("http.status")
+	HTTPHeaderMIME = key.New("http.mime")
+	HTTPRemoteAddr = key.New("http.remote")
+	HTTPLocalAddr  = key.New("http.local")
+	MessageKey     = key.New("message",
+		key.WithDescription("message text: info, error, etc"),
 	)
 )
 
@@ -134,11 +133,11 @@ func (ct *clientTracer) tlsHandshakeDone(tls.ConnectionState, error) {
 	ct.close("http.tls")
 }
 
-func (ct *clientTracer) wroteHeaderField(key string, value []string) {
+func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.currentName() != "http.headers" {
 		ct.open("http.headers")
 	}
-	ct.levels[0].SetAttribute(tag.New("http." + strings.ToLower(key)).String(sa2s(value)))
+	ct.levels[0].SetAttribute(key.New("http." + strings.ToLower(k)).String(sa2s(v)))
 }
 
 func (ct *clientTracer) wroteHeaders() {
@@ -154,18 +153,18 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 }
 
 func (ct *clientTracer) got100Continue() {
-	ct.current().AddEvent(ct.Context, event.WithString("GOT 100 - Continue"))
+	ct.current().Event(ct.Context, "GOT 100 - Continue")
 }
 
 func (ct *clientTracer) wait100Continue() {
-	ct.current().AddEvent(ct.Context, event.WithString("GOT 100 - Wait"))
+	ct.current().Event(ct.Context, "GOT 100 - Wait")
 }
 
 func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) error {
-	ct.current().AddEvent(ct.Context, event.WithAttr("GOT 1xx",
+	ct.current().Event(ct.Context, "GOT 1xx",
 		HTTPStatus.Int(code),
 		HTTPHeaderMIME.String(sm2s(header)),
-	))
+	)
 	return nil
 }
 
