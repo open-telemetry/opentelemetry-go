@@ -22,6 +22,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
 )
@@ -127,7 +128,7 @@ func (sp *span) SetAttributes(attributes ...core.KeyValue) {
 	})
 }
 
-func (sp *span) ModifyAttribute(mutator core.Mutator) {
+func (sp *span) ModifyAttribute(mutator tag.Mutator) {
 	if sp == nil {
 		return
 	}
@@ -142,7 +143,7 @@ func (sp *span) ModifyAttribute(mutator core.Mutator) {
 	})
 }
 
-func (sp *span) ModifyAttributes(mutators ...core.Mutator) {
+func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
 	if sp == nil {
 		return
 	}

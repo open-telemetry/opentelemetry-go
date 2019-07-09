@@ -78,8 +78,8 @@ type Span interface {
 	SetAttributes(...core.KeyValue)
 
 	// Modify and delete span attributes
-	ModifyAttribute(core.Mutator)
-	ModifyAttributes(...core.Mutator)
+	ModifyAttribute(tag.Mutator)
+	ModifyAttributes(...tag.Mutator)
 }
 
 type Injector interface {

@@ -147,14 +147,6 @@ func (k Key) Uint(v uint) KeyValue {
 	return k.Uint64(uint64(v))
 }
 
-// func (k Key) Value(ctx context.Context) KeyValue {
-// 	v, _ := FromContext(ctx).Value(k)
-// 	return KeyValue{
-// 		Key:   k,
-// 		Value: v,
-// 	}
-// }
-
 func (k Key) Defined() bool {
 	return k.Variable.Defined()
 }

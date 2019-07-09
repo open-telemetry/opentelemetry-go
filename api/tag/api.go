@@ -20,9 +20,39 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 )
 
+type ctxTagsType struct{}
+
+var (
+	ctxTagsKey = &ctxTagsType{}
+)
+
+type MutatorOp int
+
+const (
+	INSERT MutatorOp = iota
+	UPDATE
+	UPSERT
+	DELETE
+)
+
+type Mutator struct {
+	MutatorOp
+	core.KeyValue
+	MeasureMetadata
+}
+
+type MeasureMetadata struct {
+	TTL int // -1 == infinite, 0 == do not propagate
+}
+
+func (m Mutator) WithTTL(hops int) Mutator {
+	m.TTL = hops
+	return m
+}
+
 type Map interface {
 	// TODO combine these four into a struct
-	Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map
+	Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 Mutator, mutators []Mutator) Map
 
 	Value(core.Key) (core.Value, bool)
 	HasValue(core.Key) bool
@@ -34,10 +64,10 @@ type Map interface {
 
 func NewEmptyMap() Map {
 	var t tagMap
-	return t.Apply(core.KeyValue{}, nil, core.Mutator{}, nil)
+	return t.Apply(core.KeyValue{}, nil, Mutator{}, nil)
 }
 
-func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
+func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 Mutator, mutators []Mutator) Map {
 	var t tagMap
 	return t.Apply(a1, attributes, m1, mutators)
 }
@@ -46,10 +76,10 @@ func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxTagsKey, m)
 }
 
-func NewContext(ctx context.Context, mutators ...core.Mutator) context.Context {
+func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(
 		core.KeyValue{}, nil,
-		core.Mutator{}, mutators,
+		Mutator{}, mutators,
 	))
 }
 

@@ -25,6 +25,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type EventType int
@@ -50,8 +51,8 @@ type Event struct {
 	// Arguments (type-specific)
 	Attribute  core.KeyValue   // SET_ATTRIBUTE
 	Attributes []core.KeyValue // SET_ATTRIBUTES
-	Mutator    core.Mutator    // SET_ATTRIBUTE
-	Mutators   []core.Mutator  // SET_ATTRIBUTES
+	Mutator    tag.Mutator     // SET_ATTRIBUTE
+	Mutators   []tag.Mutator   // SET_ATTRIBUTES
 	Event      event.Event     // ADD_EVENT
 	Recovered  interface{}     // FINISH_SPAN
 	Status     codes.Code      // SET_STATUS

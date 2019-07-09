@@ -13,9 +13,3 @@
 // limitations under the License.
 
 package tag
-
-type ctxTagsType struct{}
-
-var (
-	ctxTagsKey = &ctxTagsType{}
-)

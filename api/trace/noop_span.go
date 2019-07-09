@@ -21,6 +21,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type noopSpan struct {
@@ -55,11 +56,11 @@ func (sp *noopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (sp *noopSpan) ModifyAttribute(mutator core.Mutator) {
+func (sp *noopSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (sp *noopSpan) ModifyAttributes(mutators ...core.Mutator) {
+func (sp *noopSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
