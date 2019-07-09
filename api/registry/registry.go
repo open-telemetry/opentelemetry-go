@@ -68,7 +68,7 @@ func Register(name string, vtype Type, opts ...Option) Variable {
 	})
 	v := newVar(name, vtype, opts...)
 	if count > 0 {
-		// TODO this is racey and should provide more info, can fix with a mutex
+		// TODO this is racey and should provide more info, fix with a mutex.
 		v.Status = ErrConflictingDef
 	}
 	vdef, _ = typeMap.LoadOrStore(vtype, v)

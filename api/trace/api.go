@@ -32,7 +32,6 @@ type Tracer interface {
 	// WithSpan wraps the execution of the function body with a span.
 	// It starts a new span and sets it as an active span in the context.
 	// It then executes the body. It closes the span before returning the execution result.
-	// TODO: Should it restore the previous span?
 	WithSpan(
 		ctx context.Context,
 		operation string,
