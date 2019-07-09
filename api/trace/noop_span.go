@@ -30,48 +30,48 @@ type noopSpan struct {
 var _ Span = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (sp *noopSpan) SpanContext() core.SpanContext {
+func (noopSpan) SpanContext() core.SpanContext {
 	return core.INVALID_SPAN_CONTEXT
 }
 
 // IsRecordingEvents always returns false for noopSpan.
-func (sp *noopSpan) IsRecordingEvents() bool {
+func (noopSpan) IsRecordingEvents() bool {
 	return false
 }
 
 // SetStatus does nothing.
-func (sp *noopSpan) SetStatus(status codes.Code) {
+func (noopSpan) SetStatus(status codes.Code) {
 }
 
 // SetError does nothing.
-func (sp *noopSpan) SetError(v bool) {
+func (noopSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (sp *noopSpan) SetAttribute(attribute core.KeyValue) {
+func (noopSpan) SetAttribute(attribute core.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (sp *noopSpan) SetAttributes(attributes ...core.KeyValue) {
+func (noopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (sp *noopSpan) ModifyAttribute(mutator tag.Mutator) {
+func (noopSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (sp *noopSpan) ModifyAttributes(mutators ...tag.Mutator) {
+func (noopSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (sp *noopSpan) Finish() {
+func (noopSpan) Finish() {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (sp *noopSpan) Tracer() Tracer {
-	return singletonNoopTracer
+func (noopSpan) Tracer() Tracer {
+	return noopTracer{}
 }
 
 // AddEvent does nothing.
-func (sp *noopSpan) AddEvent(ctx context.Context, event event.Event) {
+func (noopSpan) AddEvent(ctx context.Context, event event.Event) {
 }

@@ -21,8 +21,7 @@ import (
 type currentSpanKeyType struct{}
 
 var (
-	currentSpanKey    = &currentSpanKeyType{}
-	singletonNoopSpan = &noopSpan{}
+	currentSpanKey = &currentSpanKeyType{}
 )
 
 func SetCurrentSpan(ctx context.Context, span Span) context.Context {
@@ -33,5 +32,5 @@ func CurrentSpan(ctx context.Context) Span {
 	if span, has := ctx.Value(currentSpanKey).(Span); has {
 		return span
 	}
-	return singletonNoopSpan
+	return noopSpan{}
 }
