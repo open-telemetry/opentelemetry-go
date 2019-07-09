@@ -24,6 +24,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/exporter/observer"
@@ -300,7 +301,7 @@ func (ro *readerObserver) Observe(event observer.Event) {
 	}
 }
 
-func (ro *readerObserver) addMeasurement(e *Event, m core.Measurement) {
+func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
 	attrs, _ := ro.readScope(m.ScopeID)
 	e.Stats = append(e.Stats, Measurement{
 		Measure: m.Measure,

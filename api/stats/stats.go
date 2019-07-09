@@ -21,10 +21,14 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/registry"
 )
 
-type Measurement struct {
+type Measure struct {
 	Variable registry.Variable
-	Value    float64
-	Scope    core.ScopeID
+}
+
+type Measurement struct {
+	Measure Measure
+	Value   float64
+	Scope   core.ScopeID
 }
 
 type Interface interface {
@@ -38,7 +42,7 @@ type Recorder struct {
 
 var _ Interface = (*Recorder)(nil)
 
-// @@@
+// TODO
 // func With(scope scope.Scope) Recorder {
 // 	return Recorder{scope.ScopeID()}
 // }
@@ -67,4 +71,23 @@ func (r Recorder) RecordSingle(ctx context.Context, m Measurement) {
 	// 	Context: ctx,
 	// 	Stat:    m,
 	// })
+}
+
+type AnyStatistic struct{}
+
+func (AnyStatistic) String() string {
+	return "AnyStatistic"
+}
+
+func NewMeasure(name string, opts ...registry.Option) Measure {
+	return Measure{
+		Variable: registry.Register(name, AnyStatistic{}, opts...),
+	}
+}
+
+func (m Measure) M(value float64) Measurement {
+	return Measurement{
+		Measure: m,
+		Value:   value,
+	}
 }

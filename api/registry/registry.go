@@ -50,7 +50,7 @@ var (
 	ErrConflictingDef = errors.New("Conflicting variable types")
 )
 
-func Register(name string, vtype Type, opts ...Option) *Variable {
+func Register(name string, vtype Type, opts ...Option) Variable {
 	typeMapI, ok := nameToMap.Load(name)
 	if !ok {
 		typeMapI, _ = nameToMap.LoadOrStore(name, &TypeMap{})
@@ -59,25 +59,31 @@ func Register(name string, vtype Type, opts ...Option) *Variable {
 	vdef, ok := typeMap.Load(vtype)
 	if ok {
 		// Note: do we care if options are different?
-		return vdef.(*Variable)
+		return *vdef.(*Variable)
 	}
-	v := &Variable{
-		Name: name,
-	}
-	for _, o := range opts {
-		*v = o(*v)
-	}
-	v.Sequence = Sequence(atomic.AddUint64(&registryID, 1))
 	count := 0
 	typeMap.Range(func(_, _ interface{}) bool {
 		count++
 		return true
 	})
+	v := newVar(name, vtype, opts...)
 	if count > 0 {
+		// TODO this is racey and should provide more info, can fix with a mutex
 		v.Status = ErrConflictingDef
 	}
-	vdef, _ = typeMap.LoadOrStore(vtype, &Variable{})
-	return vdef.(*Variable)
+	vdef, _ = typeMap.LoadOrStore(vtype, v)
+	return *vdef.(*Variable)
+}
+
+func newVar(name string, vtype Type, opts ...Option) Variable {
+	v := Variable{
+		Name:     name,
+		Sequence: Sequence(atomic.AddUint64(&registryID, 1)),
+	}
+	for _, o := range opts {
+		v = o(v)
+	}
+	return v
 }
 
 func (v *Variable) Defined() bool {

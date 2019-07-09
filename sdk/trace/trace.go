@@ -19,6 +19,7 @@ import (
 	"math/rand"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/key"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
@@ -31,13 +32,13 @@ type tracer struct {
 }
 
 var (
-	ServiceKey   = tag.New("service")
-	ComponentKey = tag.New("component")
-	ErrorKey     = tag.New("error")
-	SpanIDKey    = tag.New("span_id")
-	TraceIDKey   = tag.New("trace_id")
-	MessageKey   = tag.New("message",
-		tag.WithDescription("message text: info, error, etc"),
+	ServiceKey   = key.New("service")
+	ComponentKey = key.New("component")
+	ErrorKey     = key.New("error")
+	SpanIDKey    = key.New("span_id")
+	TraceIDKey   = key.New("trace_id")
+	MessageKey   = key.New("message",
+		key.WithDescription("message text: info, error, etc"),
 	)
 )
 

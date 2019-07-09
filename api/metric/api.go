@@ -32,7 +32,7 @@ const (
 )
 
 type Meter interface {
-	GetFloat64Gauge(gauge *Float64GaugeRegistration, value float64, labels ...core.KeyValue) Float64Gauge
+	GetFloat64Gauge(gauge *Float64GaugeRegistration, labels ...core.KeyValue) Float64Gauge
 }
 
 type Float64Gauge interface {
@@ -40,7 +40,7 @@ type Float64Gauge interface {
 }
 
 type Registration struct {
-	Variable *registry.Variable
+	Variable registry.Variable
 
 	Type MetricType
 	Keys []core.Key
