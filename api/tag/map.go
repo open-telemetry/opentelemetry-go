@@ -23,32 +23,32 @@ import (
 
 type tagContent struct {
 	value core.Value
-	meta  core.MeasureMetadata
+	meta  MeasureMetadata
 }
 
 type tagMap map[core.Key]tagContent
 
-var _ Map = (*tagMap)(nil)
+var _ Map = tagMap{}
 
-func (t tagMap) Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
-	m := make(tagMap, len(t)+len(attributes)+len(mutators))
+func (t tagMap) Apply(update MapUpdate) Map {
+	m := make(tagMap, len(t)+len(update.MultiKV)+len(update.MultiMutator))
 	for k, v := range t {
 		m[k] = v
 	}
-	if a1.Key != nil {
-		m[a1.Key] = tagContent{
-			value: a1.Value,
+	if update.SingleKV.Key.Defined() {
+		m[update.SingleKV.Key] = tagContent{
+			value: update.SingleKV.Value,
 		}
 	}
-	for _, kv := range attributes {
+	for _, kv := range update.MultiKV {
 		m[kv.Key] = tagContent{
 			value: kv.Value,
 		}
 	}
-	if m1.KeyValue.Key != nil {
-		m.apply(m1)
+	if update.SingleMutator.Key.Defined() {
+		m.apply(update.SingleMutator)
 	}
-	for _, mutator := range mutators {
+	for _, mutator := range update.MultiMutator {
 		m.apply(mutator)
 	}
 	return m
@@ -82,7 +82,7 @@ func (m tagMap) Foreach(f func(kv core.KeyValue) bool) {
 	}
 }
 
-func (m tagMap) apply(mutator core.Mutator) {
+func (m tagMap) apply(mutator Mutator) {
 	if m == nil {
 		return
 	}
@@ -92,45 +92,45 @@ func (m tagMap) apply(mutator core.Mutator) {
 		meta:  mutator.MeasureMetadata,
 	}
 	switch mutator.MutatorOp {
-	case core.INSERT:
+	case INSERT:
 		if _, ok := m[key]; !ok {
 			m[key] = content
 		}
-	case core.UPDATE:
+	case UPDATE:
 		if _, ok := m[key]; ok {
 			m[key] = content
 		}
-	case core.UPSERT:
+	case UPSERT:
 		m[key] = content
-	case core.DELETE:
+	case DELETE:
 		delete(m, key)
 	}
 }
 
-func Insert(kv core.KeyValue) core.Mutator {
-	return core.Mutator{
-		MutatorOp: core.INSERT,
+func Insert(kv core.KeyValue) Mutator {
+	return Mutator{
+		MutatorOp: INSERT,
 		KeyValue:  kv,
 	}
 }
 
-func Update(kv core.KeyValue) core.Mutator {
-	return core.Mutator{
-		MutatorOp: core.UPDATE,
+func Update(kv core.KeyValue) Mutator {
+	return Mutator{
+		MutatorOp: UPDATE,
 		KeyValue:  kv,
 	}
 }
 
-func Upsert(kv core.KeyValue) core.Mutator {
-	return core.Mutator{
-		MutatorOp: core.UPSERT,
+func Upsert(kv core.KeyValue) Mutator {
+	return Mutator{
+		MutatorOp: UPSERT,
 		KeyValue:  kv,
 	}
 }
 
-func Delete(k core.Key) core.Mutator {
-	return core.Mutator{
-		MutatorOp: core.DELETE,
+func Delete(k core.Key) Mutator {
+	return Mutator{
+		MutatorOp: DELETE,
 		KeyValue: core.KeyValue{
 			Key: k,
 		},
@@ -143,7 +143,7 @@ func Do(ctx context.Context, f func(ctx context.Context)) {
 	m := FromContext(ctx).(tagMap)
 	keyvals := make([]string, 0, 2*len(m))
 	for k, v := range m {
-		keyvals = append(keyvals, k.Name(), v.value.Emit())
+		keyvals = append(keyvals, k.Variable.Name, v.value.Emit())
 	}
 	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }

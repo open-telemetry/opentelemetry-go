@@ -14,17 +14,20 @@
 
 package metric
 
-import (
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
-)
+import "sync/atomic"
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
+var global atomic.Value
 
-	for _, opt := range opts {
-		opt(metric, &varOpts)
+// GlobalMeter return meter registered with global registry.
+// If no meter is registered then an instance of noop Meter is returned.
+func GlobalMeter() Meter {
+	if t := global.Load(); t != nil {
+		return t.(Meter)
 	}
+	return noopMeter{}
+}
 
-	metric.Variable = registry.Register(name, mtype, varOpts...)
-	metric.Type = mtype
+// SetGlobalMeter sets provided meter as a global meter.
+func SetGlobalMeter(t Meter) {
+	global.Store(t)
 }

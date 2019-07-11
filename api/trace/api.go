@@ -16,28 +16,22 @@ package trace
 
 import (
 	"context"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type Tracer interface {
-	// ScopeID returns the resource scope of this tracer.
-	scope.Scope
-
+	// Start a span.
 	Start(context.Context, string, ...SpanOption) (context.Context, Span)
 
 	// WithSpan wraps the execution of the function body with a span.
 	// It starts a new span and sets it as an active span in the context.
 	// It then executes the body. It closes the span before returning the execution result.
-	// TODO: Should it restore the previous span?
 	WithSpan(
 		ctx context.Context,
 		operation string,
@@ -45,6 +39,7 @@ type Tracer interface {
 	) error
 
 	// TODO: Do we need WithService and WithComponent?
+	// TODO: Can we make these helpers (based on WithResources)?
 	WithService(name string) Tracer
 	WithComponent(name string) Tracer
 
@@ -56,10 +51,6 @@ type Tracer interface {
 }
 
 type Span interface {
-	scope.Mutable
-
-	stats.Interface
-
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
 
@@ -69,6 +60,8 @@ type Span interface {
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, event event.Event)
+	// AddEvent records an event to the span.
+	Event(ctx context.Context, msg string, attrs ...core.KeyValue)
 
 	// IsRecordingEvents returns true if the span is active and recording events is enabled.
 	IsRecordingEvents() bool
@@ -80,6 +73,14 @@ type Span interface {
 	// SetStatus sets the status of the span. The status of the span can be updated
 	// even after span is finished.
 	SetStatus(codes.Code)
+
+	// Set span attributes
+	SetAttribute(core.KeyValue)
+	SetAttributes(...core.KeyValue)
+
+	// Modify and delete span attributes
+	ModifyAttribute(tag.Mutator)
+	ModifyAttributes(...tag.Mutator)
 }
 
 type Injector interface {
@@ -116,46 +117,16 @@ const (
 	FollowsFromRelationship
 )
 
-var (
-	// The process global tracer could have process-wide resource
-	// tags applied directly, or we can have a SetGlobal tracer to
-	// install a default tracer w/ resources.
-	global atomic.Value
-
-	// TODO: create NOOP Tracer and register it instead of creating empty tracer here.
-	nt = &noopTracer{}
-)
-
-// GlobalTracer return tracer registered with global registry.
-// If no tracer is registered then an instance of noop Tracer is returned.
-func GlobalTracer() Tracer {
-	if t := global.Load(); t != nil {
-		return t.(Tracer)
-	}
-	return nt
-}
-
-// SetGlobalTracer sets provided tracer as a global tracer.
-func SetGlobalTracer(t Tracer) {
-	global.Store(t)
-}
-
 // Start starts a new span using registered global tracer.
 func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	return GlobalTracer().Start(ctx, name, opts...)
-}
-
-// Active returns current span from the context.
-func Active(ctx context.Context) Span {
-	span, _ := scope.Active(ctx).(Span)
-	return span
 }
 
 // Inject is convenient function to inject current span context using injector.
 // Injector is expected to serialize span context and inject it in to a carrier.
 // An example of a carrier is http request.
 func Inject(ctx context.Context, injector Injector) {
-	span := Active(ctx)
+	span := CurrentSpan(ctx)
 	if span == nil {
 		return
 	}

@@ -18,54 +18,38 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
 )
 
-type noopTracer struct {
-	resources core.EventID
-}
+type noopTracer struct{}
 
-var _ Tracer = (*noopTracer)(nil)
-
-// ScopeID returns an empty instance of ScopeID
-func (t *noopTracer) ScopeID() core.ScopeID {
-	return t.resources.Scope()
-}
+var _ Tracer = noopTracer{}
 
 // WithResources does nothing and returns noop implementation of Tracer.
-func (t *noopTracer) WithResources(attributes ...core.KeyValue) Tracer {
+func (t noopTracer) WithResources(attributes ...core.KeyValue) Tracer {
 	return t
 }
 
 // WithComponent does nothing and returns noop implementation of Tracer.
-func (g *noopTracer) WithComponent(name string) Tracer {
-	return g
+func (t noopTracer) WithComponent(name string) Tracer {
+	return t
 }
 
 // WithService does nothing and returns noop implementation of Tracer.
-func (g *noopTracer) WithService(name string) Tracer {
-	return g
+func (t noopTracer) WithService(name string) Tracer {
+	return t
 }
 
 // WithSpan wraps around execution of func with noop span.
-func (t *noopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
-	ctx, span := t.Start(ctx, name)
-	defer span.Finish()
-
-	if err := body(ctx); err != nil {
-		return err
-	}
-	return nil
+func (t noopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+	return body(ctx)
 }
 
 // Start starts a noop span.
-func (t *noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := &noopSpan{}
-	return scope.SetActive(ctx, span), span
+func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+	span := noopSpan{}
+	return SetCurrentSpan(ctx, span), span
 }
 
 // Inject does nothing.
-func (t *noopTracer) Inject(ctx context.Context, span Span, injector Injector) {
+func (noopTracer) Inject(ctx context.Context, span Span, injector Injector) {
 }
-
-var _ Tracer = (*noopTracer)(nil)

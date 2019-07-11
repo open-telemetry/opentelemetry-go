@@ -12,19 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package trace
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"context"
 )
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
+type currentSpanKeyType struct{}
 
-	for _, opt := range opts {
-		opt(metric, &varOpts)
+var (
+	currentSpanKey = &currentSpanKeyType{}
+)
+
+func SetCurrentSpan(ctx context.Context, span Span) context.Context {
+	return context.WithValue(ctx, currentSpanKey, span)
+}
+
+func CurrentSpan(ctx context.Context) Span {
+	if span, has := ctx.Value(currentSpanKey).(Span); has {
+		return span
 	}
-
-	metric.Variable = registry.Register(name, mtype, varOpts...)
-	metric.Type = mtype
+	return noopSpan{}
 }

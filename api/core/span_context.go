@@ -18,8 +18,6 @@ import (
 	"fmt"
 )
 
-type EventID uint64
-
 type TraceID struct {
 	High uint64
 	Low  uint64
@@ -28,17 +26,6 @@ type TraceID struct {
 type SpanContext struct {
 	TraceID TraceID
 	SpanID  uint64
-}
-
-type ScopeID struct {
-	EventID
-	SpanContext
-}
-
-func (e EventID) Scope() ScopeID {
-	return ScopeID{
-		EventID: e,
-	}
 }
 
 var (
@@ -64,10 +51,4 @@ func (sc SpanContext) TraceIDString() string {
 	p1 := fmt.Sprintf("%.16x", sc.TraceID.High)
 	p2 := fmt.Sprintf("%.16x", sc.TraceID.Low)
 	return p1[0:3] + ".." + p2[13:16]
-}
-
-func (s SpanContext) Scope() ScopeID {
-	return ScopeID{
-		SpanContext: s,
-	}
 }

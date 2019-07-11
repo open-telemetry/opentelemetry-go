@@ -12,19 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package main
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/stderr"
 )
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
+var (
+	stderrObs = stderr.New()
+)
 
-	for _, opt := range opts {
-		opt(metric, &varOpts)
-	}
+func Observer() observer.Observer {
+	return stderrObs
+}
 
-	metric.Variable = registry.Register(name, mtype, varOpts...)
-	metric.Type = mtype
+func main() {
+	_ = Observer()
 }

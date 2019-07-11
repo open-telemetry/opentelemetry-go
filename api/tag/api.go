@@ -18,12 +18,47 @@ import (
 	"context"
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
+type ctxTagsType struct{}
+
+var (
+	ctxTagsKey = &ctxTagsType{}
+)
+
+type MutatorOp int
+
+const (
+	INSERT MutatorOp = iota
+	UPDATE
+	UPSERT
+	DELETE
+)
+
+type Mutator struct {
+	MutatorOp
+	core.KeyValue
+	MeasureMetadata
+}
+
+type MeasureMetadata struct {
+	TTL int // -1 == infinite, 0 == do not propagate
+}
+
+func (m Mutator) WithTTL(hops int) Mutator {
+	m.TTL = hops
+	return m
+}
+
+type MapUpdate struct {
+	SingleKV      core.KeyValue
+	MultiKV       []core.KeyValue
+	SingleMutator Mutator
+	MultiMutator  []Mutator
+}
+
 type Map interface {
-	// TODO combine these four into a struct
-	Apply(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map
+	Apply(MapUpdate) Map
 
 	Value(core.Key) (core.Value, bool)
 	HasValue(core.Key) bool
@@ -33,37 +68,22 @@ type Map interface {
 	Foreach(func(kv core.KeyValue) bool)
 }
 
-type Option func(*registeredKey)
-
-func New(name string, opts ...Option) core.Key { // TODO rename NewKey?
-	return register(name, opts)
-}
-
-func NewMeasure(name string, opts ...Option) core.Measure {
-	return measure{
-		rk: register(name, opts),
-	}
-}
-
 func NewEmptyMap() Map {
-	var t tagMap
-	return t.Apply(core.KeyValue{}, nil, core.Mutator{}, nil)
+	return tagMap{}
 }
 
-func NewMap(a1 core.KeyValue, attributes []core.KeyValue, m1 core.Mutator, mutators []core.Mutator) Map {
-	var t tagMap
-	return t.Apply(a1, attributes, m1, mutators)
+func NewMap(update MapUpdate) Map {
+	return NewEmptyMap().Apply(update)
 }
 
 func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxTagsKey, m)
 }
 
-func NewContext(ctx context.Context, mutators ...core.Mutator) context.Context {
-	return WithMap(ctx, FromContext(ctx).Apply(
-		core.KeyValue{}, nil,
-		core.Mutator{}, mutators,
-	))
+func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
+	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
+		MultiMutator: mutators,
+	}))
 }
 
 func FromContext(ctx context.Context) Map {
@@ -71,18 +91,4 @@ func FromContext(ctx context.Context) Map {
 		return m
 	}
 	return tagMap{}
-}
-
-// WithDescription applies provided description.
-func WithDescription(desc string) Option {
-	return func(rk *registeredKey) {
-		rk.desc = desc
-	}
-}
-
-// WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) Option {
-	return func(rk *registeredKey) {
-		rk.unit = unit
-	}
 }

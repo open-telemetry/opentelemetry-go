@@ -21,73 +21,61 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go/api/core"
 	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/scope"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
+	"github.com/open-telemetry/opentelemetry-go/api/tag"
 )
 
 type noopSpan struct {
 }
 
 var _ Span = (*noopSpan)(nil)
-var _ stats.Interface = (*noopSpan)(nil)
-var _ scope.Mutable = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (sp *noopSpan) SpanContext() core.SpanContext {
+func (noopSpan) SpanContext() core.SpanContext {
 	return core.INVALID_SPAN_CONTEXT
 }
 
 // IsRecordingEvents always returns false for noopSpan.
-func (sp *noopSpan) IsRecordingEvents() bool {
+func (noopSpan) IsRecordingEvents() bool {
 	return false
 }
 
 // SetStatus does nothing.
-func (sp *noopSpan) SetStatus(status codes.Code) {
-}
-
-// ScopeID returns and empty ScopeID.
-func (sp *noopSpan) ScopeID() core.ScopeID {
-	return core.ScopeID{}
+func (noopSpan) SetStatus(status codes.Code) {
 }
 
 // SetError does nothing.
-func (sp *noopSpan) SetError(v bool) {
+func (noopSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (sp *noopSpan) SetAttribute(attribute core.KeyValue) {
+func (noopSpan) SetAttribute(attribute core.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (sp *noopSpan) SetAttributes(attributes ...core.KeyValue) {
+func (noopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (sp *noopSpan) ModifyAttribute(mutator core.Mutator) {
+func (noopSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (sp *noopSpan) ModifyAttributes(mutators ...core.Mutator) {
+func (noopSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (sp *noopSpan) Finish() {
+func (noopSpan) Finish() {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (sp *noopSpan) Tracer() Tracer {
-	return nt
+func (noopSpan) Tracer() Tracer {
+	return noopTracer{}
 }
 
 // AddEvent does nothing.
-func (sp *noopSpan) AddEvent(ctx context.Context, event event.Event) {
+func (noopSpan) AddEvent(ctx context.Context, event event.Event) {
 }
 
-// Record does nothing.
-func (sp *noopSpan) Record(ctx context.Context, m ...core.Measurement) {
-}
-
-// RecordSingle does nothing.
-func (sp *noopSpan) RecordSingle(ctx context.Context, m core.Measurement) {
+// Event does nothing.
+func (noopSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }

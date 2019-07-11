@@ -22,19 +22,18 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"github.com/open-telemetry/opentelemetry-go/api/key"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
-	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
 )
 
 var (
-	tracer = trace.Register().
+	tracer = trace.GlobalTracer().
 		WithService("client").
 		WithComponent("main").
 		WithResources(
-			tag.New("whatevs").String("yesss"),
+			key.New("whatevs").String("yesss"),
 		)
 )
 
@@ -42,7 +41,7 @@ func main() {
 	fmt.Printf("Tracer %v\n", tracer)
 	client := http.DefaultClient
 	ctx := tag.NewContext(context.Background(),
-		tag.Insert(tag.New("username").String("donuts")),
+		tag.Insert(key.New("username").String("donuts")),
 	)
 
 	var body []byte
@@ -53,7 +52,7 @@ func main() {
 
 			ctx, req, inj := httptrace.W3C(ctx, req)
 
-			apitrace.Inject(ctx, inj)
+			trace.Inject(ctx, inj)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -61,7 +60,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			res.Body.Close()
-			apitrace.Active(ctx).SetStatus(codes.OK)
+			trace.CurrentSpan(ctx).SetStatus(codes.OK)
 
 			return err
 		})

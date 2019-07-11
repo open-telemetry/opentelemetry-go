@@ -18,22 +18,18 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"github.com/open-telemetry/opentelemetry-go/api/key"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
+	"github.com/open-telemetry/opentelemetry-go/api/trace"
 	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
-
-	_ "github.com/open-telemetry/opentelemetry-go/exporter/loader"
-	"github.com/open-telemetry/opentelemetry-go/sdk/event"
-	"github.com/open-telemetry/opentelemetry-go/sdk/trace"
 )
 
 var (
-	tracer = trace.Register().
+	tracer = trace.GlobalTracer().
 		WithService("server").
 		WithComponent("main").
 		WithResources(
-			tag.New("whatevs").String("nooooo"),
+			key.New("whatevs").String("nooooo"),
 		)
 )
 
@@ -41,17 +37,19 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req)
 
-		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(core.KeyValue{}, tags, core.Mutator{}, nil)))
+		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(tag.MapUpdate{
+			MultiKV: tags,
+		})))
 
 		ctx, span := tracer.Start(
 			req.Context(),
 			"hello",
-			apitrace.WithAttributes(attrs...),
-			apitrace.ChildOf(spanCtx),
+			trace.WithAttributes(attrs...),
+			trace.ChildOf(spanCtx),
 		)
 		defer span.Finish()
 
-		span.AddEvent(ctx, event.WithString("handling this..."))
+		span.Event(ctx, "handling this...")
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}
