@@ -15,10 +15,6 @@
 package registry
 
 import (
-	"errors"
-	"sync"
-	"sync/atomic"
-
 	"github.com/open-telemetry/opentelemetry-go/api/unit"
 )
 
@@ -31,54 +27,19 @@ type Variable struct {
 	Description string
 	Unit        unit.Unit
 	Type        Type
-	Sequence    Sequence // 0 == unregistered
-	Status      error    // Indicates registry conflict
 }
 
 type Type interface {
 	String() string
 }
 
-type TypeMap struct {
-	sync.Map
-}
-
-var (
-	nameToMap  sync.Map // map[string]*TypeMap
-	registryID uint64
-
-	ErrConflictingDef = errors.New("Conflicting variable types")
-)
-
 func Register(name string, vtype Type, opts ...Option) Variable {
-	typeMapI, ok := nameToMap.Load(name)
-	if !ok {
-		typeMapI, _ = nameToMap.LoadOrStore(name, &TypeMap{})
-	}
-	typeMap := typeMapI.(*TypeMap)
-	vdef, ok := typeMap.Load(vtype)
-	if ok {
-		// Note: do we care if options are different?
-		return *vdef.(*Variable)
-	}
-	count := 0
-	typeMap.Range(func(_, _ interface{}) bool {
-		count++
-		return true
-	})
-	v := newVar(name, vtype, opts...)
-	if count > 0 {
-		// TODO this is racey and should provide more info, fix with a mutex.
-		v.Status = ErrConflictingDef
-	}
-	vdef, _ = typeMap.LoadOrStore(vtype, v)
-	return *vdef.(*Variable)
+	return newVar(name, vtype, opts...)
 }
 
 func newVar(name string, vtype Type, opts ...Option) Variable {
 	v := Variable{
-		Name:     name,
-		Sequence: Sequence(atomic.AddUint64(&registryID, 1)),
+		Name: name,
 	}
 	for _, o := range opts {
 		v = o(v)
@@ -88,10 +49,6 @@ func newVar(name string, vtype Type, opts ...Option) Variable {
 
 func (v *Variable) Defined() bool {
 	return len(v.Name) != 0
-}
-
-func (v *Variable) Registered() bool {
-	return v.Sequence != 0
 }
 
 // WithDescription applies the provided description.
