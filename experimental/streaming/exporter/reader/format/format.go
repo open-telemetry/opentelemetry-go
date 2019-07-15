@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 
 	// TODO this should not be an SDK dependency; move conventional tags into the API.
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk"
+	"go.opentelemetry.io/experimental/streaming/sdk"
 )
 
 var (

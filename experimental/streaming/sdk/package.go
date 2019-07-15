@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"go.opentelemetry.io/api/trace"
 )
 
 func init() {

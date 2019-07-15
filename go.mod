@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-go
+module go.opentelemetry.io
 
 go 1.12
 
@@ -20,7 +20,6 @@ require (
 	golang.org/x/sys v0.0.0-20190614160838-b47fdc937951 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190521203540-521d6ed310dd
-	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873 // indirect
 	google.golang.org/grpc v1.21.1
 )

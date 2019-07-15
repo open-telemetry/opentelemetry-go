@@ -15,8 +15,8 @@
 package main
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spanlog"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter/spanlog"
 )
 
 var (

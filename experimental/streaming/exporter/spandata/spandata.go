@@ -15,9 +15,9 @@
 package spandata
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 )
 
 type Reader interface {

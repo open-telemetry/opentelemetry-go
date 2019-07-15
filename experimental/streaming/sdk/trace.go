@@ -18,12 +18,12 @@ import (
 	"context"
 	"math/rand"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/trace"
+	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
 type tracer struct {

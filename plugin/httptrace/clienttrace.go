@@ -23,9 +23,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/trace"
 )
 
 type clientLevel struct {

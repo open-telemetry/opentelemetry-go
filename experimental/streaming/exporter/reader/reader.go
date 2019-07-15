@@ -21,11 +21,11 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/event"
+	"go.opentelemetry.io/api/stats"
+	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
 type Reader interface {

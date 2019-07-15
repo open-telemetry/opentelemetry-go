@@ -3,7 +3,7 @@ package metric
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"go.opentelemetry.io/api/core"
 )
 
 type noopMeter struct{}

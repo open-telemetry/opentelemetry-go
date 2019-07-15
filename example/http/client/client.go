@@ -22,10 +22,10 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/plugin/httptrace"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/plugin/httptrace"
 )
 
 var (

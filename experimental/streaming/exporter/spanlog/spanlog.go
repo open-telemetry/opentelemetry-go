@@ -18,9 +18,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spandata"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spandata/format"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter/spandata"
+	"go.opentelemetry.io/experimental/streaming/exporter/spandata/format"
 )
 
 type spanLog struct{}

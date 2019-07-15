@@ -1,8 +1,8 @@
 package key
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/registry"
 )
 
 type AnyValue struct{}

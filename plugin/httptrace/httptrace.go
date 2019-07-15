@@ -21,9 +21,9 @@ import (
 	"github.com/lightstep/tracecontext.go"
 	"github.com/lightstep/tracecontext.go/tracestate"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/tag"
 )
 
 const (

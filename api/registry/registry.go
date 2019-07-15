@@ -15,7 +15,7 @@
 package registry
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
+	"go.opentelemetry.io/api/unit"
 )
 
 type Sequence uint64
