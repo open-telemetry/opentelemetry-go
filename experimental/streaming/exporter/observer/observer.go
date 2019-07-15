@@ -150,7 +150,14 @@ func Foreach(f func(Observer)) {
 	}
 }
 
-func NewScope(parent ScopeID, kv ...core.KeyValue) ScopeID {
-	// TODO
-	return parent
+func NewScope(parent ScopeID, attributes ...core.KeyValue) ScopeID {
+	eventID := Record(Event{
+		Type:       NEW_SCOPE,
+		Scope:      parent,
+		Attributes: attributes,
+	})
+	return ScopeID{
+		EventID:     eventID,
+		SpanContext: parent.SpanContext,
+	}
 }

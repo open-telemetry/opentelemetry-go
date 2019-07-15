@@ -18,7 +18,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/buffer"
 	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
 	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spandata"
 	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/spandata/format"
@@ -27,7 +26,7 @@ import (
 type spanLog struct{}
 
 func New() observer.Observer {
-	return buffer.NewBuffer(1000, spandata.NewReaderObserver(&spanLog{}))
+	return spandata.NewReaderObserver(&spanLog{})
 }
 
 func (s *spanLog) Read(data *spandata.Span) {
