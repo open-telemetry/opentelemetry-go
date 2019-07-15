@@ -20,11 +20,11 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	apitrace "github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/event"
+	"go.opentelemetry.io/api/tag"
+	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
 type span struct {

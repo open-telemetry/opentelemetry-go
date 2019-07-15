@@ -20,9 +20,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/event"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/event"
+	"go.opentelemetry.io/api/tag"
 )
 
 type Tracer interface {

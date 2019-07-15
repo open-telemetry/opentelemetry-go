@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/reader"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/trace"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/experimental/streaming/exporter/reader"
+	"go.opentelemetry.io/experimental/streaming/sdk/trace"
 )
 
 var (

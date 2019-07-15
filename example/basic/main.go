@@ -17,13 +17,13 @@ package main
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go/api/key"
-	"github.com/open-telemetry/opentelemetry-go/api/metric"
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/event"
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/registry"
+	"go.opentelemetry.io/api/stats"
+	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/experimental/streaming/sdk/event"
 )
 
 var (

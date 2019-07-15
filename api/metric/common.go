@@ -15,7 +15,7 @@
 package metric
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"go.opentelemetry.io/api/registry"
 )
 
 func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {

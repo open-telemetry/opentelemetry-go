@@ -15,7 +15,7 @@
 package event
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"go.opentelemetry.io/api/core"
 )
 
 // Event interface provides methods to retrieve Event properties.

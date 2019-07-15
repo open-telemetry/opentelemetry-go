@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 
-	"github.com/open-telemetry/opentelemetry-go/api/trace"
+	"go.opentelemetry.io/api/trace"
 )
 
 // Client

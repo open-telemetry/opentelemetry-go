@@ -22,9 +22,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/stats"
-	"github.com/open-telemetry/opentelemetry-go/api/tag"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/stats"
+	"go.opentelemetry.io/api/tag"
 )
 
 type EventType int

@@ -18,7 +18,7 @@ import (
 	"context"
 	"runtime/pprof"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"go.opentelemetry.io/api/core"
 )
 
 type tagContent struct {

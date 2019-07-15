@@ -15,13 +15,13 @@
 package install
 
 import (
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/observer"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/stderr"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter/stderr"
 )
 
 // Use this import:
 //
-//   import _ "github.com/open-telemetry/opentelemetry-go/experimental/streaming/exporter/stderr/install"
+//   import _ "go.opentelemetry.io/experimental/streaming/exporter/stderr/install"
 //
 // to include the stderr exporter by default.
 
