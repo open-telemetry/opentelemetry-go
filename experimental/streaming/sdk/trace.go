@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package sdk
 
 import (
 	"context"
@@ -31,6 +31,7 @@ type tracer struct {
 }
 
 var (
+	// TODO These should move somewhere in the api, right?
 	ServiceKey   = key.New("service")
 	ComponentKey = key.New("component")
 	ErrorKey     = key.New("error")
