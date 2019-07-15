@@ -23,7 +23,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-go/api/stats"
 	"github.com/open-telemetry/opentelemetry-go/api/tag"
 	"github.com/open-telemetry/opentelemetry-go/api/trace"
-	"github.com/open-telemetry/opentelemetry-go/experimental/streaming/sdk/event"
 )
 
 var (
@@ -64,7 +63,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).AddEvent(ctx, event.WithAttr("Nice operation!", key.New("bogons").Int(100)))
+		trace.CurrentSpan(ctx).Event(ctx, "Nice operation!", key.New("bogons").Int(100))
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
@@ -76,7 +75,7 @@ func main() {
 			func(ctx context.Context) error {
 				trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-				trace.CurrentSpan(ctx).AddEvent(ctx, event.WithString("Format schmormat %d!", 100))
+				trace.CurrentSpan(ctx).Event(ctx, "Sub span event")
 
 				stats.Record(ctx, measureTwo.M(1.3))
 
