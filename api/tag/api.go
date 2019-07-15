@@ -17,7 +17,7 @@ package tag
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
+	"go.opentelemetry.io/api/core"
 )
 
 type ctxTagsType struct{}

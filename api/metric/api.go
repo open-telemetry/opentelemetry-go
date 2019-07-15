@@ -17,9 +17,9 @@ package metric
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
-	"github.com/open-telemetry/opentelemetry-go/api/unit"
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/registry"
+	"go.opentelemetry.io/api/unit"
 )
 
 type MetricType int

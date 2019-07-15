@@ -17,8 +17,8 @@ package event
 import (
 	"fmt"
 
-	"github.com/open-telemetry/opentelemetry-go/api/core"
-	apievent "github.com/open-telemetry/opentelemetry-go/api/event"
+	"go.opentelemetry.io/api/core"
+	apievent "go.opentelemetry.io/api/event"
 )
 
 type event struct {

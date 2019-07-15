@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/open-telemetry/opentelemetry-go/api/registry"
+	"go.opentelemetry.io/api/registry"
 )
 
 type Key struct {
