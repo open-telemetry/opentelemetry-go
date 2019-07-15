@@ -92,8 +92,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	if o.Reference.HasTraceID() {
 		parentScope.SpanContext = o.Reference.SpanContext
 	} else {
-		parentSpan, _ := apitrace.CurrentSpan(ctx).(*span)
-		parentScope = parentSpan.ScopeID()
+		parentScope.SpanContext = apitrace.CurrentSpan(ctx).SpanContext()
 	}
 
 	if parentScope.HasTraceID() {
@@ -111,17 +110,19 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	}
 
 	span := &span{
-		spanContext: child,
-		tracer:      t,
-		recordEvent: o.RecordEvent,
-		eventID: observer.Record(observer.Event{
-			Time:    o.StartTime,
-			Type:    observer.START_SPAN,
-			Scope:   observer.NewScope(childScope, o.Attributes...),
-			Context: ctx,
-			Parent:  parentScope,
-			String:  name,
-		}),
+		tracer: t,
+		initial: observer.ScopeID{
+			SpanContext: child,
+			EventID: observer.Record(observer.Event{
+				Time:    o.StartTime,
+				Type:    observer.START_SPAN,
+				Scope:   observer.NewScope(childScope, o.Attributes...),
+				Context: ctx,
+				Parent:  parentScope,
+				String:  name,
+			},
+			),
+		},
 	}
 	return trace.SetCurrentSpan(ctx, span), span
 }

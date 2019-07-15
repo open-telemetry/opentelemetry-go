@@ -117,6 +117,11 @@ func NewReaderObserver(readers ...Reader) observer.Observer {
 }
 
 func (ro *readerObserver) Observe(event observer.Event) {
+	// TODO this should check for out-of-order events and buffer.
+	ro.orderedObserve(event)
+}
+
+func (ro *readerObserver) orderedObserve(event observer.Event) {
 	read := Event{
 		Time:       event.Time,
 		Sequence:   event.Sequence,
@@ -169,7 +174,7 @@ func (ro *readerObserver) Observe(event observer.Event) {
 	case observer.FINISH_SPAN:
 		attrs, span := ro.readScope(event.Scope)
 		if span == nil {
-			panic("span not found")
+			panic(fmt.Sprint("span not found", event.Scope))
 		}
 
 		read.Name = span.name
