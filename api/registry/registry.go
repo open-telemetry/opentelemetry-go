@@ -40,6 +40,7 @@ func Register(name string, vtype Type, opts ...Option) Variable {
 func newVar(name string, vtype Type, opts ...Option) Variable {
 	v := Variable{
 		Name: name,
+		Type: vtype,
 	}
 	for _, o := range opts {
 		v = o(v)
