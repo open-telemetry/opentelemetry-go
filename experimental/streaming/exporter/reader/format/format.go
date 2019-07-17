@@ -21,7 +21,9 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
-	"go.opentelemetry.io/experimental/streaming/sdk/trace"
+
+	// TODO this should not be an SDK dependency; move conventional tags into the API.
+	"go.opentelemetry.io/experimental/streaming/sdk"
 )
 
 var (
@@ -119,10 +121,10 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		data.Tags.Foreach(f(true))
 	}
 	if data.SpanContext.HasSpanID() {
-		f(false)(trace.SpanIDKey.String(data.SpanContext.SpanIDString()))
+		f(false)(sdk.SpanIDKey.String(data.SpanContext.SpanIDString()))
 	}
 	if data.SpanContext.HasTraceID() {
-		f(false)(trace.TraceIDKey.String(data.SpanContext.TraceIDString()))
+		f(false)(sdk.TraceIDKey.String(data.SpanContext.TraceIDString()))
 	}
 
 	buf.WriteString(" ]\n")

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package sdk
 
 import (
 	"context"
@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/api/trace"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
-	"go.opentelemetry.io/experimental/streaming/sdk/event"
 )
 
 type tracer struct {
@@ -32,6 +31,7 @@ type tracer struct {
 }
 
 var (
+	// TODO These should move somewhere in the api, right?
 	ServiceKey   = key.New("service")
 	ComponentKey = key.New("component")
 	ErrorKey     = key.New("error")
@@ -42,20 +42,17 @@ var (
 	)
 )
 
-var t = &tracer{}
-
-// Register registers tracer to global registry and returns the registered tracer.
-func Register() apitrace.Tracer {
-	apitrace.SetGlobalTracer(t)
-	return t
+func New() trace.Tracer {
+	return &tracer{}
 }
 
 func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
-	return t
-	// s := scope.New(t.resources.Scope(), attributes...)
-	// return &tracer{
-	// 	resources: s.ScopeID().EventID,
-	// }
+	s := observer.NewScope(observer.ScopeID{
+		EventID: t.resources,
+	}, attributes...)
+	return &tracer{
+		resources: s.EventID,
+	}
 }
 
 func (t *tracer) WithComponent(name string) apitrace.Tracer {
@@ -74,18 +71,12 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 
 	if err := body(ctx); err != nil {
 		span.SetAttribute(ErrorKey.Bool(true))
-		span.AddEvent(ctx, event.WithAttr("span error", MessageKey.String(err.Error())))
+		span.Event(ctx, "span error", MessageKey.String(err.Error()))
 		return err
 	}
 	return nil
 }
 
-// Start starts a new span with provided name and span options.
-// If parent span reference is provided in the span option then it is used as as parent.
-// Otherwise, parent span reference is retrieved from current context.
-// The new span uses the same TraceID as parent.
-// If no parent is found then a root span is created and started with random TraceID.
-// TODO: Add sampling logic.
 func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOption) (context.Context, apitrace.Span) {
 	var child core.SpanContext
 
@@ -102,8 +93,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	if o.Reference.HasTraceID() {
 		parentScope.SpanContext = o.Reference.SpanContext
 	} else {
-		parentSpan, _ := apitrace.CurrentSpan(ctx).(*span)
-		parentScope = parentSpan.ScopeID()
+		parentScope.SpanContext = apitrace.CurrentSpan(ctx).SpanContext()
 	}
 
 	if parentScope.HasTraceID() {
@@ -121,17 +111,19 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	}
 
 	span := &span{
-		spanContext: child,
-		tracer:      t,
-		recordEvent: o.RecordEvent,
-		eventID: observer.Record(observer.Event{
-			Time:    o.StartTime,
-			Type:    observer.START_SPAN,
-			Scope:   observer.NewScope(childScope, o.Attributes...),
-			Context: ctx,
-			Parent:  parentScope,
-			String:  name,
-		}),
+		tracer: t,
+		initial: observer.ScopeID{
+			SpanContext: child,
+			EventID: observer.Record(observer.Event{
+				Time:    o.StartTime,
+				Type:    observer.START_SPAN,
+				Scope:   observer.NewScope(childScope, o.Attributes...),
+				Context: ctx,
+				Parent:  parentScope,
+				String:  name,
+			},
+			),
+		},
 	}
 	return trace.SetCurrentSpan(ctx, span), span
 }
