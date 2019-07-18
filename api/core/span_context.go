@@ -36,6 +36,7 @@ type SpanContext struct {
 	TraceID      TraceID
 	SpanID       uint64
 	TraceOptions byte
+	Tracestate   *Tracestate
 }
 
 var (
