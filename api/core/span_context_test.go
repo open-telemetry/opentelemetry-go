@@ -119,7 +119,7 @@ func TestTraceIDString(t *testing.T) {
 					Low:  uint64(42),
 				},
 			},
-			want: `000..000`,
+			want: `000..02a`,
 		}, {
 			name: "empty",
 			sc:   SpanContext{TraceID: TraceID{}},
@@ -128,7 +128,7 @@ func TestTraceIDString(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (sc SpanContext) TraceIDString() string {}
-			have := testcase.sc.SpanIDString()
+			have := testcase.sc.TraceIDString()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
