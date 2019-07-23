@@ -90,11 +90,11 @@ func TestFloat64(t *testing.T) {
 		want Value
 	}{
 		{
-			name: "value: float64(42.42)",
-			v:    float64(42.42),
+			name: "value: float64(42.1)",
+			v:    float64(42.1),
 			want: Value{
 				Type:    FLOAT64,
-				Float64: float64(42.42),
+				Float64: float64(42.1),
 			},
 		},
 	} {
@@ -165,11 +165,11 @@ func TestFloat32(t *testing.T) {
 		want Value
 	}{
 		{
-			name: "value: float32(42.0)",
-			v:    float32(42.0),
+			name: "value: float32(42.1)",
+			v:    float32(42.1),
 			want: Value{
 				Type:    FLOAT32,
-				Float64: float64(42.0),
+				Float64: float64(42.1),
 			},
 		},
 	} {
@@ -376,17 +376,17 @@ func TestEmit(t *testing.T) {
 			name: `float32`,
 			v: Value{
 				Type:    FLOAT32,
-				Float64: 42,
+				Float64: 42.1,
 			},
-			want: "42",
+			want: "42.1",
 		},
 		{
 			name: `float64`,
 			v: Value{
 				Type:    FLOAT64,
-				Float64: 42,
+				Float64: 42.1,
 			},
-			want: "42",
+			want: "42.1",
 		},
 		{
 			name: `string`,
