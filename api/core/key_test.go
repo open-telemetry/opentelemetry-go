@@ -1,10 +1,11 @@
 package core
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"go.opentelemetry.io/api/registry"
 	"testing"
 	"unsafe"
+
+	"github.com/google/go-cmp/cmp"
+	"go.opentelemetry.io/api/registry"
 )
 
 func TestBool(t *testing.T) {
