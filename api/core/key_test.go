@@ -165,11 +165,11 @@ func TestFloat32(t *testing.T) {
 		want Value
 	}{
 		{
-			name: "value: float32(42.1)",
-			v:    float32(42.1),
+			name: "value: float32(42.0)",
+			v:    float32(42.0),
 			want: Value{
 				Type:    FLOAT32,
-				Float64: float64(42.1),
+				Float64: float64(42.0),
 			},
 		},
 	} {
