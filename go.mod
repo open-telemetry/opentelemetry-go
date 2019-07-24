@@ -7,7 +7,7 @@ require (
 	github.com/golang/mock v1.2.0 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golangci/golangci-lint v1.17.1
-	github.com/google/go-cmp v0.3.0 // indirect
+	github.com/google/go-cmp v0.3.0
 	github.com/lightstep/tracecontext.go v0.0.0-20181129014701-1757c391b1ac
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect

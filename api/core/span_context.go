@@ -23,20 +23,19 @@ type TraceID struct {
 	Low  uint64
 }
 
-// TraceOptions contains options associated with a trace span.
-type TraceOptions byte
+const (
+	traceOptionBitMaskSampled = byte(0x01)
+	traceOptionBitMaskUnused  = byte(0xFE)
 
-// IsSampled returns true if the span will be exported.
-func (t TraceOptions) IsSampled() bool {
-	return t&1 == 1
-}
+	// TraceOptionSampled is a byte with sampled bit set. It is a convenient value initialize
+	// SpanContext when a trace is sampled.
+	TraceOptionSampled = traceOptionBitMaskSampled
+)
 
 type SpanContext struct {
 	TraceID      TraceID
 	SpanID       uint64
-	TraceOptions TraceOptions
-	// TODO: should Tracestate be part of SpanContext?
-	// Tracestate   *Tracestate
+	TraceOptions byte
 }
 
 var (
@@ -64,16 +63,6 @@ func (sc SpanContext) TraceIDString() string {
 	return p1[0:3] + ".." + p2[13:16]
 }
 
-// IsSampled returns true if the span will be exported.
 func (sc SpanContext) IsSampled() bool {
-	return sc.TraceOptions.IsSampled()
-}
-
-// SetSampled	 sets the TraceOptions bit that determines whether the span will be exported.
-func (sc SpanContext) SetSampled(sampled bool) {
-	if sampled {
-		sc.TraceOptions |= 1
-	} else {
-		sc.TraceOptions &= ^TraceOptions(1)
-	}
+	return sc.TraceOptions&traceOptionBitMaskSampled == traceOptionBitMaskSampled
 }
