@@ -85,9 +85,8 @@ type SpanData struct {
 	EndTime time.Time
 	// The values of Attributes each have type string, bool, or int64.
 	Attributes               map[string]interface{}
-	MessageEvents            []MessageEvent
+	MessageEvents            []event
 	Status                   codes.Code
-	Links                    []Link
 	HasRemoteParent          bool
 	DroppedAttributeCount    int
 	DroppedMessageEventCount int

@@ -18,54 +18,23 @@ import (
 	"time"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
+	apievent "go.opentelemetry.io/api/event"
 )
 
-// LinkType specifies the relationship between the span that had the link
-// added, and the linked span.
-type LinkType int32
-
-// LinkType values.
-const (
-	LinkTypeUnspecified LinkType = iota // The relationship of the two spans is unknown.
-	LinkTypeChild                       // The linked span is a child of the current span.
-	LinkTypeParent                      // The linked span is the parent of the current span.
-)
-
-// Link represents a reference from one span to another span.
-type Link struct {
-	Type LinkType
-	// Attributes is a set of attributes on the link.
-	Attributes map[string]interface{}
+// event is used to describe an event with a message string and set of
+// attributes.
+type event struct {
+	msg        string
+	attributes []core.KeyValue
+	time       time.Time
 }
 
-// MessageEventType specifies the type of message event.
-type MessageEventType int32
+var _ apievent.Event = &event{}
 
-// MessageEventType values.
-const (
-	MessageEventTypeUnspecified MessageEventType = iota // Unknown event type.
-	MessageEventTypeSent                                // Indicates a sent RPC message.
-	MessageEventTypeRecv                                // Indicates a received RPC message.
-)
-
-// MessageEvent represents an event describing a message sent or received on the network.
-type MessageEvent struct {
-	msg                  string
-	attributes           []core.KeyValue
-	Time                 time.Time
-	EventType            MessageEventType
-	MessageID            int64
-	UncompressedByteSize int64
-	CompressedByteSize   int64
-}
-
-var _ event.Event = &MessageEvent{}
-
-func (me *MessageEvent) Message() string {
+func (me *event) Message() string {
 	return me.msg
 }
 
-func (me *MessageEvent) Attributes() []core.KeyValue {
+func (me *event) Attributes() []core.KeyValue {
 	return me.attributes
 }

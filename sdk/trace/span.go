@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
+	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
@@ -147,7 +147,7 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, event event.Event) {
+func (s *span) AddEvent(ctx context.Context, event apievent.Event) {
 	if !s.IsRecordingEvents() {
 		return
 	}
@@ -162,10 +162,10 @@ func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	}
 	now := time.Now()
 	s.mu.Lock()
-	s.messageEvents.add(MessageEvent{
+	s.messageEvents.add(event{
 		msg:        msg,
 		attributes: attrs,
-		Time:       now,
+		time:       now,
 	})
 	s.mu.Unlock()
 }
@@ -197,26 +197,14 @@ func (s *span) makeSpanData() *SpanData {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
 		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
 	}
-	if len(s.links.queue) > 0 {
-		sd.Links = s.interfaceArrayToLinksArray()
-		sd.DroppedLinkCount = s.links.droppedCount
-	}
 	s.mu.Unlock()
 	return &sd
 }
 
-func (s *span) interfaceArrayToLinksArray() []Link {
-	linksArr := make([]Link, 0)
-	for _, value := range s.links.queue {
-		linksArr = append(linksArr, value.(Link))
-	}
-	return linksArr
-}
-
-func (s *span) interfaceArrayToMessageEventArray() []MessageEvent {
-	messageEventArr := make([]MessageEvent, 0)
+func (s *span) interfaceArrayToMessageEventArray() []event {
+	messageEventArr := make([]event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(MessageEvent))
+		messageEventArr = append(messageEventArr, value.(event))
 	}
 	return messageEventArr
 }
