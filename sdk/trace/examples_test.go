@@ -15,9 +15,8 @@
 package trace_test
 
 import (
-	"fmt"
-
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/api/trace"
 )

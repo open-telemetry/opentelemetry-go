@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package opentelemetry contains Go support for OpenCensus.
+// Package opentelemetry contains Go support for OpenTelemetry.
 package opentelemetry // import "go.opentelemetry.io/sdk"
 
 // Version is the current release version of OpenTelemetry in use.
