@@ -47,6 +47,7 @@ var (
 // Binaries can register exporters, libraries shouldn't register exporters.
 func RegisterExporter(e Exporter) {
 	exporterMu.Lock()
+	defer exporterMu.Unlock()
 	new := make(exportersMap)
 	if old, ok := exporters.Load().(exportersMap); ok {
 		for k, v := range old {
@@ -55,13 +56,13 @@ func RegisterExporter(e Exporter) {
 	}
 	new[e] = struct{}{}
 	exporters.Store(new)
-	exporterMu.Unlock()
 }
 
 // UnregisterExporter removes from the list of Exporters the Exporter that was
 // registered with the given name.
 func UnregisterExporter(e Exporter) {
 	exporterMu.Lock()
+	defer exporterMu.Unlock()
 	new := make(exportersMap)
 	if old, ok := exporters.Load().(exportersMap); ok {
 		for k, v := range old {
@@ -70,7 +71,6 @@ func UnregisterExporter(e Exporter) {
 	}
 	delete(new, e)
 	exporters.Store(new)
-	exporterMu.Unlock()
 }
 
 // SpanData contains all the information collected by a span.

@@ -188,6 +188,7 @@ func (s *span) String() string {
 func (s *span) makeSpanData() *SpanData {
 	var sd SpanData
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	sd = *s.data
 	if s.lruAttributes.simpleLruMap.Len() > 0 {
 		sd.Attributes = s.lruAttributesToAttributeMap()
@@ -197,7 +198,6 @@ func (s *span) makeSpanData() *SpanData {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
 		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
 	}
-	s.mu.Unlock()
 	return &sd
 }
 
