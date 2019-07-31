@@ -73,7 +73,7 @@ func UnregisterExporter(e Exporter) {
 	exporterMu.Unlock()
 }
 
-// SpanData contains all the information collected by a sdkSpan.
+// SpanData contains all the information collected by a span.
 type SpanData struct {
 	SpanContext  core.SpanContext
 	ParentSpanID uint64

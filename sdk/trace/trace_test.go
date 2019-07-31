@@ -48,11 +48,11 @@ func (t *testExporter) ExportSpan(s *SpanData) {
 }
 
 func TestFromContext(t *testing.T) {
-	want := &sdkSpan{}
+	want := &span{}
 	ctx := NewContext(context.Background(), want)
 	got := FromContext(ctx)
 	if got != want {
-		t.Errorf("got sdkSpan pointer %p want %p", got, want)
+		t.Errorf("got span pointer %p want %p", got, want)
 	}
 }
 
@@ -264,8 +264,6 @@ func TestSetSpanName(t *testing.T) {
 			SpanID:       sid,
 			TraceOptions: 1,
 		}),
-		//WithSampler(o.Sampler),
-		//WithSpanKind(o.SpanKind),
 	)
 	got, err := endSpan(span)
 	if err != nil {
@@ -327,7 +325,7 @@ func remoteSpanContext() core.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p core.SpanContext, c *sdkSpan) error {
+func checkChild(p core.SpanContext, c *span) error {
 	if c == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
@@ -360,14 +358,14 @@ func startSpan() apitrace.Span {
 	return span
 }
 
-// endSpan is a test utility function that ends the sdkSpan in the context and
+// endSpan is a test utility function that ends the span in the context and
 // returns the exported SpanData.
 // It requires that span be sampled using one of these methods
 //  1. Passing parent span context using ChildOf option
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //
-// It also does some basic tests on the sdkSpan.
+// It also does some basic tests on the span.
 // It also clears spanID in the SpanData to make the comparision easier.
 func endSpan(span apitrace.Span) (*SpanData, error) {
 
@@ -431,11 +429,11 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	RegisterExporter(&spans)
 	defer UnregisterExporter(&spans)
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
-	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1", WithSampler(AlwaysSample()))
+	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	span1.Finish()
 	// Start a new span with the context containing span-1
 	// even though span-1 is ended, we still add this as a new child of span-1
-	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2", WithSampler(AlwaysSample()))
+	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
 	span2.Finish()
 	span0.Finish()
 	UnregisterExporter(&spans)
@@ -461,13 +459,13 @@ func TestChildSpanCount(t *testing.T) {
 	spans := make(exporter)
 	RegisterExporter(&spans)
 	defer UnregisterExporter(&spans)
-	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent", WithSampler(AlwaysSample()))
-	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1", WithSampler(AlwaysSample()))
-	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2", WithSampler(AlwaysSample()))
+	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent")
+	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
+	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
 	span2.Finish()
 	span1.Finish()
 
-	_, span3 := apitrace.GlobalTracer().Start(ctx, "span-3", WithSampler(AlwaysSample()))
+	_, span3 := apitrace.GlobalTracer().Start(ctx, "span-3")
 	span3.Finish()
 	span0.Finish()
 	UnregisterExporter(&spans)
@@ -489,7 +487,7 @@ func TestChildSpanCount(t *testing.T) {
 }
 
 func TestNilSpanFinish(t *testing.T) {
-	var span *sdkSpan
+	var span *span
 	span.Finish()
 }
 
@@ -500,14 +498,14 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		atomic.AddUint64(&n, 1)
 	}
 
-	var spans []*sdkSpan
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "foo")
-	s := span.(*sdkSpan)
+	var spans []*span
+	_, apiSpan := apitrace.GlobalTracer().Start(context.Background(), "foo")
+	s := apiSpan.(*span)
 
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
-	_, span = apitrace.GlobalTracer().Start(
+	_, apiSpan = apitrace.GlobalTracer().Start(
 		context.Background(),
 		"foo",
 		apitrace.ChildOf(
@@ -518,13 +516,13 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 			},
 		),
 	)
-	s = span.(*sdkSpan)
+	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
 	ApplyConfig(Config{DefaultSampler: AlwaysSample()})
-	_, span = apitrace.GlobalTracer().Start(context.Background(), "foo")
-	s = span.(*sdkSpan)
+	_, apiSpan = apitrace.GlobalTracer().Start(context.Background(), "foo")
+	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // always sample
 
