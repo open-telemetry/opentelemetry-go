@@ -268,8 +268,6 @@ func TestSetSpanName(t *testing.T) {
 	}
 }
 
-// TODO: [rghetia] add TestSetSpanNameUnsampledSpan
-
 func TestSetSpanStatus(t *testing.T) {
 	span := startSpan()
 	span.SetStatus(codes.Canceled)
@@ -292,9 +290,6 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
 	}
 }
-
-// TODO: [rghetia] Add Test for ChildOf or Add links.
-//   add test for limits.
 
 func TestUnregisterExporter(t *testing.T) {
 	var te testExporter
