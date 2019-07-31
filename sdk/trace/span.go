@@ -16,7 +16,6 @@ package trace
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -28,7 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// span implements apitrace.Span interfaces.
+// span implements apitrace.Span interface.
 type span struct {
 	// data contains information recorded about the span.
 	//
@@ -59,8 +58,6 @@ type span struct {
 
 var _ apitrace.Span = &span{}
 
-// SpancContext returns an span context of the span.
-// If span is nil then it returns invalid SpanContext
 func (s *span) SpanContext() core.SpanContext {
 	if s == nil {
 		return core.INVALID_SPAN_CONTEXT
@@ -68,9 +65,6 @@ func (s *span) SpanContext() core.SpanContext {
 	return s.spanContext
 }
 
-// IsRecordingEvents returns true if events are being recorded for this span.
-// Use this check to avoid computing expensive annotations when they will never
-// be used.
 func (s *span) IsRecordingEvents() bool {
 	if s == nil {
 		return false
@@ -78,7 +72,6 @@ func (s *span) IsRecordingEvents() bool {
 	return s.data != nil
 }
 
-// SetStatus sets the status of the span, if it is recording events.
 func (s *span) SetStatus(status codes.Code) {
 	if s == nil {
 		return
@@ -168,19 +161,6 @@ func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 		time:       now,
 	})
 	s.mu.Unlock()
-}
-
-func (s *span) String() string {
-	if s == nil {
-		return "<nil>"
-	}
-	if s.data == nil {
-		return fmt.Sprintf("span %s", s.spanContext.SpanIDString())
-	}
-	s.mu.Lock()
-	str := fmt.Sprintf("span %s %q", s.spanContext.SpanIDString(), s.data.Name)
-	s.mu.Unlock()
-	return str
 }
 
 // makeSpanData produces a SpanData representing the current state of the span.
