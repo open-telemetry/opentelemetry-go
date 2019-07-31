@@ -1,6 +1,9 @@
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 ALL_PKGS := $(shell go list $(sort $(dir $(ALL_SRC))))
 
+# All source code and documents. Used in spell check.
+ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
+
 GOTEST=go test
 GOTEST_OPT?=-v -race -timeout 30s
 GOTEST_OPT_WITH_COVERAGE = $(GOTEST_OPT) -coverprofile=coverage.txt -covermode=atomic
@@ -17,9 +20,13 @@ $(TOOLS_DIR)/golangci-lint: go.mod go.sum tools.go
 $(TOOLS_DIR)/goimports: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/goimports golang.org/x/tools/cmd/goimports
 
-precommit: $(TOOLS_DIR)/goimports $(TOOLS_DIR)/golangci-lint 
+$(TOOLS_DIR)/misspell: go.mod go.sum tools.go
+	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
+
+precommit: $(TOOLS_DIR)/goimports $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
 	$(TOOLS_DIR)/goimports -d -local github.com/open-telemetry/opentelemetry-go -w .
 	$(TOOLS_DIR)/golangci-lint run # TODO: Fix this on windows.
+	$(TOOLS_DIR)/misspell -w $(ALL_SRC) $(ALL_DOCS)
 
 .PHONY: test-with-coverage
 test-with-coverage:
