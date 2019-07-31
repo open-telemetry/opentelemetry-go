@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	crand "crypto/rand"
 	"encoding/binary"
 	"math/rand"
@@ -50,10 +51,25 @@ func init() {
 var tr *tracer
 var registerOnce sync.Once
 
+// Register registers tracer implementation as default Tracer.
+// It creates single instance of tracer and registers it once.
+// Recommended use is to call Register in main() of an
+// application before calling any tracing api.
 func Register() apitrace.Tracer {
 	registerOnce.Do(func() {
 		tr = &tracer{}
 		apitrace.SetGlobalTracer(tr)
 	})
 	return tr
+}
+
+type contextKey struct{}
+
+func fromContext(ctx context.Context) *span {
+	s, _ := ctx.Value(contextKey{}).(*span)
+	return s
+}
+
+func newContext(parent context.Context, s *span) context.Context {
+	return context.WithValue(parent, contextKey{}, s)
 }

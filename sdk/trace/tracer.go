@@ -51,7 +51,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		parent = opts.Reference.SpanContext
 		remoteParent = true
 	} else {
-		if p := FromContext(ctx); p != nil {
+		if p := fromContext(ctx); p != nil {
 			p.addChild()
 			parent = p.spanContext
 		}
@@ -62,7 +62,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
-	return NewContext(ctx, span), span
+	return newContext(ctx, span), span
 }
 
 func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {

@@ -47,15 +47,6 @@ func (t *testExporter) ExportSpan(s *SpanData) {
 	t.spans = append(t.spans, s)
 }
 
-func TestFromContext(t *testing.T) {
-	want := &span{}
-	ctx := NewContext(context.Background(), want)
-	got := FromContext(ctx)
-	if got != want {
-		t.Errorf("got span pointer %p want %p", got, want)
-	}
-}
-
 func TestStartSpan(t *testing.T) {
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "StartSpan")
 	defer span.Finish()
@@ -75,40 +66,40 @@ func TestRecordingIsOff(t *testing.T) {
 // TODO: [rghetia] enable sampling test when Sampling is working.
 
 func TestStartSpanWithChildOf(t *testing.T) {
-	sc := core.SpanContext{
+	sc1 := core.SpanContext{
 		TraceID:      tid,
 		SpanID:       sid,
 		TraceOptions: 0x0,
 	}
-	ctx, _ := apitrace.GlobalTracer().Start(context.Background(), "startSpanWithRemoteParent", apitrace.ChildOf(sc))
-	if err := checkChild(sc, FromContext(ctx)); err != nil {
+	_, s1 := apitrace.GlobalTracer().Start(context.Background(), "span1-unsampled-parent1", apitrace.ChildOf(sc1))
+	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	ctx, _ = apitrace.GlobalTracer().Start(context.Background(), "startSpanWithRemoteParent", apitrace.ChildOf(sc))
-	if err := checkChild(sc, FromContext(ctx)); err != nil {
+	_, s2 := apitrace.GlobalTracer().Start(context.Background(), "span2-unsampled-parent1", apitrace.ChildOf(sc1))
+	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
 
-	sc = core.SpanContext{
+	sc2 := core.SpanContext{
 		TraceID:      tid,
 		SpanID:       sid,
 		TraceOptions: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	ctx, _ = apitrace.GlobalTracer().Start(context.Background(), "startSpanWithRemoteParent", apitrace.ChildOf(sc))
-	if err := checkChild(sc, FromContext(ctx)); err != nil {
+	_, s3 := apitrace.GlobalTracer().Start(context.Background(), "span3-sampled-parent2", apitrace.ChildOf(sc2))
+	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx, _ = apitrace.GlobalTracer().Start(context.Background(), "startSpanWithRemoteParent", apitrace.ChildOf(sc))
-	if err := checkChild(sc, FromContext(ctx)); err != nil {
+	ctx, s4 := apitrace.GlobalTracer().Start(context.Background(), "span4-sampled-parent2", apitrace.ChildOf(sc2))
+	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
 
-	ctx2, _ := apitrace.GlobalTracer().Start(ctx, "StartSpan")
-	parent := FromContext(ctx).SpanContext()
-	if err := checkChild(parent, FromContext(ctx2)); err != nil {
+	s4Sc := s4.SpanContext()
+	_, s5 := apitrace.GlobalTracer().Start(ctx, "span5-implicit-childof-span4")
+	if err := checkChild(s4Sc, s5); err != nil {
 		t.Error(err)
 	}
 }
@@ -327,17 +318,18 @@ func remoteSpanContext() core.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p core.SpanContext, c *span) error {
-	if c == nil {
+func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
+	s := apiSpan.(*span)
+	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
-	if got, want := c.spanContext.TraceIDString(), p.TraceIDString(); got != want {
+	if got, want := s.spanContext.TraceIDString(), p.TraceIDString(); got != want {
 		return fmt.Errorf("got child trace ID %s, want %s", got, want)
 	}
-	if childID, parentID := c.spanContext.SpanIDString(), p.SpanIDString(); childID == parentID {
+	if childID, parentID := s.spanContext.SpanIDString(), p.SpanIDString(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
-	if got, want := c.spanContext.TraceOptions, p.TraceOptions; got != want {
+	if got, want := s.spanContext.TraceOptions, p.TraceOptions; got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
 	// TODO [rgheita] : Fix tracestate test

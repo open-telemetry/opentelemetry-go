@@ -28,11 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// span represents a span of a trace.  It has an associated SpanContext, and
-// stores data accumulated while the span is active.
-//
-// Ideally users should interact with Spans by calling the functions in this
-// package that take a Context parameter.
+// span implements apitrace.Span interfaces.
 type span struct {
 	// data contains information recorded about the span.
 	//
@@ -63,30 +59,11 @@ type span struct {
 
 var _ apitrace.Span = &span{}
 
-type contextKey struct{}
-
-// FromContext returns the span stored in a context, or nil if there isn't one.
-func FromContext(ctx context.Context) *span {
-	s, _ := ctx.Value(contextKey{}).(*span)
-	return s
-}
-
-// NewContext returns a new context with the given span attached.
-func NewContext(parent context.Context, s *span) context.Context {
-	return context.WithValue(parent, contextKey{}, s)
-}
-
-// All available span kinds. span kind must be either one of these values.
-const (
-	SpanKindUnspecified = iota
-	SpanKindServer
-	SpanKindClient
-)
-
-// SpancContext returns an invalid span context.
+// SpancContext returns an span context of the span.
+// If span is nil then it returns invalid SpanContext
 func (s *span) SpanContext() core.SpanContext {
 	if s == nil {
-		return core.SpanContext{}
+		return core.INVALID_SPAN_CONTEXT
 	}
 	return s.spanContext
 }
@@ -118,18 +95,14 @@ func (s *span) SetAttribute(attribute core.KeyValue) {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.mu.Lock()
 	s.copyToCappedAttributes(attribute)
-	s.mu.Unlock()
 }
 
 func (s *span) SetAttributes(attributes ...core.KeyValue) {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.mu.Lock()
 	s.copyToCappedAttributes(attributes...)
-	s.mu.Unlock()
 }
 
 // ModifyAttribute does nothing.
@@ -197,6 +170,19 @@ func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	s.mu.Unlock()
 }
 
+func (s *span) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+	if s.data == nil {
+		return fmt.Sprintf("span %s", s.spanContext.SpanIDString())
+	}
+	s.mu.Lock()
+	str := fmt.Sprintf("span %s %q", s.spanContext.SpanIDString(), s.data.Name)
+	s.mu.Unlock()
+	return str
+}
+
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
 func (s *span) makeSpanData() *SpanData {
@@ -248,6 +234,8 @@ func (s *span) lruAttributesToAttributeMap() map[string]interface{} {
 }
 
 func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, a := range attributes {
 		s.lruAttributes.add(a.Key, a.Value)
 	}
@@ -260,29 +248,6 @@ func (s *span) addChild() {
 	s.mu.Lock()
 	s.data.ChildSpanCount++
 	s.mu.Unlock()
-}
-
-// AddLink adds a link to the span.
-func (s *span) AddLink(l Link) {
-	if !s.IsRecordingEvents() {
-		return
-	}
-	s.mu.Lock()
-	s.links.add(l)
-	s.mu.Unlock()
-}
-
-func (s *span) String() string {
-	if s == nil {
-		return "<nil>"
-	}
-	if s.data == nil {
-		return fmt.Sprintf("span %s", s.spanContext.SpanIDString())
-	}
-	s.mu.Lock()
-	str := fmt.Sprintf("span %s %q", s.spanContext.SpanIDString(), s.data.Name)
-	s.mu.Unlock()
-	return str
 }
 
 func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
