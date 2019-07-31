@@ -161,7 +161,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 }
 
-func TestMessageEvents(t *testing.T) {
+func TestEvents(t *testing.T) {
 	span := startSpan()
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
@@ -201,8 +201,8 @@ func TestMessageEvents(t *testing.T) {
 	}
 }
 
-func TestMessageEventsOverLimit(t *testing.T) {
-	cfg := Config{MaxMessageEventsPerSpan: 2}
+func TestEventsOverLimit(t *testing.T) {
+	cfg := Config{MaxEventsPerSpan: 2}
 	ApplyConfig(cfg)
 	span := startSpan()
 	k1v1 := key.New("key1").String("value1")

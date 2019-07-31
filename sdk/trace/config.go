@@ -28,8 +28,8 @@ type Config struct {
 	// IDGenerator is for internal use only.
 	IDGenerator internal.IDGenerator
 
-	// MaxMessageEventsPerSpan is max number of message events per span
-	MaxMessageEventsPerSpan int
+	// MaxEventsPerSpan is max number of message events per span
+	MaxEventsPerSpan int
 
 	// MaxAnnotationEventsPerSpan is max number of attributes per span
 	MaxAttributesPerSpan int
@@ -41,8 +41,8 @@ type Config struct {
 var configWriteMu sync.Mutex
 
 const (
-	// DefaultMaxMessageEventsPerSpan is default max number of message events per span
-	DefaultMaxMessageEventsPerSpan = 128
+	// DefaultMaxEventsPerSpan is default max number of message events per span
+	DefaultMaxEventsPerSpan = 128
 
 	// DefaultMaxAttributesPerSpan is default max number of attributes per span
 	DefaultMaxAttributesPerSpan = 32
@@ -64,8 +64,8 @@ func ApplyConfig(cfg Config) {
 	if cfg.IDGenerator != nil {
 		c.IDGenerator = cfg.IDGenerator
 	}
-	if cfg.MaxMessageEventsPerSpan > 0 {
-		c.MaxMessageEventsPerSpan = cfg.MaxMessageEventsPerSpan
+	if cfg.MaxEventsPerSpan > 0 {
+		c.MaxEventsPerSpan = cfg.MaxEventsPerSpan
 	}
 	if cfg.MaxAttributesPerSpan > 0 {
 		c.MaxAttributesPerSpan = cfg.MaxAttributesPerSpan

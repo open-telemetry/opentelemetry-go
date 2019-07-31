@@ -40,11 +40,11 @@ func init() {
 	gen.spanIDInc |= 1
 
 	config.Store(&Config{
-		DefaultSampler:          ProbabilitySampler(defaultSamplingProbability),
-		IDGenerator:             gen,
-		MaxAttributesPerSpan:    DefaultMaxAttributesPerSpan,
-		MaxMessageEventsPerSpan: DefaultMaxMessageEventsPerSpan,
-		MaxLinksPerSpan:         DefaultMaxLinksPerSpan,
+		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
+		IDGenerator:          gen,
+		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
+		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
+		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
 	})
 }
 

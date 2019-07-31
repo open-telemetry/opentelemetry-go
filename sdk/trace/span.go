@@ -269,7 +269,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		HasRemoteParent: remoteParent,
 	}
 	span.lruAttributes = newLruMap(cfg.MaxAttributesPerSpan)
-	span.messageEvents = newEvictedQueue(cfg.MaxMessageEventsPerSpan)
+	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)
 	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
 
 	if !noParent {
