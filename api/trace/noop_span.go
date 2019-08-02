@@ -78,3 +78,11 @@ func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 // SetName does nothing.
 func (NoopSpan) SetName(name string) {
 }
+
+// AddLink does nothing.
+func (noopSpan) AddLink(link Link) {
+}
+
+// Link does nothing.
+func (noopSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+}

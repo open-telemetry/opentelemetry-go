@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	apitrace "go.opentelemetry.io/api/trace"
 )
 
 // Exporter is a type for functions that receive sampled trace spans.
@@ -87,6 +88,7 @@ type SpanData struct {
 	// The values of Attributes each have type string, bool, or int64.
 	Attributes               map[string]interface{}
 	MessageEvents            []Event
+	Links                    []apitrace.Link
 	Status                   codes.Code
 	HasRemoteParent          bool
 	DroppedAttributeCount    int
