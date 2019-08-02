@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package install
 
 import (
-	"go.opentelemetry.io/api/registry"
+	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter/spanlog"
 )
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
+// Use this import:
+//
+//   import _ "go.opentelemetry.io/experimental/streaming/exporter/spanlog/install"
+//
+// to include the spanlog exporter by default.
 
-	for _, opt := range opts {
-		opt(metric, &varOpts)
-	}
-
-	metric.Variable = registry.Register(name, mtype, varOpts...)
-	metric.Type = mtype
+func init() {
+	observer.RegisterObserver(spanlog.New())
 }

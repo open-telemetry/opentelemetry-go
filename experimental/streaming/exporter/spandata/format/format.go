@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package format
 
 import (
-	"go.opentelemetry.io/api/registry"
+	"strings"
+
+	"go.opentelemetry.io/experimental/streaming/exporter/reader/format"
+	"go.opentelemetry.io/experimental/streaming/exporter/spandata"
 )
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
-
-	for _, opt := range opts {
-		opt(metric, &varOpts)
+func AppendSpan(buf *strings.Builder, data *spandata.Span) {
+	for _, event := range data.Events {
+		format.AppendEvent(buf, event)
 	}
+}
 
-	metric.Variable = registry.Register(name, mtype, varOpts...)
-	metric.Type = mtype
+func SpanToString(data *spandata.Span) string {
+	var buf strings.Builder
+	AppendSpan(&buf, data)
+	return buf.String()
 }
