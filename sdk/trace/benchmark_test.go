@@ -147,7 +147,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{TraceID: core.TraceID{High: 1, Low: 0x2a}}
 
-		want := "000..02a"
+		want := "0000000000000001000000000000002a"
 		for i := 0; i < b.N; i++ {
 			if got := sc.TraceIDString(); got != want {
 				b.Fatalf("got = %q want = %q", got, want)
@@ -159,7 +159,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 func BenchmarkSpanID_DotString(b *testing.B) {
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{SpanID: 1}
-		want := "000..001"
+		want := "0000000000000001"
 		for i := 0; i < b.N; i++ {
 			if got := sc.SpanIDString(); got != want {
 				b.Fatalf("got = %q want = %q", got, want)

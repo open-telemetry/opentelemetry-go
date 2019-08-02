@@ -53,14 +53,13 @@ func (sc SpanContext) HasSpanID() bool {
 }
 
 func (sc SpanContext) SpanIDString() string {
-	p := fmt.Sprintf("%.16x", sc.SpanID)
-	return p[0:3] + ".." + p[13:16]
+	return fmt.Sprintf("%.16x", sc.SpanID)
 }
 
 func (sc SpanContext) TraceIDString() string {
 	p1 := fmt.Sprintf("%.16x", sc.TraceID.High)
 	p2 := fmt.Sprintf("%.16x", sc.TraceID.Low)
-	return p1[0:3] + ".." + p2[13:16]
+	return p1 + p2
 }
 
 func (sc SpanContext) IsSampled() bool {
