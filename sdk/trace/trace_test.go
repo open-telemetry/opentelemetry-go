@@ -355,7 +355,7 @@ func startSpan() apitrace.Span {
 //  3. Configuring AlwaysSample() as default sampler
 //
 // It also does some basic tests on the span.
-// It also clears spanID in the SpanData to make the comparision easier.
+// It also clears spanID in the SpanData to make the comparison easier.
 func endSpan(span apitrace.Span) (*SpanData, error) {
 
 	if !span.IsRecordingEvents() {
