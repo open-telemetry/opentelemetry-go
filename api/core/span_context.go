@@ -23,9 +23,19 @@ type TraceID struct {
 	Low  uint64
 }
 
+const (
+	traceOptionBitMaskSampled = byte(0x01)
+	traceOptionBitMaskUnused  = byte(0xFE)
+
+	// TraceOptionSampled is a byte with sampled bit set. It is a convenient value initialize
+	// SpanContext when a trace is sampled.
+	TraceOptionSampled = traceOptionBitMaskSampled
+)
+
 type SpanContext struct {
-	TraceID TraceID
-	SpanID  uint64
+	TraceID      TraceID
+	SpanID       uint64
+	TraceOptions byte
 }
 
 var (
@@ -47,12 +57,15 @@ func (sc SpanContext) HasSpanID() bool {
 }
 
 func (sc SpanContext) SpanIDString() string {
-	p := fmt.Sprintf("%.16x", sc.SpanID)
-	return p[0:3] + ".." + p[13:16]
+	return fmt.Sprintf("%.16x", sc.SpanID)
 }
 
 func (sc SpanContext) TraceIDString() string {
 	p1 := fmt.Sprintf("%.16x", sc.TraceID.High)
 	p2 := fmt.Sprintf("%.16x", sc.TraceID.Low)
-	return p1[0:3] + ".." + p2[13:16]
+	return p1 + p2
+}
+
+func (sc SpanContext) IsSampled() bool {
+	return sc.TraceOptions&traceOptionBitMaskSampled == traceOptionBitMaskSampled
 }
