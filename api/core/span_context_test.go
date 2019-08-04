@@ -18,6 +18,43 @@ import (
 	"testing"
 )
 
+func TestIsValid(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tid  TraceID
+		sid  uint64
+		want bool
+	}{
+		{
+			name: "bothTrue",
+			tid:  TraceID{High: uint64(42)},
+			sid:  uint64(42),
+			want: true,
+		}, {
+			name: "bothFalse",
+			tid:  TraceID{High: uint64(0)},
+			sid:  uint64(0),
+			want: false,
+		}, {
+			name: "oneTrue",
+			tid:  TraceID{High: uint64(0)},
+			sid:  uint64(42),
+			want: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sc := SpanContext{
+				TraceID: testcase.tid,
+				SpanID:  testcase.sid,
+			}
+			have := sc.IsValid()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
 func TestHasTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
