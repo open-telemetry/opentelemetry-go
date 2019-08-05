@@ -1,5 +1,4 @@
-ALL_SRC := $(shell find . -name '*.go' -type f | sort)
-ALL_PKGS := $(shell go list $(sort $(dir $(ALL_SRC))))
+ALL_PKGS := $(shell go list ./...)
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
@@ -24,9 +23,8 @@ $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
 precommit: $(TOOLS_DIR)/goimports $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
-	$(TOOLS_DIR)/goimports -d -local github.com/open-telemetry/opentelemetry-go -w .
-	$(TOOLS_DIR)/golangci-lint run # TODO: Fix this on windows.
-	$(TOOLS_DIR)/misspell -w $(ALL_SRC) $(ALL_DOCS)
+	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
+	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -47,5 +45,5 @@ test-386:
 all-pkgs:
 	@echo $(ALL_PKGS) | tr ' ' '\n' | sort
 
-all-srcs:
-	@echo $(ALL_SRC) | tr ' ' '\n' | sort
+all-docs:
+	@echo $(ALL_DOCS) | tr ' ' '\n' | sort

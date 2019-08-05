@@ -2,3 +2,16 @@
 run:
   issues-exit-code: 1 #Default
   tests: true #Default
+
+linters:
+  enable:
+    - misspell
+    - goimports
+
+linters-settings:
+  misspell:
+    locale: US
+    #ignore-words:
+    #  - someword
+  goimports:
+    local-prefixes: github.com/open-telemetry/opentelemetry-go
