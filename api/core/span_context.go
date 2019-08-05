@@ -44,6 +44,10 @@ var (
 	INVALID_SPAN_CONTEXT = SpanContext{}
 )
 
+func (sc SpanContext) IsValid() bool {
+	return sc.HasTraceID() && sc.HasSpanID()
+}
+
 func (sc SpanContext) HasTraceID() bool {
 	return sc.TraceID.High != 0 || sc.TraceID.Low != 0
 }
