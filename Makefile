@@ -16,13 +16,10 @@ TOOLS_DIR := ./.tools
 $(TOOLS_DIR)/golangci-lint: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 
-$(TOOLS_DIR)/goimports: go.mod go.sum tools.go
-	go build -o $(TOOLS_DIR)/goimports golang.org/x/tools/cmd/goimports
-
 $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
-precommit: $(TOOLS_DIR)/goimports $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
+precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
 	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
