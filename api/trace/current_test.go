@@ -61,6 +61,8 @@ func TestCurrentSpan(t *testing.T) {
 // a duplicate of noopSpan for testing
 type mockSpan struct{}
 
+var _ Span = mockSpan{}
+
 // SpanContext returns an invalid span context.
 func (mockSpan) SpanContext() core.SpanContext {
 	return core.INVALID_SPAN_CONTEXT
