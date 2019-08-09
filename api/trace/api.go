@@ -47,6 +47,9 @@ type Tracer interface {
 
 	// Note: see https://github.com/opentracing/opentracing-go/issues/127
 	Inject(context.Context, Span, Injector)
+
+	// Note: see https://github.com/opentracing/opentracing-go/issues/127
+	Extract(context.Context, Extractor) (core.SpanContext, tag.Map)
 }
 
 type FinishOptions struct {
@@ -109,6 +112,13 @@ type Injector interface {
 	Inject(core.SpanContext, tag.Map)
 }
 
+type Extractor interface {
+	// Extract deserializes span context and tag.Map from a carrier associated with the
+	// extractor. For example in case of http request, span context could be extracted
+	// from the W3C Trace context header.
+	Extract() (core.SpanContext, tag.Map)
+}
+
 // SpanOption apply changes to SpanOptions.
 type SpanOption func(*SpanOptions)
 
@@ -167,6 +177,18 @@ func Inject(ctx context.Context, injector Injector) {
 	}
 
 	span.Tracer().Inject(ctx, span, injector)
+}
+
+// Extract is convenient function to extract remote span context using extractor.
+// Extractor is expected to deserialize span context from its carrier.
+// An example of a carrier is http request.
+func Extract(ctx context.Context, extractor Extractor) {
+	span := CurrentSpan(ctx)
+	if span == nil {
+		return
+	}
+
+	span.Tracer().Extract(ctx, extractor)
 }
 
 // WithStartTime sets the start time of the span to provided time t, when it is started.

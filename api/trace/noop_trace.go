@@ -17,6 +17,8 @@ package trace
 import (
 	"context"
 
+	"go.opentelemetry.io/api/tag"
+
 	"go.opentelemetry.io/api/core"
 )
 
@@ -52,4 +54,9 @@ func (NoopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (c
 
 // Inject does nothing.
 func (NoopTracer) Inject(ctx context.Context, span Span, injector Injector) {
+}
+
+// Extract does nothing.
+func (noopTracer) Extract(ctx context.Context, extractor Extractor) (core.SpanContext, tag.Map) {
+	return core.INVALID_SPAN_CONTEXT, nil
 }
