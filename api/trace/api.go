@@ -179,18 +179,6 @@ func Inject(ctx context.Context, injector Injector) {
 	span.Tracer().Inject(ctx, span, injector)
 }
 
-// Extract is convenient function to extract remote span context using extractor.
-// Extractor is expected to deserialize span context from its carrier.
-// An example of a carrier is http request.
-func Extract(ctx context.Context, extractor Extractor) {
-	span := CurrentSpan(ctx)
-	if span == nil {
-		return
-	}
-
-	span.Tracer().Extract(ctx, extractor)
-}
-
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absensce of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.
