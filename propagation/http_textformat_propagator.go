@@ -50,7 +50,9 @@ func (t textFormatPropagator) Injector(req *http.Request) trace.Injector {
 // TextFormatPropagator creates a new propagator. The propagator is then used
 // to create Injector and Extrator associated with a specific request. Injectors
 // and Extractors respectively provides method to inject and extract SpanContext
-// into/from the http request.
+// into/from the http request. Inject method encodes SpanContext into W3C
+// TraceContext Header and injects the header in the request. Extract extracts
+// the header and decodes SpanContext.
 func TextFormatPropagator() textFormatPropagator {
 	return textFormatPropagator{}
 }
@@ -63,8 +65,8 @@ var _ trace.Extractor = textFormatExtractor{}
 
 // Extract implements Extract method of trace.Extractor interface. It extracts
 // W3C TraceContext Header and decodes SpanContext from the Header.
-func (f textFormatExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
-	h, ok := getRequestHeader(f.req, traceparentHeader, false)
+func (tfe textFormatExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
+	h, ok := getRequestHeader(tfe.req, traceparentHeader, false)
 	if !ok {
 		return core.INVALID_SPAN_CONTEXT, nil
 	}
@@ -137,7 +139,7 @@ var _ trace.Injector = textFormatInjector{}
 // Inject implements Inject method of trace.Injector interface. It encodes
 // SpanContext into W3C TraceContext Header and injects the header into
 // the associated request.
-func (f textFormatInjector) Inject(sc core.SpanContext, tm tag.Map) {
+func (tfi textFormatInjector) Inject(sc core.SpanContext, tm tag.Map) {
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
 			supportedVersion,
@@ -145,7 +147,7 @@ func (f textFormatInjector) Inject(sc core.SpanContext, tm tag.Map) {
 			sc.TraceID.Low,
 			sc.SpanID,
 			sc.TraceOptions)
-		f.req.Header.Set(traceparentHeader, h)
+		tfi.req.Header.Set(traceparentHeader, h)
 	}
 	// TODO: [rghetia] add tag.Map (distributed context) injection
 }

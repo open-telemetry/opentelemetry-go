@@ -74,9 +74,9 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			req.Header.Set("traceparent", tt.header)
-			f := propagator.Extractor(req)
+			e := propagator.Extractor(req)
 
-			gotSc, _ := f.Extract()
+			gotSc, _ := e.Extract()
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -117,8 +117,8 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			f := propagator.Injector(req)
-			f.Inject(tt.sc, nil)
+			i := propagator.Injector(req)
+			i.Inject(tt.sc, nil)
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
