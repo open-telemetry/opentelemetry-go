@@ -129,7 +129,3 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 func (t *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
 	injector.Inject(span.SpanContext(), tag.FromContext(ctx))
 }
-
-func (t *tracer) Extract(ctx context.Context, extractor apitrace.Extractor) (core.SpanContext, tag.Map) {
-	return extractor.Extract()
-}

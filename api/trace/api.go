@@ -47,9 +47,6 @@ type Tracer interface {
 
 	// Note: see https://github.com/opentracing/opentracing-go/issues/127
 	Inject(context.Context, Span, Injector)
-
-	// Note: see https://github.com/opentracing/opentracing-go/issues/127
-	Extract(context.Context, Extractor) (core.SpanContext, tag.Map)
 }
 
 type FinishOptions struct {
