@@ -21,8 +21,6 @@ import "sync/atomic"
 // install a default tracer w/ resources.
 var global atomic.Value
 
-var _ Tracer = noopTracer{}
-
 // GlobalTracer return tracer registered with global registry.
 // If no tracer is registered then an instance of noop Tracer is returned.
 func GlobalTracer() Tracer {
