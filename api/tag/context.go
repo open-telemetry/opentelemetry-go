@@ -16,8 +16,7 @@ package tag
 
 import (
 	"context"
-
-	"go.opentelemetry.io/api/core"
+	"runtime/pprof"
 )
 
 type ctxTagsType struct{}
@@ -25,56 +24,6 @@ type ctxTagsType struct{}
 var (
 	ctxTagsKey = &ctxTagsType{}
 )
-
-type MutatorOp int
-
-const (
-	INSERT MutatorOp = iota
-	UPDATE
-	UPSERT
-	DELETE
-)
-
-type Mutator struct {
-	MutatorOp
-	core.KeyValue
-	MeasureMetadata
-}
-
-type MeasureMetadata struct {
-	TTL int // -1 == infinite, 0 == do not propagate
-}
-
-func (m Mutator) WithTTL(hops int) Mutator {
-	m.TTL = hops
-	return m
-}
-
-type MapUpdate struct {
-	SingleKV      core.KeyValue
-	MultiKV       []core.KeyValue
-	SingleMutator Mutator
-	MultiMutator  []Mutator
-}
-
-type Map interface {
-	Apply(MapUpdate) Map
-
-	Value(core.Key) (core.Value, bool)
-	HasValue(core.Key) bool
-
-	Len() int
-
-	Foreach(func(kv core.KeyValue) bool)
-}
-
-func NewEmptyMap() Map {
-	return tagMap{}
-}
-
-func NewMap(update MapUpdate) Map {
-	return NewEmptyMap().Apply(update)
-}
 
 func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxTagsKey, m)
@@ -90,5 +39,16 @@ func FromContext(ctx context.Context) Map {
 	if m, ok := ctx.Value(ctxTagsKey).(Map); ok {
 		return m
 	}
-	return tagMap{}
+	return NewEmptyMap()
+}
+
+// Note: the golang pprof.Do API forces this memory allocation, we
+// should file an issue about that.  (There's a TODO in the source.)
+func Do(ctx context.Context, f func(ctx context.Context)) {
+	m := FromContext(ctx)
+	keyvals := make([]string, 0, 2*len(m.m))
+	for k, v := range m.m {
+		keyvals = append(keyvals, k.Variable.Name, v.value.Emit())
+	}
+	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }

@@ -311,7 +311,7 @@ func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
 
 func (ro *readerObserver) readMeasureScope(m stats.Measure) (tag.Map, *readerSpan) {
 	// TODO
-	return nil, nil
+	return tag.NewEmptyMap(), nil
 }
 
 func (ro *readerObserver) readScope(id observer.ScopeID) (tag.Map, *readerSpan) {
