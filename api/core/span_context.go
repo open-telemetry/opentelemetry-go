@@ -38,11 +38,10 @@ type SpanContext struct {
 	TraceOptions byte
 }
 
-var (
-	// INVALID_SPAN_CONTEXT is meant for internal use to return invalid span context during error
-	// conditions.
-	INVALID_SPAN_CONTEXT = SpanContext{}
-)
+// EmptySpanContext is meant for internal use to return invalid span context during error conditions.
+func EmptySpanContext() SpanContext {
+	return SpanContext{}
+}
 
 func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()

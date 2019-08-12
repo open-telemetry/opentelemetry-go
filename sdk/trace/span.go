@@ -60,7 +60,7 @@ var _ apitrace.Span = &span{}
 
 func (s *span) SpanContext() core.SpanContext {
 	if s == nil {
-		return core.INVALID_SPAN_CONTEXT
+		return core.EmptySpanContext()
 	}
 	return s.spanContext
 }
@@ -225,7 +225,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 
 	cfg := config.Load().(*Config)
 
-	if parent == core.INVALID_SPAN_CONTEXT {
+	if parent == core.EmptySpanContext() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}
