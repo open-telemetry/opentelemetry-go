@@ -47,7 +47,7 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "zero trace ID and span ID",
 			header: "00-00000000000000000000000000000000-0000000000000000-01",
-			wantSc: core.INVALID_SPAN_CONTEXT,
+			wantSc: core.EmptySpanContext(),
 		},
 		{
 			name:   "valid header",
@@ -61,12 +61,12 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "missing options",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
-			wantSc: core.INVALID_SPAN_CONTEXT,
+			wantSc: core.EmptySpanContext(),
 		},
 		{
 			name:   "empty options",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-",
-			wantSc: core.INVALID_SPAN_CONTEXT,
+			wantSc: core.EmptySpanContext(),
 		},
 	}
 
@@ -110,7 +110,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name:       "invalid spancontext",
-			sc:         core.INVALID_SPAN_CONTEXT,
+			sc:         core.EmptySpanContext(),
 			wantHeader: "",
 		},
 	}

@@ -68,62 +68,62 @@ var _ trace.Extractor = textFormatExtractor{}
 func (tfe textFormatExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
 	h, ok := getRequestHeader(tfe.req, traceparentHeader, false)
 	if !ok {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	sections := strings.Split(h, "-")
 	if len(sections) < 4 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 
 	if len(sections[0]) != 2 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	ver, err := hex.DecodeString(sections[0])
 	if err != nil {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 
 	if version == 0 && len(sections) != 4 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 
 	if len(sections[1]) != 32 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 
 	result, err := strconv.ParseUint(sections[1][0:16], 16, 64)
 	if err != nil {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	sc.TraceID.High = result
 
 	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
 	if err != nil {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	sc.TraceID.Low = result
 
 	if len(sections[2]) != 16 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	result, err = strconv.ParseUint(sections[2][0:], 16, 64)
 	if err != nil {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	sc.SpanID = result
 
 	opts, err := hex.DecodeString(sections[3])
 	if err != nil || len(opts) < 1 {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 	sc.TraceOptions = opts[0]
 
 	if !sc.IsValid() {
-		return core.INVALID_SPAN_CONTEXT, nil
+		return core.EmptySpanContext(), nil
 	}
 
 	// TODO: [rghetia] add tag.Map (distributed context) extraction
