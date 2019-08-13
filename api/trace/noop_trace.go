@@ -20,36 +20,36 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-type noopTracer struct{}
+type NoopTracer struct{}
 
-var _ Tracer = noopTracer{}
+var _ Tracer = NoopTracer{}
 
 // WithResources does nothing and returns noop implementation of Tracer.
-func (t noopTracer) WithResources(attributes ...core.KeyValue) Tracer {
+func (t NoopTracer) WithResources(attributes ...core.KeyValue) Tracer {
 	return t
 }
 
 // WithComponent does nothing and returns noop implementation of Tracer.
-func (t noopTracer) WithComponent(name string) Tracer {
+func (t NoopTracer) WithComponent(name string) Tracer {
 	return t
 }
 
 // WithService does nothing and returns noop implementation of Tracer.
-func (t noopTracer) WithService(name string) Tracer {
+func (t NoopTracer) WithService(name string) Tracer {
 	return t
 }
 
 // WithSpan wraps around execution of func with noop span.
-func (t noopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	return body(ctx)
 }
 
 // Start starts a noop span.
-func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
+func (NoopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+	span := NoopSpan{}
 	return SetCurrentSpan(ctx, span), span
 }
 
 // Inject does nothing.
-func (noopTracer) Inject(ctx context.Context, span Span, injector Injector) {
+func (NoopTracer) Inject(ctx context.Context, span Span, injector Injector) {
 }

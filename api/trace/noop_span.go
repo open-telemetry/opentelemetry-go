@@ -24,58 +24,58 @@ import (
 	"go.opentelemetry.io/api/tag"
 )
 
-type noopSpan struct {
+type NoopSpan struct {
 }
 
-var _ Span = (*noopSpan)(nil)
+var _ Span = (*NoopSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (noopSpan) SpanContext() core.SpanContext {
+func (NoopSpan) SpanContext() core.SpanContext {
 	return core.EmptySpanContext()
 }
 
-// IsRecordingEvents always returns false for noopSpan.
-func (noopSpan) IsRecordingEvents() bool {
+// IsRecordingEvents always returns false for NoopSpan.
+func (NoopSpan) IsRecordingEvents() bool {
 	return false
 }
 
 // SetStatus does nothing.
-func (noopSpan) SetStatus(status codes.Code) {
+func (NoopSpan) SetStatus(status codes.Code) {
 }
 
 // SetError does nothing.
-func (noopSpan) SetError(v bool) {
+func (NoopSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (noopSpan) SetAttribute(attribute core.KeyValue) {
+func (NoopSpan) SetAttribute(attribute core.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (noopSpan) SetAttributes(attributes ...core.KeyValue) {
+func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (noopSpan) ModifyAttribute(mutator tag.Mutator) {
+func (NoopSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (noopSpan) ModifyAttributes(mutators ...tag.Mutator) {
+func (NoopSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (noopSpan) Finish() {
+func (NoopSpan) Finish() {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (noopSpan) Tracer() Tracer {
-	return noopTracer{}
+func (NoopSpan) Tracer() Tracer {
+	return NoopTracer{}
 }
 
 // AddEvent does nothing.
-func (noopSpan) AddEvent(ctx context.Context, event event.Event) {
+func (NoopSpan) AddEvent(ctx context.Context, event event.Event) {
 }
 
 // Event does nothing.
-func (noopSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (NoopSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
