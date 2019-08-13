@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/api/core"
+	apipropagation "go.opentelemetry.io/api/propagation"
 	"go.opentelemetry.io/api/tag"
-	"go.opentelemetry.io/api/trace"
 )
 
 const (
@@ -37,13 +37,13 @@ const (
 
 type textFormatPropagator struct{}
 
-var _ HTTPPropagator = textFormatPropagator{}
+var _ apipropagation.TextFormatPropagator = textFormatPropagator{}
 
-func (t textFormatPropagator) Extractor(req *http.Request) trace.Extractor {
+func (t textFormatPropagator) Extractor(req *http.Request) apipropagation.Extractor {
 	return textFormatExtractor{req: req}
 }
 
-func (t textFormatPropagator) Injector(req *http.Request) trace.Injector {
+func (t textFormatPropagator) Injector(req *http.Request) apipropagation.Injector {
 	return textFormatInjector{req: req}
 }
 
@@ -61,7 +61,7 @@ type textFormatExtractor struct {
 	req *http.Request
 }
 
-var _ trace.Extractor = textFormatExtractor{}
+var _ apipropagation.Extractor = textFormatExtractor{}
 
 // Extract implements Extract method of trace.Extractor interface. It extracts
 // W3C TraceContext Header and decodes SpanContext from the Header.
@@ -134,7 +134,7 @@ type textFormatInjector struct {
 	req *http.Request
 }
 
-var _ trace.Injector = textFormatInjector{}
+var _ apipropagation.Injector = textFormatInjector{}
 
 // Inject implements Inject method of trace.Injector interface. It encodes
 // SpanContext into W3C TraceContext Header and injects the header into

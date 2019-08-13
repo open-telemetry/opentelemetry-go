@@ -52,7 +52,7 @@ func main() {
 
 			ctx, req, inj := httptrace.W3C(ctx, req)
 
-			trace.Inject(ctx, inj)
+			inj.Inject(trace.CurrentSpan(ctx).SpanContext(), nil)
 
 			res, err := client.Do(req)
 			if err != nil {

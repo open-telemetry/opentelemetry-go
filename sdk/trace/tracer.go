@@ -103,6 +103,3 @@ func (tr *tracer) WithComponent(component string) apitrace.Tracer {
 	return tr
 }
 
-func (tr *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
-	injector.Inject(span.SpanContext(), tag.NewEmptyMap())
-}

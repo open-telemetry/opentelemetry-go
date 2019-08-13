@@ -19,11 +19,11 @@ import (
 	"net/http"
 	"net/http/httptrace"
 
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/api/propagation"
 )
 
 // Client
-func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request, trace.Injector) {
+func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request, propagation.Injector) {
 	t := newClientTracer(ctx)
 
 	t.GetConn = t.getConn
