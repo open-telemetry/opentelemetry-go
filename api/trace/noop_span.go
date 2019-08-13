@@ -31,7 +31,7 @@ var _ Span = (*noopSpan)(nil)
 
 // SpancContext returns an invalid span context.
 func (noopSpan) SpanContext() core.SpanContext {
-	return core.INVALID_SPAN_CONTEXT
+	return core.EmptySpanContext()
 }
 
 // IsRecordingEvents always returns false for noopSpan.

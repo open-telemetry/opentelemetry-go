@@ -46,7 +46,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 	// 2. Remote is not trusted. In this case create a root span and then add the remote as link
 	//      span := tracer.Start(ctx, "some name")
 	//      span.Link(remote_span_context, ChildOfRelationship)
-	if opts.Reference.SpanContext != core.INVALID_SPAN_CONTEXT &&
+	if opts.Reference.SpanContext != core.EmptySpanContext() &&
 		opts.Reference.RelationshipType == apitrace.ChildOfRelationship {
 		parent = opts.Reference.SpanContext
 		remoteParent = true
