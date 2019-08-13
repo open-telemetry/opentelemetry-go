@@ -27,7 +27,7 @@ func GlobalTracer() Tracer {
 	if t := global.Load(); t != nil {
 		return t.(Tracer)
 	}
-	return noopTracer{}
+	return NoopTracer{}
 }
 
 // SetGlobalTracer sets provided tracer as a global tracer.

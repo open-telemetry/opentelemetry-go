@@ -32,5 +32,5 @@ func CurrentSpan(ctx context.Context) Span {
 	if span, has := ctx.Value(currentSpanKey).(Span); has {
 		return span
 	}
-	return noopSpan{}
+	return NoopSpan{}
 }
