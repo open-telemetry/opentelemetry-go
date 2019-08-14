@@ -30,6 +30,7 @@ const (
 	// TraceOptionSampled is a byte with sampled bit set. It is a convenient value initialize
 	// SpanContext when a trace is sampled.
 	TraceOptionSampled = traceOptionBitMaskSampled
+	TraceOptionUnused  = traceOptionBitMaskUnused
 )
 
 type SpanContext struct {
