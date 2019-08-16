@@ -106,7 +106,7 @@ func (s *span) ModifyAttribute(mutator apitag.Mutator) {
 func (s *span) ModifyAttributes(mutators ...apitag.Mutator) {
 }
 
-func (s *span) Finish() {
+func (s *span) Finish(options ...apitrace.FinishOption) {
 	if s == nil {
 		return
 	}
@@ -117,13 +117,21 @@ func (s *span) Finish() {
 	if !s.IsRecordingEvents() {
 		return
 	}
+	opts := apitrace.FinishOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
 		mustExport := s.spanContext.IsSampled() && len(exp) > 0
 		//if s.spanStore != nil || mustExport {
 		if mustExport {
 			sd := s.makeSpanData()
-			sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			if opts.FinishTime.IsZero() {
+				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			} else {
+				sd.EndTime = opts.FinishTime
+			}
 			//if s.spanStore != nil {
 			//	s.spanStore.finished(s, sd)
 			//}
@@ -144,14 +152,17 @@ func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 	if !s.IsRecordingEvents() {
 		return
 	}
-	now := time.Now()
+	s.addEventWithTimestamp(time.Now(), msg, attrs...)
+}
+
+func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.messageEvents.add(event{
 		msg:        msg,
 		attributes: attrs,
-		time:       now,
+		time:       timestamp,
 	})
-	s.mu.Unlock()
 }
 
 func (s *span) SetName(name string) {

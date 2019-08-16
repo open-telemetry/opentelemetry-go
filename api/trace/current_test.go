@@ -96,7 +96,7 @@ func (mockSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (mockSpan) Finish() {
+func (mockSpan) Finish(options ...trace.FinishOption) {
 }
 
 // Tracer returns noop implementation of Tracer.

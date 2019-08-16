@@ -16,6 +16,7 @@ package sdk
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
@@ -86,9 +87,14 @@ func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
 	})
 }
 
-func (sp *span) Finish() {
+func (sp *span) Finish(options ...apitrace.FinishOption) {
 	recovered := recover()
+	opts := apitrace.FinishOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
 	observer.Record(observer.Event{
+		Time:      opts.FinishTime,
 		Type:      observer.FINISH_SPAN,
 		Scope:     sp.ScopeID(),
 		Recovered: recovered,
@@ -103,7 +109,12 @@ func (sp *span) Tracer() apitrace.Tracer {
 }
 
 func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+	sp.addEventWithTime(ctx, time.Time{}, msg, attrs...)
+}
+
+func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	observer.Record(observer.Event{
+		Time:       timestamp,
 		Type:       observer.ADD_EVENT,
 		String:     msg,
 		Attributes: attrs,

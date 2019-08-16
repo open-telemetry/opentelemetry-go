@@ -49,13 +49,25 @@ type Tracer interface {
 	Inject(context.Context, Span, Injector)
 }
 
+type FinishOptions struct {
+	FinishTime time.Time
+}
+
+type FinishOption func(*FinishOptions)
+
+func WithFinishTime(finishTime time.Time) FinishOption {
+	return func(opts *FinishOptions) {
+		opts.FinishTime = finishTime
+	}
+}
+
 type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
 
 	// Finish completes the span. No updates are allowed to span after it
 	// finishes. The only exception is setting status of the span.
-	Finish()
+	Finish(options ...FinishOption)
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
