@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 )
 
@@ -59,9 +58,7 @@ type Span interface {
 	Finish()
 
 	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, event event.Event)
-	// AddEvent records an event to the span.
-	Event(ctx context.Context, msg string, attrs ...core.KeyValue)
+	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 
 	// IsRecordingEvents returns true if the span is active and recording events is enabled.
 	IsRecordingEvents() bool

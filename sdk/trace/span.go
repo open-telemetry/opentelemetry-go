@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
@@ -141,16 +140,7 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, event apievent.Event) {
-	if !s.IsRecordingEvents() {
-		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.messageEvents.add(event)
-}
-
-func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	if !s.IsRecordingEvents() {
 		return
 	}

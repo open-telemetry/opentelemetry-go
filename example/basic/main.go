@@ -63,7 +63,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).Event(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
@@ -75,7 +75,7 @@ func main() {
 			func(ctx context.Context) error {
 				trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-				trace.CurrentSpan(ctx).Event(ctx, "Sub span event")
+				trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
 				stats.Record(ctx, measureTwo.M(1.3))
 

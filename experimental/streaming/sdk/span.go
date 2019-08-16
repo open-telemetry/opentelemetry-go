@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
@@ -103,16 +102,7 @@ func (sp *span) Tracer() apitrace.Tracer {
 	return sp.tracer
 }
 
-func (sp *span) AddEvent(ctx context.Context, event event.Event) {
-	observer.Record(observer.Event{
-		Type:       observer.ADD_EVENT,
-		String:     event.Message(),
-		Attributes: event.Attributes(),
-		Context:    ctx,
-	})
-}
-
-func (sp *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	observer.Record(observer.Event{
 		Type:       observer.ADD_EVENT,
 		String:     msg,

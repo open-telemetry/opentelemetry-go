@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 )
@@ -105,10 +104,6 @@ func (mockSpan) Tracer() trace.Tracer {
 	return trace.NoopTracer{}
 }
 
-// AddEvent does nothing.
-func (mockSpan) AddEvent(ctx context.Context, event event.Event) {
-}
-
 // Event does nothing.
-func (mockSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }

@@ -234,8 +234,8 @@ func TestEvents(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	span.Event(context.Background(), "foo", key.New("key1").String("value1"))
-	span.Event(context.Background(), "bar",
+	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "bar",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)
@@ -276,13 +276,13 @@ func TestEventsOverLimit(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	span.Event(context.Background(), "fooDrop", key.New("key1").String("value1"))
-	span.Event(context.Background(), "barDrop",
+	span.AddEvent(context.Background(), "fooDrop", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "barDrop",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)
-	span.Event(context.Background(), "foo", key.New("key1").String("value1"))
-	span.Event(context.Background(), "bar",
+	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "bar",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)

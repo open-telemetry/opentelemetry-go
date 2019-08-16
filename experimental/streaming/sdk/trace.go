@@ -71,7 +71,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 
 	if err := body(ctx); err != nil {
 		span.SetAttribute(ErrorKey.Bool(true))
-		span.Event(ctx, "span error", MessageKey.String(err.Error()))
+		span.AddEvent(ctx, "span error", MessageKey.String(err.Error()))
 		return err
 	}
 	return nil
