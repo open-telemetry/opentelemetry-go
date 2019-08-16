@@ -36,7 +36,6 @@ type ScopeID struct {
 	core.SpanContext
 }
 
-// TODO: this Event is confusing with event.Event.
 type Event struct {
 	// Automatic fields
 	Sequence EventID   // Auto-filled
