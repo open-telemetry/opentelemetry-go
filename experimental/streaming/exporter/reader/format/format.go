@@ -73,11 +73,12 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 
 	case reader.ADD_EVENT:
 		buf.WriteString("event: ")
-		buf.WriteString(data.Event.Message())
+		buf.WriteString(data.Message)
 		buf.WriteString(" (")
-		for _, kv := range data.Event.Attributes() {
+		data.Attributes.Foreach(func(kv core.KeyValue) bool {
 			buf.WriteString(" " + kv.Key.Variable.Name + "=" + kv.Value.Emit())
-		}
+			return true
+		})
 		buf.WriteString(")")
 
 	case reader.MODIFY_ATTR:

@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/stats"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
@@ -41,7 +40,6 @@ type Event struct {
 	SpanContext core.SpanContext
 	Tags        tag.Map
 	Attributes  tag.Map
-	Event       event.Event
 	Stats       []Measurement
 
 	Parent           core.SpanContext
