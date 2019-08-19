@@ -19,7 +19,11 @@ $(TOOLS_DIR)/golangci-lint: go.mod go.sum tools.go
 $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
-precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
+$(TOOLS_DIR)/stringer: go.mod go.sum tools.go
+	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
+
+precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
+	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
