@@ -74,6 +74,9 @@ type Span interface {
 	// even after span is finished.
 	SetStatus(codes.Code)
 
+	// SetName sets the name of the span.
+	SetName(name string)
+
 	// Set span attributes
 	SetAttribute(core.KeyValue)
 	SetAttributes(...core.KeyValue)

@@ -79,3 +79,7 @@ func (NoopSpan) AddEvent(ctx context.Context, event event.Event) {
 // Event does nothing.
 func (NoopSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
+
+// SetName does nothing.
+func (NoopSpan) SetName(name string) {
+}

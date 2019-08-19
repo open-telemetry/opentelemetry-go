@@ -72,6 +72,10 @@ func (mockSpan) IsRecordingEvents() bool {
 func (mockSpan) SetStatus(status codes.Code) {
 }
 
+// SetName does nothing.
+func (mockSpan) SetName(name string) {
+}
+
 // SetError does nothing.
 func (mockSpan) SetError(v bool) {
 }
