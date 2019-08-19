@@ -33,7 +33,17 @@ test-with-coverage:
 	go tool cover -html=coverage.txt -o coverage.html
 
 .PHONY: circle-ci
-circle-ci: precommit test-with-coverage test-386
+circle-ci: precommit test-clean-work-tree test-with-coverage test-386
+
+.PHONY: test-clean-work-tree
+test-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo "Working tree is not clean"; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
 
 .PHONY: test
 test:
