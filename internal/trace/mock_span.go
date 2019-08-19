@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
@@ -85,6 +86,10 @@ func (ms *MockSpan) Tracer() apitrace.Tracer {
 
 // AddEvent does nothing.
 func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+}
+
+// AddEvent does nothing.
+func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 }
 
 // AddLink does nothing.
