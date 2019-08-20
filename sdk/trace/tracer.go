@@ -57,7 +57,11 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		}
 	}
 
-	span := startSpanInternal(name, parent, remoteParent, opts)
+	spanName := name
+	if tr.name != "" {
+		spanName = tr.name + "/" + name
+	}
+	span := startSpanInternal(spanName, parent, remoteParent, opts)
 	span.tracer = tr
 
 	if span.IsRecording() {
@@ -67,7 +71,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		}
 	}
 
-	ctx, end := startExecutionTracerTask(ctx, name)
+	ctx, end := startExecutionTracerTask(ctx, spanName)
 	span.executionTracerTaskEnd = end
 	return apitrace.SetCurrentSpan(ctx, span), span
 }

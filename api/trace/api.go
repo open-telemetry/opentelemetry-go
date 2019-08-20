@@ -24,6 +24,13 @@ import (
 	"go.opentelemetry.io/api/distributedcontext"
 )
 
+type Manager interface {
+	// Tracer creates a named tracer that implements Tracer interface.
+	// If name is an empty string then default name from the manager
+	// is used.
+	Tracer(name string) Tracer
+}
+
 type Tracer interface {
 	// Start a span.
 	Start(context.Context, string, ...SpanOption) (context.Context, Span)
