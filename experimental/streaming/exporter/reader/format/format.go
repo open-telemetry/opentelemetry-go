@@ -54,9 +54,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			buf.WriteString(", a root span")
 		} else {
 			buf.WriteString(" <")
-			if data.Parent.HasSpanID() {
-				f(false)(parentSpanIDKey.String(data.SpanContext.SpanIDString()))
-			}
+			f(false)(parentSpanIDKey.String(data.Parent.SpanIDString()))
 			if data.ParentAttributes != nil {
 				data.ParentAttributes.Foreach(f(false))
 			}
