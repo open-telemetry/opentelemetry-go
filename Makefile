@@ -19,7 +19,11 @@ $(TOOLS_DIR)/golangci-lint: go.mod go.sum tools.go
 $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
-precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell 
+$(TOOLS_DIR)/stringer: go.mod go.sum tools.go
+	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
+
+precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
+	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
@@ -29,7 +33,17 @@ test-with-coverage:
 	go tool cover -html=coverage.txt -o coverage.html
 
 .PHONY: circle-ci
-circle-ci: precommit test-with-coverage test-386
+circle-ci: precommit test-clean-work-tree test-with-coverage test-386
+
+.PHONY: test-clean-work-tree
+test-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo "Working tree is not clean"; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
 
 .PHONY: test
 test:
