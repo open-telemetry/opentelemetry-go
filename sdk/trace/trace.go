@@ -47,19 +47,19 @@ func init() {
 	})
 }
 
-var m *traceManager
-var registerManagerOnce sync.Once
+var p *traceProvider
+var registerProviderOnce sync.Once
 
-// RegisterManager registers trace manager implementation as default Trace Manager.
-// It creates single instance of trace manager and registers it once.
-// Recommended use is to call RegisterManager in main() of an
+// RegisterProvider registers trace provider implementation as default Trace Provider.
+// It creates single instance of trace provider and registers it once.
+// Recommended use is to call RegisterProvider in main() of an
 // application before calling any tracing api.
-func RegisterManager() apitrace.Manager {
-	registerManagerOnce.Do(func() {
-		m = &traceManager{namedTracer: map[string]*tracer{}}
-		apitrace.SetGlobalManager(m)
+func RegisterProvider() apitrace.Provider {
+	registerProviderOnce.Do(func() {
+		p = &traceProvider{namedTracer: map[string]*tracer{}}
+		apitrace.SetGlobalProvider(p)
 	})
-	return m
+	return p
 }
 
 var tr *tracer

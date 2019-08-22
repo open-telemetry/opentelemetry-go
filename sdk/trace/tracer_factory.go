@@ -20,27 +20,27 @@ import (
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
-type traceManager struct {
+type traceProvider struct {
 	mu          sync.Mutex
 	namedTracer map[string]*tracer
 }
 
-var _ apitrace.Manager = &traceManager{}
+var _ apitrace.Provider = &traceProvider{}
 
 const (
 	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
 )
 
-func (m *traceManager) Tracer(name string) apitrace.Tracer {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (p *traceProvider) Tracer(name string) apitrace.Tracer {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if name == "" {
 		name = defaultTracerName
 	}
-	t, ok := m.namedTracer[name]
+	t, ok := p.namedTracer[name]
 	if !ok {
 		t = &tracer{name: name}
-		m.namedTracer[name] = t
+		p.namedTracer[name] = t
 	}
 	return t
 }

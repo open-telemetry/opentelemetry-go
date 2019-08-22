@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/api/distributedcontext"
 )
 
-type Manager interface {
+type Provider interface {
 	// Tracer creates a named tracer that implements Tracer interface.
 	// If name is an empty string then default name from the manager
 	// is used.

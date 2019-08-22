@@ -21,22 +21,22 @@ import "sync/atomic"
 // install a default tracer w/ resources.
 var global atomic.Value
 
-var globalManager atomic.Value
+var globalProvider atomic.Value
 
-// GlobalManager returns trace manager registered with global registry.
-// If no trace manager is registered then an instance of noop Trace Manager is returned.
+// GlobalProvider returns trace manager registered with global registry.
+// If no trace manager is registered then an instance of noop Trace Provider is returned.
 // Use the trace manager to create a named tracer. E.g.
-//     tracer := trace.GlobalManager().Tracer("example.com/foo")
-func GlobalManager() Manager {
-	if m := globalManager.Load(); m != nil {
-		return m.(Manager)
+//     tracer := trace.GlobalProvider().Tracer("example.com/foo")
+func GlobalProvider() Provider {
+	if p := globalProvider.Load(); p != nil {
+		return p.(Provider)
 	}
-	return NoopTraceManager{}
+	return NoopTraceProvider{}
 }
 
-// SetGlobalManager sets provided trace manager as a global trace manager.
-func SetGlobalManager(m Manager) {
-	globalManager.Store(m)
+// SetGlobalProvider sets provided trace manager as a global trace manager.
+func SetGlobalProvider(m Provider) {
+	globalProvider.Store(m)
 }
 
 // GlobalTracer return tracer registered with global registry.

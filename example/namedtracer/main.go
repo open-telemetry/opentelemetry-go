@@ -36,7 +36,7 @@ var (
 // sdktrace. In this example it is PrintExporter. Any default configuration such as
 // default sampling should be done here.
 func initTracer() {
-	sdktrace.RegisterManager()
+	sdktrace.RegisterProvider()
 	sdktrace.RegisterExporter(sdktrace.PrintExporter{})
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
@@ -46,7 +46,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := trace.GlobalManager().Tracer("example/namedtracer/main")
+	tracer := trace.GlobalProvider().Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
 	ctx = tag.NewContext(ctx,
