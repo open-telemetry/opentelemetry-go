@@ -14,8 +14,10 @@
 
 package trace
 
+import apievent "go.opentelemetry.io/api/event"
+
 type evictedQueue struct {
-	queue        []event
+	queue        []apievent.Event
 	capacity     int
 	droppedCount int
 }
@@ -23,13 +25,13 @@ type evictedQueue struct {
 func newEvictedQueue(capacity int) *evictedQueue {
 	eq := &evictedQueue{
 		capacity: capacity,
-		queue:    make([]event, 0),
+		queue:    make([]apievent.Event, 0),
 	}
 
 	return eq
 }
 
-func (eq *evictedQueue) add(value event) {
+func (eq *evictedQueue) add(value apievent.Event) {
 	if len(eq.queue) == eq.capacity {
 		eq.queue = eq.queue[1:]
 		eq.droppedCount++

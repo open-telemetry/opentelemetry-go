@@ -146,10 +146,7 @@ func (s *span) AddEvent(ctx context.Context, apiEvent apievent.Event) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(event{
-		msg: apiEvent.Message(),
-		attributes: apiEvent.Attributes(),
-	})
+	s.messageEvents.add(apiEvent)
 }
 
 func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
@@ -158,7 +155,7 @@ func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	}
 	now := time.Now()
 	s.mu.Lock()
-	s.messageEvents.add(event{
+	s.messageEvents.add(&event{
 		msg:        msg,
 		attributes: attrs,
 		time:       now,

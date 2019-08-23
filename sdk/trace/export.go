@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/api/core"
+	apievent "go.opentelemetry.io/api/event"
 	"google.golang.org/grpc/codes"
 )
 
@@ -85,7 +86,7 @@ type SpanData struct {
 	EndTime time.Time
 	// The values of Attributes each have type string, bool, or int64.
 	Attributes               map[string]interface{}
-	MessageEvents            []event
+	MessageEvents            []apievent.Event
 	Status                   codes.Code
 	HasRemoteParent          bool
 	DroppedAttributeCount    int

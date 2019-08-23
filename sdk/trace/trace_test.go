@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.opentelemetry.io/api/core"
+	apievent "go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
 	"google.golang.org/grpc/codes"
@@ -178,7 +179,12 @@ func TestEvents(t *testing.T) {
 	}
 
 	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].time) {
+		messageEvent, ok := got.MessageEvents[i].(*event)
+		if !ok {
+			t.Errorf("exporting span: unexpected type in messageEvents. given: %T, want: %T", got.MessageEvents[i], &event{})
+		}
+
+		if !checkTime(&messageEvent.time) {
 			t.Error("exporting span: expected nonzero event Time")
 		}
 	}
@@ -191,9 +197,9 @@ func TestEvents(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
-		MessageEvents: []event{
-			{msg: "foo", attributes: []core.KeyValue{k1v1}},
-			{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
+		MessageEvents: []apievent.Event{
+			&event{msg: "foo", attributes: []core.KeyValue{k1v1}},
+			&event{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
@@ -225,7 +231,12 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].time) {
+		messageEvent, ok := got.MessageEvents[i].(*event)
+		if !ok {
+			t.Errorf("exporting span: unexpected type in messageEvents. given: %T, want: %T", got.MessageEvents[i], &event{})
+		}
+
+		if !checkTime(&messageEvent.time) {
 			t.Error("exporting span: expected nonzero event Time")
 		}
 	}
@@ -237,9 +248,9 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		MessageEvents: []event{
-			{msg: "foo", attributes: []core.KeyValue{k1v1}},
-			{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
+		MessageEvents: []apievent.Event{
+			&event{msg: "foo", attributes: []core.KeyValue{k1v1}},
+			&event{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
