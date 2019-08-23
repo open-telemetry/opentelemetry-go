@@ -1,10 +1,12 @@
-package core
+package core_test
 
 import (
 	"testing"
 	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
+
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/registry"
 )
 
@@ -12,20 +14,20 @@ func TestBool(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    bool
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: true",
+			name: "Key.Bool() correctly returns keys's internal bool value",
 			v:    true,
-			want: Value{
-				Type: BOOL,
+			want: core.Value{
+				Type: core.BOOL,
 				Bool: true,
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Bool(v bool) KeyValue {}
-			have := Key{}.Bool(testcase.v)
+			//proto: func (k core.Key) core.Bool(v bool) KeyValue {}
+			have := core.Key{}.Bool(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -37,20 +39,20 @@ func TestInt64(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    int64
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: int64(42)",
+			name: "Key.Int64() correctly returns keys's internal int64 value",
 			v:    int64(42),
-			want: Value{
-				Type:  INT64,
+			want: core.Value{
+				Type:  core.INT64,
 				Int64: int64(42),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Int64(v int64) KeyValue {
-			have := Key{}.Int64(testcase.v)
+			//proto: func (k core.Key) Int64(v int64) KeyValue {
+			have := core.Key{}.Int64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -62,20 +64,20 @@ func TestUint64(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    uint64
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: uint64(42)",
+			name: "Key.Uint64() correctly returns keys's internal uint64 value",
 			v:    uint64(42),
-			want: Value{
-				Type:   UINT64,
+			want: core.Value{
+				Type:   core.UINT64,
 				Uint64: uint64(42),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Uint64(v uint64) KeyValue {
-			have := Key{}.Uint64(testcase.v)
+			//proto: func (k core.Key) Uint64(v uint64) KeyValue {
+			have := core.Key{}.Uint64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -87,20 +89,20 @@ func TestFloat64(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    float64
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: float64(42.1)",
+			name: "Key.float64() correctly returns keys's internal floa64 value",
 			v:    float64(42.1),
-			want: Value{
-				Type:    FLOAT64,
+			want: core.Value{
+				Type:    core.FLOAT64,
 				Float64: float64(42.1),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Float64(v float64) KeyValue {
-			have := Key{}.Float64(testcase.v)
+			//proto: func (k core.Key) Float64(v float64) KeyValue {
+			have := core.Key{}.Float64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -112,20 +114,20 @@ func TestInt32(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    int32
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: int32(42)",
+			name: "Key.int32() correctly returns keys's internal int32 value",
 			v:    int32(42),
-			want: Value{
-				Type:  INT32,
+			want: core.Value{
+				Type:  core.INT32,
 				Int64: int64(42),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Int32(v int32) KeyValue {
-			have := Key{}.Int32(testcase.v)
+			//proto: func (k core.Key) Int32(v int32) KeyValue {
+			have := core.Key{}.Int32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -137,20 +139,20 @@ func TestUint32(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    uint32
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: uint32(42)",
+			name: "Key.uint32() correctly returns keys's internal uint32 value",
 			v:    uint32(42),
-			want: Value{
-				Type:   UINT32,
+			want: core.Value{
+				Type:   core.UINT32,
 				Uint64: uint64(42),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Uint32(v uint32) KeyValue {
-			have := Key{}.Uint32(testcase.v)
+			//proto: func (k core.Key) Uint32(v uint32) KeyValue {
+			have := core.Key{}.Uint32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -162,20 +164,20 @@ func TestFloat32(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    float32
-		want Value
+		want core.Value
 	}{
 		{
-			name: "value: float32(42.0)",
+			name: "Key.float32() correctly returns keys's internal float32 value",
 			v:    float32(42.0),
-			want: Value{
-				Type:    FLOAT32,
+			want: core.Value{
+				Type:    core.FLOAT32,
 				Float64: float64(42.0),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Float32(v float32) KeyValue {
-			have := Key{}.Float32(testcase.v)
+			//proto: func (k core.Key) Float32(v float32) KeyValue {
+			have := core.Key{}.Float32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -187,20 +189,20 @@ func TestString(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    string
-		want Value
+		want core.Value
 	}{
 		{
-			name: `value: string("foo")`,
+			name: "Key.String() correctly returns keys's internal string value",
 			v:    "foo",
-			want: Value{
-				Type:   STRING,
+			want: core.Value{
+				Type:   core.STRING,
 				String: "foo",
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) String(v string) KeyValue {
-			have := Key{}.String(testcase.v)
+			//proto: func (k core.Key) String(v string) KeyValue {
+			have := core.Key{}.String(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -212,20 +214,20 @@ func TestBytes(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    []byte
-		want Value
+		want core.Value
 	}{
 		{
-			name: `value: []byte{'f','o','o'}`,
+			name: "Key.Bytes() correctly returns keys's internal []byte value",
 			v:    []byte{'f', 'o', 'o'},
-			want: Value{
-				Type:  BYTES,
+			want: core.Value{
+				Type:  core.BYTES,
 				Bytes: []byte{'f', 'o', 'o'},
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Bytes(v []byte) KeyValue {
-			have := Key{}.Bytes(testcase.v)
+			//proto: func (k core.Key) Bytes(v []byte) KeyValue {
+			have := core.Key{}.Bytes(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -234,29 +236,29 @@ func TestBytes(t *testing.T) {
 }
 
 func TestInt(t *testing.T) {
-	WTYPE := INT64
+	WTYPE := core.INT64
 	if unsafe.Sizeof(int(42)) == 4 {
 		// switch the desired value-type depending on system int byte-size
-		WTYPE = INT32
+		WTYPE = core.INT32
 	}
 
 	for _, testcase := range []struct {
 		name string
 		v    int
-		want Value
+		want core.Value
 	}{
 		{
-			name: `value: int(42)`,
+			name: "Key.Int() correctly returns keys's internal int64 value",
 			v:    int(42),
-			want: Value{
+			want: core.Value{
 				Type:  WTYPE,
 				Int64: int64(42),
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Int(v int) KeyValue {
-			have := Key{}.Int(testcase.v)
+			//proto: func (k core.Key) Int(v int) KeyValue {
+			have := core.Key{}.Int(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -265,29 +267,29 @@ func TestInt(t *testing.T) {
 }
 
 func TestUint(t *testing.T) {
-	WTYPE := UINT64
+	WTYPE := core.UINT64
 	if unsafe.Sizeof(uint(42)) == 4 {
 		// switch the desired value-type depending on system int byte-size
-		WTYPE = UINT32
+		WTYPE = core.UINT32
 	}
 
 	for _, testcase := range []struct {
 		name string
 		v    uint
-		want Value
+		want core.Value
 	}{
 		{
-			name: `value: uint(42)`,
+			name: "Key.Uint() correctly returns keys's internal uint64 value",
 			v:    uint(42),
-			want: Value{
+			want: core.Value{
 				Type:   WTYPE,
 				Uint64: 42,
 			},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k Key) Uint(v uint) KeyValue {
-			have := Key{}.Uint(testcase.v)
+			//proto: func (k core.Key) Uint(v uint) KeyValue {
+			have := core.Key{}.Uint(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -298,12 +300,12 @@ func TestUint(t *testing.T) {
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		k    Key
+		k    core.Key
 		want bool
 	}{
 		{
-			name: `Key Defined`,
-			k: Key{
+			name: "Key.Defined() returns true when len(v.Name) != 0",
+			k: core.Key{
 				registry.Variable{
 					Name: "foo",
 				},
@@ -311,13 +313,13 @@ func TestDefined(t *testing.T) {
 			want: true,
 		},
 		{
-			name: `Key not Defined`,
-			k:    Key{registry.Variable{}},
+			name: "Key.Defined() returns false when len(v.Name) == 0",
+			k:    core.Key{registry.Variable{}},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//func (k Key) Defined() bool {
+			//func (k core.Key) Defined() bool {
 			have := testcase.k.Defined()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -329,84 +331,84 @@ func TestDefined(t *testing.T) {
 func TestEmit(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		v    Value
+		v    core.Value
 		want string
 	}{
 		{
-			name: `bool`,
-			v: Value{
-				Type: BOOL,
+			name: `test Key.Emit() can emit a string representing self.BOOL`,
+			v: core.Value{
+				Type: core.BOOL,
 				Bool: true,
 			},
 			want: "true",
 		},
 		{
-			name: `int32`,
-			v: Value{
-				Type:  INT32,
+			name: `test Key.Emit() can emit a string representing self.INT32`,
+			v: core.Value{
+				Type:  core.INT32,
 				Int64: 42,
 			},
 			want: "42",
 		},
 		{
-			name: `int64`,
-			v: Value{
-				Type:  INT64,
+			name: `test Key.Emit() can emit a string representing self.INT64`,
+			v: core.Value{
+				Type:  core.INT64,
 				Int64: 42,
 			},
 			want: "42",
 		},
 		{
-			name: `uint32`,
-			v: Value{
-				Type:   UINT32,
+			name: `test Key.Emit() can emit a string representing self.UINT32`,
+			v: core.Value{
+				Type:   core.UINT32,
 				Uint64: 42,
 			},
 			want: "42",
 		},
 		{
-			name: `uint64`,
-			v: Value{
-				Type:   UINT64,
+			name: `test Key.Emit() can emit a string representing self.UINT64`,
+			v: core.Value{
+				Type:   core.UINT64,
 				Uint64: 42,
 			},
 			want: "42",
 		},
 		{
-			name: `float32`,
-			v: Value{
-				Type:    FLOAT32,
+			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
+			v: core.Value{
+				Type:    core.FLOAT32,
 				Float64: 42.1,
 			},
 			want: "42.1",
 		},
 		{
-			name: `float64`,
-			v: Value{
-				Type:    FLOAT64,
+			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
+			v: core.Value{
+				Type:    core.FLOAT64,
 				Float64: 42.1,
 			},
 			want: "42.1",
 		},
 		{
-			name: `string`,
-			v: Value{
-				Type:   STRING,
+			name: `test Key.Emit() can emit a string representing self.STRING`,
+			v: core.Value{
+				Type:   core.STRING,
 				String: "foo",
 			},
 			want: "foo",
 		},
 		{
-			name: `bytes`,
-			v: Value{
-				Type:  BYTES,
+			name: `test Key.Emit() can emit a string representing self.BYTES`,
+			v: core.Value{
+				Type:  core.BYTES,
 				Bytes: []byte{'f', 'o', 'o'},
 			},
 			want: "foo",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (v Value) Emit() string {
+			//proto: func (v core.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
