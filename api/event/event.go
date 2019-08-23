@@ -18,12 +18,18 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-// Event interface provides methods to retrieve Event properties.
-type Event interface {
+// Event describes an event with a message string and set of attributes.
+type Event struct {
+	message string
+	attr    []core.KeyValue
+}
 
-	// Message interface retrieves message string of the Event.
-	Message() string
+// Message retrieves message string of the Event.
+func (e *Event) Message() string {
+	return e.message
+}
 
-	// Attributes interface returns a copy of attributes associated with the Event.
-	Attributes() []core.KeyValue
+// Attributes returns a copy of attributes associated with the Event.
+func (e *Event) Attributes() []core.KeyValue {
+	return e.attr
 }

@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/api/core"
-	apievent "go.opentelemetry.io/api/event"
 )
 
 // event is used to describe an event with a message string and set of
@@ -28,8 +27,6 @@ type event struct {
 	attributes []core.KeyValue
 	time       time.Time
 }
-
-var _ apievent.Event = &event{}
 
 func (me *event) Message() string {
 	return me.msg
