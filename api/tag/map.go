@@ -15,64 +15,91 @@
 package tag
 
 import (
-	"context"
-	"runtime/pprof"
-
 	"go.opentelemetry.io/api/core"
 )
+
+type MeasureMetadata struct {
+	TTL int // -1 == infinite, 0 == do not propagate
+}
 
 type tagContent struct {
 	value core.Value
 	meta  MeasureMetadata
 }
 
-type tagMap map[core.Key]tagContent
+type rawMap map[core.Key]tagContent
 
-var _ Map = tagMap{}
+type Map struct {
+	m rawMap
+}
 
-func (t tagMap) Apply(update MapUpdate) Map {
-	m := make(tagMap, len(t)+len(update.MultiKV)+len(update.MultiMutator))
-	for k, v := range t {
-		m[k] = v
+type MapUpdate struct {
+	SingleKV      core.KeyValue
+	MultiKV       []core.KeyValue
+	SingleMutator Mutator
+	MultiMutator  []Mutator
+}
+
+func newMap(raw rawMap) Map {
+	return Map{
+		m: raw,
+	}
+}
+
+func NewEmptyMap() Map {
+	return newMap(nil)
+}
+
+func NewMap(update MapUpdate) Map {
+	return NewEmptyMap().Apply(update)
+}
+
+func (m Map) Apply(update MapUpdate) Map {
+	r := make(rawMap, len(m.m)+len(update.MultiKV)+len(update.MultiMutator))
+	for k, v := range m.m {
+		r[k] = v
 	}
 	if update.SingleKV.Key.Defined() {
-		m[update.SingleKV.Key] = tagContent{
+		r[update.SingleKV.Key] = tagContent{
 			value: update.SingleKV.Value,
 		}
 	}
 	for _, kv := range update.MultiKV {
-		m[kv.Key] = tagContent{
+		r[kv.Key] = tagContent{
 			value: kv.Value,
 		}
 	}
 	if update.SingleMutator.Key.Defined() {
-		m.apply(update.SingleMutator)
+		r.apply(update.SingleMutator)
 	}
 	for _, mutator := range update.MultiMutator {
-		m.apply(mutator)
+		r.apply(mutator)
 	}
-	return m
+	if len(r) == 0 {
+		r = nil
+	}
+	return newMap(r)
 }
 
-func (m tagMap) Value(k core.Key) (core.Value, bool) {
-	entry, ok := m[k]
+func (m Map) Value(k core.Key) (core.Value, bool) {
+	entry, ok := m.m[k]
 	if !ok {
 		entry.value.Type = core.INVALID
 	}
 	return entry.value, ok
 }
 
-func (m tagMap) HasValue(k core.Key) bool {
+func (m Map) HasValue(k core.Key) bool {
 	_, has := m.Value(k)
 	return has
 }
 
-func (m tagMap) Len() int {
-	return len(m)
+func (m Map) Len() int {
+	return len(m.m)
 }
 
-func (m tagMap) Foreach(f func(kv core.KeyValue) bool) {
-	for k, v := range m {
+func (m Map) Foreach(f func(kv core.KeyValue) bool) {
+	for k, v := range m.m {
 		if !f(core.KeyValue{
 			Key:   k,
 			Value: v.value,
@@ -82,10 +109,7 @@ func (m tagMap) Foreach(f func(kv core.KeyValue) bool) {
 	}
 }
 
-func (m tagMap) apply(mutator Mutator) {
-	if m == nil {
-		return
-	}
+func (r rawMap) apply(mutator Mutator) {
 	key := mutator.KeyValue.Key
 	content := tagContent{
 		value: mutator.KeyValue.Value,
@@ -93,57 +117,16 @@ func (m tagMap) apply(mutator Mutator) {
 	}
 	switch mutator.MutatorOp {
 	case INSERT:
-		if _, ok := m[key]; !ok {
-			m[key] = content
+		if _, ok := r[key]; !ok {
+			r[key] = content
 		}
 	case UPDATE:
-		if _, ok := m[key]; ok {
-			m[key] = content
+		if _, ok := r[key]; ok {
+			r[key] = content
 		}
 	case UPSERT:
-		m[key] = content
+		r[key] = content
 	case DELETE:
-		delete(m, key)
+		delete(r, key)
 	}
-}
-
-func Insert(kv core.KeyValue) Mutator {
-	return Mutator{
-		MutatorOp: INSERT,
-		KeyValue:  kv,
-	}
-}
-
-func Update(kv core.KeyValue) Mutator {
-	return Mutator{
-		MutatorOp: UPDATE,
-		KeyValue:  kv,
-	}
-}
-
-func Upsert(kv core.KeyValue) Mutator {
-	return Mutator{
-		MutatorOp: UPSERT,
-		KeyValue:  kv,
-	}
-}
-
-func Delete(k core.Key) Mutator {
-	return Mutator{
-		MutatorOp: DELETE,
-		KeyValue: core.KeyValue{
-			Key: k,
-		},
-	}
-}
-
-// Note: the golang pprof.Do API forces this memory allocation, we
-// should file an issue about that.  (There's a TODO in the source.)
-func Do(ctx context.Context, f func(ctx context.Context)) {
-	m := FromContext(ctx).(tagMap)
-	keyvals := make([]string, 0, 2*len(m))
-	for k, v := range m {
-		keyvals = append(keyvals, k.Variable.Name, v.value.Emit())
-	}
-	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }
