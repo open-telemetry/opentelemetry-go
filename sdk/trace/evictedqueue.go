@@ -15,7 +15,7 @@
 package trace
 
 type evictedQueue struct {
-	queue        []interface{}
+	queue        []event
 	capacity     int
 	droppedCount int
 }
@@ -23,13 +23,13 @@ type evictedQueue struct {
 func newEvictedQueue(capacity int) *evictedQueue {
 	eq := &evictedQueue{
 		capacity: capacity,
-		queue:    make([]interface{}, 0),
+		queue:    make([]event, 0),
 	}
 
 	return eq
 }
 
-func (eq *evictedQueue) add(value interface{}) {
+func (eq *evictedQueue) add(value event) {
 	if len(eq.queue) == eq.capacity {
 		eq.queue = eq.queue[1:]
 		eq.droppedCount++

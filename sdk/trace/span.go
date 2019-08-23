@@ -140,13 +140,16 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, event apievent.Event) {
+func (s *span) AddEvent(ctx context.Context, apiEvent apievent.Event) {
 	if !s.IsRecordingEvents() {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(event)
+	s.messageEvents.add(event{
+		msg: apiEvent.Message(),
+		attributes: apiEvent.Attributes(),
+	})
 }
 
 func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
@@ -175,18 +178,10 @@ func (s *span) makeSpanData() *SpanData {
 		sd.DroppedAttributeCount = s.lruAttributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
-		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
+		sd.MessageEvents = s.messageEvents.queue
 		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
 	}
 	return &sd
-}
-
-func (s *span) interfaceArrayToMessageEventArray() []event {
-	messageEventArr := make([]event, 0)
-	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(event))
-	}
-	return messageEventArr
 }
 
 func (s *span) lruAttributesToAttributeMap() map[string]interface{} {

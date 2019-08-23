@@ -24,8 +24,8 @@ func init() {
 
 func TestAdd(t *testing.T) {
 	q := newEvictedQueue(3)
-	q.add("value1")
-	q.add("value2")
+	q.add(event{msg: "value1"})
+	q.add(event{msg: "value2"})
 	if wantLen, gotLen := 2, len(q.queue); wantLen != gotLen {
 		t.Errorf("got queue length %d want %d", gotLen, wantLen)
 	}
@@ -34,18 +34,18 @@ func TestAdd(t *testing.T) {
 func (eq *evictedQueue) queueToArray() []string {
 	arr := make([]string, 0)
 	for _, value := range eq.queue {
-		arr = append(arr, value.(string))
+		arr = append(arr, value.msg)
 	}
 	return arr
 }
 
 func TestDropCount(t *testing.T) {
 	q := newEvictedQueue(3)
-	q.add("value1")
-	q.add("value2")
-	q.add("value3")
-	q.add("value1")
-	q.add("value4")
+	q.add(event{msg: "value1"})
+	q.add(event{msg: "value2"})
+	q.add(event{msg: "value3"})
+	q.add(event{msg: "value1"})
+	q.add(event{msg: "value4"})
 	if wantLen, gotLen := 3, len(q.queue); wantLen != gotLen {
 		t.Errorf("got queue length %d want %d", gotLen, wantLen)
 	}
