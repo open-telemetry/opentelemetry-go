@@ -68,66 +68,66 @@ var _ apipropagation.Extractor = textFormatExtractor{}
 func (tfe textFormatExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
 	h, ok := getRequestHeader(tfe.req, traceparentHeader, false)
 	if !ok {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	sections := strings.Split(h, "-")
 	if len(sections) < 4 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 
 	if len(sections[0]) != 2 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	ver, err := hex.DecodeString(sections[0])
 	if err != nil {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 
 	if version == 0 && len(sections) != 4 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 
 	if len(sections[1]) != 32 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 
 	result, err := strconv.ParseUint(sections[1][0:16], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	sc.TraceID.High = result
 
 	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	sc.TraceID.Low = result
 
 	if len(sections[2]) != 16 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	result, err = strconv.ParseUint(sections[2][0:], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	sc.SpanID = result
 
 	opts, err := hex.DecodeString(sections[3])
 	if err != nil || len(opts) < 1 {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 	sc.TraceOptions = opts[0]
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext(), nil
+		return core.EmptySpanContext(), tag.NewEmptyMap()
 	}
 
 	// TODO: [rghetia] add tag.Map (distributed context) extraction
-	return sc, nil
+	return sc, tag.NewEmptyMap()
 }
 
 type textFormatInjector struct {

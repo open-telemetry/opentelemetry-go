@@ -18,6 +18,8 @@ import (
 	"net/http"
 	"testing"
 
+	"go.opentelemetry.io/api/tag"
+
 	"github.com/google/go-cmp/cmp"
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/propagation"
@@ -118,7 +120,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			i := propagator.Injector(req)
-			i.Inject(tt.sc, nil)
+			i.Inject(tt.sc, tag.NewEmptyMap())
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {

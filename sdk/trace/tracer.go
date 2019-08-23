@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
@@ -102,4 +101,3 @@ func (tr *tracer) WithComponent(component string) apitrace.Tracer {
 	tr.component = component
 	return tr
 }
-
