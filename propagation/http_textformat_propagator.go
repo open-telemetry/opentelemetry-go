@@ -35,26 +35,46 @@ const (
 	traceparentHeader = "traceparent"
 )
 
-type textFormatPropagator struct{}
+type httpTraceContextPropagator struct{}
 
-var _ apipropagation.TextFormatPropagator = textFormatPropagator{}
+var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
 
-func (t textFormatPropagator) Extractor(req *http.Request) apipropagation.Extractor {
-	return textFormatExtractor{req: req}
+// Extractor implements Extractor method of TextFormatPropagator interface.
+//
+// It creates Extractor object and binds carrier to the object. The carrier
+// is expected to be *http.Request. If the carrier type is not *http.Request
+// then an empty extractor is returned which will extract nothing.
+func (t httpTraceContextPropagator) Extractor(carrier interface{}) apipropagation.Extractor {
+	req, ok := carrier.(*http.Request)
+	if ok {
+		return textFormatExtractor{req: req}
+	}
+	return textFormatExtractor{}
 }
 
-func (t textFormatPropagator) Injector(req *http.Request) apipropagation.Injector {
-	return textFormatInjector{req: req}
+// Injector implements Injector method of TextFormatPropagator interface.
+//
+// It creates Injector object and binds carrier to the object. The carrier
+// is expected to be of type *http.Request. If the carrier type is not *http.Request
+// then an empty injector is returned which will inject nothing.
+func (t httpTraceContextPropagator) Injector(carrier interface{}) apipropagation.Injector {
+	req, ok := carrier.(*http.Request)
+	if ok {
+		return textFormatInjector{req: req}
+	}
+	return textFormatInjector{}
 }
 
-// TextFormatPropagator creates a new propagator. The propagator is then used
-// to create Injector and Extrator associated with a specific request. Injectors
-// and Extractors respectively provides method to inject and extract SpanContext
-// into/from the http request. Inject method encodes SpanContext into W3C
-// TraceContext Header and injects the header in the request. Extract extracts
-// the header and decodes SpanContext.
-func TextFormatPropagator() textFormatPropagator {
-	return textFormatPropagator{}
+// HttpTraceContextPropagator creates a new propagator that propagates SpanContext
+// in W3C TraceContext format.
+//
+// The propagator is then used to create Injector and Extractor associated with a
+// specific request. Injectors and Extractors respectively provides method to
+// inject and extract SpanContext into/from the http request. Inject method encodes
+// SpanContext into W3C TraceContext Header and injects the header in the request.
+// Extract extracts the header and decodes SpanContext.
+func HttpTraceContextPropagator() httpTraceContextPropagator {
+	return httpTraceContextPropagator{}
 }
 
 type textFormatExtractor struct {
@@ -66,6 +86,9 @@ var _ apipropagation.Extractor = textFormatExtractor{}
 // Extract implements Extract method of trace.Extractor interface. It extracts
 // W3C TraceContext Header and decodes SpanContext from the Header.
 func (tfe textFormatExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
+	if tfe.req == nil {
+		return core.EmptySpanContext(), tag.NewEmptyMap()
+	}
 	h, ok := getRequestHeader(tfe.req, traceparentHeader, false)
 	if !ok {
 		return core.EmptySpanContext(), tag.NewEmptyMap()
@@ -136,10 +159,13 @@ type textFormatInjector struct {
 
 var _ apipropagation.Injector = textFormatInjector{}
 
-// Inject implements Inject method of trace.Injector interface. It encodes
+// Inject implements Inject method of propagation.Injector interface. It encodes
 // SpanContext into W3C TraceContext Header and injects the header into
 // the associated request.
 func (tfi textFormatInjector) Inject(sc core.SpanContext, tm tag.Map) {
+	if tfi.req == nil {
+		return
+	}
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
 			supportedVersion,

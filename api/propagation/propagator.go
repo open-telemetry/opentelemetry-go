@@ -17,8 +17,6 @@
 package propagation // import "go.opentelemetry.io/api/propagation"
 
 import (
-	"net/http"
-
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/tag"
 )
@@ -31,8 +29,8 @@ import (
 // Typically, a plugin for transport like HTTP uses this interface to allow user
 // to configure appropriate propagators.
 type TextFormatPropagator interface {
-	Extractor(req *http.Request) Extractor
-	Injector(req *http.Request) Injector
+	Extractor(carrier interface{}) Extractor
+	Injector(carrier interface{}) Injector
 }
 
 type Injector interface {
