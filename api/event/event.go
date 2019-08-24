@@ -20,8 +20,21 @@ import (
 
 // Event describes an event with a message string and set of attributes.
 type Event struct {
-	message string
-	attr    []core.KeyValue
+	message    string
+	attributes []core.KeyValue
+}
+
+// Event constructor
+func NewEvent(message string) *Event {
+	return &Event{
+		message:    message,
+		attributes: make([]core.KeyValue, 0),
+	}
+}
+
+// AddAttribute associates a keyValue with the Event
+func (e *Event) AddAttribute(keyValue core.KeyValue) {
+	e.attributes = append(e.attributes, keyValue)
 }
 
 // Message retrieves message string of the Event.
@@ -31,5 +44,8 @@ func (e *Event) Message() string {
 
 // Attributes returns a copy of attributes associated with the Event.
 func (e *Event) Attributes() []core.KeyValue {
-	return e.attr
+	attrs := make([]core.KeyValue, len(e.attributes))
+	copy(attrs, e.attributes)
+
+	return attrs
 }
