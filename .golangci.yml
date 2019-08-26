@@ -14,4 +14,4 @@ linters-settings:
     #ignore-words:
     #  - someword
   goimports:
-    local-prefixes: github.com/open-telemetry/opentelemetry-go
+    local-prefixes: go.opentelemetry.io

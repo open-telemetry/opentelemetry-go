@@ -19,12 +19,13 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/api/core"
 	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
-	"google.golang.org/grpc/codes"
 )
 
 // span implements apitrace.Span interface.

@@ -19,8 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/api/core"
 )
 
 // Exporter is a type for functions that receive sampled trace spans.

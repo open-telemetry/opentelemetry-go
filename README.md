@@ -1,8 +1,8 @@
 # OpenTelemetry-Go
 
 [![Circle CI](https://circleci.com/gh/open-telemetry/opentelemetry-go.svg?style=svg)](https://circleci.com/gh/open-telemetry/opentelemetry-go)
-[![Docs](https://godoc.org/github.com/open-telemetry/opentelemetry-go?status.svg)](http://godoc.org/github.com/open-telemetry/opentelemetry-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/open-telemetry/opentelemetry-go)](https://goreportcard.com/report/github.com/open-telemetry/opentelemetry-go)
+[![Docs](https://godoc.org/go.opentelemetry.io?status.svg)](http://godoc.org/go.opentelemetry.io)
+[![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io)](https://goreportcard.com/report/go.opentelemetry.io)
 
 This is a prototype *intended to be modified* into the opentelemetry-go implementation. The `api` directory here should be used as a starting point to introduce a new OpenTelemetry exporter, whereas the existing `exporter/observer` streaming model should be help verify the api
 
