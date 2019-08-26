@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stderr
+package stderr // import "go.opentelemetry.io/experimental/streaming/exporter/stderr"
 
 import (
 	"os"
