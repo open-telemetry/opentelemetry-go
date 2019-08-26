@@ -22,10 +22,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
-	"google.golang.org/grpc/codes"
 )
 
 var (

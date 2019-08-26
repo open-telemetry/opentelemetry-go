@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"go.opentelemetry.io/api/core"
 )
 
