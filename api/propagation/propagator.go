@@ -21,16 +21,22 @@ import (
 	"go.opentelemetry.io/api/tag"
 )
 
-// TextFormatPropagator is an interface that specifies methods to create Injector
-// and Extractor objects. Injector object implements Inject method to inject
-// SpanContext and tag.Map as a text format into carrier like HTTP request. Similarly,
-// Extractor object implements Extract method to extract SpanContext encoded in text
-// format from a carrier like HTTP request.
+// TextFormatPropagator is an interface that specifies methods to create CarrierInjector
+// and CarrierExtractor objects. These methods bind given carrier to the created object.
+// CarrierInjector object implements Inject method to inject
+// SpanContext and tag.Map as a text format into carrier like HTTP request.
+// Similarly, CarrierExtractor object implements Extract method to extract SpanContext
+// encoded in text format from a carrier like HTTP request.
 // Typically, a plugin for transport like HTTP uses this interface to allow user
-// to configure appropriate propagators.
+// to configure appropriate text format propagators.
 type TextFormatPropagator interface {
-	Extractor(carrier interface{}) Extractor
-	Injector(carrier interface{}) Injector
+	// CarrierExtractor creates an object that implements Extractor interface.
+	// It binds provided carrier to the object.
+	CarrierExtractor(carrier interface{}) Extractor
+
+	// CarrierInjector creates an object that implements Injector interface.
+	// It binds provided carrier to the object.
+	CarrierInjector(carrier interface{}) Injector
 }
 
 type Injector interface {
