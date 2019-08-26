@@ -56,7 +56,7 @@ type Event struct {
 	Status     codes.Code      // SET_STATUS
 
 	// Values
-	String  string // START_SPAN, EVENT, ...
+	String  string // START_SPAN, EVENT, SET_NAME, ...
 	Float64 float64
 	Parent  ScopeID // START_SPAN
 	Stats   []stats.Measurement
@@ -83,6 +83,7 @@ const (
 	MODIFY_ATTR
 	RECORD_STATS
 	SET_STATUS
+	SET_NAME
 )
 
 var (

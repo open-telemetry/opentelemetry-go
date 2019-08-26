@@ -164,6 +164,33 @@ func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	s.mu.Unlock()
 }
 
+func (s *span) SetName(name string) {
+	if s.data == nil {
+		// TODO: now what?
+		return
+	}
+	s.data.Name = name
+	// SAMPLING
+	noParent := s.data.ParentSpanID == 0
+	var ctx core.SpanContext
+	if noParent {
+		ctx = core.EmptySpanContext()
+	} else {
+		// FIXME: Where do we get the parent context from?
+		// From SpanStore?
+		ctx = s.data.SpanContext
+	}
+	data := samplingData{
+		noParent:     noParent,
+		remoteParent: s.data.HasRemoteParent,
+		parent:       ctx,
+		name:         name,
+		cfg:          config.Load().(*Config),
+		span:         s,
+	}
+	makeSamplingDecision(data)
+}
+
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
 func (s *span) makeSpanData() *SpanData {
@@ -231,29 +258,15 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		noParent = true
 	}
 	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
-	sampler := cfg.DefaultSampler
-
-	// TODO: [rghetia] fix sampler
-	//if !hasParent || remoteParent || o.Sampler != nil {
-	if noParent || remoteParent {
-		// If this span is the child of a local span and no Sampler is set in the
-		// options, keep the parent's TraceOptions.
-		//
-		// Otherwise, consult the Sampler in the options if it is non-nil, otherwise
-		// the default sampler.
-		//if o.Sampler != nil {
-		//	sampler = o.Sampler
-		//}
-		sampled := sampler(SamplingParameters{
-			ParentContext:   parent,
-			TraceID:         span.spanContext.TraceID,
-			SpanID:          span.spanContext.SpanID,
-			Name:            name,
-			HasRemoteParent: remoteParent}).Sample
-		if sampled {
-			span.spanContext.TraceOptions = core.TraceOptionSampled
-		}
+	data := samplingData{
+		noParent:     noParent,
+		remoteParent: remoteParent,
+		parent:       parent,
+		name:         name,
+		cfg:          cfg,
+		span:         span,
 	}
+	makeSamplingDecision(data)
 
 	// TODO: [rghetia] restore when spanstore is added.
 	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.RecordEvent {
@@ -286,4 +299,40 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	//}
 
 	return span
+}
+
+type samplingData struct {
+	noParent     bool
+	remoteParent bool
+	parent       core.SpanContext
+	name         string
+	cfg          *Config
+	span         *span
+}
+
+func makeSamplingDecision(data samplingData) {
+	if data.noParent || data.remoteParent {
+		// If this span is the child of a local span and no
+		// Sampler is set in the options, keep the parent's
+		// TraceOptions.
+		//
+		// Otherwise, consult the Sampler in the options if it
+		// is non-nil, otherwise the default sampler.
+		sampler := data.cfg.DefaultSampler
+		//if o.Sampler != nil {
+		//	sampler = o.Sampler
+		//}
+		spanContext := &data.span.spanContext
+		sampled := sampler(SamplingParameters{
+			ParentContext:   data.parent,
+			TraceID:         spanContext.TraceID,
+			SpanID:          spanContext.SpanID,
+			Name:            data.name,
+			HasRemoteParent: data.remoteParent}).Sample
+		if sampled {
+			spanContext.TraceOptions |= core.TraceOptionSampled
+		} else {
+			spanContext.TraceOptions &^= core.TraceOptionSampled
+		}
+	}
 }

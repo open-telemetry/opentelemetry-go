@@ -107,6 +107,10 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString("set status ")
 		buf.WriteString(data.Status.String())
 
+	case reader.SET_NAME:
+		buf.WriteString("set name ")
+		buf.WriteString(data.Name)
+
 	default:
 		buf.WriteString(fmt.Sprintf("WAT? %d", data.Type))
 	}

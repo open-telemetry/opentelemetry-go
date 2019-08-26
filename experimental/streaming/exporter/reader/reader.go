@@ -102,6 +102,7 @@ const (
 	MODIFY_ATTR
 	RECORD_STATS
 	SET_STATUS
+	SET_NAME
 )
 
 // NewReaderObserver returns an implementation that computes the
@@ -286,6 +287,10 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			span.status = event.Status
 			read.SpanContext = span.spanContext
 		}
+
+	case observer.SET_NAME:
+		read.Type = SET_NAME
+		read.Name = event.String
 
 	default:
 		panic(fmt.Sprint("Unhandled case: ", event.Type))

@@ -120,3 +120,10 @@ func (sp *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 		Context:    ctx,
 	})
 }
+
+func (sp *span) SetName(name string) {
+	observer.Record(observer.Event{
+		Type:   observer.SET_NAME,
+		String: name,
+	})
+}
