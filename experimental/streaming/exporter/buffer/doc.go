@@ -12,22 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/experimental/streaming/exporter/stdout"
-
-import (
-	"os"
-
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
-	"go.opentelemetry.io/experimental/streaming/exporter/reader"
-	"go.opentelemetry.io/experimental/streaming/exporter/reader/format"
-)
-
-type stdoutLog struct{}
-
-func New() observer.Observer {
-	return reader.NewReaderObserver(&stdoutLog{})
-}
-
-func (s *stdoutLog) Read(data reader.Event) {
-	os.Stdout.WriteString(format.EventToString(data))
-}
+package buffer // import "go.opentelemetry.io/experimental/streaming/exporter/buffer"
