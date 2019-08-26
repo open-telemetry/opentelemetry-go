@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package tracecontext contains HTTP propagator for TraceContext standard.
-// See https://github.com/w3c/distributed-tracing for more information.
-package propagation // import "go.opentelemetry.io/propagation"
+package propagation
 
 import (
 	"encoding/hex"

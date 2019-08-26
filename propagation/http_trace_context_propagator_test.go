@@ -18,10 +18,10 @@ import (
 	"net/http"
 	"testing"
 
-	"go.opentelemetry.io/api/tag"
-
 	"github.com/google/go-cmp/cmp"
+
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/propagation"
 )
 
