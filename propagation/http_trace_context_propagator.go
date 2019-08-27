@@ -40,27 +40,27 @@ var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
 // CarrierExtractor implements TextFormatPropagator interface.
 //
 // It creates CarrierExtractor object and binds carrier to the object. The carrier
-// is expected to be *http.Request. If the carrier type is not *http.Request
-// then an empty extractor. Extract method on empty extractor does nothing.
+// is expected to be *http.Request. If the carrier is nil or its type is not *http.Request
+// then a NoopExtractor is returned.
 func (hp httpTraceContextPropagator) CarrierExtractor(carrier interface{}) apipropagation.Extractor {
-	req, ok := carrier.(*http.Request)
-	if ok {
+	req, _ := carrier.(*http.Request)
+	if req != nil {
 		return traceContextExtractor{req: req}
 	}
-	return traceContextExtractor{}
+	return apipropagation.NoopExtractor{}
 }
 
 // CarrierInjector implements TextFormatPropagator interface.
 //
 // It creates CarrierInjector object and binds carrier to the object. The carrier
-// is expected to be of type *http.Request. If the carrier type is not *http.Request
-// then an empty injector is returned. Inject method on empty injector does nothing.
+// is expected to be of type *http.Request. If the carrier is nil or its type is not *http.Request
+// then a NoopInjector is returned.
 func (hp httpTraceContextPropagator) CarrierInjector(carrier interface{}) apipropagation.Injector {
-	req, ok := carrier.(*http.Request)
-	if ok {
+	req, _ := carrier.(*http.Request)
+	if req != nil {
 		return traceContextInjector{req: req}
 	}
-	return traceContextInjector{}
+	return apipropagation.NoopInjector{}
 }
 
 // HttpTraceContextPropagator creates a new text format propagator that propagates SpanContext
