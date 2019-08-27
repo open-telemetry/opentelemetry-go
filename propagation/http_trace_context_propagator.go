@@ -37,7 +37,7 @@ type httpTraceContextPropagator struct{}
 
 var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
 
-// CarrierExtractor implements CarrierExtractor method of TextFormatPropagator interface.
+// CarrierExtractor implements TextFormatPropagator interface.
 //
 // It creates CarrierExtractor object and binds carrier to the object. The carrier
 // is expected to be *http.Request. If the carrier type is not *http.Request
@@ -50,7 +50,7 @@ func (hp httpTraceContextPropagator) CarrierExtractor(carrier interface{}) apipr
 	return traceContextExtractor{}
 }
 
-// CarrierInjector implements CarrierInjector method of TextFormatPropagator interface.
+// CarrierInjector implements TextFormatPropagator interface.
 //
 // It creates CarrierInjector object and binds carrier to the object. The carrier
 // is expected to be of type *http.Request. If the carrier type is not *http.Request
@@ -63,14 +63,14 @@ func (hp httpTraceContextPropagator) CarrierInjector(carrier interface{}) apipro
 	return traceContextInjector{}
 }
 
-// HttpTraceContextPropagator creates a new propagator that propagates SpanContext
+// HttpTraceContextPropagator creates a new text format propagator that propagates SpanContext
 // in W3C TraceContext format.
 //
 // The propagator is then used to create CarrierInjector and CarrierExtractor associated with a
 // specific request. Injectors and Extractors respectively provides method to
 // inject and extract SpanContext into/from the http request. Inject method encodes
-// SpanContext into W3C TraceContext Header and injects the header in the request.
-// Extract method extracts the header and decodes SpanContext.
+// SpanContext and tag.Map into W3C TraceContext Header and injects the header in the request.
+// Extract method extracts the header and decodes SpanContext and tag.Map.
 func HttpTraceContextPropagator() httpTraceContextPropagator {
 	return httpTraceContextPropagator{}
 }
@@ -81,74 +81,79 @@ type traceContextExtractor struct {
 
 var _ apipropagation.Extractor = traceContextExtractor{}
 
-// Extract implements Extract method of propagation.Extractor interface. It extracts
-// W3C TraceContext Header and decodes SpanContext from the Header.
+// Extract implements Extractor interface.
+//
+// It extracts W3C TraceContext Header and then decodes SpanContext and tag.Map from the Header.
 func (tce traceContextExtractor) Extract() (sc core.SpanContext, tm tag.Map) {
 	if tce.req == nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	h, ok := getRequestHeader(tce.req, traceparentHeader, false)
 	if !ok {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	sections := strings.Split(h, "-")
 	if len(sections) < 4 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 
 	if len(sections[0]) != 2 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	ver, err := hex.DecodeString(sections[0])
 	if err != nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 
 	if version == 0 && len(sections) != 4 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 
 	if len(sections[1]) != 32 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 
 	result, err := strconv.ParseUint(sections[1][0:16], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	sc.TraceID.High = result
 
 	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	sc.TraceID.Low = result
 
 	if len(sections[2]) != 16 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	result, err = strconv.ParseUint(sections[2][0:], 16, 64)
 	if err != nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	sc.SpanID = result
 
 	opts, err := hex.DecodeString(sections[3])
 	if err != nil || len(opts) < 1 {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 	sc.TraceOptions = opts[0]
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return noExtract()
 	}
 
 	// TODO: [rghetia] add tag.Map (distributed context) extraction
 	return sc, tag.NewEmptyMap()
+}
+
+func noExtract() (core.SpanContext, tag.Map) {
+	return core.EmptySpanContext(), tag.NewEmptyMap()
 }
 
 type traceContextInjector struct {
@@ -157,8 +162,9 @@ type traceContextInjector struct {
 
 var _ apipropagation.Injector = traceContextInjector{}
 
-// Inject implements Inject method of propagation.Injector interface. It encodes
-// SpanContext into W3C TraceContext Header and injects the header into
+// Inject implements Injector interface.
+//
+// It encodes SpanContext and tag.Map into W3C TraceContext Header and injects the header into
 // the associated request.
 func (tci traceContextInjector) Inject(sc core.SpanContext, tm tag.Map) {
 	if tci.req == nil {
