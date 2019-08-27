@@ -596,3 +596,27 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
 	}
 }
+
+func TestCustomStartEndTime(t *testing.T) {
+	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
+	endTime := startTime.Add(time.Second * 20)
+	_, span := apitrace.Start(
+		context.Background(),
+		"testspan",
+		apitrace.WithStartTime(startTime),
+	)
+	var te testExporter
+	RegisterExporter(&te)
+	span.Finish(apitrace.WithFinishTime(endTime))
+	UnregisterExporter(&te)
+	if len(te.spans) != 1 {
+		t.Fatalf("got exported spans %#v, want one span", te.spans)
+	}
+	got := te.spans[0]
+	if got.StartTime != startTime {
+		t.Errorf("expected start time to be %s, got %s", startTime, got.StartTime)
+	}
+	if got.EndTime != endTime {
+		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
+	}
+}
