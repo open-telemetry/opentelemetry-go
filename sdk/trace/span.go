@@ -275,9 +275,13 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		return span
 	}
 
+	startTime := o.StartTime
+	if startTime.IsZero() {
+		startTime = time.Now()
+	}
 	span.data = &SpanData{
 		SpanContext: span.spanContext,
-		StartTime:   time.Now(),
+		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind
 		//SpanKind:        o.SpanKind,
 		Name:            name,
