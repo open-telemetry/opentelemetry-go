@@ -15,6 +15,8 @@
 package propagation
 
 import (
+	"context"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/tag"
 )
@@ -54,4 +56,35 @@ type Extractor interface {
 	// extractor. For example in case of http request, span context could be extracted
 	// from the W3C Trace context header.
 	Extract() (core.SpanContext, tag.Map)
+}
+
+// Propagator is an interface that specifies methods to inject and extract SpanContext
+// into/from a carrier using Supplier interface.
+// For example, HTTP Trace Context Propagator would encode SpanContext into W3C Trace
+// Context Header and set the header into HttpRequest.
+type Propagator interface {
+	// Inject method retrieves current SpanContext from the ctx, encodes it into propagator
+	// specific format and then injects the encoded SpanContext using supplier into a carrier
+	// associated with the supplier.
+	Inject(ctx context.Context, supplier Supplier)
+
+	// Extract method retrieves SpanContext using supplier from the associated carrier with
+	// the supplier. It decodes the SpanContext and it creates remote span using registered
+	// tracer.
+	Extract(ctx context.Context, supplier Supplier) context.Context
+
+	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
+	// carrier. The use cases for this are
+	// * allow pre-allocation of fields, especially in systems like gRPC Metadata
+	// * allow a single-pass over an iterator (ex OpenTracing has no getter in TextMap)
+	GetAllKeys() []string
+}
+
+// Supplier is an interface that specifies methods to retrieve and store
+// value for a key to an associated carrier.
+// Get method retrieves the value for a given key.
+// Set method stores the value for a given key.
+type Supplier interface {
+	Get(key string) string
+	Set(key string, value string)
 }
