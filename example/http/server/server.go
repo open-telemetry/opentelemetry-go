@@ -49,7 +49,7 @@ func main() {
 		)
 		defer span.Finish()
 
-		span.Event(ctx, "handling this...")
+		span.AddEvent(ctx, "handling this...")
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}

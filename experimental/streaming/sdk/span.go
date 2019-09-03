@@ -16,11 +16,11 @@ package sdk
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
@@ -87,9 +87,14 @@ func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
 	})
 }
 
-func (sp *span) Finish() {
+func (sp *span) Finish(options ...apitrace.FinishOption) {
 	recovered := recover()
+	opts := apitrace.FinishOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
 	observer.Record(observer.Event{
+		Time:      opts.FinishTime,
 		Type:      observer.FINISH_SPAN,
 		Scope:     sp.ScopeID(),
 		Recovered: recovered,
@@ -103,17 +108,13 @@ func (sp *span) Tracer() apitrace.Tracer {
 	return sp.tracer
 }
 
-func (sp *span) AddEvent(ctx context.Context, event event.Event) {
-	observer.Record(observer.Event{
-		Type:       observer.ADD_EVENT,
-		String:     event.Message(),
-		Attributes: event.Attributes(),
-		Context:    ctx,
-	})
+func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+	sp.addEventWithTime(ctx, time.Time{}, msg, attrs...)
 }
 
-func (sp *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	observer.Record(observer.Event{
+		Time:       timestamp,
 		Type:       observer.ADD_EVENT,
 		String:     msg,
 		Attributes: attrs,

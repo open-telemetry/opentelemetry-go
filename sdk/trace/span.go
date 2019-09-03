@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
@@ -107,7 +106,7 @@ func (s *span) ModifyAttribute(mutator apitag.Mutator) {
 func (s *span) ModifyAttributes(mutators ...apitag.Mutator) {
 }
 
-func (s *span) Finish() {
+func (s *span) Finish(options ...apitrace.FinishOption) {
 	if s == nil {
 		return
 	}
@@ -118,13 +117,21 @@ func (s *span) Finish() {
 	if !s.IsRecordingEvents() {
 		return
 	}
+	opts := apitrace.FinishOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
 		mustExport := s.spanContext.IsSampled() && len(exp) > 0
 		//if s.spanStore != nil || mustExport {
 		if mustExport {
 			sd := s.makeSpanData()
-			sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			if opts.FinishTime.IsZero() {
+				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			} else {
+				sd.EndTime = opts.FinishTime
+			}
 			//if s.spanStore != nil {
 			//	s.spanStore.finished(s, sd)
 			//}
@@ -141,27 +148,21 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, event apievent.Event) {
+func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.messageEvents.add(event)
+	s.addEventWithTimestamp(time.Now(), msg, attrs...)
 }
 
-func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
-		return
-	}
-	now := time.Now()
+func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.messageEvents.add(event{
 		msg:        msg,
 		attributes: attrs,
-		time:       now,
+		time:       timestamp,
 	})
-	s.mu.Unlock()
 }
 
 func (s *span) SetName(name string) {
@@ -274,9 +275,13 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		return span
 	}
 
+	startTime := o.StartTime
+	if startTime.IsZero() {
+		startTime = time.Now()
+	}
 	span.data = &SpanData{
 		SpanContext: span.spanContext,
-		StartTime:   time.Now(),
+		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind
 		//SpanKind:        o.SpanKind,
 		Name:            name,

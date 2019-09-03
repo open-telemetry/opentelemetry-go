@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 )
 
@@ -50,18 +49,28 @@ type Tracer interface {
 	Inject(context.Context, Span, Injector)
 }
 
+type FinishOptions struct {
+	FinishTime time.Time
+}
+
+type FinishOption func(*FinishOptions)
+
+func WithFinishTime(finishTime time.Time) FinishOption {
+	return func(opts *FinishOptions) {
+		opts.FinishTime = finishTime
+	}
+}
+
 type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
 
 	// Finish completes the span. No updates are allowed to span after it
 	// finishes. The only exception is setting status of the span.
-	Finish()
+	Finish(options ...FinishOption)
 
 	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, event event.Event)
-	// AddEvent records an event to the span.
-	Event(ctx context.Context, msg string, attrs ...core.KeyValue)
+	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 
 	// IsRecordingEvents returns true if the span is active and recording events is enabled.
 	IsRecordingEvents() bool
