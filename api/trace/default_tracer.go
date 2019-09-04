@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+
 	"go.opentelemetry.io/api/core"
 )
 
@@ -52,6 +53,6 @@ func (DefaultTracer) Start(ctx context.Context, name string, o ...SpanOption) (c
 	if !opts.RemoteSpanContext.IsValid() {
 		return ctx, NoopSpan{}
 	}
-	span := &DefaultSpan{sc:opts.RemoteSpanContext}
+	span := &DefaultSpan{sc: opts.RemoteSpanContext}
 	return SetCurrentSpan(ctx, span), span
 }

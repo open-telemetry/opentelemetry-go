@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/propagation"
 )
 
@@ -34,62 +33,6 @@ var (
 )
 
 func TestExtractTraceContextFromHTTPReq(t *testing.T) {
-	propagator := propagation.HttpTraceContextPropagator()
-	tests := []struct {
-		name   string
-		header string
-		wantSc core.SpanContext
-	}{
-		{
-			name:   "future version",
-			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: core.SpanContext{
-				TraceID:      traceID,
-				SpanID:       spanID,
-				TraceOptions: core.TraceOptionSampled,
-			},
-		},
-		{
-			name:   "zero trace ID and span ID",
-			header: "00-00000000000000000000000000000000-0000000000000000-01",
-			wantSc: core.EmptySpanContext(),
-		},
-		{
-			name:   "valid header",
-			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: core.SpanContext{
-				TraceID:      traceID,
-				SpanID:       spanID,
-				TraceOptions: core.TraceOptionSampled,
-			},
-		},
-		{
-			name:   "missing options",
-			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
-			wantSc: core.EmptySpanContext(),
-		},
-		{
-			name:   "empty options",
-			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-",
-			wantSc: core.EmptySpanContext(),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("traceparent", tt.header)
-			e := propagator.CarrierExtractor(req)
-
-			gotSc, _ := e.Extract()
-			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
-				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
-			}
-		})
-	}
-}
-
-func TestExtractTraceContextFromHTTPReq2(t *testing.T) {
 	trace.SetGlobalTracer(trace.DefaultTracer{})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
@@ -148,76 +91,7 @@ func TestExtractTraceContextFromHTTPReq2(t *testing.T) {
 	}
 }
 
-func TestExtractTraceContextFromInvalidCarrier(t *testing.T) {
-	propagator := propagation.HttpTraceContextPropagator()
-	tests := []struct {
-		name   string
-		header string
-		wantSc core.SpanContext
-	}{
-		{
-			name:   "valid header on invalid carrier",
-			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: core.EmptySpanContext(),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e := propagator.CarrierExtractor(tt.header)
-			gotSc, _ := e.Extract()
-			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
-				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
-			}
-		})
-	}
-}
-
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
-	propagator := propagation.HttpTraceContextPropagator()
-	tests := []struct {
-		name       string
-		sc         core.SpanContext
-		wantHeader string
-	}{
-		{
-			name: "valid spancontext, sampled",
-			sc: core.SpanContext{
-				TraceID:      traceID,
-				SpanID:       spanID,
-				TraceOptions: core.TraceOptionSampled,
-			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-		},
-		{
-			name: "valid spancontext, not sampled",
-			sc: core.SpanContext{
-				TraceID: traceID,
-				SpanID:  spanID,
-			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
-		},
-		{
-			name:       "invalid spancontext",
-			sc:         core.EmptySpanContext(),
-			wantHeader: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			i := propagator.CarrierInjector(req)
-			i.Inject(tt.sc, tag.NewEmptyMap())
-
-			gotHeader := req.Header.Get("traceparent")
-			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
-				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
-			}
-		})
-	}
-}
-
-func TestInjectTraceContextToHTTPReq2(t *testing.T) {
 	trace.SetGlobalTracer(trace.DefaultTracer{})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
@@ -259,29 +133,6 @@ func TestInjectTraceContextToHTTPReq2(t *testing.T) {
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
-		})
-	}
-}
-
-func TestInjectTraceContextToInvalidCarrier(t *testing.T) {
-	propagator := propagation.HttpTraceContextPropagator()
-	tests := []struct {
-		name string
-		sc   core.SpanContext
-	}{
-		{
-			name: "valid spancontext to invalid carrier does nothing.",
-			sc: core.SpanContext{
-				TraceID:      traceID,
-				SpanID:       spanID,
-				TraceOptions: core.TraceOptionSampled,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			i := propagator.CarrierInjector("")
-			i.Inject(tt.sc, tag.NewEmptyMap())
 		})
 	}
 }

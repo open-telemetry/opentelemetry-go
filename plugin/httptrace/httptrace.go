@@ -15,15 +15,17 @@
 package httptrace
 
 import (
+	"context"
 	"encoding/binary"
 	"net/http"
 
+	"go.opentelemetry.io/api/trace"
+
 	"github.com/lightstep/tracecontext.go"
-	"github.com/lightstep/tracecontext.go/tracestate"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/propagation"
 )
 
 const (
@@ -34,46 +36,25 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	encoding = binary.BigEndian
+	encoding   = binary.BigEndian
+	propagator = propagation.HttpTraceContextPropagator()
 )
 
 // Returns the Attributes, Context Tags, and SpanContext that were encoded by Inject.
-func Extract(req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
-	tc, err := tracecontext.FromHeaders(req.Header)
-
-	if err != nil {
-		return nil, nil, core.SpanContext{}
-	}
-
-	var sc core.SpanContext
-	sc.SpanID = encoding.Uint64(tc.TraceParent.SpanID[0:8])
-	sc.TraceID.High = encoding.Uint64(tc.TraceParent.TraceID[0:8])
-	sc.TraceID.Low = encoding.Uint64(tc.TraceParent.TraceID[8:16])
+func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, context.Context) {
+	ctx = propagator.Extract(ctx, req.Header)
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
 		// Etc.
 	}
 
-	var tags []core.KeyValue
-
-	for _, ts := range tc.TraceState {
-		if ts.Vendor != Vendor {
-			continue
-		}
-		// TODO: max-hops, type conversion questions answered,
-		// case-conversion questions.
-		tags = append(tags, key.New(ts.Tenant).String(ts.Value))
-	}
-
-	return attrs, tags, sc
+	return attrs, nil, ctx
 }
 
-type hinjector struct {
-	*http.Request
-}
-
-func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {
+func Inject(ctx context.Context, req *http.Request) {
+	propagator.Inject(ctx, req.Header)
+	sc := trace.CurrentSpan(ctx).SpanContext()
 	var tc tracecontext.TraceContext
 	var sid [8]byte
 	var tid [16]byte
@@ -97,5 +78,5 @@ func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {
 		return true
 	})
 
-	tc.SetHeaders(h.Header)
+	tc.SetHeaders(req.Header)
 }

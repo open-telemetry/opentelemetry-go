@@ -15,39 +15,24 @@
 package propagation
 
 import (
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
+	"context"
 )
 
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
 type NoopTextFormatPropagator struct{}
 
-var _ TextFormatPropagator = NoopTextFormatPropagator{}
+var _ Propagator = NoopTextFormatPropagator{}
 
-// CarrierExtractor returns NoopExtractor
-func (ntp NoopTextFormatPropagator) CarrierExtractor(carrier interface{}) Extractor {
-	return NoopExtractor{}
+// Inject does nothing.
+func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {
 }
 
-// CarrierInjector returns NoopInjector
-func (ntp NoopTextFormatPropagator) CarrierInjector(carrier interface{}) Injector {
-	return NoopInjector{}
+// Extract does nothing.
+func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) context.Context {
+	return ctx
 }
 
-// NoopInjector implements Injector interface that does nothing.
-type NoopInjector struct{}
-
-var _ Injector = NoopInjector{}
-
-func (ni NoopInjector) Inject(sc core.SpanContext, tm tag.Map) {
-}
-
-// NoopExtractor implements Extractor interface that does nothing.
-type NoopExtractor struct{}
-
-var _ Extractor = NoopExtractor{}
-
-// Extract method always returns Invalid SpanContext and empty tag.Map
-func (ne NoopExtractor) Extract() (core.SpanContext, tag.Map) {
-	return core.EmptySpanContext(), tag.NewEmptyMap()
+// GetAllKeys returns empty list of strings.
+func (np NoopTextFormatPropagator) GetAllKeys() []string {
+	return []string{}
 }
