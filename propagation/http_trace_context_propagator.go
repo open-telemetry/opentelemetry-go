@@ -35,7 +35,7 @@ const (
 
 type httpTraceContextPropagator struct{}
 
-var _ apipropagation.Propagator = httpTraceContextPropagator{}
+var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
 
 func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()

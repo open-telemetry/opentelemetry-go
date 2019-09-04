@@ -21,7 +21,7 @@ import (
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
 type NoopTextFormatPropagator struct{}
 
-var _ Propagator = NoopTextFormatPropagator{}
+var _ TextFormatPropagator = NoopTextFormatPropagator{}
 
 // Inject does nothing.
 func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {

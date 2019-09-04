@@ -18,11 +18,11 @@ import (
 	"context"
 )
 
-// Propagator is an interface that specifies methods to inject and extract SpanContext
+// TextFormatPropagator is an interface that specifies methods to inject and extract SpanContext
 // into/from a carrier using Supplier interface.
-// For example, HTTP Trace Context Propagator would encode SpanContext into W3C Trace
+// For example, HTTP Trace Context propagator would encode SpanContext into W3C Trace
 // Context Header and set the header into HttpRequest.
-type Propagator interface {
+type TextFormatPropagator interface {
 	// Inject method retrieves current SpanContext from the ctx, encodes it into propagator
 	// specific format and then injects the encoded SpanContext using supplier into a carrier
 	// associated with the supplier.
