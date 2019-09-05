@@ -12,22 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/experimental/streaming/exporter/stdout"
+package trace
 
 import (
-	"os"
+	"testing"
 
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
-	"go.opentelemetry.io/experimental/streaming/exporter/reader"
-	"go.opentelemetry.io/experimental/streaming/exporter/reader/format"
+	"github.com/google/go-cmp/cmp"
+
+	"go.opentelemetry.io/api/core"
 )
 
-type stdoutLog struct{}
-
-func New() observer.Observer {
-	return reader.NewReaderObserver(&stdoutLog{})
+func TestNeverSamperShouldSample(t *testing.T) {
+	gotD := NeverSampleSampler().ShouldSample(
+		core.SpanContext{}, false, core.TraceID{}, 0, "span")
+	wantD := Decision{Sampled: false}
+	if diff := cmp.Diff(wantD, gotD); diff != "" {
+		t.Errorf("Decision: +got, -want%v", diff)
+	}
 }
 
-func (s *stdoutLog) Read(data reader.Event) {
-	os.Stdout.WriteString(format.EventToString(data))
+func TestNeverSamplerDescription(t *testing.T) {
+	gotDesc := NeverSampleSampler().Description()
+	wantDesc := neverSamplerDescription
+	if diff := cmp.Diff(wantDesc, gotDesc); diff != "" {
+		t.Errorf("Description: +got, -want%v", diff)
+	}
 }

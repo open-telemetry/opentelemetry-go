@@ -54,10 +54,8 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			buf.WriteString(", a root span")
 		} else {
 			buf.WriteString(" <")
-			if data.Parent.HasSpanID() {
-				f(false)(parentSpanIDKey.String(data.SpanContext.SpanIDString()))
-			}
-			if data.ParentAttributes != nil {
+			f(false)(parentSpanIDKey.String(data.Parent.SpanIDString()))
+			if data.ParentAttributes.Len() > 0 {
 				data.ParentAttributes.Foreach(f(false))
 			}
 			buf.WriteString(" >")
@@ -109,16 +107,20 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString("set status ")
 		buf.WriteString(data.Status.String())
 
+	case reader.SET_NAME:
+		buf.WriteString("set name ")
+		buf.WriteString(data.Name)
+
 	default:
 		buf.WriteString(fmt.Sprintf("WAT? %d", data.Type))
 	}
 
 	// Attach the scope (span) attributes and context tags.
 	buf.WriteString(" [")
-	if data.Attributes != nil {
+	if data.Attributes.Len() > 0 {
 		data.Attributes.Foreach(f(false))
 	}
-	if data.Tags != nil {
+	if data.Tags.Len() > 0 {
 		data.Tags.Foreach(f(true))
 	}
 	if data.SpanContext.HasSpanID() {

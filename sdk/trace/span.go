@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/api/core"
-	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
-	"google.golang.org/grpc/codes"
 )
 
 // span implements apitrace.Span interface.
@@ -106,7 +106,7 @@ func (s *span) ModifyAttribute(mutator apitag.Mutator) {
 func (s *span) ModifyAttributes(mutators ...apitag.Mutator) {
 }
 
-func (s *span) Finish() {
+func (s *span) Finish(options ...apitrace.FinishOption) {
 	if s == nil {
 		return
 	}
@@ -117,13 +117,21 @@ func (s *span) Finish() {
 	if !s.IsRecordingEvents() {
 		return
 	}
+	opts := apitrace.FinishOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
 		mustExport := s.spanContext.IsSampled() && len(exp) > 0
 		//if s.spanStore != nil || mustExport {
 		if mustExport {
 			sd := s.makeSpanData()
-			sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			if opts.FinishTime.IsZero() {
+				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
+			} else {
+				sd.EndTime = opts.FinishTime
+			}
 			//if s.spanStore != nil {
 			//	s.spanStore.finished(s, sd)
 			//}
@@ -140,27 +148,48 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, event apievent.Event) {
+func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.messageEvents.add(event)
+	s.addEventWithTimestamp(time.Now(), msg, attrs...)
 }
 
-func (s *span) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
-		return
-	}
-	now := time.Now()
+func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.messageEvents.add(event{
 		msg:        msg,
 		attributes: attrs,
-		time:       now,
+		time:       timestamp,
 	})
-	s.mu.Unlock()
+}
+
+func (s *span) SetName(name string) {
+	if s.data == nil {
+		// TODO: now what?
+		return
+	}
+	s.data.Name = name
+	// SAMPLING
+	noParent := s.data.ParentSpanID == 0
+	var ctx core.SpanContext
+	if noParent {
+		ctx = core.EmptySpanContext()
+	} else {
+		// FIXME: Where do we get the parent context from?
+		// From SpanStore?
+		ctx = s.data.SpanContext
+	}
+	data := samplingData{
+		noParent:     noParent,
+		remoteParent: s.data.HasRemoteParent,
+		parent:       ctx,
+		name:         name,
+		cfg:          config.Load().(*Config),
+		span:         s,
+	}
+	makeSamplingDecision(data)
 }
 
 // makeSpanData produces a SpanData representing the current state of the span.
@@ -230,29 +259,15 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		noParent = true
 	}
 	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
-	sampler := cfg.DefaultSampler
-
-	// TODO: [rghetia] fix sampler
-	//if !hasParent || remoteParent || o.Sampler != nil {
-	if noParent || remoteParent {
-		// If this span is the child of a local span and no Sampler is set in the
-		// options, keep the parent's TraceOptions.
-		//
-		// Otherwise, consult the Sampler in the options if it is non-nil, otherwise
-		// the default sampler.
-		//if o.Sampler != nil {
-		//	sampler = o.Sampler
-		//}
-		sampled := sampler(SamplingParameters{
-			ParentContext:   parent,
-			TraceID:         span.spanContext.TraceID,
-			SpanID:          span.spanContext.SpanID,
-			Name:            name,
-			HasRemoteParent: remoteParent}).Sample
-		if sampled {
-			span.spanContext.TraceOptions = core.TraceOptionSampled
-		}
+	data := samplingData{
+		noParent:     noParent,
+		remoteParent: remoteParent,
+		parent:       parent,
+		name:         name,
+		cfg:          cfg,
+		span:         span,
 	}
+	makeSamplingDecision(data)
 
 	// TODO: [rghetia] restore when spanstore is added.
 	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.RecordEvent {
@@ -260,9 +275,13 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 		return span
 	}
 
+	startTime := o.StartTime
+	if startTime.IsZero() {
+		startTime = time.Now()
+	}
 	span.data = &SpanData{
 		SpanContext: span.spanContext,
-		StartTime:   time.Now(),
+		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind
 		//SpanKind:        o.SpanKind,
 		Name:            name,
@@ -285,4 +304,40 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	//}
 
 	return span
+}
+
+type samplingData struct {
+	noParent     bool
+	remoteParent bool
+	parent       core.SpanContext
+	name         string
+	cfg          *Config
+	span         *span
+}
+
+func makeSamplingDecision(data samplingData) {
+	if data.noParent || data.remoteParent {
+		// If this span is the child of a local span and no
+		// Sampler is set in the options, keep the parent's
+		// TraceOptions.
+		//
+		// Otherwise, consult the Sampler in the options if it
+		// is non-nil, otherwise the default sampler.
+		sampler := data.cfg.DefaultSampler
+		//if o.Sampler != nil {
+		//	sampler = o.Sampler
+		//}
+		spanContext := &data.span.spanContext
+		sampled := sampler(SamplingParameters{
+			ParentContext:   data.parent,
+			TraceID:         spanContext.TraceID,
+			SpanID:          spanContext.SpanID,
+			Name:            data.name,
+			HasRemoteParent: data.remoteParent}).Sample
+		if sampled {
+			spanContext.TraceOptions |= core.TraceOptionSampled
+		} else {
+			spanContext.TraceOptions &^= core.TraceOptionSampled
+		}
+	}
 }

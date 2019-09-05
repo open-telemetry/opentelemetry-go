@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package main // "go.opentelemetry.io/experimental/streaming/exporter/stderr/plugin"
 
 import (
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"

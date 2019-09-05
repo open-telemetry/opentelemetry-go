@@ -153,15 +153,15 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 }
 
 func (ct *clientTracer) got100Continue() {
-	ct.current().Event(ct.Context, "GOT 100 - Continue")
+	ct.current().AddEvent(ct.Context, "GOT 100 - Continue")
 }
 
 func (ct *clientTracer) wait100Continue() {
-	ct.current().Event(ct.Context, "GOT 100 - Wait")
+	ct.current().AddEvent(ct.Context, "GOT 100 - Wait")
 }
 
 func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) error {
-	ct.current().Event(ct.Context, "GOT 1xx",
+	ct.current().AddEvent(ct.Context, "GOT 1xx",
 		HTTPStatus.Int(code),
 		HTTPHeaderMIME.String(sm2s(header)),
 	)

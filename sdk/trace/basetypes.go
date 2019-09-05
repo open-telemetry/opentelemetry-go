@@ -27,11 +27,3 @@ type event struct {
 	attributes []core.KeyValue
 	time       time.Time
 }
-
-func (me *event) Message() string {
-	return me.msg
-}
-
-func (me *event) Attributes() []core.KeyValue {
-	return me.attributes
-}

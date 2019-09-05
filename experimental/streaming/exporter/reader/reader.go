@@ -102,6 +102,7 @@ const (
 	MODIFY_ATTR
 	RECORD_STATS
 	SET_STATUS
+	SET_NAME
 )
 
 // NewReaderObserver returns an implementation that computes the
@@ -287,6 +288,10 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			read.SpanContext = span.spanContext
 		}
 
+	case observer.SET_NAME:
+		read.Type = SET_NAME
+		read.Name = event.String
+
 	default:
 		panic(fmt.Sprint("Unhandled case: ", event.Type))
 	}
@@ -311,7 +316,7 @@ func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
 
 func (ro *readerObserver) readMeasureScope(m stats.Measure) (tag.Map, *readerSpan) {
 	// TODO
-	return nil, nil
+	return tag.NewEmptyMap(), nil
 }
 
 func (ro *readerObserver) readScope(id observer.ScopeID) (tag.Map, *readerSpan) {

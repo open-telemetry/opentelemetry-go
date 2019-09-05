@@ -17,15 +17,17 @@ package trace
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
-	"google.golang.org/grpc/codes"
 )
 
 var (
@@ -35,6 +37,10 @@ var (
 
 func init() {
 	Register()
+	setupDefaultSamplerConfig()
+}
+
+func setupDefaultSamplerConfig() {
 	// no random sampling, but sample children of sampled spans.
 	ApplyConfig(Config{DefaultSampler: ProbabilitySampler(0)})
 }
@@ -52,6 +58,67 @@ func TestStartSpan(t *testing.T) {
 	defer span.Finish()
 	if span == nil {
 		t.Errorf("span not started")
+	}
+}
+
+func TestSetName(t *testing.T) {
+	samplerIsCalled := false
+	fooSampler := Sampler(func(p SamplingParameters) SamplingDecision {
+		samplerIsCalled = true
+		t.Logf("called sampler for name %q", p.Name)
+		return SamplingDecision{Sample: strings.HasPrefix(p.Name, "foo")}
+	})
+	ApplyConfig(Config{DefaultSampler: fooSampler})
+	defer setupDefaultSamplerConfig()
+	type testCase struct {
+		name          string
+		newName       string
+		sampledBefore bool
+		sampledAfter  bool
+	}
+	for idx, tt := range []testCase{
+		{ // 0
+			name:          "foobar",
+			newName:       "foobaz",
+			sampledBefore: true,
+			sampledAfter:  true,
+		},
+		{ // 1
+			name:          "foobar",
+			newName:       "barbaz",
+			sampledBefore: true,
+			sampledAfter:  false,
+		},
+		{ // 2
+			name:          "barbar",
+			newName:       "barbaz",
+			sampledBefore: false,
+			sampledAfter:  false,
+		},
+		{ // 3
+			name:          "barbar",
+			newName:       "foobar",
+			sampledBefore: false,
+			sampledAfter:  true,
+		},
+	} {
+		span := startNamedSpan(tt.name)
+		if !samplerIsCalled {
+			t.Errorf("%d: the sampler was not even called during span creation", idx)
+		}
+		samplerIsCalled = false
+		if gotSampledBefore := span.SpanContext().IsSampled(); tt.sampledBefore != gotSampledBefore {
+			t.Errorf("%d: invalid sampling decision before rename, expected %v, got %v", idx, tt.sampledBefore, gotSampledBefore)
+		}
+		span.SetName(tt.newName)
+		if !samplerIsCalled {
+			t.Errorf("%d: the sampler was not even called during span rename", idx)
+		}
+		samplerIsCalled = false
+		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
+			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
+		}
+		span.Finish()
 	}
 }
 
@@ -167,8 +234,8 @@ func TestEvents(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	span.Event(context.Background(), "foo", key.New("key1").String("value1"))
-	span.Event(context.Background(), "bar",
+	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "bar",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)
@@ -209,13 +276,13 @@ func TestEventsOverLimit(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	span.Event(context.Background(), "fooDrop", key.New("key1").String("value1"))
-	span.Event(context.Background(), "barDrop",
+	span.AddEvent(context.Background(), "fooDrop", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "barDrop",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)
-	span.Event(context.Background(), "foo", key.New("key1").String("value1"))
-	span.Event(context.Background(), "bar",
+	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "bar",
 		key.New("key2").String("value2"),
 		key.New("key3").String("value3"),
 	)
@@ -334,13 +401,20 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 	return nil
 }
 
-// startSpan is a test utility func that starts a span with ChildOf option.
-// remote span context contains traceoption with sampled bit set. This allows
-// the span to be automatically sampled.
+// startSpan starts a span with a name "span0". See startNamedSpan for
+// details.
 func startSpan() apitrace.Span {
+	return startNamedSpan("span0")
+}
+
+// startNamed Span is a test utility func that starts a span with a
+// passed name and with ChildOf option.  remote span context contains
+// traceoption with sampled bit set. This allows the span to be
+// automatically sampled.
+func startNamedSpan(name string) apitrace.Span {
 	_, span := apitrace.GlobalTracer().Start(
 		context.Background(),
-		"span0",
+		name,
 		apitrace.ChildOf(remoteSpanContext()),
 		apitrace.WithRecordEvents(),
 	)
@@ -520,5 +594,29 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	}
 	if got, want := n, uint64(len(spans)); got != want {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
+	}
+}
+
+func TestCustomStartEndTime(t *testing.T) {
+	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
+	endTime := startTime.Add(time.Second * 20)
+	_, span := apitrace.Start(
+		context.Background(),
+		"testspan",
+		apitrace.WithStartTime(startTime),
+	)
+	var te testExporter
+	RegisterExporter(&te)
+	span.Finish(apitrace.WithFinishTime(endTime))
+	UnregisterExporter(&te)
+	if len(te.spans) != 1 {
+		t.Fatalf("got exported spans %#v, want one span", te.spans)
+	}
+	got := te.spans[0]
+	if got.StartTime != startTime {
+		t.Errorf("expected start time to be %s, got %s", startTime, got.StartTime)
+	}
+	if got.EndTime != endTime {
+		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
 	}
 }
