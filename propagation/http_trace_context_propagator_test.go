@@ -33,7 +33,7 @@ var (
 )
 
 func TestExtractTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(trace.DefaultTracer{})
+	trace.SetGlobalTracer(trace.PassThroughTracer{})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
 		name   string
@@ -92,7 +92,7 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(trace.DefaultTracer{})
+	trace.SetGlobalTracer(trace.PassThroughTracer{})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
 		name       string

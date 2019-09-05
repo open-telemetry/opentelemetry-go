@@ -20,32 +20,36 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-type DefaultTracer struct{}
+// PassThroughTracer is equivalent of noop tracer except that
+// it facilitates forwarding incoming trace to downstream services.
+// It does require to use appropriate propagators.
+type PassThroughTracer struct{}
 
-var _ Tracer = DefaultTracer{}
+var _ Tracer = PassThroughTracer{}
 
 // WithResources does nothing and returns noop implementation of Tracer.
-func (t DefaultTracer) WithResources(attributes ...core.KeyValue) Tracer {
+func (t PassThroughTracer) WithResources(attributes ...core.KeyValue) Tracer {
 	return t
 }
 
 // WithComponent does nothing and returns noop implementation of Tracer.
-func (t DefaultTracer) WithComponent(name string) Tracer {
+func (t PassThroughTracer) WithComponent(name string) Tracer {
 	return t
 }
 
 // WithService does nothing and returns noop implementation of Tracer.
-func (t DefaultTracer) WithService(name string) Tracer {
+func (t PassThroughTracer) WithService(name string) Tracer {
 	return t
 }
 
 // WithSpan wraps around execution of func with noop span.
-func (t DefaultTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (t PassThroughTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	return body(ctx)
 }
 
-// Start starts a noop span.
-func (DefaultTracer) Start(ctx context.Context, name string, o ...SpanOption) (context.Context, Span) {
+// Start starts a PassThroughSpan. It simply creates a copy of remote span.
+// If RemoteSpanContext is not provided then it returns a NoopSpan.
+func (PassThroughTracer) Start(ctx context.Context, name string, o ...SpanOption) (context.Context, Span) {
 	var opts SpanOptions
 	for _, op := range o {
 		op(&opts)
@@ -53,6 +57,6 @@ func (DefaultTracer) Start(ctx context.Context, name string, o ...SpanOption) (c
 	if !opts.RemoteSpanContext.IsValid() {
 		return ctx, NoopSpan{}
 	}
-	span := &DefaultSpan{sc: opts.RemoteSpanContext}
+	span := &PassThroughSpan{sc: opts.RemoteSpanContext}
 	return SetCurrentSpan(ctx, span), span
 }

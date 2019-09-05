@@ -24,62 +24,62 @@ import (
 	"go.opentelemetry.io/api/tag"
 )
 
-type DefaultSpan struct {
+type PassThroughSpan struct {
 	sc core.SpanContext
 }
 
-var _ Span = (*DefaultSpan)(nil)
+var _ Span = (*PassThroughSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (ds *DefaultSpan) SpanContext() core.SpanContext {
+func (ds *PassThroughSpan) SpanContext() core.SpanContext {
 	if ds == nil {
 		core.EmptySpanContext()
 	}
 	return ds.sc
 }
 
-// IsRecordingEvents always returns false for DefaultSpan.
-func (ds *DefaultSpan) IsRecordingEvents() bool {
+// IsRecordingEvents always returns false for PassThroughSpan.
+func (ds *PassThroughSpan) IsRecordingEvents() bool {
 	return false
 }
 
 // SetStatus does nothing.
-func (ds *DefaultSpan) SetStatus(status codes.Code) {
+func (ds *PassThroughSpan) SetStatus(status codes.Code) {
 }
 
 // SetError does nothing.
-func (ds *DefaultSpan) SetError(v bool) {
+func (ds *PassThroughSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (ds *DefaultSpan) SetAttribute(attribute core.KeyValue) {
+func (ds *PassThroughSpan) SetAttribute(attribute core.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (ds *DefaultSpan) SetAttributes(attributes ...core.KeyValue) {
+func (ds *PassThroughSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (ds *DefaultSpan) ModifyAttribute(mutator tag.Mutator) {
+func (ds *PassThroughSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (ds *DefaultSpan) ModifyAttributes(mutators ...tag.Mutator) {
+func (ds *PassThroughSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (ds *DefaultSpan) Finish() {
+func (ds *PassThroughSpan) Finish() {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (ds *DefaultSpan) Tracer() Tracer {
-	return NoopTracer{}
+func (ds *PassThroughSpan) Tracer() Tracer {
+	return PassThroughTracer{}
 }
 
 // AddEvent does nothing.
-func (ds *DefaultSpan) AddEvent(ctx context.Context, event event.Event) {
+func (ds *PassThroughSpan) AddEvent(ctx context.Context, event event.Event) {
 }
 
 // Event does nothing.
-func (ds *DefaultSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (ds *PassThroughSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
