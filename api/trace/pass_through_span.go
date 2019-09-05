@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 )
 
@@ -68,7 +67,11 @@ func (ds *PassThroughSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (ds *PassThroughSpan) Finish() {
+func (ds *PassThroughSpan) Finish(options ...FinishOption) {
+}
+
+// SetName does nothing.
+func (ds *PassThroughSpan) SetName(name string) {
 }
 
 // Tracer returns noop implementation of Tracer.
@@ -77,9 +80,5 @@ func (ds *PassThroughSpan) Tracer() Tracer {
 }
 
 // AddEvent does nothing.
-func (ds *PassThroughSpan) AddEvent(ctx context.Context, event event.Event) {
-}
-
-// Event does nothing.
-func (ds *PassThroughSpan) Event(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (ds *PassThroughSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
