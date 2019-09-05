@@ -3,10 +3,12 @@ package trace_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 )
@@ -106,4 +108,12 @@ func (mockSpan) Tracer() trace.Tracer {
 
 // Event does nothing.
 func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+}
+
+// AddEventWithTimestamp does nothing.
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+}
+
+// AddBulkEvents does nothing.
+func (mockSpan) AddBulkEvents(ctx context.Context, events ...event.Event) {
 }

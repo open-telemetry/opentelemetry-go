@@ -16,10 +16,12 @@ package trace
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 )
 
@@ -73,6 +75,14 @@ func (NoopSpan) Tracer() Tracer {
 
 // AddEvent does nothing.
 func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+}
+
+// AddEventWithTimestamp does nothing.
+func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+}
+
+// AddBulkEvents does nothing.
+func (NoopSpan) AddBulkEvents(ctx context.Context, events ...event.Event) {
 }
 
 // SetName does nothing.

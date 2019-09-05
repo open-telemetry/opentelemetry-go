@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	apievent "go.opentelemetry.io/api/event"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/internal"
@@ -152,10 +153,13 @@ func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.addEventWithTimestamp(time.Now(), msg, attrs...)
+	s.AddEventWithTimestamp(ctx, time.Now(), msg, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+	if !s.IsRecordingEvents() {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(event{
@@ -163,6 +167,15 @@ func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...c
 		attributes: attrs,
 		time:       timestamp,
 	})
+}
+
+func (s *span) AddBulkEvents(ctx context.Context, events ...apievent.Event) {
+	if !s.IsRecordingEvents() {
+		return
+	}
+	for _, event := range events {
+		s.AddEventWithTimestamp(ctx, event.Time, event.Message, event.Attributes...)
+	}
 }
 
 func (s *span) SetName(name string) {

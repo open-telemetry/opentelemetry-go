@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	apievent "go.opentelemetry.io/api/event"
 	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
@@ -109,10 +110,10 @@ func (sp *span) Tracer() apitrace.Tracer {
 }
 
 func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
-	sp.addEventWithTime(ctx, time.Time{}, msg, attrs...)
+	sp.AddEventWithTimestamp(ctx, time.Time{}, msg, attrs...)
 }
 
-func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (sp *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	observer.Record(observer.Event{
 		Time:       timestamp,
 		Type:       observer.ADD_EVENT,
@@ -120,6 +121,12 @@ func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg s
 		Attributes: attrs,
 		Context:    ctx,
 	})
+}
+
+func (sp *span) AddBulkEvents(ctx context.Context, events ...apievent.Event) {
+	for _, event := range events {
+		sp.AddEventWithTimestamp(ctx, event.Time, event.Message, event.Attributes...)
+	}
 }
 
 func (sp *span) SetName(name string) {
