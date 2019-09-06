@@ -144,21 +144,6 @@ type Tag struct {
 	value interface{}
 }
 
-// BoolTag creates a new tag of type bool, exported as jaeger.TagType_BOOL
-func BoolTag(key string, value bool) Tag {
-	return Tag{key, value}
-}
-
-// StringTag creates a new tag of type string, exported as jaeger.TagType_STRING
-func StringTag(key string, value string) Tag {
-	return Tag{key, value}
-}
-
-// Int64Tag creates a new tag of type int64, exported as jaeger.TagType_LONG
-func Int64Tag(key string, value int64) Tag {
-	return Tag{key, value}
-}
-
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
 type Exporter struct {
 	endpoint      string
@@ -242,6 +227,7 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 	}
 }
 
+// TODO(rghetia): remove interface{}. see https://github.com/open-telemetry/opentelemetry-go/pull/112/files#r321444786
 func attributeToTag(key string, a interface{}) *gen.Tag {
 	var tag *gen.Tag
 	switch value := a.(type) {
@@ -331,6 +317,7 @@ func (e *Exporter) uploadCollector(batch *gen.Batch) error {
 	return nil
 }
 
+// TODO(rghetia): check if the buffer can be optimized to avoid allocation on every send request.
 func serialize(obj thrift.TStruct) (*bytes.Buffer, error) {
 	buf := thrift.NewTMemoryBuffer()
 	if err := obj.Write(thrift.NewTBinaryProtocolTransport(buf)); err != nil {
