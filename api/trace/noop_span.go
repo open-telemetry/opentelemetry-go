@@ -80,9 +80,9 @@ func (NoopSpan) SetName(name string) {
 }
 
 // AddLink does nothing.
-func (noopSpan) AddLink(link Link) {
+func (NoopSpan) AddLink(link Link) {
 }
 
 // Link does nothing.
-func (noopSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+func (NoopSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
 }

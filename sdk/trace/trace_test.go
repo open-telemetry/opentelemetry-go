@@ -347,7 +347,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
 	}
 }
@@ -384,7 +384,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
 }
@@ -423,7 +423,7 @@ func TestLinksOverLimit(t *testing.T) {
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
 	}
 }
