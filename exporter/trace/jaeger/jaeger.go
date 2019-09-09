@@ -317,7 +317,6 @@ func (e *Exporter) uploadCollector(batch *gen.Batch) error {
 	return nil
 }
 
-// TODO(rghetia): check if the buffer can be optimized to avoid allocation on every send request.
 func serialize(obj thrift.TStruct) (*bytes.Buffer, error) {
 	buf := thrift.NewTMemoryBuffer()
 	if err := obj.Write(thrift.NewTBinaryProtocolTransport(buf)); err != nil {
