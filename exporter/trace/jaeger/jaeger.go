@@ -185,14 +185,14 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 
 	var logs []*gen.Log
 	for _, a := range data.MessageEvents {
-		fields := make([]*gen.Tag, 0, len(a.Attributes()))
-		for _, kv := range a.Attributes() {
+		fields := make([]*gen.Tag, 0, len(a.Attributes))
+		for _, kv := range a.Attributes {
 			tag := attributeToTag(kv.Key.Variable.Name, kv.Value.Emit())
 			if tag != nil {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, attributeToTag("message", a.Message()))
+		fields = append(fields, attributeToTag("message", a.Message))
 		logs = append(logs, &gen.Log{
 			//Timestamp: a.Time.UnixNano() / 1000,
 			//TODO: [rghetia] update when time is supported in the event.

@@ -20,10 +20,15 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-// event is used to describe an event with a message string and set of
-// attributes.
-type event struct {
-	msg        string
-	attributes []core.KeyValue
-	time       time.Time
+// Event is used to describe an Event with a message string and set of
+// Attributes.
+type Event struct {
+	// Message describes the Event.
+	Message string
+
+	// Attributes contains a list of keyvalue pairs.
+	Attributes []core.KeyValue
+
+	// Time is the time at which this event was recorded.
+	Time time.Time
 }
