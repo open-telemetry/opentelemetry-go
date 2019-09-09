@@ -16,6 +16,8 @@ package propagation
 
 import (
 	"context"
+
+	"go.opentelemetry.io/api/core"
 )
 
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
@@ -28,8 +30,8 @@ func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier
 }
 
 // Extract does nothing.
-func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) context.Context {
-	return ctx
+func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) core.SpanContext {
+	return core.EmptySpanContext()
 }
 
 // GetAllKeys returns empty list of strings.

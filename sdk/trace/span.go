@@ -38,9 +38,6 @@ type span struct {
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext core.SpanContext
 
-	// remote is true if span was created to mirror a remote span.
-	remote bool
-
 	// lruAttributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
 	lruAttributes *lruMap
@@ -300,13 +297,6 @@ func (s *span) addChild() {
 func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
 	var noParent bool
 	span := &span{}
-
-	if o.RemoteSpanContext.IsValid() {
-		span.remote = true
-		span.spanContext = o.RemoteSpanContext
-		return span
-	}
-
 	span.spanContext = parent
 
 	cfg := config.Load().(*Config)

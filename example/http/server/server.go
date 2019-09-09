@@ -35,9 +35,9 @@ var (
 
 func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		attrs, tags, ctx := httptrace.Extract(req.Context(), req)
+		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(tag.WithMap(ctx, tag.NewMap(tag.MapUpdate{
+		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(tag.MapUpdate{
 			MultiKV: tags,
 		})))
 
@@ -45,6 +45,7 @@ func main() {
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),
+			trace.ChildOf(spanCtx),
 		)
 		defer span.Finish()
 

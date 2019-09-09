@@ -105,11 +105,10 @@ type SpanOption func(*SpanOptions)
 // SpanOptions provides options to set properties of span at the time of starting
 // a new span.
 type SpanOptions struct {
-	Attributes        []core.KeyValue
-	StartTime         time.Time
-	Reference         Reference
-	RecordEvent       bool
-	RemoteSpanContext core.SpanContext
+	Attributes  []core.KeyValue
+	StartTime   time.Time
+	Reference   Reference
+	RecordEvent bool
 }
 
 // Reference is used to establish relationship between newly created span and the
@@ -171,13 +170,6 @@ func WithAttributes(attrs ...core.KeyValue) SpanOption {
 func WithRecordEvents() SpanOption {
 	return func(o *SpanOptions) {
 		o.RecordEvent = true
-	}
-}
-
-// CopyOfRemote allows to create an inactive span mirroring remote span.
-func CopyOfRemote(sc core.SpanContext) SpanOption {
-	return func(o *SpanOptions) {
-		o.RemoteSpanContext = sc
 	}
 }
 

@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/api/core"
+	mocktrace "go.opentelemetry.io/internal/trace"
 	"go.opentelemetry.io/propagation"
 )
 
@@ -33,7 +34,7 @@ var (
 )
 
 func TestExtractTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(trace.PassThroughTracer{})
+	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
 		name   string
@@ -81,9 +82,7 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagator.Extract(ctx, req.Header)
-			span := trace.CurrentSpan(ctx)
-			gotSc := span.SpanContext()
+			gotSc := propagator.Extract(ctx, req.Header)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -92,7 +91,11 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(trace.PassThroughTracer{})
+	var id uint64
+	trace.SetGlobalTracer(&mocktrace.MockTracer{
+		Sampled:     false,
+		StartSpanId: &id,
+	})
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
 		name       string
@@ -106,7 +109,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				SpanID:       spanID,
 				TraceOptions: core.TraceOptionSampled,
 			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-01",
 		},
 		{
 			name: "valid spancontext, not sampled",
@@ -114,7 +117,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-00",
 		},
 		{
 			name:       "invalid spancontext",
@@ -126,7 +129,9 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
-			ctx, _ = trace.GlobalTracer().Start(ctx, "inject", trace.CopyOfRemote(tt.sc))
+			if tt.sc.IsValid() {
+				ctx, _ = trace.GlobalTracer().Start(ctx, "inject", trace.ChildOf(tt.sc))
+			}
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("traceparent")

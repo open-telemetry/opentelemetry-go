@@ -16,6 +16,8 @@ package propagation
 
 import (
 	"context"
+
+	"go.opentelemetry.io/api/core"
 )
 
 // TextFormatPropagator is an interface that specifies methods to inject and extract SpanContext
@@ -28,10 +30,10 @@ type TextFormatPropagator interface {
 	// associated with the supplier.
 	Inject(ctx context.Context, supplier Supplier)
 
-	// Extract method retrieves SpanContext using supplier from the associated carrier with
-	// the supplier. It decodes the SpanContext and it creates remote span using registered
-	// tracer.
-	Extract(ctx context.Context, supplier Supplier) context.Context
+	// Extract method retrieves encoded SpanContext using supplier from the associated carrier.
+	// It decodes the SpanContext and returns it. If no SpanContext was retrieved OR
+	// if the retrieved SpanContext is invalid then an empty SpanContext is returned.
+	Extract(ctx context.Context, supplier Supplier) core.SpanContext
 
 	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
 	// carrier. The use cases for this are

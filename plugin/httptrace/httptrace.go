@@ -41,15 +41,15 @@ var (
 )
 
 // Returns the Attributes, Context Tags, and SpanContext that were encoded by Inject.
-func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, context.Context) {
-	ctx = propagator.Extract(ctx, req.Header)
+func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
+	sc := propagator.Extract(ctx, req.Header)
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
 		// Etc.
 	}
 
-	return attrs, nil, ctx
+	return attrs, nil, sc
 }
 
 func Inject(ctx context.Context, req *http.Request) {

@@ -21,64 +21,66 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/tag"
+	apitrace "go.opentelemetry.io/api/trace"
 )
 
-type PassThroughSpan struct {
-	sc core.SpanContext
+type MockSpan struct {
+	sc     core.SpanContext
+	tracer apitrace.Tracer
 }
 
-var _ Span = (*PassThroughSpan)(nil)
+var _ apitrace.Span = (*MockSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (ds *PassThroughSpan) SpanContext() core.SpanContext {
-	if ds == nil {
+func (ms *MockSpan) SpanContext() core.SpanContext {
+	if ms == nil {
 		core.EmptySpanContext()
 	}
-	return ds.sc
+	return ms.sc
 }
 
-// IsRecordingEvents always returns false for PassThroughSpan.
-func (ds *PassThroughSpan) IsRecordingEvents() bool {
+// IsRecordingEvents always returns false for MockSpan.
+func (ms *MockSpan) IsRecordingEvents() bool {
 	return false
 }
 
 // SetStatus does nothing.
-func (ds *PassThroughSpan) SetStatus(status codes.Code) {
+func (ms *MockSpan) SetStatus(status codes.Code) {
 }
 
 // SetError does nothing.
-func (ds *PassThroughSpan) SetError(v bool) {
+func (ms *MockSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (ds *PassThroughSpan) SetAttribute(attribute core.KeyValue) {
+func (ms *MockSpan) SetAttribute(attribute core.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (ds *PassThroughSpan) SetAttributes(attributes ...core.KeyValue) {
+func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (ds *PassThroughSpan) ModifyAttribute(mutator tag.Mutator) {
+func (ms *MockSpan) ModifyAttribute(mutator tag.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (ds *PassThroughSpan) ModifyAttributes(mutators ...tag.Mutator) {
+func (ms *MockSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
 // Finish does nothing.
-func (ds *PassThroughSpan) Finish(options ...FinishOption) {
+func (ms *MockSpan) Finish(options ...apitrace.FinishOption) {
 }
 
 // SetName does nothing.
-func (ds *PassThroughSpan) SetName(name string) {
+func (ms *MockSpan) SetName(name string) {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (ds *PassThroughSpan) Tracer() Tracer {
-	return PassThroughTracer{}
+func (ms *MockSpan) Tracer() apitrace.Tracer {
+	return ms.tracer
 }
 
 // AddEvent does nothing.
-func (ds *PassThroughSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
