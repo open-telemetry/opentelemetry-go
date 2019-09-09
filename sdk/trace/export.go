@@ -86,7 +86,7 @@ type SpanData struct {
 	EndTime time.Time
 	// The values of Attributes each have type string, bool, or int64.
 	Attributes               map[string]interface{}
-	MessageEvents            []event
+	MessageEvents            []Event
 	Status                   codes.Code
 	HasRemoteParent          bool
 	DroppedAttributeCount    int
@@ -95,4 +95,17 @@ type SpanData struct {
 
 	// ChildSpanCount holds the number of child span created for this span.
 	ChildSpanCount int
+}
+
+// Event is used to describe an Event with a message string and set of
+// Attributes.
+type Event struct {
+	// Message describes the Event.
+	Message string
+
+	// Attributes contains a list of keyvalue pairs.
+	Attributes []core.KeyValue
+
+	// Time is the time at which this event was recorded.
+	Time time.Time
 }
