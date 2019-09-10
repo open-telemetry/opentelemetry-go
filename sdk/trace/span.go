@@ -123,7 +123,8 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
-		mustExport := s.spanContext.IsSampled() && len(exp) > 0
+		sps, _ := processors.Load().(spanProcessorMap)
+		mustExport := s.spanContext.IsSampled() && (len(sps) > 0 || len(exp) > 0)
 		//if s.spanStore != nil || mustExport {
 		if mustExport {
 			sd := s.makeSpanData()
@@ -135,10 +136,11 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 			//if s.spanStore != nil {
 			//	s.spanStore.finished(s, sd)
 			//}
-			if mustExport {
-				for e := range exp {
-					e.ExportSpan(sd)
-				}
+			for e := range exp {
+				e.ExportSpan(sd)
+			}
+			for sp := range sps {
+				sp.OnEnd(sd)
 			}
 		}
 	})
