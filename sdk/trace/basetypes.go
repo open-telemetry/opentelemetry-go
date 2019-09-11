@@ -22,8 +22,8 @@ import (
 
 // event is used to describe an event with a message string and set of
 // attributes.
-type event struct {
-	msg        string
-	attributes []core.KeyValue
-	time       time.Time
+type Event struct {
+	Msg        string
+	Attributes []core.KeyValue
+	Time       time.Time
 }
