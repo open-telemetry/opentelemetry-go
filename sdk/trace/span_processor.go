@@ -39,8 +39,8 @@ type SpanProcessor interface {
 type spanProcessorMap map[SpanProcessor]struct{}
 
 var (
-	mu         sync.Mutex
-	processors atomic.Value
+	mu             sync.Mutex
+	spanProcessors atomic.Value
 )
 
 // RegisterSpanProcessor adds to the list of SpanProcessors that will receive sampled
@@ -49,13 +49,13 @@ func RegisterSpanProcessor(e SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
 	new := make(spanProcessorMap)
-	if old, ok := processors.Load().(spanProcessorMap); ok {
+	if old, ok := spanProcessors.Load().(spanProcessorMap); ok {
 		for k, v := range old {
 			new[k] = v
 		}
 	}
 	new[e] = struct{}{}
-	processors.Store(new)
+	spanProcessors.Store(new)
 }
 
 // UnregisterSpanProcessor removes from the list of SpanProcessors the SpanProcessor that was
@@ -64,11 +64,11 @@ func UnregisterSpanProcessor(e SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
 	new := make(spanProcessorMap)
-	if old, ok := processors.Load().(spanProcessorMap); ok {
+	if old, ok := spanProcessors.Load().(spanProcessorMap); ok {
 		for k, v := range old {
 			new[k] = v
 		}
 	}
 	delete(new, e)
-	processors.Store(new)
+	spanProcessors.Store(new)
 }

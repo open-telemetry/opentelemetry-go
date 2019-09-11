@@ -123,7 +123,7 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
-		sps, _ := processors.Load().(spanProcessorMap)
+		sps, _ := spanProcessors.Load().(spanProcessorMap)
 		mustExport := s.spanContext.IsSampled() && (len(sps) > 0 || len(exp) > 0)
 		//if s.spanStore != nil || mustExport {
 		if mustExport {
