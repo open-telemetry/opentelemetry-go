@@ -158,10 +158,10 @@ func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(event{
-		msg:        msg,
-		attributes: attrs,
-		time:       timestamp,
+	s.messageEvents.add(Event{
+		Message:    msg,
+		Attributes: attrs,
+		Time:       timestamp,
 	})
 }
 
@@ -210,10 +210,10 @@ func (s *span) makeSpanData() *SpanData {
 	return &sd
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []event {
-	messageEventArr := make([]event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []Event {
+	messageEventArr := make([]Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(event))
+		messageEventArr = append(messageEventArr, value.(Event))
 	}
 	return messageEventArr
 }

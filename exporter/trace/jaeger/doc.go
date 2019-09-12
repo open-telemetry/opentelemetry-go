@@ -12,18 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
-
-import (
-	"time"
-
-	"go.opentelemetry.io/api/core"
-)
-
-// event is used to describe an event with a message string and set of
-// attributes.
-type event struct {
-	msg        string
-	attributes []core.KeyValue
-	time       time.Time
-}
+// Package jaeger contains an OpenTelemetry tracing exporter for Jaeger.
+package jaeger // import "go.opentelemetry.io/exporter/trace/jaeger"

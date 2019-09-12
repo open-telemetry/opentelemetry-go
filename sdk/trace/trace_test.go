@@ -245,8 +245,8 @@ func TestEvents(t *testing.T) {
 	}
 
 	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].time) {
-			t.Error("exporting span: expected nonzero event Time")
+		if !checkTime(&got.MessageEvents[i].Time) {
+			t.Error("exporting span: expected nonzero Event Time")
 		}
 	}
 
@@ -258,12 +258,12 @@ func TestEvents(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
-		MessageEvents: []event{
-			{msg: "foo", attributes: []core.KeyValue{k1v1}},
-			{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
+		MessageEvents: []Event{
+			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
 	}
 }
@@ -292,8 +292,8 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].time) {
-			t.Error("exporting span: expected nonzero event Time")
+		if !checkTime(&got.MessageEvents[i].Time) {
+			t.Error("exporting span: expected nonzero Event Time")
 		}
 	}
 
@@ -304,14 +304,14 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		MessageEvents: []event{
-			{msg: "foo", attributes: []core.KeyValue{k1v1}},
-			{msg: "bar", attributes: []core.KeyValue{k2v2, k3v3}},
+		MessageEvents: []Event{
+			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
 	}
 }
