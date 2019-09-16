@@ -123,22 +123,25 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 	}
 	s.endOnce.Do(func() {
 		exp, _ := exporters.Load().(exportersMap)
-		mustExport := s.spanContext.IsSampled() && len(exp) > 0
-		//if s.spanStore != nil || mustExport {
-		if mustExport {
+		sps, _ := spanProcessors.Load().(spanProcessorMap)
+		mustExportOrProcess := len(sps) > 0 || (s.spanContext.IsSampled() && len(exp) > 0)
+		// TODO(rghetia): when exporter is migrated to use processors simply check for the number
+		// of processors. Exporter will export based on sampling.
+		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if opts.FinishTime.IsZero() {
 				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 			} else {
 				sd.EndTime = opts.FinishTime
 			}
-			//if s.spanStore != nil {
-			//	s.spanStore.finished(s, sd)
-			//}
-			if mustExport {
+			// Sampling check would be in the processor if the processor is used for exporting.
+			if s.spanContext.IsSampled() {
 				for e := range exp {
 					e.ExportSpan(sd)
 				}
+			}
+			for sp := range sps {
+				sp.OnEnd(sd)
 			}
 		}
 	})

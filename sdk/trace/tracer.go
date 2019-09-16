@@ -61,6 +61,13 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 	span := startSpanInternal(name, parent, remoteParent, opts)
 	span.tracer = tr
 
+	if span.IsRecordingEvents() {
+		sps, _ := spanProcessors.Load().(spanProcessorMap)
+		for sp := range sps {
+			sp.OnStart(span.data)
+		}
+	}
+
 	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
 	return newContext(ctx, span), span
