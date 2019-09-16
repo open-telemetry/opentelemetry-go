@@ -114,8 +114,5 @@ func TestShutdown(t *testing.T) {
 }
 
 func NewTestSpanProcessor() *testSpanProcesor {
-	return &testSpanProcesor{
-		spansStarted: make([]*sdktrace.SpanData, 0),
-		spansEnded:   make([]*sdktrace.SpanData, 0),
-	}
+	return &testSpanProcesor{}
 }
