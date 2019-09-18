@@ -16,12 +16,7 @@ package httptrace
 
 import (
 	"context"
-	"encoding/binary"
 	"net/http"
-
-	"go.opentelemetry.io/api/trace"
-
-	"github.com/lightstep/tracecontext.go"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
@@ -36,7 +31,6 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	encoding   = binary.BigEndian
 	propagator = propagation.HttpTraceContextPropagator()
 )
 
@@ -54,29 +48,4 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 
 func Inject(ctx context.Context, req *http.Request) {
 	propagator.Inject(ctx, req.Header)
-	sc := trace.CurrentSpan(ctx).SpanContext()
-	var tc tracecontext.TraceContext
-	var sid [8]byte
-	var tid [16]byte
-
-	encoding.PutUint64(sid[0:8], sc.SpanID)
-	encoding.PutUint64(tid[0:8], sc.TraceID.High)
-	encoding.PutUint64(tid[8:16], sc.TraceID.Low)
-
-	tc.TraceParent.Version = tracecontext.Version
-	tc.TraceParent.TraceID = tid
-	tc.TraceParent.SpanID = sid
-	tc.TraceParent.Flags.Recorded = true // Note: not implemented.
-
-	tags.Foreach(func(kv core.KeyValue) bool {
-		// TODO: implement MaxHops
-		tc.TraceState = append(tc.TraceState, tracestate.Member{
-			Vendor: Vendor,
-			Tenant: kv.Key.Name,
-			Value:  kv.Value.Emit(),
-		})
-		return true
-	})
-
-	tc.SetHeaders(req.Header)
 }

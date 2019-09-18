@@ -29,7 +29,7 @@ var _ TextFormatPropagator = NoopTextFormatPropagator{}
 func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {
 }
 
-// Extract does nothing.
+// Extract does nothing and returns an empty SpanContext
 func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) core.SpanContext {
 	return core.EmptySpanContext()
 }

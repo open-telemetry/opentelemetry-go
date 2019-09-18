@@ -118,17 +118,11 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 }
 
 func (hp httpTraceContextPropagator) GetAllKeys() []string {
-	return nil
+	return []string{traceparentHeader}
 }
 
 // HttpTraceContextPropagator creates a new text format propagator that propagates SpanContext
 // in W3C TraceContext format.
-//
-// The propagator is then used to create CarrierInjector and CarrierExtractor associated with a
-// specific request. Injectors and Extractors respectively provides method to
-// inject and extract SpanContext into/from the http request. Inject method encodes
-// SpanContext and tag.Map into W3C TraceContext Header and injects the header in the request.
-// Extract method extracts the header and decodes SpanContext and tag.Map.
-func HttpTraceContextPropagator() httpTraceContextPropagator {
+func HttpTraceContextPropagator() apipropagation.TextFormatPropagator {
 	return httpTraceContextPropagator{}
 }

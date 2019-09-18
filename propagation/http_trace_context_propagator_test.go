@@ -92,10 +92,10 @@ func TestExtractTraceContextFromHTTPReq(t *testing.T) {
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	var id uint64
-	trace.SetGlobalTracer(&mocktrace.MockTracer{
+	mockTracer := &mocktrace.MockTracer{
 		Sampled:     false,
 		StartSpanId: &id,
-	})
+	}
 	propagator := propagation.HttpTraceContextPropagator()
 	tests := []struct {
 		name       string
@@ -130,7 +130,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
 			if tt.sc.IsValid() {
-				ctx, _ = trace.GlobalTracer().Start(ctx, "inject", trace.ChildOf(tt.sc))
+				ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
 			}
 			propagator.Inject(ctx, req.Header)
 
@@ -139,5 +139,14 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
 		})
+	}
+}
+
+func TestHttpTraceContextPropagator_GetAllKeys(t *testing.T) {
+	propagator := propagation.HttpTraceContextPropagator()
+	want := []string{"traceparent"}
+	got := propagator.GetAllKeys()
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("GetAllKeys: -got +want %s", diff)
 	}
 }

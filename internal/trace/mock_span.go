@@ -24,6 +24,7 @@ import (
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
+// MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
 	sc     core.SpanContext
 	tracer apitrace.Tracer
@@ -31,7 +32,8 @@ type MockSpan struct {
 
 var _ apitrace.Span = (*MockSpan)(nil)
 
-// SpancContext returns an invalid span context.
+// SpanContext returns associated core.SpanContext. If the receiver is nil it returns
+// an empty core.SpanContext
 func (ms *MockSpan) SpanContext() core.SpanContext {
 	if ms == nil {
 		core.EmptySpanContext()
@@ -76,7 +78,7 @@ func (ms *MockSpan) Finish(options ...apitrace.FinishOption) {
 func (ms *MockSpan) SetName(name string) {
 }
 
-// Tracer returns noop implementation of Tracer.
+// Tracer returns MockTracer implementation of Tracer.
 func (ms *MockSpan) Tracer() apitrace.Tracer {
 	return ms.tracer
 }
