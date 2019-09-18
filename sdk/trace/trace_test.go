@@ -186,9 +186,12 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceID:      tid,
 			TraceOptions: 0x1,
 		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		Attributes:      map[string]interface{}{"key1": core.Value{Type: core.STRING, String: "value1"}},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []core.KeyValue{{
+			Key:   core.Key{Name: "key1"},
+			Value: core.Value{Type: core.STRING, String: "value1"},
+		}},
 		HasRemoteParent: true,
 	}
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -217,9 +220,16 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: map[string]interface{}{
-			"key1": core.Value{Type: core.STRING, String: "value3"},
-			"key4": core.Value{Type: core.STRING, String: "value4"}},
+		Attributes: []core.KeyValue{
+			{
+				Key:   core.Key{Name: "key1"},
+				Value: core.Value{Type: core.STRING, String: "value3"},
+			},
+			{
+				Key:   core.Key{Name: "key4"},
+				Value: core.Value{Type: core.STRING, String: "value4"},
+			},
+		},
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}

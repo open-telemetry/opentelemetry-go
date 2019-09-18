@@ -1,0 +1,65 @@
+# Example
+
+## HTTP
+This is a simple example that demonstrates tracing http request from client to server. The example
+shows key aspects of tracing such as 
+- Root Span (on Client)
+- Child Span (on Client)
+- Propagating SpanContext (from Client to Server)
+- Child Span from a Remote Parent (on Server)
+- Span Events
+- Span Attributes
+
+Example uses
+- open-telemetry SDK as trace instrumentation provider,
+- httptrace plugin to facilitate tracing http request on client and server
+- http trace_context propagation to propagate SpanContext on the wire.
+- jaeger exporter to export spans to visualize and store them.
+
+### How to run?
+
+#### Prequisites
+
+- go 1.12 installed 
+- GOPATH is configured.
+
+#### 1 Download git repo
+```
+GO111MODULE="" go get -d go.opentelemetry.io
+```
+
+#### 2 Start All-in-one Jaeger
+
+```
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.8
+```
+
+#### 3 Start Server
+```
+cd $GOPATH/src/go.opentelemetry.io/example/http/
+go run ./server/server.go
+``` 
+
+#### 4 Start Client
+```
+cd $GOPATH/src/go.opentelemetry.io/example/http/
+go run ./client/client.go
+``` 
+
+#### 5 Check traces on Jaeger UI
+
+Click on http://localhost:16686  
+Click on 'Find' to see traces.
+
+[Sample Snapshot](images/JaegarTraceExample.png)
+
+

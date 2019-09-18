@@ -55,9 +55,15 @@ func Test_spanDataToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Attributes: map[string]interface{}{
-					"double": doubleValue,
-					"key":    keyValue,
+				Attributes: []core.KeyValue{
+					{
+						Key:   core.Key{Name: "key"},
+						Value: core.Value{Type: core.STRING, String: keyValue},
+					},
+					{
+						Key:   core.Key{Name: "double"},
+						Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
+					},
 				},
 				// TODO: [rghetia] add events test after event is concrete type.
 				Status: codes.Unknown,

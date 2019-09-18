@@ -272,13 +272,14 @@ func (s *span) interfaceArrayToMessageEventArray() []Event {
 	return messageEventArr
 }
 
-func (s *span) lruAttributesToAttributeMap() map[string]interface{} {
-	attributes := make(map[string]interface{})
+func (s *span) lruAttributesToAttributeMap() []core.KeyValue {
+	attributes := make([]core.KeyValue, 0, s.lruAttributes.simpleLruMap.Len())
 	for _, key := range s.lruAttributes.simpleLruMap.Keys() {
 		value, ok := s.lruAttributes.simpleLruMap.Get(key)
 		if ok {
 			key := key.(core.Key)
-			attributes[key.Name] = value
+			value := value.(core.Value)
+			attributes = append(attributes, core.KeyValue{Key: key, Value: value})
 		}
 	}
 	return attributes
