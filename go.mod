@@ -9,6 +9,7 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/lightstep/tracecontext.go v0.0.0-20181129014701-1757c391b1ac
+	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
 	google.golang.org/api v0.9.0
 	google.golang.org/grpc v1.22.1
 )
