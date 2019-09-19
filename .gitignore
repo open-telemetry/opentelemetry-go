@@ -3,3 +3,7 @@
 *.iml
 *.so
 coverage.*
+
+/example/basic/basic
+/example/http/client/client
+/example/http/server/server
