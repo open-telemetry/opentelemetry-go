@@ -19,15 +19,14 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/registry"
 )
 
 type MeasureHandle struct {
-	Variable registry.Variable
+	Name string
 }
 
 type Measure interface {
-	V() registry.Variable
+	N() string
 	M(value float64) Measurement
 }
 
@@ -71,20 +70,9 @@ func RecordSingle(ctx context.Context, m Measurement) {
 	GlobalRecorder().RecordSingle(ctx, m)
 }
 
-type AnyStatistic struct{}
-
-func (AnyStatistic) String() string {
-	return "AnyStatistic"
-}
-
-var (
-	WithDescription = registry.WithDescription
-	WithUnit        = registry.WithUnit
-)
-
-func NewMeasure(name string, opts ...registry.Option) *MeasureHandle {
+func NewMeasure(name string) *MeasureHandle {
 	return &MeasureHandle{
-		Variable: registry.Register(name, AnyStatistic{}, opts...),
+		Name: name,
 	}
 }
 
@@ -95,8 +83,8 @@ func (m *MeasureHandle) M(value float64) Measurement {
 	}
 }
 
-func (m *MeasureHandle) V() registry.Variable {
-	return m.Variable
+func (m *MeasureHandle) N() string {
+	return m.Name
 }
 
 func (noopRecorder) Record(ctx context.Context, m ...Measurement) {
@@ -113,6 +101,6 @@ func (noopMeasure) M(float64) Measurement {
 	return Measurement{}
 }
 
-func (noopMeasure) V() registry.Variable {
-	return registry.Variable{}
+func (noopMeasure) N() string {
+	return ""
 }

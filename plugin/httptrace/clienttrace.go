@@ -35,9 +35,7 @@ var (
 	HTTPHeaderMIME = key.New("http.mime")
 	HTTPRemoteAddr = key.New("http.remote")
 	HTTPLocalAddr  = key.New("http.local")
-	MessageKey     = key.New("message",
-		key.WithDescription("message text: info, error, etc"),
-	)
+	MessageKey     = key.New("message")
 )
 
 type clientTracer struct {

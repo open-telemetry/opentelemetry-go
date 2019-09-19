@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/registry"
 	"go.opentelemetry.io/api/stats"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
@@ -34,9 +33,9 @@ var (
 
 	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
 
-	fooKey     = key.New("ex.com/foo", registry.WithDescription("A Foo var"))
-	barKey     = key.New("ex.com/bar", registry.WithDescription("A Bar var"))
-	lemonsKey  = key.New("ex.com/lemons", registry.WithDescription("A Lemons var"))
+	fooKey     = key.New("ex.com/foo")
+	barKey     = key.New("ex.com/bar")
+	lemonsKey  = key.New("ex.com/lemons")
 	anotherKey = key.New("ex.com/another")
 
 	oneMetric = metric.NewFloat64Gauge("ex.com/one",

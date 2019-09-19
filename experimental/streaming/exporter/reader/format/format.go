@@ -37,7 +37,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			if skipIf && data.Attributes.HasValue(kv.Key) {
 				return true
 			}
-			buf.WriteString(" " + kv.Key.Variable.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
 			return true
 		}
 	}
@@ -74,7 +74,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Message)
 		buf.WriteString(" (")
 		data.Attributes.Foreach(func(kv core.KeyValue) bool {
-			buf.WriteString(" " + kv.Key.Variable.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
 			return true
 		})
 		buf.WriteString(")")
@@ -86,7 +86,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 
 		for _, s := range data.Stats {
 			f(false)(core.Key{
-				Variable: s.Measure.V(),
+				Name: s.Measure.N(),
 			}.Float64(s.Value))
 
 			buf.WriteString(" {")
@@ -96,7 +96,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 					buf.WriteString(",")
 				}
 				i++
-				buf.WriteString(kv.Key.Variable.Name)
+				buf.WriteString(kv.Key.Name)
 				buf.WriteString("=")
 				buf.WriteString(kv.Value.Emit())
 				return true

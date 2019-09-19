@@ -37,9 +37,7 @@ var (
 	ErrorKey     = key.New("error")
 	SpanIDKey    = key.New("span_id")
 	TraceIDKey   = key.New("trace_id")
-	MessageKey   = key.New("message",
-		key.WithDescription("message text: info, error, etc"),
-	)
+	MessageKey   = key.New("message")
 )
 
 func New() trace.Tracer {
