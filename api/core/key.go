@@ -3,12 +3,10 @@ package core
 import (
 	"fmt"
 	"unsafe"
-
-	"go.opentelemetry.io/api/registry"
 )
 
 type Key struct {
-	Variable registry.Variable
+	Name string
 }
 
 type KeyValue struct {
@@ -148,7 +146,7 @@ func (k Key) Uint(v uint) KeyValue {
 }
 
 func (k Key) Defined() bool {
-	return k.Variable.Defined()
+	return len(k.Name) != 0
 }
 
 // TODO make this a lazy one-time conversion.
