@@ -18,60 +18,60 @@ import (
 	"context"
 )
 
-type Float64Gauge struct {
+type Float64Measure struct {
 	Instrument
 }
 
-type Int64Gauge struct {
+type Int64Measure struct {
 	Instrument
 }
 
-type Float64GaugeHandle struct {
+type Float64MeasureHandle struct {
 	Handle
 }
 
-type Int64GaugeHandle struct {
+type Int64MeasureHandle struct {
 	Handle
 }
 
-func NewFloat64Gauge(name string, mos ...Option) (g Float64Gauge) {
-	registerInstrument(name, GaugeKind, mos, &g.Instrument)
+func NewFloat64Measure(name string, mos ...Option) (m Float64Measure) {
+	registerInstrument(name, MeasureKind, mos, &m.Instrument)
 	return
 }
 
-func NewInt64Gauge(name string, mos ...Option) (g Int64Gauge) {
-	registerInstrument(name, GaugeKind, mos, &g.Instrument)
+func NewInt64Measure(name string, mos ...Option) (m Int64Measure) {
+	registerInstrument(name, MeasureKind, mos, &m.Instrument)
 	return
 }
 
-func (g *Float64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Float64GaugeHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Instrument)
+func (m *Float64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Float64MeasureHandle) {
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, m.Instrument)
 	return
 }
 
-func (g *Int64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Int64GaugeHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Instrument)
+func (m *Int64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Int64MeasureHandle) {
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, m.Instrument)
 	return
 }
 
-func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
+func (g *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
 		Instrument: g.Instrument,
 		Value:      value,
 	})
 }
 
-func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
+func (g *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
 		Instrument: g.Instrument,
 		Value:      float64(value),
 	})
 }
 
-func (g *Float64GaugeHandle) Set(ctx context.Context, value float64) {
+func (g *Float64MeasureHandle) Record(ctx context.Context, value float64) {
 	g.Recorder.Record(ctx, value)
 }
 
-func (g *Int64GaugeHandle) Set(ctx context.Context, value int64) {
+func (g *Int64MeasureHandle) Record(ctx context.Context, value int64) {
 	g.Recorder.Record(ctx, float64(value))
 }

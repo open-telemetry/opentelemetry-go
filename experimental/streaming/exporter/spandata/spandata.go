@@ -25,7 +25,8 @@ type Reader interface {
 }
 
 type Span struct {
-	Events []reader.Event
+	Events     []reader.Event
+	Aggregates map[string]float64
 }
 
 type spanReader struct {
@@ -56,6 +57,12 @@ func (s *spanReader) Read(data reader.Event) {
 		}
 	}
 
+	switch data.Type {
+	case exporter.SINGLE_METRIC:
+		s.updateMetric(data)
+		return
+	}
+
 	span.Events = append(span.Events, data)
 
 	if data.Type == exporter.END_SPAN {
@@ -64,4 +71,8 @@ func (s *spanReader) Read(data reader.Event) {
 		}
 		delete(s.spans, data.SpanContext)
 	}
+}
+
+func (s *spanReader) updateMetric(data reader.Event) {
+	// TODO aggregate
 }

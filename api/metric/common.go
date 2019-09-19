@@ -14,11 +14,18 @@
 
 package metric
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	for _, opt := range opts {
-		opt(metric)
-	}
+import "sync/atomic"
 
-	metric.Name = name
-	metric.Type = mtype
+var (
+	instrumentID uint64
+)
+
+func registerInstrument(name string, kind Kind, opts []Option, inst *Instrument) {
+	inst.Name = name
+	inst.Kind = kind
+	inst.ID = InstrumentID(atomic.AddUint64(&instrumentID, 1))
+
+	for _, opt := range opts {
+		opt(inst)
+	}
 }

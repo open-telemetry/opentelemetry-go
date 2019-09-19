@@ -21,62 +21,166 @@ import (
 	"go.opentelemetry.io/api/unit"
 )
 
-type MetricType int
+// Kind categorizes different kinds of metric.
+type Kind int
 
+//go:generate stringer -type=Kind
 const (
-	Invalid    MetricType = iota
-	Gauge                 // Supports Set()
-	Cumulative            // Supports Inc()
+	Invalid        Kind = iota
+	CumulativeKind      // Supports Add()
+	GaugeKind           // Supports Set()
+	MeasureKind         // Supports Record()
 )
 
+// Recorder is the implementation-level interface to Set/Add/Record individual metrics.
+type Recorder interface {
+	// Record allows the SDK to observe a single metric event
+	Record(ctx context.Context, value float64)
+}
+
+// LabelSet represents a []core.KeyValue for use as pre-defined labels
+// in the metrics API.
+//
+// TODO this belongs outside the metrics API, in some sense, but that
+// might create a dependency.  Putting this here means we can't re-use
+// a LabelSet between metrics and tracing, even when they are the same
+// SDK.
+type LabelSet interface {
+	Meter() Meter
+}
+
+// Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	// TODO more Metric types
-	GetFloat64Gauge(ctx context.Context, gauge *Float64GaugeHandle, labels ...core.KeyValue) Float64Gauge
+	// DefineLabels returns a reference to a set of labels that
+	// cannot be read by the application.
+	DefineLabels(context.Context, ...core.KeyValue) LabelSet
+
+	// RecorderFor returns a handle for observing single measurements.
+	RecorderFor(context.Context, LabelSet, Instrument) Recorder
+
+	// RecordSingle records a single measurement without computing a handle.
+	RecordSingle(context.Context, LabelSet, Measurement)
+
+	// RecordBatch atomically records a batch of measurements.  An
+	// implementation may elect to call `RecordSingle` on each
+	// measurement, or it could choose a more-optimized approach.
+	RecordBatch(context.Context, LabelSet, ...Measurement)
 }
 
-type Float64Gauge interface {
-	Set(ctx context.Context, value float64, labels ...core.KeyValue)
-}
+type InstrumentID uint64
 
-type Handle struct {
-	Name        string
+// Instrument represents a named metric with recommended local-aggregation keys.
+type Instrument struct {
+	// Name is a required field describing this metric instrument,
+	// should have length > 0.
+	Name string
+
+	// ID is uniquely assigned to support per-SDK registration.
+	ID InstrumentID
+
+	// Description is an optional field describing this metric instrument.
 	Description string
-	Unit        unit.Unit
 
-	Type MetricType
+	// Unit is an optional field describing this metric instrument.
+	Unit unit.Unit
+
+	// Kind is the metric kind of this instrument.
+	Kind Kind
+
+	// Bidirectional implies this is an up-down Cumulative.
+	Bidirectional bool
+
+	// Unidirectional implies this is a non-descending Gauge.
+	Unidirectional bool
+
+	// NonNegative implies this is a non-negative Measure.
+	NonNegative bool
+
+	// Disabled implies this instrument is disabled by default.
+	Disabled bool
+
+	// Keys are required keys determined in the handles
+	// obtained for this metric.
 	Keys []core.Key
 }
 
-type Option func(*Handle)
+// Handle contains a Recorder to support the implementation-defined
+// behavior of reporting a single metric with pre-determined label
+// values.
+type Handle struct {
+	Recorder
+}
+
+// Measurement is used for reporting a batch of metric values.
+type Measurement struct {
+	Instrument Instrument
+	Value      float64
+}
+
+// Option supports specifying the various metric options.
+type Option func(*Instrument)
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
-	return func(m *Handle) {
-		m.Description = desc
+	return func(inst *Instrument) {
+		inst.Description = desc
 	}
 }
 
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) Option {
-	return func(m *Handle) {
-		m.Unit = unit
+	return func(inst *Instrument) {
+		inst.Unit = unit
 	}
 }
 
-// WithKeys applies the provided dimension keys.
+// WithBidirectional sets whether a cumulative is permitted to go up AND down.
+func WithBidirectional(bi bool) Option {
+	return func(inst *Instrument) {
+		inst.Bidirectional = bi
+	}
+}
+
+// WithUnidirectional sets whether a gauge is not permitted to go down.
+func WithUnidirectional(uni bool) Option {
+	return func(inst *Instrument) {
+		inst.Unidirectional = uni
+	}
+}
+
+// WithNonNegative sets whether a measure is not permitted to be negative.
+func WithNonNegative(non bool) Option {
+	return func(inst *Instrument) {
+		inst.NonNegative = non
+	}
+}
+
+// WithDisabled sets whether a measure is disabled by default
+func WithDisabled(dis bool) Option {
+	return func(inst *Instrument) {
+		inst.Disabled = dis
+	}
+}
+
+// WithKeys applies required label keys.  Multiple `WithKeys`
+// options accumulate.
 func WithKeys(keys ...core.Key) Option {
-	return func(m *Handle) {
-		m.Keys = keys
+	return func(m *Instrument) {
+		m.Keys = append(m.Keys, keys...)
 	}
 }
 
-func (mtype MetricType) String() string {
-	switch mtype {
-	case Gauge:
-		return "gauge"
-	case Cumulative:
-		return "cumulative"
-	default:
-		return "unknown"
-	}
+// Defined returns true when the instrument has been registered.
+func (inst Instrument) Defined() bool {
+	return len(inst.Name) != 0
+}
+
+// RecordSingle reports to the global Meter.
+func RecordSingle(ctx context.Context, labels LabelSet, measurement Measurement) {
+	GlobalMeter().RecordSingle(ctx, labels, measurement)
+}
+
+// RecordBatch reports to the global Meter.
+func RecordBatch(ctx context.Context, labels LabelSet, batch ...Measurement) {
+	GlobalMeter().RecordBatch(ctx, labels, batch...)
 }

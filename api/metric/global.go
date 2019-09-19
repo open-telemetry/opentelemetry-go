@@ -24,7 +24,7 @@ func GlobalMeter() Meter {
 	if t := global.Load(); t != nil {
 		return t.(Meter)
 	}
-	return NoopMeter{}
+	return noopMeter{}
 }
 
 // SetGlobalMeter sets provided meter as a global meter.

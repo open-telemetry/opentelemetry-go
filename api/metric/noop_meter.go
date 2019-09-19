@@ -6,17 +6,31 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-type NoopMeter struct{}
+type noopMeter struct{}
+type noopRecorder struct{}
+type noopLabelSet struct{}
 
-type noopMetric struct{}
+var _ Meter = noopMeter{}
+var _ Recorder = noopRecorder{}
+var _ LabelSet = noopLabelSet{}
 
-var _ Meter = NoopMeter{}
-
-var _ Float64Gauge = noopMetric{}
-
-func (NoopMeter) GetFloat64Gauge(ctx context.Context, gauge *Float64GaugeHandle, labels ...core.KeyValue) Float64Gauge {
-	return noopMetric{}
+func (noopRecorder) Record(ctx context.Context, value float64) {
 }
 
-func (noopMetric) Set(ctx context.Context, value float64, labels ...core.KeyValue) {
+func (noopLabelSet) Meter() Meter {
+	return noopMeter{}
+}
+
+func (noopMeter) DefineLabels(ctx context.Context, labels ...core.KeyValue) LabelSet {
+	return noopLabelSet{}
+}
+
+func (noopMeter) RecordSingle(context.Context, LabelSet, Measurement) {
+}
+
+func (noopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
+}
+
+func (noopMeter) RecorderFor(context.Context, LabelSet, Instrument) Recorder {
+	return noopRecorder{}
 }
