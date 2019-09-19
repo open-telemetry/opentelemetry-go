@@ -7,6 +7,8 @@ EXAMPLES := \
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
+# All directories with go.mod files. Used in go mod tidy.
+ALL_GO_MOD_DIRS := $(shell find . -name 'go.mod' -printf "%h\n" | sort)
 
 GOTEST=go test
 GOTEST_OPT?=-v -race -timeout 30s
@@ -31,6 +33,10 @@ precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/string
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
+	for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go mod tidy in $${dir}"; \
+	  (cd "$${dir}" && go mod tidy); \
+	done
 
 .PHONY: test-with-coverage
 test-with-coverage:
