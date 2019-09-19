@@ -227,7 +227,7 @@ func (s *span) lruAttributesToAttributeMap() map[string]interface{} {
 		value, ok := s.lruAttributes.simpleLruMap.Get(key)
 		if ok {
 			key := key.(core.Key)
-			attributes[key.Variable.Name] = value
+			attributes[key.Name] = value
 		}
 	}
 	return attributes

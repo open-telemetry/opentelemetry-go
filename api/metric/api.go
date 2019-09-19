@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/registry"
 	"go.opentelemetry.io/api/unit"
 )
 
@@ -40,31 +39,33 @@ type Float64Gauge interface {
 }
 
 type Handle struct {
-	Variable registry.Variable
+	Name        string
+	Description string
+	Unit        unit.Unit
 
 	Type MetricType
 	Keys []core.Key
 }
 
-type Option func(*Handle, *[]registry.Option)
+type Option func(*Handle)
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
-	return func(_ *Handle, to *[]registry.Option) {
-		*to = append(*to, registry.WithDescription(desc))
+	return func(m *Handle) {
+		m.Description = desc
 	}
 }
 
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) Option {
-	return func(_ *Handle, to *[]registry.Option) {
-		*to = append(*to, registry.WithUnit(unit))
+	return func(m *Handle) {
+		m.Unit = unit
 	}
 }
 
 // WithKeys applies the provided dimension keys.
 func WithKeys(keys ...core.Key) Option {
-	return func(m *Handle, _ *[]registry.Option) {
+	return func(m *Handle) {
 		m.Keys = keys
 	}
 }
