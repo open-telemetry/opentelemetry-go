@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,7 @@ const (
 type httpTraceContextPropagator struct{}
 
 var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
+var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}")
 
 func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
@@ -53,6 +55,11 @@ func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
+		return core.EmptySpanContext()
+	}
+
+	if !traceCtxRegExp.MatchString(h) {
+		fmt.Printf("header does not match regex %s\n", h)
 		return core.EmptySpanContext()
 	}
 
@@ -104,11 +111,14 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 	}
 	sc.SpanID = result
 
-	opts, err := hex.DecodeString(sections[3])
-	if err != nil || len(opts) < 1 {
+	if len(sections[3]) != 2 {
 		return core.EmptySpanContext()
 	}
-	sc.TraceOptions = opts[0]
+	opts, err := hex.DecodeString(sections[3])
+	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
+		return core.EmptySpanContext()
+	}
+	sc.TraceOptions = opts[0] &^ core.TraceOptionUnused
 
 	if !sc.IsValid() {
 		return core.EmptySpanContext()
