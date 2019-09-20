@@ -93,6 +93,24 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceOptions: core.TraceOptionSampled,
 			},
 		},
+		{
+			name:   "valid header ending in dash",
+			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
+			wantSc: core.SpanContext{
+				TraceID:      traceID,
+				SpanID:       spanID,
+				TraceOptions: core.TraceOptionSampled,
+			},
+		},
+		{
+			name:   "future valid header ending in dash",
+			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
+			wantSc: core.SpanContext{
+				TraceID:      traceID,
+				SpanID:       spanID,
+				TraceOptions: core.TraceOptionSampled,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -146,23 +164,23 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			header: "00-ab000000000000000000000000000000-qw00000000000000-01",
 		},
 		{
-			name:   "bogus trace flag length",
+			name:   "bogus trace flag",
 			header: "00-ab000000000000000000000000000000-cd00000000000000-qw",
 		},
 		{
-			name:   "upper case version length",
+			name:   "upper case version",
 			header: "A0-00000000000000000000000000000000-0000000000000000-01",
 		},
 		{
-			name:   "upper case trace ID length",
+			name:   "upper case trace ID",
 			header: "00-AB000000000000000000000000000000-cd00000000000000-01",
 		},
 		{
-			name:   "upper case span ID length",
+			name:   "upper case span ID",
 			header: "00-ab000000000000000000000000000000-CD00000000000000-01",
 		},
 		{
-			name:   "upper case trace flag length",
+			name:   "upper case trace flag",
 			header: "00-ab000000000000000000000000000000-cd00000000000000-A1",
 		},
 		{

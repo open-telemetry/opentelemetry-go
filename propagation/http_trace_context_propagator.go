@@ -37,7 +37,7 @@ const (
 type httpTraceContextPropagator struct{}
 
 var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
-var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}")
+var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
 func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
@@ -58,8 +58,8 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 		return core.EmptySpanContext()
 	}
 
+	h = strings.Trim(h, "-")
 	if !traceCtxRegExp.MatchString(h) {
-		fmt.Printf("header does not match regex %s\n", h)
 		return core.EmptySpanContext()
 	}
 
