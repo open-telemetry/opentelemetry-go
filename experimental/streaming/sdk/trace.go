@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
-	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
@@ -49,20 +48,21 @@ func New(observers ...observer.Observer) trace.Tracer {
 	}
 }
 
-func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
+func (t *tracer) WithResources(attributes ...core.KeyValue) trace.Tracer {
 	s := t.exporter.NewScope(observer.ScopeID{
 		EventID: t.resources,
 	}, attributes...)
 	return &tracer{
+		exporter:  t.exporter,
 		resources: s.EventID,
 	}
 }
 
-func (t *tracer) WithComponent(name string) apitrace.Tracer {
+func (t *tracer) WithComponent(name string) trace.Tracer {
 	return t.WithResources(ComponentKey.String(name))
 }
 
-func (t *tracer) WithService(name string) apitrace.Tracer {
+func (t *tracer) WithService(name string) trace.Tracer {
 	return t.WithResources(ServiceKey.String(name))
 }
 
@@ -80,12 +80,12 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	return nil
 }
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOption) (context.Context, apitrace.Span) {
+func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
 	var child core.SpanContext
 
 	child.SpanID = rand.Uint64()
 
-	o := &apitrace.SpanOptions{}
+	o := &trace.SpanOptions{}
 
 	for _, opt := range opts {
 		opt(o)
@@ -96,7 +96,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	if o.Reference.HasTraceID() {
 		parentScope.SpanContext = o.Reference.SpanContext
 	} else {
-		parentScope.SpanContext = apitrace.CurrentSpan(ctx).SpanContext()
+		parentScope.SpanContext = trace.CurrentSpan(ctx).SpanContext()
 	}
 
 	if parentScope.HasTraceID() {
@@ -131,6 +131,6 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 	return trace.SetCurrentSpan(ctx, span), span
 }
 
-func (t *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
+func (t *tracer) Inject(ctx context.Context, span trace.Span, injector trace.Injector) {
 	injector.Inject(span.SpanContext(), tag.FromContext(ctx))
 }
