@@ -44,7 +44,7 @@ func (sp *span) IsRecordingEvents() bool {
 
 // SetStatus sets the status of the span.
 func (sp *span) SetStatus(status codes.Code) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:   observer.SET_STATUS,
 		Scope:  sp.ScopeID(),
 		Status: status,
@@ -56,7 +56,7 @@ func (sp *span) ScopeID() observer.ScopeID {
 }
 
 func (sp *span) SetAttribute(attribute core.KeyValue) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:      observer.MODIFY_ATTR,
 		Scope:     sp.ScopeID(),
 		Attribute: attribute,
@@ -64,7 +64,7 @@ func (sp *span) SetAttribute(attribute core.KeyValue) {
 }
 
 func (sp *span) SetAttributes(attributes ...core.KeyValue) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:       observer.MODIFY_ATTR,
 		Scope:      sp.ScopeID(),
 		Attributes: attributes,
@@ -72,7 +72,7 @@ func (sp *span) SetAttributes(attributes ...core.KeyValue) {
 }
 
 func (sp *span) ModifyAttribute(mutator tag.Mutator) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:    observer.MODIFY_ATTR,
 		Scope:   sp.ScopeID(),
 		Mutator: mutator,
@@ -80,7 +80,7 @@ func (sp *span) ModifyAttribute(mutator tag.Mutator) {
 }
 
 func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:     observer.MODIFY_ATTR,
 		Scope:    sp.ScopeID(),
 		Mutators: mutators,
@@ -93,7 +93,7 @@ func (sp *span) Finish(options ...apitrace.FinishOption) {
 	for _, opt := range options {
 		opt(&opts)
 	}
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Time:      opts.FinishTime,
 		Type:      observer.FINISH_SPAN,
 		Scope:     sp.ScopeID(),
@@ -113,7 +113,7 @@ func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 }
 
 func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Time:       timestamp,
 		Type:       observer.ADD_EVENT,
 		String:     msg,
@@ -123,7 +123,7 @@ func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg s
 }
 
 func (sp *span) SetName(name string) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(observer.Event{
 		Type:   observer.SET_NAME,
 		String: name,
 	})

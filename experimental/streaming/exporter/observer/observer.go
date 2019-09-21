@@ -16,7 +16,6 @@ package observer
 
 import (
 	"context"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -85,73 +84,42 @@ const (
 	SET_NAME
 )
 
-var (
-	observerMu sync.Mutex
-	observers  atomic.Value
-
-	sequenceNum uint64
-)
-
-func NextEventID() EventID {
-	return EventID(atomic.AddUint64(&sequenceNum, 1))
+type Exporter struct {
+	sequence  uint64
+	observers []Observer
 }
 
-// RegisterObserver adds to the list of Observers that will receive sampled
-// trace spans.
-//
-// Binaries can register observers, libraries shouldn't register observers.
-func RegisterObserver(e Observer) {
-	observerMu.Lock()
-	new := make(observersMap)
-	if old, ok := observers.Load().(observersMap); ok {
-		for k, v := range old {
-			new[k] = v
-		}
+func NewExporter(observers ...Observer) *Exporter {
+	return &Exporter{
+		observers: observers,
 	}
-	new[e] = struct{}{}
-	observers.Store(new)
-	observerMu.Unlock()
 }
 
-// UnregisterObserver removes from the list of Observers the Observer that was
-// registered with the given name.
-func UnregisterObserver(e Observer) {
-	observerMu.Lock()
-	new := make(observersMap)
-	if old, ok := observers.Load().(observersMap); ok {
-		for k, v := range old {
-			new[k] = v
-		}
-	}
-	delete(new, e)
-	observers.Store(new)
-	observerMu.Unlock()
+func (e *Exporter) NextEventID() EventID {
+	return EventID(atomic.AddUint64(&e.sequence, 1))
 }
 
-func Record(event Event) EventID {
+func (e *Exporter) Record(event Event) EventID {
 	if event.Sequence == 0 {
-		event.Sequence = NextEventID()
+		event.Sequence = e.NextEventID()
 	}
 	if event.Time.IsZero() {
 		event.Time = time.Now()
 	}
-
-	observers, _ := observers.Load().(observersMap)
-	for observer := range observers {
+	for _, observer := range e.observers {
 		observer.Observe(event)
 	}
 	return event.Sequence
 }
 
-func Foreach(f func(Observer)) {
-	observers, _ := observers.Load().(observersMap)
-	for observer := range observers {
+func (e *Exporter) Foreach(f func(Observer)) {
+	for _, observer := range e.observers {
 		f(observer)
 	}
 }
 
-func NewScope(parent ScopeID, attributes ...core.KeyValue) ScopeID {
-	eventID := Record(Event{
+func (e *Exporter) NewScope(parent ScopeID, attributes ...core.KeyValue) ScopeID {
+	eventID := e.Record(Event{
 		Type:       NEW_SCOPE,
 		Scope:      parent,
 		Attributes: attributes,

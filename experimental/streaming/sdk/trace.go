@@ -27,6 +27,7 @@ import (
 )
 
 type tracer struct {
+	exporter  *observer.Exporter
 	resources observer.EventID
 }
 
@@ -42,12 +43,14 @@ var (
 	)
 )
 
-func New() trace.Tracer {
-	return &tracer{}
+func New(observers ...observer.Observer) trace.Tracer {
+	return &tracer{
+		exporter: observer.NewExporter(observers...),
+	}
 }
 
 func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
-	s := observer.NewScope(observer.ScopeID{
+	s := t.exporter.NewScope(observer.ScopeID{
 		EventID: t.resources,
 	}, attributes...)
 	return &tracer{
@@ -114,10 +117,10 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 		tracer: t,
 		initial: observer.ScopeID{
 			SpanContext: child,
-			EventID: observer.Record(observer.Event{
+			EventID: t.exporter.Record(observer.Event{
 				Time:    o.StartTime,
 				Type:    observer.START_SPAN,
-				Scope:   observer.NewScope(childScope, o.Attributes...),
+				Scope:   t.exporter.NewScope(childScope, o.Attributes...),
 				Context: ctx,
 				Parent:  parentScope,
 				String:  name,

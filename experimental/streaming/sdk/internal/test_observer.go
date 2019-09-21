@@ -26,14 +26,8 @@ type TestObserver struct {
 
 var _ observer.Observer = &TestObserver{}
 
-func NewRegisteredObserver() *TestObserver {
-	o := &TestObserver{}
-	observer.RegisterObserver(o)
-	return o
-}
-
-func (o *TestObserver) Unregister() {
-	observer.UnregisterObserver(o)
+func NewTestObserver() *TestObserver {
+	return &TestObserver{}
 }
 
 func (o *TestObserver) Observe(e observer.Event) {
@@ -41,15 +35,6 @@ func (o *TestObserver) Observe(e observer.Event) {
 		o.events = make(eventsMap)
 	}
 	o.events[e.Type] = append(o.events[e.Type], e)
-}
-
-func (o *TestObserver) Clear() {
-	o.events = nil
-}
-
-func (o *TestObserver) ClearAndUnregister() {
-	o.Clear()
-	o.Unregister()
 }
 
 func (o *TestObserver) Events(eType observer.EventType) []observer.Event {

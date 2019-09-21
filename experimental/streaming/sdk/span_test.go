@@ -31,12 +31,11 @@ import (
 )
 
 func TestEvents(t *testing.T) {
-	_ = New().WithSpan(context.Background(), "test", func(ctx context.Context) error {
+	obs := internal.NewTestObserver()
+	_ = New(obs).WithSpan(context.Background(), "test", func(ctx context.Context) error {
 		type test1Type struct{}
 		type test2Type struct{}
 		span := trace.CurrentSpan(ctx)
-		obs := internal.NewRegisteredObserver()
-		defer obs.ClearAndUnregister()
 		k1v1 := key.New("k1").String("v1")
 		k2v2 := key.New("k2").String("v2")
 		k3v3 := key.New("k3").String("v3")
@@ -80,9 +79,8 @@ func TestEvents(t *testing.T) {
 func TestCustomStartEndTime(t *testing.T) {
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
-	tracer := New()
-	obs := internal.NewRegisteredObserver()
-	defer obs.ClearAndUnregister()
+	obs := internal.NewTestObserver()
+	tracer := New(obs)
 	_, span := tracer.Start(
 		context.Background(),
 		"testspan",
