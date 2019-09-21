@@ -15,7 +15,6 @@
 package trace
 
 import (
-	"context"
 	crand "crypto/rand"
 	"encoding/binary"
 	"math/rand"
@@ -61,15 +60,4 @@ func Register() apitrace.Tracer {
 		apitrace.SetGlobalTracer(tr)
 	})
 	return tr
-}
-
-type contextKey struct{}
-
-func fromContext(ctx context.Context) *span {
-	s, _ := ctx.Value(contextKey{}).(*span)
-	return s
-}
-
-func newContext(parent context.Context, s *span) context.Context {
-	return context.WithValue(parent, contextKey{}, s)
 }

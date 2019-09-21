@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/registry"
 )
 
 func TestBool(t *testing.T) {
@@ -306,15 +305,13 @@ func TestDefined(t *testing.T) {
 		{
 			name: "Key.Defined() returns true when len(v.Name) != 0",
 			k: core.Key{
-				registry.Variable{
-					Name: "foo",
-				},
+				Name: "foo",
 			},
 			want: true,
 		},
 		{
 			name: "Key.Defined() returns false when len(v.Name) == 0",
-			k:    core.Key{registry.Variable{}},
+			k:    core.Key{},
 			want: false,
 		},
 	} {

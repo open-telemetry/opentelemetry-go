@@ -187,7 +187,7 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 	for _, a := range data.MessageEvents {
 		fields := make([]*gen.Tag, 0, len(a.Attributes))
 		for _, kv := range a.Attributes {
-			tag := attributeToTag(kv.Key.Variable.Name, kv.Value.Emit())
+			tag := attributeToTag(kv.Key.Name, kv.Value.Emit())
 			if tag != nil {
 				fields = append(fields, tag)
 			}

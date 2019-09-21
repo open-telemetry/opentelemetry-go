@@ -91,7 +91,7 @@ func (h hinjector) Inject(sc core.SpanContext, tags tag.Map) {
 		// TODO: implement MaxHops
 		tc.TraceState = append(tc.TraceState, tracestate.Member{
 			Vendor: Vendor,
-			Tenant: kv.Key.Variable.Name,
+			Tenant: kv.Key.Name,
 			Value:  kv.Value.Emit(),
 		})
 		return true

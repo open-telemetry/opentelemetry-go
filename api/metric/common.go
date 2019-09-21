@@ -14,17 +14,11 @@
 
 package metric
 
-import (
-	"go.opentelemetry.io/api/registry"
-)
-
 func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	var varOpts []registry.Option
-
 	for _, opt := range opts {
-		opt(metric, &varOpts)
+		opt(metric)
 	}
 
-	metric.Variable = registry.Register(name, mtype, varOpts...)
+	metric.Name = name
 	metric.Type = mtype
 }

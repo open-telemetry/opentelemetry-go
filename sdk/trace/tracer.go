@@ -52,18 +52,27 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		parent = opts.Reference.SpanContext
 		remoteParent = true
 	} else {
-		if p := fromContext(ctx); p != nil {
-			p.addChild()
-			parent = p.spanContext
+		if p := apitrace.CurrentSpan(ctx); p != nil {
+			if sdkSpan, ok := p.(*span); ok {
+				sdkSpan.addChild()
+				parent = sdkSpan.spanContext
+			}
 		}
 	}
 
 	span := startSpanInternal(name, parent, remoteParent, opts)
 	span.tracer = tr
 
+	if span.IsRecordingEvents() {
+		sps, _ := spanProcessors.Load().(spanProcessorMap)
+		for sp := range sps {
+			sp.OnStart(span.data)
+		}
+	}
+
 	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
-	return newContext(ctx, span), span
+	return apitrace.SetCurrentSpan(ctx, span), span
 }
 
 func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
