@@ -65,8 +65,6 @@ type Observer interface {
 	Observe(data Event)
 }
 
-type observersMap map[Observer]struct{}
-
 //go:generate stringer -type=EventType
 const (
 	// TODO: rename these NOUN_VERB
