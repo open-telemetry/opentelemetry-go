@@ -195,6 +195,38 @@ func (s *span) SetName(name string) {
 	makeSamplingDecision(data)
 }
 
+// AddLink implements Span interface. Specified link is added to the span.
+// If the total number of links associated with the span exceeds the limit
+// then the oldest link is removed to create space for the link being added.
+func (s *span) AddLink(link apitrace.Link) {
+	if !s.IsRecordingEvents() {
+		return
+	}
+	s.addLink(link)
+}
+
+// Link implements Span interface. It is similar to AddLink but it excepts
+// SpanContext and attributes as arguments instead of Link. It first creates
+// a Link object and then adds to the span.
+func (s *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+	if !s.IsRecordingEvents() {
+		return
+	}
+	attrsCopy := attrs
+	if attrs != nil {
+		attrsCopy = make([]core.KeyValue, len(attrs))
+		copy(attrsCopy, attrs)
+	}
+	link := apitrace.Link{SpanContext: sc, Attributes: attrsCopy}
+	s.addLink(link)
+}
+
+func (s *span) addLink(link apitrace.Link) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.links.add(link)
+}
+
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
 func (s *span) makeSpanData() *SpanData {
@@ -210,7 +242,19 @@ func (s *span) makeSpanData() *SpanData {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
 		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
 	}
+	if len(s.links.queue) > 0 {
+		sd.Links = s.interfaceArrayToLinksArray()
+		sd.DroppedLinkCount = s.links.droppedCount
+	}
 	return &sd
+}
+
+func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
+	linkArr := make([]apitrace.Link, 0)
+	for _, value := range s.links.queue {
+		linkArr = append(linkArr, value.(apitrace.Link))
+	}
+	return linkArr
 }
 
 func (s *span) interfaceArrayToMessageEventArray() []Event {

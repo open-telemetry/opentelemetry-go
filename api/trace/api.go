@@ -75,6 +75,13 @@ type Span interface {
 	// IsRecordingEvents returns true if the span is active and recording events is enabled.
 	IsRecordingEvents() bool
 
+	// AddLink adds a link to the span.
+	AddLink(link Link)
+
+	// Link creates a link between this span and the other span specified by the SpanContext.
+	// It then adds the newly created Link to the span.
+	Link(sc core.SpanContext, attrs ...core.KeyValue)
+
 	// SpancContext returns span context of the span. Return SpanContext is usable
 	// even after the span is finished.
 	SpanContext() core.SpanContext
@@ -128,6 +135,22 @@ const (
 	ChildOfRelationship RelationshipType = iota
 	FollowsFromRelationship
 )
+
+// Link is used to establish relationship between two spans within the same Trace or
+// across different Traces. Few examples of Link usage.
+//   1. Batch Processing: A batch of elements may contain elements associated with one
+//      or more traces/spans. Since there can only be one parent SpanContext, Link is
+//      used to keep reference to SpanContext of all elements in the batch.
+//   2. Public Endpoint: A SpanContext in incoming client request on a public endpoint
+//      is untrusted from service provider perspective. In such case it is advisable to
+//      start a new trace with appropriate sampling decision.
+//      However, it is desirable to associate incoming SpanContext to new trace initiated
+//      on service provider side so two traces (from Client and from Service Provider) can
+//      be correlated.
+type Link struct {
+	core.SpanContext
+	Attributes []core.KeyValue
+}
 
 // Start starts a new span using registered global tracer.
 func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
