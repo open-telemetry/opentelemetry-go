@@ -46,7 +46,7 @@ func (s *spanReader) Read(data reader.Event) {
 		return
 	}
 	var span *Span
-	if data.Type == reader.START_SPAN {
+	if data.Type == exporter.START_SPAN {
 		span = &Span{Events: make([]reader.Event, 0, 4)}
 		s.spans[data.SpanContext] = span
 	} else {
@@ -59,7 +59,7 @@ func (s *spanReader) Read(data reader.Event) {
 
 	span.Events = append(span.Events, data)
 
-	if data.Type == reader.FINISH_SPAN {
+	if data.Type == exporter.FINISH_SPAN {
 		for _, r := range s.readers {
 			r.Read(span)
 		}
