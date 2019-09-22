@@ -42,8 +42,7 @@ func NewReaderObserver(readers ...Reader) exporter.Observer {
 
 func (s *spanReader) Read(data reader.Event) {
 	if !data.SpanContext.HasSpanID() {
-		// @@@ This is happening, somehow span context is busted.
-		return
+		panic("How is this?")
 	}
 	var span *Span
 	if data.Type == exporter.START_SPAN {
