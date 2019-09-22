@@ -32,7 +32,11 @@ $(TOOLS_DIR)/stringer: go.mod go.sum tools.go
 
 precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
-	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
+	# TODO: Fix this on windows.
+	for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "golangci-lint in $${dir}"; \
+	  (cd "$${dir}" && $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
+	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 	for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go mod tidy in $${dir}"; \
