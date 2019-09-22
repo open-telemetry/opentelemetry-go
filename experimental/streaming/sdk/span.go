@@ -120,6 +120,7 @@ func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg s
 	sp.tracer.exporter.Record(exporter.Event{
 		Time:       timestamp,
 		Type:       exporter.ADD_EVENT,
+		Scope:      sp.ScopeID(),
 		String:     msg,
 		Attributes: attrs,
 		Context:    ctx,
