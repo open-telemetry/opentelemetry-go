@@ -38,7 +38,10 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			if skipIf && data.Attributes.HasValue(kv.Key) {
 				return true
 			}
-			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" ")
+			buf.WriteString(kv.Key.Name)
+			buf.WriteString("=")
+			buf.WriteString(kv.Value.Emit())
 			return true
 		}
 	}
@@ -75,13 +78,17 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Message)
 		buf.WriteString(" (")
 		data.Attributes.Foreach(func(kv core.KeyValue) bool {
-			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" ")
+			buf.WriteString(kv.Key.Name)
+			buf.WriteString("=")
+			buf.WriteString(kv.Value.Emit())
 			return true
 		})
 		buf.WriteString(")")
 
 	case exporter.MODIFY_ATTR:
-		buf.WriteString("modify attr")
+		buf.WriteString("modify attr ")
+		buf.WriteString(data.Type.String())
 	case exporter.RECORD_STATS:
 		buf.WriteString("record")
 
