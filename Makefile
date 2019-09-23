@@ -33,9 +33,6 @@ precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/string
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	$(TOOLS_DIR)/golangci-lint run --fix # TODO: Fix this on windows.
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
-
-.PHONY: mod-tidy
-mod-tidy:
 	for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go mod tidy in $${dir}"; \
 	  (cd "$${dir}" && go mod tidy); \
