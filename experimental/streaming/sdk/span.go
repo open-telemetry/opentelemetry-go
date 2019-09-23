@@ -129,7 +129,7 @@ func (sp *span) SetName(name string) {
 	})
 }
 
-func (sp *span) AddLink(link apitrace.Link) {
+func (sp *span) AddLink(link trace.Link) {
 }
 
 func (sp *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
