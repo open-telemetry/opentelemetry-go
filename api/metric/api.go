@@ -93,8 +93,9 @@ type Instrument struct {
 	// Monotonic implies this is a non-descending Gauge.
 	Monotonic bool
 
-	// NonNegative implies this is a non-negative Measure.
-	NonNegative bool
+	// Signed implies this is a Measure that supports positive and
+	// negative values.
+	Signed bool
 
 	// Disabled implies this instrument is disabled by default.
 	Disabled bool
@@ -148,10 +149,10 @@ func WithMonotonic(m bool) Option {
 	}
 }
 
-// WithNonNegative sets whether a measure is not permitted to be negative.
-func WithNonNegative(non bool) Option {
+// WithSigned sets whether a measure is permitted to be negative.
+func WithSigned(s bool) Option {
 	return func(inst *Instrument) {
-		inst.NonNegative = non
+		inst.Signed = s
 	}
 }
 
