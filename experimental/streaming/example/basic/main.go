@@ -73,12 +73,12 @@ func main() {
 			commonLabels,
 
 			metric.Measurement{
-				Instrument: oneMetric.Instrument,
+				Descriptor: oneMetric.Descriptor,
 				Value:      1.0,
 			},
 
 			metric.Measurement{
-				Instrument: measureTwo.Instrument,
+				Descriptor: measureTwo.Descriptor,
 				Value:      2.0,
 			},
 		)

@@ -56,7 +56,7 @@ type Meter interface {
 	DefineLabels(context.Context, ...core.KeyValue) LabelSet
 
 	// RecorderFor returns a handle for observing single measurements.
-	RecorderFor(context.Context, LabelSet, Instrument) Recorder
+	RecorderFor(context.Context, LabelSet, Descriptor) Recorder
 
 	// RecordSingle records a single measurement without computing a handle.
 	RecordSingle(context.Context, LabelSet, Measurement)
@@ -67,24 +67,24 @@ type Meter interface {
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 }
 
-type InstrumentID uint64
+type DescriptorID uint64
 
-// Instrument represents a named metric with recommended local-aggregation keys.
-type Instrument struct {
-	// Name is a required field describing this metric instrument,
+// Descriptor represents a named metric with recommended local-aggregation keys.
+type Descriptor struct {
+	// Name is a required field describing this metric descriptor,
 	// should have length > 0.
 	Name string
 
 	// ID is uniquely assigned to support per-SDK registration.
-	ID InstrumentID
+	ID DescriptorID
 
-	// Description is an optional field describing this metric instrument.
+	// Description is an optional field describing this metric descriptor.
 	Description string
 
-	// Unit is an optional field describing this metric instrument.
+	// Unit is an optional field describing this metric descriptor.
 	Unit unit.Unit
 
-	// Kind is the metric kind of this instrument.
+	// Kind is the metric kind of this descriptor.
 	Kind Kind
 
 	// NonMonotonic implies this is an up-down Counter.
@@ -97,7 +97,7 @@ type Instrument struct {
 	// negative values.
 	Signed bool
 
-	// Disabled implies this instrument is disabled by default.
+	// Disabled implies this descriptor is disabled by default.
 	Disabled bool
 
 	// Keys are required keys determined in the handles
@@ -114,66 +114,66 @@ type Handle struct {
 
 // Measurement is used for reporting a batch of metric values.
 type Measurement struct {
-	Instrument Instrument
+	Descriptor Descriptor
 	Value      float64
 }
 
 // Option supports specifying the various metric options.
-type Option func(*Instrument)
+type Option func(*Descriptor)
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
-	return func(inst *Instrument) {
-		inst.Description = desc
+	return func(d *Descriptor) {
+		d.Description = desc
 	}
 }
 
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) Option {
-	return func(inst *Instrument) {
-		inst.Unit = unit
+	return func(d *Descriptor) {
+		d.Unit = unit
 	}
 }
 
 // WithNonMonotonic sets whether a counter is permitted to go up AND down.
 func WithNonMonotonic(nm bool) Option {
-	return func(inst *Instrument) {
-		inst.NonMonotonic = nm
+	return func(d *Descriptor) {
+		d.NonMonotonic = nm
 	}
 }
 
 // WithMonotonic sets whether a gauge is not permitted to go down.
 func WithMonotonic(m bool) Option {
-	return func(inst *Instrument) {
-		inst.Monotonic = m
+	return func(d *Descriptor) {
+		d.Monotonic = m
 	}
 }
 
 // WithSigned sets whether a measure is permitted to be negative.
 func WithSigned(s bool) Option {
-	return func(inst *Instrument) {
-		inst.Signed = s
+	return func(d *Descriptor) {
+		d.Signed = s
 	}
 }
 
 // WithDisabled sets whether a measure is disabled by default
 func WithDisabled(dis bool) Option {
-	return func(inst *Instrument) {
-		inst.Disabled = dis
+	return func(d *Descriptor) {
+		d.Disabled = dis
 	}
 }
 
 // WithKeys applies required label keys.  Multiple `WithKeys`
 // options accumulate.
 func WithKeys(keys ...core.Key) Option {
-	return func(m *Instrument) {
+	return func(m *Descriptor) {
 		m.Keys = append(m.Keys, keys...)
 	}
 }
 
-// Defined returns true when the instrument has been registered.
-func (inst Instrument) Defined() bool {
-	return len(inst.Name) != 0
+// Defined returns true when the descriptor has been registered.
+func (d Descriptor) Defined() bool {
+	return len(d.Name) != 0
 }
 
 // RecordSingle reports to the global Meter.

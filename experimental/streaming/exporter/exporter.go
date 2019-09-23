@@ -22,7 +22,7 @@ type ScopeID struct {
 }
 
 type Measurement struct {
-	Instrument metric.Instrument
+	Descriptor metric.Descriptor
 	Value      float64
 }
 

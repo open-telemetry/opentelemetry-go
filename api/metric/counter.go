@@ -19,11 +19,11 @@ import (
 )
 
 type Float64Counter struct {
-	Instrument
+	Descriptor
 }
 
 type Int64Counter struct {
-	Instrument
+	Descriptor
 }
 
 type Float64CounterHandle struct {
@@ -35,35 +35,35 @@ type Int64CounterHandle struct {
 }
 
 func NewFloat64Counter(name string, mos ...Option) (c Float64Counter) {
-	registerInstrument(name, CounterKind, mos, &c.Instrument)
+	registerDescriptor(name, CounterKind, mos, &c.Descriptor)
 	return
 }
 
 func NewInt64Counter(name string, mos ...Option) (c Int64Counter) {
-	registerInstrument(name, CounterKind, mos, &c.Instrument)
+	registerDescriptor(name, CounterKind, mos, &c.Descriptor)
 	return
 }
 
 func (c *Float64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Float64CounterHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Instrument)
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Descriptor)
 	return
 }
 
 func (c *Int64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Int64CounterHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Instrument)
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Descriptor)
 	return
 }
 
 func (g *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Instrument: g.Instrument,
+		Descriptor: g.Descriptor,
 		Value:      value,
 	})
 }
 
 func (g *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Instrument: g.Instrument,
+		Descriptor: g.Descriptor,
 		Value:      float64(value),
 	})
 }

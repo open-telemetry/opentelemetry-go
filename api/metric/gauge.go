@@ -19,11 +19,11 @@ import (
 )
 
 type Float64Gauge struct {
-	Instrument
+	Descriptor
 }
 
 type Int64Gauge struct {
-	Instrument
+	Descriptor
 }
 
 type Float64GaugeHandle struct {
@@ -35,35 +35,35 @@ type Int64GaugeHandle struct {
 }
 
 func NewFloat64Gauge(name string, mos ...Option) (g Float64Gauge) {
-	registerInstrument(name, GaugeKind, mos, &g.Instrument)
+	registerDescriptor(name, GaugeKind, mos, &g.Descriptor)
 	return
 }
 
 func NewInt64Gauge(name string, mos ...Option) (g Int64Gauge) {
-	registerInstrument(name, GaugeKind, mos, &g.Instrument)
+	registerDescriptor(name, GaugeKind, mos, &g.Descriptor)
 	return
 }
 
 func (g *Float64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Float64GaugeHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Instrument)
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Descriptor)
 	return
 }
 
 func (g *Int64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Int64GaugeHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Instrument)
+	h.Recorder = labels.Meter().RecorderFor(ctx, labels, g.Descriptor)
 	return
 }
 
 func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Instrument: g.Instrument,
+		Descriptor: g.Descriptor,
 		Value:      value,
 	})
 }
 
 func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Instrument: g.Instrument,
+		Descriptor: g.Descriptor,
 		Value:      float64(value),
 	})
 }

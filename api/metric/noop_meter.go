@@ -31,6 +31,6 @@ func (noopMeter) RecordSingle(context.Context, LabelSet, Measurement) {
 func (noopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 }
 
-func (noopMeter) RecorderFor(context.Context, LabelSet, Instrument) Recorder {
+func (noopMeter) RecorderFor(context.Context, LabelSet, Descriptor) Recorder {
 	return noopRecorder{}
 }

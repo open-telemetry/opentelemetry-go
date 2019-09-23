@@ -17,15 +17,15 @@ package metric
 import "sync/atomic"
 
 var (
-	instrumentID uint64
+	descriptorID uint64
 )
 
-func registerInstrument(name string, kind Kind, opts []Option, inst *Instrument) {
-	inst.Name = name
-	inst.Kind = kind
-	inst.ID = InstrumentID(atomic.AddUint64(&instrumentID, 1))
+func registerDescriptor(name string, kind Kind, opts []Option, d *Descriptor) {
+	d.Name = name
+	d.Kind = kind
+	d.ID = DescriptorID(atomic.AddUint64(&descriptorID, 1))
 
 	for _, opt := range opts {
-		opt(inst)
+		opt(d)
 	}
 }

@@ -228,7 +228,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		attrs, _ := ro.readScope(event.Scope)
 		read.Attributes = attrs
 		read.Measurement = metric.Measurement{
-			Instrument: event.Measurement.Instrument,
+			Descriptor: event.Measurement.Descriptor,
 			Value:      event.Measurement.Value,
 		}
 
@@ -247,7 +247,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		for _, m := range event.Measurements {
 			read.Measurements = append(read.Measurements, metric.Measurement{
-				Instrument: m.Instrument,
+				Descriptor: m.Descriptor,
 				Value:      m.Value,
 			})
 		}

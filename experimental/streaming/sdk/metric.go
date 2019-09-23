@@ -23,7 +23,7 @@ import (
 )
 
 type metricHandle struct {
-	instrument metric.Instrument
+	descriptor metric.Descriptor
 	labels     metricLabels
 }
 
@@ -38,7 +38,7 @@ func (h *metricHandle) Record(ctx context.Context, value float64) {
 		Context: ctx,
 		Scope:   h.labels.scope,
 		Measurement: exporter.Measurement{
-			Instrument: h.instrument,
+			Descriptor: h.descriptor,
 			Value:      value,
 		},
 	})
@@ -55,11 +55,11 @@ func (s *sdk) DefineLabels(ctx context.Context, labels ...core.KeyValue) metric.
 	}
 }
 
-func (s *sdk) RecorderFor(ctx context.Context, labels metric.LabelSet, inst metric.Instrument) metric.Recorder {
+func (s *sdk) RecorderFor(ctx context.Context, labels metric.LabelSet, descriptor metric.Descriptor) metric.Recorder {
 	mlabels, _ := labels.(metricLabels)
 
 	return &metricHandle{
-		instrument: inst,
+		descriptor: descriptor,
 		labels:     mlabels,
 	}
 }
@@ -71,7 +71,7 @@ func (s *sdk) RecordSingle(ctx context.Context, labels metric.LabelSet, input me
 		Context: ctx,
 		Scope:   mlabels.scope,
 		Measurement: exporter.Measurement{
-			Instrument: input.Instrument,
+			Descriptor: input.Descriptor,
 			Value:      input.Value,
 		}})
 }
@@ -82,7 +82,7 @@ func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...met
 
 	for i, input := range ms {
 		oms[i] = exporter.Measurement{
-			Instrument: input.Instrument,
+			Descriptor: input.Descriptor,
 			Value:      input.Value,
 		}
 	}
