@@ -152,15 +152,15 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			header: "00-ab000000000000000000000000000000-cd00000000000000-0100",
 		},
 		{
-			name:   "bogus version length",
+			name:   "bogus version",
 			header: "qw-00000000000000000000000000000000-0000000000000000-01",
 		},
 		{
-			name:   "bogus trace ID length",
+			name:   "bogus trace ID",
 			header: "00-qw000000000000000000000000000000-cd00000000000000-01",
 		},
 		{
-			name:   "bogus span ID length",
+			name:   "bogus span ID",
 			header: "00-ab000000000000000000000000000000-qw00000000000000-01",
 		},
 		{
@@ -243,6 +243,15 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				SpanID:  spanID,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-00",
+		},
+		{
+			name: "valid spancontext, with unsupported bit set in traceoption",
+			sc: core.SpanContext{
+				TraceID:      traceID,
+				SpanID:       spanID,
+				TraceOptions: 0xff,
+			},
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-01",
 		},
 		{
 			name:       "invalid spancontext",

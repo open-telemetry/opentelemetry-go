@@ -47,7 +47,7 @@ func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			sc.TraceID.High,
 			sc.TraceID.Low,
 			sc.SpanID,
-			sc.TraceOptions)
+			sc.TraceOptions&core.TraceOptionSampled)
 		supplier.Set(traceparentHeader, h)
 	}
 }
