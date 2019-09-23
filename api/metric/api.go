@@ -26,10 +26,10 @@ type Kind int
 
 //go:generate stringer -type=Kind
 const (
-	Invalid        Kind = iota
-	CumulativeKind      // Supports Add()
-	GaugeKind           // Supports Set()
-	MeasureKind         // Supports Record()
+	Invalid     Kind = iota
+	CounterKind      // Supports Add()
+	GaugeKind        // Supports Set()
+	MeasureKind      // Supports Record()
 )
 
 // Recorder is the implementation-level interface to Set/Add/Record individual metrics.
@@ -87,7 +87,7 @@ type Instrument struct {
 	// Kind is the metric kind of this instrument.
 	Kind Kind
 
-	// Bidirectional implies this is an up-down Cumulative.
+	// Bidirectional implies this is an up-down Counter.
 	Bidirectional bool
 
 	// Unidirectional implies this is a non-descending Gauge.
@@ -134,7 +134,7 @@ func WithUnit(unit unit.Unit) Option {
 	}
 }
 
-// WithBidirectional sets whether a cumulative is permitted to go up AND down.
+// WithBidirectional sets whether a counter is permitted to go up AND down.
 func WithBidirectional(bi bool) Option {
 	return func(inst *Instrument) {
 		inst.Bidirectional = bi

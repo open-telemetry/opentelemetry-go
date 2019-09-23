@@ -18,60 +18,60 @@ import (
 	"context"
 )
 
-type Float64Cumulative struct {
+type Float64Counter struct {
 	Instrument
 }
 
-type Int64Cumulative struct {
+type Int64Counter struct {
 	Instrument
 }
 
-type Float64CumulativeHandle struct {
+type Float64CounterHandle struct {
 	Handle
 }
 
-type Int64CumulativeHandle struct {
+type Int64CounterHandle struct {
 	Handle
 }
 
-func NewFloat64Cumulative(name string, mos ...Option) (c Float64Cumulative) {
-	registerInstrument(name, CumulativeKind, mos, &c.Instrument)
+func NewFloat64Counter(name string, mos ...Option) (c Float64Counter) {
+	registerInstrument(name, CounterKind, mos, &c.Instrument)
 	return
 }
 
-func NewInt64Cumulative(name string, mos ...Option) (c Int64Cumulative) {
-	registerInstrument(name, CumulativeKind, mos, &c.Instrument)
+func NewInt64Counter(name string, mos ...Option) (c Int64Counter) {
+	registerInstrument(name, CounterKind, mos, &c.Instrument)
 	return
 }
 
-func (c *Float64Cumulative) GetHandle(ctx context.Context, labels LabelSet) (h Float64CumulativeHandle) {
+func (c *Float64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Float64CounterHandle) {
 	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Instrument)
 	return
 }
 
-func (c *Int64Cumulative) GetHandle(ctx context.Context, labels LabelSet) (h Int64CumulativeHandle) {
+func (c *Int64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Int64CounterHandle) {
 	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Instrument)
 	return
 }
 
-func (g *Float64Cumulative) Add(ctx context.Context, value float64, labels LabelSet) {
+func (g *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
 		Instrument: g.Instrument,
 		Value:      value,
 	})
 }
 
-func (g *Int64Cumulative) Add(ctx context.Context, value int64, labels LabelSet) {
+func (g *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 	labels.Meter().RecordSingle(ctx, labels, Measurement{
 		Instrument: g.Instrument,
 		Value:      float64(value),
 	})
 }
 
-func (g *Float64CumulativeHandle) Add(ctx context.Context, value float64) {
+func (g *Float64CounterHandle) Add(ctx context.Context, value float64) {
 	g.Recorder.Record(ctx, value)
 }
 
-func (g *Int64CumulativeHandle) Add(ctx context.Context, value int64) {
+func (g *Int64CounterHandle) Add(ctx context.Context, value int64) {
 	g.Recorder.Record(ctx, float64(value))
 }

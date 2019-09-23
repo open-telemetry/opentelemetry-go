@@ -9,14 +9,14 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[Invalid-0]
-	_ = x[CumulativeKind-1]
+	_ = x[CounterKind-1]
 	_ = x[GaugeKind-2]
 	_ = x[MeasureKind-3]
 }
 
-const _Kind_name = "InvalidCumulativeKindGaugeKindMeasureKind"
+const _Kind_name = "InvalidCounterKindGaugeKindMeasureKind"
 
-var _Kind_index = [...]uint8{0, 7, 21, 30, 41}
+var _Kind_index = [...]uint8{0, 7, 18, 27, 38}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {
