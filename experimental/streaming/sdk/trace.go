@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
@@ -127,8 +126,4 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		},
 	}
 	return trace.SetCurrentSpan(ctx, span), span
-}
-
-func (t *tracer) Inject(ctx context.Context, span trace.Span, injector trace.Injector) {
-	injector.Inject(span.SpanContext(), tag.FromContext(ctx))
 }

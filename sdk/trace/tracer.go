@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
@@ -101,8 +100,4 @@ func (tr *tracer) WithResources(res ...core.KeyValue) apitrace.Tracer {
 func (tr *tracer) WithComponent(component string) apitrace.Tracer {
 	tr.component = component
 	return tr
-}
-
-func (tr *tracer) Inject(ctx context.Context, span apitrace.Span, injector apitrace.Injector) {
-	injector.Inject(span.SpanContext(), tag.NewEmptyMap())
 }
