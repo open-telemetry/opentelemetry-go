@@ -17,14 +17,14 @@ package stderr // import "go.opentelemetry.io/experimental/streaming/exporter/st
 import (
 	"os"
 
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader/format"
 )
 
 type stderrLog struct{}
 
-func New() observer.Observer {
+func New() exporter.Observer {
 	return reader.NewReaderObserver(&stderrLog{})
 }
 

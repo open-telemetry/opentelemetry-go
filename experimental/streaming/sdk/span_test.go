@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/sdk/internal"
 )
 
@@ -44,7 +44,7 @@ func TestEvents(t *testing.T) {
 		ctx2 := context.WithValue(ctx1, test2Type{}, "foo")
 		span.AddEvent(ctx2, "testing", k2v2, k3v3)
 
-		got := obs.Events(observer.ADD_EVENT)
+		got := obs.Events(exporter.ADD_EVENT)
 		for idx := range got {
 			if got[idx].Time.IsZero() {
 				t.Errorf("Event %d has zero timestamp", idx)
@@ -54,14 +54,14 @@ func TestEvents(t *testing.T) {
 		if len(got) != 2 {
 			t.Errorf("Expected two events, got %d", len(got))
 		}
-		want := []observer.Event{
+		want := []exporter.Event{
 			{
-				Type:       observer.ADD_EVENT,
+				Type:       exporter.ADD_EVENT,
 				String:     "one two three",
 				Attributes: []core.KeyValue{k1v1},
 			},
 			{
-				Type:       observer.ADD_EVENT,
+				Type:       exporter.ADD_EVENT,
 				String:     "testing",
 				Attributes: []core.KeyValue{k2v2, k3v3},
 			},
@@ -87,18 +87,18 @@ func TestCustomStartEndTime(t *testing.T) {
 		trace.WithStartTime(startTime),
 	)
 	span.Finish(trace.WithFinishTime(endTime))
-	want := []observer.Event{
+	want := []exporter.Event{
 		{
-			Type:   observer.START_SPAN,
+			Type:   exporter.START_SPAN,
 			Time:   startTime,
 			String: "testspan",
 		},
 		{
-			Type: observer.FINISH_SPAN,
+			Type: exporter.FINISH_SPAN,
 			Time: endTime,
 		},
 	}
-	got := append(obs.Events(observer.START_SPAN), obs.Events(observer.FINISH_SPAN)...)
+	got := append(obs.Events(exporter.START_SPAN), obs.Events(exporter.FINISH_SPAN)...)
 	diffEvents(t, got, want, "Scope")
 }
 
@@ -127,7 +127,7 @@ func checkContext(t *testing.T, ctx context.Context, key, wantValue interface{})
 	return true
 }
 
-func diffEvents(t *testing.T, got, want []observer.Event, extraIgnoredFields ...string) bool {
+func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...string) bool {
 	ignoredPaths := map[string]struct{}{
 		"Sequence": struct{}{},
 		"Context":  struct{}{},

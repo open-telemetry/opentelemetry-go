@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/stats"
 	"go.opentelemetry.io/api/tag"
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
 type Reader interface {
@@ -36,7 +36,7 @@ type EventType int
 type Event struct {
 	Type        EventType
 	Time        time.Time
-	Sequence    observer.EventID
+	Sequence    exporter.EventID
 	SpanContext core.SpanContext
 	Tags        tag.Map
 	Attributes  tag.Map
@@ -90,7 +90,7 @@ type readerMetric struct {
 
 type readerScope struct {
 	span       *readerSpan
-	parent     observer.EventID
+	parent     exporter.EventID
 	attributes tag.Map
 }
 
@@ -109,18 +109,18 @@ const (
 // necessary state needed by a reader to process events in memory.
 // Practically, this means tracking live metric handles and scope
 // attribute sets.
-func NewReaderObserver(readers ...Reader) observer.Observer {
+func NewReaderObserver(readers ...Reader) exporter.Observer {
 	return &readerObserver{
 		readers: readers,
 	}
 }
 
-func (ro *readerObserver) Observe(event observer.Event) {
+func (ro *readerObserver) Observe(event exporter.Event) {
 	// TODO this should check for out-of-order events and buffer.
 	ro.orderedObserve(event)
 }
 
-func (ro *readerObserver) orderedObserve(event observer.Event) {
+func (ro *readerObserver) orderedObserve(event exporter.Event) {
 	read := Event{
 		Time:       event.Time,
 		Sequence:   event.Sequence,
@@ -133,7 +133,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 	}
 
 	switch event.Type {
-	case observer.START_SPAN:
+	case exporter.START_SPAN:
 		// Save the span context tags, initial attributes, start time, and name.
 		span := &readerSpan{
 			name:        event.String,
@@ -170,7 +170,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 
 		ro.scopes.Store(event.Sequence, span)
 
-	case observer.FINISH_SPAN:
+	case exporter.FINISH_SPAN:
 		attrs, span := ro.readScope(event.Scope)
 		if span == nil {
 			panic(fmt.Sprint("span not found", event.Scope))
@@ -186,7 +186,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 
 		// TODO: recovered
 
-	case observer.NEW_SCOPE, observer.MODIFY_ATTR:
+	case exporter.NEW_SCOPE, exporter.MODIFY_ATTR:
 		var span *readerSpan
 		var m tag.Map
 
@@ -223,7 +223,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 
 		ro.scopes.Store(event.Sequence, sc)
 
-		if event.Type == observer.NEW_SCOPE {
+		if event.Type == exporter.NEW_SCOPE {
 			return
 		}
 
@@ -235,14 +235,14 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			read.Tags = span.startTags
 		}
 
-	case observer.NEW_MEASURE:
+	case exporter.NEW_MEASURE:
 		measure := &readerMeasure{
 			name: event.String,
 		}
 		ro.measures.Store(event.Sequence, measure)
 		return
 
-	case observer.NEW_METRIC:
+	case exporter.NEW_METRIC:
 		measureI, has := ro.measures.Load(event.Scope.EventID)
 		if !has {
 			panic("metric measure not found")
@@ -253,7 +253,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 		ro.metrics.Store(event.Sequence, metric)
 		return
 
-	case observer.ADD_EVENT:
+	case exporter.ADD_EVENT:
 		read.Type = ADD_EVENT
 		read.Message = event.String
 
@@ -265,7 +265,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			read.SpanContext = span.spanContext
 		}
 
-	case observer.RECORD_STATS:
+	case exporter.RECORD_STATS:
 		read.Type = RECORD_STATS
 
 		_, span := ro.readScope(event.Scope)
@@ -279,7 +279,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			ro.addMeasurement(&read, event.Stat)
 		}
 
-	case observer.SET_STATUS:
+	case exporter.SET_STATUS:
 		read.Type = SET_STATUS
 		read.Status = event.Status
 		_, span := ro.readScope(event.Scope)
@@ -288,7 +288,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 			read.SpanContext = span.spanContext
 		}
 
-	case observer.SET_NAME:
+	case exporter.SET_NAME:
 		read.Type = SET_NAME
 		read.Name = event.String
 
@@ -300,7 +300,7 @@ func (ro *readerObserver) orderedObserve(event observer.Event) {
 		reader.Read(read)
 	}
 
-	if event.Type == observer.FINISH_SPAN {
+	if event.Type == exporter.FINISH_SPAN {
 		ro.cleanupSpan(event.Scope.EventID)
 	}
 }
@@ -319,7 +319,7 @@ func (ro *readerObserver) readMeasureScope(m stats.Measure) (tag.Map, *readerSpa
 	return tag.NewEmptyMap(), nil
 }
 
-func (ro *readerObserver) readScope(id observer.ScopeID) (tag.Map, *readerSpan) {
+func (ro *readerObserver) readScope(id exporter.ScopeID) (tag.Map, *readerSpan) {
 	if id.EventID == 0 {
 		return tag.NewEmptyMap(), nil
 	}
@@ -335,7 +335,7 @@ func (ro *readerObserver) readScope(id observer.ScopeID) (tag.Map, *readerSpan) 
 	return tag.NewEmptyMap(), nil
 }
 
-func (ro *readerObserver) cleanupSpan(id observer.EventID) {
+func (ro *readerObserver) cleanupSpan(id exporter.EventID) {
 	for id != 0 {
 		ev, has := ro.scopes.Load(id)
 		if !has {

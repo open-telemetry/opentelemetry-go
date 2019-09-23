@@ -16,7 +16,7 @@ package spandata
 
 import (
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 )
 
@@ -33,7 +33,7 @@ type spanReader struct {
 	readers []Reader
 }
 
-func NewReaderObserver(readers ...Reader) observer.Observer {
+func NewReaderObserver(readers ...Reader) exporter.Observer {
 	return reader.NewReaderObserver(&spanReader{
 		spans:   map[core.SpanContext]*Span{},
 		readers: readers,

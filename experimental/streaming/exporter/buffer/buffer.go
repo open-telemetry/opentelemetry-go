@@ -18,21 +18,21 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
 type Buffer struct {
-	observers []observer.Observer
-	events    chan observer.Event
+	observers []exporter.Observer
+	events    chan exporter.Event
 	dropped   uint64
 	wait      sync.WaitGroup
 	close     chan struct{}
 }
 
-func NewBuffer(size int, observers ...observer.Observer) *Buffer {
+func NewBuffer(size int, observers ...exporter.Observer) *Buffer {
 	b := &Buffer{
 		observers: observers,
-		events:    make(chan observer.Event, size),
+		events:    make(chan exporter.Event, size),
 		close:     make(chan struct{}),
 	}
 	b.wait.Add(1)
@@ -40,7 +40,7 @@ func NewBuffer(size int, observers ...observer.Observer) *Buffer {
 	return b
 }
 
-func (b *Buffer) Observe(data observer.Event) {
+func (b *Buffer) Observe(data exporter.Event) {
 	select {
 	case b.events <- data:
 	default:

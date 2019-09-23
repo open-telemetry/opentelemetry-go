@@ -18,14 +18,14 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/spandata"
 	"go.opentelemetry.io/experimental/streaming/exporter/spandata/format"
 )
 
 type spanLog struct{}
 
-func New() observer.Observer {
+func New() exporter.Observer {
 	return spandata.NewReaderObserver(&spanLog{})
 }
 

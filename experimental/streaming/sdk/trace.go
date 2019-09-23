@@ -23,12 +23,11 @@ import (
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
 type tracer struct {
 	exporter  *exporter.Exporter
-	resources observer.EventID
+	resources exporter.EventID
 }
 
 var (
@@ -41,14 +40,14 @@ var (
 	MessageKey   = key.New("message")
 )
 
-func New(observers ...observer.Observer) trace.Tracer {
+func New(observers ...exporter.Observer) trace.Tracer {
 	return &tracer{
-		exporter: observer.NewExporter(observers...),
+		exporter: exporter.NewExporter(observers...),
 	}
 }
 
 func (t *tracer) WithResources(attributes ...core.KeyValue) trace.Tracer {
-	s := t.exporter.NewScope(observer.ScopeID{
+	s := t.exporter.NewScope(exporter.ScopeID{
 		EventID: t.resources,
 	}, attributes...)
 	return &tracer{
@@ -90,7 +89,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		opt(o)
 	}
 
-	var parentScope observer.ScopeID
+	var parentScope exporter.ScopeID
 
 	if o.Reference.HasTraceID() {
 		parentScope.SpanContext = o.Reference.SpanContext
@@ -107,18 +106,18 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		child.TraceID.Low = rand.Uint64()
 	}
 
-	childScope := observer.ScopeID{
+	childScope := exporter.ScopeID{
 		SpanContext: child,
 		EventID:     t.resources,
 	}
 
 	span := &span{
 		tracer: t,
-		initial: observer.ScopeID{
+		initial: exporter.ScopeID{
 			SpanContext: child,
-			EventID: t.exporter.Record(observer.Event{
+			EventID: t.exporter.Record(exporter.Event{
 				Time:    o.StartTime,
-				Type:    observer.START_SPAN,
+				Type:    exporter.START_SPAN,
 				Scope:   t.exporter.NewScope(childScope, o.Attributes...),
 				Context: ctx,
 				Parent:  parentScope,
