@@ -86,3 +86,11 @@ func (ms *MockSpan) Tracer() apitrace.Tracer {
 // AddEvent does nothing.
 func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
 }
+
+// AddLink does nothing.
+func (ms *MockSpan) AddLink(link apitrace.Link) {
+}
+
+// Link does nothing.
+func (ms *MockSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+}
