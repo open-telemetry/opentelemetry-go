@@ -14,45 +14,28 @@
 
 package internal // import "go.opentelemetry.io/experimental/streaming/sdk/internal"
 
-import (
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
-)
+import "go.opentelemetry.io/experimental/streaming/exporter"
 
-type eventsMap map[observer.EventType][]observer.Event
+type eventsMap map[exporter.EventType][]exporter.Event
 
 type TestObserver struct {
 	events eventsMap
 }
 
-var _ observer.Observer = &TestObserver{}
+var _ exporter.Observer = &TestObserver{}
 
-func NewRegisteredObserver() *TestObserver {
-	o := &TestObserver{}
-	observer.RegisterObserver(o)
-	return o
+func NewTestObserver() *TestObserver {
+	return &TestObserver{}
 }
 
-func (o *TestObserver) Unregister() {
-	observer.UnregisterObserver(o)
-}
-
-func (o *TestObserver) Observe(e observer.Event) {
+func (o *TestObserver) Observe(e exporter.Event) {
 	if o.events == nil {
 		o.events = make(eventsMap)
 	}
 	o.events[e.Type] = append(o.events[e.Type], e)
 }
 
-func (o *TestObserver) Clear() {
-	o.events = nil
-}
-
-func (o *TestObserver) ClearAndUnregister() {
-	o.Clear()
-	o.Unregister()
-}
-
-func (o *TestObserver) Events(eType observer.EventType) []observer.Event {
+func (o *TestObserver) Events(eType exporter.EventType) []exporter.Event {
 	if o.events == nil {
 		return nil
 	}

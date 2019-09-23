@@ -21,12 +21,12 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
 type tracer struct {
-	resources observer.EventID
+	exporter  *exporter.Exporter
+	resources exporter.EventID
 }
 
 var (
@@ -39,24 +39,27 @@ var (
 	MessageKey   = key.New("message")
 )
 
-func New() trace.Tracer {
-	return &tracer{}
+func New(observers ...exporter.Observer) trace.Tracer {
+	return &tracer{
+		exporter: exporter.NewExporter(observers...),
+	}
 }
 
-func (t *tracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
-	s := observer.NewScope(observer.ScopeID{
+func (t *tracer) WithResources(attributes ...core.KeyValue) trace.Tracer {
+	s := t.exporter.NewScope(exporter.ScopeID{
 		EventID: t.resources,
 	}, attributes...)
 	return &tracer{
+		exporter:  t.exporter,
 		resources: s.EventID,
 	}
 }
 
-func (t *tracer) WithComponent(name string) apitrace.Tracer {
+func (t *tracer) WithComponent(name string) trace.Tracer {
 	return t.WithResources(ComponentKey.String(name))
 }
 
-func (t *tracer) WithService(name string) apitrace.Tracer {
+func (t *tracer) WithService(name string) trace.Tracer {
 	return t.WithResources(ServiceKey.String(name))
 }
 
@@ -74,23 +77,23 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	return nil
 }
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOption) (context.Context, apitrace.Span) {
+func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
 	var child core.SpanContext
 
 	child.SpanID = rand.Uint64()
 
-	o := &apitrace.SpanOptions{}
+	o := &trace.SpanOptions{}
 
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	var parentScope observer.ScopeID
+	var parentScope exporter.ScopeID
 
 	if o.Reference.HasTraceID() {
 		parentScope.SpanContext = o.Reference.SpanContext
 	} else {
-		parentScope.SpanContext = apitrace.CurrentSpan(ctx).SpanContext()
+		parentScope.SpanContext = trace.CurrentSpan(ctx).SpanContext()
 	}
 
 	if parentScope.HasTraceID() {
@@ -102,19 +105,19 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...apitrace.SpanOp
 		child.TraceID.Low = rand.Uint64()
 	}
 
-	childScope := observer.ScopeID{
+	childScope := exporter.ScopeID{
 		SpanContext: child,
 		EventID:     t.resources,
 	}
 
 	span := &span{
 		tracer: t,
-		initial: observer.ScopeID{
+		initial: exporter.ScopeID{
 			SpanContext: child,
-			EventID: observer.Record(observer.Event{
+			EventID: t.exporter.Record(exporter.Event{
 				Time:    o.StartTime,
-				Type:    observer.START_SPAN,
-				Scope:   observer.NewScope(childScope, o.Attributes...),
+				Type:    exporter.START_SPAN,
+				Scope:   t.exporter.NewScope(childScope, o.Attributes...),
 				Context: ctx,
 				Parent:  parentScope,
 				String:  name,

@@ -3,7 +3,8 @@ ALL_PKGS := $(shell go list ./...)
 EXAMPLES := \
 	./example/basic \
 	./example/http/client \
-	./example/http/server
+	./example/http/server \
+	./experimental/streaming/example/basic
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)

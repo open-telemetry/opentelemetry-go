@@ -22,13 +22,13 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/tag"
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/experimental/streaming/exporter/observer"
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
 type span struct {
 	tracer  *tracer
-	initial observer.ScopeID
+	initial exporter.ScopeID
 }
 
 // SpancContext returns span context of the span. Return SpanContext is usable
@@ -44,58 +44,58 @@ func (sp *span) IsRecordingEvents() bool {
 
 // SetStatus sets the status of the span.
 func (sp *span) SetStatus(status codes.Code) {
-	observer.Record(observer.Event{
-		Type:   observer.SET_STATUS,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:   exporter.SET_STATUS,
 		Scope:  sp.ScopeID(),
 		Status: status,
 	})
 }
 
-func (sp *span) ScopeID() observer.ScopeID {
+func (sp *span) ScopeID() exporter.ScopeID {
 	return sp.initial
 }
 
 func (sp *span) SetAttribute(attribute core.KeyValue) {
-	observer.Record(observer.Event{
-		Type:      observer.MODIFY_ATTR,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:      exporter.MODIFY_ATTR,
 		Scope:     sp.ScopeID(),
 		Attribute: attribute,
 	})
 }
 
 func (sp *span) SetAttributes(attributes ...core.KeyValue) {
-	observer.Record(observer.Event{
-		Type:       observer.MODIFY_ATTR,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:       exporter.MODIFY_ATTR,
 		Scope:      sp.ScopeID(),
 		Attributes: attributes,
 	})
 }
 
 func (sp *span) ModifyAttribute(mutator tag.Mutator) {
-	observer.Record(observer.Event{
-		Type:    observer.MODIFY_ATTR,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:    exporter.MODIFY_ATTR,
 		Scope:   sp.ScopeID(),
 		Mutator: mutator,
 	})
 }
 
 func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
-	observer.Record(observer.Event{
-		Type:     observer.MODIFY_ATTR,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:     exporter.MODIFY_ATTR,
 		Scope:    sp.ScopeID(),
 		Mutators: mutators,
 	})
 }
 
-func (sp *span) Finish(options ...apitrace.FinishOption) {
+func (sp *span) Finish(options ...trace.FinishOption) {
 	recovered := recover()
-	opts := apitrace.FinishOptions{}
+	opts := trace.FinishOptions{}
 	for _, opt := range options {
 		opt(&opts)
 	}
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(exporter.Event{
 		Time:      opts.FinishTime,
-		Type:      observer.FINISH_SPAN,
+		Type:      exporter.FINISH_SPAN,
 		Scope:     sp.ScopeID(),
 		Recovered: recovered,
 	})
@@ -104,7 +104,7 @@ func (sp *span) Finish(options ...apitrace.FinishOption) {
 	}
 }
 
-func (sp *span) Tracer() apitrace.Tracer {
+func (sp *span) Tracer() trace.Tracer {
 	return sp.tracer
 }
 
@@ -113,9 +113,9 @@ func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 }
 
 func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
-	observer.Record(observer.Event{
+	sp.tracer.exporter.Record(exporter.Event{
 		Time:       timestamp,
-		Type:       observer.ADD_EVENT,
+		Type:       exporter.ADD_EVENT,
 		String:     msg,
 		Attributes: attrs,
 		Context:    ctx,
@@ -123,13 +123,13 @@ func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg s
 }
 
 func (sp *span) SetName(name string) {
-	observer.Record(observer.Event{
-		Type:   observer.SET_NAME,
+	sp.tracer.exporter.Record(exporter.Event{
+		Type:   exporter.SET_NAME,
 		String: name,
 	})
 }
 
-func (sp *span) AddLink(link apitrace.Link) {
+func (sp *span) AddLink(link trace.Link) {
 }
 
 func (sp *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
