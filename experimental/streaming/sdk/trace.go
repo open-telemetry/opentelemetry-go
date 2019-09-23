@@ -22,11 +22,12 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/observer"
 )
 
 type tracer struct {
-	exporter  *observer.Exporter
+	exporter  *exporter.Exporter
 	resources observer.EventID
 }
 

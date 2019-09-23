@@ -7,3 +7,4 @@ coverage.*
 /example/basic/basic
 /example/http/client/client
 /example/http/server/server
+/experimental/streaming/example/basic/basic
