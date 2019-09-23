@@ -49,7 +49,3 @@ func (NoopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (c
 	span := NoopSpan{}
 	return SetCurrentSpan(ctx, span), span
 }
-
-// Inject does nothing.
-func (NoopTracer) Inject(ctx context.Context, span Span, injector Injector) {
-}

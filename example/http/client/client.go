@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/plugin/httptrace"
 	"io/ioutil"
 	"net/http"
 
@@ -25,7 +26,6 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/plugin/httptrace"
 )
 
 var (
@@ -50,9 +50,8 @@ func main() {
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
-			ctx, req, inj := httptrace.W3C(ctx, req)
-
-			trace.Inject(ctx, inj)
+			ctx, req = httptrace.W3C(ctx, req)
+			httptrace.Inject(ctx, req)
 
 			res, err := client.Do(req)
 			if err != nil {

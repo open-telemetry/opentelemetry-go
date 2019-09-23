@@ -44,9 +44,6 @@ type Tracer interface {
 
 	// WithResources attaches resource attributes to the Tracer.
 	WithResources(res ...core.KeyValue) Tracer
-
-	// Note: see https://github.com/opentracing/opentracing-go/issues/127
-	Inject(context.Context, Span, Injector)
 }
 
 type FinishOptions struct {
@@ -102,13 +99,6 @@ type Span interface {
 	ModifyAttributes(...tag.Mutator)
 }
 
-type Injector interface {
-	// Inject serializes span context and tag.Map and inserts them in to
-	// carrier associated with the injector. For example in case of http request,
-	// span context could added to the request (carrier) as W3C Trace context header.
-	Inject(core.SpanContext, tag.Map)
-}
-
 // SpanOption apply changes to SpanOptions.
 type SpanOption func(*SpanOptions)
 
@@ -155,18 +145,6 @@ type Link struct {
 // Start starts a new span using registered global tracer.
 func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	return GlobalTracer().Start(ctx, name, opts...)
-}
-
-// Inject is convenient function to inject current span context using injector.
-// Injector is expected to serialize span context and inject it in to a carrier.
-// An example of a carrier is http request.
-func Inject(ctx context.Context, injector Injector) {
-	span := CurrentSpan(ctx)
-	if span == nil {
-		return
-	}
-
-	span.Tracer().Inject(ctx, span, injector)
 }
 
 // WithStartTime sets the start time of the span to provided time t, when it is started.

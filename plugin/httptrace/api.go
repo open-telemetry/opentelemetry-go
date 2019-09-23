@@ -18,12 +18,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptrace"
-
-	"go.opentelemetry.io/api/trace"
 )
 
 // Client
-func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request, trace.Injector) {
+func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request) {
 	t := newClientTracer(ctx)
 
 	t.GetConn = t.getConn
@@ -45,5 +43,5 @@ func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request
 
 	ctx = httptrace.WithClientTrace(ctx, &t.ClientTrace)
 	req = req.WithContext(ctx)
-	return ctx, req, hinjector{req}
+	return ctx, req
 }
