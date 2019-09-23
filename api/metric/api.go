@@ -90,8 +90,8 @@ type Instrument struct {
 	// NonMonotonic implies this is an up-down Counter.
 	NonMonotonic bool
 
-	// Unidirectional implies this is a non-descending Gauge.
-	Unidirectional bool
+	// Monotonic implies this is a non-descending Gauge.
+	Monotonic bool
 
 	// NonNegative implies this is a non-negative Measure.
 	NonNegative bool
@@ -141,10 +141,10 @@ func WithNonMonotonic(nm bool) Option {
 	}
 }
 
-// WithUnidirectional sets whether a gauge is not permitted to go down.
-func WithUnidirectional(uni bool) Option {
+// WithMonotonic sets whether a gauge is not permitted to go down.
+func WithMonotonic(m bool) Option {
 	return func(inst *Instrument) {
-		inst.Unidirectional = uni
+		inst.Monotonic = m
 	}
 }
 
