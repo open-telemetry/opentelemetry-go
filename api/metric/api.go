@@ -87,8 +87,8 @@ type Instrument struct {
 	// Kind is the metric kind of this instrument.
 	Kind Kind
 
-	// Bidirectional implies this is an up-down Counter.
-	Bidirectional bool
+	// NonMonotonic implies this is an up-down Counter.
+	NonMonotonic bool
 
 	// Unidirectional implies this is a non-descending Gauge.
 	Unidirectional bool
@@ -134,10 +134,10 @@ func WithUnit(unit unit.Unit) Option {
 	}
 }
 
-// WithBidirectional sets whether a counter is permitted to go up AND down.
-func WithBidirectional(bi bool) Option {
+// WithNonMonotonic sets whether a counter is permitted to go up AND down.
+func WithNonMonotonic(nm bool) Option {
 	return func(inst *Instrument) {
-		inst.Bidirectional = bi
+		inst.NonMonotonic = nm
 	}
 }
 
