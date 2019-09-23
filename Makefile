@@ -8,7 +8,7 @@ EXAMPLES := \
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 # All directories with go.mod files. Used in go mod tidy.
-ALL_GO_MOD_DIRS := $(shell find . -name 'go.mod' -printf "%h\n" | sort)
+ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 GOTEST=go test
 GOTEST_OPT?=-v -race -timeout 30s
