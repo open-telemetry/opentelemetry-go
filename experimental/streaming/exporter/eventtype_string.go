@@ -4,6 +4,24 @@ package exporter
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[INVALID-0]
+	_ = x[START_SPAN-1]
+	_ = x[FINISH_SPAN-2]
+	_ = x[ADD_EVENT-3]
+	_ = x[ADD_EVENTF-4]
+	_ = x[NEW_SCOPE-5]
+	_ = x[NEW_MEASURE-6]
+	_ = x[NEW_METRIC-7]
+	_ = x[MODIFY_ATTR-8]
+	_ = x[RECORD_STATS-9]
+	_ = x[SET_STATUS-10]
+	_ = x[SET_NAME-11]
+}
+
 const _EventType_name = "INVALIDSTART_SPANFINISH_SPANADD_EVENTADD_EVENTFNEW_SCOPENEW_MEASURENEW_METRICMODIFY_ATTRRECORD_STATSSET_STATUSSET_NAME"
 
 var _EventType_index = [...]uint8{0, 7, 17, 28, 37, 47, 56, 67, 77, 88, 100, 110, 118}

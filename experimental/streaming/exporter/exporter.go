@@ -5,10 +5,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/stats"
 	"go.opentelemetry.io/api/tag"
-	"google.golang.org/grpc/codes"
 )
 
 type EventType int
