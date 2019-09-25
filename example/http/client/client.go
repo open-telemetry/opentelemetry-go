@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/plugin/httptrace"
 	"io/ioutil"
 	"net/http"
 
@@ -26,6 +25,7 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/plugin/httptrace"
 )
 
 var (
