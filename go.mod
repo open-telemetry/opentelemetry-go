@@ -8,6 +8,7 @@ require (
 	github.com/golangci/golangci-lint v1.18.0
 	github.com/google/go-cmp v0.3.0
 	github.com/hashicorp/golang-lru v0.5.3
+	github.com/opentracing/opentracing-go v1.1.1-0.20190913142402-a7454ce5950e
 	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72
 	google.golang.org/api v0.9.0
 	google.golang.org/grpc v1.22.1

@@ -3,6 +3,7 @@ package trace_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
@@ -106,6 +107,10 @@ func (mockSpan) Tracer() trace.Tracer {
 
 // Event does nothing.
 func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+}
+
+// AddEventWithTimestamp does nothing.
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 }
 
 // AddLink does nothing.

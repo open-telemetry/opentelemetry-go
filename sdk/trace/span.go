@@ -158,6 +158,13 @@ func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
 	s.addEventWithTimestamp(time.Now(), msg, attrs...)
 }
 
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+	if !s.IsRecordingEvents() {
+		return
+	}
+	s.addEventWithTimestamp(timestamp, msg, attrs...)
+}
+
 func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

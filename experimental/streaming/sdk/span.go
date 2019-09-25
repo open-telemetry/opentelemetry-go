@@ -112,6 +112,10 @@ func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 	sp.addEventWithTime(ctx, time.Time{}, msg, attrs...)
 }
 
+func (sp *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+	sp.addEventWithTime(ctx, timestamp, msg, attrs...)
+}
+
 func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	sp.tracer.exporter.Record(exporter.Event{
 		Time:       timestamp,
