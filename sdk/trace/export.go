@@ -25,6 +25,16 @@ import (
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
+// BatchExporter is a type for functions that receive sampled trace spans.
+//
+// The ExportSpans method is called asynchronously. However BatchExporter should
+// not take forever to process the spans.
+//
+// The SpanData should not be modified.
+type BatchExporter interface {
+	ExportSpans(sds []*SpanData)
+}
+
 // Exporter is a type for functions that receive sampled trace spans.
 //
 // The ExportSpan method should be safe for concurrent use and should return
@@ -47,6 +57,7 @@ var (
 // trace spans.
 //
 // Binaries can register exporters, libraries shouldn't register exporters.
+// TODO(rghetia) : Remove it.
 func RegisterExporter(e Exporter) {
 	exporterMu.Lock()
 	defer exporterMu.Unlock()
