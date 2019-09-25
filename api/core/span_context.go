@@ -24,19 +24,19 @@ type TraceID struct {
 }
 
 const (
-	traceOptionBitMaskSampled = byte(0x01)
-	traceOptionBitMaskUnused  = byte(0xFE)
+	traceFlagsBitMaskSampled = byte(0x01)
+	traceFlagsBitMaskUnused  = byte(0xFE)
 
-	// TraceOptionSampled is a byte with sampled bit set. It is a convenient value initialize
-	// SpanContext when a trace is sampled.
-	TraceOptionSampled = traceOptionBitMaskSampled
-	TraceOptionUnused  = traceOptionBitMaskUnused
+	// TraceFlagsSampled is a byte with sampled bit set. It is a convenient value initializer
+	// for SpanContext TraceFlags field when a trace is sampled.
+	TraceFlagsSampled = traceFlagsBitMaskSampled
+	TraceFlagsUnused  = traceFlagsBitMaskUnused
 )
 
 type SpanContext struct {
-	TraceID      TraceID
-	SpanID       uint64
-	TraceOptions byte
+	TraceID    TraceID
+	SpanID     uint64
+	TraceFlags byte
 }
 
 // EmptySpanContext is meant for internal use to return invalid span context during error conditions.
@@ -67,5 +67,5 @@ func (sc SpanContext) TraceIDString() string {
 }
 
 func (sc SpanContext) IsSampled() bool {
-	return sc.TraceOptions&traceOptionBitMaskSampled == traceOptionBitMaskSampled
+	return sc.TraceFlags&traceFlagsBitMaskSampled == traceFlagsBitMaskSampled
 }

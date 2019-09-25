@@ -134,9 +134,9 @@ func TestRecordingIsOff(t *testing.T) {
 
 func TestStartSpanWithChildOf(t *testing.T) {
 	sc1 := core.SpanContext{
-		TraceID:      tid,
-		SpanID:       sid,
-		TraceOptions: 0x0,
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x0,
 	}
 	_, s1 := apitrace.GlobalTracer().Start(context.Background(), "span1-unsampled-parent1", apitrace.ChildOf(sc1))
 	if err := checkChild(sc1, s1); err != nil {
@@ -149,9 +149,9 @@ func TestStartSpanWithChildOf(t *testing.T) {
 	}
 
 	sc2 := core.SpanContext{
-		TraceID:      tid,
-		SpanID:       sid,
-		TraceOptions: 0x1,
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
 	_, s3 := apitrace.GlobalTracer().Start(context.Background(), "span3-sampled-parent2", apitrace.ChildOf(sc2))
@@ -183,8 +183,8 @@ func TestSetSpanAttributes(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
@@ -215,8 +215,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
@@ -262,8 +262,8 @@ func TestEvents(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
 		Name:            "span0",
@@ -309,8 +309,8 @@ func TestEventsOverLimit(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
@@ -346,8 +346,8 @@ func TestAddLinks(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
 		Name:            "span0",
@@ -383,8 +383,8 @@ func TestLinks(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
 		Name:            "span0",
@@ -421,8 +421,8 @@ func TestLinksOverLimit(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
@@ -442,9 +442,9 @@ func TestSetSpanName(t *testing.T) {
 	want := "SpanName-1"
 	_, span := apitrace.GlobalTracer().Start(context.Background(), want,
 		apitrace.ChildOf(core.SpanContext{
-			TraceID:      tid,
-			SpanID:       sid,
-			TraceOptions: 1,
+			TraceID:    tid,
+			SpanID:     sid,
+			TraceFlags: 1,
 		}),
 	)
 	got, err := endSpan(span)
@@ -467,8 +467,8 @@ func TestSetSpanStatus(t *testing.T) {
 
 	want := &SpanData{
 		SpanContext: core.SpanContext{
-			TraceID:      tid,
-			TraceOptions: 0x1,
+			TraceID:    tid,
+			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
 		Name:            "span0",
@@ -494,9 +494,9 @@ func TestUnregisterExporter(t *testing.T) {
 
 func remoteSpanContext() core.SpanContext {
 	return core.SpanContext{
-		TraceID:      tid,
-		SpanID:       sid,
-		TraceOptions: 1,
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 1,
 	}
 }
 
@@ -513,7 +513,7 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 	if childID, parentID := s.spanContext.SpanIDString(), p.SpanIDString(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
-	if got, want := s.spanContext.TraceOptions, p.TraceOptions; got != want {
+	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
 	// TODO [rgheita] : Fix tracestate test
@@ -531,7 +531,7 @@ func startSpan() apitrace.Span {
 
 // startNamed Span is a test utility func that starts a span with a
 // passed name and with ChildOf option.  remote span context contains
-// traceoption with sampled bit set. This allows the span to be
+// TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
 func startNamedSpan(name string) apitrace.Span {
 	_, span := apitrace.GlobalTracer().Start(
@@ -695,9 +695,9 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		"foo",
 		apitrace.ChildOf(
 			core.SpanContext{
-				TraceID:      core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f},
-				SpanID:       uint64(0x0001020304050607),
-				TraceOptions: 0,
+				TraceID:    core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f},
+				SpanID:     uint64(0x0001020304050607),
+				TraceFlags: 0,
 			},
 		),
 	)

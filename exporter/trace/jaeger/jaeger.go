@@ -211,7 +211,7 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 		SpanId:        int64(data.SpanContext.SpanID),
 		ParentSpanId:  int64(data.ParentSpanID),
 		OperationName: data.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
-		Flags:         int32(data.SpanContext.TraceOptions),
+		Flags:         int32(data.SpanContext.TraceFlags),
 		StartTime:     data.StartTime.UnixNano() / 1000,
 		Duration:      data.EndTime.Sub(data.StartTime).Nanoseconds() / 1000,
 		Tags:          tags,

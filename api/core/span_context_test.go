@@ -193,7 +193,7 @@ func TestSpanContextIsSampled(t *testing.T) {
 					High: uint64(42),
 					Low:  uint64(42),
 				},
-				TraceOptions: core.TraceOptionSampled,
+				TraceFlags: core.TraceFlagsSampled,
 			},
 			want: true,
 		}, {
@@ -203,7 +203,7 @@ func TestSpanContextIsSampled(t *testing.T) {
 					High: uint64(42),
 					Low:  uint64(42),
 				},
-				TraceOptions: core.TraceOptionSampled | core.TraceOptionUnused,
+				TraceFlags: core.TraceFlagsSampled | core.TraceFlagsUnused,
 			},
 			want: true,
 		}, {
