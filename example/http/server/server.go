@@ -16,24 +16,43 @@ package main
 
 import (
 	"io"
+	"log"
 	"net/http"
 
-	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/exporter/trace/jaeger"
 	"go.opentelemetry.io/plugin/httptrace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
-var (
-	tracer = trace.GlobalTracer().
-		WithService("server").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("nooooo"),
-		)
-)
+func initTracer() {
+	sdktrace.Register()
+
+	// Create Jaeger exporter to be able to retrieve
+	// the collected spans.
+	exporter, err := jaeger.NewExporter(jaeger.Options{
+		CollectorEndpoint: "http://localhost:14268/api/traces",
+		Process: jaeger.Process{
+			ServiceName: "trace-demo",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Wrap Jaeger exporter with SimpleSpanProcessor and register the processor.
+	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
+	sdktrace.RegisterSpanProcessor(ssp)
+
+	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
+	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+}
 
 func main() {
+	initTracer()
+
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
@@ -41,7 +60,7 @@ func main() {
 			MultiKV: tags,
 		})))
 
-		ctx, span := tracer.Start(
+		ctx, span := trace.GlobalTracer().Start(
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),

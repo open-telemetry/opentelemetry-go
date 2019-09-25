@@ -18,27 +18,49 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
+
 	"net/http"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/exporter/trace/jaeger"
 	"go.opentelemetry.io/plugin/httptrace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
-var (
-	tracer = trace.GlobalTracer().
-		WithService("client").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("yesss"),
-		)
-)
+func initTracer() {
+	// Register SDK as trace provider.
+	sdktrace.Register()
+
+	// Create Jaeger exporter to be able to retrieve
+	// the collected spans.
+	exporter, err := jaeger.NewExporter(jaeger.Options{
+		CollectorEndpoint: "http://localhost:14268/api/traces",
+		Process: jaeger.Process{
+			ServiceName: "trace-demo",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Wrap Jaeger exporter with SimpleSpanProcessor and register the processor.
+	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
+	sdktrace.RegisterSpanProcessor(ssp)
+
+	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
+	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+}
 
 func main() {
-	fmt.Printf("Tracer %v\n", tracer)
+	initTracer()
+
 	client := http.DefaultClient
 	ctx := tag.NewContext(context.Background(),
 		tag.Insert(key.New("username").String("donuts")),
@@ -46,13 +68,14 @@ func main() {
 
 	var body []byte
 
-	err := tracer.WithSpan(ctx, "say hello",
+	err := trace.GlobalTracer().WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
 			ctx, req = httptrace.W3C(ctx, req)
 			httptrace.Inject(ctx, req)
 
+			fmt.Printf("Sending request...\n")
 			res, err := client.Do(req)
 			if err != nil {
 				panic(err)
@@ -68,5 +91,8 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%s", body)
+	fmt.Printf("Response Received: %s\n\n\n", body)
+	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
+	time.Sleep(10 * time.Second)
+	fmt.Printf("Check traces on http://localhost:16686\n")
 }

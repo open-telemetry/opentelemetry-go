@@ -22,13 +22,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
-
-	"google.golang.org/grpc/codes"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"google.golang.org/api/support/bundler"
+	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/sdk/trace"
 )
@@ -165,38 +164,33 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 
 func spanDataToThrift(data *trace.SpanData) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(data.Attributes))
-	for k, v := range data.Attributes {
-		tag := attributeToTag(k, v)
-		if tag != nil {
-			tags = append(tags, tag)
-		}
+	for _, kv := range data.Attributes {
+		tag := coreAttributeToTag(kv)
+		tags = append(tags, tag)
 	}
 
-	tags = append(tags,
-		attributeToTag("status.code", int32(data.Status)),
-		attributeToTag("status.message", data.Status.String()),
+	tags = append(tags, getInt64Tag("status.code", int64(data.Status)),
+		getStringTag("status.message", data.Status.String()),
 	)
 
 	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
 	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
 	if data.Status != codes.OK {
-		tags = append(tags, attributeToTag("error", true))
+		tags = append(tags, getBoolTag("error", true))
 	}
 
 	var logs []*gen.Log
 	for _, a := range data.MessageEvents {
 		fields := make([]*gen.Tag, 0, len(a.Attributes))
 		for _, kv := range a.Attributes {
-			tag := attributeToTag(kv.Key.Name, kv.Value.Emit())
+			tag := coreAttributeToTag(kv)
 			if tag != nil {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, attributeToTag("message", a.Message))
+		fields = append(fields, getStringTag("message", a.Message))
 		logs = append(logs, &gen.Log{
-			//Timestamp: a.Time.UnixNano() / 1000,
-			//TODO: [rghetia] update when time is supported in the event.
-			Timestamp: time.Now().UnixNano() / 1000,
+			Timestamp: a.Time.UnixNano() / 1000,
 			Fields:    fields,
 		})
 	}
@@ -224,6 +218,61 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 		Logs:          logs,
 		// TODO: goes with Links.
 		// References:    refs,
+	}
+}
+
+func coreAttributeToTag(kv core.KeyValue) *gen.Tag {
+	var tag *gen.Tag
+	switch kv.Value.Type {
+	case core.STRING:
+		tag = &gen.Tag{
+			Key:   kv.Key.Name,
+			VStr:  &kv.Value.String,
+			VType: gen.TagType_STRING,
+		}
+	case core.BOOL:
+		tag = &gen.Tag{
+			Key:   kv.Key.Name,
+			VBool: &kv.Value.Bool,
+			VType: gen.TagType_BOOL,
+		}
+	case core.INT32, core.INT64:
+		tag = &gen.Tag{
+			Key:   kv.Key.Name,
+			VLong: &kv.Value.Int64,
+			VType: gen.TagType_LONG,
+		}
+	case core.FLOAT32, core.FLOAT64:
+		tag = &gen.Tag{
+			Key:     kv.Key.Name,
+			VDouble: &kv.Value.Float64,
+			VType:   gen.TagType_DOUBLE,
+		}
+	}
+	return tag
+}
+
+func getInt64Tag(k string, i int64) *gen.Tag {
+	return &gen.Tag{
+		Key:   k,
+		VLong: &i,
+		VType: gen.TagType_LONG,
+	}
+}
+
+func getStringTag(k, s string) *gen.Tag {
+	return &gen.Tag{
+		Key:   k,
+		VStr:  &s,
+		VType: gen.TagType_STRING,
+	}
+}
+
+func getBoolTag(k string, b bool) *gen.Tag {
+	return &gen.Tag{
+		Key:   k,
+		VBool: &b,
+		VType: gen.TagType_BOOL,
 	}
 }
 
