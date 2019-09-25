@@ -5,8 +5,8 @@ This is a simple example that demonstrates tracing http request from client to s
 shows key aspects of tracing such as 
 - Root Span (on Client)
 - Child Span (on Client)
-- Propagating SpanContext (from Client to Server)
 - Child Span from a Remote Parent (on Server)
+- SpanContext Propagation (from Client to Server)
 - Span Events
 - Span Attributes
 
@@ -60,6 +60,6 @@ go run ./client/client.go
 Click on http://localhost:16686  
 Click on 'Find' to see traces.
 
-[Sample Snapshot](images/JaegarTraceExample.png)
+[Sample Snapshot](http/images/JaegarTraceExample.png)
 
 
