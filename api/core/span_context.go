@@ -27,8 +27,8 @@ const (
 	traceFlagsBitMaskSampled = byte(0x01)
 	traceFlagsBitMaskUnused  = byte(0xFE)
 
-	// TraceFlagsSampled is a byte with sampled bit set. It is a convenient value initialize
-	// SpanContext when a trace is sampled.
+	// TraceFlagsSampled is a byte with sampled bit set. It is a convenient value initializer
+	// for SpanContext TraceFlags field when a trace is sampled.
 	TraceFlagsSampled = traceFlagsBitMaskSampled
 	TraceFlagsUnused  = traceFlagsBitMaskUnused
 )
