@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 
 	// TODO this should not be an SDK dependency; move conventional tags into the API.
@@ -37,7 +38,10 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			if skipIf && data.Attributes.HasValue(kv.Key) {
 				return true
 			}
-			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" ")
+			buf.WriteString(kv.Key.Name)
+			buf.WriteString("=")
+			buf.WriteString(kv.Value.Emit())
 			return true
 		}
 	}
@@ -46,7 +50,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 	buf.WriteString(" ")
 
 	switch data.Type {
-	case reader.START_SPAN:
+	case exporter.START_SPAN:
 		buf.WriteString("start ")
 		buf.WriteString(data.Name)
 
@@ -61,7 +65,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			buf.WriteString(" >")
 		}
 
-	case reader.FINISH_SPAN:
+	case exporter.FINISH_SPAN:
 		buf.WriteString("finish ")
 		buf.WriteString(data.Name)
 
@@ -69,19 +73,23 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(data.Duration.String())
 		buf.WriteString(")")
 
-	case reader.ADD_EVENT:
+	case exporter.ADD_EVENT:
 		buf.WriteString("event: ")
 		buf.WriteString(data.Message)
 		buf.WriteString(" (")
 		data.Attributes.Foreach(func(kv core.KeyValue) bool {
-			buf.WriteString(" " + kv.Key.Name + "=" + kv.Value.Emit())
+			buf.WriteString(" ")
+			buf.WriteString(kv.Key.Name)
+			buf.WriteString("=")
+			buf.WriteString(kv.Value.Emit())
 			return true
 		})
 		buf.WriteString(")")
 
-	case reader.MODIFY_ATTR:
-		buf.WriteString("modify attr")
-	case reader.RECORD_STATS:
+	case exporter.MODIFY_ATTR:
+		buf.WriteString("modify attr ")
+		buf.WriteString(data.Type.String())
+	case exporter.RECORD_STATS:
 		buf.WriteString("record")
 
 		for _, s := range data.Stats {
@@ -103,11 +111,12 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			})
 			buf.WriteString("}")
 		}
-	case reader.SET_STATUS:
+
+	case exporter.SET_STATUS:
 		buf.WriteString("set status ")
 		buf.WriteString(data.Status.String())
 
-	case reader.SET_NAME:
+	case exporter.SET_NAME:
 		buf.WriteString("set name ")
 		buf.WriteString(data.Name)
 

@@ -31,10 +31,8 @@ type Reader interface {
 	Read(Event)
 }
 
-type EventType int
-
 type Event struct {
-	Type        EventType
+	Type        exporter.EventType
 	Time        time.Time
 	Sequence    exporter.EventID
 	SpanContext core.SpanContext
@@ -94,17 +92,6 @@ type readerScope struct {
 	attributes tag.Map
 }
 
-const (
-	INVALID EventType = iota
-	START_SPAN
-	FINISH_SPAN
-	ADD_EVENT
-	MODIFY_ATTR
-	RECORD_STATS
-	SET_STATUS
-	SET_NAME
-)
-
 // NewReaderObserver returns an implementation that computes the
 // necessary state needed by a reader to process events in memory.
 // Practically, this means tracking live metric handles and scope
@@ -149,7 +136,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		span.readerScope.attributes = rattrs
 
 		read.Name = span.name
-		read.Type = START_SPAN
+		read.Type = exporter.START_SPAN
 		read.SpanContext = span.spanContext
 		read.Attributes = rattrs
 
@@ -177,7 +164,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		}
 
 		read.Name = span.name
-		read.Type = FINISH_SPAN
+		read.Type = exporter.FINISH_SPAN
 
 		read.Attributes = attrs
 		read.Duration = event.Time.Sub(span.start)
@@ -227,7 +214,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 			return
 		}
 
-		read.Type = MODIFY_ATTR
+		read.Type = exporter.MODIFY_ATTR
 		read.Attributes = sc.attributes
 
 		if span != nil {
@@ -254,7 +241,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		return
 
 	case exporter.ADD_EVENT:
-		read.Type = ADD_EVENT
+		read.Type = exporter.ADD_EVENT
 		read.Message = event.String
 
 		attrs, span := ro.readScope(event.Scope)
@@ -266,7 +253,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		}
 
 	case exporter.RECORD_STATS:
-		read.Type = RECORD_STATS
+		read.Type = exporter.RECORD_STATS
 
 		_, span := ro.readScope(event.Scope)
 		if span != nil {
@@ -280,7 +267,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		}
 
 	case exporter.SET_STATUS:
-		read.Type = SET_STATUS
+		read.Type = exporter.SET_STATUS
 		read.Status = event.Status
 		_, span := ro.readScope(event.Scope)
 		if span != nil {
@@ -289,7 +276,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		}
 
 	case exporter.SET_NAME:
-		read.Type = SET_NAME
+		read.Type = exporter.SET_NAME
 		read.Name = event.String
 
 	default:
