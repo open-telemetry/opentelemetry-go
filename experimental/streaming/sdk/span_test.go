@@ -35,14 +35,14 @@ func TestEvents(t *testing.T) {
 	_ = New(obs).WithSpan(context.Background(), "test", func(ctx context.Context) error {
 		type test1Type struct{}
 		type test2Type struct{}
-		span := trace.CurrentSpan(ctx)
+		sp := trace.CurrentSpan(ctx)
 		k1v1 := key.New("k1").String("v1")
 		k2v2 := key.New("k2").String("v2")
 		k3v3 := key.New("k3").String("v3")
 		ctx1 := context.WithValue(ctx, test1Type{}, 42)
-		span.AddEvent(ctx1, "one two three", k1v1)
+		sp.AddEvent(ctx1, "one two three", k1v1)
 		ctx2 := context.WithValue(ctx1, test2Type{}, "foo")
-		span.AddEvent(ctx2, "testing", k2v2, k3v3)
+		sp.AddEvent(ctx2, "testing", k2v2, k3v3)
 
 		got := obs.Events(exporter.ADD_EVENT)
 		for idx := range got {
@@ -54,16 +54,19 @@ func TestEvents(t *testing.T) {
 		if len(got) != 2 {
 			t.Errorf("Expected two events, got %d", len(got))
 		}
+		sdkSpan := sp.(*span)
 		want := []exporter.Event{
 			{
 				Type:       exporter.ADD_EVENT,
 				String:     "one two three",
 				Attributes: []core.KeyValue{k1v1},
+				Scope:      sdkSpan.ScopeID(),
 			},
 			{
 				Type:       exporter.ADD_EVENT,
 				String:     "testing",
 				Attributes: []core.KeyValue{k2v2, k3v3},
+				Scope:      sdkSpan.ScopeID(),
 			},
 		}
 		if diffEvents(t, got, want) {
