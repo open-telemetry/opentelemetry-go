@@ -47,7 +47,7 @@ func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			sc.TraceID.High,
 			sc.TraceID.Low,
 			sc.SpanID,
-			sc.TraceOptions&core.TraceOptionSampled)
+			sc.TraceFlags&core.TraceFlagsSampled)
 		supplier.Set(traceparentHeader, h)
 	}
 }
@@ -118,7 +118,7 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
 		return core.EmptySpanContext()
 	}
-	sc.TraceOptions = opts[0] &^ core.TraceOptionUnused
+	sc.TraceFlags = opts[0] &^ core.TraceFlagsUnused
 
 	if !sc.IsValid() {
 		return core.EmptySpanContext()

@@ -491,7 +491,7 @@ func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltra
 var (
 	traceIDHeader       = http.CanonicalHeaderKey("x-otelbridge-trace-id")
 	spanIDHeader        = http.CanonicalHeaderKey("x-otelbridge-span-id")
-	traceOptionsHeader  = http.CanonicalHeaderKey("x-otelbridge-trace-options")
+	traceFlagsHeader    = http.CanonicalHeaderKey("x-otelbridge-trace-flags")
 	baggageHeaderPrefix = http.CanonicalHeaderKey("x-otelbridge-baggage-")
 )
 
@@ -516,7 +516,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	hhcarrier.Set(traceIDHeader, traceIDString(bridgeSC.otelSpanContext.TraceID))
 	hhcarrier.Set(spanIDHeader, spanIDToString(bridgeSC.otelSpanContext.SpanID))
-	hhcarrier.Set(traceOptionsHeader, traceOptionsToString(bridgeSC.otelSpanContext.TraceOptions))
+	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
 	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
 		// we assume that keys are already canonicalized
 		hhcarrier.Set(baggageHeaderPrefix+k, v)
@@ -535,9 +535,9 @@ func spanIDToString(spanID uint64) string {
 	return fmt.Sprintf("%.16x", spanID)
 }
 
-func traceOptionsToString(opts byte) string {
+func traceFlagsToString(opts byte) string {
 	var parts []string
-	if opts&otelcore.TraceOptionSampled == otelcore.TraceOptionSampled {
+	if opts&otelcore.TraceFlagsSampled == otelcore.TraceFlagsSampled {
 		parts = append(parts, "sampled")
 	}
 	return strings.Join(parts, ",")
@@ -571,8 +571,8 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 				return err
 			}
 			bridgeSC.otelSpanContext.SpanID = spanID
-		case traceOptionsHeader:
-			bridgeSC.otelSpanContext.TraceOptions = stringToTraceOptions(v)
+		case traceFlagsHeader:
+			bridgeSC.otelSpanContext.TraceFlags = stringToTraceFlags(v)
 		default:
 			if strings.HasPrefix(ck, baggageHeaderPrefix) {
 				bk := strings.TrimPrefix(ck, baggageHeaderPrefix)
@@ -614,12 +614,12 @@ func spanIDFromString(s string) (uint64, error) {
 	return strconv.ParseUint(s, 16, 64)
 }
 
-func stringToTraceOptions(s string) byte {
+func stringToTraceFlags(s string) byte {
 	var opts byte
 	for _, part := range strings.Split(s, ",") {
 		switch part {
 		case "sampled":
-			opts |= otelcore.TraceOptionSampled
+			opts |= otelcore.TraceFlagsSampled
 		}
 	}
 	return opts

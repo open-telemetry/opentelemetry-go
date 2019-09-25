@@ -374,7 +374,7 @@ func makeSamplingDecision(data samplingData) {
 	if data.noParent || data.remoteParent {
 		// If this span is the child of a local span and no
 		// Sampler is set in the options, keep the parent's
-		// TraceOptions.
+		// TraceFlags.
 		//
 		// Otherwise, consult the Sampler in the options if it
 		// is non-nil, otherwise the default sampler.
@@ -390,9 +390,9 @@ func makeSamplingDecision(data samplingData) {
 			Name:            data.name,
 			HasRemoteParent: data.remoteParent}).Sample
 		if sampled {
-			spanContext.TraceOptions |= core.TraceOptionSampled
+			spanContext.TraceFlags |= core.TraceFlagsSampled
 		} else {
-			spanContext.TraceOptions &^= core.TraceOptionSampled
+			spanContext.TraceFlags &^= core.TraceFlagsSampled
 		}
 	}
 }

@@ -98,9 +98,9 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		startTime = time.Now()
 	}
 	spanContext := otelcore.SpanContext{
-		TraceID:      t.getTraceID(ctx, &spanOpts),
-		SpanID:       t.getSpanID(),
-		TraceOptions: 0,
+		TraceID:    t.getTraceID(ctx, &spanOpts),
+		SpanID:     t.getSpanID(),
+		TraceFlags: 0,
 	}
 	span := &MockSpan{
 		mockTracer:     t,

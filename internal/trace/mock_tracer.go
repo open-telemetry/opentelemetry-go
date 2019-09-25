@@ -76,7 +76,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 			},
 		}
 		if mt.Sampled {
-			sc.TraceOptions = core.TraceOptionSampled
+			sc.TraceFlags = core.TraceFlagsSampled
 		}
 	} else {
 		sc = opts.Reference.SpanContext
