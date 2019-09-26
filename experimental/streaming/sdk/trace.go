@@ -67,7 +67,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	// TODO: use runtime/trace.WithRegion for execution tracer support
 	// TODO: use runtime/pprof.Do for profile tags support
 	ctx, span := t.Start(ctx, name)
-	defer span.Finish()
+	defer span.End()
 
 	if err := body(ctx); err != nil {
 		span.SetAttribute(ErrorKey.Bool(true))

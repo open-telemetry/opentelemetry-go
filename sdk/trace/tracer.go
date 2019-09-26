@@ -76,7 +76,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
 	ctx, span := tr.Start(ctx, name)
-	defer span.Finish()
+	defer span.End()
 
 	if err := body(ctx); err != nil {
 		// TODO: set event with boolean attribute for error.

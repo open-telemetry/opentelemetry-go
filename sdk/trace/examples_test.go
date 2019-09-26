@@ -27,7 +27,7 @@ import (
 func ExampleStart() {
 	printEvens := func(ctx context.Context) {
 		_, span := trace.GlobalTracer().Start(ctx, "my/package.Function")
-		defer span.Finish()
+		defer span.End()
 
 		for i := 0; i < 10; i++ {
 			if i%2 == 0 {

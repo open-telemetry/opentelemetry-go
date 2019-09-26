@@ -70,7 +70,7 @@ func (ct *clientTracer) close(name string) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if s, ok := ct.levels[name]; ok {
-		s.Finish()
+		s.End()
 		delete(ct.levels, name)
 	} else {
 		panic(fmt.Sprintf("failed to find span %s in levels.", name))

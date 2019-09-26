@@ -89,7 +89,7 @@ func TestCustomStartEndTime(t *testing.T) {
 		"testspan",
 		trace.WithStartTime(startTime),
 	)
-	span.Finish(trace.WithFinishTime(endTime))
+	span.End(trace.WithEndTime(endTime))
 	want := []exporter.Event{
 		{
 			Type:   exporter.START_SPAN,
@@ -97,11 +97,11 @@ func TestCustomStartEndTime(t *testing.T) {
 			String: "testspan",
 		},
 		{
-			Type: exporter.FINISH_SPAN,
+			Type: exporter.END_SPAN,
 			Time: endTime,
 		},
 	}
-	got := append(obs.Events(exporter.START_SPAN), obs.Events(exporter.FINISH_SPAN)...)
+	got := append(obs.Events(exporter.START_SPAN), obs.Events(exporter.END_SPAN)...)
 	diffEvents(t, got, want, "Scope")
 }
 

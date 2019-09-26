@@ -51,7 +51,7 @@ func TestRegisterSpanProcessort(t *testing.T) {
 	sdktrace.RegisterSpanProcessor(sp)
 	defer sdktrace.UnregisterSpanProcessor(sp)
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
-	span.Finish()
+	span.End()
 	wantCount := 1
 	gotCount := len(sp.spansStarted)
 	if gotCount != wantCount {
@@ -68,12 +68,12 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 	sp := NewTestSpanProcessor()
 	sdktrace.RegisterSpanProcessor(sp)
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
-	span.Finish()
+	span.End()
 	sdktrace.UnregisterSpanProcessor(sp)
 
 	// start another span after unregistering span processor.
 	_, span = apitrace.GlobalTracer().Start(context.Background(), "Start span after unregister")
-	span.Finish()
+	span.End()
 
 	wantCount := 1
 	gotCount := len(sp.spansStarted)
@@ -94,7 +94,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
 	sdktrace.UnregisterSpanProcessor(sp)
 
-	span.Finish()
+	span.End()
 
 	wantCount := 1
 	gotCount := len(sp.spansStarted)

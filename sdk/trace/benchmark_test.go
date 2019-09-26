@@ -30,7 +30,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
-			span.Finish()
+			span.End()
 		}
 	})
 }
@@ -50,7 +50,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 				key.New("key3").Uint64(123),
 				key.New("key4").Float64(123.456),
 			)
-			span.Finish()
+			span.End()
 		}
 	})
 }
@@ -74,7 +74,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 				key.New("key23").Uint64(123),
 				key.New("key24").Float64(123.456),
 			)
-			span.Finish()
+			span.End()
 		}
 	})
 }
@@ -101,7 +101,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 				key.New("key10").Int(123),
 				key.New("key11").Uint(123),
 			)
-			span.Finish()
+			span.End()
 		}
 	})
 }
@@ -138,7 +138,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 				key.New("key210").Int(123),
 				key.New("key211").Uint(123),
 			)
-			span.Finish()
+			span.End()
 		}
 	})
 }

@@ -65,8 +65,8 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 			buf.WriteString(" >")
 		}
 
-	case exporter.FINISH_SPAN:
-		buf.WriteString("finish ")
+	case exporter.END_SPAN:
+		buf.WriteString("end ")
 		buf.WriteString(data.Name)
 
 		buf.WriteString(" (")
