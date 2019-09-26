@@ -87,7 +87,7 @@ type bridgeSpan struct {
 
 var _ ot.Span = &bridgeSpan{}
 
-func (s *bridgeSpan) End() {
+func (s *bridgeSpan) Finish() {
 	s.otelSpan.End()
 }
 
