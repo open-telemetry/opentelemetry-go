@@ -109,7 +109,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		recording:      spanOpts.RecordEvent,
 		Attributes:     oteltag.NewMap(upsertMultiMapUpdate(spanOpts.Attributes...)),
 		StartTime:      startTime,
-		FinishTime:     time.Time{},
+		EndTime:        time.Time{},
 		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
 		Events:         nil,
 	}
@@ -267,7 +267,7 @@ func (s *MockSpan) applyUpdate(update oteltag.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
-func (s *MockSpan) End(options ...oteltrace.FinishOption) {
+func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}

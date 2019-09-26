@@ -106,7 +106,7 @@ func (s *span) ModifyAttribute(mutator apitag.Mutator) {
 func (s *span) ModifyAttributes(mutators ...apitag.Mutator) {
 }
 
-func (s *span) End(options ...apitrace.FinishOption) {
+func (s *span) End(options ...apitrace.EndOption) {
 	if s == nil {
 		return
 	}
