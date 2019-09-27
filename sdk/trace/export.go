@@ -73,6 +73,7 @@ func RegisterExporter(e Exporter) {
 
 // UnregisterExporter removes from the list of Exporters the Exporter that was
 // registered with the given name.
+// TODO(rghetia) : Remove it.
 func UnregisterExporter(e Exporter) {
 	exporterMu.Lock()
 	defer exporterMu.Unlock()

@@ -60,7 +60,7 @@ func RegisterSpanProcessor(e SpanProcessor) {
 
 // UnregisterSpanProcessor removes from the list of SpanProcessors the SpanProcessor that was
 // registered with the given name.
-func UnregisterSpanProcessor(e SpanProcessor) {
+func UnregisterSpanProcessor(s SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
 	new := make(spanProcessorMap)
@@ -69,6 +69,7 @@ func UnregisterSpanProcessor(e SpanProcessor) {
 			new[k] = v
 		}
 	}
-	delete(new, e)
+	delete(new, s)
 	spanProcessors.Store(new)
+	s.Shutdown()
 }

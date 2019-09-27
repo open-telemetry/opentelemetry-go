@@ -26,8 +26,9 @@ import (
 )
 
 type testBatchExporter struct {
-	mu sync.Mutex
-	spans []*sdktrace.SpanData
+	mu         sync.Mutex
+	spans      []*sdktrace.SpanData
+	sizes      []int
 	batchCount int
 }
 
@@ -35,6 +36,7 @@ func (t *testBatchExporter) ExportSpans(sds []*sdktrace.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.spans = append(t.spans, sds...)
+	t.sizes = append(t.sizes, len(sds))
 	t.batchCount++
 }
 
@@ -42,6 +44,12 @@ func (t *testBatchExporter) len() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return len(t.spans)
+}
+
+func (t *testBatchExporter) getBatchCount() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.batchCount
 }
 
 func (t *testBatchExporter) get(idx int) *sdktrace.SpanData {
@@ -59,116 +67,133 @@ func init() {
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
-func TestNewBatchSpanProcessor(t *testing.T) {
-	ssp := sdktrace.NewBatchSpanProcessor(&testBatchExporter{}, defaultOpts)
-	if ssp == nil {
-		t.Errorf("Error creating new instance of BatchSpanProcessor\n")
+func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
+	_, err := sdktrace.NewBatchSpanProcessor(nil, defaultOpts)
+	if err == nil {
+		t.Errorf("Expected error while creating processor with nil exporter")
 	}
 }
 
-func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
-	ssp := sdktrace.NewBatchSpanProcessor(nil, defaultOpts)
-	if ssp == nil {
-		t.Errorf("Error creating new instance of BatchSpanProcessor with nil Exporter\n")
-	}
+type testOption struct {
+	name           string
+	o              sdktrace.BatchSpanProcessorOption
+	wantNumSpans   int
+	wantBatchCount int
+	genNumSpans    int
+	waitTime       time.Duration
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
-	options := []struct {
-		name string
-		o sdktrace.BatchSpanProcessorOption
-	} {
+	schDelay := time.Duration(200 * time.Millisecond)
+	waitTime := schDelay + time.Duration(100*time.Millisecond)
+	options := []testOption{
 		{
-			name: "default BatchSpanProcessorOption",
-			o : sdktrace.BatchSpanProcessorOption{
-			},
+			name:           "default BatchSpanProcessorOption",
+			o:              sdktrace.BatchSpanProcessorOption{},
+			wantNumSpans:   2048,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+			waitTime:       time.Duration(5100 * time.Millisecond),
 		},
 		{
 			name: "non-default ScheduledDelayMillis",
-			o : sdktrace.BatchSpanProcessorOption{
-				ScheduledDelayMillis: time.Duration(100 * time.Millisecond),
+			o: sdktrace.BatchSpanProcessorOption{
+				ScheduledDelayMillis: schDelay,
 			},
+			wantNumSpans:   2048,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+			waitTime:       waitTime,
 		},
 		{
-			name: "non-default MaxQueueSize",
-			o : sdktrace.BatchSpanProcessorOption{
-				MaxQueueSize: 200,
-				ScheduledDelayMillis: time.Duration(100 * time.Millisecond),
+			name: "non-default MaxQueueSize and ScheduledDelayMillis",
+			o: sdktrace.BatchSpanProcessorOption{
+				MaxQueueSize:         200,
+				ScheduledDelayMillis: schDelay,
 			},
+			wantNumSpans:   200,
+			wantBatchCount: 1,
+			genNumSpans:    205,
+			waitTime:       waitTime,
 		},
 		{
-			name: "non-default MaxExportBatchSize",
-			o : sdktrace.BatchSpanProcessorOption{
-				MaxQueueSize: 205,
-				MaxExportBatchSize: 20,
-				ScheduledDelayMillis: time.Duration(100 * time.Millisecond),
+			name: "non-default MaxQueueSize, ScheduledDelayMillis and MaxExportBatchSize",
+			o: sdktrace.BatchSpanProcessorOption{
+				MaxQueueSize:         205,
+				MaxExportBatchSize:   20,
+				ScheduledDelayMillis: schDelay,
 			},
+			wantNumSpans:   205,
+			wantBatchCount: 11,
+			genNumSpans:    210,
+			waitTime:       waitTime,
 		},
 		{
-			name: "all non-default batch option",
-			o : sdktrace.BatchSpanProcessorOption{
-				MaxExportBatchSize: 100,
-				MaxQueueSize: 200,
-				ScheduledDelayMillis: time.Duration(100 * time.Millisecond),
+			name: "blocking option",
+			o: sdktrace.BatchSpanProcessorOption{
+				MaxQueueSize:         200,
+				MaxExportBatchSize:   20,
+				ScheduledDelayMillis: schDelay,
+				BlockOnQueueFull:     true,
 			},
+			wantNumSpans:   205,
+			wantBatchCount: 11,
+			genNumSpans:    205,
+			waitTime:       waitTime,
 		},
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
-		expectO := getExpectedOptions(option.o)
-		numOfSpan := expectO.MaxQueueSize + 5
-		ssp := sdktrace.NewBatchSpanProcessor(&te, option.o)
+		ssp := createAndRegisterBatchSP(t, option, &te)
 		if ssp == nil {
-			t.Errorf("Error creating new instance of BatchSpanProcessor with nil Exporter\n")
+			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 		}
 		sdktrace.RegisterSpanProcessor(ssp)
-		sc := getSpanContext()
-		for i := 0; i < numOfSpan ; i++ {
-			sc.TraceID.High = uint64(i+1)
-			_, span := apitrace.GlobalTracer().Start(context.Background(), option.name, apitrace.ChildOf(sc))
-			span.Finish()
-		}
 
-		time.Sleep(expectO.ScheduledDelayMillis + time.Duration(100 + time.Millisecond))
+		generateSpan(t, option)
+
+		time.Sleep(option.waitTime)
 
 		gotNumOfSpans := te.len()
-		wantNumOfSpans := expectO.MaxQueueSize
-		if wantNumOfSpans != gotNumOfSpans {
-			t.Errorf("BatchSpanProcessor number of exported span: got %+v, want %+v\n", gotNumOfSpans, wantNumOfSpans)
+		if option.wantNumSpans != gotNumOfSpans {
+			t.Errorf("%s: number of exported span: got %+v, want %+v\n", option.name, gotNumOfSpans, option.wantNumSpans)
 		}
 
-		gotBatchCount := te.batchCount
-		wantBatchCount := expectO.MaxQueueSize / expectO.MaxExportBatchSize
-		if expectO.MaxQueueSize % expectO.MaxExportBatchSize > 0 {
-			wantBatchCount += 1
-		}
-		if wantBatchCount != gotBatchCount {
-			t.Errorf("BatchSpanProcessor number batches: got %+v, want %+v\n", gotBatchCount, wantBatchCount)
+		gotBatchCount := te.getBatchCount()
+		if gotBatchCount < option.wantBatchCount {
+			t.Errorf("%s: number batches: got %+v, want >= %+v\n", option.name, gotBatchCount, option.wantBatchCount)
+			t.Errorf("Batches %v\n", te.sizes)
 		}
 
 		// Check first Span is reported. Most recent one is dropped.
+		sc := getSpanContext()
 		wantTraceID := sc.TraceID
-		wantTraceID.High = 1;
+		wantTraceID.High = 1
 		gotTraceID := te.get(0).SpanContext.TraceID
 		if wantTraceID != gotTraceID {
-			t.Errorf("BatchSpanProcessor first exported span: got %+v, want %+v\n", gotTraceID, wantTraceID)
+			t.Errorf("%s: first exported span: got %+v, want %+v\n", option.name, gotTraceID, wantTraceID)
 		}
 		sdktrace.UnregisterSpanProcessor(ssp)
 	}
 }
 
-func getExpectedOptions(o sdktrace.BatchSpanProcessorOption) sdktrace.BatchSpanProcessorOption {
-	expectedO := o
-	if expectedO.ScheduledDelayMillis <= 0 {
-		expectedO.ScheduledDelayMillis = time.Duration(5000 * time.Millisecond)
+func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
+	ssp, err := sdktrace.NewBatchSpanProcessor(te, option.o)
+	if ssp == nil {
+		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}
-	if expectedO.MaxQueueSize <= 0 {
-		expectedO.MaxQueueSize = 2048
+	sdktrace.RegisterSpanProcessor(ssp)
+	return ssp
+}
+
+func generateSpan(t *testing.T, option testOption) {
+	sc := getSpanContext()
+
+	for i := 0; i < option.genNumSpans; i++ {
+		sc.TraceID.High = uint64(i + 1)
+		_, span := apitrace.GlobalTracer().Start(context.Background(), option.name, apitrace.ChildOf(sc))
+		span.Finish()
 	}
-	if expectedO.MaxExportBatchSize <= 0 {
-		expectedO.MaxExportBatchSize = 512
-	}
-	return expectedO
 }
 
 func getSpanContext() core.SpanContext {

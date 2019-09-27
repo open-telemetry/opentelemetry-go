@@ -40,7 +40,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Wrap exporter with SimpleSpanProcessor
+	// Wrap exporter with SimpleSpanProcessor and register the processor.
 	ssp := trace.NewSimpleSpanProcessor(exporter)
 	trace.RegisterSpanProcessor(ssp)
 

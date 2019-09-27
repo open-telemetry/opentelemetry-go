@@ -16,52 +16,71 @@ package trace
 
 import (
 	"context"
-	"sync"
+	"errors"
 	"time"
 )
 
 const (
-	defaultMaxQueueSize = 2048
+	defaultMaxQueueSize         = 2048
 	defaultScheduledDelayMillis = time.Duration(5000 * time.Millisecond)
-	defaultMaxExportBatchSize = 512
+	defaultMaxExportBatchSize   = 512
 )
+
+var (
+	errNilExporter = errors.New("exporter is nil")
+)
+
 type BatchSpanProcessorOption struct {
-	// MaxQueueSize is the maximum queue size. After the size is reached spans are dropped.
-	// The default value is 2048.
+	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing. If the
+	// queue gets full it drops the spans. Use BlockOnQueueFull to change this behavior.
+	// The default value of MaxQueueSize is 2048.
 	MaxQueueSize int
 
-	// ScheduledDelayMillis is the delay interval in milliseconds between two consecutive exports.
-	// The default value is 5000.
+	// ScheduledDelayMillis is the delay interval in milliseconds between two consecutive
+	// processing of spans.
+	// The default value of ScheduledDelayMillis is 5000 msec.
 	ScheduledDelayMillis time.Duration
 
-	// MaxExportBatchSize IS the maximum batch size of every export.
-	// The default value is 512.
+	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
+	// If there are more than one batch worth of spans then it processes multiple batches
+	// of spans one batch after the other without any delay.
+	// The default value of MaxExportBatchSize is 512.
 	MaxExportBatchSize int
+
+	// BlockOnQueueFull blocks onEnd() and onStart() method if the queue is full
+	// AND if BlockOnQueueFull is set to true.
+	// Blocking option should be used carefully as it can severely affect the performance of an
+	// application.
+	BlockOnQueueFull bool
 }
 
-// SimpleSpanProcessor implements SpanProcessor interfaces. It is used by
-// exporters to receive SpanData synchronously when span is finished.
+// BatchSpanProcessor implements SpanProcessor interfaces. It is used by
+// exporters to receive SpanData asynchronously.
+// Use BatchSpanProcessorOption to change the behavior of the processor.
 type BatchSpanProcessor struct {
 	exporter BatchExporter
 	o        BatchSpanProcessorOption
 
-	qLock    sync.RWMutex
-	queue    []*SpanData
-	dropped  uint32
+	queue   chan *SpanData
+	dropped uint32
 
-	stopCh             chan struct{}
-	stopOnce           sync.Once
-
+	stopCh chan struct{}
 }
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 
 // NewBatchSpanProcessor creates a new instance of BatchSpanProcessor
-// for a given exporter.
-func NewBatchSpanProcessor(exporter BatchExporter, opts BatchSpanProcessorOption) *BatchSpanProcessor {
+// for a given exporter. It returns an error if exporter is nil.
+// The newly created BatchSpanProcessor should then be registered with sdk
+// using RegisterSpanProcessor.
+func NewBatchSpanProcessor(exporter BatchExporter, opts BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
+	if exporter == nil {
+		return nil, errNilExporter
+	}
+
 	bsp := &BatchSpanProcessor{
 		exporter: exporter,
-		o: opts,
+		o:        opts,
 	}
 
 	if bsp.o.ScheduledDelayMillis.Nanoseconds() == 0 {
@@ -73,7 +92,10 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts BatchSpanProcessorOption
 	if bsp.o.MaxExportBatchSize <= 0 {
 		bsp.o.MaxExportBatchSize = defaultMaxExportBatchSize
 	}
-	bsp.queue =    make([]*SpanData, 0, bsp.o.MaxQueueSize)
+
+	bsp.queue = make(chan *SpanData, bsp.o.MaxQueueSize)
+
+	bsp.stopCh = make(chan struct{})
 
 	//Start timer to export metrics
 	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
@@ -84,19 +106,12 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts BatchSpanProcessorOption
 			case <-bsp.stopCh:
 				return
 			case <-ticker.C:
-				sds := bsp.copyQueue()
-				for i := 0; i < len(sds) ; i += bsp.o.MaxExportBatchSize {
-					endIdx := i + bsp.o.MaxExportBatchSize
-					if endIdx > len(sds) {
-						endIdx = len(sds)
-					}
-					bsp.exporter.ExportSpans(sds[i:endIdx])
-				}
+				bsp.processQueue()
 			}
 		}
 	}(context.Background())
 
-	return bsp
+	return bsp, nil
 }
 
 // OnStart method does nothing.
@@ -105,25 +120,56 @@ func (bsp *BatchSpanProcessor) OnStart(sd *SpanData) {
 
 // OnEnd method exports SpanData using associated exporter.
 func (bsp *BatchSpanProcessor) OnEnd(sd *SpanData) {
-	bsp.qLock.Lock()
-	defer bsp.qLock.Unlock()
-
-	if len(bsp.queue) < bsp.o.MaxQueueSize {
-		bsp.queue = append(bsp.queue, sd)
-	} else {
-		bsp.dropped++
-	}
+	bsp.enqueue(sd)
 }
 
 // Shutdown method does nothing. There is no data to cleanup.
 func (bsp *BatchSpanProcessor) Shutdown() {
+	close(bsp.queue)
+	close(bsp.stopCh)
 }
 
-func (bsp *BatchSpanProcessor) copyQueue() []*SpanData {
-	bsp.qLock.Lock()
-	defer bsp.qLock.Unlock()
+func (bsp *BatchSpanProcessor) processQueue() {
+	batch := make([]*SpanData, 0, bsp.o.MaxExportBatchSize)
+	for {
+		var sd *SpanData
+		var ok bool
+		select {
+		case sd = <-bsp.queue:
+			if sd != nil {
+				batch = append(batch, sd)
+			}
+			ok = true
+		default:
+			ok = false
+		}
+		if ok {
+			if len(batch) >= bsp.o.MaxExportBatchSize {
+				bsp.exporter.ExportSpans(batch)
+				batch = batch[:0]
+			}
+		} else {
+			if len(batch) > 0 {
+				bsp.exporter.ExportSpans(batch)
+			}
+			break
+		}
+	}
+}
 
-	sdToExport := bsp.queue[0:]
-	bsp.queue = make([]*SpanData, 0, bsp.o.MaxQueueSize)
-	return sdToExport
+func (bsp *BatchSpanProcessor) enqueue(sd *SpanData) {
+	if bsp.o.BlockOnQueueFull {
+		bsp.queue <- sd
+	} else {
+		var ok bool
+		select {
+		case bsp.queue <- sd:
+			ok = true
+		default:
+			ok = false
+		}
+		if !ok {
+			bsp.dropped++
+		}
+	}
 }
