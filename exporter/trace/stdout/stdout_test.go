@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
@@ -68,6 +67,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	expectedSerializedNow, _ := json.Marshal(now)
 
+	got := b.String()
 	expectedOutput := `{"SpanContext":{` +
 		`"TraceID":{"High":72623859790382856,"Low":651345242494996240},` +
 		`"SpanID":72623859790382856,"TraceFlags":0},` +
@@ -94,5 +94,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
 		`"ChildSpanCount":0}` + "\n"
-	assert.Equal(t, b.String(), expectedOutput)
+
+	if got != expectedOutput {
+		t.Errorf("Want: %v but got: %v", expectedOutput, got)
+	}
 }
