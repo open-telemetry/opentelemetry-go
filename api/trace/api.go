@@ -82,7 +82,7 @@ type Span interface {
 	// It then adds the newly created Link to the span.
 	Link(sc core.SpanContext, attrs ...core.KeyValue)
 
-	// SpanContext returns span context of the span. Return SpanContext is usable
+	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
 	SpanContext() core.SpanContext
 

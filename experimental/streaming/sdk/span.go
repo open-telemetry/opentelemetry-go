@@ -31,7 +31,7 @@ type span struct {
 	initial exporter.ScopeID
 }
 
-// SpanContext returns span context of the span. Return SpanContext is usable
+// SpanContext returns span context of the span. Returned SpanContext is usable
 // even after the span is finished.
 func (sp *span) SpanContext() core.SpanContext {
 	return sp.initial.SpanContext
