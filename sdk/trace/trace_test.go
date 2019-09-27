@@ -55,7 +55,7 @@ func (t *testExporter) ExportSpan(s *SpanData) {
 
 func TestStartSpan(t *testing.T) {
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "StartSpan")
-	defer span.Finish()
+	defer span.End()
 	if span == nil {
 		t.Errorf("span not started")
 	}
@@ -118,13 +118,13 @@ func TestSetName(t *testing.T) {
 		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
 			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
 		}
-		span.Finish()
+		span.End()
 	}
 }
 
 func TestRecordingIsOff(t *testing.T) {
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "StartSpan")
-	defer span.Finish()
+	defer span.End()
 	if span.IsRecordingEvents() == true {
 		t.Error("new span is recording events")
 	}
@@ -562,7 +562,7 @@ func endSpan(span apitrace.Span) (*SpanData, error) {
 	}
 	var te testExporter
 	RegisterExporter(&te)
-	span.Finish()
+	span.End()
 	UnregisterExporter(&te)
 	if len(te.spans) != 1 {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
@@ -601,8 +601,8 @@ func TestEndSpanTwice(t *testing.T) {
 	RegisterExporter(&spans)
 	defer UnregisterExporter(&spans)
 	span := startSpan()
-	span.Finish()
-	span.Finish()
+	span.End()
+	span.End()
 	UnregisterExporter(&spans)
 	if len(spans) != 1 {
 		t.Fatalf("expected only a single span, got %#v", spans)
@@ -615,12 +615,12 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	defer UnregisterExporter(&spans)
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
-	span1.Finish()
+	span1.End()
 	// Start a new span with the context containing span-1
 	// even though span-1 is ended, we still add this as a new child of span-1
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
-	span2.Finish()
-	span0.Finish()
+	span2.End()
+	span0.End()
 	UnregisterExporter(&spans)
 	if got, want := len(spans), 3; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
@@ -647,12 +647,12 @@ func TestChildSpanCount(t *testing.T) {
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent")
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
-	span2.Finish()
-	span1.Finish()
+	span2.End()
+	span1.End()
 
 	_, span3 := apitrace.GlobalTracer().Start(ctx, "span-3")
-	span3.Finish()
-	span0.Finish()
+	span3.End()
+	span0.End()
 	UnregisterExporter(&spans)
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
@@ -671,9 +671,9 @@ func TestChildSpanCount(t *testing.T) {
 	}
 }
 
-func TestNilSpanFinish(t *testing.T) {
+func TestNilSpanEnd(t *testing.T) {
 	var span *span
-	span.Finish()
+	span.End()
 }
 
 func TestExecutionTracerTaskEnd(t *testing.T) {
@@ -712,7 +712,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	spans = append(spans, s) // always sample
 
 	for _, span := range spans {
-		span.Finish()
+		span.End()
 	}
 	if got, want := n, uint64(len(spans)); got != want {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
@@ -729,7 +729,7 @@ func TestCustomStartEndTime(t *testing.T) {
 	)
 	var te testExporter
 	RegisterExporter(&te)
-	span.Finish(apitrace.WithFinishTime(endTime))
+	span.End(apitrace.WithEndTime(endTime))
 	UnregisterExporter(&te)
 	if len(te.spans) != 1 {
 		t.Fatalf("got exported spans %#v, want one span", te.spans)

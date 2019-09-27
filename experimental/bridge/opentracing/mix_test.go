@@ -538,7 +538,7 @@ func min(a, b int) int {
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
 	ctx, span := oteltrace.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name))
-	defer span.Finish()
+	defer span.End()
 	callback(t, ctx)
 	func(ctx2 context.Context) {
 		span, ctx2 := ot.StartSpanFromContext(ctx2, fmt.Sprintf("%sOtel_OT_Otel", name))
@@ -546,7 +546,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 		callback(t, ctx2)
 		func(ctx3 context.Context) {
 			ctx3, span := oteltrace.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name))
-			defer span.Finish()
+			defer span.End()
 			callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
@@ -558,7 +558,7 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 	callback(t, ctx)
 	func(ctx2 context.Context) {
 		ctx2, span := oteltrace.Start(ctx2, fmt.Sprintf("%sOT_Otel_OT", name))
-		defer span.Finish()
+		defer span.End()
 		callback(t, ctx2)
 		func(ctx3 context.Context) {
 			span, ctx3 := ot.StartSpanFromContext(ctx3, fmt.Sprintf("%sOTOtel_OT_", name))

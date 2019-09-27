@@ -10,7 +10,7 @@ func _() {
 	var x [1]struct{}
 	_ = x[INVALID-0]
 	_ = x[START_SPAN-1]
-	_ = x[FINISH_SPAN-2]
+	_ = x[END_SPAN-2]
 	_ = x[ADD_EVENT-3]
 	_ = x[NEW_SCOPE-4]
 	_ = x[NEW_MEASURE-5]
@@ -21,9 +21,9 @@ func _() {
 	_ = x[SET_NAME-10]
 }
 
-const _EventType_name = "INVALIDSTART_SPANFINISH_SPANADD_EVENTNEW_SCOPENEW_MEASURENEW_METRICMODIFY_ATTRRECORD_STATSSET_STATUSSET_NAME"
+const _EventType_name = "INVALIDSTART_SPANEND_SPANADD_EVENTNEW_SCOPENEW_MEASURENEW_METRICMODIFY_ATTRRECORD_STATSSET_STATUSSET_NAME"
 
-var _EventType_index = [...]uint8{0, 7, 17, 28, 37, 46, 57, 67, 78, 90, 100, 108}
+var _EventType_index = [...]uint8{0, 7, 17, 25, 34, 43, 54, 64, 75, 87, 97, 105}
 
 func (i EventType) String() string {
 	if i < 0 || i >= EventType(len(_EventType_index)-1) {

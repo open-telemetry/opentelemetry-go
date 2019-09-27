@@ -106,7 +106,7 @@ func (s *span) ModifyAttribute(mutator apitag.Mutator) {
 func (s *span) ModifyAttributes(mutators ...apitag.Mutator) {
 }
 
-func (s *span) Finish(options ...apitrace.FinishOption) {
+func (s *span) End(options ...apitrace.EndOption) {
 	if s == nil {
 		return
 	}
@@ -117,7 +117,7 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	opts := apitrace.FinishOptions{}
+	opts := apitrace.EndOptions{}
 	for _, opt := range options {
 		opt(&opts)
 	}
@@ -129,10 +129,10 @@ func (s *span) Finish(options ...apitrace.FinishOption) {
 		// of processors. Exporter will export based on sampling.
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
-			if opts.FinishTime.IsZero() {
+			if opts.EndTime.IsZero() {
 				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 			} else {
-				sd.EndTime = opts.FinishTime
+				sd.EndTime = opts.EndTime
 			}
 			// Sampling check would be in the processor if the processor is used for exporting.
 			if s.spanContext.IsSampled() {

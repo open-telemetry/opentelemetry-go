@@ -31,7 +31,7 @@ type span struct {
 	initial exporter.ScopeID
 }
 
-// SpancContext returns span context of the span. Return SpanContext is usable
+// SpanContext returns span context of the span. Returned SpanContext is usable
 // even after the span is finished.
 func (sp *span) SpanContext() core.SpanContext {
 	return sp.initial.SpanContext
@@ -87,15 +87,15 @@ func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
 	})
 }
 
-func (sp *span) Finish(options ...trace.FinishOption) {
+func (sp *span) End(options ...trace.EndOption) {
 	recovered := recover()
-	opts := trace.FinishOptions{}
+	opts := trace.EndOptions{}
 	for _, opt := range options {
 		opt(&opts)
 	}
 	sp.tracer.exporter.Record(exporter.Event{
-		Time:      opts.FinishTime,
-		Type:      exporter.FINISH_SPAN,
+		Time:      opts.EndTime,
+		Type:      exporter.END_SPAN,
 		Scope:     sp.ScopeID(),
 		Recovered: recovered,
 	})

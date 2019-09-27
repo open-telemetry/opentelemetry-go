@@ -46,15 +46,15 @@ type Tracer interface {
 	WithResources(res ...core.KeyValue) Tracer
 }
 
-type FinishOptions struct {
-	FinishTime time.Time
+type EndOptions struct {
+	EndTime time.Time
 }
 
-type FinishOption func(*FinishOptions)
+type EndOption func(*EndOptions)
 
-func WithFinishTime(finishTime time.Time) FinishOption {
-	return func(opts *FinishOptions) {
-		opts.FinishTime = finishTime
+func WithEndTime(endTime time.Time) EndOption {
+	return func(opts *EndOptions) {
+		opts.EndTime = endTime
 	}
 }
 
@@ -62,9 +62,9 @@ type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
 
-	// Finish completes the span. No updates are allowed to span after it
-	// finishes. The only exception is setting status of the span.
-	Finish(options ...FinishOption)
+	// End completes the span. No updates are allowed to span after it
+	// ends. The only exception is setting status of the span.
+	End(options ...EndOption)
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
@@ -82,12 +82,12 @@ type Span interface {
 	// It then adds the newly created Link to the span.
 	Link(sc core.SpanContext, attrs ...core.KeyValue)
 
-	// SpancContext returns span context of the span. Return SpanContext is usable
-	// even after the span is finished.
+	// SpanContext returns span context of the span. Returned SpanContext is usable
+	// even after the span ends.
 	SpanContext() core.SpanContext
 
 	// SetStatus sets the status of the span. The status of the span can be updated
-	// even after span is finished.
+	// even after span ends.
 	SetStatus(codes.Code)
 
 	// SetName sets the name of the span.

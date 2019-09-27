@@ -49,14 +49,14 @@ func main() {
 
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
 	bar(ctx)
-	span.Finish()
+	span.End()
 
 	exporter.Flush()
 }
 
 func bar(ctx context.Context) {
 	_, span := apitrace.GlobalTracer().Start(ctx, "/bar")
-	defer span.Finish()
+	defer span.End()
 
 	// Do bar...
 }

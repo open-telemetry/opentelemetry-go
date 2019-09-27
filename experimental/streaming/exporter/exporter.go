@@ -36,7 +36,7 @@ type Event struct {
 	Attributes []core.KeyValue // SET_ATTRIBUTES
 	Mutator    tag.Mutator     // SET_ATTRIBUTE
 	Mutators   []tag.Mutator   // SET_ATTRIBUTES
-	Recovered  interface{}     // FINISH_SPAN
+	Recovered  interface{}     // END_SPAN
 	Status     codes.Code      // SET_STATUS
 
 	// Values
@@ -55,7 +55,7 @@ type Observer interface {
 const (
 	INVALID EventType = iota
 	START_SPAN
-	FINISH_SPAN
+	END_SPAN
 	ADD_EVENT
 	NEW_SCOPE
 	NEW_MEASURE
