@@ -63,8 +63,8 @@ func (NoopSpan) ModifyAttribute(mutator tag.Mutator) {
 func (NoopSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
-// Finish does nothing.
-func (NoopSpan) Finish(options ...FinishOption) {
+// End does nothing.
+func (NoopSpan) End(options ...EndOption) {
 }
 
 // Tracer returns noop implementation of Tracer.

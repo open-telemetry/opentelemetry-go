@@ -88,14 +88,14 @@ type bridgeSpan struct {
 var _ ot.Span = &bridgeSpan{}
 
 func (s *bridgeSpan) Finish() {
-	s.otelSpan.Finish()
+	s.otelSpan.End()
 }
 
 func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
-	var otelOpts []oteltrace.FinishOption
+	var otelOpts []oteltrace.EndOption
 
 	if !opts.FinishTime.IsZero() {
-		otelOpts = append(otelOpts, oteltrace.WithFinishTime(opts.FinishTime))
+		otelOpts = append(otelOpts, oteltrace.WithEndTime(opts.FinishTime))
 	}
 	for _, record := range opts.LogRecords {
 		s.logRecord(record)
@@ -103,7 +103,7 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 	for _, data := range opts.BulkLogData {
 		s.logRecord(data.ToLogRecord())
 	}
-	s.otelSpan.Finish(otelOpts...)
+	s.otelSpan.End(otelOpts...)
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {

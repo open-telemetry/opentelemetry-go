@@ -84,7 +84,7 @@ func (t *MockTracer) WithService(name string) oteltrace.Tracer {
 
 func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	ctx, span := t.Start(ctx, name)
-	defer span.Finish()
+	defer span.End()
 	return body(ctx)
 }
 
@@ -109,7 +109,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		recording:      spanOpts.RecordEvent,
 		Attributes:     oteltag.NewMap(upsertMultiMapUpdate(spanOpts.Attributes...)),
 		StartTime:      startTime,
-		FinishTime:     time.Time{},
+		EndTime:        time.Time{},
 		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
 		Events:         nil,
 	}
@@ -215,7 +215,7 @@ type MockSpan struct {
 
 	Attributes   oteltag.Map
 	StartTime    time.Time
-	FinishTime   time.Time
+	EndTime      time.Time
 	ParentSpanID uint64
 	Events       []MockEvent
 }
@@ -267,21 +267,21 @@ func (s *MockSpan) applyUpdate(update oteltag.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
-func (s *MockSpan) Finish(options ...oteltrace.FinishOption) {
-	if !s.FinishTime.IsZero() {
+func (s *MockSpan) End(options ...oteltrace.EndOption) {
+	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	finishOpts := oteltrace.FinishOptions{}
+	endOpts := oteltrace.EndOptions{}
 
 	for _, opt := range options {
-		opt(&finishOpts)
+		opt(&endOpts)
 	}
 
-	finishTime := finishOpts.FinishTime
-	if finishTime.IsZero() {
-		finishTime = time.Now()
+	endTime := endOpts.EndTime
+	if endTime.IsZero() {
+		endTime = time.Now()
 	}
-	s.FinishTime = finishTime
+	s.EndTime = endTime
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 

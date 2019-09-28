@@ -71,8 +71,8 @@ func (ms *MockSpan) ModifyAttribute(mutator tag.Mutator) {
 func (ms *MockSpan) ModifyAttributes(mutators ...tag.Mutator) {
 }
 
-// Finish does nothing.
-func (ms *MockSpan) Finish(options ...apitrace.FinishOption) {
+// End does nothing.
+func (ms *MockSpan) End(options ...apitrace.EndOption) {
 }
 
 // SetName does nothing.

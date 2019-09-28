@@ -157,14 +157,14 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		ro.scopes.Store(event.Sequence, span)
 
-	case exporter.FINISH_SPAN:
+	case exporter.END_SPAN:
 		attrs, span := ro.readScope(event.Scope)
 		if span == nil {
 			panic(fmt.Sprint("span not found", event.Scope))
 		}
 
 		read.Name = span.name
-		read.Type = exporter.FINISH_SPAN
+		read.Type = exporter.END_SPAN
 
 		read.Attributes = attrs
 		read.Duration = event.Time.Sub(span.start)
@@ -287,7 +287,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		reader.Read(read)
 	}
 
-	if event.Type == exporter.FINISH_SPAN {
+	if event.Type == exporter.END_SPAN {
 		ro.cleanupSpan(event.Scope.EventID)
 	}
 }
