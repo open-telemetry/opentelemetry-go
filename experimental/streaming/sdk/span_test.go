@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/experimental/streaming/exporter"
@@ -130,6 +131,25 @@ func checkContext(t *testing.T, ctx context.Context, key, wantValue interface{})
 	return true
 }
 
+func measurementCompare(mv1, mv2 metric.MeasurementValue) bool {
+	i1, ok1 := mv1.GetInt()
+	i2, ok2 := mv2.GetInt()
+	if ok1 != ok2 {
+		return false
+	} else if ok1 && ok2 {
+		return i1 == i2
+	}
+	f1, ok1 := mv1.GetFloat()
+	f2, ok2 := mv2.GetFloat()
+	if ok1 != ok2 {
+		return false
+	} else if ok1 && ok2 {
+		return f1 == f2
+	}
+	// both are not initialized
+	return true
+}
+
 func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...string) bool {
 	ignoredPaths := map[string]struct{}{
 		"Sequence": struct{}{},
@@ -143,6 +163,7 @@ func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...
 			_, found := ignoredPaths[path.String()]
 			return found
 		}, cmp.Ignore()),
+		cmp.Comparer(measurementCompare),
 	}
 	if diff := cmp.Diff(got, want, opts...); diff != "" {
 		t.Errorf("Events: -got +want %s", diff)

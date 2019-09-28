@@ -105,8 +105,7 @@ type Descriptor struct {
 // Measurement is used for reporting a batch of metric values.
 type Measurement struct {
 	Descriptor Descriptor
-	ValueFloat float64
-	ValueInt   int64
+	Value      MeasurementValue
 }
 
 // Option supports specifying the various metric options.
