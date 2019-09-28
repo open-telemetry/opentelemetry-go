@@ -21,7 +21,7 @@ import (
 
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/jaeger"
+	"go.opentelemetry.io/exporter/trace/stdout"
 	"go.opentelemetry.io/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
@@ -31,12 +31,7 @@ func initTracer() {
 
 	// Create Jaeger exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := jaeger.NewExporter(jaeger.Options{
-		CollectorEndpoint: "http://localhost:14268/api/traces",
-		Process: jaeger.Process{
-			ServiceName: "trace-demo",
-		},
-	})
+	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -28,32 +28,20 @@ Example uses
 GO111MODULE="" go get -d go.opentelemetry.io
 ```
 
-#### 2 Start All-in-one Jaeger
-
-```
-docker run -d --name jaeger \
-  -p 16686:16686 \
-  -p 14268:14268 \
-  jaegertracing/all-in-one:1.8
-```
-
-#### 3 Start Server
+#### 2 Start Server
 ```
 cd $GOPATH/src/go.opentelemetry.io/example/http/
 go run ./server/server.go
 ``` 
 
-#### 4 Start Client
+#### 3 Start Client
 ```
 cd $GOPATH/src/go.opentelemetry.io/example/http/
 go run ./client/client.go
 ``` 
 
-#### 5 Check traces on Jaeger UI
+#### 4 Check traces in stdout
 
-Visit http://localhost:16686 with a web browser
-Click on 'Find' to see traces.
-
-[Sample Snapshot](http/images/JaegarTraceExample.png)
+The spans should be visible in stdout in the order that they were exported.
 
 
