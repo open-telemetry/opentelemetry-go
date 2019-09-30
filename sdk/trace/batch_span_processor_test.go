@@ -60,15 +60,13 @@ func (t *testBatchExporter) get(idx int) *sdktrace.SpanData {
 
 var _ sdktrace.BatchExporter = (*testBatchExporter)(nil)
 
-var defaultOpts = sdktrace.BatchSpanProcessorOption{}
-
 func init() {
 	sdktrace.Register()
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
-	_, err := sdktrace.NewBatchSpanProcessor(nil, defaultOpts)
+	_, err := sdktrace.NewBatchSpanProcessor(nil)
 	if err == nil {
 		t.Errorf("Expected error while creating processor with nil exporter")
 	}
@@ -76,7 +74,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 
 type testOption struct {
 	name           string
-	o              sdktrace.BatchSpanProcessorOption
+	o              []sdktrace.BatchSpanProcessorOption
 	wantNumSpans   int
 	wantBatchCount int
 	genNumSpans    int
@@ -88,8 +86,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	waitTime := schDelay + time.Duration(100*time.Millisecond)
 	options := []testOption{
 		{
-			name:           "default BatchSpanProcessorOption",
-			o:              sdktrace.BatchSpanProcessorOption{},
+			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2048,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
@@ -97,8 +94,8 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default ScheduledDelayMillis",
-			o: sdktrace.BatchSpanProcessorOption{
-				ScheduledDelayMillis: schDelay,
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
 			},
 			wantNumSpans:   2048,
 			wantBatchCount: 4,
@@ -107,9 +104,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default MaxQueueSize and ScheduledDelayMillis",
-			o: sdktrace.BatchSpanProcessorOption{
-				MaxQueueSize:         200,
-				ScheduledDelayMillis: schDelay,
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
+				sdktrace.WithMaxQueueSize(200),
 			},
 			wantNumSpans:   200,
 			wantBatchCount: 1,
@@ -118,10 +115,10 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default MaxQueueSize, ScheduledDelayMillis and MaxExportBatchSize",
-			o: sdktrace.BatchSpanProcessorOption{
-				MaxQueueSize:         205,
-				MaxExportBatchSize:   20,
-				ScheduledDelayMillis: schDelay,
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
+				sdktrace.WithMaxQueueSize(205),
+				sdktrace.WithMaxExportBatchSize(20),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 11,
@@ -130,11 +127,11 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "blocking option",
-			o: sdktrace.BatchSpanProcessorOption{
-				MaxQueueSize:         200,
-				MaxExportBatchSize:   20,
-				ScheduledDelayMillis: schDelay,
-				BlockOnQueueFull:     true,
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
+				sdktrace.WithMaxQueueSize(200),
+				sdktrace.WithMaxExportBatchSize(20),
+				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 11,
@@ -178,7 +175,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 }
 
 func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
-	ssp, err := sdktrace.NewBatchSpanProcessor(te, option.o)
+	ssp, err := sdktrace.NewBatchSpanProcessor(te, option.o...)
 	if ssp == nil {
 		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}
@@ -192,7 +189,7 @@ func generateSpan(t *testing.T, option testOption) {
 	for i := 0; i < option.genNumSpans; i++ {
 		sc.TraceID.High = uint64(i + 1)
 		_, span := apitrace.GlobalTracer().Start(context.Background(), option.name, apitrace.ChildOf(sc))
-		span.Finish()
+		span.End()
 	}
 }
 
