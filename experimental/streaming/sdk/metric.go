@@ -41,9 +41,9 @@ func (h *metricHandle) RecordFloat(ctx context.Context, value float64) {
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,
 		Scope:   h.labels.scope,
-		Measurement: exporter.Measurement{
+		Measurement: metric.Measurement{
 			Descriptor: h.descriptor,
-			Value:      value,
+			ValueFloat: value,
 		},
 	})
 }
@@ -53,10 +53,9 @@ func (h *metricHandle) RecordInt(ctx context.Context, value int64) {
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,
 		Scope:   h.labels.scope,
-		Measurement: exporter.Measurement{
+		Measurement: metric.Measurement{
 			Descriptor: h.descriptor,
-			// meh, will be fixed later
-			Value: float64(value),
+			ValueInt:   value,
 		},
 	})
 }
@@ -89,16 +88,10 @@ func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...met
 	if len(ms) == 1 {
 		eventType = exporter.SINGLE_METRIC
 	}
-	oms := make([]exporter.Measurement, len(ms))
+	oms := make([]metric.Measurement, len(ms))
 	mlabels, _ := labels.(metricLabels)
 
-	for i, input := range ms {
-		oms[i] = exporter.Measurement{
-			Descriptor: input.Descriptor,
-			// meh, will be fixed later
-			Value: input.ValueFloat,
-		}
-	}
+	copy(oms, ms)
 
 	s.exporter.Record(exporter.Event{
 		Type:         eventType,

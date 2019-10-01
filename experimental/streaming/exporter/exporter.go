@@ -21,11 +21,6 @@ type ScopeID struct {
 	core.SpanContext
 }
 
-type Measurement struct {
-	Descriptor metric.Descriptor
-	Value      float64
-}
-
 type Event struct {
 	// Automatic fields
 	Sequence EventID   // Auto-filled
@@ -47,8 +42,8 @@ type Event struct {
 	// Values
 	String       string  // START_SPAN, EVENT, SET_NAME, ...
 	Parent       ScopeID // START_SPAN
-	Measurement  Measurement
-	Measurements []Measurement
+	Measurement  metric.Measurement
+	Measurements []metric.Measurement
 }
 
 type Observer interface {

@@ -227,11 +227,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		}
 		attrs, _ := ro.readScope(event.Scope)
 		read.Attributes = attrs
-		read.Measurement = metric.Measurement{
-			Descriptor: event.Measurement.Descriptor,
-			// meh, will be fixed later anyway
-			ValueFloat: event.Measurement.Value,
-		}
+		read.Measurement = event.Measurement
 
 	case exporter.BATCH_METRIC:
 		read.Type = event.Type
@@ -245,14 +241,8 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		attrs, _ := ro.readScope(event.Scope)
 		read.Attributes = attrs
-
-		for _, m := range event.Measurements {
-			read.Measurements = append(read.Measurements, metric.Measurement{
-				Descriptor: m.Descriptor,
-				// meh, will be fixed later
-				ValueFloat: m.Value,
-			})
-		}
+		read.Measurements = make([]metric.Measurement, len(event.Measurements))
+		copy(read.Measurements, event.Measurements)
 
 	case exporter.SET_STATUS:
 		read.Type = exporter.SET_STATUS
