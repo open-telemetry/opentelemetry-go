@@ -94,9 +94,6 @@ type Descriptor struct {
 	// Unit is an optional field describing this metric descriptor.
 	Unit unit.Unit
 
-	// Disabled implies this descriptor is disabled by default.
-	Disabled bool
-
 	// NonMonotonic implies this is an up-down Counter.
 	NonMonotonic bool
 
@@ -128,13 +125,6 @@ func WithDescription(desc string) Option {
 func WithUnit(unit unit.Unit) Option {
 	return func(d *Descriptor) {
 		d.Unit = unit
-	}
-}
-
-// WithDisabled sets whether a metric is disabled by default
-func WithDisabled(dis bool) Option {
-	return func(d *Descriptor) {
-		d.Disabled = dis
 	}
 }
 
