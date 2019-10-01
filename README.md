@@ -6,6 +6,10 @@
 
 The Go [OpenTelemetry](https://opentelemetry.io/) client.
 
+## Contributing
+
+See the [contributing file](CONTRIBUTING.md).
+
 ## TODO
 
 TODO

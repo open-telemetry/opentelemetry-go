@@ -1,4 +1,6 @@
-ALL_PKGS := $(shell go list ./...)
+ALL_PKGS := $(shell GO111MODULE=on go list ./...)
+
+export GO111MODULE=on
 
 EXAMPLES := \
 	./example/basic \
@@ -55,7 +57,7 @@ circle-ci: precommit test-clean-work-tree test-with-coverage test-386 examples
 test-clean-work-tree:
 	@if ! git diff --quiet; then \
 	  echo; \
-	  echo "Working tree is not clean"; \
+	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
 	  echo; \
 	  git status; \
 	  exit 1; \
