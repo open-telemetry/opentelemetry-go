@@ -72,6 +72,13 @@ type Descriptor struct {
 	// should have length > 0.
 	Name string
 
+	// Kind is the metric kind of this descriptor.
+	Kind Kind
+
+	// Keys are required keys determined in the handles
+	// obtained for this metric.
+	Keys []core.Key
+
 	// ID is uniquely assigned to support per-SDK registration.
 	ID DescriptorID
 
@@ -81,8 +88,8 @@ type Descriptor struct {
 	// Unit is an optional field describing this metric descriptor.
 	Unit unit.Unit
 
-	// Kind is the metric kind of this descriptor.
-	Kind Kind
+	// Disabled implies this descriptor is disabled by default.
+	Disabled bool
 
 	// NonMonotonic implies this is an up-down Counter.
 	NonMonotonic bool
@@ -93,13 +100,6 @@ type Descriptor struct {
 	// Signed implies this is a Measure that supports positive and
 	// negative values.
 	Signed bool
-
-	// Disabled implies this descriptor is disabled by default.
-	Disabled bool
-
-	// Keys are required keys determined in the handles
-	// obtained for this metric.
-	Keys []core.Key
 }
 
 // Measurement is used for reporting a batch of metric values.
@@ -126,6 +126,21 @@ func WithUnit(unit unit.Unit) Option {
 	}
 }
 
+// WithDisabled sets whether a metric is disabled by default
+func WithDisabled(dis bool) Option {
+	return func(d *Descriptor) {
+		d.Disabled = dis
+	}
+}
+
+// WithKeys applies required label keys.  Multiple `WithKeys`
+// options accumulate.
+func WithKeys(keys ...core.Key) Option {
+	return func(d *Descriptor) {
+		d.Keys = append(d.Keys, keys...)
+	}
+}
+
 // WithNonMonotonic sets whether a counter is permitted to go up AND down.
 func WithNonMonotonic(nm bool) Option {
 	return func(d *Descriptor) {
@@ -144,21 +159,6 @@ func WithMonotonic(m bool) Option {
 func WithSigned(s bool) Option {
 	return func(d *Descriptor) {
 		d.Signed = s
-	}
-}
-
-// WithDisabled sets whether a measure is disabled by default
-func WithDisabled(dis bool) Option {
-	return func(d *Descriptor) {
-		d.Disabled = dis
-	}
-}
-
-// WithKeys applies required label keys.  Multiple `WithKeys`
-// options accumulate.
-func WithKeys(keys ...core.Key) Option {
-	return func(m *Descriptor) {
-		m.Keys = append(m.Keys, keys...)
 	}
 }
 
