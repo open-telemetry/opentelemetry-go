@@ -37,7 +37,7 @@ type metricLabels struct {
 
 var _ metric.LabelSet = &metricLabels{}
 
-func (h *metricHandle) Record(ctx context.Context, value metric.MeasurementValue) {
+func (h *metricHandle) RecordOne(ctx context.Context, value metric.MeasurementValue) {
 	h.labels.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,

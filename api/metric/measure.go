@@ -66,7 +66,7 @@ func (m *Measure) RecordInt64(ctx context.Context, value int64, labels LabelSet)
 }
 
 func (h *MeasureHandle) Record(ctx context.Context, value MeasurementValue) {
-	h.Handle.Record(ctx, value)
+	h.RecordOne(ctx, value)
 }
 
 func (h *MeasureHandle) RecordFloat64(ctx context.Context, value float64) {

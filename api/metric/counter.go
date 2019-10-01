@@ -66,7 +66,7 @@ func (c *Counter) AddInt64(ctx context.Context, value int64, labels LabelSet) {
 }
 
 func (h *CounterHandle) Add(ctx context.Context, value MeasurementValue) {
-	h.Record(ctx, value)
+	h.RecordOne(ctx, value)
 }
 
 func (h *CounterHandle) AddFloat64(ctx context.Context, value float64) {
