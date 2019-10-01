@@ -29,8 +29,7 @@ func main() {
 	trace.Register()
 	ctx := context.Background()
 
-	// Register the Jaeger exporter to be able to retrieve
-	// the collected spans.
+	// Create Jaeger Exporter
 	exporter, err := jaeger.NewExporter(jaeger.Options{
 		CollectorEndpoint: "http://localhost:14268/api/traces",
 		Process: jaeger.Process{
@@ -40,7 +39,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	trace.RegisterExporter(exporter)
+
+	// Wrap exporter with SimpleSpanProcessor and register the processor.
+	ssp := trace.NewSimpleSpanProcessor(exporter)
+	trace.RegisterSpanProcessor(ssp)
 
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
