@@ -67,10 +67,9 @@ type BatchSpanProcessor struct {
 	queue   chan *SpanData
 	dropped uint32
 
-	stopMu      sync.Mutex
-	stopPending bool
-
-	stopCh chan struct{}
+	stopWait sync.WaitGroup
+	stopOnce sync.Once
+	stopCh   chan struct{}
 }
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
@@ -105,9 +104,13 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOpt
 	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
 	go func(ctx context.Context) {
 		defer ticker.Stop()
+		bsp.stopWait.Add(1)
 		for {
 			select {
 			case <-bsp.stopCh:
+				bsp.processQueue()
+				close(bsp.queue)
+				bsp.stopWait.Done()
 				return
 			case <-ticker.C:
 				bsp.processQueue()
@@ -129,11 +132,10 @@ func (bsp *BatchSpanProcessor) OnEnd(sd *SpanData) {
 
 // Shutdown method does nothing. There is no data to cleanup.
 func (bsp *BatchSpanProcessor) Shutdown() {
-	bsp.stopMu.Lock()
-	defer bsp.stopMu.Unlock()
-	bsp.stopPending = true
-
-	close(bsp.queue)
+	bsp.stopOnce.Do(func() {
+		close(bsp.stopCh)
+		bsp.stopWait.Wait()
+	})
 }
 
 func WithMaxQueueSize(size int) BatchSpanProcessorOption {
@@ -185,11 +187,6 @@ func (bsp *BatchSpanProcessor) processQueue() {
 			}
 			break
 		}
-	}
-	bsp.stopMu.Lock()
-	defer bsp.stopMu.Unlock()
-	if bsp.stopPending {
-		close(bsp.stopCh)
 	}
 }
 
