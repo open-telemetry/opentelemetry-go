@@ -14,7 +14,10 @@
 
 package metric
 
-import "sync/atomic"
+import (
+	"fmt"
+	"sync/atomic"
+)
 
 var (
 	descriptorID uint64
@@ -28,4 +31,34 @@ func registerDescriptor(name string, kind Kind, opts []Option, d *Descriptor) {
 	for _, opt := range opts {
 		opt(d)
 	}
+	ensureValidDescriptor(d)
+}
+
+func ensureValidDescriptor(d *Descriptor) {
+	checkNonMonotonic := false
+	checkMonotonic := false
+	checkSigned := false
+	switch d.Kind {
+	case Invalid:
+		panic("tried to register a metric descriptor with invalid kind")
+	case CounterKind:
+		checkMonotonic, checkSigned = true, true
+	case GaugeKind:
+		checkNonMonotonic, checkSigned = true, true
+	case MeasureKind:
+		checkMonotonic, checkNonMonotonic = true, true
+	}
+	if checkNonMonotonic && d.NonMonotonic {
+		panicBadField(d.Kind, "NonMonotonic")
+	}
+	if checkMonotonic && d.Monotonic {
+		panicBadField(d.Kind, "Monotonic")
+	}
+	if checkSigned && d.Signed {
+		panicBadField(d.Kind, "Signed")
+	}
+}
+
+func panicBadField(kind Kind, field string) {
+	panic(fmt.Sprintf("invalid %s descriptor, has set %s field", kind.String(), field))
 }
