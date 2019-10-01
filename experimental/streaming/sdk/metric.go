@@ -43,7 +43,7 @@ func (h *metricHandle) RecordFloat(ctx context.Context, value float64) {
 		Scope:   h.labels.scope,
 		Measurement: metric.Measurement{
 			Descriptor: h.descriptor,
-			Value:      metric.NewFloatMeasurementValue(value),
+			Value:      metric.NewFloat64MeasurementValue(value),
 		},
 	})
 }
@@ -55,7 +55,7 @@ func (h *metricHandle) RecordInt(ctx context.Context, value int64) {
 		Scope:   h.labels.scope,
 		Measurement: metric.Measurement{
 			Descriptor: h.descriptor,
-			Value:      metric.NewIntMeasurementValue(value),
+			Value:      metric.NewInt64MeasurementValue(value),
 		},
 	})
 }

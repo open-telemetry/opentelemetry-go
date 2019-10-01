@@ -57,14 +57,14 @@ func (g *Int64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Int64Gau
 func (g *Float64Gauge) Measurement(value float64) Measurement {
 	return Measurement{
 		Descriptor: g.Descriptor,
-		Value:      NewFloatMeasurementValue(value),
+		Value:      NewFloat64MeasurementValue(value),
 	}
 }
 
 func (g *Int64Gauge) Measurement(value int64) Measurement {
 	return Measurement{
 		Descriptor: g.Descriptor,
-		Value:      NewIntMeasurementValue(value),
+		Value:      NewInt64MeasurementValue(value),
 	}
 }
 

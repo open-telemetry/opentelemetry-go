@@ -132,15 +132,15 @@ func checkContext(t *testing.T, ctx context.Context, key, wantValue interface{})
 }
 
 func measurementCompare(mv1, mv2 metric.MeasurementValue) bool {
-	i1, ok1 := mv1.GetInt()
-	i2, ok2 := mv2.GetInt()
+	i1, ok1 := mv1.GetInt64()
+	i2, ok2 := mv2.GetInt64()
 	if ok1 != ok2 {
 		return false
 	} else if ok1 && ok2 {
 		return i1 == i2
 	}
-	f1, ok1 := mv1.GetFloat()
-	f2, ok2 := mv2.GetFloat()
+	f1, ok1 := mv1.GetFloat64()
+	f2, ok2 := mv2.GetFloat64()
 	if ok1 != ok2 {
 		return false
 	} else if ok1 && ok2 {
