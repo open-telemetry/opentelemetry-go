@@ -1,4 +1,6 @@
-ALL_PKGS := $(shell go list ./...)
+ALL_PKGS := $(shell GO111MODULE=on go list ./...)
+
+export GO111MODULE=on
 
 EXAMPLES := \
 	./example/basic \
