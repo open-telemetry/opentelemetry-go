@@ -7,14 +7,14 @@ import (
 )
 
 type noopMeter struct{}
-type noopRecorder struct{}
+type noopHandle struct{}
 type noopLabelSet struct{}
 
 var _ Meter = noopMeter{}
-var _ Recorder = noopRecorder{}
+var _ Handle = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (noopRecorder) Record(ctx context.Context, value float64) {
+func (noopHandle) RecordOne(ctx context.Context, value float64) {
 }
 
 func (noopLabelSet) Meter() Meter {
@@ -25,12 +25,12 @@ func (noopMeter) DefineLabels(ctx context.Context, labels ...core.KeyValue) Labe
 	return noopLabelSet{}
 }
 
-func (noopMeter) RecordSingle(context.Context, LabelSet, Measurement) {
+func (noopMeter) NewHandle(context.Context, Descriptor, LabelSet) Handle {
+	return noopHandle{}
+}
+
+func (noopMeter) DeleteHandle(Handle) {
 }
 
 func (noopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
-}
-
-func (noopMeter) RecorderFor(context.Context, LabelSet, Descriptor) Recorder {
-	return noopRecorder{}
 }

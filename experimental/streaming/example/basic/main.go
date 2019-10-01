@@ -72,15 +72,8 @@ func main() {
 				tag.Insert(anotherKey.String("xyz"))),
 			commonLabels,
 
-			metric.Measurement{
-				Descriptor: oneMetric.Descriptor,
-				Value:      1.0,
-			},
-
-			metric.Measurement{
-				Descriptor: measureTwo.Descriptor,
-				Value:      2.0,
-			},
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
 		)
 
 		return tracer.WithSpan(

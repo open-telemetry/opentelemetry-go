@@ -27,12 +27,16 @@ type metricHandle struct {
 	labels     metricLabels
 }
 
+var _ metric.Handle = &metricHandle{}
+
 type metricLabels struct {
 	sdk   *sdk
 	scope exporter.ScopeID
 }
 
-func (h *metricHandle) Record(ctx context.Context, value float64) {
+var _ metric.LabelSet = &metricLabels{}
+
+func (h *metricHandle) RecordOne(ctx context.Context, value float64) {
 	h.labels.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,
@@ -55,7 +59,7 @@ func (s *sdk) DefineLabels(ctx context.Context, labels ...core.KeyValue) metric.
 	}
 }
 
-func (s *sdk) RecorderFor(ctx context.Context, labels metric.LabelSet, descriptor metric.Descriptor) metric.Recorder {
+func (s *sdk) NewHandle(ctx context.Context, descriptor metric.Descriptor, labels metric.LabelSet) metric.Handle {
 	mlabels, _ := labels.(metricLabels)
 
 	return &metricHandle{
@@ -64,19 +68,14 @@ func (s *sdk) RecorderFor(ctx context.Context, labels metric.LabelSet, descripto
 	}
 }
 
-func (s *sdk) RecordSingle(ctx context.Context, labels metric.LabelSet, input metric.Measurement) {
-	mlabels, _ := labels.(metricLabels)
-	s.exporter.Record(exporter.Event{
-		Type:    exporter.SINGLE_METRIC,
-		Context: ctx,
-		Scope:   mlabels.scope,
-		Measurement: exporter.Measurement{
-			Descriptor: input.Descriptor,
-			Value:      input.Value,
-		}})
+func (s *sdk) DeleteHandle(handle metric.Handle) {
 }
 
 func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...metric.Measurement) {
+	eventType := exporter.BATCH_METRIC
+	if len(ms) == 1 {
+		eventType = exporter.SINGLE_METRIC
+	}
 	oms := make([]exporter.Measurement, len(ms))
 	mlabels, _ := labels.(metricLabels)
 
@@ -88,7 +87,7 @@ func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...met
 	}
 
 	s.exporter.Record(exporter.Event{
-		Type:         exporter.BATCH_METRIC,
+		Type:         eventType,
 		Context:      ctx,
 		Scope:        mlabels.scope,
 		Measurements: oms,

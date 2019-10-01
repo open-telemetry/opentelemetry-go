@@ -65,7 +65,7 @@ const (
 	MODIFY_ATTR
 	SET_STATUS
 	SET_NAME
-	SINGLE_METRIC // A metric Set(), Add(), Record(), or RecordSingle()
+	SINGLE_METRIC // A metric Set(), Add(), Record()
 	BATCH_METRIC  // A RecordBatch()
 )
 

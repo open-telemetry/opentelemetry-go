@@ -45,33 +45,41 @@ func NewInt64Counter(name string, mos ...Option) (c Int64Counter) {
 }
 
 func (c *Float64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Float64CounterHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Descriptor)
+	h.Handle = labels.Meter().NewHandle(ctx, c.Descriptor, labels)
 	return
 }
 
 func (c *Int64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Int64CounterHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, c.Descriptor)
+	h.Handle = labels.Meter().NewHandle(ctx, c.Descriptor, labels)
 	return
 }
 
-func (g *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
-	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Descriptor: g.Descriptor,
+func (c *Float64Counter) Measurement(value float64) Measurement {
+	return Measurement{
+		Descriptor: c.Descriptor,
 		Value:      value,
-	})
+	}
 }
 
-func (g *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
-	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Descriptor: g.Descriptor,
+func (c *Int64Counter) Measurement(value int64) Measurement {
+	return Measurement{
+		Descriptor: c.Descriptor,
 		Value:      float64(value),
-	})
+	}
 }
 
-func (g *Float64CounterHandle) Add(ctx context.Context, value float64) {
-	g.Recorder.Record(ctx, value)
+func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, c.Measurement(value))
 }
 
-func (g *Int64CounterHandle) Add(ctx context.Context, value int64) {
-	g.Recorder.Record(ctx, float64(value))
+func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, c.Measurement(value))
+}
+
+func (h *Float64CounterHandle) Add(ctx context.Context, value float64) {
+	h.RecordOne(ctx, value)
+}
+
+func (h *Int64CounterHandle) Add(ctx context.Context, value int64) {
+	h.RecordOne(ctx, float64(value))
 }

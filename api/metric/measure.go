@@ -45,33 +45,41 @@ func NewInt64Measure(name string, mos ...Option) (m Int64Measure) {
 }
 
 func (m *Float64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Float64MeasureHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, m.Descriptor)
+	h.Handle = labels.Meter().NewHandle(ctx, m.Descriptor, labels)
 	return
 }
 
 func (m *Int64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Int64MeasureHandle) {
-	h.Recorder = labels.Meter().RecorderFor(ctx, labels, m.Descriptor)
+	h.Handle = labels.Meter().NewHandle(ctx, m.Descriptor, labels)
 	return
 }
 
-func (g *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Descriptor: g.Descriptor,
+func (m *Float64Measure) Measurement(value float64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
 		Value:      value,
-	})
+	}
 }
 
-func (g *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	labels.Meter().RecordSingle(ctx, labels, Measurement{
-		Descriptor: g.Descriptor,
+func (m *Int64Measure) Measurement(value int64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
 		Value:      float64(value),
-	})
+	}
 }
 
-func (g *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	g.Recorder.Record(ctx, value)
+func (m *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, m.Measurement(value))
 }
 
-func (g *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	g.Recorder.Record(ctx, float64(value))
+func (m *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, m.Measurement(value))
+}
+
+func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
+	h.RecordOne(ctx, value)
+}
+
+func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
+	h.RecordOne(ctx, float64(value))
 }

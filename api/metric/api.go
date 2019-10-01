@@ -33,9 +33,9 @@ const (
 )
 
 // Recorder is the implementation-level interface to Set/Add/Record individual metrics.
-type Recorder interface {
-	// Record allows the SDK to observe a single metric event
-	Record(ctx context.Context, value float64)
+type Handle interface {
+	// RecordOne allows the SDK to observe a single metric event
+	RecordOne(ctx context.Context, value float64)
 }
 
 // LabelSet represents a []core.KeyValue for use as pre-defined labels
@@ -55,15 +55,10 @@ type Meter interface {
 	// cannot be read by the application.
 	DefineLabels(context.Context, ...core.KeyValue) LabelSet
 
-	// RecorderFor returns a handle for observing single measurements.
-	RecorderFor(context.Context, LabelSet, Descriptor) Recorder
+	NewHandle(context.Context, Descriptor, LabelSet) Handle
+	DeleteHandle(Handle)
 
-	// RecordSingle records a single measurement without computing a handle.
-	RecordSingle(context.Context, LabelSet, Measurement)
-
-	// RecordBatch atomically records a batch of measurements.  An
-	// implementation may elect to call `RecordSingle` on each
-	// measurement, or it could choose a more-optimized approach.
+	// RecordBatch atomically records a batch of measurements..
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 }
 
@@ -103,13 +98,6 @@ type Descriptor struct {
 	// Keys are required keys determined in the handles
 	// obtained for this metric.
 	Keys []core.Key
-}
-
-// Handle contains a Recorder to support the implementation-defined
-// behavior of reporting a single metric with pre-determined label
-// values.
-type Handle struct {
-	Recorder
 }
 
 // Measurement is used for reporting a batch of metric values.
@@ -174,11 +162,6 @@ func WithKeys(keys ...core.Key) Option {
 // Defined returns true when the descriptor has been registered.
 func (d Descriptor) Defined() bool {
 	return len(d.Name) != 0
-}
-
-// RecordSingle reports to the global Meter.
-func RecordSingle(ctx context.Context, labels LabelSet, measurement Measurement) {
-	GlobalMeter().RecordSingle(ctx, labels, measurement)
 }
 
 // RecordBatch reports to the global Meter.
