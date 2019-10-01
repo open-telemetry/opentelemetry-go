@@ -125,12 +125,13 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOpt
 func (bsp *BatchSpanProcessor) OnStart(sd *SpanData) {
 }
 
-// OnEnd method exports SpanData using associated exporter.
+// OnEnd method enqueues SpanData for later processing.
 func (bsp *BatchSpanProcessor) OnEnd(sd *SpanData) {
 	bsp.enqueue(sd)
 }
 
-// Shutdown method does nothing. There is no data to cleanup.
+// Shutdown flushes the queue and waits until all spans are processed.
+// It only executes once. Subsequent call does nothing.
 func (bsp *BatchSpanProcessor) Shutdown() {
 	bsp.stopOnce.Do(func() {
 		close(bsp.stopCh)
