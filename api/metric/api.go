@@ -34,8 +34,10 @@ const (
 
 // Recorder is the implementation-level interface to Set/Add/Record individual metrics.
 type Handle interface {
-	// RecordOne allows the SDK to observe a single metric event
-	RecordOne(ctx context.Context, value float64)
+	// Record allows the SDK to observe a single floating metric event
+	RecordFloat(ctx context.Context, value float64)
+	// Record allows the SDK to observe a single integral metric event
+	RecordInt(ctx context.Context, value int64)
 }
 
 // LabelSet represents a []core.KeyValue for use as pre-defined labels
@@ -103,7 +105,8 @@ type Descriptor struct {
 // Measurement is used for reporting a batch of metric values.
 type Measurement struct {
 	Descriptor Descriptor
-	Value      float64
+	ValueFloat float64
+	ValueInt   int64
 }
 
 // Option supports specifying the various metric options.

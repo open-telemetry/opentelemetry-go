@@ -36,7 +36,7 @@ type metricLabels struct {
 
 var _ metric.LabelSet = &metricLabels{}
 
-func (h *metricHandle) RecordOne(ctx context.Context, value float64) {
+func (h *metricHandle) RecordFloat(ctx context.Context, value float64) {
 	h.labels.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,
@@ -44,6 +44,19 @@ func (h *metricHandle) RecordOne(ctx context.Context, value float64) {
 		Measurement: exporter.Measurement{
 			Descriptor: h.descriptor,
 			Value:      value,
+		},
+	})
+}
+
+func (h *metricHandle) RecordInt(ctx context.Context, value int64) {
+	h.labels.sdk.exporter.Record(exporter.Event{
+		Type:    exporter.SINGLE_METRIC,
+		Context: ctx,
+		Scope:   h.labels.scope,
+		Measurement: exporter.Measurement{
+			Descriptor: h.descriptor,
+			// meh, will be fixed later
+			Value: float64(value),
 		},
 	})
 }
@@ -82,7 +95,8 @@ func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...met
 	for i, input := range ms {
 		oms[i] = exporter.Measurement{
 			Descriptor: input.Descriptor,
-			Value:      input.Value,
+			// meh, will be fixed later
+			Value: input.ValueFloat,
 		}
 	}
 

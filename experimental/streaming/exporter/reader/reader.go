@@ -229,7 +229,8 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		read.Attributes = attrs
 		read.Measurement = metric.Measurement{
 			Descriptor: event.Measurement.Descriptor,
-			Value:      event.Measurement.Value,
+			// meh, will be fixed later anyway
+			ValueFloat: event.Measurement.Value,
 		}
 
 	case exporter.BATCH_METRIC:
@@ -248,7 +249,8 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		for _, m := range event.Measurements {
 			read.Measurements = append(read.Measurements, metric.Measurement{
 				Descriptor: m.Descriptor,
-				Value:      m.Value,
+				// meh, will be fixed later
+				ValueFloat: m.Value,
 			})
 		}
 

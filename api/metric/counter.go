@@ -57,14 +57,14 @@ func (c *Int64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Int64C
 func (c *Float64Counter) Measurement(value float64) Measurement {
 	return Measurement{
 		Descriptor: c.Descriptor,
-		Value:      value,
+		ValueFloat: value,
 	}
 }
 
 func (c *Int64Counter) Measurement(value int64) Measurement {
 	return Measurement{
 		Descriptor: c.Descriptor,
-		Value:      float64(value),
+		ValueInt:   value,
 	}
 }
 
@@ -77,9 +77,9 @@ func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 }
 
 func (h *Float64CounterHandle) Add(ctx context.Context, value float64) {
-	h.RecordOne(ctx, value)
+	h.RecordFloat(ctx, value)
 }
 
 func (h *Int64CounterHandle) Add(ctx context.Context, value int64) {
-	h.RecordOne(ctx, float64(value))
+	h.RecordInt(ctx, value)
 }
