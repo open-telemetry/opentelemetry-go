@@ -34,10 +34,8 @@ const (
 
 // Recorder is the implementation-level interface to Set/Add/Record individual metrics.
 type Handle interface {
-	// Record allows the SDK to observe a single floating metric event
-	RecordFloat(ctx context.Context, value float64)
-	// Record allows the SDK to observe a single integral metric event
-	RecordInt(ctx context.Context, value int64)
+	// Record allows the SDK to observe a single metric event
+	Record(ctx context.Context, value MeasurementValue)
 }
 
 // LabelSet represents a []core.KeyValue for use as pre-defined labels

@@ -18,68 +18,61 @@ import (
 	"context"
 )
 
-type Float64Gauge struct {
+type Gauge struct {
 	Descriptor
 }
 
-type Int64Gauge struct {
-	Descriptor
-}
-
-type Float64GaugeHandle struct {
+type GaugeHandle struct {
 	Handle
 }
 
-type Int64GaugeHandle struct {
-	Handle
-}
-
-func NewFloat64Gauge(name string, mos ...Option) (g Float64Gauge) {
+func NewGauge(name string, mos ...Option) (g Gauge) {
 	registerDescriptor(name, GaugeKind, mos, &g.Descriptor)
 	return
 }
 
-func NewInt64Gauge(name string, mos ...Option) (g Int64Gauge) {
-	registerDescriptor(name, GaugeKind, mos, &g.Descriptor)
-	return
-}
-
-func (g *Float64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Float64GaugeHandle) {
+func (g *Gauge) GetHandle(ctx context.Context, labels LabelSet) (h GaugeHandle) {
 	h.Handle = labels.Meter().NewHandle(ctx, g.Descriptor, labels)
 	return
 }
 
-func (g *Int64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Int64GaugeHandle) {
-	h.Handle = labels.Meter().NewHandle(ctx, g.Descriptor, labels)
-	return
-}
-
-func (g *Float64Gauge) Measurement(value float64) Measurement {
+func (g *Gauge) Float64Measurement(value float64) Measurement {
 	return Measurement{
 		Descriptor: g.Descriptor,
 		Value:      NewFloat64MeasurementValue(value),
 	}
 }
 
-func (g *Int64Gauge) Measurement(value int64) Measurement {
+func (g *Gauge) Int64Measurement(value int64) Measurement {
 	return Measurement{
 		Descriptor: g.Descriptor,
 		Value:      NewInt64MeasurementValue(value),
 	}
 }
 
-func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, g.Measurement(value))
+func (g *Gauge) Set(ctx context.Context, value MeasurementValue, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, Measurement{
+		Descriptor: g.Descriptor,
+		Value:      value,
+	})
 }
 
-func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, g.Measurement(value))
+func (g *Gauge) SetFloat64(ctx context.Context, value float64, labels LabelSet) {
+	g.Set(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
-func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
-	h.RecordFloat(ctx, value)
+func (g *Gauge) SetInt64(ctx context.Context, value int64, labels LabelSet) {
+	g.Set(ctx, NewInt64MeasurementValue(value), labels)
 }
 
-func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
-	h.RecordInt(ctx, value)
+func (h *GaugeHandle) Set(ctx context.Context, value MeasurementValue) {
+	h.Record(ctx, value)
+}
+
+func (h *GaugeHandle) SetFloat64(ctx context.Context, value float64) {
+	h.Set(ctx, NewFloat64MeasurementValue(value))
+}
+
+func (h *GaugeHandle) SetInt64(ctx context.Context, value int64) {
+	h.Set(ctx, NewInt64MeasurementValue(value))
 }

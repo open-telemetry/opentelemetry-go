@@ -18,68 +18,61 @@ import (
 	"context"
 )
 
-type Float64Measure struct {
+type Measure struct {
 	Descriptor
 }
 
-type Int64Measure struct {
-	Descriptor
-}
-
-type Float64MeasureHandle struct {
+type MeasureHandle struct {
 	Handle
 }
 
-type Int64MeasureHandle struct {
-	Handle
-}
-
-func NewFloat64Measure(name string, mos ...Option) (m Float64Measure) {
+func NewMeasure(name string, mos ...Option) (m Measure) {
 	registerDescriptor(name, MeasureKind, mos, &m.Descriptor)
 	return
 }
 
-func NewInt64Measure(name string, mos ...Option) (m Int64Measure) {
-	registerDescriptor(name, MeasureKind, mos, &m.Descriptor)
-	return
-}
-
-func (m *Float64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Float64MeasureHandle) {
+func (m *Measure) GetHandle(ctx context.Context, labels LabelSet) (h MeasureHandle) {
 	h.Handle = labels.Meter().NewHandle(ctx, m.Descriptor, labels)
 	return
 }
 
-func (m *Int64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Int64MeasureHandle) {
-	h.Handle = labels.Meter().NewHandle(ctx, m.Descriptor, labels)
-	return
-}
-
-func (m *Float64Measure) Measurement(value float64) Measurement {
+func (m *Measure) Float64Measurement(value float64) Measurement {
 	return Measurement{
 		Descriptor: m.Descriptor,
 		Value:      NewFloat64MeasurementValue(value),
 	}
 }
 
-func (m *Int64Measure) Measurement(value int64) Measurement {
+func (m *Measure) Int64Measurement(value int64) Measurement {
 	return Measurement{
 		Descriptor: m.Descriptor,
 		Value:      NewInt64MeasurementValue(value),
 	}
 }
 
-func (m *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, m.Measurement(value))
+func (m *Measure) Record(ctx context.Context, value MeasurementValue, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, Measurement{
+		Descriptor: m.Descriptor,
+		Value:      value,
+	})
 }
 
-func (m *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, m.Measurement(value))
+func (m *Measure) RecordFloat64(ctx context.Context, value float64, labels LabelSet) {
+	m.Record(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
-func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	h.RecordFloat(ctx, value)
+func (m *Measure) RecordInt64(ctx context.Context, value int64, labels LabelSet) {
+	m.Record(ctx, NewInt64MeasurementValue(value), labels)
 }
 
-func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	h.RecordInt(ctx, value)
+func (h *MeasureHandle) Record(ctx context.Context, value MeasurementValue) {
+	h.Handle.Record(ctx, value)
+}
+
+func (h *MeasureHandle) RecordFloat64(ctx context.Context, value float64) {
+	h.Record(ctx, NewFloat64MeasurementValue(value))
+}
+
+func (h *MeasureHandle) RecordInt64(ctx context.Context, value int64) {
+	h.Record(ctx, NewInt64MeasurementValue(value))
 }

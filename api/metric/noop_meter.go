@@ -14,10 +14,7 @@ var _ Meter = noopMeter{}
 var _ Handle = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (noopHandle) RecordFloat(ctx context.Context, value float64) {
-}
-
-func (noopHandle) RecordInt(ctx context.Context, value int64) {
+func (noopHandle) Record(ctx context.Context, value MeasurementValue) {
 }
 
 func (noopLabelSet) Meter() Meter {

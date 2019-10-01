@@ -36,26 +36,14 @@ type metricLabels struct {
 
 var _ metric.LabelSet = &metricLabels{}
 
-func (h *metricHandle) RecordFloat(ctx context.Context, value float64) {
+func (h *metricHandle) Record(ctx context.Context, value metric.MeasurementValue) {
 	h.labels.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.SINGLE_METRIC,
 		Context: ctx,
 		Scope:   h.labels.scope,
 		Measurement: metric.Measurement{
 			Descriptor: h.descriptor,
-			Value:      metric.NewFloat64MeasurementValue(value),
-		},
-	})
-}
-
-func (h *metricHandle) RecordInt(ctx context.Context, value int64) {
-	h.labels.sdk.exporter.Record(exporter.Event{
-		Type:    exporter.SINGLE_METRIC,
-		Context: ctx,
-		Scope:   h.labels.scope,
-		Measurement: metric.Measurement{
-			Descriptor: h.descriptor,
-			Value:      metric.NewInt64MeasurementValue(value),
+			Value:      value,
 		},
 	})
 }
