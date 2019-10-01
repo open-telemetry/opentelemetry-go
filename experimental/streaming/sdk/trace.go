@@ -32,12 +32,6 @@ var (
 	MessageKey = key.New("message")
 )
 
-func New(observers ...exporter.Observer) SDK {
-	return &sdk{
-		exporter: exporter.NewExporter(observers...),
-	}
-}
-
 func (s *sdk) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	// TODO: use runtime/trace.WithRegion for execution sdk support
 	// TODO: use runtime/pprof.Do for profile tags support

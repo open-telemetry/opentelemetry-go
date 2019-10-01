@@ -30,6 +30,7 @@ const (
 	CounterKind      // Supports Add()
 	GaugeKind        // Supports Set()
 	MeasureKind      // Supports Record()
+	ObserverKind
 )
 
 // Recorder is the implementation-level interface to Set/Add/Record individual metrics.
@@ -49,6 +50,10 @@ type LabelSet interface {
 	Meter() Meter
 }
 
+// ObserverCallback defines a type of the callback SDK will call for
+// the registered observers.
+type ObserverCallback func(Meter, Observer) (LabelSet, MeasurementValue)
+
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
 	// DefineLabels returns a reference to a set of labels that
@@ -60,6 +65,9 @@ type Meter interface {
 
 	// RecordBatch atomically records a batch of measurements..
 	RecordBatch(context.Context, LabelSet, ...Measurement)
+
+	RegisterObserver(Observer, ObserverCallback)
+	UnregisterObserver(Observer)
 }
 
 type DescriptorID uint64
@@ -92,7 +100,7 @@ type Descriptor struct {
 	// NonMonotonic implies this is an up-down Counter.
 	NonMonotonic bool
 
-	// Monotonic implies this is a non-descending Gauge.
+	// Monotonic implies this is a non-descending Gauge/Observer.
 	Monotonic bool
 
 	// Signed implies this is a Measure that supports positive and

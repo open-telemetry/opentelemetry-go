@@ -34,3 +34,9 @@ func (noopMeter) DeleteHandle(Handle) {
 
 func (noopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 }
+
+func (noopMeter) RegisterObserver(Observer, ObserverCallback) {
+}
+
+func (noopMeter) UnregisterObserver(Observer) {
+}

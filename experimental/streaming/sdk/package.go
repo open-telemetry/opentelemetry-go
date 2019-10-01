@@ -15,14 +15,27 @@
 package sdk
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
+type observerData struct {
+	observer metric.Observer
+	callback metric.ObserverCallback
+}
+
+type observersMap map[metric.DescriptorID]observerData
+
 type sdk struct {
 	exporter  *exporter.Exporter
 	resources exporter.EventID
+
+	observersLock sync.Mutex
+	observers     atomic.Value // observersMap
 }
 
 type SDK interface {
@@ -31,3 +44,9 @@ type SDK interface {
 }
 
 var _ SDK = &sdk{}
+
+func New(observers ...exporter.Observer) SDK {
+	return &sdk{
+		exporter: exporter.NewExporter(observers...),
+	}
+}

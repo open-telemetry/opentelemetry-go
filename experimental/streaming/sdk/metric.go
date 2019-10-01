@@ -16,6 +16,7 @@ package sdk
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/metric"
@@ -87,4 +88,80 @@ func (s *sdk) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...met
 		Scope:        mlabels.scope,
 		Measurements: oms,
 	})
+}
+
+func (s *sdk) RegisterObserver(observer metric.Observer, callback metric.ObserverCallback) {
+	if s.insertNewObserver(observer, callback) {
+		go s.observersRoutine()
+	}
+}
+
+func (s *sdk) insertNewObserver(observer metric.Observer, callback metric.ObserverCallback) bool {
+	s.observersLock.Lock()
+	defer s.observersLock.Unlock()
+	old := s.loadObserversMap()
+	if _, ok := old[observer.Descriptor.ID]; ok {
+		return false
+	}
+	observers := make(observersMap)
+	for id, data := range old {
+		observers[id] = data
+	}
+	observers[observer.Descriptor.ID] = observerData{
+		observer: observer,
+		callback: callback,
+	}
+	s.storeObserversMap(observers)
+	return old == nil
+}
+
+func (s *sdk) UnregisterObserver(observer metric.Observer) {
+	s.observersLock.Lock()
+	defer s.observersLock.Unlock()
+	old := s.loadObserversMap()
+	if _, ok := old[observer.Descriptor.ID]; !ok {
+		return
+	}
+	if len(old) == 1 {
+		s.storeObserversMap(nil)
+		return
+	}
+	observers := make(observersMap)
+	for id, data := range old {
+		if id != observer.Descriptor.ID {
+			observers[id] = data
+		}
+	}
+	s.observers.Store(observers)
+}
+
+func (s *sdk) observersRoutine() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		m := s.loadObserversMap()
+		if m == nil {
+			return
+		}
+		for _, data := range m {
+			labels, value := data.callback(s, data.observer)
+			s.RecordBatch(context.Background(), labels, metric.Measurement{
+				Descriptor: data.observer.Descriptor,
+				Value:      value,
+			})
+		}
+	}
+}
+
+func (s *sdk) loadObserversMap() observersMap {
+	i := s.observers.Load()
+	if i == nil {
+		return nil
+	}
+	m := i.(observersMap)
+	return m
+}
+
+func (s *sdk) storeObserversMap(m observersMap) {
+	s.observers.Store(m)
 }
