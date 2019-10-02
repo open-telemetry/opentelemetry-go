@@ -31,36 +31,16 @@ type tracer struct {
 
 var (
 	// TODO These should move somewhere in the api, right?
-	ServiceKey   = key.New("service")
-	ComponentKey = key.New("component")
-	ErrorKey     = key.New("error")
-	SpanIDKey    = key.New("span_id")
-	TraceIDKey   = key.New("trace_id")
-	MessageKey   = key.New("message")
+	ErrorKey   = key.New("error")
+	SpanIDKey  = key.New("span_id")
+	TraceIDKey = key.New("trace_id")
+	MessageKey = key.New("message")
 )
 
 func New(observers ...exporter.Observer) trace.Tracer {
 	return &tracer{
 		exporter: exporter.NewExporter(observers...),
 	}
-}
-
-func (t *tracer) WithResources(attributes ...core.KeyValue) trace.Tracer {
-	s := t.exporter.NewScope(exporter.ScopeID{
-		EventID: t.resources,
-	}, attributes...)
-	return &tracer{
-		exporter:  t.exporter,
-		resources: s.EventID,
-	}
-}
-
-func (t *tracer) WithComponent(name string) trace.Tracer {
-	return t.WithResources(ComponentKey.String(name))
-}
-
-func (t *tracer) WithService(name string) trace.Tracer {
-	return t.WithResources(ServiceKey.String(name))
 }
 
 func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {

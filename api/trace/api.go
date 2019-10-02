@@ -36,14 +36,6 @@ type Tracer interface {
 		operation string,
 		body func(ctx context.Context) error,
 	) error
-
-	// TODO: Do we need WithService and WithComponent?
-	// TODO: Can we make these helpers (based on WithResources)?
-	WithService(name string) Tracer
-	WithComponent(name string) Tracer
-
-	// WithResources attaches resource attributes to the Tracer.
-	WithResources(res ...core.KeyValue) Tracer
 }
 
 type EndOptions struct {
