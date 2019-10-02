@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"go.opentelemetry.io/exporter/trace/jaeger"
+	"go.opentelemetry.io/exporter/trace/stdout"
 	"go.opentelemetry.io/plugin/httptrace"
 	"go.opentelemetry.io/sdk/trace"
 )
@@ -14,19 +14,13 @@ import (
 func ExampleNewHandler() {
 	trace.Register()
 
-	// Create Jaeger exporter to be able to retrieve
-	// the collected spans.
-	exporter, err := jaeger.NewExporter(jaeger.Options{
-		CollectorEndpoint: "http://localhost:14268/api/traces",
-		Process: jaeger.Process{
-			ServiceName: "trace-demo",
-		},
-	})
+	// Write spans to stdout
+	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Wrap Jaeger exporter with SimpleSpanProcessor and register the processor.
+	// Wrap stdout exporter with SimpleSpanProcessor and register the processor.
 	ssp := trace.NewSimpleSpanProcessor(exporter)
 	trace.RegisterSpanProcessor(ssp)
 
@@ -50,7 +44,11 @@ func ExampleNewHandler() {
 
 	}
 
-	http.Handle("/hello", httptrace.NewHandler(http.HandlerFunc(helloHandler), "hello"))
+	http.Handle("/hello", httptrace.NewHandler(
+		http.HandlerFunc(helloHandler),
+		"hello",
+	))
+
 	if err := http.ListenAndServe(":7777", nil); err != nil {
 		log.Fatal(err)
 	}

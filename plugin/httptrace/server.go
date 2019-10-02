@@ -19,11 +19,12 @@ type httpHandler struct {
 }
 
 // NewHandler wraps the passed handler in an span named after the operation and
-// with provided options and functions like http middleware. The span is tagged
+// with provided options, and functions as http middleware. The span is tagged
 // with:
 //   * "read_bytes" - if anything was read from the request body
 //   * "wrote_bytes" - if anything was written to the response writer
 //   * "http_status" - the http status, if set
+// TODO: Add these aatributes: https://github.com/census-instrumentation/opencensus-go/blob/fa651b05963cfb6060755dc887e7d156ba66e792/plugin/ochttp/trace.go#L33-L40
 func NewHandler(handler http.Handler, operation string, opts ...HandlerOption) http.Handler {
 	c := newHandlerConfig(opts...)
 
@@ -39,18 +40,21 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: what if sctx == EmptySpanContext?
 	attrs, tags, sctx := Extract(ctx, r)
 
-	// TODO: what's going on here?
-	r = r.WithContext(tag.WithMap(ctx, tag.NewMap(tag.MapUpdate{MultiKV: tags})))
-
-	// TODO: flesh this out
-	operationName := h.operation
+	// TODO: What is this doing exactly?
+	ctx = tag.WithMap(ctx, tag.NewMap(tag.MapUpdate{MultiKV: tags}))
 
 	spanOpts := []trace.SpanOption{
 		trace.WithAttributes(attrs...),
+		// TODO: If the endpoint is a public endpoint, it should start a new trace
+		// and incoming remote sctx should be added as a link (WithLinks(links...) -
+		// this option doesn't exist). OR it should somehow indicate to SDK that it
+		// is a public endpoint and SDK takes care of using sctx as either a parent
+		// or a Link.
 		trace.ChildOf(sctx),
 	}
 
-	ctx, span := h.tracer.Start(ctx, operationName, spanOpts...)
+	var span trace.Span
+	ctx, span = h.tracer.Start(ctx, h.operation, spanOpts...)
 	defer span.End()
 
 	r = r.WithContext(ctx)
@@ -65,6 +69,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func attributes(bw *bodyWrapper, rw *respWriterWrapper) []core.KeyValue {
 	kv := make([]core.KeyValue, 0, 5)
+	// TODO: Consider adding an event after each read and write, possibly as an
+	// option (defaulting to off), so at to not create needlesly verbose spans.
 	if bw.read > 0 {
 		kv = append(kv,
 			core.KeyValue{
