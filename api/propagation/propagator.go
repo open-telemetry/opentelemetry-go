@@ -50,3 +50,13 @@ type Supplier interface {
 	Get(key string) string
 	Set(key string, value string)
 }
+
+// BinaryFormatPropagator is an interface that specifies methods to convert SpanContext
+// to/from byte array.
+type BinaryFormatPropagator interface {
+	// ToBytes serializes span context into a byte array and returns the array.
+	ToBytes(sc core.SpanContext) []byte
+
+	// FromBytes de-serializes byte array into span context and returns the span context.
+	FromBytes([]byte) core.SpanContext
+}
