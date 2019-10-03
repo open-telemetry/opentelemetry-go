@@ -18,7 +18,25 @@ type Observer struct {
 	Descriptor
 }
 
-func NewObserver(name string, mos ...Option) (o Observer) {
-	registerDescriptor(name, ObserverKind, mos, &o.Descriptor)
+type Float64Observer struct {
+	Observer
+}
+
+type Int64Observer struct {
+	Observer
+}
+
+func NewObserver(name string, valueKind MetricValueKind, mos ...Option) (o Observer) {
+	registerDescriptor(name, ObserverKind, valueKind, mos, &o.Descriptor)
+	return
+}
+
+func NewFloat64Observer(name string, mos ...Option) (o Float64Observer) {
+	o.Observer = NewObserver(name, Float64ValueKind, mos...)
+	return
+}
+
+func NewInt64Observer(name string, mos ...Option) (o Int64Observer) {
+	o.Observer = NewObserver(name, Int64ValueKind, mos...)
 	return
 }

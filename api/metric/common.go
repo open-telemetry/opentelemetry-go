@@ -23,9 +23,10 @@ var (
 	descriptorID uint64
 )
 
-func registerDescriptor(name string, kind Kind, opts []Option, d *Descriptor) {
+func registerDescriptor(name string, kind Kind, valueKind MetricValueKind, opts []Option, d *Descriptor) {
 	d.Name = name
 	d.Kind = kind
+	d.ValueKind = valueKind
 	d.ID = DescriptorID(atomic.AddUint64(&descriptorID, 1))
 
 	for _, opt := range opts {

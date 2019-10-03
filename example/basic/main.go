@@ -33,12 +33,12 @@ var (
 	lemonsKey  = key.New("ex.com/lemons")
 	anotherKey = key.New("ex.com/another")
 
-	oneMetric = metric.NewGauge("ex.com/one",
+	oneMetric = metric.NewFloat64Gauge("ex.com/one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo = metric.NewMeasure("ex.com/two")
+	measureTwo = metric.NewFloat64Measure("ex.com/two")
 )
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
-		gauge.SetInt64(ctx, 1)
+		gauge.Set(ctx, 1)
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context tags:
@@ -69,8 +69,8 @@ func main() {
 				tag.Insert(anotherKey.String("xyz"))),
 			commonLabels,
 
-			oneMetric.Float64Measurement(1.0),
-			measureTwo.Float64Measurement(2.0),
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
 		)
 
 		return tracer.WithSpan(
@@ -81,7 +81,7 @@ func main() {
 
 				trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
-				measure.RecordFloat64(ctx, 1.3)
+				measure.Record(ctx, 1.3)
 
 				return nil
 			},

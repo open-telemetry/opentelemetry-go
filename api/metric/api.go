@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=Kind,MetricValueKind
+
 package metric
 
 import (
@@ -24,7 +26,6 @@ import (
 // Kind categorizes different kinds of metric.
 type Kind int
 
-//go:generate stringer -type=Kind
 const (
 	Invalid     Kind = iota
 	CounterKind      // Supports Add()
@@ -71,6 +72,13 @@ type Meter interface {
 }
 
 type DescriptorID uint64
+type MetricValueKind int8
+
+const (
+	AnyValueKind MetricValueKind = iota
+	Int64ValueKind
+	Float64ValueKind
+)
 
 // Descriptor represents a named metric with recommended local-aggregation keys.
 type Descriptor struct {
@@ -93,6 +101,9 @@ type Descriptor struct {
 
 	// Unit is an optional field describing this metric descriptor.
 	Unit unit.Unit
+
+	// ValueKind describes the type of values the metric produces.
+	ValueKind MetricValueKind
 
 	// NonMonotonic implies this is an up-down Counter.
 	NonMonotonic bool
@@ -165,4 +176,36 @@ func (d Descriptor) Defined() bool {
 // RecordBatch reports to the global Meter.
 func RecordBatch(ctx context.Context, labels LabelSet, batch ...Measurement) {
 	GlobalMeter().RecordBatch(ctx, labels, batch...)
+}
+
+// Int64ObserverCallback defines a type of the callback SDK will call
+// for the registered int64 observers.
+type Int64ObserverCallback func(Meter, Int64Observer) (LabelSet, int64)
+
+func RegisterInt64Observer(meter Meter, observer Int64Observer, callback Int64ObserverCallback) {
+	cb := func(m Meter, o Observer) (LabelSet, MeasurementValue) {
+		l, i := callback(m, Int64Observer{o})
+		return l, NewInt64MeasurementValue(i)
+	}
+	meter.RegisterObserver(observer.Observer, cb)
+}
+
+func UnregisterInt64Observer(meter Meter, observer Int64Observer) {
+	meter.UnregisterObserver(observer.Observer)
+}
+
+// Float64ObserverCallback defines a type of the callback SDK will
+// call for the registered float64 observers.
+type Float64ObserverCallback func(Meter, Float64Observer) (LabelSet, float64)
+
+func RegisterFloat64Observer(meter Meter, observer Float64Observer, callback Float64ObserverCallback) {
+	cb := func(m Meter, o Observer) (LabelSet, MeasurementValue) {
+		l, f := callback(m, Float64Observer{o})
+		return l, NewFloat64MeasurementValue(f)
+	}
+	meter.RegisterObserver(observer.Observer, cb)
+}
+
+func UnregisterFloat64Observer(meter Meter, observer Float64Observer) {
+	meter.UnregisterObserver(observer.Observer)
 }
