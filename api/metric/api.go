@@ -105,15 +105,16 @@ type Descriptor struct {
 	// ValueKind describes the type of values the metric produces.
 	ValueKind MetricValueKind
 
-	// NonMonotonic implies this is an up-down Counter.
-	NonMonotonic bool
-
-	// Monotonic implies this is a non-descending Gauge/Observer.
-	Monotonic bool
-
-	// Signed implies this is a Measure that supports positive and
-	// negative values.
-	Signed bool
+	// Meaning depends on the metric type:
+	//
+	// - for Counter it implies that this is an up-down Counter
+	//
+	// - for Gauge/Observer it implies that this is non-descending
+	//   Gauge/Observer
+	//
+	// - for Measure it implies that it supports positive and
+	// negative values
+	Alternate bool
 }
 
 // Measurement is used for reporting a batch of metric values.
@@ -186,7 +187,7 @@ func WithKeys(keys ...core.Key) OptionApplier {
 func WithNonMonotonic(nm bool) CounterOptionApplier {
 	return counterOptionWrapper{
 		F: func(d *Descriptor) {
-			d.NonMonotonic = nm
+			d.Alternate = nm
 		},
 	}
 }
@@ -195,7 +196,7 @@ func WithNonMonotonic(nm bool) CounterOptionApplier {
 func WithMonotonic(m bool) GaugeOptionApplier {
 	return gaugeOptionWrapper{
 		F: func(d *Descriptor) {
-			d.Monotonic = m
+			d.Alternate = m
 		},
 	}
 }
@@ -204,7 +205,7 @@ func WithMonotonic(m bool) GaugeOptionApplier {
 func WithSigned(s bool) MeasureOptionApplier {
 	return measureOptionWrapper{
 		F: func(d *Descriptor) {
-			d.Signed = s
+			d.Alternate = s
 		},
 	}
 }
