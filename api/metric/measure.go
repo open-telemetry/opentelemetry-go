@@ -42,17 +42,34 @@ type Int64MeasureHandle struct {
 	MeasureHandle
 }
 
-func NewMeasure(name string, valueKind MetricValueKind, mos ...Option) (m Measure) {
-	registerDescriptor(name, MeasureKind, valueKind, mos, &m.Descriptor)
+type MeasureOptionApplier interface {
+	ApplyMeasureOption(*Descriptor)
+}
+
+type measureOptionWrapper struct {
+	F Option
+}
+
+var _ MeasureOptionApplier = measureOptionWrapper{}
+
+func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
+	o.F(d)
+}
+
+func NewMeasure(name string, valueKind MetricValueKind, mos ...MeasureOptionApplier) (m Measure) {
+	registerDescriptor(name, MeasureKind, valueKind, &m.Descriptor)
+	for _, opt := range mos {
+		opt.ApplyMeasureOption(&m.Descriptor)
+	}
 	return
 }
 
-func NewFloat64Measure(name string, mos ...Option) (c Float64Measure) {
+func NewFloat64Measure(name string, mos ...MeasureOptionApplier) (c Float64Measure) {
 	c.Measure = NewMeasure(name, Float64ValueKind, mos...)
 	return
 }
 
-func NewInt64Measure(name string, mos ...Option) (c Int64Measure) {
+func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) {
 	c.Measure = NewMeasure(name, Int64ValueKind, mos...)
 	return
 }

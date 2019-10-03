@@ -42,17 +42,34 @@ type Int64CounterHandle struct {
 	CounterHandle
 }
 
-func NewCounter(name string, valueKind MetricValueKind, mos ...Option) (c Counter) {
-	registerDescriptor(name, CounterKind, valueKind, mos, &c.Descriptor)
+type CounterOptionApplier interface {
+	ApplyCounterOption(*Descriptor)
+}
+
+type counterOptionWrapper struct {
+	F Option
+}
+
+var _ CounterOptionApplier = counterOptionWrapper{}
+
+func (o counterOptionWrapper) ApplyCounterOption(d *Descriptor) {
+	o.F(d)
+}
+
+func NewCounter(name string, valueKind MetricValueKind, mos ...CounterOptionApplier) (c Counter) {
+	registerDescriptor(name, CounterKind, valueKind, &c.Descriptor)
+	for _, opt := range mos {
+		opt.ApplyCounterOption(&c.Descriptor)
+	}
 	return
 }
 
-func NewFloat64Counter(name string, mos ...Option) (c Float64Counter) {
+func NewFloat64Counter(name string, mos ...CounterOptionApplier) (c Float64Counter) {
 	c.Counter = NewCounter(name, Float64ValueKind, mos...)
 	return
 }
 
-func NewInt64Counter(name string, mos ...Option) (c Int64Counter) {
+func NewInt64Counter(name string, mos ...CounterOptionApplier) (c Int64Counter) {
 	c.Counter = NewCounter(name, Int64ValueKind, mos...)
 	return
 }

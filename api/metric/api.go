@@ -125,46 +125,87 @@ type Measurement struct {
 // Option supports specifying the various metric options.
 type Option func(*Descriptor)
 
+type OptionApplier interface {
+	CounterOptionApplier
+	GaugeOptionApplier
+	MeasureOptionApplier
+	ApplyOption(*Descriptor)
+}
+
+type optionWrapper struct {
+	F Option
+}
+
+var _ OptionApplier = optionWrapper{}
+
+func (o optionWrapper) ApplyCounterOption(d *Descriptor) {
+	o.ApplyOption(d)
+}
+
+func (o optionWrapper) ApplyGaugeOption(d *Descriptor) {
+	o.ApplyOption(d)
+}
+
+func (o optionWrapper) ApplyMeasureOption(d *Descriptor) {
+	o.ApplyOption(d)
+}
+
+func (o optionWrapper) ApplyOption(d *Descriptor) {
+	o.F(d)
+}
+
 // WithDescription applies provided description.
-func WithDescription(desc string) Option {
-	return func(d *Descriptor) {
-		d.Description = desc
+func WithDescription(desc string) OptionApplier {
+	return optionWrapper{
+		F: func(d *Descriptor) {
+			d.Description = desc
+		},
 	}
 }
 
 // WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) Option {
-	return func(d *Descriptor) {
-		d.Unit = unit
+func WithUnit(unit unit.Unit) OptionApplier {
+	return optionWrapper{
+		F: func(d *Descriptor) {
+			d.Unit = unit
+		},
 	}
 }
 
 // WithKeys applies required label keys.  Multiple `WithKeys`
 // options accumulate.
-func WithKeys(keys ...core.Key) Option {
-	return func(d *Descriptor) {
-		d.Keys = append(d.Keys, keys...)
+func WithKeys(keys ...core.Key) OptionApplier {
+	return optionWrapper{
+		F: func(d *Descriptor) {
+			d.Keys = append(d.Keys, keys...)
+		},
 	}
 }
 
 // WithNonMonotonic sets whether a counter is permitted to go up AND down.
-func WithNonMonotonic(nm bool) Option {
-	return func(d *Descriptor) {
-		d.NonMonotonic = nm
+func WithNonMonotonic(nm bool) CounterOptionApplier {
+	return counterOptionWrapper{
+		F: func(d *Descriptor) {
+			d.NonMonotonic = nm
+		},
 	}
 }
 
 // WithMonotonic sets whether a gauge is not permitted to go down.
-func WithMonotonic(m bool) Option {
-	return func(d *Descriptor) {
-		d.Monotonic = m
+func WithMonotonic(m bool) GaugeOptionApplier {
+	return gaugeOptionWrapper{
+		F: func(d *Descriptor) {
+			d.Monotonic = m
+		},
 	}
 }
 
 // WithSigned sets whether a measure is permitted to be negative.
-func WithSigned(s bool) Option {
-	return func(d *Descriptor) {
-		d.Signed = s
+func WithSigned(s bool) MeasureOptionApplier {
+	return measureOptionWrapper{
+		F: func(d *Descriptor) {
+			d.Signed = s
+		},
 	}
 }
 

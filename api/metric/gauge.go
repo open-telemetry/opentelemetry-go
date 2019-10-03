@@ -42,17 +42,34 @@ type Int64GaugeHandle struct {
 	GaugeHandle
 }
 
-func NewGauge(name string, valueKind MetricValueKind, mos ...Option) (g Gauge) {
-	registerDescriptor(name, GaugeKind, valueKind, mos, &g.Descriptor)
+type GaugeOptionApplier interface {
+	ApplyGaugeOption(*Descriptor)
+}
+
+type gaugeOptionWrapper struct {
+	F Option
+}
+
+var _ GaugeOptionApplier = gaugeOptionWrapper{}
+
+func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
+	o.F(d)
+}
+
+func NewGauge(name string, valueKind MetricValueKind, mos ...GaugeOptionApplier) (g Gauge) {
+	registerDescriptor(name, GaugeKind, valueKind, &g.Descriptor)
+	for _, opt := range mos {
+		opt.ApplyGaugeOption(&g.Descriptor)
+	}
 	return
 }
 
-func NewFloat64Gauge(name string, mos ...Option) (g Float64Gauge) {
+func NewFloat64Gauge(name string, mos ...GaugeOptionApplier) (g Float64Gauge) {
 	g.Gauge = NewGauge(name, Float64ValueKind, mos...)
 	return
 }
 
-func NewInt64Gauge(name string, mos ...Option) (g Int64Gauge) {
+func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
 	g.Gauge = NewGauge(name, Int64ValueKind, mos...)
 	return
 }
