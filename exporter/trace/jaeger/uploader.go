@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
-	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/apache/thrift/lib/go/thrift"
+
+	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 )
 
 // batchUploader send a batch of spans to Jaeger

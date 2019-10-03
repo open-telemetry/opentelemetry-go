@@ -15,9 +15,10 @@
 package jaeger
 
 import (
+	"log"
+
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
-	"log"
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
@@ -136,14 +137,9 @@ type Tag struct {
 
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
 type Exporter struct {
-	endpoint      string
-	agentEndpoint string
-	process       *gen.Process
-	bundler       *bundler.Bundler
-	client        *agentClientUDP
-
-	username, password string
-	uploader           batchUploader
+	process  *gen.Process
+	bundler  *bundler.Bundler
+	uploader batchUploader
 }
 
 var _ trace.Exporter = (*Exporter)(nil)
