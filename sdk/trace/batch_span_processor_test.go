@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/exporter"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -32,9 +33,15 @@ type testBatchExporter struct {
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(sds []*sdktrace.SpanData) {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, d []interface{}) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	var sds []*sdktrace.SpanData
+	for _, v := range d {
+		sds = append(sds, v.(*sdktrace.SpanData))
+	}
+
 	t.spans = append(t.spans, sds...)
 	t.sizes = append(t.sizes, len(sds))
 	t.batchCount++
@@ -58,7 +65,7 @@ func (t *testBatchExporter) get(idx int) *sdktrace.SpanData {
 	return t.spans[idx]
 }
 
-var _ sdktrace.BatchExporter = (*testBatchExporter)(nil)
+var _ exporter.BatchExporter = (*testBatchExporter)(nil)
 
 func init() {
 	sdktrace.Register()

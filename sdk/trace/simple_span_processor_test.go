@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/exporter"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -27,11 +28,11 @@ type testExporter struct {
 	spans []*sdktrace.SpanData
 }
 
-func (t *testExporter) ExportSpan(s *sdktrace.SpanData) {
-	t.spans = append(t.spans, s)
+func (t *testExporter) ExportSpan(ctx context.Context, s interface{}) {
+	t.spans = append(t.spans, s.(*sdktrace.SpanData))
 }
 
-var _ sdktrace.Exporter = (*testExporter)(nil)
+var _ exporter.SyncExporter = (*testExporter)(nil)
 
 func init() {
 	sdktrace.Register()

@@ -24,8 +24,46 @@ import (
 	"go.opentelemetry.io/api/core"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/exporter"
 	"go.opentelemetry.io/sdk/internal"
 )
+
+// SpanData contains all the information collected by a span.
+type SpanData struct {
+	SpanContext  core.SpanContext
+	ParentSpanID uint64
+	SpanKind     int
+	Name         string
+	StartTime    time.Time
+	// The wall clock time of EndTime will be adjusted to always be offset
+	// from StartTime by the duration of the span.
+	EndTime time.Time
+	// The values of Attributes each have type string, bool, or int64.
+	Attributes               []core.KeyValue
+	MessageEvents            []Event
+	Links                    []apitrace.Link
+	Status                   codes.Code
+	HasRemoteParent          bool
+	DroppedAttributeCount    int
+	DroppedMessageEventCount int
+	DroppedLinkCount         int
+
+	// ChildSpanCount holds the number of child span created for this span.
+	ChildSpanCount int
+}
+
+// Event is used to describe an Event with a message string and set of
+// Attributes.
+type Event struct {
+	// Message describes the Event.
+	Message string
+
+	// Attributes contains a list of keyvalue pairs.
+	Attributes []core.KeyValue
+
+	// Time is the time at which this event was recorded.
+	Time time.Time
+}
 
 // span implements apitrace.Span interface.
 type span struct {
@@ -122,7 +160,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 		opt(&opts)
 	}
 	s.endOnce.Do(func() {
-		exp, _ := exporters.Load().(exportersMap)
+		exp := exporter.Load(exporter.ExporterTypeSync)
 		sps, _ := spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0 || (s.spanContext.IsSampled() && len(exp) > 0)
 		// TODO(rghetia): when exporter is migrated to use processors simply check for the number
@@ -136,8 +174,10 @@ func (s *span) End(options ...apitrace.EndOption) {
 			}
 			// Sampling check would be in the processor if the processor is used for exporting.
 			if s.spanContext.IsSampled() {
-				for e := range exp {
-					e.ExportSpan(sd)
+				for _, e := range exp {
+					if s, ok := e.(exporter.SyncExporter); ok {
+						s.ExportSpan(context.Background(), sd)
+					}
 				}
 			}
 			for sp := range sps {

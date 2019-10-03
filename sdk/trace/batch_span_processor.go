@@ -19,6 +19,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/sdk/exporter"
 )
 
 const (
@@ -61,8 +63,8 @@ type BatchSpanProcessorOptions struct {
 // exporters to receive SpanData asynchronously.
 // Use BatchSpanProcessorOptions to change the behavior of the processor.
 type BatchSpanProcessor struct {
-	exporter BatchExporter
-	o        BatchSpanProcessorOptions
+	e exporter.BatchExporter
+	o BatchSpanProcessorOptions
 
 	queue   chan *SpanData
 	dropped uint32
@@ -78,8 +80,8 @@ var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 // for a given exporter. It returns an error if exporter is nil.
 // The newly created BatchSpanProcessor should then be registered with sdk
 // using RegisterSpanProcessor.
-func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
-	if exporter == nil {
+func NewBatchSpanProcessor(e exporter.BatchExporter, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
+	if e == nil {
 		return nil, errNilExporter
 	}
 
@@ -92,8 +94,8 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOpt
 		opt(&o)
 	}
 	bsp := &BatchSpanProcessor{
-		exporter: exporter,
-		o:        o,
+		e: e,
+		o: o,
 	}
 
 	bsp.queue = make(chan *SpanData, bsp.o.MaxQueueSize)
@@ -164,7 +166,7 @@ func WithBlocking() BatchSpanProcessorOption {
 }
 
 func (bsp *BatchSpanProcessor) processQueue() {
-	batch := make([]*SpanData, 0, bsp.o.MaxExportBatchSize)
+	batch := make([]interface{}, 0, bsp.o.MaxExportBatchSize)
 	for {
 		var sd *SpanData
 		var ok bool
@@ -179,12 +181,12 @@ func (bsp *BatchSpanProcessor) processQueue() {
 		}
 		if ok {
 			if len(batch) >= bsp.o.MaxExportBatchSize {
-				bsp.exporter.ExportSpans(batch)
+				bsp.e.ExportSpans(context.Background(), batch)
 				batch = batch[:0]
 			}
 		} else {
 			if len(batch) > 0 {
-				bsp.exporter.ExportSpans(batch)
+				bsp.e.ExportSpans(context.Background(), batch)
 			}
 			break
 		}

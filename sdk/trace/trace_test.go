@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/exporter"
 )
 
 var (
@@ -49,8 +50,8 @@ type testExporter struct {
 	spans []*SpanData
 }
 
-func (t *testExporter) ExportSpan(s *SpanData) {
-	t.spans = append(t.spans, s)
+func (t *testExporter) ExportSpan(ctx context.Context, d interface{}) {
+	t.spans = append(t.spans, d.(*SpanData))
 }
 
 func TestStartSpan(t *testing.T) {
@@ -482,8 +483,8 @@ func TestSetSpanStatus(t *testing.T) {
 
 func TestUnregisterExporter(t *testing.T) {
 	var te testExporter
-	RegisterExporter(&te)
-	UnregisterExporter(&te)
+	exporter.Register(exporter.ExporterTypeSync, &te)
+	exporter.Unregister(&te)
 
 	ctx := startSpan()
 	_, _ = endSpan(ctx)
@@ -561,9 +562,9 @@ func endSpan(span apitrace.Span) (*SpanData, error) {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
 	var te testExporter
-	RegisterExporter(&te)
+	exporter.Register(exporter.ExporterTypeSync, &te)
 	span.End()
-	UnregisterExporter(&te)
+	exporter.Unregister(&te)
 	if len(te.spans) != 1 {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
 	}
@@ -590,29 +591,30 @@ func checkTime(x *time.Time) bool {
 	return true
 }
 
-type exporter map[string]*SpanData
+type fakeExporter map[string]*SpanData
 
-func (e exporter) ExportSpan(s *SpanData) {
-	e[s.Name] = s
+func (f fakeExporter) ExportSpan(ctx context.Context, d interface{}) {
+	s := d.(*SpanData)
+	f[s.Name] = s
 }
 
 func TestEndSpanTwice(t *testing.T) {
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	exporter.Register(exporter.ExporterTypeSync, &spans)
+	defer exporter.Unregister(&spans)
 	span := startSpan()
 	span.End()
 	span.End()
-	UnregisterExporter(&spans)
+	exporter.Unregister(&spans)
 	if len(spans) != 1 {
 		t.Fatalf("expected only a single span, got %#v", spans)
 	}
 }
 
 func TestStartSpanAfterEnd(t *testing.T) {
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	exporter.Register(exporter.ExporterTypeSync, &spans)
+	defer exporter.Unregister(&spans)
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	span1.End()
@@ -621,7 +623,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
 	span2.End()
 	span0.End()
-	UnregisterExporter(&spans)
+	exporter.Unregister(&spans)
 	if got, want := len(spans), 3; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
@@ -641,9 +643,9 @@ func TestStartSpanAfterEnd(t *testing.T) {
 
 func TestChildSpanCount(t *testing.T) {
 	ApplyConfig(Config{DefaultSampler: AlwaysSample()})
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	exporter.Register(exporter.ExporterTypeSync, &spans)
+	defer exporter.Unregister(&spans)
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent")
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
@@ -653,7 +655,7 @@ func TestChildSpanCount(t *testing.T) {
 	_, span3 := apitrace.GlobalTracer().Start(ctx, "span-3")
 	span3.End()
 	span0.End()
-	UnregisterExporter(&spans)
+	exporter.Unregister(&spans)
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
@@ -728,9 +730,9 @@ func TestCustomStartEndTime(t *testing.T) {
 		apitrace.WithStartTime(startTime),
 	)
 	var te testExporter
-	RegisterExporter(&te)
+	exporter.Register(exporter.ExporterTypeSync, &te)
 	span.End(apitrace.WithEndTime(endTime))
-	UnregisterExporter(&te)
+	exporter.Unregister(&te)
 	if len(te.spans) != 1 {
 		t.Fatalf("got exported spans %#v, want one span", te.spans)
 	}
