@@ -54,6 +54,10 @@ func TestRegisterUnregister(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+	// Empty the exporters map so we can test loading an exporter for the first
+	// time
+	exporters.Store(make(exportersMap))
+
 	var te testSyncExporter
 	e := Load(ExporterTypeSync)
 
