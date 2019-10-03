@@ -25,11 +25,7 @@ import (
 )
 
 var (
-	tracer = trace.GlobalTracer().
-		WithComponent("example").
-		WithResources(
-			key.New("whatevs").String("yesss"),
-		)
+	tracer = trace.GlobalTracer()
 
 	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
 

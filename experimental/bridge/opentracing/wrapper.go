@@ -17,7 +17,6 @@ package opentracing
 import (
 	"context"
 
-	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
 	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
@@ -51,24 +50,6 @@ func NewWrapperTracer(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperTra
 
 func (t *WrapperTracer) otelTracer() oteltrace.Tracer {
 	return t.tracer
-}
-
-// WithResources forwards the call to the wrapped tracer.
-func (t *WrapperTracer) WithResources(attributes ...otelcore.KeyValue) oteltrace.Tracer {
-	t.otelTracer().WithResources(attributes...)
-	return t
-}
-
-// WithComponent forwards the call to the wrapped tracer.
-func (t *WrapperTracer) WithComponent(name string) oteltrace.Tracer {
-	t.otelTracer().WithComponent(name)
-	return t
-}
-
-// WithService forwards the call to the wrapped tracer.
-func (t *WrapperTracer) WithService(name string) oteltrace.Tracer {
-	t.otelTracer().WithService(name)
-	return t
 }
 
 // WithSpan forwards the call to the wrapped tracer with a modified

@@ -28,11 +28,7 @@ import (
 )
 
 var (
-	streaming = sdk.New(spanlog.New()).
-			WithComponent("example").
-			WithResources(
-			key.New("whatevs").String("yesss"),
-		)
+	streaming = sdk.New(spanlog.New())
 
 	tracer trace.Tracer = streaming
 	meter  metric.Meter = metric.NoopMeter{}
