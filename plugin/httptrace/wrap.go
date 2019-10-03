@@ -28,14 +28,16 @@ var _ io.ReadCloser = &bodyWrapper{}
 type bodyWrapper struct {
 	rc io.ReadCloser
 
-	read int64
-	err  error
+	read   int64
+	err    error
+	record func(n int) // must not be nil
 }
 
 func (w *bodyWrapper) Read(b []byte) (int, error) {
 	n, err := w.rc.Read(b)
 	w.read += int64(n)
 	w.err = err
+	w.record(n)
 	return n, err
 }
 
@@ -57,6 +59,7 @@ type respWriterWrapper struct {
 	statusCode  int
 	err         error
 	wroteHeader bool
+	record      func(n int) // must not be nil
 }
 
 func (w *respWriterWrapper) Header() http.Header {
@@ -69,6 +72,7 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 		w.wroteHeader = true
 	}
 	n, err := w.w.Write(p)
+	w.record(n)
 	w.written += int64(n)
 	w.err = err
 	return n, err
