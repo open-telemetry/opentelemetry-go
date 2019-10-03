@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"context"
 	"log"
 
 	"google.golang.org/api/support/bundler"
@@ -22,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/sdk/exporter"
 	"go.opentelemetry.io/sdk/trace"
 )
 
@@ -142,11 +144,11 @@ type Exporter struct {
 	uploader batchUploader
 }
 
-var _ trace.Exporter = (*Exporter)(nil)
+var _ exporter.SyncExporter = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
-func (e *Exporter) ExportSpan(data *trace.SpanData) {
-	_ = e.bundler.Add(spanDataToThrift(data), 1)
+func (e *Exporter) ExportSpan(ctx context.Context, d interface{}) {
+	_ = e.bundler.Add(spanDataToThrift(d.(*trace.SpanData)), 1)
 	// TODO(jbd): Handle oversized bundlers.
 }
 

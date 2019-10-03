@@ -16,6 +16,7 @@ package stdout
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		},
 		Status: codes.Unknown,
 	}
-	exporter.ExportSpan(testSpan)
+	exporter.ExportSpan(context.Background(), testSpan)
 
 	expectedSerializedNow, _ := json.Marshal(now)
 

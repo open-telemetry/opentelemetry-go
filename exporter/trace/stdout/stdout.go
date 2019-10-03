@@ -15,6 +15,7 @@
 package stdout
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -43,9 +44,10 @@ func NewExporter(o Options) (*Exporter, error) {
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
-func (e *Exporter) ExportSpan(data *trace.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, d interface{}) {
 	var jsonSpan []byte
 	var err error
+	data := d.(*trace.SpanData)
 	if e.pretty {
 		jsonSpan, err = json.MarshalIndent(data, "", "\t")
 	} else {
