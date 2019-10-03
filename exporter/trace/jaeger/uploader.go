@@ -88,6 +88,8 @@ type agentUploader struct {
 	client *agentClientUDP
 }
 
+var _ batchUploader = (*agentUploader)(nil)
+
 func (a *agentUploader) upload(batch *gen.Batch) error {
 	return a.client.EmitBatch(batch)
 }
@@ -99,6 +101,8 @@ type collectorUploader struct {
 	username string
 	password string
 }
+
+var _ batchUploader = (*collectorUploader)(nil)
 
 func (c *collectorUploader) upload(batch *gen.Batch) error {
 	body, err := serialize(batch)

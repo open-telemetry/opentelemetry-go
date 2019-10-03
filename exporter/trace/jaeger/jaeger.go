@@ -32,7 +32,7 @@ type Option func(*options)
 // options are the options to be used when initializing a Jaeger exporter.
 type options struct {
 	// OnError is the hook to be called when there is
-	// an error occurred when uploading the stats data.
+	// an error occurred when uploading the span data.
 	// If no custom hook is set, errors are logged.
 	OnError func(err error)
 
@@ -44,7 +44,7 @@ type options struct {
 }
 
 // WithOnError sets the hook to be called when there is
-// an error occurred when uploading the stats data.
+// an error occurred when uploading the span data.
 // If no custom hook is set, errors are logged.
 func WithOnError(onError func(err error)) func(o *options) {
 	return func(o *options) {
