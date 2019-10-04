@@ -15,15 +15,8 @@
 package jaeger
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
@@ -34,29 +27,14 @@ import (
 
 const defaultServiceName = "OpenTelemetry"
 
-// Options are the options to be used when initializing a Jaeger exporter.
-type Options struct {
-	// CollectorEndpoint is the full url to the Jaeger HTTP Thrift collector.
-	// For example, http://localhost:14268/api/traces
-	CollectorEndpoint string
+type Option func(*options)
 
-	// AgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
-	// For example, localhost:6831.
-	AgentEndpoint string
-
+// options are the options to be used when initializing a Jaeger exporter.
+type options struct {
 	// OnError is the hook to be called when there is
-	// an error occurred when uploading the stats data.
+	// an error occurred when uploading the span data.
 	// If no custom hook is set, errors are logged.
-	// Optional.
 	OnError func(err error)
-
-	// Username to be used if basic auth is required.
-	// Optional.
-	Username string
-
-	// Password to be used if basic auth is required.
-	// Optional.
-	Password string
 
 	// Process contains the information about the exporting process.
 	Process Process
@@ -65,24 +43,42 @@ type Options struct {
 	BufferMaxCount int
 }
 
+// WithOnError sets the hook to be called when there is
+// an error occurred when uploading the span data.
+// If no custom hook is set, errors are logged.
+func WithOnError(onError func(err error)) func(o *options) {
+	return func(o *options) {
+		o.OnError = onError
+	}
+}
+
+// WithProcess sets the process with the information about the exporting process.
+func WithProcess(process Process) func(o *options) {
+	return func(o *options) {
+		o.Process = process
+	}
+}
+
+//WithBufferMaxCount defines the total number of traces that can be buffered in memory
+func WithBufferMaxCount(bufferMaxCount int) func(o *options) {
+	return func(o *options) {
+		o.BufferMaxCount = bufferMaxCount
+	}
+}
+
 // NewExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
-func NewExporter(o Options) (*Exporter, error) {
-	if o.CollectorEndpoint == "" && o.AgentEndpoint == "" {
-		return nil, errors.New("missing endpoint for Jaeger exporter")
+func NewExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
+	uploader, err := endpointOption()
+	if err != nil {
+		return nil, err
 	}
 
-	var endpoint string
-	var client *agentClientUDP
-	var err error
-	if o.CollectorEndpoint != "" {
-		endpoint = o.CollectorEndpoint
-	} else {
-		client, err = newAgentClientUDP(o.AgentEndpoint, udpPacketMaxLength)
-		if err != nil {
-			return nil, err
-		}
+	o := options{}
+	for _, opt := range opts {
+		opt(&o)
 	}
+
 	onError := func(err error) {
 		if o.OnError != nil {
 			o.OnError(err)
@@ -99,11 +95,7 @@ func NewExporter(o Options) (*Exporter, error) {
 		tags[i] = attributeToTag(tag.key, tag.value)
 	}
 	e := &Exporter{
-		endpoint:      endpoint,
-		agentEndpoint: o.AgentEndpoint,
-		client:        client,
-		username:      o.Username,
-		password:      o.Password,
+		uploader: uploader,
 		process: &gen.Process{
 			ServiceName: service,
 			Tags:        tags,
@@ -145,13 +137,9 @@ type Tag struct {
 
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
 type Exporter struct {
-	endpoint      string
-	agentEndpoint string
-	process       *gen.Process
-	bundler       *bundler.Bundler
-	client        *agentClientUDP
-
-	username, password string
+	process  *gen.Process
+	bundler  *bundler.Bundler
+	uploader batchUploader
 }
 
 var _ trace.Exporter = (*Exporter)(nil)
@@ -328,48 +316,6 @@ func (e *Exporter) upload(spans []*gen.Span) error {
 		Spans:   spans,
 		Process: e.process,
 	}
-	if e.endpoint != "" {
-		return e.uploadCollector(batch)
-	}
-	return e.uploadAgent(batch)
-}
 
-func (e *Exporter) uploadAgent(batch *gen.Batch) error {
-	return e.client.EmitBatch(batch)
-}
-
-func (e *Exporter) uploadCollector(batch *gen.Batch) error {
-	body, err := serialize(batch)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", e.endpoint, body)
-	if err != nil {
-		return err
-	}
-	if e.username != "" && e.password != "" {
-		req.SetBasicAuth(e.username, e.password)
-	}
-	req.Header.Set("Content-Type", "application/x-thrift")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
-	resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("failed to upload traces; HTTP status code: %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func serialize(obj thrift.TStruct) (*bytes.Buffer, error) {
-	buf := thrift.NewTMemoryBuffer()
-	if err := obj.Write(thrift.NewTBinaryProtocolTransport(buf)); err != nil {
-		return nil, err
-	}
-	return buf.Buffer, nil
+	return e.uploader.upload(batch)
 }

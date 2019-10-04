@@ -30,12 +30,12 @@ func main() {
 	ctx := context.Background()
 
 	// Create Jaeger Exporter
-	exporter, err := jaeger.NewExporter(jaeger.Options{
-		CollectorEndpoint: "http://localhost:14268/api/traces",
-		Process: jaeger.Process{
+	exporter, err := jaeger.NewExporter(
+		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
-		},
-	})
+		}),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
