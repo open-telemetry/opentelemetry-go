@@ -47,11 +47,11 @@ func setupDefaultSamplerConfig() {
 }
 
 type testExporter struct {
-	spans []*SpanData
+	spans []*exporter.SpanData
 }
 
-func (t *testExporter) ExportSpan(ctx context.Context, d interface{}) {
-	t.spans = append(t.spans, d.(*SpanData))
+func (t *testExporter) ExportSpan(ctx context.Context, d *exporter.SpanData) {
+	t.spans = append(t.spans, d)
 }
 
 func TestStartSpan(t *testing.T) {
@@ -182,7 +182,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -214,7 +214,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -261,7 +261,7 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -269,12 +269,12 @@ func TestEvents(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
-		MessageEvents: []Event{
+		MessageEvents: []exporter.Event{
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(exporter.Event{})); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
 	}
 }
@@ -308,21 +308,21 @@ func TestEventsOverLimit(t *testing.T) {
 		}
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		MessageEvents: []Event{
+		MessageEvents: []exporter.Event{
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(exporter.Event{})); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
 	}
 }
@@ -345,7 +345,7 @@ func TestAddLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -358,7 +358,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(exporter.Event{})); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
 	}
 }
@@ -382,7 +382,7 @@ func TestLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -395,7 +395,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(exporter.Event{})); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
 }
@@ -420,7 +420,7 @@ func TestLinksOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -434,7 +434,7 @@ func TestLinksOverLimit(t *testing.T) {
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(exporter.Event{})); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
 	}
 }
@@ -466,7 +466,7 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &exporter.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -545,15 +545,15 @@ func startNamedSpan(name string) apitrace.Span {
 }
 
 // endSpan is a test utility function that ends the span in the context and
-// returns the exported SpanData.
+// returns the exported exporter.SpanData.
 // It requires that span be sampled using one of these methods
 //  1. Passing parent span context using ChildOf option
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //
 // It also does some basic tests on the span.
-// It also clears spanID in the SpanData to make the comparison easier.
-func endSpan(span apitrace.Span) (*SpanData, error) {
+// It also clears spanID in the exporter.SpanData to make the comparison easier.
+func endSpan(span apitrace.Span) (*exporter.SpanData, error) {
 
 	if !span.IsRecordingEvents() {
 		return nil, fmt.Errorf("IsRecordingEvents: got false, want true")
@@ -591,10 +591,9 @@ func checkTime(x *time.Time) bool {
 	return true
 }
 
-type fakeExporter map[string]*SpanData
+type fakeExporter map[string]*exporter.SpanData
 
-func (f fakeExporter) ExportSpan(ctx context.Context, d interface{}) {
-	s := d.(*SpanData)
+func (f fakeExporter) ExportSpan(ctx context.Context, s *exporter.SpanData) {
 	f[s.Name] = s
 }
 

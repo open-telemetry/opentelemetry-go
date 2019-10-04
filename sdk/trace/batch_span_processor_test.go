@@ -28,19 +28,14 @@ import (
 
 type testBatchExporter struct {
 	mu         sync.Mutex
-	spans      []*sdktrace.SpanData
+	spans      []*exporter.SpanData
 	sizes      []int
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, d []interface{}) {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*exporter.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-
-	var sds []*sdktrace.SpanData
-	for _, v := range d {
-		sds = append(sds, v.(*sdktrace.SpanData))
-	}
 
 	t.spans = append(t.spans, sds...)
 	t.sizes = append(t.sizes, len(sds))
@@ -59,7 +54,7 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-func (t *testBatchExporter) get(idx int) *sdktrace.SpanData {
+func (t *testBatchExporter) get(idx int) *exporter.SpanData {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.spans[idx]

@@ -31,7 +31,7 @@ const (
 
 // SyncExporter is a synchronous exporter
 type SyncExporter interface {
-	ExportSpan(context.Context, interface{})
+	ExportSpan(context.Context, *SpanData)
 }
 
 // BatchExporter is a type for functions that receive sampled trace spans.
@@ -41,7 +41,7 @@ type SyncExporter interface {
 //
 // The SpanData should not be modified.
 type BatchExporter interface {
-	ExportSpans(context.Context, []interface{})
+	ExportSpans(context.Context, []*SpanData)
 }
 
 type exportersMap map[Type][]interface{}

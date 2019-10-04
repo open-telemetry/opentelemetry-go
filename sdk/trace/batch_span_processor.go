@@ -60,13 +60,13 @@ type BatchSpanProcessorOptions struct {
 }
 
 // BatchSpanProcessor implements SpanProcessor interfaces. It is used by
-// exporters to receive SpanData asynchronously.
+// exporters to receive exporter.SpanData asynchronously.
 // Use BatchSpanProcessorOptions to change the behavior of the processor.
 type BatchSpanProcessor struct {
 	e exporter.BatchExporter
 	o BatchSpanProcessorOptions
 
-	queue   chan *SpanData
+	queue   chan *exporter.SpanData
 	dropped uint32
 
 	stopWait sync.WaitGroup
@@ -98,7 +98,7 @@ func NewBatchSpanProcessor(e exporter.BatchExporter, opts ...BatchSpanProcessorO
 		o: o,
 	}
 
-	bsp.queue = make(chan *SpanData, bsp.o.MaxQueueSize)
+	bsp.queue = make(chan *exporter.SpanData, bsp.o.MaxQueueSize)
 
 	bsp.stopCh = make(chan struct{})
 
@@ -124,11 +124,11 @@ func NewBatchSpanProcessor(e exporter.BatchExporter, opts ...BatchSpanProcessorO
 }
 
 // OnStart method does nothing.
-func (bsp *BatchSpanProcessor) OnStart(sd *SpanData) {
+func (bsp *BatchSpanProcessor) OnStart(sd *exporter.SpanData) {
 }
 
-// OnEnd method enqueues SpanData for later processing.
-func (bsp *BatchSpanProcessor) OnEnd(sd *SpanData) {
+// OnEnd method enqueues exporter.SpanData for later processing.
+func (bsp *BatchSpanProcessor) OnEnd(sd *exporter.SpanData) {
 	bsp.enqueue(sd)
 }
 
@@ -166,9 +166,9 @@ func WithBlocking() BatchSpanProcessorOption {
 }
 
 func (bsp *BatchSpanProcessor) processQueue() {
-	batch := make([]interface{}, 0, bsp.o.MaxExportBatchSize)
+	batch := make([]*exporter.SpanData, 0, bsp.o.MaxExportBatchSize)
 	for {
-		var sd *SpanData
+		var sd *exporter.SpanData
 		var ok bool
 		select {
 		case sd = <-bsp.queue:
@@ -193,7 +193,7 @@ func (bsp *BatchSpanProcessor) processQueue() {
 	}
 }
 
-func (bsp *BatchSpanProcessor) enqueue(sd *SpanData) {
+func (bsp *BatchSpanProcessor) enqueue(sd *exporter.SpanData) {
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 	} else {

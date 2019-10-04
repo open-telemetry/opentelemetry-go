@@ -17,6 +17,8 @@ package trace
 import (
 	"sync"
 	"sync/atomic"
+
+	"go.opentelemetry.io/sdk/exporter"
 )
 
 // SpanProcessor is interface to add hooks to start and end method invocations.
@@ -24,11 +26,11 @@ type SpanProcessor interface {
 
 	// OnStart method is invoked when span is started. It is a synchronous call
 	// and hence should not block.
-	OnStart(sd *SpanData)
+	OnStart(sd *exporter.SpanData)
 
 	// OnEnd method is invoked when span is finished. It is a synchronous call
 	// and hence should not block.
-	OnEnd(sd *SpanData)
+	OnEnd(sd *exporter.SpanData)
 
 	// Shutdown is invoked when SDK shutsdown. Use this call to cleanup any processor
 	// data. No calls to OnStart and OnEnd method is invoked after Shutdown call is

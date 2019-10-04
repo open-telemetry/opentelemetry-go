@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/sdk/exporter"
-	"go.opentelemetry.io/sdk/trace"
 )
 
 const defaultServiceName = "OpenTelemetry"
@@ -147,12 +146,12 @@ type Exporter struct {
 var _ exporter.SyncExporter = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
-func (e *Exporter) ExportSpan(ctx context.Context, d interface{}) {
-	_ = e.bundler.Add(spanDataToThrift(d.(*trace.SpanData)), 1)
+func (e *Exporter) ExportSpan(ctx context.Context, d *exporter.SpanData) {
+	_ = e.bundler.Add(spanDataToThrift(d), 1)
 	// TODO(jbd): Handle oversized bundlers.
 }
 
-func spanDataToThrift(data *trace.SpanData) *gen.Span {
+func spanDataToThrift(data *exporter.SpanData) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(data.Attributes))
 	for _, kv := range data.Attributes {
 		tag := coreAttributeToTag(kv)

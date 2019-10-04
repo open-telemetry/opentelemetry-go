@@ -20,7 +20,7 @@ import (
 	"io"
 	"os"
 
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/exporter"
 )
 
 // Options are the options to be used when initializing a stdout exporter.
@@ -44,10 +44,9 @@ func NewExporter(o Options) (*Exporter, error) {
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
-func (e *Exporter) ExportSpan(ctx context.Context, d interface{}) {
+func (e *Exporter) ExportSpan(ctx context.Context, data *exporter.SpanData) {
 	var jsonSpan []byte
 	var err error
-	data := d.(*trace.SpanData)
 	if e.pretty {
 		jsonSpan, err = json.MarshalIndent(data, "", "\t")
 	} else {

@@ -38,11 +38,11 @@ func NewSimpleSpanProcessor(e exporter.SyncExporter) *SimpleSpanProcessor {
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(sd *SpanData) {
+func (ssp *SimpleSpanProcessor) OnStart(sd *exporter.SpanData) {
 }
 
 // OnEnd method exports SpanData using associated exporter.
-func (ssp *SimpleSpanProcessor) OnEnd(sd *SpanData) {
+func (ssp *SimpleSpanProcessor) OnEnd(sd *exporter.SpanData) {
 	if ssp.e != nil {
 		ssp.e.ExportSpan(context.Background(), sd)
 	}

@@ -25,11 +25,11 @@ import (
 )
 
 type testExporter struct {
-	spans []*sdktrace.SpanData
+	spans []*exporter.SpanData
 }
 
-func (t *testExporter) ExportSpan(ctx context.Context, s interface{}) {
-	t.spans = append(t.spans, s.(*sdktrace.SpanData))
+func (t *testExporter) ExportSpan(ctx context.Context, s *exporter.SpanData) {
+	t.spans = append(t.spans, s)
 }
 
 var _ exporter.SyncExporter = (*testExporter)(nil)

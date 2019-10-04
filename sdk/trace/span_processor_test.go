@@ -19,12 +19,13 @@ import (
 	"testing"
 
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/exporter"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 type testSpanProcesor struct {
-	spansStarted  []*sdktrace.SpanData
-	spansEnded    []*sdktrace.SpanData
+	spansStarted  []*exporter.SpanData
+	spansEnded    []*exporter.SpanData
 	shutdownCount int
 }
 
@@ -33,11 +34,11 @@ func init() {
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
-func (t *testSpanProcesor) OnStart(s *sdktrace.SpanData) {
+func (t *testSpanProcesor) OnStart(s *exporter.SpanData) {
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcesor) OnEnd(s *sdktrace.SpanData) {
+func (t *testSpanProcesor) OnEnd(s *exporter.SpanData) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 

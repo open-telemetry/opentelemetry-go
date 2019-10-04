@@ -28,43 +28,6 @@ import (
 	"go.opentelemetry.io/sdk/internal"
 )
 
-// SpanData contains all the information collected by a span.
-type SpanData struct {
-	SpanContext  core.SpanContext
-	ParentSpanID uint64
-	SpanKind     int
-	Name         string
-	StartTime    time.Time
-	// The wall clock time of EndTime will be adjusted to always be offset
-	// from StartTime by the duration of the span.
-	EndTime time.Time
-	// The values of Attributes each have type string, bool, or int64.
-	Attributes               []core.KeyValue
-	MessageEvents            []Event
-	Links                    []apitrace.Link
-	Status                   codes.Code
-	HasRemoteParent          bool
-	DroppedAttributeCount    int
-	DroppedMessageEventCount int
-	DroppedLinkCount         int
-
-	// ChildSpanCount holds the number of child span created for this span.
-	ChildSpanCount int
-}
-
-// Event is used to describe an Event with a message string and set of
-// Attributes.
-type Event struct {
-	// Message describes the Event.
-	Message string
-
-	// Attributes contains a list of keyvalue pairs.
-	Attributes []core.KeyValue
-
-	// Time is the time at which this event was recorded.
-	Time time.Time
-}
-
 // span implements apitrace.Span interface.
 type span struct {
 	// data contains information recorded about the span.
@@ -72,7 +35,7 @@ type span struct {
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanContext, so that the trace ID is propagated.
-	data        *SpanData
+	data        *exporter.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext core.SpanContext
 
@@ -208,7 +171,7 @@ func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(Event{
+	s.messageEvents.add(exporter.Event{
 		Message:    msg,
 		Attributes: attrs,
 		Time:       timestamp,
@@ -276,8 +239,8 @@ func (s *span) addLink(link apitrace.Link) {
 
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
-func (s *span) makeSpanData() *SpanData {
-	var sd SpanData
+func (s *span) makeSpanData() *exporter.SpanData {
+	var sd exporter.SpanData
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	sd = *s.data
@@ -304,10 +267,10 @@ func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []Event {
-	messageEventArr := make([]Event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []exporter.Event {
+	messageEventArr := make([]exporter.Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(Event))
+		messageEventArr = append(messageEventArr, value.(exporter.Event))
 	}
 	return messageEventArr
 }
@@ -374,7 +337,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	span.data = &SpanData{
+	span.data = &exporter.SpanData{
 		SpanContext: span.spanContext,
 		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind
