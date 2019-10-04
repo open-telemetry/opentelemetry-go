@@ -65,7 +65,7 @@ type Meter interface {
 	// cannot be read by the application.
 	DefineLabels(context.Context, ...core.KeyValue) LabelSet
 
-	NewHandle(Descriptor, LabelSet) Handle
+	NewHandle(*Descriptor, LabelSet) Handle
 	DeleteHandle(Handle)
 
 	// RecordBatch atomically records a batch of measurements..
@@ -84,46 +84,72 @@ const (
 	Float64ValueKind
 )
 
-// Descriptor represents a named metric with recommended local-aggregation keys.
+// Descriptor represents a named metric with recommended
+// local-aggregation keys.
 type Descriptor struct {
-	// Name is a required field describing this metric descriptor,
-	// should have length > 0.
-	Name string
+	name        string
+	kind        Kind
+	keys        []core.Key
+	id          DescriptorID
+	description string
+	unit        unit.Unit
+	valueKind   ValueKind
+	alternate   bool
+}
 
-	// Kind is the metric kind of this descriptor.
-	Kind Kind
+// Name is a required field describing this metric descriptor, should
+// have length > 0.
+func (d *Descriptor) Name() string {
+	return d.name
+}
 
-	// Keys are required keys determined in the handles
-	// obtained for this metric.
-	Keys []core.Key
+// Kind is the metric kind of this descriptor.
+func (d *Descriptor) Kind() Kind {
+	return d.kind
+}
 
-	// ID is uniquely assigned to support per-SDK registration.
-	ID DescriptorID
+// Keys are recommended keys determined in the handles obtained for
+// this metric.
+func (d *Descriptor) Keys() []core.Key {
+	return d.keys
+}
 
-	// Description is an optional field describing this metric descriptor.
-	Description string
+// ID is uniquely assigned to support per-SDK registration.
+func (d *Descriptor) ID() DescriptorID {
+	return d.id
+}
 
-	// Unit is an optional field describing this metric descriptor.
-	Unit unit.Unit
+// Description is an optional field describing this metric descriptor.
+func (d *Descriptor) Description() string {
+	return d.description
+}
 
-	// ValueKind describes the type of values the metric produces.
-	ValueKind ValueKind
+// Unit is an optional field describing this metric descriptor.
+func (d *Descriptor) Unit() unit.Unit {
+	return d.unit
+}
 
-	// Meaning depends on the metric type:
-	//
-	// - for Counter it implies that this is an up-down Counter
-	//
-	// - for Gauge/Observer it implies that this is non-descending
-	//   Gauge/Observer
-	//
-	// - for Measure it implies that it supports positive and
-	// negative values
-	Alternate bool
+// ValueKind describes the type of values the metric produces.
+func (d *Descriptor) ValueKind() ValueKind {
+	return d.valueKind
+}
+
+// Meaning depends on the metric type:
+//
+// - for Counter it implies that this is an up-down Counter
+//
+// - for Gauge/Observer it implies that this is non-descending
+//   Gauge/Observer
+//
+// - for Measure it implies that it supports positive and negative
+//   values
+func (d *Descriptor) Alternate() bool {
+	return d.alternate
 }
 
 // Measurement is used for reporting a batch of metric values.
 type Measurement struct {
-	Descriptor Descriptor
+	Descriptor *Descriptor
 	Value      MeasurementValue
 }
 
@@ -163,7 +189,7 @@ func (o optionWrapper) ApplyOption(d *Descriptor) {
 func WithDescription(desc string) OptionApplier {
 	return optionWrapper{
 		F: func(d *Descriptor) {
-			d.Description = desc
+			d.description = desc
 		},
 	}
 }
@@ -172,7 +198,7 @@ func WithDescription(desc string) OptionApplier {
 func WithUnit(unit unit.Unit) OptionApplier {
 	return optionWrapper{
 		F: func(d *Descriptor) {
-			d.Unit = unit
+			d.unit = unit
 		},
 	}
 }
@@ -182,7 +208,7 @@ func WithUnit(unit unit.Unit) OptionApplier {
 func WithKeys(keys ...core.Key) OptionApplier {
 	return optionWrapper{
 		F: func(d *Descriptor) {
-			d.Keys = append(d.Keys, keys...)
+			d.keys = append(d.keys, keys...)
 		},
 	}
 }
@@ -191,7 +217,7 @@ func WithKeys(keys ...core.Key) OptionApplier {
 func WithNonMonotonic(nm bool) CounterOptionApplier {
 	return counterOptionWrapper{
 		F: func(d *Descriptor) {
-			d.Alternate = nm
+			d.alternate = nm
 		},
 	}
 }
@@ -200,7 +226,7 @@ func WithNonMonotonic(nm bool) CounterOptionApplier {
 func WithMonotonic(m bool) GaugeOptionApplier {
 	return gaugeOptionWrapper{
 		F: func(d *Descriptor) {
-			d.Alternate = m
+			d.alternate = m
 		},
 	}
 }
@@ -209,14 +235,14 @@ func WithMonotonic(m bool) GaugeOptionApplier {
 func WithSigned(s bool) MeasureOptionApplier {
 	return measureOptionWrapper{
 		F: func(d *Descriptor) {
-			d.Alternate = s
+			d.alternate = s
 		},
 	}
 }
 
 // Defined returns true when the descriptor has been registered.
 func (d Descriptor) Defined() bool {
-	return len(d.Name) != 0
+	return len(d.name) != 0
 }
 
 // RecordBatch reports to the global Meter.

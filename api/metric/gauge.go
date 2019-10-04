@@ -19,7 +19,7 @@ import (
 )
 
 type Gauge struct {
-	Descriptor
+	*Descriptor
 }
 
 type Float64Gauge struct {
@@ -57,9 +57,9 @@ func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
 }
 
 func NewGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (g Gauge) {
-	registerDescriptor(name, GaugeKind, valueKind, &g.Descriptor)
+	g.Descriptor = registerDescriptor(name, GaugeKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyGaugeOption(&g.Descriptor)
+		opt.ApplyGaugeOption(g.Descriptor)
 	}
 	return
 }

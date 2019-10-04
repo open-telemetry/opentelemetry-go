@@ -19,7 +19,7 @@ import (
 )
 
 type Counter struct {
-	Descriptor
+	*Descriptor
 }
 
 type Float64Counter struct {
@@ -57,9 +57,9 @@ func (o counterOptionWrapper) ApplyCounterOption(d *Descriptor) {
 }
 
 func NewCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) (c Counter) {
-	registerDescriptor(name, CounterKind, valueKind, &c.Descriptor)
+	c.Descriptor = registerDescriptor(name, CounterKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyCounterOption(&c.Descriptor)
+		opt.ApplyCounterOption(c.Descriptor)
 	}
 	return
 }

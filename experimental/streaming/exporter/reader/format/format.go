@@ -135,9 +135,9 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 }
 
 func formatMetricUpdate(buf *strings.Builder, m metric.Measurement) {
-	buf.WriteString(m.Descriptor.Kind.String())
+	buf.WriteString(m.Descriptor.Kind().String())
 	buf.WriteString(" ")
-	buf.WriteString(m.Descriptor.Name)
+	buf.WriteString(m.Descriptor.Name())
 	buf.WriteString("=")
 	buf.WriteString(m.Value.Emit())
 }

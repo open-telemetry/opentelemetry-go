@@ -19,7 +19,7 @@ import (
 )
 
 type Measure struct {
-	Descriptor
+	*Descriptor
 }
 
 type Float64Measure struct {
@@ -57,9 +57,9 @@ func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
 }
 
 func NewMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) (m Measure) {
-	registerDescriptor(name, MeasureKind, valueKind, &m.Descriptor)
+	m.Descriptor = registerDescriptor(name, MeasureKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyMeasureOption(&m.Descriptor)
+		opt.ApplyMeasureOption(m.Descriptor)
 	}
 	return
 }

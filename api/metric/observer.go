@@ -15,7 +15,7 @@
 package metric
 
 type Observer struct {
-	Descriptor
+	*Descriptor
 }
 
 type Float64Observer struct {
@@ -27,9 +27,9 @@ type Int64Observer struct {
 }
 
 func NewObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o Observer) {
-	registerDescriptor(name, ObserverKind, valueKind, &o.Descriptor)
+	o.Descriptor = registerDescriptor(name, ObserverKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyGaugeOption(&o.Descriptor)
+		opt.ApplyGaugeOption(o.Descriptor)
 	}
 	return
 }

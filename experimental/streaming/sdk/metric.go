@@ -24,7 +24,7 @@ import (
 )
 
 type metricHandle struct {
-	descriptor metric.Descriptor
+	descriptor *metric.Descriptor
 	labels     metricLabels
 }
 
@@ -60,7 +60,7 @@ func (s *sdk) DefineLabels(ctx context.Context, labels ...core.KeyValue) metric.
 	}
 }
 
-func (s *sdk) NewHandle(descriptor metric.Descriptor, labels metric.LabelSet) metric.Handle {
+func (s *sdk) NewHandle(descriptor *metric.Descriptor, labels metric.LabelSet) metric.Handle {
 	mlabels, _ := labels.(metricLabels)
 
 	return &metricHandle{
@@ -100,14 +100,15 @@ func (s *sdk) insertNewObserver(observer metric.Observer, callback metric.Observ
 	s.observersLock.Lock()
 	defer s.observersLock.Unlock()
 	old := s.loadObserversMap()
-	if _, ok := old[observer.Descriptor.ID]; ok {
+	id := observer.Descriptor.ID()
+	if _, ok := old[id]; ok {
 		return false
 	}
 	observers := make(observersMap)
-	for id, data := range old {
-		observers[id] = data
+	for oid, data := range old {
+		observers[oid] = data
 	}
-	observers[observer.Descriptor.ID] = observerData{
+	observers[id] = observerData{
 		observer: observer,
 		callback: callback,
 	}
@@ -119,7 +120,8 @@ func (s *sdk) UnregisterObserver(observer metric.Observer) {
 	s.observersLock.Lock()
 	defer s.observersLock.Unlock()
 	old := s.loadObserversMap()
-	if _, ok := old[observer.Descriptor.ID]; !ok {
+	id := observer.Descriptor.ID()
+	if _, ok := old[id]; !ok {
 		return
 	}
 	if len(old) == 1 {
@@ -127,9 +129,9 @@ func (s *sdk) UnregisterObserver(observer metric.Observer) {
 		return
 	}
 	observers := make(observersMap)
-	for id, data := range old {
-		if id != observer.Descriptor.ID {
-			observers[id] = data
+	for oid, data := range old {
+		if oid != id {
+			observers[oid] = data
 		}
 	}
 	s.observers.Store(observers)
@@ -150,7 +152,7 @@ func (s *sdk) observersRoutine() {
 	}
 }
 
-func (s *sdk) getObservationCallback(descriptor metric.Descriptor) metric.ObservationCallback {
+func (s *sdk) getObservationCallback(descriptor *metric.Descriptor) metric.ObservationCallback {
 	return func(l metric.LabelSet, v metric.MeasurementValue) {
 		s.RecordBatch(context.Background(), l, metric.Measurement{
 			Descriptor: descriptor,

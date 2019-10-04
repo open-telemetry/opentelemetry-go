@@ -20,9 +20,11 @@ var (
 	descriptorID uint64
 )
 
-func registerDescriptor(name string, kind Kind, valueKind ValueKind, d *Descriptor) {
-	d.Name = name
-	d.Kind = kind
-	d.ValueKind = valueKind
-	d.ID = DescriptorID(atomic.AddUint64(&descriptorID, 1))
+func registerDescriptor(name string, kind Kind, valueKind ValueKind) *Descriptor {
+	return &Descriptor{
+		name:      name,
+		kind:      kind,
+		valueKind: valueKind,
+		id:        DescriptorID(atomic.AddUint64(&descriptorID, 1)),
+	}
 }
