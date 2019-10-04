@@ -56,7 +56,7 @@ func (o counterOptionWrapper) ApplyCounterOption(d *Descriptor) {
 	o.F(d)
 }
 
-func NewCounter(name string, valueKind MetricValueKind, mos ...CounterOptionApplier) (c Counter) {
+func NewCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) (c Counter) {
 	registerDescriptor(name, CounterKind, valueKind, &c.Descriptor)
 	for _, opt := range mos {
 		opt.ApplyCounterOption(&c.Descriptor)

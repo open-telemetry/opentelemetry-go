@@ -56,7 +56,7 @@ func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
 	o.F(d)
 }
 
-func NewMeasure(name string, valueKind MetricValueKind, mos ...MeasureOptionApplier) (m Measure) {
+func NewMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) (m Measure) {
 	registerDescriptor(name, MeasureKind, valueKind, &m.Descriptor)
 	for _, opt := range mos {
 		opt.ApplyMeasureOption(&m.Descriptor)

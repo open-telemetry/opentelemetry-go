@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Kind,MetricValueKind
+//go:generate stringer -type=Kind,ValueKind
 
 package metric
 
@@ -72,10 +72,10 @@ type Meter interface {
 }
 
 type DescriptorID uint64
-type MetricValueKind int8
+type ValueKind int8
 
 const (
-	AnyValueKind MetricValueKind = iota
+	AnyValueKind ValueKind = iota
 	Int64ValueKind
 	Float64ValueKind
 )
@@ -103,7 +103,7 @@ type Descriptor struct {
 	Unit unit.Unit
 
 	// ValueKind describes the type of values the metric produces.
-	ValueKind MetricValueKind
+	ValueKind ValueKind
 
 	// Meaning depends on the metric type:
 	//

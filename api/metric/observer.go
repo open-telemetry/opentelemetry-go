@@ -26,7 +26,7 @@ type Int64Observer struct {
 	Observer
 }
 
-func NewObserver(name string, valueKind MetricValueKind, mos ...GaugeOptionApplier) (o Observer) {
+func NewObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o Observer) {
 	registerDescriptor(name, ObserverKind, valueKind, &o.Descriptor)
 	for _, opt := range mos {
 		opt.ApplyGaugeOption(&o.Descriptor)

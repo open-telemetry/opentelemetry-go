@@ -56,7 +56,7 @@ func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
 	o.F(d)
 }
 
-func NewGauge(name string, valueKind MetricValueKind, mos ...GaugeOptionApplier) (g Gauge) {
+func NewGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (g Gauge) {
 	registerDescriptor(name, GaugeKind, valueKind, &g.Descriptor)
 	for _, opt := range mos {
 		opt.ApplyGaugeOption(&g.Descriptor)

@@ -20,7 +20,7 @@ var (
 	descriptorID uint64
 )
 
-func registerDescriptor(name string, kind Kind, valueKind MetricValueKind, d *Descriptor) {
+func registerDescriptor(name string, kind Kind, valueKind ValueKind, d *Descriptor) {
 	d.Name = name
 	d.Kind = kind
 	d.ValueKind = valueKind
