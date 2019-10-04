@@ -25,7 +25,7 @@ func (noopMeter) DefineLabels(ctx context.Context, labels ...core.KeyValue) Labe
 	return noopLabelSet{}
 }
 
-func (noopMeter) NewHandle(context.Context, Descriptor, LabelSet) Handle {
+func (noopMeter) NewHandle(Descriptor, LabelSet) Handle {
 	return noopHandle{}
 }
 

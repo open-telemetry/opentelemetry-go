@@ -60,7 +60,7 @@ func (s *sdk) DefineLabels(ctx context.Context, labels ...core.KeyValue) metric.
 	}
 }
 
-func (s *sdk) NewHandle(ctx context.Context, descriptor metric.Descriptor, labels metric.LabelSet) metric.Handle {
+func (s *sdk) NewHandle(descriptor metric.Descriptor, labels metric.LabelSet) metric.Handle {
 	mlabels, _ := labels.(metricLabels)
 
 	return &metricHandle{

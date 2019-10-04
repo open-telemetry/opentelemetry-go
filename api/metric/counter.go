@@ -74,18 +74,18 @@ func NewInt64Counter(name string, mos ...CounterOptionApplier) (c Int64Counter) 
 	return
 }
 
-func (c *Counter) GetHandle(ctx context.Context, labels LabelSet) (h CounterHandle) {
-	h.Handle = labels.Meter().NewHandle(ctx, c.Descriptor, labels)
+func (c *Counter) GetHandle(labels LabelSet) (h CounterHandle) {
+	h.Handle = labels.Meter().NewHandle(c.Descriptor, labels)
 	return
 }
 
-func (c *Float64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Float64CounterHandle) {
-	h.CounterHandle = c.Counter.GetHandle(ctx, labels)
+func (c *Float64Counter) GetHandle(labels LabelSet) (h Float64CounterHandle) {
+	h.CounterHandle = c.Counter.GetHandle(labels)
 	return
 }
 
-func (c *Int64Counter) GetHandle(ctx context.Context, labels LabelSet) (h Int64CounterHandle) {
-	h.CounterHandle = c.Counter.GetHandle(ctx, labels)
+func (c *Int64Counter) GetHandle(labels LabelSet) (h Int64CounterHandle) {
+	h.CounterHandle = c.Counter.GetHandle(labels)
 	return
 }
 

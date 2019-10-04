@@ -65,7 +65,7 @@ type Meter interface {
 	// cannot be read by the application.
 	DefineLabels(context.Context, ...core.KeyValue) LabelSet
 
-	NewHandle(context.Context, Descriptor, LabelSet) Handle
+	NewHandle(Descriptor, LabelSet) Handle
 	DeleteHandle(Handle)
 
 	// RecordBatch atomically records a batch of measurements..

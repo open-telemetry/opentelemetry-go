@@ -74,18 +74,18 @@ func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) 
 	return
 }
 
-func (m *Measure) GetHandle(ctx context.Context, labels LabelSet) (h MeasureHandle) {
-	h.Handle = labels.Meter().NewHandle(ctx, m.Descriptor, labels)
+func (m *Measure) GetHandle(labels LabelSet) (h MeasureHandle) {
+	h.Handle = labels.Meter().NewHandle(m.Descriptor, labels)
 	return
 }
 
-func (c *Float64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Float64MeasureHandle) {
-	h.MeasureHandle = c.Measure.GetHandle(ctx, labels)
+func (c *Float64Measure) GetHandle(labels LabelSet) (h Float64MeasureHandle) {
+	h.MeasureHandle = c.Measure.GetHandle(labels)
 	return
 }
 
-func (c *Int64Measure) GetHandle(ctx context.Context, labels LabelSet) (h Int64MeasureHandle) {
-	h.MeasureHandle = c.Measure.GetHandle(ctx, labels)
+func (c *Int64Measure) GetHandle(labels LabelSet) (h Int64MeasureHandle) {
+	h.MeasureHandle = c.Measure.GetHandle(labels)
 	return
 }
 

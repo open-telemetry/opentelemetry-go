@@ -74,18 +74,18 @@ func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
 	return
 }
 
-func (g *Gauge) GetHandle(ctx context.Context, labels LabelSet) (h GaugeHandle) {
-	h.Handle = labels.Meter().NewHandle(ctx, g.Descriptor, labels)
+func (g *Gauge) GetHandle(labels LabelSet) (h GaugeHandle) {
+	h.Handle = labels.Meter().NewHandle(g.Descriptor, labels)
 	return
 }
 
-func (g *Float64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Float64GaugeHandle) {
-	h.GaugeHandle = g.Gauge.GetHandle(ctx, labels)
+func (g *Float64Gauge) GetHandle(labels LabelSet) (h Float64GaugeHandle) {
+	h.GaugeHandle = g.Gauge.GetHandle(labels)
 	return
 }
 
-func (g *Int64Gauge) GetHandle(ctx context.Context, labels LabelSet) (h Int64GaugeHandle) {
-	h.GaugeHandle = g.Gauge.GetHandle(ctx, labels)
+func (g *Int64Gauge) GetHandle(labels LabelSet) (h Int64GaugeHandle) {
+	h.GaugeHandle = g.Gauge.GetHandle(labels)
 	return
 }
 

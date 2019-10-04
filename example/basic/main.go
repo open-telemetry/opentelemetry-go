@@ -51,9 +51,9 @@ func main() {
 
 	commonLabels := meter.DefineLabels(ctx, lemonsKey.Int(10))
 
-	gauge := oneMetric.GetHandle(ctx, commonLabels)
+	gauge := oneMetric.GetHandle(commonLabels)
 
-	measure := measureTwo.GetHandle(ctx, commonLabels)
+	measure := measureTwo.GetHandle(commonLabels)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
