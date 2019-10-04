@@ -44,7 +44,7 @@ func initTracer() {
 		log.Fatal(err)
 	}
 
-	// Wrap Jaeger exporter with SimpleSpanProcessor and register the processor.
+	// Wrap stdout exporter with SimpleSpanProcessor and register the processor.
 	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
 	sdktrace.RegisterSpanProcessor(ssp)
 
