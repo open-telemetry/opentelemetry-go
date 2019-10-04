@@ -144,12 +144,18 @@ func (s *sdk) observersRoutine() {
 			return
 		}
 		for _, data := range m {
-			labels, value := data.callback(s, data.observer)
-			s.RecordBatch(context.Background(), labels, metric.Measurement{
-				Descriptor: data.observer.Descriptor,
-				Value:      value,
-			})
+			ocb := s.getObservationCallback(data.observer.Descriptor)
+			data.callback(s, data.observer, ocb)
 		}
+	}
+}
+
+func (s *sdk) getObservationCallback(descriptor metric.Descriptor) metric.ObservationCallback {
+	return func(l metric.LabelSet, v metric.MeasurementValue) {
+		s.RecordBatch(context.Background(), l, metric.Measurement{
+			Descriptor: descriptor,
+			Value:      v,
+		})
 	}
 }
 

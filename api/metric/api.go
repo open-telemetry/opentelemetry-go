@@ -51,9 +51,13 @@ type LabelSet interface {
 	Meter() Meter
 }
 
+// ObservationCallback defines a type of the callback the observer
+// will use to report the measurement
+type ObservationCallback func(LabelSet, MeasurementValue)
+
 // ObserverCallback defines a type of the callback SDK will call for
 // the registered observers.
-type ObserverCallback func(Meter, Observer) (LabelSet, MeasurementValue)
+type ObserverCallback func(Meter, Observer, ObservationCallback)
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
@@ -220,14 +224,20 @@ func RecordBatch(ctx context.Context, labels LabelSet, batch ...Measurement) {
 	GlobalMeter().RecordBatch(ctx, labels, batch...)
 }
 
+// Int64ObservationCallback defines a type of the callback the
+// observer will use to report the int64 measurement.
+type Int64ObservationCallback func(LabelSet, int64)
+
 // Int64ObserverCallback defines a type of the callback SDK will call
 // for the registered int64 observers.
-type Int64ObserverCallback func(Meter, Int64Observer) (LabelSet, int64)
+type Int64ObserverCallback func(Meter, Int64Observer, Int64ObservationCallback)
 
 func RegisterInt64Observer(meter Meter, observer Int64Observer, callback Int64ObserverCallback) {
-	cb := func(m Meter, o Observer) (LabelSet, MeasurementValue) {
-		l, i := callback(m, Int64Observer{o})
-		return l, NewInt64MeasurementValue(i)
+	cb := func(m Meter, o Observer, ocb ObservationCallback) {
+		iocb := func(l LabelSet, i int64) {
+			ocb(l, NewInt64MeasurementValue(i))
+		}
+		callback(m, Int64Observer{o}, iocb)
 	}
 	meter.RegisterObserver(observer.Observer, cb)
 }
@@ -236,14 +246,20 @@ func UnregisterInt64Observer(meter Meter, observer Int64Observer) {
 	meter.UnregisterObserver(observer.Observer)
 }
 
+// Float64ObservationCallback defines a type of the callback the
+// observer will use to report the float64 measurement.
+type Float64ObservationCallback func(LabelSet, float64)
+
 // Float64ObserverCallback defines a type of the callback SDK will
 // call for the registered float64 observers.
-type Float64ObserverCallback func(Meter, Float64Observer) (LabelSet, float64)
+type Float64ObserverCallback func(Meter, Float64Observer, Float64ObservationCallback)
 
 func RegisterFloat64Observer(meter Meter, observer Float64Observer, callback Float64ObserverCallback) {
-	cb := func(m Meter, o Observer) (LabelSet, MeasurementValue) {
-		l, f := callback(m, Float64Observer{o})
-		return l, NewFloat64MeasurementValue(f)
+	cb := func(m Meter, o Observer, ocb ObservationCallback) {
+		focb := func(l LabelSet, f float64) {
+			ocb(l, NewFloat64MeasurementValue(f))
+		}
+		callback(m, Float64Observer{o}, focb)
 	}
 	meter.RegisterObserver(observer.Observer, cb)
 }
