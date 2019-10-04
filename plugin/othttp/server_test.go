@@ -1,4 +1,4 @@
-package httptrace_test
+package othttp_test
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stdout"
-	"go.opentelemetry.io/plugin/httptrace"
+	"go.opentelemetry.io/plugin/othttp"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -67,7 +67,7 @@ func ExampleNewHandler() {
 
 	var mux http.ServeMux
 	mux.Handle("/hello/",
-		httptrace.WithRouteTag("/hello/:name", http.HandlerFunc(
+		othttp.WithRouteTag("/hello/:name", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
 				var name string
@@ -99,8 +99,8 @@ func ExampleNewHandler() {
 	)
 
 	if err := http.ListenAndServe(":7777",
-		httptrace.NewHandler(&mux, "server",
-			httptrace.WithMessageEvents(httptrace.EventRead, httptrace.EventWrite),
+		othttp.NewHandler(&mux, "server",
+			othttp.WithMessageEvents(othttp.EventRead, othttp.EventWrite),
 		),
 	); err != nil {
 		log.Fatal(err)
