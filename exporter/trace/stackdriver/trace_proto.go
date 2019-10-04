@@ -34,9 +34,10 @@ import (
 
 const (
 	maxAnnotationEventsPerSpan = 32
-	maxMessageEventsPerSpan    = 128
-	maxAttributeStringValue    = 256
-	agentLabel                 = "g.co/agent"
+	// TODO(ymotongpoo): uncomment this after gRPC trace get supported.
+	// maxMessageEventsPerSpan    = 128
+	maxAttributeStringValue = 256
+	agentLabel              = "g.co/agent"
 
 	// Attributes recorded on the span for the requests.
 	// Only trace exporters will need them.
