@@ -58,10 +58,10 @@ func WithTracer(tracer trace.Tracer) HandlerOption {
 	}
 }
 
-// IsPublicEndpoint configures the HTTPHandler to link the span with an
+// WithPublicEndpoint configures the HTTPHandler to link the span with an
 // incoming span context. If this option is not provided (the default), then the
 // association is a child association (instead of a link).
-func IsPublicEndpoint() HandlerOption {
+func WithPublicEndpoint() HandlerOption {
 	return func(h *HTTPHandler) {
 		h.public = true
 	}
@@ -101,7 +101,7 @@ func WithMessageEvents(events ...httpEvent) HandlerOption {
 // NewHandler wraps the passed handler, functioning like middleware, in a span
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...HandlerOption) http.Handler {
-	var h HTTPHandler
+	h := HTTPHandler{handler: handler}
 	defaultOpts := []HandlerOption{
 		WithTracer(trace.GlobalTracer()),
 		WithPropagator(prop.HttpTraceContextPropagator()),
@@ -110,16 +110,13 @@ func NewHandler(handler http.Handler, operation string, opts ...HandlerOption) h
 	for _, opt := range append(defaultOpts, opts...) {
 		opt(&h)
 	}
-
-	h.handler = handler
 	return &h
 }
 
 func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	opts := append([]trace.SpanOption{}, h.spanOptions...) // start with the configured options
 
-	sc := h.prop.Extract(ctx, r.Header)
+	sc := h.prop.Extract(r.Context(), r.Header)
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.SpanOption
 		if h.public {
@@ -133,11 +130,9 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		opts = append(opts, opt)
 	}
-	var span trace.Span
-	ctx, span = h.tracer.Start(ctx, h.operation, opts...)
-	defer span.End()
 
-	r = r.WithContext(ctx)
+	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	defer span.End()
 
 	readRecordFunc := func(int) {}
 	if h.readEvent {
@@ -150,8 +145,8 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}})
 		}
 	}
-	bw := &bodyWrapper{rc: r.Body, record: readRecordFunc}
-	r.Body = wrapBody(bw, r.Body)
+	bw := bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
+	r.Body = &bw
 
 	writeRecordFunc := func(int) {}
 	if h.writeEvent {
@@ -165,116 +160,115 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	rw := &respWriterWrapper{w: w, record: writeRecordFunc}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc}
 
+	setBeforeServeAttributes(span, r.Host, r.Method, r.URL.Path, r.URL.String(), r.UserAgent())
+	// inject the response header before calling ServeHTTP because a Write in
+	// ServeHTTP will cause all headers to be written out.
+	h.prop.Inject(ctx, rww.Header())
+
+	h.handler.ServeHTTP(rww, r.WithContext(ctx))
+	setAfterServeAttributes(span, bw.read, rww.written, int64(rww.statusCode), bw.err, rww.err)
+}
+
+func setBeforeServeAttributes(span trace.Span, host, method, path, url, uagent string) {
+	// Setup basic span attributes before calling handler.ServeHTTP so that they
+	// are available to be mutated by the handler if needed.
 	span.SetAttributes(
 		core.KeyValue{
 			Key: core.Key{Name: HostKeyName},
 			Value: core.Value{
 				Type:   core.STRING,
-				String: r.Host,
+				String: host,
 			}},
 		core.KeyValue{
 			Key: core.Key{Name: MethodKeyName},
 			Value: core.Value{
 				Type:   core.STRING,
-				String: r.Method,
+				String: method,
 			}},
 		core.KeyValue{
 			Key: core.Key{Name: PathKeyName},
 			Value: core.Value{
 				Type:   core.STRING,
-				String: r.URL.Path,
+				String: path,
 			}},
 		core.KeyValue{
 			Key: core.Key{Name: URLKeyName},
 			Value: core.Value{
 				Type:   core.STRING,
-				String: r.URL.String(),
+				String: url,
 			}},
 		core.KeyValue{
 			Key: core.Key{Name: UserAgentKeyName},
 			Value: core.Value{
 				Type:   core.STRING,
-				String: r.UserAgent(),
+				String: uagent,
 			}},
 	)
-
-	// inject the response header before because calling ServeHTTP because a
-	// Write in ServeHTTP will cause all headers to be written out.
-	h.prop.Inject(ctx, rw.Header())
-
-	h.handler.ServeHTTP(rw, r)
-	span.SetAttributes(afterServeAttributes(bw, rw)...)
 }
 
-func afterServeAttributes(bw *bodyWrapper, rw *respWriterWrapper) []core.KeyValue {
+func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rerr, werr error) {
 	kv := make([]core.KeyValue, 0, 5)
 	// TODO: Consider adding an event after each read and write, possibly as an
 	// option (defaulting to off), so at to not create needlesly verbose spans.
-	if bw.read > 0 {
+	if read > 0 {
 		kv = append(kv,
 			core.KeyValue{
 				Key: core.Key{Name: ReadBytesKeyName},
 				Value: core.Value{
 					Type:  core.INT64,
-					Int64: bw.read,
-				},
-			},
-		)
+					Int64: read,
+				}})
 	}
 
-	if bw.err != nil && bw.err != io.EOF {
+	if rerr != nil && rerr != io.EOF {
 		kv = append(kv,
 			core.KeyValue{
 				Key: core.Key{Name: ReadErrorKeyName},
 				Value: core.Value{
 					Type:   core.STRING,
-					String: bw.err.Error(),
-				},
-			},
-		)
+					String: rerr.Error(),
+				}})
 	}
 
-	if rw.wroteHeader {
+	if wrote > 0 {
 		kv = append(kv,
 			core.KeyValue{
 				Key: core.Key{Name: WroteBytesKeyName},
 				Value: core.Value{
 					Type:  core.INT64,
-					Int64: rw.written,
-				},
-			},
+					Int64: wrote,
+				}})
+	}
+
+	if statusCode > 0 {
+		kv = append(kv,
 			core.KeyValue{
 				Key: core.Key{Name: StatusCodeKeyName},
 				Value: core.Value{
 					Type:  core.INT64,
-					Int64: int64(rw.statusCode),
-				},
-			},
-		)
+					Int64: statusCode,
+				}})
 	}
 
-	if rw.err != nil && rw.err != io.EOF {
+	if werr != nil && werr != io.EOF {
 		kv = append(kv,
 			core.KeyValue{
 				Key: core.Key{Name: WriteErrorKeyName},
 				Value: core.Value{
 					Type:   core.STRING,
-					String: rw.err.Error(),
-				},
-			},
-		)
+					String: werr.Error(),
+				}})
 	}
 
-	return kv
+	span.SetAttributes(kv...)
 }
 
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		span := trace.CurrentSpan(ctx)
-		//TODO: Why doesn't tag.Upset work?
+		span := trace.CurrentSpan(r.Context())
+		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttribute(
 			core.KeyValue{
 				Key: core.Key{Name: RouteKeyName},
@@ -284,7 +278,7 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 				},
 			},
 		)
-		r = r.WithContext(trace.SetCurrentSpan(ctx, span))
-		h.ServeHTTP(w, r)
+
+		h.ServeHTTP(w, r.WithContext(trace.SetCurrentSpan(r.Context(), span)))
 	})
 }

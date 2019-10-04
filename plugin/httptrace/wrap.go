@@ -5,36 +5,20 @@ import (
 	"net/http"
 )
 
-// wrapBody returns the wrapped version of the original io.ReadCloser.
-// If the original io.ReadCloser was also an io.Writer the returned
-// io.ReadCloser is also an io.Writer
-func wrapBody(wrapper io.ReadCloser, original io.ReadCloser) io.ReadCloser {
-	w, isWriter := original.(io.Writer)
-
-	if !isWriter {
-		return wrapper
-	}
-
-	return struct {
-		io.ReadCloser
-		io.Writer
-	}{wrapper, w}
-}
-
 var _ io.ReadCloser = &bodyWrapper{}
 
 // bodyWrapper wraps a http.Request.Body (an io.ReadCloser) to track the number
 // of bytes read and the last error
 type bodyWrapper struct {
-	rc io.ReadCloser
-
-	read   int64
-	err    error
+	io.ReadCloser
 	record func(n int) // must not be nil
+
+	read int64
+	err  error
 }
 
 func (w *bodyWrapper) Read(b []byte) (int, error) {
-	n, err := w.rc.Read(b)
+	n, err := w.ReadCloser.Read(b)
 	w.read += int64(n)
 	w.err = err
 	w.record(n)
@@ -42,7 +26,7 @@ func (w *bodyWrapper) Read(b []byte) (int, error) {
 }
 
 func (w *bodyWrapper) Close() error {
-	return w.rc.Close()
+	return w.ReadCloser.Close()
 }
 
 var _ http.ResponseWriter = &respWriterWrapper{}
@@ -53,17 +37,17 @@ var _ http.ResponseWriter = &respWriterWrapper{}
 // types (http.Hijacker, http.Pusher, http.CloseNotifier, http.Flusher, etc)
 // that may be useful when using it in real life situations.
 type respWriterWrapper struct {
-	w http.ResponseWriter
+	http.ResponseWriter
+	record func(n int) // must not be nil
 
 	written     int64
 	statusCode  int
 	err         error
 	wroteHeader bool
-	record      func(n int) // must not be nil
 }
 
 func (w *respWriterWrapper) Header() http.Header {
-	return w.w.Header()
+	return w.ResponseWriter.Header()
 }
 
 func (w *respWriterWrapper) Write(p []byte) (int, error) {
@@ -71,7 +55,7 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 		w.WriteHeader(http.StatusOK)
 		w.wroteHeader = true
 	}
-	n, err := w.w.Write(p)
+	n, err := w.ResponseWriter.Write(p)
 	w.record(n)
 	w.written += int64(n)
 	w.err = err
@@ -81,5 +65,5 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 func (w *respWriterWrapper) WriteHeader(statusCode int) {
 	w.wroteHeader = true
 	w.statusCode = statusCode
-	w.w.WriteHeader(statusCode)
+	w.ResponseWriter.WriteHeader(statusCode)
 }
