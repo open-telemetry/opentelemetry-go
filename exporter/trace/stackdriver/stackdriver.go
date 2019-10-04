@@ -29,8 +29,11 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Options contains options for configuring the exporter.
-type Options struct {
+// Option is function type that is passed to the exporter initialization function.
+type Option func(*options)
+
+// options contains options for configuring the exporter.
+type options struct {
 	// ProjectID is the identifier of the Stackdriver
 	// project the user is uploading the stats data to.
 	// If not set, this will default to your "Application Default Credentials".
@@ -117,11 +120,54 @@ type Options struct {
 	NumberOfWorkers int
 }
 
+// WithProjectID sets Google Cloud Platform project as projectID.
+// Without using this option, it automatically detects the project ID
+// from the default credential detection process.
+// Please find the detailed order of the default credentail detection proecess on the doc:
+// https://godoc.org/golang.org/x/oauth2/google#FindDefaultCredentials
+func WithProjectID(projectID string) func(o *options) {
+	return func(o *options) {
+		o.ProjectID = projectID
+	}
+}
+
+// WithOnError sets the hook to be called when there is an error
+// occured on uploading the span data to Stackdriver.
+// If no custom hook is set, errors are logged.
+func WithOnError(onError func(err error)) func(o *options) {
+	return func(o *options) {
+		o.OnError = onError
+	}
+}
+
+// WithTraceClientOptions sets additionial client options for tracing.
+func WithTraceClientOptions(opts []option.ClientOption) func(o *options) {
+	return func(o *options) {
+		o.TraceClientOptions = opts
+	}
+}
+
+// WithContext sets the context that trace exporter and metric exporter
+// relies on.
+func WithContext(ctx context.Context) func(o *options) {
+	return func(o *options) {
+		o.Context = ctx
+	}
+}
+
+func (o *options) handleError(err error) {
+	if o.OnError != nil {
+		o.OnError(err)
+		return
+	}
+	log.Printf("Failed to export to Stackdriver: %v", err)
+}
+
 const defaultTimeout = 5 * time.Second
 
 // Exporter is a trace exporter that uploads data to Stackdriver.
 //
-// TODO(yoshifumi): add a metrics exoprter once the spec definition
+// TODO(yoshifumi): add a metrics exporter once the spec definition
 // process and the sampler implementation are done.
 type Exporter struct {
 	traceExporter *traceExporter
@@ -131,7 +177,11 @@ type Exporter struct {
 //
 // TODO(yoshifumi): add a metrics exporter one the spec definition
 // process and the sampler implementation are done.
-func NewExporter(o Options) (*Exporter, error) {
+func NewExporter(opts ...Option) (*Exporter, error) {
+	o := options{}
+	for _, opt := range opts {
+		opt(&o)
+	}
 	if o.ProjectID == "" {
 		ctx := o.Context
 		if ctx == nil {
@@ -146,7 +196,7 @@ func NewExporter(o Options) (*Exporter, error) {
 		}
 		o.ProjectID = creds.ProjectID
 	}
-	te, err := newTraceExporter(o)
+	te, err := newTraceExporter(&o)
 	if err != nil {
 		return nil, err
 	}
@@ -154,14 +204,6 @@ func NewExporter(o Options) (*Exporter, error) {
 	return &Exporter{
 		traceExporter: te,
 	}, nil
-}
-
-func (o Options) handleError(err error) {
-	if o.OnError != nil {
-		o.OnError(err)
-		return
-	}
-	log.Printf("Failed to export to Stackdriver: %v", err)
 }
 
 func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.Context, func()) {

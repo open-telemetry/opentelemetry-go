@@ -32,7 +32,7 @@ import (
 // traceExporter is an imeplementation of trace.Exporter
 // that uploads spans to Stackdriver Trace.
 type traceExporter struct {
-	o         Options
+	o         *options
 	projectID string
 	bundler   *bundler.Bundler
 	// uploadFn defaults in uploadSpans; it can be replaced for tests.
@@ -41,7 +41,7 @@ type traceExporter struct {
 	client *traceclient.Client
 }
 
-func newTraceExporter(o Options) (*traceExporter, error) {
+func newTraceExporter(o *options) (*traceExporter, error) {
 	ctx := o.Context
 	if ctx == nil {
 		ctx = context.Background()
@@ -55,7 +55,7 @@ func newTraceExporter(o Options) (*traceExporter, error) {
 
 const defaultBufferedByteLimit = 0 * 1024 * 1024
 
-func newTraceExporterWithClient(o Options, c *traceclient.Client) *traceExporter {
+func newTraceExporterWithClient(o *options, c *traceclient.Client) *traceExporter {
 	e := &traceExporter{
 		projectID: o.ProjectID,
 		client:    c,

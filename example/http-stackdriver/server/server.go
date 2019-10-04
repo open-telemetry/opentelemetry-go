@@ -18,6 +18,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
@@ -29,11 +30,13 @@ import (
 func initTracer() {
 	sdktrace.Register()
 
+	projectID := os.Getenv("PROJECT_ID")
+
 	// Create Stackdriver exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID: "development-215403",
-	})
+	exporter, err := stackdriver.NewExporter(
+		stackdriver.WithProjectID(projectID),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

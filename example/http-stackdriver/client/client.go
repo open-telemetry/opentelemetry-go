@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 
 	"net/http"
 	"time"
@@ -37,11 +38,13 @@ func initTracer() {
 	// Register SDK as trace provider.
 	sdktrace.Register()
 
+	projectID := os.Getenv("PROJECT_ID")
+
 	// Create Stackdriver exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID: "development-215403",
-	})
+	exporter, err := stackdriver.NewExporter(
+		stackdriver.WithProjectID(projectID),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
