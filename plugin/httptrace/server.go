@@ -12,11 +12,11 @@ import (
 
 var _ http.Handler = &HTTPHandler{}
 
-type HTTPEvent int
+type httpEvent int
 
 // Possible message events that can be enabled via WithMessageEvents
 const (
-	EventRead  HTTPEvent = iota // An event that records the number of bytes read is created for every Read
+	EventRead  httpEvent = iota // An event that records the number of bytes read is created for every Read
 	EventWrite                  // an event that records the number of bytes written is created for every Write
 )
 
@@ -27,6 +27,7 @@ const (
 	PathKeyName       = "http.path"        // the http path (http.Request.URL.Path)
 	URLKeyName        = "http.url"         // the http url (http.Request.URL.String())
 	UserAgentKeyName  = "http.user_agent"  // the http user agent (http.Request.UserAgent())
+	RouteKeyName      = "http.route"       // the http route (ex: /users/:id)
 	StatusCodeKeyName = "http.status_code" // if set, the http status
 	ReadBytesKeyName  = "http.read_bytes"  // if anything was read from the request body, the total number of bytes read
 	ReadErrorKeyName  = "http.read_error"  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
@@ -84,7 +85,7 @@ func WithSpanOptions(opts ...trace.SpanOption) HandlerOption {
 
 // WithMessageEvents configures the HTTPHandler with a set of message events. By
 // default only the summary attributes are added at the end of the request.
-func WithMessageEvents(events ...HTTPEvent) HandlerOption {
+func WithMessageEvents(events ...httpEvent) HandlerOption {
 	return func(h *HTTPHandler) {
 		for _, e := range events {
 			switch e {
@@ -267,4 +268,23 @@ func afterServeAttributes(bw *bodyWrapper, rw *respWriterWrapper) []core.KeyValu
 	}
 
 	return kv
+}
+
+func WithRouteTag(route string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		span := trace.CurrentSpan(ctx)
+		//TODO: Why doesn't tag.Upset work?
+		span.SetAttribute(
+			core.KeyValue{
+				Key: core.Key{Name: RouteKeyName},
+				Value: core.Value{
+					Type:   core.STRING,
+					String: route,
+				},
+			},
+		)
+		r = r.WithContext(trace.SetCurrentSpan(ctx, span))
+		h.ServeHTTP(w, r)
+	})
 }
