@@ -16,8 +16,6 @@ package exporter
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
 )
 
 // Type defines all the types of exporters we have available
@@ -42,60 +40,4 @@ type SyncExporter interface {
 // The SpanData should not be modified.
 type BatchExporter interface {
 	ExportSpans(context.Context, []*SpanData)
-}
-
-type exportersMap map[Type][]interface{}
-
-var (
-	exporterMu sync.Mutex
-	exporters  atomic.Value
-)
-
-// Register adds to the list of Exporters that will receive sampled trace
-// spans.
-func Register(t Type, e interface{}) {
-	exporterMu.Lock()
-	defer exporterMu.Unlock()
-
-	nm := make(exportersMap)
-	if old, ok := exporters.Load().(exportersMap); ok {
-		for k, v := range old {
-			nm[k] = v
-		}
-	}
-
-	nm[t] = append(nm[t], e)
-	exporters.Store(nm)
-}
-
-// Unregister removes from the list of Exporters the Exporter that was
-// registered with the given name.
-func Unregister(e interface{}) {
-	exporterMu.Lock()
-	defer exporterMu.Unlock()
-
-	nm := make(exportersMap)
-	if old, ok := exporters.Load().(exportersMap); ok {
-		for k, tv := range old {
-			for i, v := range tv {
-				if e == v {
-					tv[i] = tv[len(tv)-1]
-					tv = tv[:len(tv)-1]
-				}
-			}
-
-			nm[k] = tv
-		}
-	}
-
-	exporters.Store(nm)
-}
-
-// Load loads all the registered exporters matching a specific type
-func Load(t Type) []interface{} {
-	exporterMu.Lock()
-	defer exporterMu.Unlock()
-
-	e, _ := exporters.Load().(exportersMap)
-	return e[t]
 }
