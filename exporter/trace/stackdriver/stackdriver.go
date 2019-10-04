@@ -23,10 +23,11 @@ import (
 	"time"
 
 	traceapi "cloud.google.com/go/trace/apiv2"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/sdk/trace"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
+
+	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 // Option is function type that is passed to the exporter initialization function.
@@ -132,7 +133,7 @@ func WithProjectID(projectID string) func(o *options) {
 }
 
 // WithOnError sets the hook to be called when there is an error
-// occured on uploading the span data to Stackdriver.
+// occurred on uploading the span data to Stackdriver.
 // If no custom hook is set, errors are logged.
 func WithOnError(onError func(err error)) func(o *options) {
 	return func(o *options) {
@@ -233,20 +234,18 @@ func (e *Exporter) ExportSpan(sd *trace.SpanData) {
 func (e *Exporter) sdWithDefaultTraceAttributes(sd *trace.SpanData) *trace.SpanData {
 	newSD := *sd
 	for k, v := range e.traceExporter.o.DefaultTraceAttributes {
-		switch v.(type) {
+		switch val := v.(type) {
 		case bool:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Bool(v.(bool)))
+			newSD.Attributes = append(newSD.Attributes, key.New(k).Bool(val))
 		case int64:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Int64(v.(int64)))
+			newSD.Attributes = append(newSD.Attributes, key.New(k).Int64(val))
 		case float64:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Float64(v.(float64)))
+			newSD.Attributes = append(newSD.Attributes, key.New(k).Float64(val))
 		case string:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).String(v.(string)))
+			newSD.Attributes = append(newSD.Attributes, key.New(k).String(val))
 		}
 	}
-	for _, kv := range sd.Attributes {
-		newSD.Attributes = append(newSD.Attributes, kv)
-	}
+	newSD.Attributes = append(newSD.Attributes, sd.Attributes...)
 	return &newSD
 }
 

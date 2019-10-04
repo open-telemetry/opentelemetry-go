@@ -24,9 +24,10 @@ import (
 
 	traceclient "cloud.google.com/go/trace/apiv2"
 	"github.com/golang/protobuf/proto"
-	"go.opentelemetry.io/sdk/trace"
 	"google.golang.org/api/support/bundler"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
+
+	"go.opentelemetry.io/sdk/trace"
 )
 
 // traceExporter is an imeplementation of trace.Exporter

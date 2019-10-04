@@ -24,12 +24,13 @@ import (
 
 	timestamppb "github.com/golang/protobuf/ptypes/timestamp"
 	wrapperspb "github.com/golang/protobuf/ptypes/wrappers"
-	"go.opentelemetry.io/api/core"
-	opentelemetry "go.opentelemetry.io/sdk"
-	"go.opentelemetry.io/sdk/trace"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/api/core"
+	opentelemetry "go.opentelemetry.io/sdk"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 const (
