@@ -31,7 +31,7 @@ import (
 const (
 	supportedVersion  = 0
 	maxVersion        = 254
-	traceparentHeader = "traceparent"
+	TraceparentHeader = "Traceparent"
 )
 
 type httpTraceContextPropagator struct{}
@@ -48,12 +48,12 @@ func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			sc.TraceID.Low,
 			sc.SpanID,
 			sc.TraceFlags&core.TraceFlagsSampled)
-		supplier.Set(traceparentHeader, h)
+		supplier.Set(TraceparentHeader, h)
 	}
 }
 
 func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
-	h := supplier.Get(traceparentHeader)
+	h := supplier.Get(TraceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
 	}
@@ -128,7 +128,7 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 }
 
 func (hp httpTraceContextPropagator) GetAllKeys() []string {
-	return []string{traceparentHeader}
+	return []string{TraceparentHeader}
 }
 
 // HttpTraceContextPropagator creates a new text format propagator that propagates SpanContext
