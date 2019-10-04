@@ -14,14 +14,14 @@ var _ Meter = noopMeter{}
 var _ Handle = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (noopHandle) RecordOne(ctx context.Context, value MeasurementValue) {
+func (noopHandle) RecordOne(context.Context, MeasurementValue) {
 }
 
 func (noopLabelSet) Meter() Meter {
 	return noopMeter{}
 }
 
-func (noopMeter) DefineLabels(ctx context.Context, labels ...core.KeyValue) LabelSet {
+func (noopMeter) DefineLabels(context.Context, ...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 
