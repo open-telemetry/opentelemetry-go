@@ -109,8 +109,20 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	}
 }
 
-// TODO(rghetia): Add Shutdown test when it is implemented.
-func TestShutdown(t *testing.T) {
+func TestSpanProcessorShutdown(t *testing.T) {
+	name := "Increment shutdown counter of a span processor"
+	sp := NewTestSpanProcessor()
+	if sp == nil {
+		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
+	}
+
+	wantCount := sp.shutdownCount + 1
+	sp.Shutdown()
+
+	gotCount := sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
 }
 
 func NewTestSpanProcessor() *testSpanProcesor {

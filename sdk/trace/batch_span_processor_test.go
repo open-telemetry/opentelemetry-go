@@ -202,3 +202,19 @@ func getSpanContext() core.SpanContext {
 		TraceFlags: 0x1,
 	}
 }
+
+func TestBatchSpanProcessorShutdown(t *testing.T) {
+	bsp, err := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
+	if err != nil {
+		t.Errorf("Unexpected error while creating processor\n")
+	}
+
+	if bsp == nil {
+		t.Fatalf("Error creating new instance of BatchSpanProcessor\n")
+	}
+
+	bsp.Shutdown()
+
+	// Check if it only executes once
+	bsp.Shutdown()
+}
