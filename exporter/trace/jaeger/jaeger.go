@@ -143,7 +143,7 @@ type Exporter struct {
 	uploader batchUploader
 }
 
-var _ exporter.SyncExporter = (*Exporter)(nil)
+var _ exporter.Syncer = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(ctx context.Context, d *exporter.SpanData) {

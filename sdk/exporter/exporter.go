@@ -18,26 +18,21 @@ import (
 	"context"
 )
 
-// Type defines all the types of exporters we have available
-type Type int32
-
-// All the exporter types
-const (
-	ExporterTypeSync = iota
-	ExporterTypeBatch
-)
-
-// SyncExporter is a synchronous exporter
-type SyncExporter interface {
+// Syncer is a type for functions that receive a single trace span.
+//
+// The ExportSpan method is called synchronously.
+//
+// The SpanData should not be modified.
+type Syncer interface {
 	ExportSpan(context.Context, *SpanData)
 }
 
-// BatchExporter is a type for functions that receive sampled trace spans.
+// Batcher is a type for functions that receive sampled trace spans.
 //
-// The ExportSpans method is called asynchronously. However BatchExporter should
-// not take forever to process the spans.
+// The ExportSpans method is called asynchronously. However its should not take
+// forever to process the spans.
 //
 // The SpanData should not be modified.
-type BatchExporter interface {
+type Batcher interface {
 	ExportSpans(context.Context, []*SpanData)
 }

@@ -32,7 +32,7 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *exporter.SpanData) {
 	t.spans = append(t.spans, s)
 }
 
-var _ exporter.SyncExporter = (*testExporter)(nil)
+var _ exporter.Syncer = (*testExporter)(nil)
 
 func init() {
 	sdktrace.Register()
