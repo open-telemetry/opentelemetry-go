@@ -134,7 +134,7 @@ func (s *sdk) UnregisterObserver(observer metric.Observer) {
 			observers[oid] = data
 		}
 	}
-	s.observers.Store(observers)
+	s.storeObserversMap(observers)
 }
 
 func (s *sdk) observersRoutine() {
