@@ -34,9 +34,10 @@ const (
 	ObserverKind
 )
 
-// Recorder is the implementation-level interface to Set/Add/Record individual metrics.
+// Handle is the implementation-level interface to Set/Add/Record
+// individual metrics.
 type Handle interface {
-	// Record allows the SDK to observe a single metric event
+	// RecordOne allows the SDK to observe a single metric event
 	RecordOne(ctx context.Context, value MeasurementValue)
 }
 
