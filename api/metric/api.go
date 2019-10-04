@@ -135,15 +135,16 @@ func (d *Descriptor) ValueKind() ValueKind {
 	return d.valueKind
 }
 
-// Meaning depends on the metric type:
+// Alternate defines the property of metric value dependent on a
+// metric type.
 //
-// - for Counter it implies that this is an up-down Counter
+// - for Counter, true implies that the metric is an up-down Counter
 //
-// - for Gauge/Observer it implies that this is non-descending
-//   Gauge/Observer
+// - for Gauge/Observer, true implies that the metric is a
+//   non-descending Gauge/Observer
 //
-// - for Measure it implies that it supports positive and negative
-//   values
+// - for Measure, true implies that the metric supports positive and
+//   negative values
 func (d *Descriptor) Alternate() bool {
 	return d.alternate
 }
