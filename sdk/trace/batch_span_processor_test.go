@@ -215,6 +215,6 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 
 	bsp.Shutdown()
 
-	// Check if it only executes once
+	// Multiple call to Shutdown() should not panic.
 	bsp.Shutdown()
 }
