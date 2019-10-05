@@ -139,7 +139,7 @@ func formatMetricUpdate(buf *strings.Builder, m metric.Measurement) {
 	buf.WriteString(" ")
 	buf.WriteString(m.Descriptor.Name())
 	buf.WriteString("=")
-	buf.WriteString(m.Value.Emit())
+	buf.WriteString(m.Value.Emit(m.Descriptor.ValueKind()))
 }
 
 func formatMetricLabels(buf *strings.Builder, l tag.Map) {
