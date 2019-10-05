@@ -26,7 +26,7 @@ type Int64Observer struct {
 	Observer
 }
 
-func NewObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o Observer) {
+func newObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o Observer) {
 	o.Descriptor = registerDescriptor(name, ObserverKind, valueKind)
 	for _, opt := range mos {
 		opt.ApplyGaugeOption(o.Descriptor)
@@ -35,11 +35,11 @@ func NewObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o
 }
 
 func NewFloat64Observer(name string, mos ...GaugeOptionApplier) (o Float64Observer) {
-	o.Observer = NewObserver(name, Float64ValueKind, mos...)
+	o.Observer = newObserver(name, Float64ValueKind, mos...)
 	return
 }
 
 func NewInt64Observer(name string, mos ...GaugeOptionApplier) (o Int64Observer) {
-	o.Observer = NewObserver(name, Int64ValueKind, mos...)
+	o.Observer = newObserver(name, Int64ValueKind, mos...)
 	return
 }

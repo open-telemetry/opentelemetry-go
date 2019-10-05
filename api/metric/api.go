@@ -80,8 +80,7 @@ type DescriptorID uint64
 type ValueKind int8
 
 const (
-	AnyValueKind ValueKind = iota
-	Int64ValueKind
+	Int64ValueKind ValueKind = iota
 	Float64ValueKind
 )
 

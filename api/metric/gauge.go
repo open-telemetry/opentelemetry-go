@@ -18,28 +18,20 @@ import (
 	"context"
 )
 
-type Gauge struct {
-	*Descriptor
-}
-
 type Float64Gauge struct {
-	Gauge
+	CommonMetric
 }
 
 type Int64Gauge struct {
-	Gauge
-}
-
-type GaugeHandle struct {
-	Handle
+	CommonMetric
 }
 
 type Float64GaugeHandle struct {
-	GaugeHandle
+	Handle
 }
 
 type Int64GaugeHandle struct {
-	GaugeHandle
+	Handle
 }
 
 type GaugeOptionApplier interface {
@@ -56,84 +48,54 @@ func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
 	o.F(d)
 }
 
-func NewGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (g Gauge) {
-	g.Descriptor = registerDescriptor(name, GaugeKind, valueKind)
+func newGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) CommonMetric {
+	m := registerCommonMetric(name, GaugeKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyGaugeOption(g.Descriptor)
+		opt.ApplyGaugeOption(m.Descriptor)
 	}
-	return
+	return m
 }
 
 func NewFloat64Gauge(name string, mos ...GaugeOptionApplier) (g Float64Gauge) {
-	g.Gauge = NewGauge(name, Float64ValueKind, mos...)
+	g.CommonMetric = newGauge(name, Float64ValueKind, mos...)
 	return
 }
 
 func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
-	g.Gauge = NewGauge(name, Int64ValueKind, mos...)
-	return
-}
-
-func (g *Gauge) GetHandle(labels LabelSet) (h GaugeHandle) {
-	h.Handle = labels.Meter().NewHandle(g.Descriptor, labels)
+	g.CommonMetric = newGauge(name, Int64ValueKind, mos...)
 	return
 }
 
 func (g *Float64Gauge) GetHandle(labels LabelSet) (h Float64GaugeHandle) {
-	h.GaugeHandle = g.Gauge.GetHandle(labels)
+	h.Handle = g.getHandle(labels)
 	return
 }
 
 func (g *Int64Gauge) GetHandle(labels LabelSet) (h Int64GaugeHandle) {
-	h.GaugeHandle = g.Gauge.GetHandle(labels)
+	h.Handle = g.getHandle(labels)
 	return
 }
 
-func (g *Gauge) Float64Measurement(value float64) Measurement {
-	return Measurement{
-		Descriptor: g.Descriptor,
-		Value:      NewFloat64MeasurementValue(value),
-	}
-}
-
-func (g *Gauge) Int64Measurement(value int64) Measurement {
-	return Measurement{
-		Descriptor: g.Descriptor,
-		Value:      NewInt64MeasurementValue(value),
-	}
-}
-
 func (g *Float64Gauge) Measurement(value float64) Measurement {
-	return g.Gauge.Float64Measurement(value)
+	return g.float64Measurement(value)
 }
 
 func (g *Int64Gauge) Measurement(value int64) Measurement {
-	return g.Gauge.Int64Measurement(value)
-}
-
-func (g *Gauge) Set(ctx context.Context, value MeasurementValue, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, Measurement{
-		Descriptor: g.Descriptor,
-		Value:      value,
-	})
+	return g.int64Measurement(value)
 }
 
 func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
-	g.Gauge.Set(ctx, NewFloat64MeasurementValue(value), labels)
+	g.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
 func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
-	g.Gauge.Set(ctx, NewInt64MeasurementValue(value), labels)
-}
-
-func (h *GaugeHandle) Set(ctx context.Context, value MeasurementValue) {
-	h.RecordOne(ctx, value)
+	g.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }
 
 func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
-	h.GaugeHandle.Set(ctx, NewFloat64MeasurementValue(value))
+	h.RecordOne(ctx, NewFloat64MeasurementValue(value))
 }
 
 func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
-	h.GaugeHandle.Set(ctx, NewInt64MeasurementValue(value))
+	h.RecordOne(ctx, NewInt64MeasurementValue(value))
 }

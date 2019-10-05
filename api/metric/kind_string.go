@@ -29,14 +29,13 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[AnyValueKind-0]
-	_ = x[Int64ValueKind-1]
-	_ = x[Float64ValueKind-2]
+	_ = x[Int64ValueKind-0]
+	_ = x[Float64ValueKind-1]
 }
 
-const _ValueKind_name = "AnyValueKindInt64ValueKindFloat64ValueKind"
+const _ValueKind_name = "Int64ValueKindFloat64ValueKind"
 
-var _ValueKind_index = [...]uint8{0, 12, 26, 42}
+var _ValueKind_index = [...]uint8{0, 14, 30}
 
 func (i ValueKind) String() string {
 	if i < 0 || i >= ValueKind(len(_ValueKind_index)-1) {

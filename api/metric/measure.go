@@ -18,28 +18,20 @@ import (
 	"context"
 )
 
-type Measure struct {
-	*Descriptor
-}
-
 type Float64Measure struct {
-	Measure
+	CommonMetric
 }
 
 type Int64Measure struct {
-	Measure
-}
-
-type MeasureHandle struct {
-	Handle
+	CommonMetric
 }
 
 type Float64MeasureHandle struct {
-	MeasureHandle
+	Handle
 }
 
 type Int64MeasureHandle struct {
-	MeasureHandle
+	Handle
 }
 
 type MeasureOptionApplier interface {
@@ -56,84 +48,54 @@ func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
 	o.F(d)
 }
 
-func NewMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) (m Measure) {
-	m.Descriptor = registerDescriptor(name, MeasureKind, valueKind)
+func newMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) CommonMetric {
+	m := registerCommonMetric(name, MeasureKind, valueKind)
 	for _, opt := range mos {
 		opt.ApplyMeasureOption(m.Descriptor)
 	}
-	return
+	return m
 }
 
 func NewFloat64Measure(name string, mos ...MeasureOptionApplier) (c Float64Measure) {
-	c.Measure = NewMeasure(name, Float64ValueKind, mos...)
+	c.CommonMetric = newMeasure(name, Float64ValueKind, mos...)
 	return
 }
 
 func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) {
-	c.Measure = NewMeasure(name, Int64ValueKind, mos...)
-	return
-}
-
-func (m *Measure) GetHandle(labels LabelSet) (h MeasureHandle) {
-	h.Handle = labels.Meter().NewHandle(m.Descriptor, labels)
+	c.CommonMetric = newMeasure(name, Int64ValueKind, mos...)
 	return
 }
 
 func (c *Float64Measure) GetHandle(labels LabelSet) (h Float64MeasureHandle) {
-	h.MeasureHandle = c.Measure.GetHandle(labels)
+	h.Handle = c.getHandle(labels)
 	return
 }
 
 func (c *Int64Measure) GetHandle(labels LabelSet) (h Int64MeasureHandle) {
-	h.MeasureHandle = c.Measure.GetHandle(labels)
+	h.Handle = c.getHandle(labels)
 	return
 }
 
-func (m *Measure) Float64Measurement(value float64) Measurement {
-	return Measurement{
-		Descriptor: m.Descriptor,
-		Value:      NewFloat64MeasurementValue(value),
-	}
-}
-
-func (m *Measure) Int64Measurement(value int64) Measurement {
-	return Measurement{
-		Descriptor: m.Descriptor,
-		Value:      NewInt64MeasurementValue(value),
-	}
-}
-
 func (c *Float64Measure) Measurement(value float64) Measurement {
-	return c.Measure.Float64Measurement(value)
+	return c.float64Measurement(value)
 }
 
 func (c *Int64Measure) Measurement(value int64) Measurement {
-	return c.Measure.Int64Measurement(value)
-}
-
-func (m *Measure) Record(ctx context.Context, value MeasurementValue, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, Measurement{
-		Descriptor: m.Descriptor,
-		Value:      value,
-	})
+	return c.int64Measurement(value)
 }
 
 func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	c.Measure.Record(ctx, NewFloat64MeasurementValue(value), labels)
+	c.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
 func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	c.Measure.Record(ctx, NewInt64MeasurementValue(value), labels)
-}
-
-func (h *MeasureHandle) Record(ctx context.Context, value MeasurementValue) {
-	h.RecordOne(ctx, value)
+	c.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }
 
 func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	h.MeasureHandle.Record(ctx, NewFloat64MeasurementValue(value))
+	h.RecordOne(ctx, NewFloat64MeasurementValue(value))
 }
 
 func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	h.MeasureHandle.Record(ctx, NewInt64MeasurementValue(value))
+	h.RecordOne(ctx, NewInt64MeasurementValue(value))
 }

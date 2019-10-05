@@ -14,11 +14,51 @@
 
 package metric
 
-import "sync/atomic"
+import (
+	"context"
+	"sync/atomic"
+)
 
 var (
 	descriptorID uint64
 )
+
+// TODO: Maybe unexport that and document very _very_ clearly, that
+// you can still get a descriptor with NewInt64Counter(…).Descriptor
+type CommonMetric struct {
+	*Descriptor
+}
+
+func (m CommonMetric) getHandle(labels LabelSet) Handle {
+	return labels.Meter().NewHandle(m.Descriptor, labels)
+}
+
+func (m CommonMetric) float64Measurement(value float64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
+		Value:      NewFloat64MeasurementValue(value),
+	}
+}
+
+func (m CommonMetric) int64Measurement(value int64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
+		Value:      NewInt64MeasurementValue(value),
+	}
+}
+
+func (m CommonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, Measurement{
+		Descriptor: m.Descriptor,
+		Value:      value,
+	})
+}
+
+func registerCommonMetric(name string, kind Kind, valueKind ValueKind) CommonMetric {
+	return CommonMetric{
+		Descriptor: registerDescriptor(name, kind, valueKind),
+	}
+}
 
 func registerDescriptor(name string, kind Kind, valueKind ValueKind) *Descriptor {
 	return &Descriptor{
