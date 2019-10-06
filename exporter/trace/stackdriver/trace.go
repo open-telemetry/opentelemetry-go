@@ -30,8 +30,8 @@ import (
 	"go.opentelemetry.io/sdk/trace"
 )
 
-// traceExporter is an imeplementation of trace.Exporter
-// that uploads spans to Stackdriver Trace.
+// traceExporter is an imeplementation of trace.Exporter and trace.BatchExporter
+// that uploads spans to Stackdriver Trace in batch.
 type traceExporter struct {
 	o         *options
 	projectID string
@@ -103,6 +103,11 @@ func (e *traceExporter) ExportSpan(s *trace.SpanData) {
 	default:
 		e.o.handleError(err)
 	}
+}
+
+// ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
+func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
+
 }
 
 // Flush waits for exported trace spans to be uploaded.

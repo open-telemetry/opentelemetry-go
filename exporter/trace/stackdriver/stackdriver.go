@@ -218,9 +218,12 @@ func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.
 }
 
 // Register registers e to the tracer.
-func (e *Exporter) Register() {
-	trace.Register()
-	trace.RegisterExporter(e)
+func (e *Exporter) Register() error {
+	bsp, err := trace.NewBatchSpanProcessor(e)
+	if err != nil {
+		return err
+	}
+	trace.RegisterSpanProcessor(bsp)
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
@@ -229,6 +232,12 @@ func (e *Exporter) ExportSpan(sd *trace.SpanData) {
 		sd = e.sdWithDefaultTraceAttributes(sd)
 	}
 	e.traceExporter.ExportSpan(sd)
+}
+
+// ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
+func (e *Exporter) ExportSpans(sds []*trace.SpanData) {
+	// TODO(ymotongpoo): implement here
+	e.traceExporter.ExportSpans(sds)
 }
 
 func (e *Exporter) sdWithDefaultTraceAttributes(sd *trace.SpanData) *trace.SpanData {
