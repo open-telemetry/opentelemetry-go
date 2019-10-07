@@ -42,7 +42,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		wantSc core.SpanContext
 	}{
 		{
-			name:   "valid header",
+			name:   "valid b3Header",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
 			wantSc: core.SpanContext{
 				TraceID: traceID,
@@ -50,7 +50,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			},
 		},
 		{
-			name:   "valid header and sampled",
+			name:   "valid b3Header and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: core.SpanContext{
 				TraceID:    traceID,
@@ -94,7 +94,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			},
 		},
 		{
-			name:   "valid header ending in dash",
+			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
 			wantSc: core.SpanContext{
 				TraceID:    traceID,
@@ -103,7 +103,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			},
 		},
 		{
-			name:   "future valid header ending in dash",
+			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
 			wantSc: core.SpanContext{
 				TraceID:    traceID,

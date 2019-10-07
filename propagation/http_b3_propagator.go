@@ -15,154 +15,225 @@
 package propagation
 
 import (
+	"context"
 	"fmt"
-	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
+
+	"go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/api/core"
 	apipropagation "go.opentelemetry.io/api/propagation"
-	"go.opentelemetry.io/api/tag"
 )
 
 const (
-	B3TraceIDHeader = "X-B3-TraceId"
-	B3SpanIDHeader  = "X-B3-SpanId"
-	B3SampledHeader = "X-B3-Sampled"
+	B3SingleHeader       = "X-B3"
+	B3DebugFlagHeader    = "X-B3-Flags"
+	B3TraceIDHeader      = "X-B3-TraceId"
+	B3SpanIDHeader       = "X-B3-SpanId"
+	B3SampledHeader      = "X-B3-Sampled"
+	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
 )
 
-type httpB3Propagator struct{}
+type httpB3Propagator struct {
+	singleHeader bool
+}
 
 var _ apipropagation.TextFormatPropagator = httpB3Propagator{}
 
-// CarrierExtractor implements CarrierExtractor method of TextFormatPropagator interface.
+var hexStr32ByteRegex = regexp.MustCompile("^[a-f0-9]{32}$")
+var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
+
+// HttpB3Propagator creates a new text format propagator that facilitates core.SpanContext
+// propagation using B3 Headers.
+// This propagator supports both version of B3 headers,
+//  1. Single Header :
+//    X-B3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
+//  2. Multiple Headers:
+//    X-B3-TraceId: {TraceId}
+//    X-B3-ParentSpanId: {ParentSpanId}
+//    X-B3-SpanId: {SpanId}
+//    X-B3-Sampled: {SamplingState}
+//    X-B3-Flags: {DebugFlag}
 //
-// It creates CarrierExtractor object and binds carrier to the object. The carrier
-// is expected to be *http.Request. If the carrier type is not *http.Request
-// then an empty extractor. Extract method on empty extractor does nothing.
-func (t httpB3Propagator) CarrierExtractor(carrier interface{}) apipropagation.Extractor {
-	req, ok := carrier.(*http.Request)
-	if ok {
-		return b3Extractor{req: req}
+// If singleHeader is set to true then X-B3 header is used to inject and extract. Otherwise,
+// separate headers are used to inject and extract.
+func HttpB3Propagator(singleHeader bool) httpB3Propagator {
+	// [TODO](rghetia): should it automatically look for both versions? which one to pick if
+	// both are present? What if one is valid and other one is not.
+	return httpB3Propagator{singleHeader}
+}
+
+func (b3 httpB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+	sc := trace.CurrentSpan(ctx).SpanContext()
+	if sc.IsValid() {
+		if b3.singleHeader {
+			sampled := sc.TraceFlags & core.TraceFlagsSampled
+			supplier.Set(B3SingleHeader,
+				fmt.Sprintf("%.16x%.16x-%.16x-%.1d", sc.TraceID.High, sc.TraceID.Low, sc.SpanID, sampled))
+		} else {
+			supplier.Set(B3TraceIDHeader,
+				fmt.Sprintf("%.16x%.16x", sc.TraceID.High, sc.TraceID.Low))
+			supplier.Set(B3SpanIDHeader,
+				fmt.Sprintf("%.16x", sc.SpanID))
+
+			var sampled string
+			if sc.IsSampled() {
+				sampled = "1"
+			} else {
+				sampled = "0"
+			}
+			supplier.Set(B3SampledHeader, sampled)
+		}
 	}
-	return b3Extractor{}
 }
 
-// CarrierInjector implements CarrierInjector method of TextFormatPropagator interface.
-//
-// It creates CarrierInjector object and binds carrier to the object. The carrier
-// is expected to be of type *http.Request. If the carrier type is not *http.Request
-// then an empty injector is returned. Inject method on empty injector does nothing.
-func (t httpB3Propagator) CarrierInjector(carrier interface{}) apipropagation.Injector {
-	req, ok := carrier.(*http.Request)
-	if ok {
-		return b3Injector{req: req}
+// Extract retrieves B3 Headers from the supplier
+func (b3 httpB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
+	if b3.singleHeader {
+		return b3.extractSingleHeader(supplier)
 	}
-	return b3Injector{}
+	return b3.extract(supplier)
 }
 
-// HttpB3Propagator creates a new propagator. The propagator is then used
-// to create Injector and Extrator associated with a specific request. Injectors
-// and Extractors respectively provides method to inject and extract SpanContext
-// into/from the http request. These methods encode/decode SpanContext to/from B3
-// Headers.
-func HttpB3Propagator() httpB3Propagator {
-	return httpB3Propagator{}
-}
-
-type b3Extractor struct {
-	req *http.Request
-}
-
-var _ apipropagation.Extractor = b3Extractor{}
-
-// Extract implements Extract method of trace.Extractor interface. It extracts
-// B3 Trace Headers and decodes SpanContext from these headers. These headers are
-// X-B3-TraceId
-// X-B3-SpanId
-// X-B3-Sampled
-// It skips the X-B3-ParentId and X-B3-Flags headers as they are not supported
-// by core.SpanContext
-func (be b3Extractor) Extract() (sc core.SpanContext, tm tag.Map) {
-	if be.req == nil {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+func (b3 httpB3Propagator) GetAllKeys() []string {
+	if b3.singleHeader {
+		return []string{B3SingleHeader}
 	}
-	tid := extractTraceID(be.req.Header.Get(B3TraceIDHeader))
-	sid := extractSpanID(be.req.Header.Get(B3SpanIDHeader))
-	sampled := extractTraceOption(be.req.Header.Get(B3SampledHeader))
-	sc = core.SpanContext{
-		TraceID:      tid,
-		SpanID:       sid,
-		TraceOptions: sampled,
+	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
+}
+
+func (b3 httpB3Propagator) extract(supplier apipropagation.Supplier) core.SpanContext {
+	tid, ok := b3.extractTraceID(supplier.Get(B3TraceIDHeader))
+	if !ok {
+		return core.EmptySpanContext()
+	}
+	sid, ok := b3.extractSpanID(supplier.Get(B3SpanIDHeader))
+	if !ok {
+		return core.EmptySpanContext()
+	}
+	sampled, ok := b3.extractSampledState(supplier.Get(B3SampledHeader))
+	if !ok {
+		return core.EmptySpanContext()
+	}
+
+	debug, ok := b3.extracDebugFlag(supplier.Get(B3DebugFlagHeader))
+	if !ok {
+		return core.EmptySpanContext()
+	}
+	if debug == core.TraceFlagsSampled {
+		sampled = core.TraceFlagsSampled
+	}
+
+	sc := core.SpanContext{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: sampled,
 	}
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext(), tag.NewEmptyMap()
+		return core.EmptySpanContext()
 	}
 
-	return sc, tag.NewEmptyMap()
+	return sc
 }
 
-// extractTraceID parses the value of the X-B3-TraceId header.
-func extractTraceID(tid string) (traceID core.TraceID) {
-	if tid == "" {
-		return traceID
+func (b3 httpB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) core.SpanContext {
+	h := supplier.Get(B3SingleHeader)
+	if h == "" || h == "0" {
+		core.EmptySpanContext()
 	}
-	l := len(tid)
-	if l > 32 {
-		return core.TraceID{}
-	} else if l > 16 {
-		traceID.High, _ = strconv.ParseUint(tid[0:(l-16)], 16, 64)
-		traceID.Low, _ = strconv.ParseUint(tid[(l-16):l], 16, 64)
+	sc := core.SpanContext{}
+	parts := strings.Split(h, "-")
+	l := len(parts)
+	if l > 4 {
+		return core.EmptySpanContext()
+	}
+
+	if l < 2 {
+		return core.EmptySpanContext()
 	} else {
-		traceID.Low, _ = strconv.ParseUint(tid[:l], 16, 64)
+		var ok bool
+		sc.TraceID, ok = b3.extractTraceID(parts[0])
+		if !ok {
+			return core.EmptySpanContext()
+		}
+
+		sc.SpanID, ok = b3.extractSpanID(parts[1])
+		if !ok {
+			return core.EmptySpanContext()
+		}
+
+		if l > 2 {
+			sc.TraceFlags, ok = b3.extractSampledState(parts[2])
+			if !ok {
+				return core.EmptySpanContext()
+			}
+		}
+		if l == 4 {
+			_, ok = b3.extractSpanID(parts[3])
+			if !ok {
+				return core.EmptySpanContext()
+			}
+		}
 	}
-	return traceID
+
+	if !sc.IsValid() {
+		return core.EmptySpanContext()
+	}
+
+	return sc
+}
+
+// extractTraceID parses the value of the X-B3-TraceId b3Header.
+func (b3 httpB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
+	if hexStr32ByteRegex.MatchString(tid) {
+		traceID.High, _ = strconv.ParseUint(tid[0:(16)], 16, 64)
+		traceID.Low, _ = strconv.ParseUint(tid[(16):32], 16, 64)
+		ok = true
+	} else if b3.singleHeader && hexStr16ByteRegex.MatchString(tid) {
+		traceID.Low, _ = strconv.ParseUint(tid[:16], 16, 64)
+		ok = true
+	}
+	return traceID, ok
 }
 
 // extractSpanID parses the value of the X-B3-SpanId or X-B3-ParentSpanId headers.
-func extractSpanID(sid string) (spanID uint64) {
-	if sid == "" {
-		return spanID
+func (b3 httpB3Propagator) extractSpanID(sid string) (spanID uint64, ok bool) {
+	if hexStr16ByteRegex.MatchString(sid) {
+		spanID, _ = strconv.ParseUint(sid, 16, 64)
+		ok = true
 	}
-	spanID, _ = strconv.ParseUint(sid, 16, 64)
-	return spanID
+	return spanID, ok
 }
 
-// extractTraceOption parses the value of the X-B3-Sampled header.
-func extractTraceOption(sampled string) byte {
+// extractSampledState parses the value of the X-B3-Sampled b3Header.
+func (b3 httpB3Propagator) extractSampledState(sampled string) (flag byte, ok bool) {
 	switch sampled {
-	case "true", "1":
-		return core.TraceOptionSampled
-	default:
-		return 0
-	}
-}
-
-type b3Injector struct {
-	req *http.Request
-}
-
-var _ apipropagation.Injector = b3Injector{}
-
-// Inject implements Inject method of trace.Injector interface. It encodes
-// SpanContext into W3C TraceContext Header and injects the header into
-// the associated request.
-func (b3i b3Injector) Inject(sc core.SpanContext, tm tag.Map) {
-	if b3i.req == nil {
-		return
-	}
-	if sc.IsValid() {
-		b3i.req.Header.Set(B3TraceIDHeader,
-			fmt.Sprintf("%.16x%.16x", sc.TraceID.High, sc.TraceID.Low))
-		b3i.req.Header.Set(B3SpanIDHeader,
-			fmt.Sprintf("%.16x", sc.SpanID))
-
-		var sampled string
-		if sc.IsSampled() {
-			sampled = "1"
-		} else {
-			sampled = "0"
+	case "", "0":
+		return 0, true
+	case "1":
+		return core.TraceFlagsSampled, true
+	case "true":
+		if !b3.singleHeader {
+			return core.TraceFlagsSampled, true
 		}
-		b3i.req.Header.Set(B3SampledHeader, sampled)
+	case "d":
+		if b3.singleHeader {
+			return core.TraceFlagsSampled, true
+		}
 	}
+	return 0, false
+}
+
+// extracDebugFlag parses the value of the X-B3-Sampled b3Header.
+func (b3 httpB3Propagator) extracDebugFlag(debug string) (flag byte, ok bool) {
+	switch debug {
+	case "", "0":
+		return 0, true
+	case "1":
+		return core.TraceFlagsSampled, true
+	}
+	return 0, false
 }
