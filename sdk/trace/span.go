@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/sdk/exporter"
+	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/internal"
 )
 
@@ -35,7 +35,7 @@ type span struct {
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanContext, so that the trace ID is propagated.
-	data        *exporter.SpanData
+	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext core.SpanContext
 
@@ -160,7 +160,7 @@ func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(exporter.Event{
+	s.messageEvents.add(export.Event{
 		Message:    msg,
 		Attributes: attrs,
 		Time:       timestamp,
@@ -228,8 +228,8 @@ func (s *span) addLink(link apitrace.Link) {
 
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
-func (s *span) makeSpanData() *exporter.SpanData {
-	var sd exporter.SpanData
+func (s *span) makeSpanData() *export.SpanData {
+	var sd export.SpanData
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	sd = *s.data
@@ -256,10 +256,10 @@ func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []exporter.Event {
-	messageEventArr := make([]exporter.Event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []export.Event {
+	messageEventArr := make([]export.Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(exporter.Event))
+		messageEventArr = append(messageEventArr, value.(export.Event))
 	}
 	return messageEventArr
 }
@@ -326,7 +326,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	span.data = &exporter.SpanData{
+	span.data = &export.SpanData{
 		SpanContext: span.spanContext,
 		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind

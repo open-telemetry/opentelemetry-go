@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/exporter"
+	"go.opentelemetry.io/sdk/export"
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
@@ -44,7 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	keyValue := "value"
 	doubleValue := float64(123.456)
 
-	testSpan := &exporter.SpanData{
+	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,

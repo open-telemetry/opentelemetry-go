@@ -23,14 +23,14 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/sdk/exporter"
+	"go.opentelemetry.io/sdk/export"
 )
 
 const defaultServiceName = "OpenTelemetry"
 
 type Option func(*options)
 
-// options are the options to be used when initializing a Jaeger exporter.
+// options are the options to be used when initializing a Jaeger export.
 type options struct {
 	// OnError is the hook to be called when there is
 	// an error occurred when uploading the span data.
@@ -143,15 +143,15 @@ type Exporter struct {
 	uploader batchUploader
 }
 
-var _ exporter.SpanSyncer = (*Exporter)(nil)
+var _ export.SpanSyncer = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
-func (e *Exporter) ExportSpan(ctx context.Context, d *exporter.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, d *export.SpanData) {
 	_ = e.bundler.Add(spanDataToThrift(d), 1)
 	// TODO(jbd): Handle oversized bundlers.
 }
 
-func spanDataToThrift(data *exporter.SpanData) *gen.Span {
+func spanDataToThrift(data *export.SpanData) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(data.Attributes))
 	for _, kv := range data.Attributes {
 		tag := coreAttributeToTag(kv)

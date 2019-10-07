@@ -22,18 +22,18 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/sdk/exporter"
+	"go.opentelemetry.io/sdk/export"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 type testBatchExporter struct {
 	mu         sync.Mutex
-	spans      []*exporter.SpanData
+	spans      []*export.SpanData
 	sizes      []int
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*exporter.SpanData) {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -54,13 +54,13 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-func (t *testBatchExporter) get(idx int) *exporter.SpanData {
+func (t *testBatchExporter) get(idx int) *export.SpanData {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.spans[idx]
 }
 
-var _ exporter.SpanBatcher = (*testBatchExporter)(nil)
+var _ export.SpanBatcher = (*testBatchExporter)(nil)
 
 func init() {
 	sdktrace.Register()
