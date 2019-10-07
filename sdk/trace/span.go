@@ -125,8 +125,6 @@ func (s *span) End(options ...apitrace.EndOption) {
 	s.endOnce.Do(func() {
 		sps, _ := spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0
-		// TODO(rghetia): when exporter is migrated to use processors simply check for the number
-		// of processors. Exporter will export based on sampling.
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if opts.EndTime.IsZero() {
