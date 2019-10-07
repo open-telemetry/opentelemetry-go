@@ -23,14 +23,14 @@ import (
 // SimpleSpanProcessor implements SpanProcessor interfaces. It is used by
 // exporters to receive SpanData synchronously when span is finished.
 type SimpleSpanProcessor struct {
-	e exporter.Syncer
+	e exporter.SpanSyncer
 }
 
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 
 // NewSimpleSpanProcessor creates a new instance of SimpleSpanProcessor
 // for a given exporter.
-func NewSimpleSpanProcessor(e exporter.Syncer) *SimpleSpanProcessor {
+func NewSimpleSpanProcessor(e exporter.SpanSyncer) *SimpleSpanProcessor {
 	ssp := &SimpleSpanProcessor{
 		e: e,
 	}

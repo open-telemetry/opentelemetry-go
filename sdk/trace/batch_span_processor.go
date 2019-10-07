@@ -63,7 +63,7 @@ type BatchSpanProcessorOptions struct {
 // exporters to receive exporter.SpanData asynchronously.
 // Use BatchSpanProcessorOptions to change the behavior of the processor.
 type BatchSpanProcessor struct {
-	e exporter.Batcher
+	e exporter.SpanBatcher
 	o BatchSpanProcessorOptions
 
 	queue   chan *exporter.SpanData
@@ -80,7 +80,7 @@ var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 // for a given exporter. It returns an error if exporter is nil.
 // The newly created BatchSpanProcessor should then be registered with sdk
 // using RegisterSpanProcessor.
-func NewBatchSpanProcessor(e exporter.Batcher, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
+func NewBatchSpanProcessor(e exporter.SpanBatcher, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
 	if e == nil {
 		return nil, errNilExporter
 	}

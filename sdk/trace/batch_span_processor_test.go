@@ -60,7 +60,7 @@ func (t *testBatchExporter) get(idx int) *exporter.SpanData {
 	return t.spans[idx]
 }
 
-var _ exporter.Batcher = (*testBatchExporter)(nil)
+var _ exporter.SpanBatcher = (*testBatchExporter)(nil)
 
 func init() {
 	sdktrace.Register()

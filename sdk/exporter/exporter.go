@@ -18,21 +18,23 @@ import (
 	"context"
 )
 
-// Syncer is a type for functions that receive a single trace span.
+// SpanSyncer is a type for functions that receive a single sampled trace span.
 //
-// The ExportSpan method is called synchronously.
+// The ExportSpan method is called synchronously. Therefore, it should not take
+// forever to process the span.
 //
 // The SpanData should not be modified.
-type Syncer interface {
+type SpanSyncer interface {
 	ExportSpan(context.Context, *SpanData)
 }
 
-// Batcher is a type for functions that receive sampled trace spans.
+// SpanBatcher is a type for functions that receive batched of sampled trace
+// spans.
 //
 // The ExportSpans method is called asynchronously. However its should not take
 // forever to process the spans.
 //
 // The SpanData should not be modified.
-type Batcher interface {
+type SpanBatcher interface {
 	ExportSpans(context.Context, []*SpanData)
 }
