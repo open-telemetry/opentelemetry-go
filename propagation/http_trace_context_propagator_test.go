@@ -278,7 +278,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 
 func TestHttpTraceContextPropagator_GetAllKeys(t *testing.T) {
 	propagator := propagation.HttpTraceContextPropagator()
-	want := []string{"traceparent"}
+	want := []string{"Traceparent"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
