@@ -224,6 +224,7 @@ func (e *Exporter) Register() error {
 		return err
 	}
 	trace.RegisterSpanProcessor(bsp)
+	return nil
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
