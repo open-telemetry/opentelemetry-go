@@ -25,6 +25,9 @@ var (
 
 // TODO: Maybe unexport that and document very _very_ clearly, that
 // you can still get a descriptor with NewInt64Counter(…).Descriptor
+
+// CommonMetric holds a descriptor. It is used mostly to implement the
+// common parts for every metric kind.
 type CommonMetric struct {
 	*Descriptor
 }

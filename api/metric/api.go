@@ -27,10 +27,16 @@ import (
 type Kind int
 
 const (
-	Invalid     Kind = iota
-	CounterKind      // Supports Add()
-	GaugeKind        // Supports Set()
-	MeasureKind      // Supports Record()
+	// Invalid describes an invalid metric.
+	Invalid Kind = iota
+	// CounterKind describes a metric that supports Add().
+	CounterKind
+	// GaugeKind describes a metric that supports Set().
+	GaugeKind
+	// MeasureKind describes a metric that supports Record().
+	MeasureKind
+	// ObserverKind describes a metric that reports measurement on
+	// demand.
 	ObserverKind
 )
 
@@ -41,13 +47,13 @@ type Handle interface {
 	RecordOne(ctx context.Context, value MeasurementValue)
 }
 
-// LabelSet represents a []core.KeyValue for use as pre-defined labels
-// in the metrics API.
-//
 // TODO this belongs outside the metrics API, in some sense, but that
-// might create a dependency.  Putting this here means we can't re-use
+// might create a dependency. Putting this here means we can't re-use
 // a LabelSet between metrics and tracing, even when they are the same
 // SDK.
+
+// LabelSet represents a []core.KeyValue for use as pre-defined labels
+// in the metrics API.
 type LabelSet interface {
 	Meter() Meter
 }
@@ -66,21 +72,44 @@ type Meter interface {
 	// cannot be read by the application.
 	DefineLabels(context.Context, ...core.KeyValue) LabelSet
 
-	NewHandle(*Descriptor, LabelSet) Handle
-	DeleteHandle(Handle)
-
-	// RecordBatch atomically records a batch of measurements..
+	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 
+	// NewHandle creates a Handle that contains the passed
+	// key-value pairs. This should not be used directly - prefer
+	// using GetHandle function of a metric.
+	NewHandle(*Descriptor, LabelSet) Handle
+	// DeleteHandle destroys the Handle and does a cleanup of the
+	// underlying resources.
+	DeleteHandle(Handle)
+
+	// RegisterObserver registers the observer with callback
+	// returning a measurement. When and how often the callback
+	// will be called is defined by SDK. This should not be used
+	// directly - prefer either RegisterInt64Observer or
+	// RegisterFloat64Observer, depending on the type of the
+	// observer to be registered.
 	RegisterObserver(Observer, ObserverCallback)
+	// UnregisterObserver removes the observer from registered
+	// observers. This should not be used directly - prefer either
+	// UnregisterInt64Observer or UnregisterFloat64Observer,
+	// depending on the type of the observer to be registered.
 	UnregisterObserver(Observer)
 }
 
+// DescriptorID is a unique identifier of a metric.
 type DescriptorID uint64
+
+// ValueKind describes the data type of the measurement value the
+// metric generates.
 type ValueKind int8
 
 const (
+	// Int64ValueKind means that the metric generates values of
+	// type int64.
 	Int64ValueKind ValueKind = iota
+	// Float64ValueKind means that the metric generates values of
+	// type float64.
 	Float64ValueKind
 )
 
@@ -157,10 +186,13 @@ type Measurement struct {
 // Option supports specifying the various metric options.
 type Option func(*Descriptor)
 
+// OptionApplier is an interface for applying metric options that are
+// valid for all the kinds of metrics.
 type OptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
 	MeasureOptionApplier
+	// ApplyOption is used to make some changes in the Descriptor.
 	ApplyOption(*Descriptor)
 }
 
@@ -204,8 +236,8 @@ func WithUnit(unit unit.Unit) OptionApplier {
 	}
 }
 
-// WithKeys applies required label keys.  Multiple `WithKeys`
-// options accumulate.
+// WithKeys applies required label keys. Multiple `WithKeys` options
+// accumulate.
 func WithKeys(keys ...core.Key) OptionApplier {
 	return optionWrapper{
 		F: func(d *Descriptor) {
@@ -214,7 +246,8 @@ func WithKeys(keys ...core.Key) OptionApplier {
 	}
 }
 
-// WithNonMonotonic sets whether a counter is permitted to go up AND down.
+// WithNonMonotonic sets whether a counter is permitted to go up AND
+// down.
 func WithNonMonotonic(nm bool) CounterOptionApplier {
 	return counterOptionWrapper{
 		F: func(d *Descriptor) {
@@ -259,6 +292,9 @@ type Int64ObservationCallback func(LabelSet, int64)
 // for the registered int64 observers.
 type Int64ObserverCallback func(Meter, Int64Observer, Int64ObservationCallback)
 
+// RegisterInt64Observer is a convenience wrapper around
+// Meter.RegisterObserver that provides a type-safe callback for
+// Int64Observer.
 func RegisterInt64Observer(meter Meter, observer Int64Observer, callback Int64ObserverCallback) {
 	cb := func(m Meter, o Observer, ocb ObservationCallback) {
 		iocb := func(l LabelSet, i int64) {
@@ -269,6 +305,8 @@ func RegisterInt64Observer(meter Meter, observer Int64Observer, callback Int64Ob
 	meter.RegisterObserver(observer.Observer, cb)
 }
 
+// UnregisterInt64Observer is a convenience wrapper around
+// Meter.UnregisterObserver for Int64Observer.
 func UnregisterInt64Observer(meter Meter, observer Int64Observer) {
 	meter.UnregisterObserver(observer.Observer)
 }
@@ -281,6 +319,9 @@ type Float64ObservationCallback func(LabelSet, float64)
 // call for the registered float64 observers.
 type Float64ObserverCallback func(Meter, Float64Observer, Float64ObservationCallback)
 
+// RegisterFloat64Observer is a convenience wrapper around
+// Meter.RegisterObserver that provides a type-safe callback for
+// Float64Observer.
 func RegisterFloat64Observer(meter Meter, observer Float64Observer, callback Float64ObserverCallback) {
 	cb := func(m Meter, o Observer, ocb ObservationCallback) {
 		focb := func(l LabelSet, f float64) {
@@ -291,6 +332,8 @@ func RegisterFloat64Observer(meter Meter, observer Float64Observer, callback Flo
 	meter.RegisterObserver(observer.Observer, cb)
 }
 
+// UnregisterFloat64Observer is a convenience wrapper around
+// Meter.UnregisterObserver for Float64Observer.
 func UnregisterFloat64Observer(meter Meter, observer Float64Observer) {
 	meter.UnregisterObserver(observer.Observer)
 }
