@@ -217,14 +217,20 @@ func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.
 	return context.WithTimeout(ctx, timeout)
 }
 
-// Register registers e to the tracer.
-func (e *Exporter) Register() error {
+// RegisterBatchSpanProcessor registers e as BatchSpanProcessor.
+func (e *Exporter) RegisterBatchSpanProcessor() error {
 	bsp, err := trace.NewBatchSpanProcessor(e)
 	if err != nil {
 		return err
 	}
 	trace.RegisterSpanProcessor(bsp)
 	return nil
+}
+
+// RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
+func (e *Exporter) RegisterSimpleSpanProcessor() {
+	ssp := trace.NewSimpleSpanProcessor(e)
+	trace.RegisterSpanProcessor(ssp)
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
@@ -259,10 +265,10 @@ func (e *Exporter) sdWithDefaultTraceAttributes(sd *trace.SpanData) *trace.SpanD
 	return &newSD
 }
 
-// Flush waits for exported data to be uploaded.
+// Shutdown waits for exported data to be uploaded.
 //
 // This is useful if your program is ending and you do not
 // want to lose recent stats or spans.
-func (e *Exporter) Flush() {
-	e.traceExporter.Flush()
+func (e *Exporter) Shutdown() {
+	e.traceExporter.Shutdown()
 }

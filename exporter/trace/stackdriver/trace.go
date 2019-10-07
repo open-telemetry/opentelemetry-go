@@ -110,11 +110,11 @@ func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
 
 }
 
-// Flush waits for exported trace spans to be uploaded.
+// Shutdown waits for exported trace spans to be uploaded.
 //
 // This is useful if your program is ending and you do not want to lose recent
 // spans.
-func (e *traceExporter) Flush() {
+func (e *traceExporter) Shutdown() {
 	e.bundler.Flush()
 }
 
