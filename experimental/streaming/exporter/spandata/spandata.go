@@ -42,18 +42,17 @@ func NewReaderObserver(readers ...Reader) exporter.Observer {
 }
 
 func (s *spanReader) Read(data reader.Event) {
-	if !data.SpanContext.HasSpanID() {
-		panic("How is this?")
-	}
 	var span *Span
-	if data.Type == exporter.START_SPAN {
-		span = &Span{Events: make([]reader.Event, 0, 4)}
-		s.spans[data.SpanContext] = span
-	} else {
-		span = s.spans[data.SpanContext]
-		if span == nil {
-			// TODO count and report this.
-			return
+	if data.SpanContext.HasSpanID() {
+		if data.Type == exporter.START_SPAN {
+			span = &Span{Events: make([]reader.Event, 0, 4)}
+			s.spans[data.SpanContext] = span
+		} else {
+			span = s.spans[data.SpanContext]
+			if span == nil {
+				// TODO count and report this.
+				return
+			}
 		}
 	}
 
@@ -63,13 +62,14 @@ func (s *spanReader) Read(data reader.Event) {
 		return
 	}
 
-	span.Events = append(span.Events, data)
-
-	if data.Type == exporter.END_SPAN {
-		for _, r := range s.readers {
-			r.Read(span)
+	if span != nil {
+		span.Events = append(span.Events, data)
+		if data.Type == exporter.END_SPAN {
+			for _, r := range s.readers {
+				r.Read(span)
+			}
+			delete(s.spans, data.SpanContext)
 		}
-		delete(s.spans, data.SpanContext)
 	}
 }
 
