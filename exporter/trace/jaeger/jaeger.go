@@ -182,16 +182,18 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 			Fields:    fields,
 		})
 	}
-	//TODO: [rghetia] add links.
-	//
-	//var refs []*gen.SpanRef
-	//for _, link := range data.Links {
-	//	refs = append(refs, &gen.SpanRef{
-	//		TraceIdHigh: bytesToInt64(link.TraceID[0:8]),
-	//		TraceIdLow:  bytesToInt64(link.TraceID[8:16]),
-	//		SpanId:      bytesToInt64(link.SpanID[:]),
-	//	})
-	//}
+
+	var refs []*gen.SpanRef
+	for _, link := range data.Links {
+		refs = append(refs, &gen.SpanRef{
+			TraceIdHigh: int64(link.TraceID.High),
+			TraceIdLow:  int64(link.TraceID.Low),
+			SpanId:      int64(link.SpanID),
+			// TODO(paivagustavo): properly set the reference type when specs are defined
+			//  see https://github.com/open-telemetry/opentelemetry-specification/issues/65
+			RefType: gen.SpanRefType_CHILD_OF,
+		})
+	}
 
 	return &gen.Span{
 		TraceIdHigh:   int64(data.SpanContext.TraceID.High),
@@ -204,8 +206,7 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 		Duration:      data.EndTime.Sub(data.StartTime).Nanoseconds() / 1000,
 		Tags:          tags,
 		Logs:          logs,
-		// TODO: goes with Links.
-		// References:    refs,
+		References:    refs,
 	}
 }
 
