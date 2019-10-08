@@ -43,7 +43,7 @@ func (ssp *SimpleSpanProcessor) OnStart(sd *export.SpanData) {
 
 // OnEnd method exports SpanData using associated export.
 func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
-	if ssp.e != nil {
+	if ssp.e != nil && sd.SpanContext.IsSampled() {
 		ssp.e.ExportSpan(context.Background(), sd)
 	}
 }

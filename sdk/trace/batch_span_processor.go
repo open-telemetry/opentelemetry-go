@@ -172,13 +172,14 @@ func (bsp *BatchSpanProcessor) processQueue() {
 		var ok bool
 		select {
 		case sd = <-bsp.queue:
-			if sd != nil {
+			if sd != nil && sd.SpanContext.IsSampled() {
 				batch = append(batch, sd)
 			}
 			ok = true
 		default:
 			ok = false
 		}
+
 		if ok {
 			if len(batch) >= bsp.o.MaxExportBatchSize {
 				bsp.e.ExportSpans(context.Background(), batch)
