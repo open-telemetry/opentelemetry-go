@@ -1,5 +1,4 @@
 // Copyright 2019, OpenTelemetry Authors
-// Copyright 2017, OpenCensus Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,23 +67,7 @@ func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
 	e.uploadFn(pbSpans)
 }
 
-// Shutdown waits for exported trace spans to be uploaded.
-//
-// This is useful if your program is ending and you do not want to lose recent
-// spans.
-func (e *traceExporter) Shutdown() {
-	spanProcessor.Shutdown()
-}
-
-func (e *traceExporter) OnStart(sd *trace.SpanData) {
-	spanProcessor.OnStart(sd)
-}
-
-func (e *traceExporter) OnEnd(sd *trace.SpanData) {
-	spanProcessor.OnEnd(sd)
-}
-
-// uploadSpans uploads a set of spans to Stackdriver.
+// uploadSpans sends a set of spans to Stackdriver.
 func (e *traceExporter) uploadSpans(spans []*tracepb.Span) {
 	req := tracepb.BatchWriteSpansRequest{
 		Name:  "projects/" + e.projectID,

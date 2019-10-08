@@ -1,5 +1,4 @@
 // Copyright 2019, OpenTelemetry Authors
-// Copyright 2017, OpenCensus Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,10 +75,15 @@ type options struct {
 	// Optional.
 	BatchDelayThreshold time.Duration
 
-	// QueueSizeThreshold determines how many view data events or trace spans
-	// can be buffered before batch uploading them to the backend.
-	// Optional.
-	QueueSizeThreshold int
+	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing.
+	// See the detailed definition in https://godoc.org/go.opentelemetry.io/sdk/trace#BatchSpanProcessorOptions.
+	// Default is 2048. Optional.
+	MaxQueueSize int
+
+	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
+	// See the detailed definition in https://godoc.org/go.opentelemetry.io/sdk/trace#BatchSpanProcessorOptions.
+	// Default is 512. Optional.
+	MaxExportBatchSize int
 
 	// TraceSpansBufferMaxBytes is the maximum size (in bytes) of spans that
 	// will be buffered in memory before being dropped.
@@ -164,6 +168,7 @@ func (o *options) handleError(err error) {
 	log.Printf("Failed to export to Stackdriver: %v", err)
 }
 
+// defaultTimeout is used as default when timeout is not set in newContextWithTimout.
 const defaultTimeout = 5 * time.Second
 
 // Exporter is a trace exporter that uploads data to Stackdriver.
@@ -172,6 +177,7 @@ const defaultTimeout = 5 * time.Second
 // process and the sampler implementation are done.
 type Exporter struct {
 	traceExporter *traceExporter
+	spanProcessor trace.SpanProcessor
 }
 
 // NewExporter creates a new Exporter thats implements trace.Exporter.
@@ -217,28 +223,25 @@ func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.
 	return context.WithTimeout(ctx, timeout)
 }
 
-var spanProcessor trace.SpanProcessor
-
 // RegisterBatchSpanProcessor registers e as BatchSpanProcessor.
 func (e *Exporter) RegisterBatchSpanProcessor() error {
-	delayThreshold := 2 * time.Second
+	opts := []trace.BatchSpanProcessorOption{}
+
 	if e.traceExporter.o.BatchDelayThreshold > 0 {
-		delayThreshold = e.traceExporter.o.BatchDelayThreshold
+		opts = append(opts, trace.WithScheduleDelayMillis(e.traceExporter.o.BatchDelayThreshold))
 	}
-	queueSizeThreshold := 50
+	if e.traceExporter.o.MaxQueueSize > 0 {
+		opts = append(opts, trace.WithMaxQueueSize(e.traceExporter.o.MaxQueueSize))
+	}
 	if e.traceExporter.o.QueueSizeThreshold > 0 {
-		queueSizeThreshold = e.traceExporter.o.QueueSizeThreshold
+		opts = append(opts, trace.WithMaxExportBatchSize(e.traceExporter.o.MaxExportBatchSize))
 	}
 
-	spanProcessor, err := trace.NewBatchSpanProcessor(e,
-		trace.WithMaxExportBatchSize(queueSizeThreshold),
-		trace.WithMaxQueueSize(queueSizeThreshold),
-		trace.WithScheduleDelayMillis(delayThreshold),
-	)
+	e.spanProcessor, err := trace.NewBatchSpanProcessor(e, opts)
 	if err != nil {
 		return err
 	}
-	trace.RegisterSpanProcessor(spanProcessor)
+	trace.RegisterSpanProcessor(e.spanProcessor)
 	return nil
 }
 
@@ -258,7 +261,6 @@ func (e *Exporter) ExportSpan(sd *trace.SpanData) {
 
 // ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
 func (e *Exporter) ExportSpans(sds []*trace.SpanData) {
-	// TODO(ymotongpoo): implement here
 	e.traceExporter.ExportSpans(sds)
 }
 
@@ -280,10 +282,7 @@ func (e *Exporter) sdWithDefaultTraceAttributes(sd *trace.SpanData) *trace.SpanD
 	return &newSD
 }
 
-// Shutdown waits for exported data to be uploaded.
-//
-// This is useful if your program is ending and you do not
-// want to lose recent stats or spans.
+// Shutdown unregisters spanProcessor.
 func (e *Exporter) Shutdown() {
-	e.traceExporter.Shutdown()
+	e.spanProcessor = nil
 }
