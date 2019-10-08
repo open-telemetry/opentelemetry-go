@@ -18,17 +18,16 @@ import (
 	"context"
 	"time"
 
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/registry"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
-	sdktrace "go.opentelemetry.io/sdk/trace"
 	"go.opentelemetry.io/example/namedtracer/foo"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 var (
-	fooKey     = key.New("ex.com/foo", registry.WithDescription("A Foo var"))
-	barKey     = key.New("ex.com/bar", registry.WithDescription("A Bar var"))
+	fooKey     = key.New("ex.com/foo")
+	barKey     = key.New("ex.com/bar")
 	anotherKey = key.New("ex.com/another")
 )
 
@@ -37,7 +36,8 @@ var (
 // default sampling should be done here.
 func initTracer() {
 	sdktrace.RegisterProvider()
-	sdktrace.RegisterExporter(sdktrace.PrintExporter{})
+	ssp := sdktrace.NewSimpleSpanProcessor(&sdktrace.PrintExporter{})
+	sdktrace.RegisterSpanProcessor(ssp)
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
@@ -49,14 +49,14 @@ func main() {
 	tracer := trace.GlobalProvider().Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
-	ctx = tag.NewContext(ctx,
-		tag.Insert(fooKey.String("foo1")),
-		tag.Insert(barKey.String("bar1")),
+	ctx = distributedcontext.NewContext(ctx,
+		distributedcontext.Insert(fooKey.String("foo1")),
+		distributedcontext.Insert(barKey.String("bar1")),
 	)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).Event(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 

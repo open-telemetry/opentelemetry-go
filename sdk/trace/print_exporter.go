@@ -15,7 +15,10 @@
 package trace
 
 import (
+	"context"
 	"fmt"
+
+	"go.opentelemetry.io/sdk/export"
 )
 
 // Exporter is a type for functions that receive sampled trace spans.
@@ -28,9 +31,9 @@ import (
 type PrintExporter struct {
 }
 
-var _ Exporter = PrintExporter{}
+var _ export.SpanSyncer = PrintExporter{}
 
-func (pe PrintExporter) ExportSpan(s *SpanData) {
+func (pe PrintExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 	go func() {
 		fmt.Printf("Span: %+v\n", s)
 	}()

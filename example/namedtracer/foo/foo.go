@@ -16,13 +16,13 @@ package foo
 
 import (
 	"context"
+
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/registry"
 	"go.opentelemetry.io/api/trace"
 )
 
 var (
-	lemonsKey  = key.New("ex.com/lemons", registry.WithDescription("A Lemons var"))
+	lemonsKey = key.New("ex.com/lemons")
 )
 
 // SubOperation is simply an example to demonstrate the use of named tracer.
@@ -34,7 +34,7 @@ func SubOperation(ctx context.Context) error {
 		func(ctx context.Context) error {
 			trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-			trace.CurrentSpan(ctx).Event(ctx, "Sub span event")
+			trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
 			return nil
 		},
