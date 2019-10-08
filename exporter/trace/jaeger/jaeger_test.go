@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	apitrace "go.opentelemetry.io/api/trace"
+
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 
@@ -33,6 +35,9 @@ func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
 	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
 	spanID := uint64(0x0102030405060708)
+
+	linkTraceID := core.TraceID{High: 0x0102030405060709, Low: 0x090a0b0c0d0e0f11}
+	linkSpanID := uint64(0x0102030405060709)
 
 	keyValue := "value"
 	statusCodeValue := int64(2)
@@ -55,6 +60,14 @@ func Test_spanDataToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
+				Links: []apitrace.Link{
+					apitrace.Link{
+						SpanContext: core.SpanContext{
+							TraceID: linkTraceID,
+							SpanID:  linkSpanID,
+						},
+					},
+				},
 				Attributes: []core.KeyValue{
 					{
 						Key:   core.Key{Name: "key"},
@@ -81,6 +94,14 @@ func Test_spanDataToThrift(t *testing.T) {
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+				},
+				References: []*gen.SpanRef{
+					&gen.SpanRef{
+						RefType:     gen.SpanRefType_CHILD_OF,
+						TraceIdLow:  int64(linkTraceID.Low),
+						TraceIdHigh: int64(linkTraceID.High),
+						SpanId:      int64(linkSpanID),
+					},
 				},
 				// TODO [rghetia]: check Logs when event is added.
 			},

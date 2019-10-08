@@ -29,14 +29,14 @@ import (
 func initTracer() {
 	sdktrace.Register()
 
-	// Create Jaeger exporter to be able to retrieve
+	// Create stdout exporter to be able to retrieve
 	// the collected spans.
 	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Wrap Jaeger exporter with SimpleSpanProcessor and register the processor.
+	// Wrap stdout exporter with SimpleSpanProcessor and register the processor.
 	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
 	sdktrace.RegisterSpanProcessor(ssp)
 
