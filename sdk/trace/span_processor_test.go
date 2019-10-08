@@ -109,8 +109,47 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	}
 }
 
-// TODO(rghetia): Add Shutdown test when it is implemented.
-func TestShutdown(t *testing.T) {
+func TestSpanProcessorShutdown(t *testing.T) {
+	name := "Increment shutdown counter of a span processor"
+	sp := NewTestSpanProcessor()
+	if sp == nil {
+		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
+	}
+
+	wantCount := sp.shutdownCount + 1
+	sp.Shutdown()
+
+	gotCount := sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
+}
+
+func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
+	name := "Increment shutdown counter after each UnregisterSpanProcessor call"
+	sp := NewTestSpanProcessor()
+	if sp == nil {
+		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
+	}
+
+	wantCount := sp.shutdownCount + 1
+
+	sdktrace.RegisterSpanProcessor(sp)
+	sdktrace.UnregisterSpanProcessor(sp)
+
+	gotCount := sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
+
+	// Multiple UnregisterSpanProcessor triggers multiple Shutdown calls.
+	wantCount = wantCount + 1
+	sdktrace.UnregisterSpanProcessor(sp)
+
+	gotCount = sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
 }
 
 func NewTestSpanProcessor() *testSpanProcesor {

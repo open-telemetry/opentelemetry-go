@@ -75,3 +75,12 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 		t.Errorf("SimplerSpanProcessor OnEnd() check: got %+v, want %+v\n", gotTraceID, wantTraceID)
 	}
 }
+
+func TestSimpleSpanProcessorShutdown(t *testing.T) {
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if ssp == nil {
+		t.Errorf("Error creating new instance of SimpleSpanProcessor\n")
+	}
+
+	ssp.Shutdown()
+}
