@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	apitag "go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/internal"
 )
 
@@ -34,7 +35,7 @@ type span struct {
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanContext, so that the trace ID is propagated.
-	data        *SpanData
+	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext core.SpanContext
 
@@ -122,23 +123,14 @@ func (s *span) End(options ...apitrace.EndOption) {
 		opt(&opts)
 	}
 	s.endOnce.Do(func() {
-		exp, _ := exporters.Load().(exportersMap)
 		sps, _ := spanProcessors.Load().(spanProcessorMap)
-		mustExportOrProcess := len(sps) > 0 || (s.spanContext.IsSampled() && len(exp) > 0)
-		// TODO(rghetia): when exporter is migrated to use processors simply check for the number
-		// of processors. Exporter will export based on sampling.
+		mustExportOrProcess := len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if opts.EndTime.IsZero() {
 				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 			} else {
 				sd.EndTime = opts.EndTime
-			}
-			// Sampling check would be in the processor if the processor is used for exporting.
-			if s.spanContext.IsSampled() {
-				for e := range exp {
-					e.ExportSpan(sd)
-				}
 			}
 			for sp := range sps {
 				sp.OnEnd(sd)
@@ -168,7 +160,7 @@ func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(Event{
+	s.messageEvents.add(export.Event{
 		Message:    msg,
 		Attributes: attrs,
 		Time:       timestamp,
@@ -236,8 +228,8 @@ func (s *span) addLink(link apitrace.Link) {
 
 // makeSpanData produces a SpanData representing the current state of the span.
 // It requires that s.data is non-nil.
-func (s *span) makeSpanData() *SpanData {
-	var sd SpanData
+func (s *span) makeSpanData() *export.SpanData {
+	var sd export.SpanData
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	sd = *s.data
@@ -264,10 +256,10 @@ func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []Event {
-	messageEventArr := make([]Event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []export.Event {
+	messageEventArr := make([]export.Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(Event))
+		messageEventArr = append(messageEventArr, value.(export.Event))
 	}
 	return messageEventArr
 }
@@ -334,7 +326,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	span.data = &SpanData{
+	span.data = &export.SpanData{
 		SpanContext: span.spanContext,
 		StartTime:   startTime,
 		// TODO;[rghetia] : fix spanKind

@@ -15,14 +15,15 @@
 package stdout
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"os"
 
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
-// Options are the options to be used when initializing a stdout exporter.
+// Options are the options to be used when initializing a stdout export.
 type Options struct {
 	// PrettyPrint will pretty the json representation of the span,
 	// making it print "pretty". Default is false.
@@ -43,7 +44,7 @@ func NewExporter(o Options) (*Exporter, error) {
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
-func (e *Exporter) ExportSpan(data *trace.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	var jsonSpan []byte
 	var err error
 	if e.pretty {

@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 // TODO(rghetia): Test export.
@@ -47,12 +47,12 @@ func Test_spanDataToThrift(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *trace.SpanData
+		data *export.SpanData
 		want *gen.Span
 	}{
 		{
 			name: "no parent",
-			data: &trace.SpanData{
+			data: &export.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,

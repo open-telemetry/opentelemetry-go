@@ -16,6 +16,7 @@ package stdout
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -23,18 +24,18 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
-	exporter, err := NewExporter(Options{})
+	ex, err := NewExporter(Options{})
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}
 
 	// override output writer for testing
 	var b bytes.Buffer
-	exporter.outputWriter = &b
+	ex.outputWriter = &b
 
 	// setup test span
 	now := time.Now()
@@ -43,7 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	keyValue := "value"
 	doubleValue := float64(123.456)
 
-	testSpan := &trace.SpanData{
+	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -63,7 +64,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		},
 		Status: codes.Unknown,
 	}
-	exporter.ExportSpan(testSpan)
+	ex.ExportSpan(context.Background(), testSpan)
 
 	expectedSerializedNow, _ := json.Marshal(now)
 

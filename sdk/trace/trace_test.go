@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 var (
@@ -46,11 +47,11 @@ func setupDefaultSamplerConfig() {
 }
 
 type testExporter struct {
-	spans []*SpanData
+	spans []*export.SpanData
 }
 
-func (t *testExporter) ExportSpan(s *SpanData) {
-	t.spans = append(t.spans, s)
+func (t *testExporter) ExportSpan(ctx context.Context, d *export.SpanData) {
+	t.spans = append(t.spans, d)
 }
 
 func TestStartSpan(t *testing.T) {
@@ -181,7 +182,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -213,7 +214,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -260,7 +261,7 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -268,12 +269,12 @@ func TestEvents(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
-		MessageEvents: []Event{
+		MessageEvents: []export.Event{
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
 	}
 }
@@ -307,21 +308,21 @@ func TestEventsOverLimit(t *testing.T) {
 		}
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		MessageEvents: []Event{
+		MessageEvents: []export.Event{
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
 	}
 }
@@ -344,7 +345,7 @@ func TestAddLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -357,7 +358,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
 	}
 }
@@ -381,7 +382,7 @@ func TestLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -394,7 +395,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
 }
@@ -419,7 +420,7 @@ func TestLinksOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -433,7 +434,7 @@ func TestLinksOverLimit(t *testing.T) {
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(Event{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
 	}
 }
@@ -465,7 +466,7 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanData{
+	want := &export.SpanData{
 		SpanContext: core.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -477,18 +478,6 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
-	}
-}
-
-func TestUnregisterExporter(t *testing.T) {
-	var te testExporter
-	RegisterExporter(&te)
-	UnregisterExporter(&te)
-
-	ctx := startSpan()
-	_, _ = endSpan(ctx)
-	if len(te.spans) != 0 {
-		t.Error("unregistered Exporter was called")
 	}
 }
 
@@ -544,15 +533,15 @@ func startNamedSpan(name string) apitrace.Span {
 }
 
 // endSpan is a test utility function that ends the span in the context and
-// returns the exported SpanData.
+// returns the exported export.SpanData.
 // It requires that span be sampled using one of these methods
 //  1. Passing parent span context using ChildOf option
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //
 // It also does some basic tests on the span.
-// It also clears spanID in the SpanData to make the comparison easier.
-func endSpan(span apitrace.Span) (*SpanData, error) {
+// It also clears spanID in the export.SpanData to make the comparison easier.
+func endSpan(span apitrace.Span) (*export.SpanData, error) {
 
 	if !span.IsRecordingEvents() {
 		return nil, fmt.Errorf("IsRecordingEvents: got false, want true")
@@ -561,9 +550,10 @@ func endSpan(span apitrace.Span) (*SpanData, error) {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
 	var te testExporter
-	RegisterExporter(&te)
+	p := NewSimpleSpanProcessor(&te)
+	RegisterSpanProcessor(p)
 	span.End()
-	UnregisterExporter(&te)
+	UnregisterSpanProcessor(p)
 	if len(te.spans) != 1 {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
 	}
@@ -590,29 +580,32 @@ func checkTime(x *time.Time) bool {
 	return true
 }
 
-type exporter map[string]*SpanData
+type fakeExporter map[string]*export.SpanData
 
-func (e exporter) ExportSpan(s *SpanData) {
-	e[s.Name] = s
+func (f fakeExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
+	f[s.Name] = s
 }
 
 func TestEndSpanTwice(t *testing.T) {
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	p := NewSimpleSpanProcessor(&spans)
+	RegisterSpanProcessor(p)
+	defer UnregisterSpanProcessor(p)
+
 	span := startSpan()
 	span.End()
 	span.End()
-	UnregisterExporter(&spans)
 	if len(spans) != 1 {
 		t.Fatalf("expected only a single span, got %#v", spans)
 	}
 }
 
 func TestStartSpanAfterEnd(t *testing.T) {
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	p := NewSimpleSpanProcessor(&spans)
+	RegisterSpanProcessor(p)
+	defer UnregisterSpanProcessor(p)
+
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	span1.End()
@@ -621,7 +614,6 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
 	span2.End()
 	span0.End()
-	UnregisterExporter(&spans)
 	if got, want := len(spans), 3; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
@@ -641,9 +633,11 @@ func TestStartSpanAfterEnd(t *testing.T) {
 
 func TestChildSpanCount(t *testing.T) {
 	ApplyConfig(Config{DefaultSampler: AlwaysSample()})
-	spans := make(exporter)
-	RegisterExporter(&spans)
-	defer UnregisterExporter(&spans)
+	spans := make(fakeExporter)
+	p := NewSimpleSpanProcessor(&spans)
+	RegisterSpanProcessor(p)
+	defer UnregisterSpanProcessor(p)
+
 	ctx, span0 := apitrace.GlobalTracer().Start(context.Background(), "parent")
 	ctx1, span1 := apitrace.GlobalTracer().Start(ctx, "span-1")
 	_, span2 := apitrace.GlobalTracer().Start(ctx1, "span-2")
@@ -653,7 +647,6 @@ func TestChildSpanCount(t *testing.T) {
 	_, span3 := apitrace.GlobalTracer().Start(ctx, "span-3")
 	span3.End()
 	span0.End()
-	UnregisterExporter(&spans)
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
@@ -728,9 +721,11 @@ func TestCustomStartEndTime(t *testing.T) {
 		apitrace.WithStartTime(startTime),
 	)
 	var te testExporter
-	RegisterExporter(&te)
+	p := NewSimpleSpanProcessor(&te)
+	RegisterSpanProcessor(p)
 	span.End(apitrace.WithEndTime(endTime))
-	UnregisterExporter(&te)
+	UnregisterSpanProcessor(p)
+
 	if len(te.spans) != 1 {
 		t.Fatalf("got exported spans %#v, want one span", te.spans)
 	}
