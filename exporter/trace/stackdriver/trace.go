@@ -18,13 +18,8 @@ package stackdriver
 import (
 	"context"
 	"fmt"
-	"log"
-	"sync"
-	"time"
 
 	traceclient "cloud.google.com/go/trace/apiv2"
-	"github.com/golang/protobuf/proto"
-	"google.golang.org/api/support/bundler"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 
 	"go.opentelemetry.io/sdk/trace"
@@ -35,11 +30,9 @@ import (
 type traceExporter struct {
 	o         *options
 	projectID string
-	bundler   *bundler.Bundler
 	// uploadFn defaults in uploadSpans; it can be replaced for tests.
 	uploadFn func(spans []*tracepb.Span)
-	overflowLogger
-	client *traceclient.Client
+	client   *traceclient.Client
 }
 
 func newTraceExporter(o *options) (*traceExporter, error) {
@@ -51,63 +44,28 @@ func newTraceExporter(o *options) (*traceExporter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Stackdriver: couldn't initiate trace client: %v", err)
 	}
-	return newTraceExporterWithClient(o, client), nil
-}
-
-const defaultBufferedByteLimit = 0 * 1024 * 1024
-
-func newTraceExporterWithClient(o *options, c *traceclient.Client) *traceExporter {
 	e := &traceExporter{
 		projectID: o.ProjectID,
-		client:    c,
+		client:    client,
 		o:         o,
 	}
-	b := bundler.NewBundler((*tracepb.Span)(nil), func(bundle interface{}) {
-		e.uploadFn(bundle.([]*tracepb.Span))
-	})
-	if o.BundleDelayThreshold > 0 {
-		b.DelayThreshold = o.BundleDelayThreshold
-	} else {
-		b.DelayThreshold = 2 * time.Second
-	}
-	if o.BundleCountThreshold > 0 {
-		b.BundleCountThreshold = o.BundleCountThreshold
-	} else {
-		b.BundleCountThreshold = 50
-	}
-	// The measured "bytes" are not really bytes, see exportReceiver.
-	b.BundleByteThreshold = b.BundleCountThreshold * 200
-	b.BundleByteLimit = b.BundleCountThreshold * 1000
-	if o.TraceSpansBufferMaxBytes > 0 {
-		b.BundleByteLimit = o.TraceSpansBufferMaxBytes
-	} else {
-		b.BundleByteLimit = defaultBufferedByteLimit
-	}
-
-	e.bundler = b
 	e.uploadFn = e.uploadSpans
-	return e
+	return e, nil
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
 func (e *traceExporter) ExportSpan(s *trace.SpanData) {
 	protoSpan := protoFromSpanData(s, e.projectID)
-	protoSize := proto.Size(protoSpan)
-	err := e.bundler.Add(protoSpan, protoSize)
-	switch err {
-	case nil:
-		return
-	case bundler.ErrOversizedItem:
-	case bundler.ErrOverflow:
-		e.overflowLogger.log()
-	default:
-		e.o.handleError(err)
-	}
+	e.uploadFn([]*tracepb.Span{protoSpan})
 }
 
 // ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
 func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
-
+	pbSpans := make([]*tracepb.Span, len(sds))
+	for i, sd := range sds {
+		pbSpans[i] = protoFromSpanData(sd, e.projectID)
+	}
+	e.uploadFn(pbSpans)
 }
 
 // Shutdown waits for exported trace spans to be uploaded.
@@ -115,7 +73,15 @@ func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
 // This is useful if your program is ending and you do not want to lose recent
 // spans.
 func (e *traceExporter) Shutdown() {
-	e.bundler.Flush()
+	spanProcessor.Shutdown()
+}
+
+func (e *traceExporter) OnStart(sd *trace.SpanData) {
+	spanProcessor.OnStart(sd)
+}
+
+func (e *traceExporter) OnEnd(sd *trace.SpanData) {
+	spanProcessor.OnEnd(sd)
 }
 
 // uploadSpans uploads a set of spans to Stackdriver.
@@ -144,44 +110,5 @@ func (e *traceExporter) uploadSpans(spans []*tracepb.Span) {
 		// TODO(ymotongpoo): handle detailed error categories
 		// span.SetStatus(codes.Unknown)
 		e.o.handleError(err)
-	}
-}
-
-// overflowLogger ensures that at most one overflow error log message is
-// written every 5 seconds.
-type overflowLogger struct {
-	mu    sync.Mutex
-	pause bool
-	accum int
-}
-
-func (o *overflowLogger) delay() {
-	o.pause = true
-	time.AfterFunc(5*time.Second, func() {
-		o.mu.Lock()
-		defer o.mu.Unlock()
-		switch {
-		case o.accum == 0:
-			o.pause = false
-		case o.accum == 1:
-			log.Println("OpenTelemetry Stackdriver exporter: failed to upload span: buffer full")
-			o.accum = 0
-			o.delay()
-		default:
-			log.Printf("OpenTelemetry Stackdriver exporter: failed to upload %d spans: buffer full", o.accum)
-			o.accum = 0
-			o.delay()
-		}
-	})
-}
-
-func (o *overflowLogger) log() {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	if !o.pause {
-		log.Println("OpenTelemetry Stackdriver exporter: failed to upload span: buffer full")
-		o.delay()
-	} else {
-		o.accum++
 	}
 }

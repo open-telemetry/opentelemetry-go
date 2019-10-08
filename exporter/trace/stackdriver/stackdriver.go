@@ -70,22 +70,22 @@ type options struct {
 	// Optional.
 	TraceClientOptions []option.ClientOption
 
-	// BundleDelayThreshold determines the max amount of time
+	// BatchDelayThreshold determines the max amount of time
 	// the exporter can wait before uploading view data or trace spans to
 	// the backend.
 	// Optional.
-	BundleDelayThreshold time.Duration
+	BatchDelayThreshold time.Duration
 
-	// BundleCountThreshold determines how many view data events or trace spans
+	// QueueSizeThreshold determines how many view data events or trace spans
 	// can be buffered before batch uploading them to the backend.
 	// Optional.
-	BundleCountThreshold int
+	QueueSizeThreshold int
 
 	// TraceSpansBufferMaxBytes is the maximum size (in bytes) of spans that
 	// will be buffered in memory before being dropped.
 	//
 	// If unset, a default of 8MB will be used.
-	TraceSpansBufferMaxBytes int
+	// TraceSpansBufferMaxBytes int
 
 	// DefaultTraceAttributes will be appended to every span that is exported to
 	// Stackdriver Trace.
@@ -217,20 +217,35 @@ func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.
 	return context.WithTimeout(ctx, timeout)
 }
 
+var spanProcessor trace.SpanProcessor
+
 // RegisterBatchSpanProcessor registers e as BatchSpanProcessor.
 func (e *Exporter) RegisterBatchSpanProcessor() error {
-	bsp, err := trace.NewBatchSpanProcessor(e)
+	delayThreshold := 2 * time.Second
+	if e.traceExporter.o.BatchDelayThreshold > 0 {
+		delayThreshold = e.traceExporter.o.BatchDelayThreshold
+	}
+	queueSizeThreshold := 50
+	if e.traceExporter.o.QueueSizeThreshold > 0 {
+		queueSizeThreshold = e.traceExporter.o.QueueSizeThreshold
+	}
+
+	spanProcessor, err := trace.NewBatchSpanProcessor(e,
+		trace.WithMaxExportBatchSize(queueSizeThreshold),
+		trace.WithMaxQueueSize(queueSizeThreshold),
+		trace.WithScheduleDelayMillis(delayThreshold),
+	)
 	if err != nil {
 		return err
 	}
-	trace.RegisterSpanProcessor(bsp)
+	trace.RegisterSpanProcessor(spanProcessor)
 	return nil
 }
 
 // RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
 func (e *Exporter) RegisterSimpleSpanProcessor() {
-	ssp := trace.NewSimpleSpanProcessor(e)
-	trace.RegisterSpanProcessor(ssp)
+	spanProcessor := trace.NewSimpleSpanProcessor(e)
+	trace.RegisterSpanProcessor(spanProcessor)
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.

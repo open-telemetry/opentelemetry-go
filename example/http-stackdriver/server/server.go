@@ -40,10 +40,9 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Wrap Stackdriver exporter with SimpleSpanProcessor and register the processor.
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	sdktrace.RegisterSpanProcessor(ssp)
+	if err := exporter.RegisterBatchSpanProcessor(); err != nil {
+		log.Fatal(err)
+	}
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
