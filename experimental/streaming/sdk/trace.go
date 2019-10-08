@@ -24,11 +24,6 @@ import (
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
-type tracer struct {
-	exporter  *exporter.Exporter
-	resources exporter.EventID
-}
-
 var (
 	// TODO These should move somewhere in the api, right?
 	ErrorKey   = key.New("error")
@@ -37,16 +32,10 @@ var (
 	MessageKey = key.New("message")
 )
 
-func New(observers ...exporter.Observer) trace.Tracer {
-	return &tracer{
-		exporter: exporter.NewExporter(observers...),
-	}
-}
-
-func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
-	// TODO: use runtime/trace.WithRegion for execution tracer support
+func (s *sdk) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+	// TODO: use runtime/trace.WithRegion for execution sdk support
 	// TODO: use runtime/pprof.Do for profile tags support
-	ctx, span := t.Start(ctx, name)
+	ctx, span := s.Start(ctx, name)
 	defer span.End()
 
 	if err := body(ctx); err != nil {
@@ -57,7 +46,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	return nil
 }
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+func (s *sdk) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
 	var child core.SpanContext
 
 	child.SpanID = rand.Uint64()
@@ -87,17 +76,17 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 
 	childScope := exporter.ScopeID{
 		SpanContext: child,
-		EventID:     t.resources,
+		EventID:     s.resources,
 	}
 
 	span := &span{
-		tracer: t,
+		sdk: s,
 		initial: exporter.ScopeID{
 			SpanContext: child,
-			EventID: t.exporter.Record(exporter.Event{
+			EventID: s.exporter.Record(exporter.Event{
 				Time:    o.StartTime,
 				Type:    exporter.START_SPAN,
-				Scope:   t.exporter.NewScope(childScope, o.Attributes...),
+				Scope:   s.exporter.NewScope(childScope, o.Attributes...),
 				Context: ctx,
 				Parent:  parentScope,
 				String:  name,

@@ -14,11 +14,60 @@
 
 package metric
 
-func registerMetric(name string, mtype MetricType, opts []Option, metric *Handle) {
-	for _, opt := range opts {
-		opt(metric)
-	}
+import (
+	"context"
+	"sync/atomic"
+)
 
-	metric.Name = name
-	metric.Type = mtype
+var (
+	descriptorID uint64
+)
+
+// TODO: Maybe unexport that and document very _very_ clearly, that
+// you can still get a descriptor with NewInt64Counter(…).Descriptor
+
+// CommonMetric holds a descriptor. It is used mostly to implement the
+// common parts for every metric kind.
+type CommonMetric struct {
+	*Descriptor
+}
+
+func (m CommonMetric) getHandle(labels LabelSet) Handle {
+	return labels.Meter().NewHandle(m.Descriptor, labels)
+}
+
+func (m CommonMetric) float64Measurement(value float64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
+		Value:      NewFloat64MeasurementValue(value),
+	}
+}
+
+func (m CommonMetric) int64Measurement(value int64) Measurement {
+	return Measurement{
+		Descriptor: m.Descriptor,
+		Value:      NewInt64MeasurementValue(value),
+	}
+}
+
+func (m CommonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
+	labels.Meter().RecordBatch(ctx, labels, Measurement{
+		Descriptor: m.Descriptor,
+		Value:      value,
+	})
+}
+
+func registerCommonMetric(name string, kind Kind, valueKind ValueKind) CommonMetric {
+	return CommonMetric{
+		Descriptor: registerDescriptor(name, kind, valueKind),
+	}
+}
+
+func registerDescriptor(name string, kind Kind, valueKind ValueKind) *Descriptor {
+	return &Descriptor{
+		name:      name,
+		kind:      kind,
+		valueKind: valueKind,
+		id:        DescriptorID(atomic.AddUint64(&descriptorID, 1)),
+	}
 }

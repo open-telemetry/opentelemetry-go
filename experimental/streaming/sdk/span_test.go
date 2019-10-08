@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/experimental/streaming/exporter"
@@ -130,6 +131,26 @@ func checkContext(t *testing.T, ctx context.Context, key, wantValue interface{})
 	return true
 }
 
+func measurementCompare(m1, m2 metric.Measurement) bool {
+	// Nil descriptor normally shouldn't happen, unless there is
+	// some struct with the Measurement field that didn't get
+	// initialized.
+	m1Nil := m1.Descriptor == nil
+	m2Nil := m2.Descriptor == nil
+	if m1Nil != m2Nil {
+		return false
+	}
+	if m1Nil {
+		return m1.Value.AsRaw() == m2.Value.AsRaw()
+	}
+	if m1.Descriptor.ID() != m2.Descriptor.ID() {
+		return false
+	}
+	m2Raw := m2.Value.AsRaw()
+	kind := m1.Descriptor.ValueKind()
+	return m1.Value.RawCompare(m2Raw, kind) == 0
+}
+
 func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...string) bool {
 	ignoredPaths := map[string]struct{}{
 		"Sequence": struct{}{},
@@ -143,6 +164,7 @@ func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...
 			_, found := ignoredPaths[path.String()]
 			return found
 		}, cmp.Ignore()),
+		cmp.Comparer(measurementCompare),
 	}
 	if diff := cmp.Diff(got, want, opts...); diff != "" {
 		t.Errorf("Events: -got +want %s", diff)

@@ -18,13 +18,13 @@ import "sync/atomic"
 
 var global atomic.Value
 
-// GlobalMeter return meter registered with global registry.
-// If no meter is registered then an instance of noop Meter is returned.
+// GlobalMeter returns a meter registered as a global meter. If no
+// meter is registered then an instance of noop Meter is returned.
 func GlobalMeter() Meter {
 	if t := global.Load(); t != nil {
 		return t.(Meter)
 	}
-	return NoopMeter{}
+	return noopMeter{}
 }
 
 // SetGlobalMeter sets provided meter as a global meter.

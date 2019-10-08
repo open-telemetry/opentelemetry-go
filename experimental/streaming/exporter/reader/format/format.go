@@ -20,6 +20,8 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 
@@ -89,27 +91,17 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 	case exporter.MODIFY_ATTR:
 		buf.WriteString("modify attr ")
 		buf.WriteString(data.Type.String())
-	case exporter.RECORD_STATS:
-		buf.WriteString("record")
 
-		for _, s := range data.Stats {
-			f(false)(core.Key{
-				Name: s.Measure.N(),
-			}.Float64(s.Value))
+	case exporter.SINGLE_METRIC:
+		formatMetricUpdate(buf, data.Measurement)
+		formatMetricLabels(buf, data.Attributes)
 
-			buf.WriteString(" {")
-			i := 0
-			s.Tags.Foreach(func(kv core.KeyValue) bool {
-				if i != 0 {
-					buf.WriteString(",")
-				}
-				i++
-				buf.WriteString(kv.Key.Name)
-				buf.WriteString("=")
-				buf.WriteString(kv.Value.Emit())
-				return true
-			})
-			buf.WriteString("}")
+	case exporter.BATCH_METRIC:
+		buf.WriteString("BATCH")
+		formatMetricLabels(buf, data.Attributes)
+		for _, m := range data.Measurements {
+			formatMetricUpdate(buf, m)
+			buf.WriteString(" ")
 		}
 
 	case exporter.SET_STATUS:
@@ -140,6 +132,30 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 	}
 
 	buf.WriteString(" ]\n")
+}
+
+func formatMetricUpdate(buf *strings.Builder, m metric.Measurement) {
+	buf.WriteString(m.Descriptor.Kind().String())
+	buf.WriteString(" ")
+	buf.WriteString(m.Descriptor.Name())
+	buf.WriteString("=")
+	buf.WriteString(m.Value.Emit(m.Descriptor.ValueKind()))
+}
+
+func formatMetricLabels(buf *strings.Builder, l tag.Map) {
+	buf.WriteString(" {")
+	i := 0
+	l.Foreach(func(kv core.KeyValue) bool {
+		if i != 0 {
+			buf.WriteString(",")
+		}
+		i++
+		buf.WriteString(kv.Key.Name)
+		buf.WriteString("=")
+		buf.WriteString(kv.Value.Emit())
+		return true
+	})
+	buf.WriteString("}")
 }
 
 func EventToString(data reader.Event) string {

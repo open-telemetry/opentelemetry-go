@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/stats"
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/tag"
 )
 
@@ -40,11 +40,10 @@ type Event struct {
 	Status     codes.Code      // SET_STATUS
 
 	// Values
-	String  string // START_SPAN, EVENT, SET_NAME, ...
-	Float64 float64
-	Parent  ScopeID // START_SPAN
-	Stats   []stats.Measurement
-	Stat    stats.Measurement
+	String       string  // START_SPAN, EVENT, SET_NAME, ...
+	Parent       ScopeID // START_SPAN
+	Measurement  metric.Measurement
+	Measurements []metric.Measurement
 }
 
 type Observer interface {
@@ -58,12 +57,11 @@ const (
 	END_SPAN
 	ADD_EVENT
 	NEW_SCOPE
-	NEW_MEASURE
-	NEW_METRIC
 	MODIFY_ATTR
-	RECORD_STATS
 	SET_STATUS
 	SET_NAME
+	SINGLE_METRIC // A metric Set(), Add(), Record()
+	BATCH_METRIC  // A RecordBatch()
 )
 
 type Exporter struct {
@@ -101,6 +99,9 @@ func (e *Exporter) Foreach(f func(Observer)) {
 }
 
 func (e *Exporter) NewScope(parent ScopeID, attributes ...core.KeyValue) ScopeID {
+	if len(attributes) == 0 {
+		return parent
+	}
 	eventID := e.Record(Event{
 		Type:       NEW_SCOPE,
 		Scope:      parent,
