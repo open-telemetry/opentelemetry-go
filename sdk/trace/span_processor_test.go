@@ -19,12 +19,13 @@ import (
 	"testing"
 
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/export"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 type testSpanProcesor struct {
-	spansStarted  []*sdktrace.SpanData
-	spansEnded    []*sdktrace.SpanData
+	spansStarted  []*export.SpanData
+	spansEnded    []*export.SpanData
 	shutdownCount int
 }
 
@@ -33,11 +34,11 @@ func init() {
 	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
-func (t *testSpanProcesor) OnStart(s *sdktrace.SpanData) {
+func (t *testSpanProcesor) OnStart(s *export.SpanData) {
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcesor) OnEnd(s *sdktrace.SpanData) {
+func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
@@ -109,8 +110,47 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	}
 }
 
-// TODO(rghetia): Add Shutdown test when it is implemented.
-func TestShutdown(t *testing.T) {
+func TestSpanProcessorShutdown(t *testing.T) {
+	name := "Increment shutdown counter of a span processor"
+	sp := NewTestSpanProcessor()
+	if sp == nil {
+		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
+	}
+
+	wantCount := sp.shutdownCount + 1
+	sp.Shutdown()
+
+	gotCount := sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
+}
+
+func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
+	name := "Increment shutdown counter after each UnregisterSpanProcessor call"
+	sp := NewTestSpanProcessor()
+	if sp == nil {
+		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
+	}
+
+	wantCount := sp.shutdownCount + 1
+
+	sdktrace.RegisterSpanProcessor(sp)
+	sdktrace.UnregisterSpanProcessor(sp)
+
+	gotCount := sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
+
+	// Multiple UnregisterSpanProcessor triggers multiple Shutdown calls.
+	wantCount = wantCount + 1
+	sdktrace.UnregisterSpanProcessor(sp)
+
+	gotCount = sp.shutdownCount
+	if wantCount != gotCount {
+		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
+	}
 }
 
 func NewTestSpanProcessor() *testSpanProcesor {

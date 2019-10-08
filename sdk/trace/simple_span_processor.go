@@ -14,31 +14,37 @@
 
 package trace
 
+import (
+	"context"
+
+	"go.opentelemetry.io/sdk/export"
+)
+
 // SimpleSpanProcessor implements SpanProcessor interfaces. It is used by
 // exporters to receive SpanData synchronously when span is finished.
 type SimpleSpanProcessor struct {
-	exporter Exporter
+	e export.SpanSyncer
 }
 
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 
 // NewSimpleSpanProcessor creates a new instance of SimpleSpanProcessor
-// for a given exporter.
-func NewSimpleSpanProcessor(exporter Exporter) *SimpleSpanProcessor {
+// for a given export.
+func NewSimpleSpanProcessor(e export.SpanSyncer) *SimpleSpanProcessor {
 	ssp := &SimpleSpanProcessor{
-		exporter: exporter,
+		e: e,
 	}
 	return ssp
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(sd *SpanData) {
+func (ssp *SimpleSpanProcessor) OnStart(sd *export.SpanData) {
 }
 
-// OnEnd method exports SpanData using associated exporter.
-func (ssp *SimpleSpanProcessor) OnEnd(sd *SpanData) {
-	if ssp.exporter != nil {
-		ssp.exporter.ExportSpan(sd)
+// OnEnd method exports SpanData using associated export.
+func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
+	if ssp.e != nil && sd.SpanContext.IsSampled() {
+		ssp.e.ExportSpan(context.Background(), sd)
 	}
 }
 

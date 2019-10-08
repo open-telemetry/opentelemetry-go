@@ -19,6 +19,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/sdk/export"
 )
 
 const (
@@ -58,13 +60,13 @@ type BatchSpanProcessorOptions struct {
 }
 
 // BatchSpanProcessor implements SpanProcessor interfaces. It is used by
-// exporters to receive SpanData asynchronously.
+// exporters to receive export.SpanData asynchronously.
 // Use BatchSpanProcessorOptions to change the behavior of the processor.
 type BatchSpanProcessor struct {
-	exporter BatchExporter
-	o        BatchSpanProcessorOptions
+	e export.SpanBatcher
+	o BatchSpanProcessorOptions
 
-	queue   chan *SpanData
+	queue   chan *export.SpanData
 	dropped uint32
 
 	stopWait sync.WaitGroup
@@ -75,11 +77,11 @@ type BatchSpanProcessor struct {
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 
 // NewBatchSpanProcessor creates a new instance of BatchSpanProcessor
-// for a given exporter. It returns an error if exporter is nil.
+// for a given export. It returns an error if exporter is nil.
 // The newly created BatchSpanProcessor should then be registered with sdk
 // using RegisterSpanProcessor.
-func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
-	if exporter == nil {
+func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
+	if e == nil {
 		return nil, errNilExporter
 	}
 
@@ -92,11 +94,11 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOpt
 		opt(&o)
 	}
 	bsp := &BatchSpanProcessor{
-		exporter: exporter,
-		o:        o,
+		e: e,
+		o: o,
 	}
 
-	bsp.queue = make(chan *SpanData, bsp.o.MaxQueueSize)
+	bsp.queue = make(chan *export.SpanData, bsp.o.MaxQueueSize)
 
 	bsp.stopCh = make(chan struct{})
 
@@ -122,11 +124,11 @@ func NewBatchSpanProcessor(exporter BatchExporter, opts ...BatchSpanProcessorOpt
 }
 
 // OnStart method does nothing.
-func (bsp *BatchSpanProcessor) OnStart(sd *SpanData) {
+func (bsp *BatchSpanProcessor) OnStart(sd *export.SpanData) {
 }
 
-// OnEnd method enqueues SpanData for later processing.
-func (bsp *BatchSpanProcessor) OnEnd(sd *SpanData) {
+// OnEnd method enqueues export.SpanData for later processing.
+func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
 	bsp.enqueue(sd)
 }
 
@@ -164,34 +166,35 @@ func WithBlocking() BatchSpanProcessorOption {
 }
 
 func (bsp *BatchSpanProcessor) processQueue() {
-	batch := make([]*SpanData, 0, bsp.o.MaxExportBatchSize)
+	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
 	for {
-		var sd *SpanData
+		var sd *export.SpanData
 		var ok bool
 		select {
 		case sd = <-bsp.queue:
-			if sd != nil {
+			if sd != nil && sd.SpanContext.IsSampled() {
 				batch = append(batch, sd)
 			}
 			ok = true
 		default:
 			ok = false
 		}
+
 		if ok {
 			if len(batch) >= bsp.o.MaxExportBatchSize {
-				bsp.exporter.ExportSpans(batch)
+				bsp.e.ExportSpans(context.Background(), batch)
 				batch = batch[:0]
 			}
 		} else {
 			if len(batch) > 0 {
-				bsp.exporter.ExportSpans(batch)
+				bsp.e.ExportSpans(context.Background(), batch)
 			}
 			break
 		}
 	}
 }
 
-func (bsp *BatchSpanProcessor) enqueue(sd *SpanData) {
+func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 	} else {

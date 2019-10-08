@@ -22,19 +22,21 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/export"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 type testBatchExporter struct {
 	mu         sync.Mutex
-	spans      []*sdktrace.SpanData
+	spans      []*export.SpanData
 	sizes      []int
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(sds []*sdktrace.SpanData) {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	t.spans = append(t.spans, sds...)
 	t.sizes = append(t.sizes, len(sds))
 	t.batchCount++
@@ -52,13 +54,13 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-func (t *testBatchExporter) get(idx int) *sdktrace.SpanData {
+func (t *testBatchExporter) get(idx int) *export.SpanData {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.spans[idx]
 }
 
-var _ sdktrace.BatchExporter = (*testBatchExporter)(nil)
+var _ export.SpanBatcher = (*testBatchExporter)(nil)
 
 func init() {
 	sdktrace.Register()
@@ -201,4 +203,20 @@ func getSpanContext() core.SpanContext {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
+}
+
+func TestBatchSpanProcessorShutdown(t *testing.T) {
+	bsp, err := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
+	if err != nil {
+		t.Errorf("Unexpected error while creating processor\n")
+	}
+
+	if bsp == nil {
+		t.Fatalf("Error creating new instance of BatchSpanProcessor\n")
+	}
+
+	bsp.Shutdown()
+
+	// Multiple call to Shutdown() should not panic.
+	bsp.Shutdown()
 }
