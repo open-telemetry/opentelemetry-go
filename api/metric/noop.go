@@ -25,7 +25,7 @@ func (noopMeter) DefineLabels(context.Context, ...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 
-func (noopMeter) NewHandle(*Descriptor, LabelSet) Handle {
+func (noopMeter) NewHandle(ExplicitReportingMetric, LabelSet) Handle {
 	return noopHandle{}
 }
 

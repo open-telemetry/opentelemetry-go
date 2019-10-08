@@ -66,6 +66,23 @@ type ObservationCallback func(LabelSet, MeasurementValue)
 // the registered observers.
 type ObserverCallback func(Meter, Observer, ObservationCallback)
 
+// WithDescriptor is an interface that all metric implement.
+type WithDescriptor interface {
+	// Descriptor returns a descriptor of this metric.
+	Descriptor() *Descriptor
+}
+
+type hiddenType struct{}
+
+// ExplicitReportingMetric is an interface that is implemented only by
+// metrics that support getting a Handle.
+type ExplicitReportingMetric interface {
+	WithDescriptor
+	// SupportHandle is a dummy function that can be only
+	// implemented in this package.
+	SupportHandle() hiddenType
+}
+
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
 	// DefineLabels returns a reference to a set of labels that
@@ -78,7 +95,7 @@ type Meter interface {
 	// NewHandle creates a Handle that contains the passed
 	// key-value pairs. This should not be used directly - prefer
 	// using GetHandle function of a metric.
-	NewHandle(*Descriptor, LabelSet) Handle
+	NewHandle(ExplicitReportingMetric, LabelSet) Handle
 	// DeleteHandle destroys the Handle and does a cleanup of the
 	// underlying resources.
 	DeleteHandle(Handle)

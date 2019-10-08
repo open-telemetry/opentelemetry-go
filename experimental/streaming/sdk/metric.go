@@ -60,11 +60,11 @@ func (s *sdk) DefineLabels(ctx context.Context, labels ...core.KeyValue) metric.
 	}
 }
 
-func (s *sdk) NewHandle(descriptor *metric.Descriptor, labels metric.LabelSet) metric.Handle {
+func (s *sdk) NewHandle(erm metric.ExplicitReportingMetric, labels metric.LabelSet) metric.Handle {
 	mlabels, _ := labels.(metricLabels)
 
 	return &metricHandle{
-		descriptor: descriptor,
+		descriptor: erm.Descriptor(),
 		labels:     mlabels,
 	}
 }
@@ -100,7 +100,7 @@ func (s *sdk) insertNewObserver(observer metric.Observer, callback metric.Observ
 	s.observersLock.Lock()
 	defer s.observersLock.Unlock()
 	old := s.loadObserversMap()
-	id := observer.Descriptor.ID()
+	id := observer.Descriptor().ID()
 	if _, ok := old[id]; ok {
 		return false
 	}
@@ -120,7 +120,7 @@ func (s *sdk) UnregisterObserver(observer metric.Observer) {
 	s.observersLock.Lock()
 	defer s.observersLock.Unlock()
 	old := s.loadObserversMap()
-	id := observer.Descriptor.ID()
+	id := observer.Descriptor().ID()
 	if _, ok := old[id]; !ok {
 		return
 	}
@@ -146,7 +146,7 @@ func (s *sdk) observersRoutine() {
 			return
 		}
 		for _, data := range m {
-			ocb := s.getObservationCallback(data.observer.Descriptor)
+			ocb := s.getObservationCallback(data.observer.Descriptor())
 			data.callback(s, data.observer, ocb)
 		}
 	}

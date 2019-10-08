@@ -20,12 +20,12 @@ import (
 
 // Float64Counter is a metric that accumulates float64 values.
 type Float64Counter struct {
-	CommonMetric
+	commonMetric
 }
 
 // Int64Counter is a metric that accumulates int64 values.
 type Int64Counter struct {
-	CommonMetric
+	commonMetric
 }
 
 // Float64CounterHandle is a handle for Float64Counter.
@@ -50,29 +50,33 @@ type counterOptionWrapper struct {
 	F Option
 }
 
-var _ CounterOptionApplier = counterOptionWrapper{}
+var (
+	_ CounterOptionApplier    = counterOptionWrapper{}
+	_ ExplicitReportingMetric = Float64Counter{}
+	_ ExplicitReportingMetric = Int64Counter{}
+)
 
 func (o counterOptionWrapper) ApplyCounterOption(d *Descriptor) {
 	o.F(d)
 }
 
-func newCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) CommonMetric {
+func newCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) commonMetric {
 	m := registerCommonMetric(name, CounterKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyCounterOption(m.Descriptor)
+		opt.ApplyCounterOption(m.Descriptor())
 	}
 	return m
 }
 
 // NewFloat64Counter creates a new counter for float64.
 func NewFloat64Counter(name string, mos ...CounterOptionApplier) (c Float64Counter) {
-	c.CommonMetric = newCounter(name, Float64ValueKind, mos...)
+	c.commonMetric = newCounter(name, Float64ValueKind, mos...)
 	return
 }
 
 // NewInt64Counter creates a new counter for int64.
 func NewInt64Counter(name string, mos ...CounterOptionApplier) (c Int64Counter) {
-	c.CommonMetric = newCounter(name, Int64ValueKind, mos...)
+	c.commonMetric = newCounter(name, Int64ValueKind, mos...)
 	return
 }
 

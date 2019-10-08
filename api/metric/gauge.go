@@ -20,12 +20,12 @@ import (
 
 // Float64Gauge is a metric that stores the last float64 value.
 type Float64Gauge struct {
-	CommonMetric
+	commonMetric
 }
 
 // Int64Gauge is a metric that stores the last int64 value.
 type Int64Gauge struct {
-	CommonMetric
+	commonMetric
 }
 
 // Float64GaugeHandle is a handle for Float64Gauge.
@@ -50,29 +50,33 @@ type gaugeOptionWrapper struct {
 	F Option
 }
 
-var _ GaugeOptionApplier = gaugeOptionWrapper{}
+var (
+	_ GaugeOptionApplier      = gaugeOptionWrapper{}
+	_ ExplicitReportingMetric = Float64Gauge{}
+	_ ExplicitReportingMetric = Int64Gauge{}
+)
 
 func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
 	o.F(d)
 }
 
-func newGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) CommonMetric {
+func newGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) commonMetric {
 	m := registerCommonMetric(name, GaugeKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyGaugeOption(m.Descriptor)
+		opt.ApplyGaugeOption(m.Descriptor())
 	}
 	return m
 }
 
 // NewFloat64Gauge creates a new gauge for float64.
 func NewFloat64Gauge(name string, mos ...GaugeOptionApplier) (g Float64Gauge) {
-	g.CommonMetric = newGauge(name, Float64ValueKind, mos...)
+	g.commonMetric = newGauge(name, Float64ValueKind, mos...)
 	return
 }
 
 // NewInt64Gauge creates a new gauge for int64.
 func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
-	g.CommonMetric = newGauge(name, Int64ValueKind, mos...)
+	g.commonMetric = newGauge(name, Int64ValueKind, mos...)
 	return
 }
 

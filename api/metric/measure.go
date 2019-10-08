@@ -20,12 +20,12 @@ import (
 
 // Float64Measure is a metric that records float64 values.
 type Float64Measure struct {
-	CommonMetric
+	commonMetric
 }
 
 // Int64Measure is a metric that records int64 values.
 type Int64Measure struct {
-	CommonMetric
+	commonMetric
 }
 
 // Float64MeasureHandle is a handle for Float64Measure.
@@ -50,29 +50,33 @@ type measureOptionWrapper struct {
 	F Option
 }
 
-var _ MeasureOptionApplier = measureOptionWrapper{}
+var (
+	_ MeasureOptionApplier    = measureOptionWrapper{}
+	_ ExplicitReportingMetric = Float64Measure{}
+	_ ExplicitReportingMetric = Int64Measure{}
+)
 
 func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
 	o.F(d)
 }
 
-func newMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) CommonMetric {
+func newMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) commonMetric {
 	m := registerCommonMetric(name, MeasureKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyMeasureOption(m.Descriptor)
+		opt.ApplyMeasureOption(m.Descriptor())
 	}
 	return m
 }
 
 // NewFloat64Measure creates a new measure for float64.
 func NewFloat64Measure(name string, mos ...MeasureOptionApplier) (c Float64Measure) {
-	c.CommonMetric = newMeasure(name, Float64ValueKind, mos...)
+	c.commonMetric = newMeasure(name, Float64ValueKind, mos...)
 	return
 }
 
 // NewInt64Measure creates a new measure for int64.
 func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) {
-	c.CommonMetric = newMeasure(name, Int64ValueKind, mos...)
+	c.commonMetric = newMeasure(name, Int64ValueKind, mos...)
 	return
 }
 
