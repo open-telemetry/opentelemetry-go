@@ -81,16 +81,24 @@ func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
 }
 
 // GetHandle creates a handle for this gauge. The labels should
-// contain the keys and values specified in the gauge with the
-// WithKeys option.
+// contain the keys and values for each key specified in the gauge
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// gauge with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (g *Float64Gauge) GetHandle(labels LabelSet) (h Float64GaugeHandle) {
 	h.Handle = g.getHandle(labels)
 	return
 }
 
 // GetHandle creates a handle for this gauge. The labels should
-// contain the keys and values specified in the gauge with the
-// WithKeys option.
+// contain the keys and values for each key specified in the gauge
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// gauge with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (g *Int64Gauge) GetHandle(labels LabelSet) (h Int64GaugeHandle) {
 	h.Handle = g.getHandle(labels)
 	return
@@ -108,26 +116,34 @@ func (g *Int64Gauge) Measurement(value int64) Measurement {
 	return g.int64Measurement(value)
 }
 
-// Set sets the value of the gauge to the passed value. The labels
-// should contain the keys and values specified in the gauge with the
-// WithKeys option.
+// Set assigns the passed value to the value of the gauge. The labels
+// should contain the keys and values for each key specified in the
+// gauge with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// gauge with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
 	g.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
-// Set sets the value of the gauge to the passed value. The labels
-// should contain the keys and values specified in the gauge with the
-// WithKeys option.
+// Set assigns the passed value to the value of the gauge. The labels
+// should contain the keys and values for each key specified in the
+// gauge with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// gauge with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 	g.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }
 
-// Set sets the value of the gauge to the passed value.
+// Set assigns the passed value to the value of the gauge.
 func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
 	h.RecordOne(ctx, NewFloat64MeasurementValue(value))
 }
 
-// Set sets the value of the gauge to the passed value.
+// Set assigns the passed value to the value of the gauge.
 func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
 	h.RecordOne(ctx, NewInt64MeasurementValue(value))
 }

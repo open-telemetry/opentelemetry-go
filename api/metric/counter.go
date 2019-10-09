@@ -81,16 +81,24 @@ func NewInt64Counter(name string, mos ...CounterOptionApplier) (c Int64Counter) 
 }
 
 // GetHandle creates a handle for this counter. The labels should
-// contain the keys and values specified in the counter with the
-// WithKeys option.
+// contain the keys and values for each key specified in the counter
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Counter) GetHandle(labels LabelSet) (h Float64CounterHandle) {
 	h.Handle = c.getHandle(labels)
 	return
 }
 
 // GetHandle creates a handle for this counter. The labels should
-// contain the keys and values specified in the counter with the
-// WithKeys option.
+// contain the keys and values for each key specified in the counter
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Counter) GetHandle(labels LabelSet) (h Int64CounterHandle) {
 	h.Handle = c.getHandle(labels)
 	return
@@ -109,15 +117,23 @@ func (c *Int64Counter) Measurement(value int64) Measurement {
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values specified in the counter with the WithKeys
-// option.
+// the keys and values for each key specified in the counter with the
+// WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
 	c.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values specified in the counter with the WithKeys
-// option.
+// the keys and values for each key specified in the counter with the
+// WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 	c.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }

@@ -81,16 +81,24 @@ func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) 
 }
 
 // GetHandle creates a handle for this measure. The labels should
-// contain the keys and values specified in the measure with the
-// WithKeys option.
+// contain the keys and values for each key specified in the measure
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// measure with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Measure) GetHandle(labels LabelSet) (h Float64MeasureHandle) {
 	h.Handle = c.getHandle(labels)
 	return
 }
 
 // GetHandle creates a handle for this measure. The labels should
-// contain the keys and values specified in the measure with the
-// WithKeys option.
+// contain the keys and values for each key specified in the measure
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// measure with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Measure) GetHandle(labels LabelSet) (h Int64MeasureHandle) {
 	h.Handle = c.getHandle(labels)
 	return
@@ -109,15 +117,23 @@ func (c *Int64Measure) Measurement(value int64) Measurement {
 }
 
 // Record adds a new value to the list of measure's records. The
-// labels should contain the keys and values specified in the measure
-// with the WithKeys option.
+// labels should contain the keys and values for each key specified in
+// the measure with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// measure with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
 	c.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
 // Record adds a new value to the list of measure's records. The
-// labels should contain the keys and values specified in the measure
-// with the WithKeys option.
+// labels should contain the keys and values for each key specified in
+// the measure with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// measure with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
 	c.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }
