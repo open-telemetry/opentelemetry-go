@@ -38,7 +38,7 @@ type SpanProcessor interface {
 	Shutdown()
 }
 
-type spanProcessorMap map[SpanProcessor]struct{}
+type spanProcessorMap map[SpanProcessor]*sync.Once
 
 var (
 	mu             sync.Mutex
@@ -56,7 +56,7 @@ func RegisterSpanProcessor(e SpanProcessor) {
 			new[k] = v
 		}
 	}
-	new[e] = struct{}{}
+	new[e] = &sync.Once{}
 	spanProcessors.Store(new)
 }
 
@@ -71,7 +71,11 @@ func UnregisterSpanProcessor(s SpanProcessor) {
 			new[k] = v
 		}
 	}
+	if stopOnce, ok := new[s]; ok && stopOnce != nil {
+		stopOnce.Do(func() {
+			s.Shutdown()
+		})
+	}
 	delete(new, s)
 	spanProcessors.Store(new)
-	s.Shutdown()
 }
