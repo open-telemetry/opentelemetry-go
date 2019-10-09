@@ -27,7 +27,7 @@ import (
 )
 
 type span struct {
-	tracer  *tracer
+	sdk     *sdk
 	initial exporter.ScopeID
 }
 
@@ -44,7 +44,7 @@ func (sp *span) IsRecordingEvents() bool {
 
 // SetStatus sets the status of the span.
 func (sp *span) SetStatus(status codes.Code) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:   exporter.SET_STATUS,
 		Scope:  sp.ScopeID(),
 		Status: status,
@@ -56,7 +56,7 @@ func (sp *span) ScopeID() exporter.ScopeID {
 }
 
 func (sp *span) SetAttribute(attribute core.KeyValue) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:      exporter.MODIFY_ATTR,
 		Scope:     sp.ScopeID(),
 		Attribute: attribute,
@@ -64,7 +64,7 @@ func (sp *span) SetAttribute(attribute core.KeyValue) {
 }
 
 func (sp *span) SetAttributes(attributes ...core.KeyValue) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:       exporter.MODIFY_ATTR,
 		Scope:      sp.ScopeID(),
 		Attributes: attributes,
@@ -72,7 +72,7 @@ func (sp *span) SetAttributes(attributes ...core.KeyValue) {
 }
 
 func (sp *span) ModifyAttribute(mutator tag.Mutator) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.MODIFY_ATTR,
 		Scope:   sp.ScopeID(),
 		Mutator: mutator,
@@ -80,7 +80,7 @@ func (sp *span) ModifyAttribute(mutator tag.Mutator) {
 }
 
 func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:     exporter.MODIFY_ATTR,
 		Scope:    sp.ScopeID(),
 		Mutators: mutators,
@@ -93,7 +93,7 @@ func (sp *span) End(options ...trace.EndOption) {
 	for _, opt := range options {
 		opt(&opts)
 	}
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Time:      opts.EndTime,
 		Type:      exporter.END_SPAN,
 		Scope:     sp.ScopeID(),
@@ -105,7 +105,7 @@ func (sp *span) End(options ...trace.EndOption) {
 }
 
 func (sp *span) Tracer() trace.Tracer {
-	return sp.tracer
+	return sp.sdk
 }
 
 func (sp *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
@@ -117,7 +117,7 @@ func (sp *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, 
 }
 
 func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Time:       timestamp,
 		Type:       exporter.ADD_EVENT,
 		Scope:      sp.ScopeID(),
@@ -128,7 +128,7 @@ func (sp *span) addEventWithTime(ctx context.Context, timestamp time.Time, msg s
 }
 
 func (sp *span) SetName(name string) {
-	sp.tracer.exporter.Record(exporter.Event{
+	sp.sdk.exporter.Record(exporter.Event{
 		Type:   exporter.SET_NAME,
 		String: name,
 	})

@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/stats"
 	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 )
@@ -39,7 +38,7 @@ var (
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo = stats.NewMeasure("ex.com/two")
+	measureTwo = metric.NewFloat64Measure("ex.com/two")
 )
 
 func main() {
@@ -50,11 +49,11 @@ func main() {
 		tag.Insert(barKey.String("bar1")),
 	)
 
-	gauge := meter.GetFloat64Gauge(
-		ctx,
-		oneMetric,
-		lemonsKey.Int(10),
-	)
+	commonLabels := meter.DefineLabels(ctx, lemonsKey.Int(10))
+
+	gauge := oneMetric.GetHandle(commonLabels)
+
+	measure := measureTwo.GetHandle(commonLabels)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
@@ -64,6 +63,16 @@ func main() {
 
 		gauge.Set(ctx, 1)
 
+		meter.RecordBatch(
+			// Note: call-site variables added as context tags:
+			tag.NewContext(ctx,
+				tag.Insert(anotherKey.String("xyz"))),
+			commonLabels,
+
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
+		)
+
 		return tracer.WithSpan(
 			ctx,
 			"Sub operation...",
@@ -72,7 +81,7 @@ func main() {
 
 				trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
-				stats.Record(ctx, measureTwo.M(1.3))
+				measure.Record(ctx, 1.3)
 
 				return nil
 			},

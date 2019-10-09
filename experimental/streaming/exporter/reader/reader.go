@@ -22,8 +22,9 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/stats"
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
@@ -32,13 +33,14 @@ type Reader interface {
 }
 
 type Event struct {
-	Type        exporter.EventType
-	Time        time.Time
-	Sequence    exporter.EventID
-	SpanContext core.SpanContext
-	Tags        tag.Map
-	Attributes  tag.Map
-	Stats       []Measurement
+	Type         exporter.EventType
+	Time         time.Time
+	Sequence     exporter.EventID
+	SpanContext  core.SpanContext
+	Tags         tag.Map // context tags
+	Attributes   tag.Map // span attributes, metric labels
+	Measurement  metric.Measurement
+	Measurements []metric.Measurement
 
 	Parent           core.SpanContext
 	ParentAttributes tag.Map
@@ -49,23 +51,11 @@ type Event struct {
 	Status   codes.Code
 }
 
-type Measurement struct {
-	Measure stats.Measure
-	Value   float64
-	Tags    tag.Map
-}
-
 type readerObserver struct {
 	readers []Reader
 
 	// core.EventID -> *readerSpan or *readerScope
 	scopes sync.Map
-
-	// core.EventID -> *readerMeasure
-	measures sync.Map
-
-	// core.EventID -> *readerMetric
-	metrics sync.Map
 }
 
 type readerSpan struct {
@@ -76,14 +66,6 @@ type readerSpan struct {
 	status      codes.Code
 
 	*readerScope
-}
-
-type readerMeasure struct {
-	name string
-}
-
-type readerMetric struct {
-	*readerMeasure
 }
 
 type readerScope struct {
@@ -222,24 +204,6 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 			read.Tags = span.startTags
 		}
 
-	case exporter.NEW_MEASURE:
-		measure := &readerMeasure{
-			name: event.String,
-		}
-		ro.measures.Store(event.Sequence, measure)
-		return
-
-	case exporter.NEW_METRIC:
-		measureI, has := ro.measures.Load(event.Scope.EventID)
-		if !has {
-			panic("metric measure not found")
-		}
-		metric := &readerMetric{
-			readerMeasure: measureI.(*readerMeasure),
-		}
-		ro.metrics.Store(event.Sequence, metric)
-		return
-
 	case exporter.ADD_EVENT:
 		read.Type = exporter.ADD_EVENT
 		read.Message = event.String
@@ -252,19 +216,33 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 			read.SpanContext = span.spanContext
 		}
 
-	case exporter.RECORD_STATS:
-		read.Type = exporter.RECORD_STATS
+	case exporter.SINGLE_METRIC:
+		read.Type = exporter.SINGLE_METRIC
 
-		_, span := ro.readScope(event.Scope)
-		if span != nil {
-			read.SpanContext = span.spanContext
+		if event.Context != nil {
+			span := trace.CurrentSpan(event.Context)
+			if span != nil {
+				read.SpanContext = span.SpanContext()
+			}
 		}
-		for _, es := range event.Stats {
-			ro.addMeasurement(&read, es)
+		attrs, _ := ro.readScope(event.Scope)
+		read.Attributes = attrs
+		read.Measurement = event.Measurement
+
+	case exporter.BATCH_METRIC:
+		read.Type = event.Type
+
+		if event.Context != nil {
+			span := trace.CurrentSpan(event.Context)
+			if span != nil {
+				read.SpanContext = span.SpanContext()
+			}
 		}
-		if event.Stat.Measure != nil {
-			ro.addMeasurement(&read, event.Stat)
-		}
+
+		attrs, _ := ro.readScope(event.Scope)
+		read.Attributes = attrs
+		read.Measurements = make([]metric.Measurement, len(event.Measurements))
+		copy(read.Measurements, event.Measurements)
 
 	case exporter.SET_STATUS:
 		read.Type = exporter.SET_STATUS
@@ -290,20 +268,6 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 	if event.Type == exporter.END_SPAN {
 		ro.cleanupSpan(event.Scope.EventID)
 	}
-}
-
-func (ro *readerObserver) addMeasurement(e *Event, m stats.Measurement) {
-	attrs, _ := ro.readMeasureScope(m.Measure)
-	e.Stats = append(e.Stats, Measurement{
-		Measure: m.Measure,
-		Value:   m.Value,
-		Tags:    attrs,
-	})
-}
-
-func (ro *readerObserver) readMeasureScope(m stats.Measure) (tag.Map, *readerSpan) {
-	// TODO
-	return tag.NewEmptyMap(), nil
 }
 
 func (ro *readerObserver) readScope(id exporter.ScopeID) (tag.Map, *readerSpan) {

@@ -25,6 +25,7 @@ type Value struct {
 	String  string
 	Bytes   []byte
 
+	// TODO See how segmentio/stats handles this type, it's much smaller.
 	// TODO Lazy value type?
 }
 
