@@ -22,12 +22,12 @@ type MeasureMetadata struct {
 	TTL int // -1 == infinite, 0 == do not propagate
 }
 
-type entryContent struct {
+type entry struct {
 	value core.Value
 	meta  MeasureMetadata
 }
 
-type rawMap map[core.Key]entryContent
+type rawMap map[core.Key]entry
 
 type Map struct {
 	m rawMap
@@ -60,12 +60,12 @@ func (m Map) Apply(update MapUpdate) Map {
 		r[k] = v
 	}
 	if update.SingleKV.Key.Defined() {
-		r[update.SingleKV.Key] = entryContent{
+		r[update.SingleKV.Key] = entry{
 			value: update.SingleKV.Value,
 		}
 	}
 	for _, kv := range update.MultiKV {
-		r[kv.Key] = entryContent{
+		r[kv.Key] = entry{
 			value: kv.Value,
 		}
 	}
@@ -111,7 +111,7 @@ func (m Map) Foreach(f func(kv core.KeyValue) bool) {
 
 func (r rawMap) apply(mutator Mutator) {
 	key := mutator.KeyValue.Key
-	content := entryContent{
+	content := entry{
 		value: mutator.KeyValue.Value,
 		meta:  mutator.MeasureMetadata,
 	}

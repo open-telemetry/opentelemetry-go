@@ -53,10 +53,10 @@ func main() {
 	initTracer()
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
+		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
 
 		req = req.WithContext(distributedContext.WithMap(req.Context(), distributedContext.NewMap(distributedContext.MapUpdate{
-			MultiKV: tags,
+			MultiKV: entries,
 		})))
 
 		ctx, span := trace.GlobalTracer().Start(

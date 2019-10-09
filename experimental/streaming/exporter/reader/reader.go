@@ -37,7 +37,7 @@ type Event struct {
 	Time         time.Time
 	Sequence     exporter.EventID
 	SpanContext  core.SpanContext
-	Tags         distributedContext.Map // context tags
+	Entries      distributedContext.Map // context entries
 	Attributes   distributedContext.Map // span attributes, metric labels
 	Measurement  metric.Measurement
 	Measurements []metric.Measurement
@@ -59,11 +59,11 @@ type readerObserver struct {
 }
 
 type readerSpan struct {
-	name        string
-	start       time.Time
-	startTags   distributedContext.Map
-	spanContext core.SpanContext
-	status      codes.Code
+	name         string
+	start        time.Time
+	startEntries distributedContext.Map
+	spanContext  core.SpanContext
+	status       codes.Code
 
 	*readerScope
 }
@@ -94,22 +94,22 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		Time:       event.Time,
 		Sequence:   event.Sequence,
 		Attributes: distributedContext.NewEmptyMap(),
-		Tags:       distributedContext.NewEmptyMap(),
+		Entries:    distributedContext.NewEmptyMap(),
 	}
 
 	if event.Context != nil {
-		read.Tags = distributedContext.FromContext(event.Context)
+		read.Entries = distributedContext.FromContext(event.Context)
 	}
 
 	switch event.Type {
 	case exporter.START_SPAN:
-		// Save the span context tags, initial attributes, start time, and name.
+		// Save the span context entries, initial attributes, start time, and name.
 		span := &readerSpan{
-			name:        event.String,
-			start:       event.Time,
-			startTags:   distributedContext.FromContext(event.Context),
-			spanContext: event.Scope.SpanContext,
-			readerScope: &readerScope{},
+			name:         event.String,
+			start:        event.Time,
+			startEntries: distributedContext.FromContext(event.Context),
+			spanContext:  event.Scope.SpanContext,
+			readerScope:  &readerScope{},
 		}
 
 		rattrs, _ := ro.readScope(event.Scope)
@@ -150,7 +150,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		read.Attributes = attrs
 		read.Duration = event.Time.Sub(span.start)
-		read.Tags = span.startTags
+		read.Entries = span.startEntries
 		read.SpanContext = span.spanContext
 
 		// TODO: recovered
@@ -201,7 +201,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		if span != nil {
 			read.SpanContext = span.spanContext
-			read.Tags = span.startTags
+			read.Entries = span.startEntries
 		}
 
 	case exporter.ADD_EVENT:

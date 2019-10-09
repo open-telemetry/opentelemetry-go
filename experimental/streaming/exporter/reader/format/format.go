@@ -116,13 +116,13 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(fmt.Sprintf("WAT? %d", data.Type))
 	}
 
-	// Attach the scope (span) attributes and context tags.
+	// Attach the scope (span) attributes and context entries.
 	buf.WriteString(" [")
 	if data.Attributes.Len() > 0 {
 		data.Attributes.Foreach(f(false))
 	}
-	if data.Tags.Len() > 0 {
-		data.Tags.Foreach(f(true))
+	if data.Entries.Len() > 0 {
+		data.Entries.Foreach(f(true))
 	}
 	if data.SpanContext.HasSpanID() {
 		f(false)(sdk.SpanIDKey.String(data.SpanContext.SpanIDString()))

@@ -34,7 +34,7 @@ var (
 	propagator = propagation.HttpTraceContextPropagator()
 )
 
-// Returns the Attributes, Context Tags, and SpanContext that were encoded by Inject.
+// Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
 	sc := propagator.Extract(ctx, req.Header)
 
