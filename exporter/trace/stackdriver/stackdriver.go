@@ -233,11 +233,12 @@ func (e *Exporter) RegisterBatchSpanProcessor() error {
 	if e.traceExporter.o.MaxQueueSize > 0 {
 		opts = append(opts, trace.WithMaxQueueSize(e.traceExporter.o.MaxQueueSize))
 	}
-	if e.traceExporter.o.QueueSizeThreshold > 0 {
+	if e.traceExporter.o.MaxExportBatchSize > 0 {
 		opts = append(opts, trace.WithMaxExportBatchSize(e.traceExporter.o.MaxExportBatchSize))
 	}
 
-	e.spanProcessor, err := trace.NewBatchSpanProcessor(e, opts)
+	var err error
+	e.spanProcessor, err = trace.NewBatchSpanProcessor(e, opts...)
 	if err != nil {
 		return err
 	}
