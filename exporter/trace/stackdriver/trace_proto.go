@@ -29,7 +29,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	opentelemetry "go.opentelemetry.io/sdk"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 const (
@@ -59,7 +59,7 @@ const (
 
 var userAgent = fmt.Sprintf("opentelemetry-go %s; stackdriver-exporter %s", opentelemetry.Version(), version)
 
-func protoFromSpanData(s *trace.SpanData, projectID string) *tracepb.Span {
+func protoFromSpanData(s *export.SpanData, projectID string) *tracepb.Span {
 	if s == nil {
 		return nil
 	}

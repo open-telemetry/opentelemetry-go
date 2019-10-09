@@ -26,6 +26,7 @@ import (
 	"google.golang.org/api/option"
 
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/trace"
 )
 
@@ -253,7 +254,7 @@ func (e *Exporter) RegisterSimpleSpanProcessor() {
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
-func (e *Exporter) ExportSpan(sd *trace.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, sd *export.SpanData) {
 	if len(e.traceExporter.o.DefaultTraceAttributes) > 0 {
 		sd = e.sdWithDefaultTraceAttributes(sd)
 	}
@@ -261,11 +262,11 @@ func (e *Exporter) ExportSpan(sd *trace.SpanData) {
 }
 
 // ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
-func (e *Exporter) ExportSpans(sds []*trace.SpanData) {
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
 	e.traceExporter.ExportSpans(sds)
 }
 
-func (e *Exporter) sdWithDefaultTraceAttributes(sd *trace.SpanData) *trace.SpanData {
+func (e *Exporter) sdWithDefaultTraceAttributes(sd *export.SpanData) *export.SpanData {
 	newSD := *sd
 	for k, v := range e.traceExporter.o.DefaultTraceAttributes {
 		switch val := v.(type) {

@@ -21,7 +21,7 @@ import (
 	traceclient "cloud.google.com/go/trace/apiv2"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 // traceExporter is an imeplementation of trace.Exporter and trace.BatchExporter
@@ -53,13 +53,13 @@ func newTraceExporter(o *options) (*traceExporter, error) {
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
-func (e *traceExporter) ExportSpan(s *trace.SpanData) {
-	protoSpan := protoFromSpanData(s, e.projectID)
+func (e *traceExporter) ExportSpan(sd *export.SpanData) {
+	protoSpan := protoFromSpanData(sd, e.projectID)
 	e.uploadFn([]*tracepb.Span{protoSpan})
 }
 
 // ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
-func (e *traceExporter) ExportSpans(sds []*trace.SpanData) {
+func (e *traceExporter) ExportSpans(sds []*export.SpanData) {
 	pbSpans := make([]*tracepb.Span, len(sds))
 	for i, sd := range sds {
 		pbSpans[i] = protoFromSpanData(sd, e.projectID)
