@@ -30,7 +30,7 @@ type traceExporter struct {
 	o         *options
 	projectID string
 	// uploadFn defaults in uploadSpans; it can be replaced for tests.
-	uploadFn func(spans []*tracepb.Span)
+	uploadFn func(ctx context.Context, spans []*tracepb.Span)
 	client   *traceclient.Client
 }
 
@@ -53,29 +53,34 @@ func newTraceExporter(o *options) (*traceExporter, error) {
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
-func (e *traceExporter) ExportSpan(sd *export.SpanData) {
+func (e *traceExporter) ExportSpan(ctx context.Context, sd *export.SpanData) {
 	protoSpan := protoFromSpanData(sd, e.projectID)
-	e.uploadFn([]*tracepb.Span{protoSpan})
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	e.uploadFn(ctx, []*tracepb.Span{protoSpan})
 }
 
 // ExportSpans exports a slice of SpanData to Stackdriver Trace in batch
-func (e *traceExporter) ExportSpans(sds []*export.SpanData) {
+func (e *traceExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
 	pbSpans := make([]*tracepb.Span, len(sds))
 	for i, sd := range sds {
 		pbSpans[i] = protoFromSpanData(sd, e.projectID)
 	}
-	e.uploadFn(pbSpans)
+	var cancel func()
+	if ctx == nil {
+		ctx, cancel = newContextWithTimeout(e.o.Context, e.o.Timeout)
+	}
+	defer cancel()
+	e.uploadFn(ctx, pbSpans)
 }
 
 // uploadSpans sends a set of spans to Stackdriver.
-func (e *traceExporter) uploadSpans(spans []*tracepb.Span) {
+func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) {
 	req := tracepb.BatchWriteSpansRequest{
 		Name:  "projects/" + e.projectID,
 		Spans: spans,
 	}
-	// Create a never-sampled span to prevent traces associated with exporter.
-	ctx, cancel := newContextWithTimeout(e.o.Context, e.o.Timeout)
-	defer cancel()
 
 	// TODO(ymotongpoo): add this part after OTel support NeverSampler
 	// for tracer.Start() initialization.
