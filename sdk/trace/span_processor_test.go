@@ -117,7 +117,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
 	}
 
-	wantCount := sp.shutdownCount + 1
+	wantCount := 1
 	sp.Shutdown()
 
 	gotCount := sp.shutdownCount
@@ -127,13 +127,13 @@ func TestSpanProcessorShutdown(t *testing.T) {
 }
 
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
-	name := "Increment shutdown counter after each UnregisterSpanProcessor call"
+	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
 	}
 
-	wantCount := sp.shutdownCount + 1
+	wantCount := 1
 
 	sdktrace.RegisterSpanProcessor(sp)
 	sdktrace.UnregisterSpanProcessor(sp)
@@ -143,8 +143,7 @@ func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 		t.Errorf("%s: wrong counter: got %d, want %d\n", name, gotCount, wantCount)
 	}
 
-	// Multiple UnregisterSpanProcessor triggers multiple Shutdown calls.
-	wantCount = wantCount + 1
+	// Multiple UnregisterSpanProcessor should not trigger multiple Shutdown calls.
 	sdktrace.UnregisterSpanProcessor(sp)
 
 	gotCount = sp.shutdownCount

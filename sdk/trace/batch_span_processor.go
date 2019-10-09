@@ -104,9 +104,9 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 
 	//Start timer to export metrics
 	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
+	bsp.stopWait.Add(1)
 	go func(ctx context.Context) {
 		defer ticker.Stop()
-		bsp.stopWait.Add(1)
 		for {
 			select {
 			case <-bsp.stopCh:
