@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	traceapi "cloud.google.com/go/trace/apiv2"
@@ -177,6 +178,7 @@ const defaultTimeout = 5 * time.Second
 // TODO(yoshifumi): add a metrics exporter once the spec definition
 // process and the sampler implementation are done.
 type Exporter struct {
+	once          sync.Once
 	traceExporter *traceExporter
 	spanProcessor trace.SpanProcessor
 }
@@ -239,18 +241,19 @@ func (e *Exporter) RegisterBatchSpanProcessor() error {
 	}
 
 	var err error
-	e.spanProcessor, err = trace.NewBatchSpanProcessor(e, opts...)
-	if err != nil {
-		return err
-	}
-	trace.RegisterSpanProcessor(e.spanProcessor)
-	return nil
+	e.once.Do(func() {
+		e.spanProcessor, err = trace.NewBatchSpanProcessor(e, opts...)
+		trace.RegisterSpanProcessor(e.spanProcessor)
+	})
+	return err
 }
 
 // RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
 func (e *Exporter) RegisterSimpleSpanProcessor() {
-	spanProcessor := trace.NewSimpleSpanProcessor(e)
-	trace.RegisterSpanProcessor(spanProcessor)
+	e.once.Do(func() {
+		e.spanProcessor = trace.NewSimpleSpanProcessor(e)
+		trace.RegisterSpanProcessor(e.spanProcessor)
+	})
 }
 
 // ExportSpan exports a SpanData to Stackdriver Trace.
@@ -286,5 +289,6 @@ func (e *Exporter) sdWithDefaultTraceAttributes(sd *export.SpanData) *export.Spa
 
 // Shutdown unregisters spanProcessor.
 func (e *Exporter) Shutdown() {
+	trace.UnregisterSpanProcessor(e.spanProcessor)
 	e.spanProcessor = nil
 }
