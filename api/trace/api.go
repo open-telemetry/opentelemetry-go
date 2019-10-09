@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/distributedContext"
 )
 
 type Tracer interface {
@@ -90,8 +90,8 @@ type Span interface {
 	SetAttributes(...core.KeyValue)
 
 	// Modify and delete span attributes
-	ModifyAttribute(tag.Mutator)
-	ModifyAttributes(...tag.Mutator)
+	ModifyAttribute(distributedContext.Mutator)
+	ModifyAttributes(...distributedContext.Mutator)
 }
 
 // SpanOption apply changes to SpanOptions.

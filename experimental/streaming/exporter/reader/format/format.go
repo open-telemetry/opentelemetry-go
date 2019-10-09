@@ -19,9 +19,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/distributedContext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 
@@ -142,7 +142,7 @@ func formatMetricUpdate(buf *strings.Builder, m metric.Measurement) {
 	buf.WriteString(m.Value.Emit(m.Descriptor.ValueKind()))
 }
 
-func formatMetricLabels(buf *strings.Builder, l tag.Map) {
+func formatMetricLabels(buf *strings.Builder, l distributedContext.Map) {
 	buf.WriteString(" {")
 	i := 0
 	l.Foreach(func(kv core.KeyValue) bool {
