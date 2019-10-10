@@ -19,9 +19,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 	"go.opentelemetry.io/experimental/streaming/exporter/reader"
 
@@ -116,13 +116,13 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(fmt.Sprintf("WAT? %d", data.Type))
 	}
 
-	// Attach the scope (span) attributes and context tags.
+	// Attach the scope (span) attributes and context entries.
 	buf.WriteString(" [")
 	if data.Attributes.Len() > 0 {
 		data.Attributes.Foreach(f(false))
 	}
-	if data.Tags.Len() > 0 {
-		data.Tags.Foreach(f(true))
+	if data.Entries.Len() > 0 {
+		data.Entries.Foreach(f(true))
 	}
 	if data.SpanContext.HasSpanID() {
 		f(false)(sdk.SpanIDKey.String(data.SpanContext.SpanIDString()))
@@ -142,7 +142,7 @@ func formatMetricUpdate(buf *strings.Builder, m metric.Measurement) {
 	buf.WriteString(m.Value.Emit(m.Descriptor.ValueKind()))
 }
 
-func formatMetricLabels(buf *strings.Builder, l tag.Map) {
+func formatMetricLabels(buf *strings.Builder, l distributedcontext.Map) {
 	buf.WriteString(" {")
 	i := 0
 	l.Foreach(func(kv core.KeyValue) bool {

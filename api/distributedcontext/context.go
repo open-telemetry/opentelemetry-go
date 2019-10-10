@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tag
+package distributedcontext
 
 import (
 	"context"
 	"runtime/pprof"
 )
 
-type ctxTagsType struct{}
+type ctxEntriesType struct{}
 
 var (
-	ctxTagsKey = &ctxTagsType{}
+	ctxEntriesKey = &ctxEntriesType{}
 )
 
 func WithMap(ctx context.Context, m Map) context.Context {
-	return context.WithValue(ctx, ctxTagsKey, m)
+	return context.WithValue(ctx, ctxEntriesKey, m)
 }
 
 func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
@@ -36,7 +36,7 @@ func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
 }
 
 func FromContext(ctx context.Context) Map {
-	if m, ok := ctx.Value(ctxTagsKey).(Map); ok {
+	if m, ok := ctx.Value(ctxEntriesKey).(Map); ok {
 		return m
 	}
 	return NewEmptyMap()

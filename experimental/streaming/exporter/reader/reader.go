@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/tag"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
@@ -37,13 +37,13 @@ type Event struct {
 	Time         time.Time
 	Sequence     exporter.EventID
 	SpanContext  core.SpanContext
-	Tags         tag.Map // context tags
-	Attributes   tag.Map // span attributes, metric labels
+	Entries      distributedcontext.Map // context entries
+	Attributes   distributedcontext.Map // span attributes, metric labels
 	Measurement  metric.Measurement
 	Measurements []metric.Measurement
 
 	Parent           core.SpanContext
-	ParentAttributes tag.Map
+	ParentAttributes distributedcontext.Map
 
 	Duration time.Duration
 	Name     string
@@ -59,11 +59,11 @@ type readerObserver struct {
 }
 
 type readerSpan struct {
-	name        string
-	start       time.Time
-	startTags   tag.Map
-	spanContext core.SpanContext
-	status      codes.Code
+	name         string
+	start        time.Time
+	startEntries distributedcontext.Map
+	spanContext  core.SpanContext
+	status       codes.Code
 
 	*readerScope
 }
@@ -71,7 +71,7 @@ type readerSpan struct {
 type readerScope struct {
 	span       *readerSpan
 	parent     exporter.EventID
-	attributes tag.Map
+	attributes distributedcontext.Map
 }
 
 // NewReaderObserver returns an implementation that computes the
@@ -93,23 +93,23 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 	read := Event{
 		Time:       event.Time,
 		Sequence:   event.Sequence,
-		Attributes: tag.NewEmptyMap(),
-		Tags:       tag.NewEmptyMap(),
+		Attributes: distributedcontext.NewEmptyMap(),
+		Entries:    distributedcontext.NewEmptyMap(),
 	}
 
 	if event.Context != nil {
-		read.Tags = tag.FromContext(event.Context)
+		read.Entries = distributedcontext.FromContext(event.Context)
 	}
 
 	switch event.Type {
 	case exporter.START_SPAN:
-		// Save the span context tags, initial attributes, start time, and name.
+		// Save the span context entries, initial attributes, start time, and name.
 		span := &readerSpan{
-			name:        event.String,
-			start:       event.Time,
-			startTags:   tag.FromContext(event.Context),
-			spanContext: event.Scope.SpanContext,
-			readerScope: &readerScope{},
+			name:         event.String,
+			start:        event.Time,
+			startEntries: distributedcontext.FromContext(event.Context),
+			spanContext:  event.Scope.SpanContext,
+			readerScope:  &readerScope{},
 		}
 
 		rattrs, _ := ro.readScope(event.Scope)
@@ -150,19 +150,19 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		read.Attributes = attrs
 		read.Duration = event.Time.Sub(span.start)
-		read.Tags = span.startTags
+		read.Entries = span.startEntries
 		read.SpanContext = span.spanContext
 
 		// TODO: recovered
 
 	case exporter.NEW_SCOPE, exporter.MODIFY_ATTR:
 		var span *readerSpan
-		var m tag.Map
+		var m distributedcontext.Map
 
 		sid := event.Scope
 
 		if sid.EventID == 0 {
-			m = tag.NewEmptyMap()
+			m = distributedcontext.NewEmptyMap()
 		} else {
 			parentI, has := ro.scopes.Load(sid.EventID)
 			if !has {
@@ -181,7 +181,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 			span:   span,
 			parent: sid.EventID,
 			attributes: m.Apply(
-				tag.MapUpdate{
+				distributedcontext.MapUpdate{
 					SingleKV:      event.Attribute,
 					MultiKV:       event.Attributes,
 					SingleMutator: event.Mutator,
@@ -201,7 +201,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 
 		if span != nil {
 			read.SpanContext = span.spanContext
-			read.Tags = span.startTags
+			read.Entries = span.startEntries
 		}
 
 	case exporter.ADD_EVENT:
@@ -209,7 +209,7 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 		read.Message = event.String
 
 		attrs, span := ro.readScope(event.Scope)
-		read.Attributes = attrs.Apply(tag.MapUpdate{
+		read.Attributes = attrs.Apply(distributedcontext.MapUpdate{
 			MultiKV: event.Attributes,
 		})
 		if span != nil {
@@ -270,9 +270,9 @@ func (ro *readerObserver) orderedObserve(event exporter.Event) {
 	}
 }
 
-func (ro *readerObserver) readScope(id exporter.ScopeID) (tag.Map, *readerSpan) {
+func (ro *readerObserver) readScope(id exporter.ScopeID) (distributedcontext.Map, *readerSpan) {
 	if id.EventID == 0 {
-		return tag.NewEmptyMap(), nil
+		return distributedcontext.NewEmptyMap(), nil
 	}
 	ev, has := ro.scopes.Load(id.EventID)
 	if !has {
@@ -283,7 +283,7 @@ func (ro *readerObserver) readScope(id exporter.ScopeID) (tag.Map, *readerSpan) 
 	} else if sp, ok := ev.(*readerSpan); ok {
 		return sp.attributes, sp
 	}
-	return tag.NewEmptyMap(), nil
+	return distributedcontext.NewEmptyMap(), nil
 }
 
 func (ro *readerObserver) cleanupSpan(id exporter.EventID) {

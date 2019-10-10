@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/tag"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
@@ -71,7 +71,7 @@ func (sp *span) SetAttributes(attributes ...core.KeyValue) {
 	})
 }
 
-func (sp *span) ModifyAttribute(mutator tag.Mutator) {
+func (sp *span) ModifyAttribute(mutator distributedcontext.Mutator) {
 	sp.sdk.exporter.Record(exporter.Event{
 		Type:    exporter.MODIFY_ATTR,
 		Scope:   sp.ScopeID(),
@@ -79,7 +79,7 @@ func (sp *span) ModifyAttribute(mutator tag.Mutator) {
 	})
 }
 
-func (sp *span) ModifyAttributes(mutators ...tag.Mutator) {
+func (sp *span) ModifyAttributes(mutators ...distributedcontext.Mutator) {
 	sp.sdk.exporter.Record(exporter.Event{
 		Type:     exporter.MODIFY_ATTR,
 		Scope:    sp.ScopeID(),

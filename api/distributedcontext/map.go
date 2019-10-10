@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tag
+package distributedcontext
 
 import (
 	"go.opentelemetry.io/api/core"
@@ -22,12 +22,12 @@ type MeasureMetadata struct {
 	TTL int // -1 == infinite, 0 == do not propagate
 }
 
-type tagContent struct {
+type entry struct {
 	value core.Value
 	meta  MeasureMetadata
 }
 
-type rawMap map[core.Key]tagContent
+type rawMap map[core.Key]entry
 
 type Map struct {
 	m rawMap
@@ -60,12 +60,12 @@ func (m Map) Apply(update MapUpdate) Map {
 		r[k] = v
 	}
 	if update.SingleKV.Key.Defined() {
-		r[update.SingleKV.Key] = tagContent{
+		r[update.SingleKV.Key] = entry{
 			value: update.SingleKV.Value,
 		}
 	}
 	for _, kv := range update.MultiKV {
-		r[kv.Key] = tagContent{
+		r[kv.Key] = entry{
 			value: kv.Value,
 		}
 	}
@@ -111,7 +111,7 @@ func (m Map) Foreach(f func(kv core.KeyValue) bool) {
 
 func (r rawMap) apply(mutator Mutator) {
 	key := mutator.KeyValue.Key
-	content := tagContent{
+	content := entry{
 		value: mutator.KeyValue.Value,
 		meta:  mutator.MeasureMetadata,
 	}
