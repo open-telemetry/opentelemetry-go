@@ -60,7 +60,7 @@ func main() {
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
-	distributedcontext.Insert(key.New("username").String("donuts")),
+		distributedcontext.Insert(key.New("username").String("donuts")),
 	)
 
 	var body []byte
