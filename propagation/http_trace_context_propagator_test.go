@@ -42,7 +42,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		wantSc core.SpanContext
 	}{
 		{
-			name:   "valid b3Header",
+			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
 			wantSc: core.SpanContext{
 				TraceID: traceID,
@@ -50,7 +50,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			},
 		},
 		{
-			name:   "valid b3Header and sampled",
+			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: core.SpanContext{
 				TraceID:    traceID,
