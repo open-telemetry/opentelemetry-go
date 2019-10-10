@@ -106,7 +106,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		recording:      spanOpts.RecordEvent,
+		recording:      spanOpts.Record,
 		Attributes:     oteldctx.NewMap(upsertMultiMapUpdate(spanOpts.Attributes...)),
 		StartTime:      startTime,
 		EndTime:        time.Time{},
@@ -227,7 +227,7 @@ func (s *MockSpan) SpanContext() otelcore.SpanContext {
 	return s.spanContext
 }
 
-func (s *MockSpan) IsRecordingEvents() bool {
+func (s *MockSpan) IsRecording() bool {
 	return s.recording
 }
 

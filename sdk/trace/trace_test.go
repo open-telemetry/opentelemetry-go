@@ -126,7 +126,7 @@ func TestSetName(t *testing.T) {
 func TestRecordingIsOff(t *testing.T) {
 	_, span := apitrace.GlobalTracer().Start(context.Background(), "StartSpan")
 	defer span.End()
-	if span.IsRecordingEvents() == true {
+	if span.IsRecording() == true {
 		t.Error("new span is recording events")
 	}
 }
@@ -527,7 +527,7 @@ func startNamedSpan(name string) apitrace.Span {
 		context.Background(),
 		name,
 		apitrace.ChildOf(remoteSpanContext()),
-		apitrace.WithRecordEvents(),
+		apitrace.WithRecord(),
 	)
 	return span
 }
@@ -543,8 +543,8 @@ func startNamedSpan(name string) apitrace.Span {
 // It also clears spanID in the export.SpanData to make the comparison easier.
 func endSpan(span apitrace.Span) (*export.SpanData, error) {
 
-	if !span.IsRecordingEvents() {
-		return nil, fmt.Errorf("IsRecordingEvents: got false, want true")
+	if !span.IsRecording() {
+		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
 	if !span.SpanContext().IsSampled() {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
