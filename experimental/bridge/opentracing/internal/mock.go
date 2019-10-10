@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	otelcore "go.opentelemetry.io/api/core"
-	oteldctx "go.opentelemetry.io/api/distributedContext"
+	oteldctx "go.opentelemetry.io/api/dctx"
 	otelkey "go.opentelemetry.io/api/key"
 	oteltrace "go.opentelemetry.io/api/trace"
 

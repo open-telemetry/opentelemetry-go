@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedContext"
+	"go.opentelemetry.io/api/dctx"
 	"go.opentelemetry.io/api/metric"
 )
 
@@ -32,12 +32,12 @@ type Event struct {
 	Context context.Context // core.FromContext() and scope.Active()
 
 	// Arguments (type-specific)
-	Attribute  core.KeyValue                // SET_ATTRIBUTE
-	Attributes []core.KeyValue              // SET_ATTRIBUTES
-	Mutator    distributedContext.Mutator   // SET_ATTRIBUTE
-	Mutators   []distributedContext.Mutator // SET_ATTRIBUTES
-	Recovered  interface{}                  // END_SPAN
-	Status     codes.Code                   // SET_STATUS
+	Attribute  core.KeyValue   // SET_ATTRIBUTE
+	Attributes []core.KeyValue // SET_ATTRIBUTES
+	Mutator    dctx.Mutator    // SET_ATTRIBUTE
+	Mutators   []dctx.Mutator  // SET_ATTRIBUTES
+	Recovered  interface{}     // END_SPAN
+	Status     codes.Code      // SET_STATUS
 
 	// Values
 	String       string  // START_SPAN, EVENT, SET_NAME, ...

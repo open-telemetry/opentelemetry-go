@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"os"
 
-	"go.opentelemetry.io/api/distributedContext"
+	"go.opentelemetry.io/api/dctx"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stackdriver"
 	"go.opentelemetry.io/plugin/httptrace"
@@ -55,7 +55,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(distributedContext.WithMap(req.Context(), distributedContext.NewMap(distributedContext.MapUpdate{
+		req = req.WithContext(dctx.WithMap(req.Context(), dctx.NewMap(dctx.MapUpdate{
 			MultiKV: entries,
 		})))
 

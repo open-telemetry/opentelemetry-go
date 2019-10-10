@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedContext"
+	"go.opentelemetry.io/api/dctx"
 )
 
 type NoopSpan struct {
@@ -56,11 +56,11 @@ func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (NoopSpan) ModifyAttribute(mutator distributedContext.Mutator) {
+func (NoopSpan) ModifyAttribute(mutator dctx.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (NoopSpan) ModifyAttributes(mutators ...distributedContext.Mutator) {
+func (NoopSpan) ModifyAttributes(mutators ...dctx.Mutator) {
 }
 
 // End does nothing.

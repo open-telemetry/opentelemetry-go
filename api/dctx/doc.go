@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedContext // import "go.opentelemetry.io/api/distributedContext"
+package dctx // import "go.opentelemetry.io/api/dctx"

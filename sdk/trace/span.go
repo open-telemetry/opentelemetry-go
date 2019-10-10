@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	apidctx "go.opentelemetry.io/api/distributedContext"
+	apidctx "go.opentelemetry.io/api/dctx"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/internal"

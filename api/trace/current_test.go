@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedContext"
+	"go.opentelemetry.io/api/dctx"
 	"go.opentelemetry.io/api/trace"
 )
 
@@ -89,11 +89,11 @@ func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
 // ModifyAttribute does nothing.
-func (mockSpan) ModifyAttribute(mutator distributedContext.Mutator) {
+func (mockSpan) ModifyAttribute(mutator dctx.Mutator) {
 }
 
 // ModifyAttributes does nothing.
-func (mockSpan) ModifyAttributes(mutators ...distributedContext.Mutator) {
+func (mockSpan) ModifyAttributes(mutators ...dctx.Mutator) {
 }
 
 // End does nothing.
