@@ -26,7 +26,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/dctx"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stackdriver"
@@ -59,8 +59,8 @@ func main() {
 	initTracer()
 
 	client := http.DefaultClient
-	ctx := dctx.NewContext(context.Background(),
-		dctx.Insert(key.New("username").String("donuts")),
+	ctx := distributedcontext.NewContext(context.Background(),
+	distributedcontext.Insert(key.New("username").String("donuts")),
 	)
 
 	var body []byte

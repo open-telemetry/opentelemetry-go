@@ -17,7 +17,7 @@ package main
 import (
 	"context"
 
-	"go.opentelemetry.io/api/dctx"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
@@ -47,9 +47,9 @@ var (
 func main() {
 	ctx := context.Background()
 
-	ctx = dctx.NewContext(ctx,
-		dctx.Insert(fooKey.String("foo1")),
-		dctx.Insert(barKey.String("bar1")),
+	ctx = distributedcontext.NewContext(ctx,
+		distributedcontext.Insert(fooKey.String("foo1")),
+		distributedcontext.Insert(barKey.String("bar1")),
 	)
 
 	commonLabels := meter.DefineLabels(ctx, lemonsKey.Int(10))
@@ -68,8 +68,8 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context entries:
-			dctx.NewContext(ctx,
-				dctx.Insert(anotherKey.String("xyz"))),
+			distributedcontext.NewContext(ctx,
+				distributedcontext.Insert(anotherKey.String("xyz"))),
 			commonLabels,
 
 			oneMetric.Measurement(1.0),
