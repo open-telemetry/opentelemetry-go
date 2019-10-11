@@ -66,7 +66,7 @@ func (s *span) SpanContext() core.SpanContext {
 	return s.spanContext
 }
 
-func (s *span) IsRecordingEvents() bool {
+func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
 	}
@@ -77,7 +77,7 @@ func (s *span) SetStatus(status codes.Code) {
 	if s == nil {
 		return
 	}
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.mu.Lock()
@@ -86,14 +86,14 @@ func (s *span) SetStatus(status codes.Code) {
 }
 
 func (s *span) SetAttribute(attribute core.KeyValue) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.copyToCappedAttributes(attribute)
 }
 
 func (s *span) SetAttributes(attributes ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.copyToCappedAttributes(attributes...)
@@ -115,7 +115,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 	if s.executionTracerTaskEnd != nil {
 		s.executionTracerTaskEnd()
 	}
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	opts := apitrace.EndOptions{}
@@ -144,14 +144,14 @@ func (s *span) Tracer() apitrace.Tracer {
 }
 
 func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(time.Now(), msg, attrs...)
 }
 
 func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(timestamp, msg, attrs...)
@@ -198,7 +198,7 @@ func (s *span) SetName(name string) {
 // If the total number of links associated with the span exceeds the limit
 // then the oldest link is removed to create space for the link being added.
 func (s *span) AddLink(link apitrace.Link) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.addLink(link)
@@ -208,7 +208,7 @@ func (s *span) AddLink(link apitrace.Link) {
 // SpanContext and attributes as arguments instead of Link. It first creates
 // a Link object and then adds to the span.
 func (s *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	attrsCopy := attrs
@@ -286,7 +286,7 @@ func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
 }
 
 func (s *span) addChild() {
-	if !s.IsRecordingEvents() {
+	if !s.IsRecording() {
 		return
 	}
 	s.mu.Lock()
@@ -317,8 +317,8 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 	makeSamplingDecision(data)
 
 	// TODO: [rghetia] restore when spanstore is added.
-	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.RecordEvent {
-	if !span.spanContext.IsSampled() && !o.RecordEvent {
+	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.Record {
+	if !span.spanContext.IsSampled() && !o.Record {
 		return span
 	}
 

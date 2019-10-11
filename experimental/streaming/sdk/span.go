@@ -37,8 +37,8 @@ func (sp *span) SpanContext() core.SpanContext {
 	return sp.initial.SpanContext
 }
 
-// IsRecordingEvents returns true is the span is active and recording events is enabled.
-func (sp *span) IsRecordingEvents() bool {
+// IsRecording returns true is the span is active and recording events is enabled.
+func (sp *span) IsRecording() bool {
 	return false
 }
 

@@ -64,8 +64,8 @@ type Span interface {
 	// to the span.
 	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue)
 
-	// IsRecordingEvents returns true if the span is active and recording events is enabled.
-	IsRecordingEvents() bool
+	// IsRecording returns true if the span is active and recording events is enabled.
+	IsRecording() bool
 
 	// AddLink adds a link to the span.
 	AddLink(link Link)
@@ -100,10 +100,10 @@ type SpanOption func(*SpanOptions)
 // SpanOptions provides options to set properties of span at the time of starting
 // a new span.
 type SpanOptions struct {
-	Attributes  []core.KeyValue
-	StartTime   time.Time
-	Reference   Reference
-	RecordEvent bool
+	Attributes []core.KeyValue
+	StartTime  time.Time
+	Reference  Reference
+	Record     bool
 }
 
 // Reference is used to establish relationship between newly created span and the
@@ -159,12 +159,12 @@ func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	}
 }
 
-// WithRecordEvents enables recording of the events while the span is active.
-// In the absence of this option, RecordEvent is set to false, disabling any recording of
-// the events.
-func WithRecordEvents() SpanOption {
+// WithRecord specifies that the span should be recorded.
+// Note that the implementation may still override this preference,
+// e.g., if the span is a child in an unsampled trace.
+func WithRecord() SpanOption {
 	return func(o *SpanOptions) {
-		o.RecordEvent = true
+		o.Record = true
 	}
 }
 
