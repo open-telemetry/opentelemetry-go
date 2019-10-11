@@ -27,10 +27,13 @@ import (
 
 var _ trace.Span = (*Span)(nil)
 
-type Span struct{}
+type Span struct {
+	tracer      *Tracer
+	spanContext core.SpanContext
+}
 
 func (s *Span) Tracer() trace.Tracer {
-	return nil
+	return s.tracer
 }
 
 func (s *Span) End(opts ...trace.EndOption) {}
@@ -41,7 +44,7 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 }
 
 func (s *Span) IsRecording() bool {
-	return false
+	return true
 }
 
 func (s *Span) AddLink(link trace.Link) {}
@@ -49,7 +52,7 @@ func (s *Span) AddLink(link trace.Link) {}
 func (s *Span) Link(sc core.SpanContext, attrs ...core.KeyValue) {}
 
 func (s *Span) SpanContext() core.SpanContext {
-	return core.SpanContext{}
+	return s.spanContext
 }
 
 func (s *Span) SetStatus(code codes.Code) {}

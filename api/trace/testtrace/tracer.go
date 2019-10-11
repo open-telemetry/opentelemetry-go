@@ -17,6 +17,7 @@ package testtrace
 import (
 	"context"
 
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/trace"
 )
 
@@ -35,11 +36,39 @@ func NewTracer(opts ...TracerOption) *Tracer {
 }
 
 func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	return nil, nil
+	var c trace.SpanOptions
+
+	for _, opt := range opts {
+		opt(&c)
+	}
+
+	var traceID core.TraceID
+
+	if parentSpanContext := c.Relation.SpanContext; parentSpanContext.IsValid() {
+		traceID = parentSpanContext.TraceID
+	} else if parentSpanContext := trace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
+		traceID = parentSpanContext.TraceID
+	} else {
+		traceID = t.generator.TraceID()
+	}
+
+	spanID := t.generator.SpanID()
+
+	span := &Span{
+		tracer: t,
+		spanContext: core.SpanContext{
+			TraceID: traceID,
+			SpanID:  spanID,
+		},
+	}
+
+	return trace.SetCurrentSpan(ctx, span), span
 }
 
 func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
-	return nil
+	ctx, _ = t.Start(ctx, name)
+
+	return body(ctx)
 }
 
 type TracerOption func(*tracerConfig)
