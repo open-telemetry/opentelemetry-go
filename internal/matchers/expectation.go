@@ -74,6 +74,39 @@ func (e *Expectation) ToBeFalse() {
 	}
 }
 
+func (e *Expectation) ToSucceed() {
+	switch actual := e.actual.(type) {
+	case error:
+		if actual != nil {
+			e.t.Fatalf("Expected error\n\t%v\nto have succeeded\n", actual)
+		}
+	default:
+		e.t.Fatalf("Cannot check if non-error value\n\t%v\nsucceeded\n", actual)
+	}
+}
+
+func (e *Expectation) ToMatchError(expected interface{}) {
+	e.verifyExpectedNotNil(expected)
+
+	actual, ok := e.actual.(error)
+	if !ok {
+		e.t.Fatalf("Cannot check if non-error value\n\t%v\nmatches error\n", e.actual)
+	}
+
+	switch expected := expected.(type) {
+	case error:
+		if actual != expected {
+			e.t.Fatalf("Expected\n\t%v\nto match error\n\t%v\n", actual, expected)
+		}
+	case string:
+		if actual.Error() != expected {
+			e.t.Fatalf("Expected\n\t%v\nto match error\n\t%v\n", actual, expected)
+		}
+	default:
+		e.t.Fatalf("Cannot match\n\t%v\nagainst non-error\n\t%v\n", actual, expected)
+	}
+}
+
 func (e *Expectation) verifyExpectedNotNil(expected interface{}) {
 	if expected == nil {
 		e.t.Fatal("Refusing to compare with <nil>. Use `ToBeNil` or `NotToBeNil` instead.")

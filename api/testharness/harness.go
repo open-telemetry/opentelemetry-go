@@ -180,7 +180,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 				return expectedErr
 			})
 
-			e.Expect(err).ToEqual(expectedErr)
+			e.Expect(err).ToMatchError(expectedErr)
 		})
 
 		t.Run("propagates the original context to the body", func(t *testing.T) {
