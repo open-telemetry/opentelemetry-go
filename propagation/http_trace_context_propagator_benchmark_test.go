@@ -63,8 +63,6 @@ func BenchmarkExtract(b *testing.B) {
 }
 
 func extractSubBenchmark(b *testing.B, fn func(*testing.B, *http.Request)) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
-
 	b.Run("Sampled", func(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		req.Header.Set("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
