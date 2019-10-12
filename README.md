@@ -30,48 +30,48 @@ $ go get -u go.opentelemetry.io
 package main
 
 import (
-	"context"
-	"log"
+    "context"
+    "log"
 
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/stdout"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+    apitrace "go.opentelemetry.io/api/trace"
+    "go.opentelemetry.io/exporter/trace/stdout"
+    sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func initTracer() {
-	sdktrace.Register()
+    sdktrace.Register()
 
-	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
-	if err != nil {
-		log.Fatal(err)
-	}
+    exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	sdktrace.RegisterSpanProcessor(ssp)
+    ssp := sdktrace.NewSimpleSpanProcessor(exporter)
+    sdktrace.RegisterSpanProcessor(ssp)
 
-	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+    // For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+    // In a production application, use sdktrace.ProbabilitySampler with a desired probability.
+    sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
 func main() {
-	initTracer()
+    initTracer()
 
-	apitrace.GlobalTracer().WithSpan(context.Background(), "foo",
-		func(ctx context.Context) error {
-			apitrace.GlobalTracer().WithSpan(ctx, "bar",
-				func(ctx context.Context) error {
-					apitrace.GlobalTracer().WithSpan(ctx, "baz",
-						func(ctx context.Context) error {
-							return nil
-						},
-					)
-					return nil
-				},
-			)
-			return nil
-		},
-	)
+    apitrace.GlobalTracer().WithSpan(context.Background(), "foo",
+        func(ctx context.Context) error {
+            apitrace.GlobalTracer().WithSpan(ctx, "bar",
+                func(ctx context.Context) error {
+                    apitrace.GlobalTracer().WithSpan(ctx, "baz",
+                        func(ctx context.Context) error {
+                            return nil
+                        },
+                    )
+                    return nil
+                },
+            )
+            return nil
+        },
+    )
 }
 
 ```
@@ -89,9 +89,9 @@ See the [contributing file](CONTRIBUTING.md).
 ## Release Schedule
 
 OpenTelemetry Go is under active development. Below is the release schedule
-for the Go library. The first version of release isn't guaranteed to conform
+for the Go library. The first version of the release isn't guaranteed to conform
 to a specific version of the specification, and future releases will not
-attempt to maintain backwards compatibility with the alpha release.
+attempt to maintain backward compatibility with the alpha release.
 
 | Component                   | Version | Target Date     |
 | --------------------------- | ------- | --------------- |
