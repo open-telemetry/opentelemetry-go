@@ -88,10 +88,7 @@ See the [contributing file](CONTRIBUTING.md).
 
 ## Release Schedule
 
-OpenTelemetry Go is under active development. Below is the release schedule
-for the Go library. The first version of release isn't guaranteed to conform
-to a specific version of the specification, and future releases will not
-attempt to maintain backwards compatibility with the alpha release.
+OpenTelemetry Go is under active development. Below are the release schedule dates for the Go library. The first version of the release isn't guaranteed to conform to a specific version of the specification, and future releases will not attempt to maintain backward compatibility with the alpha release.
 
 | Component                   | Version | Target Date     |
 | --------------------------- | ------- | --------------- |
