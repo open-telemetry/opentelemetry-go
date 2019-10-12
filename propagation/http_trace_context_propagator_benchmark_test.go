@@ -10,10 +10,10 @@ import (
 	mocktrace "go.opentelemetry.io/internal/trace"
 )
 
-func BenchmarkStartEndSpan(b *testing.B) {
+func BenchmarkInject(b *testing.B) {
 	t := httpTraceContextPropagator{}
 
-	injectSubBenchmark(b, func(ctx context.Context, b *testing.B) {
+	injectSubBenchmarks(b, func(ctx context.Context, b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -22,7 +22,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 	})
 }
 
-func injectSubBenchmark(b *testing.B, fn func(context.Context, *testing.B)) {
+func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 	b.Run("SampledSpanContext", func(b *testing.B) {
 		var (
 			id      uint64
@@ -52,7 +52,7 @@ func injectSubBenchmark(b *testing.B, fn func(context.Context, *testing.B)) {
 }
 
 func BenchmarkExtract(b *testing.B) {
-	extractSubBenchmark(b, func(b *testing.B, req *http.Request) {
+	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
 		propagator := HttpTraceContextPropagator()
 		ctx := context.Background()
 		b.ResetTimer()
@@ -62,7 +62,7 @@ func BenchmarkExtract(b *testing.B) {
 	})
 }
 
-func extractSubBenchmark(b *testing.B, fn func(*testing.B, *http.Request)) {
+func extractSubBenchmarks(b *testing.B, fn func(*testing.B, *http.Request)) {
 	b.Run("Sampled", func(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		req.Header.Set("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
