@@ -95,13 +95,13 @@ attempt to maintain backwards compatibility with the alpha release.
 
 | Component                   | Version | Target Date     |
 | --------------------------- | ------- | --------------- |
-| Tracing API                 | Alpha   | October 4 2019  |
-| Tracing SDK                 | Alpha   | October 4 2019  |
-| Metrics API                 | Alpha   | October 14 2019 |
-| Metrics SDK                 | Alpha   | October 14 2019 |
+| Tracing API                 | Alpha   | October 28 2019 |
+| Tracing SDK                 | Alpha   | October 28 2019 |
+| Metrics API                 | Alpha   | October 28 2019 |
+| Metrics SDK                 | Alpha   | October 28 2019 |
 | Zipkin Trace Exporter       | Alpha   | Unknown         |
-| Jaeger Trace Exporter       | Alpha   | October 4 2019  |
-| Prometheus Metrics Exporter | Alpha   | October 14 2019 |
+| Jaeger Trace Exporter       | Alpha   | October 28 2019 |
+| Prometheus Metrics Exporter | Alpha   | October 28 2019 |
 | Trace Context Propagation   | Alpha   | Unknown         |
 | OpenTracing Bridge          | Alpha   | October         |
 | OpenCensus Bridge           | Alpha   | Unknown         |
