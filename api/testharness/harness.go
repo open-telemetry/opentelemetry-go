@@ -195,11 +195,13 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			var actualCtx context.Context
 
-			subject.WithSpan(ctx, "test", func(ctx context.Context) error {
+			err := subject.WithSpan(ctx, "test", func(ctx context.Context) error {
 				actualCtx = ctx
 
 				return nil
 			})
+
+			e.Expect(err).ToBeNil()
 
 			e.Expect(actualCtx.Value(ctxKey)).ToEqual(ctxValue)
 		})
@@ -212,11 +214,13 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			var span trace.Span
 
-			subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
+			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
 				span = trace.CurrentSpan(ctx)
 
 				return nil
 			})
+
+			e.Expect(err).ToBeNil()
 
 			e.Expect(span).NotToBeNil()
 
@@ -233,16 +237,21 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			var span1 trace.Span
 			var span2 trace.Span
 
-			subject.WithSpan(context.Background(), "span1", func(ctx context.Context) error {
+			err := subject.WithSpan(context.Background(), "span1", func(ctx context.Context) error {
 				span1 = trace.CurrentSpan(ctx)
 
 				return nil
 			})
-			subject.WithSpan(context.Background(), "span2", func(ctx context.Context) error {
+
+			e.Expect(err).ToBeNil()
+
+			err = subject.WithSpan(context.Background(), "span2", func(ctx context.Context) error {
 				span2 = trace.CurrentSpan(ctx)
 
 				return nil
 			})
+
+			e.Expect(err).ToBeNil()
 
 			sc1 := span1.SpanContext()
 			sc2 := span2.SpanContext()
@@ -261,11 +270,13 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			var child trace.Span
 
-			subject.WithSpan(ctx, "child", func(ctx context.Context) error {
+			err := subject.WithSpan(ctx, "child", func(ctx context.Context) error {
 				child = trace.CurrentSpan(ctx)
 
 				return nil
 			})
+
+			e.Expect(err).ToBeNil()
 
 			psc := parent.SpanContext()
 			csc := child.SpanContext()

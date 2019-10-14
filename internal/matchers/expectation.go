@@ -15,19 +15,19 @@
 package matchers
 
 import (
+	"reflect"
 	"testing"
 )
 
 type Expectation struct {
-	t       *testing.T
-	negated bool
-	actual  interface{}
+	t      *testing.T
+	actual interface{}
 }
 
 func (e *Expectation) ToEqual(expected interface{}) {
 	e.verifyExpectedNotNil(expected)
 
-	if e.actual != expected {
+	if !reflect.DeepEqual(e.actual, expected) {
 		e.t.Fatalf("Expected\n\t%v\nto equal\n\t%v\n", e.actual, expected)
 	}
 }
@@ -35,7 +35,7 @@ func (e *Expectation) ToEqual(expected interface{}) {
 func (e *Expectation) NotToEqual(expected interface{}) {
 	e.verifyExpectedNotNil(expected)
 
-	if e.actual == expected {
+	if reflect.DeepEqual(e.actual, expected) {
 		e.t.Fatalf("Expected\n\t%v\nnot to equal\n\t%v\n", e.actual, expected)
 	}
 }
@@ -95,7 +95,7 @@ func (e *Expectation) ToMatchError(expected interface{}) {
 
 	switch expected := expected.(type) {
 	case error:
-		if actual != expected {
+		if !reflect.DeepEqual(actual, expected) {
 			e.t.Fatalf("Expected\n\t%v\nto match error\n\t%v\n", actual, expected)
 		}
 	case string:
