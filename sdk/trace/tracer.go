@@ -39,17 +39,15 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		op(&opts)
 	}
 
-	// TODO: [rghetia] ChildOfRelationship is used to indicate that the parent is remote
-	// and its context is received as part of a request. There are two possibilities
-	// 1. Remote is trusted. So continue using same trace.
-	//      tracer.Start(ctx, "some name", ChildOf(remote_span_context))
-	// 2. Remote is not trusted. In this case create a root span and then add the remote as link
-	//      span := tracer.Start(ctx, "some name")
-	//      span.Link(remote_span_context, ChildOfRelationship)
-	if opts.Reference.SpanContext != core.EmptySpanContext() &&
-		opts.Reference.RelationshipType == apitrace.ChildOfRelationship {
-		parent = opts.Reference.SpanContext
-		remoteParent = true
+	if reference := opts.Reference; reference.SpanContext != core.EmptySpanContext() {
+		switch reference.RelationshipType {
+		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
+			parent = opts.Reference.SpanContext
+			remoteParent = true
+		default:
+			// Future relationship types may have different behavior,
+			// e.g., adding a `Link` instead of setting the `parent`
+		}
 	} else {
 		if p := apitrace.CurrentSpan(ctx); p != nil {
 			if sdkSpan, ok := p.(*span); ok {

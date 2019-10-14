@@ -172,6 +172,45 @@ func TestStartSpanWithChildOf(t *testing.T) {
 	}
 }
 
+func TestStartSpanWithFollowsFrom(t *testing.T) {
+	sc1 := core.SpanContext{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x0,
+	}
+	_, s1 := apitrace.GlobalTracer().Start(context.Background(), "span1-unsampled-parent1", apitrace.FollowsFrom(sc1))
+	if err := checkChild(sc1, s1); err != nil {
+		t.Error(err)
+	}
+
+	_, s2 := apitrace.GlobalTracer().Start(context.Background(), "span2-unsampled-parent1", apitrace.FollowsFrom(sc1))
+	if err := checkChild(sc1, s2); err != nil {
+		t.Error(err)
+	}
+
+	sc2 := core.SpanContext{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x1,
+		//Tracestate:   testTracestate,
+	}
+	_, s3 := apitrace.GlobalTracer().Start(context.Background(), "span3-sampled-parent2", apitrace.FollowsFrom(sc2))
+	if err := checkChild(sc2, s3); err != nil {
+		t.Error(err)
+	}
+
+	ctx, s4 := apitrace.GlobalTracer().Start(context.Background(), "span4-sampled-parent2", apitrace.FollowsFrom(sc2))
+	if err := checkChild(sc2, s4); err != nil {
+		t.Error(err)
+	}
+
+	s4Sc := s4.SpanContext()
+	_, s5 := apitrace.GlobalTracer().Start(ctx, "span5-implicit-childof-span4")
+	if err := checkChild(s4Sc, s5); err != nil {
+		t.Error(err)
+	}
+}
+
 // TODO: [rghetia] Equivalent of SpanKind Test.
 
 func TestSetSpanAttributes(t *testing.T) {
