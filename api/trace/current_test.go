@@ -63,8 +63,8 @@ func (mockSpan) SpanContext() core.SpanContext {
 	return core.EmptySpanContext()
 }
 
-// IsRecordingEvents always returns false for mockSpan.
-func (mockSpan) IsRecordingEvents() bool {
+// IsRecording always returns false for mockSpan.
+func (mockSpan) IsRecording() bool {
 	return false
 }
 

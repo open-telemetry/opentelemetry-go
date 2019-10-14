@@ -34,8 +34,8 @@ func (NoopSpan) SpanContext() core.SpanContext {
 	return core.EmptySpanContext()
 }
 
-// IsRecordingEvents always returns false for NoopSpan.
-func (NoopSpan) IsRecordingEvents() bool {
+// IsRecording always returns false for NoopSpan.
+func (NoopSpan) IsRecording() bool {
 	return false
 }
 
