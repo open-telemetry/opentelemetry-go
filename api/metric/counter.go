@@ -20,12 +20,12 @@ import (
 
 // Float64Counter is a metric that accumulates float64 values.
 type Float64Counter struct {
-	CommonMetric
+	commonMetric
 }
 
 // Int64Counter is a metric that accumulates int64 values.
 type Int64Counter struct {
-	CommonMetric
+	commonMetric
 }
 
 // Float64CounterHandle is a handle for Float64Counter.
@@ -50,43 +50,55 @@ type counterOptionWrapper struct {
 	F Option
 }
 
-var _ CounterOptionApplier = counterOptionWrapper{}
+var (
+	_ CounterOptionApplier    = counterOptionWrapper{}
+	_ ExplicitReportingMetric = Float64Counter{}
+	_ ExplicitReportingMetric = Int64Counter{}
+)
 
 func (o counterOptionWrapper) ApplyCounterOption(d *Descriptor) {
 	o.F(d)
 }
 
-func newCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) CommonMetric {
+func newCounter(name string, valueKind ValueKind, mos ...CounterOptionApplier) commonMetric {
 	m := registerCommonMetric(name, CounterKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyCounterOption(m.Descriptor)
+		opt.ApplyCounterOption(m.Descriptor())
 	}
 	return m
 }
 
 // NewFloat64Counter creates a new counter for float64.
 func NewFloat64Counter(name string, mos ...CounterOptionApplier) (c Float64Counter) {
-	c.CommonMetric = newCounter(name, Float64ValueKind, mos...)
+	c.commonMetric = newCounter(name, Float64ValueKind, mos...)
 	return
 }
 
 // NewInt64Counter creates a new counter for int64.
 func NewInt64Counter(name string, mos ...CounterOptionApplier) (c Int64Counter) {
-	c.CommonMetric = newCounter(name, Int64ValueKind, mos...)
+	c.commonMetric = newCounter(name, Int64ValueKind, mos...)
 	return
 }
 
 // GetHandle creates a handle for this counter. The labels should
-// contain the keys and values specified in the counter with the
-// WithKeys option.
+// contain the keys and values for each key specified in the counter
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Counter) GetHandle(labels LabelSet) (h Float64CounterHandle) {
 	h.Handle = c.getHandle(labels)
 	return
 }
 
 // GetHandle creates a handle for this counter. The labels should
-// contain the keys and values specified in the counter with the
-// WithKeys option.
+// contain the keys and values for each key specified in the counter
+// with the WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Counter) GetHandle(labels LabelSet) (h Int64CounterHandle) {
 	h.Handle = c.getHandle(labels)
 	return
@@ -105,15 +117,23 @@ func (c *Int64Counter) Measurement(value int64) Measurement {
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values specified in the counter with the WithKeys
-// option.
+// the keys and values for each key specified in the counter with the
+// WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
 	c.recordOne(ctx, NewFloat64MeasurementValue(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values specified in the counter with the WithKeys
-// option.
+// the keys and values for each key specified in the counter with the
+// WithKeys option.
+//
+// If the labels do not contain a value for the key specified in the
+// counter with the WithKeys option, then the missing value will be
+// treated as unspecified.
 func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 	c.recordOne(ctx, NewInt64MeasurementValue(value), labels)
 }

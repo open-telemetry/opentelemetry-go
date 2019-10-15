@@ -16,7 +16,7 @@ package metric
 
 // Observer is a base of typed-observers. Shouldn't be used directly.
 type Observer struct {
-	*Descriptor
+	d *Descriptor
 }
 
 // Float64Observer is an observer that reports float64 values.
@@ -30,9 +30,9 @@ type Int64Observer struct {
 }
 
 func newObserver(name string, valueKind ValueKind, mos ...GaugeOptionApplier) (o Observer) {
-	o.Descriptor = registerDescriptor(name, ObserverKind, valueKind)
+	o.d = registerDescriptor(name, ObserverKind, valueKind)
 	for _, opt := range mos {
-		opt.ApplyGaugeOption(o.Descriptor)
+		opt.ApplyGaugeOption(o.d)
 	}
 	return
 }
@@ -47,4 +47,8 @@ func NewFloat64Observer(name string, mos ...GaugeOptionApplier) (o Float64Observ
 func NewInt64Observer(name string, mos ...GaugeOptionApplier) (o Int64Observer) {
 	o.Observer = newObserver(name, Int64ValueKind, mos...)
 	return
+}
+
+func (o Observer) Descriptor() *Descriptor {
+	return o.d
 }

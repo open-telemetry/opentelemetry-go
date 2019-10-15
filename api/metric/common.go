@@ -23,43 +23,48 @@ var (
 	descriptorID uint64
 )
 
-// TODO: Maybe unexport that and document very _very_ clearly, that
-// you can still get a descriptor with NewInt64Counter(…).Descriptor
-
-// CommonMetric holds a descriptor. It is used mostly to implement the
-// common parts for every metric kind.
-type CommonMetric struct {
-	*Descriptor
+type commonMetric struct {
+	d *Descriptor
 }
 
-func (m CommonMetric) getHandle(labels LabelSet) Handle {
-	return labels.Meter().NewHandle(m.Descriptor, labels)
+var _ ExplicitReportingMetric = commonMetric{}
+
+func (m commonMetric) Descriptor() *Descriptor {
+	return m.d
 }
 
-func (m CommonMetric) float64Measurement(value float64) Measurement {
+func (m commonMetric) SupportHandle() hiddenType {
+	return hiddenType{}
+}
+
+func (m commonMetric) getHandle(labels LabelSet) Handle {
+	return labels.Meter().NewHandle(m, labels)
+}
+
+func (m commonMetric) float64Measurement(value float64) Measurement {
 	return Measurement{
-		Descriptor: m.Descriptor,
+		Descriptor: m.d,
 		Value:      NewFloat64MeasurementValue(value),
 	}
 }
 
-func (m CommonMetric) int64Measurement(value int64) Measurement {
+func (m commonMetric) int64Measurement(value int64) Measurement {
 	return Measurement{
-		Descriptor: m.Descriptor,
+		Descriptor: m.d,
 		Value:      NewInt64MeasurementValue(value),
 	}
 }
 
-func (m CommonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
+func (m commonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
 	labels.Meter().RecordBatch(ctx, labels, Measurement{
-		Descriptor: m.Descriptor,
+		Descriptor: m.d,
 		Value:      value,
 	})
 }
 
-func registerCommonMetric(name string, kind Kind, valueKind ValueKind) CommonMetric {
-	return CommonMetric{
-		Descriptor: registerDescriptor(name, kind, valueKind),
+func registerCommonMetric(name string, kind Kind, valueKind ValueKind) commonMetric {
+	return commonMetric{
+		d: registerDescriptor(name, kind, valueKind),
 	}
 }
 
