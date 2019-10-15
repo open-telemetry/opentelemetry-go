@@ -62,9 +62,11 @@ func BenchmarkExtractB3(b *testing.B) {
 				for h, v := range tt.headers {
 					req.Header.Set(h, v)
 				}
-
+				b.ReportAllocs()
 				b.ResetTimer()
-				_ = propagator.Extract(ctx, req.Header)
+				for i := 0; i < b.N; i++ {
+					_ = propagator.Extract(ctx, req.Header)
+				}
 			})
 		}
 	}
@@ -107,9 +109,11 @@ func BenchmarkInjectB3(b *testing.B) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-
+				b.ReportAllocs()
 				b.ResetTimer()
-				propagator.Inject(ctx, req.Header)
+				for i := 0; i < b.N; i++ {
+					propagator.Inject(ctx, req.Header)
+				}
 			})
 		}
 	}
