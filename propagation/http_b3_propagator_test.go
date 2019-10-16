@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	mocktrace "go.opentelemetry.io/internal/trace"
 	"go.opentelemetry.io/propagation"
@@ -112,7 +111,7 @@ func TestInjectB3(t *testing.T) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-				propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
+				propagator.Inject(ctx, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v

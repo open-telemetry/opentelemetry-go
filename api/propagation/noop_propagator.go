@@ -27,7 +27,7 @@ type NoopTextFormatPropagator struct{}
 var _ TextFormatPropagator = NoopTextFormatPropagator{}
 
 // Inject does nothing.
-func (np NoopTextFormatPropagator) Inject(ctx context.Context, correlationCtx dctx.Map, supplier Supplier) {
+func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {
 }
 
 // Extract does nothing and returns an empty SpanContext

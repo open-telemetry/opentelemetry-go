@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"testing"
 
-	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	mocktrace "go.opentelemetry.io/internal/trace"
 	"go.opentelemetry.io/propagation"
@@ -113,7 +112,7 @@ func BenchmarkInjectB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
+					propagator.Inject(ctx, req.Header)
 				}
 			})
 		}

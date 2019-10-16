@@ -268,7 +268,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			if tt.sc.IsValid() {
 				ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
 			}
-			propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
+			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
@@ -449,7 +449,8 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			propagator.Inject(context.Background(), dctx.NewMap(dctx.MapUpdate{MultiKV: tt.kvs}), req.Header)
+			ctx := dctx.NewContext(context.Background())
+			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))

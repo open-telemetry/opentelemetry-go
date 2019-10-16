@@ -30,35 +30,13 @@ type TextFormatPropagator interface {
 	// specific format and then injects the encoded SpanContext using supplier into a carrier
 	// associated with the supplier. It also takes a correlationCtx whose values will be
 	// injected into a carrier using the supplier.
-	Inject(ctx context.Context, correlationCtx dctx.Map, supplier Supplier)
+	Inject(ctx context.Context, supplier Supplier)
 
 	// Extract method retrieves encoded SpanContext using supplier from the associated carrier.
 	// It decodes the SpanContext and returns it and a dctx of correlated context.
 	// If no SpanContext was retrieved OR if the retrieved SpanContext is invalid then
 	// an empty SpanContext is returned.
 	Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map)
-
-	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
-	// carrier. The use cases for this are
-	// * allow pre-allocation of fields, especially in systems like gRPC Metadata
-	// * allow a single-pass over an iterator (ex OpenTracing has no getter in TextMap)
-	GetAllKeys() []string
-}
-
-// TextFormatBaggagePropagator is an interface that specifies methods to inject and extract
-// DistributedContext into/from a carrier using Supplier interface.
-// For example, HTTP Correlation Context propagator would encode DistributedContext into W3C Trace
-// Correlation Context Header and set the header into HttpRequest.
-type TextFormatCorrelationContextPropagator interface {
-	// Inject method encodes the provided key values it into propagator
-	// specific format and then injects the encoded distributedcontext using supplier into a carrier
-	// associated with the supplier.
-	Inject(dctx []core.KeyValue, supplier Supplier)
-
-	// Extract method retrieves encoded DistributedContext using supplier from the associated carrier.
-	// It decodes the DistributedContext and returns it. If no DistributedContext was retrieved OR
-	// if the retrieved DistributedContext is invalid then an empty DistributedContext is returned.
-	Extract(ctx context.Context, supplier Supplier) []core.KeyValue
 
 	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
 	// carrier. The use cases for this are

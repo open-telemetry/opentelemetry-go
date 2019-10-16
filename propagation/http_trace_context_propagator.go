@@ -23,10 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/api/key"
-
 	"go.opentelemetry.io/api/core"
 	dctx "go.opentelemetry.io/api/distributedcontext"
+	"go.opentelemetry.io/api/key"
 	apipropagation "go.opentelemetry.io/api/propagation"
 	"go.opentelemetry.io/api/trace"
 )
@@ -44,7 +43,7 @@ type HTTPTraceContextPropagator struct{}
 var _ apipropagation.TextFormatPropagator = HTTPTraceContextPropagator{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, correlationCtx dctx.Map, supplier apipropagation.Supplier) {
+func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
@@ -56,6 +55,7 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, correlationCtx 
 		supplier.Set(TraceparentHeader, h)
 	}
 
+	correlationCtx := dctx.FromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	correlationCtx.Foreach(func(kv core.KeyValue) bool {

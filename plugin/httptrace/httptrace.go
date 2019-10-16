@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/api/core"
-	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/propagation"
 )
@@ -43,18 +42,16 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 		URLKey.String(req.URL.String()),
 		// Etc.
 	}
+
+	var correlationCtxKVs []core.KeyValue
 	correlationCtx.Foreach(func(kv core.KeyValue) bool {
-		attrs = append(attrs, kv)
+		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})
 
-	return attrs, nil, sc
+	return attrs, correlationCtxKVs, sc
 }
 
 func Inject(ctx context.Context, req *http.Request) {
-	propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
-}
-
-func InjectWithCorrelationCtx(ctx context.Context, correlationCtx dctx.Map, req *http.Request) {
-	propagator.Inject(ctx, correlationCtx, req.Header)
+	propagator.Inject(ctx, req.Header)
 }
