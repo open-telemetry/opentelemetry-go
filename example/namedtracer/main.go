@@ -46,7 +46,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := trace.GlobalProvider().Tracer("example/namedtracer/main")
+	tracer := trace.GlobalProvider().GetTracer("example/namedtracer/main")
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,

@@ -31,7 +31,7 @@ const (
 	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
 )
 
-func (p *traceProvider) Tracer(name string) apitrace.Tracer {
+func (p *traceProvider) GetTracer(name string) apitrace.Tracer {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {

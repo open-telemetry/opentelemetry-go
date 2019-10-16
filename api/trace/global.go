@@ -26,7 +26,7 @@ var globalProvider atomic.Value
 // GlobalProvider returns trace manager registered with global registry.
 // If no trace manager is registered then an instance of noop Trace Provider is returned.
 // Use the trace manager to create a named tracer. E.g.
-//     tracer := trace.GlobalProvider().Tracer("example.com/foo")
+//     tracer := trace.GlobalProvider().GetTracer("example.com/foo")
 func GlobalProvider() Provider {
 	if p := globalProvider.Load(); p != nil {
 		return p.(Provider)
