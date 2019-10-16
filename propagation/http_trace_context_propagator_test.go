@@ -449,7 +449,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			ctx := dctx.NewContext(context.Background())
+			ctx := dctx.WithMap(context.Background(), dctx.NewMap(dctx.MapUpdate{MultiKV: tt.kvs}))
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")
