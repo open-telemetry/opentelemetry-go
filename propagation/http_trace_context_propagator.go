@@ -34,12 +34,13 @@ const (
 	TraceparentHeader = "Traceparent"
 )
 
-type httpTraceContextPropagator struct{}
+// HTTPTraceContextPropagator propagates SpanContext in W3C TraceContext format.
+type HTTPTraceContextPropagator struct{}
 
-var _ apipropagation.TextFormatPropagator = httpTraceContextPropagator{}
+var _ apipropagation.TextFormatPropagator = HTTPTraceContextPropagator{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
@@ -52,7 +53,7 @@ func (hp httpTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 	}
 }
 
-func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
+func (hp HTTPTraceContextPropagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
@@ -127,12 +128,6 @@ func (hp httpTraceContextPropagator) Extract(ctx context.Context, supplier apipr
 	return sc
 }
 
-func (hp httpTraceContextPropagator) GetAllKeys() []string {
+func (hp HTTPTraceContextPropagator) GetAllKeys() []string {
 	return []string{TraceparentHeader}
-}
-
-// HttpTraceContextPropagator creates a new text format propagator that propagates SpanContext
-// in W3C TraceContext format.
-func HttpTraceContextPropagator() apipropagation.TextFormatPropagator {
-	return httpTraceContextPropagator{}
 }

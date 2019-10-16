@@ -31,7 +31,7 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	propagator = propagation.HttpTraceContextPropagator()
+	propagator = propagation.HTTPTraceContextPropagator{}
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.

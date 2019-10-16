@@ -30,9 +30,9 @@ type MockTracer struct {
 	// Sampled specifies if the new span should be sampled or not.
 	Sampled bool
 
-	// StartSpanId is used to initialize spanId. It is incremented by one
+	// StartSpanID is used to initialize spanId. It is incremented by one
 	// every time a new span is created.
-	StartSpanId *uint64
+	StartSpanID *uint64
 }
 
 var _ apitrace.Tracer = (*MockTracer)(nil)
@@ -81,7 +81,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	} else {
 		sc = opts.Reference.SpanContext
 	}
-	sc.SpanID = atomic.AddUint64(mt.StartSpanId, 1)
+	sc.SpanID = atomic.AddUint64(mt.StartSpanID, 1)
 	span = &MockSpan{
 		sc:     sc,
 		tracer: mt,

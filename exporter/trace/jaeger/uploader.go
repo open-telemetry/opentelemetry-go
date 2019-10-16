@@ -25,7 +25,7 @@ type EndpointOption func() (batchUploader, error)
 func WithAgentEndpoint(agentEndpoint string) func() (batchUploader, error) {
 	return func() (batchUploader, error) {
 		if agentEndpoint == "" {
-			return nil, errors.New("agentEndpoint must not be empty.")
+			return nil, errors.New("agentEndpoint must not be empty")
 		}
 
 		client, err := newAgentClientUDP(agentEndpoint, udpPacketMaxLength)
@@ -42,7 +42,7 @@ func WithAgentEndpoint(agentEndpoint string) func() (batchUploader, error) {
 func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpointOption) func() (batchUploader, error) {
 	return func() (batchUploader, error) {
 		if collectorEndpoint == "" {
-			return nil, errors.New("collectorEndpoint must not be empty.")
+			return nil, errors.New("collectorEndpoint must not be empty")
 		}
 
 		o := &CollectorEndpointOptions{}

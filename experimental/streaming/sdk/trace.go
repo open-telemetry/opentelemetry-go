@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/experimental/streaming/exporter"
 )
 
+// TODO These should move somewhere in the api, right?
 var (
-	// TODO These should move somewhere in the api, right?
 	ErrorKey   = key.New("error")
 	SpanIDKey  = key.New("span_id")
 	TraceIDKey = key.New("trace_id")

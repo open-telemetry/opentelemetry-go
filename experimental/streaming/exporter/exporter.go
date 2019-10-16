@@ -51,6 +51,7 @@ type Observer interface {
 }
 
 //go:generate stringer -type=EventType
+// nolint:golint
 const (
 	INVALID EventType = iota
 	START_SPAN
