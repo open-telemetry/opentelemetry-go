@@ -661,6 +661,7 @@ func TestObserver(t *testing.T) {
 }
 
 func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, descriptor *Descriptor) {
+	t.Helper()
 	if len(meter.measurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.measurementBatches))
 	}

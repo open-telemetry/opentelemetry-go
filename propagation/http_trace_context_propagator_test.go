@@ -35,7 +35,7 @@ var (
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 	trace.SetGlobalTracer(&mocktrace.MockTracer{})
-	propagator := propagation.HttpTraceContextPropagator()
+	var propagator propagation.HTTPTraceContextPropagator
 	tests := []struct {
 		name   string
 		header string
@@ -129,7 +129,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	trace.SetGlobalTracer(&mocktrace.MockTracer{})
-	propagator := propagation.HttpTraceContextPropagator()
+	var propagator propagation.HTTPTraceContextPropagator
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
 		name   string
@@ -219,9 +219,9 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	var id uint64
 	mockTracer := &mocktrace.MockTracer{
 		Sampled:     false,
-		StartSpanId: &id,
+		StartSpanID: &id,
 	}
-	propagator := propagation.HttpTraceContextPropagator()
+	var propagator propagation.HTTPTraceContextPropagator
 	tests := []struct {
 		name       string
 		sc         core.SpanContext
@@ -277,7 +277,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestHttpTraceContextPropagator_GetAllKeys(t *testing.T) {
-	propagator := propagation.HttpTraceContextPropagator()
+	var propagator propagation.HTTPTraceContextPropagator
 	want := []string{"Traceparent"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {

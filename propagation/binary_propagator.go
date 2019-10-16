@@ -27,7 +27,7 @@ var _ apipropagation.BinaryFormatPropagator = binaryPropagator{}
 
 // BinaryPropagator creates a new propagator. The propagator implements
 // ToBytes and FromBytes method to transform SpanContext to/from byte array.
-func BinaryPropagator() binaryPropagator {
+func BinaryPropagator() apipropagation.BinaryFormatPropagator {
 	return binaryPropagator{}
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkInject(b *testing.B) {
-	t := httpTraceContextPropagator{}
+	var t HTTPTraceContextPropagator
 
 	injectSubBenchmarks(b, func(ctx context.Context, b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -31,7 +31,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 		)
 		mockTracer := &mocktrace.MockTracer{
 			Sampled:     false,
-			StartSpanId: &id,
+			StartSpanID: &id,
 		}
 		b.ReportAllocs()
 		sc := core.SpanContext{
@@ -53,7 +53,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 
 func BenchmarkExtract(b *testing.B) {
 	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
-		propagator := HttpTraceContextPropagator()
+		var propagator HTTPTraceContextPropagator
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

@@ -61,7 +61,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				StartTime: now,
 				EndTime:   now,
 				Links: []apitrace.Link{
-					apitrace.Link{
+					{
 						SpanContext: core.SpanContext{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
@@ -96,7 +96,7 @@ func Test_spanDataToThrift(t *testing.T) {
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 				},
 				References: []*gen.SpanRef{
-					&gen.SpanRef{
+					{
 						RefType:     gen.SpanRefType_CHILD_OF,
 						TraceIdLow:  int64(linkTraceID.Low),
 						TraceIdHigh: int64(linkTraceID.High),

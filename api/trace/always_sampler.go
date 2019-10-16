@@ -47,6 +47,6 @@ func (as alwaysSampleSampler) Description() string {
 
 var _ Sampler = alwaysSampleSampler{}
 
-func AlwaysSampleSampler() alwaysSampleSampler {
+func AlwaysSampleSampler() Sampler {
 	return alwaysSampleSampler{}
 }

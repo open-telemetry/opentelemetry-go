@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	defaultMaxQueueSize         = 2048
-	defaultScheduledDelayMillis = time.Duration(5000 * time.Millisecond)
-	defaultMaxExportBatchSize   = 512
+	defaultMaxQueueSize       = 2048
+	defaultScheduledDelay     = time.Duration(5000 * time.Millisecond)
+	defaultMaxExportBatchSize = 512
 )
 
 var (
@@ -86,7 +86,7 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 	}
 
 	o := BatchSpanProcessorOptions{
-		ScheduledDelayMillis: defaultScheduledDelayMillis,
+		ScheduledDelayMillis: defaultScheduledDelay,
 		MaxQueueSize:         defaultMaxQueueSize,
 		MaxExportBatchSize:   defaultMaxExportBatchSize,
 	}

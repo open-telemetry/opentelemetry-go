@@ -54,7 +54,7 @@ func BenchmarkExtractB3(b *testing.B) {
 	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 
 	for _, tg := range testGroup {
-		propagator := propagation.HttpB3Propagator(tg.singleHeader)
+		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -93,13 +93,13 @@ func BenchmarkInjectB3(b *testing.B) {
 
 	mockTracer := &mocktrace.MockTracer{
 		Sampled:     false,
-		StartSpanId: &id,
+		StartSpanID: &id,
 	}
 	trace.SetGlobalTracer(mockTracer)
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagation.HttpB3Propagator(tg.singleHeader)
+		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
