@@ -47,6 +47,6 @@ func (ns neverSampleSampler) Description() string {
 
 var _ Sampler = neverSampleSampler{}
 
-func NeverSampleSampler() neverSampleSampler {
+func NeverSampleSampler() Sampler {
 	return neverSampleSampler{}
 }

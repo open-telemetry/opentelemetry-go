@@ -36,16 +36,7 @@ const (
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
 )
 
-type httpB3Propagator struct {
-	singleHeader bool
-}
-
-var _ apipropagation.TextFormatPropagator = httpB3Propagator{}
-
-var hexStr32ByteRegex = regexp.MustCompile("^[a-f0-9]{32}$")
-var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
-
-// HttpB3Propagator creates a new text format propagator that facilitates core.SpanContext
+// HTTPB3Propagator that facilitates core.SpanContext
 // propagation using B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
@@ -57,18 +48,21 @@ var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
 //    X-B3-Sampled: {SamplingState}
 //    X-B3-Flags: {DebugFlag}
 //
-// If singleHeader is set to true then X-B3 header is used to inject and extract. Otherwise,
+// If SingleHeader is set to true then X-B3 header is used to inject and extract. Otherwise,
 // separate headers are used to inject and extract.
-func HttpB3Propagator(singleHeader bool) httpB3Propagator {
-	// [TODO](rghetia): should it automatically look for both versions? which one to pick if
-	// both are present? What if one is valid and other one is not.
-	return httpB3Propagator{singleHeader}
+type HTTPB3Propagator struct {
+	SingleHeader bool
 }
 
-func (b3 httpB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+var _ apipropagation.TextFormatPropagator = HTTPB3Propagator{}
+
+var hexStr32ByteRegex = regexp.MustCompile("^[a-f0-9]{32}$")
+var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
+
+func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
-		if b3.singleHeader {
+		if b3.SingleHeader {
 			sampled := sc.TraceFlags & core.TraceFlagsSampled
 			supplier.Set(B3SingleHeader,
 				fmt.Sprintf("%.16x%.16x-%.16x-%.1d", sc.TraceID.High, sc.TraceID.Low, sc.SpanID, sampled))
@@ -90,21 +84,21 @@ func (b3 httpB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 httpB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
-	if b3.singleHeader {
+func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
+	if b3.SingleHeader {
 		return b3.extractSingleHeader(supplier)
 	}
 	return b3.extract(supplier)
 }
 
-func (b3 httpB3Propagator) GetAllKeys() []string {
-	if b3.singleHeader {
+func (b3 HTTPB3Propagator) GetAllKeys() []string {
+	if b3.SingleHeader {
 		return []string{B3SingleHeader}
 	}
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 httpB3Propagator) extract(supplier apipropagation.Supplier) core.SpanContext {
+func (b3 HTTPB3Propagator) extract(supplier apipropagation.Supplier) core.SpanContext {
 	tid, ok := b3.extractTraceID(supplier.Get(B3TraceIDHeader))
 	if !ok {
 		return core.EmptySpanContext()
@@ -139,7 +133,7 @@ func (b3 httpB3Propagator) extract(supplier apipropagation.Supplier) core.SpanCo
 	return sc
 }
 
-func (b3 httpB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) core.SpanContext {
+func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
 		core.EmptySpanContext()
@@ -153,29 +147,29 @@ func (b3 httpB3Propagator) extractSingleHeader(supplier apipropagation.Supplier)
 
 	if l < 2 {
 		return core.EmptySpanContext()
-	} else {
-		var ok bool
-		sc.TraceID, ok = b3.extractTraceID(parts[0])
+	}
+
+	var ok bool
+	sc.TraceID, ok = b3.extractTraceID(parts[0])
+	if !ok {
+		return core.EmptySpanContext()
+	}
+
+	sc.SpanID, ok = b3.extractSpanID(parts[1])
+	if !ok {
+		return core.EmptySpanContext()
+	}
+
+	if l > 2 {
+		sc.TraceFlags, ok = b3.extractSampledState(parts[2])
 		if !ok {
 			return core.EmptySpanContext()
 		}
-
-		sc.SpanID, ok = b3.extractSpanID(parts[1])
+	}
+	if l == 4 {
+		_, ok = b3.extractSpanID(parts[3])
 		if !ok {
 			return core.EmptySpanContext()
-		}
-
-		if l > 2 {
-			sc.TraceFlags, ok = b3.extractSampledState(parts[2])
-			if !ok {
-				return core.EmptySpanContext()
-			}
-		}
-		if l == 4 {
-			_, ok = b3.extractSpanID(parts[3])
-			if !ok {
-				return core.EmptySpanContext()
-			}
 		}
 	}
 
@@ -187,12 +181,12 @@ func (b3 httpB3Propagator) extractSingleHeader(supplier apipropagation.Supplier)
 }
 
 // extractTraceID parses the value of the X-B3-TraceId b3Header.
-func (b3 httpB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
+func (b3 HTTPB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
 	if hexStr32ByteRegex.MatchString(tid) {
 		traceID.High, _ = strconv.ParseUint(tid[0:(16)], 16, 64)
 		traceID.Low, _ = strconv.ParseUint(tid[(16):32], 16, 64)
 		ok = true
-	} else if b3.singleHeader && hexStr16ByteRegex.MatchString(tid) {
+	} else if b3.SingleHeader && hexStr16ByteRegex.MatchString(tid) {
 		traceID.Low, _ = strconv.ParseUint(tid[:16], 16, 64)
 		ok = true
 	}
@@ -200,7 +194,7 @@ func (b3 httpB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok 
 }
 
 // extractSpanID parses the value of the X-B3-SpanId or X-B3-ParentSpanId headers.
-func (b3 httpB3Propagator) extractSpanID(sid string) (spanID uint64, ok bool) {
+func (b3 HTTPB3Propagator) extractSpanID(sid string) (spanID uint64, ok bool) {
 	if hexStr16ByteRegex.MatchString(sid) {
 		spanID, _ = strconv.ParseUint(sid, 16, 64)
 		ok = true
@@ -209,18 +203,18 @@ func (b3 httpB3Propagator) extractSpanID(sid string) (spanID uint64, ok bool) {
 }
 
 // extractSampledState parses the value of the X-B3-Sampled b3Header.
-func (b3 httpB3Propagator) extractSampledState(sampled string) (flag byte, ok bool) {
+func (b3 HTTPB3Propagator) extractSampledState(sampled string) (flag byte, ok bool) {
 	switch sampled {
 	case "", "0":
 		return 0, true
 	case "1":
 		return core.TraceFlagsSampled, true
 	case "true":
-		if !b3.singleHeader {
+		if !b3.SingleHeader {
 			return core.TraceFlagsSampled, true
 		}
 	case "d":
-		if b3.singleHeader {
+		if b3.SingleHeader {
 			return core.TraceFlagsSampled, true
 		}
 	}
@@ -228,7 +222,7 @@ func (b3 httpB3Propagator) extractSampledState(sampled string) (flag byte, ok bo
 }
 
 // extracDebugFlag parses the value of the X-B3-Sampled b3Header.
-func (b3 httpB3Propagator) extracDebugFlag(debug string) (flag byte, ok bool) {
+func (b3 HTTPB3Propagator) extracDebugFlag(debug string) (flag byte, ok bool) {
 	switch debug {
 	case "", "0":
 		return 0, true

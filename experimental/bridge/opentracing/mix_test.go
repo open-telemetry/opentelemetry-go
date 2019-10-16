@@ -250,15 +250,15 @@ type coin3Value struct{}
 func newContextIntactTest() *contextIntactTest {
 	return &contextIntactTest{
 		contextKeyValues: []internal.MockContextKeyValue{
-			internal.MockContextKeyValue{
+			{
 				Key:   coin1Key{},
 				Value: coin1Value{},
 			},
-			internal.MockContextKeyValue{
+			{
 				Key:   coin2Key{},
 				Value: coin2Value{},
 			},
-			internal.MockContextKeyValue{
+			{
 				Key:   coin3Key{},
 				Value: coin3Value{},
 			},

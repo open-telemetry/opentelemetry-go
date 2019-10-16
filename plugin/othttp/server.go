@@ -117,7 +117,7 @@ func NewHandler(handler http.Handler, operation string, opts ...HandlerOption) h
 	h := HTTPHandler{handler: handler}
 	defaultOpts := []HandlerOption{
 		WithTracer(trace.GlobalTracer()),
-		WithPropagator(prop.HttpTraceContextPropagator()),
+		WithPropagator(prop.HTTPTraceContextPropagator{}),
 	}
 
 	for _, opt := range append(defaultOpts, opts...) {

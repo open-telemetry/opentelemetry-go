@@ -29,7 +29,7 @@ func TestBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var id uint64
-	tracer := mocktrace.MockTracer{StartSpanId: &id}
+	tracer := mocktrace.MockTracer{StartSpanID: &id}
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

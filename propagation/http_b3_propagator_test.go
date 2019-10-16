@@ -56,7 +56,7 @@ func TestExtractB3(t *testing.T) {
 	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 
 	for _, tg := range testGroup {
-		propagator := propagation.HttpB3Propagator(tg.singleHeader)
+		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -95,13 +95,13 @@ func TestInjectB3(t *testing.T) {
 
 	mockTracer := &mocktrace.MockTracer{
 		Sampled:     false,
-		StartSpanId: &id,
+		StartSpanID: &id,
 	}
 	trace.SetGlobalTracer(mockTracer)
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagation.HttpB3Propagator(tg.singleHeader)
+		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -132,8 +132,8 @@ func TestInjectB3(t *testing.T) {
 	}
 }
 
-func TestHttpB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := propagation.HttpB3Propagator(false)
+func TestHTTPB3Propagator_GetAllKeys(t *testing.T) {
+	propagator := propagation.HTTPB3Propagator{false}
 	want := []string{
 		propagation.B3TraceIDHeader,
 		propagation.B3SpanIDHeader,
@@ -146,7 +146,7 @@ func TestHttpB3Propagator_GetAllKeys(t *testing.T) {
 }
 
 func TestHttpB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := propagation.HttpB3Propagator(true)
+	propagator := propagation.HTTPB3Propagator{true}
 	want := []string{
 		propagation.B3SingleHeader,
 	}
