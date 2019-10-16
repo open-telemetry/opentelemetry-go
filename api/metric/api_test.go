@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/unit"
 )
 
@@ -44,14 +45,14 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []CounterOptionApplier{
-				WithKeys(key("foo"), key("foo2")),
-				WithKeys(key("bar"), key("bar2")),
-				WithKeys(key("baz"), key("baz2")),
+				WithKeys(key.New("foo"), key.New("foo2")),
+				WithKeys(key.New("bar"), key.New("bar2")),
+				WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
-				key("foo"), key("foo2"),
-				key("bar"), key("bar2"),
-				key("baz"), key("baz2"),
+				key.New("foo"), key.New("foo2"),
+				key.New("bar"), key.New("bar2"),
+				key.New("baz"), key.New("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -163,14 +164,14 @@ func TestGaugeOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []GaugeOptionApplier{
-				WithKeys(key("foo"), key("foo2")),
-				WithKeys(key("bar"), key("bar2")),
-				WithKeys(key("baz"), key("baz2")),
+				WithKeys(key.New("foo"), key.New("foo2")),
+				WithKeys(key.New("bar"), key.New("bar2")),
+				WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
-				key("foo"), key("foo2"),
-				key("bar"), key("bar2"),
-				key("baz"), key("baz2"),
+				key.New("foo"), key.New("foo2"),
+				key.New("bar"), key.New("bar2"),
+				key.New("baz"), key.New("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -282,14 +283,14 @@ func TestMeasureOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []MeasureOptionApplier{
-				WithKeys(key("foo"), key("foo2")),
-				WithKeys(key("bar"), key("bar2")),
-				WithKeys(key("baz"), key("baz2")),
+				WithKeys(key.New("foo"), key.New("foo2")),
+				WithKeys(key.New("bar"), key.New("bar2")),
+				WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
-				key("foo"), key("foo2"),
-				key("bar"), key("bar2"),
-				key("baz"), key("baz2"),
+				key.New("foo"), key.New("foo2"),
+				key.New("bar"), key.New("bar2"),
+				key.New("baz"), key.New("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -401,14 +402,14 @@ func TestObserverOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []GaugeOptionApplier{
-				WithKeys(key("foo"), key("foo2")),
-				WithKeys(key("bar"), key("bar2")),
-				WithKeys(key("baz"), key("baz2")),
+				WithKeys(key.New("foo"), key.New("foo2")),
+				WithKeys(key.New("bar"), key.New("bar2")),
+				WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
-				key("foo"), key("foo2"),
-				key("bar"), key("bar2"),
-				key("baz"), key("baz2"),
+				key.New("foo"), key.New("foo2"),
+				key.New("bar"), key.New("bar2"),
+				key.New("baz"), key.New("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -499,12 +500,6 @@ func TestObserverOptions(t *testing.T) {
 	}
 }
 
-func key(name string) core.Key {
-	return core.Key{
-		Name: name,
-	}
-}
-
 type descriptor struct {
 	name string
 	keys []core.Key
@@ -527,8 +522,8 @@ func checkDescriptor(t *testing.T, e descriptor, d *Descriptor) {
 		minLen = len(d.Keys())
 	}
 	for i := 0; i < minLen; i++ {
-		if e.keys[i].Name != d.Keys()[i].Name {
-			t.Errorf("Expected key %q, got %q", e.keys[i].Name, d.Keys()[i].Name)
+		if e.keys[i] != d.Keys()[i] {
+			t.Errorf("Expected key %q, got %q", e.keys[i], d.Keys()[i])
 		}
 	}
 	if e.desc != d.Description() {

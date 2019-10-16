@@ -54,11 +54,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		EndTime:   now,
 		Attributes: []core.KeyValue{
 			{
-				Key:   core.Key{Name: "key"},
+				Key:   core.Key("key"),
 				Value: core.Value{Type: core.STRING, String: keyValue},
 			},
 			{
-				Key:   core.Key{Name: "double"},
+				Key:   core.Key("double"),
 				Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
 			},
 		},
@@ -79,11 +79,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"EndTime":` + string(expectedSerializedNow) + "," +
 		`"Attributes":[` +
 		`{` +
-		`"Key":{"Name":"key"},` +
+		`"Key":"key",` +
 		`"Value":{"Type":8,"Bool":false,"Int64":0,"Uint64":0,"Float64":0,"String":"value","Bytes":null}` +
 		`},` +
 		`{` +
-		`"Key":{"Name":"double"},` +
+		`"Key":"double",` +
 		`"Value":{"Type":7,"Bool":false,"Int64":0,"Uint64":0,"Float64":123.456,"String":"","Bytes":null}` +
 		`}` +
 		`],` +

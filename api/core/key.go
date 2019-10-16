@@ -5,9 +5,7 @@ import (
 	"unsafe"
 )
 
-type Key struct {
-	Name string
-}
+type Key string
 
 type KeyValue struct {
 	Key   Key
@@ -147,7 +145,7 @@ func (k Key) Uint(v uint) KeyValue {
 }
 
 func (k Key) Defined() bool {
-	return len(k.Name) != 0
+	return len(k) != 0
 }
 
 // TODO make this a lazy one-time conversion.

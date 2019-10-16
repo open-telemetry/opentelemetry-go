@@ -432,9 +432,7 @@ func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {
 }
 
 func otTagToOtelCoreKey(k string) otelcore.Key {
-	return otelcore.Key{
-		Name: k,
-	}
+	return otelcore.Key(k)
 }
 
 type bridgeReference struct {
