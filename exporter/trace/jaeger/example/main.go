@@ -39,10 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Wrap exporter with SimpleSpanProcessor and register the processor.
-	ssp := trace.NewSimpleSpanProcessor(exporter)
-	trace.RegisterSpanProcessor(ssp)
+	exporter.RegisterSimpleSpanProcessor()
 
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
