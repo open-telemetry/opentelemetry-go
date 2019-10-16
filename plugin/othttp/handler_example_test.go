@@ -68,12 +68,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			span := trace.CurrentSpan(ctx)
-			span.SetAttribute(
-				core.KeyValue{Key: "name",
-					Value: core.Value{Type: core.STRING, String: pp[1]},
-				},
-			)
+			trace.CurrentSpan(ctx).SetAttribute(core.Key("name").String(pp[1]))
 		}
 		return pp[1], err
 	}
@@ -113,7 +108,7 @@ func ExampleNewHandler() {
 
 	if err := http.ListenAndServe(":7777",
 		othttp.NewHandler(&mux, "server",
-			othttp.WithMessageEvents(othttp.EventRead, othttp.EventWrite),
+			othttp.WithMessageEvents(othttp.ReadEvents, othttp.WriteEvents),
 		),
 	); err != nil {
 		log.Fatal(err)
