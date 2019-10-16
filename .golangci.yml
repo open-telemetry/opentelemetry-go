@@ -8,6 +8,7 @@ linters:
     - misspell
     - goimports
     - golint
+    - gofmt
 
 issues:
   exclude-rules:

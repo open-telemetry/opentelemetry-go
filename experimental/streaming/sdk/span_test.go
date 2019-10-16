@@ -153,8 +153,8 @@ func measurementCompare(m1, m2 metric.Measurement) bool {
 
 func diffEvents(t *testing.T, got, want []exporter.Event, extraIgnoredFields ...string) bool {
 	ignoredPaths := map[string]struct{}{
-		"Sequence": struct{}{},
-		"Context":  struct{}{},
+		"Sequence": {},
+		"Context":  {},
 	}
 	for _, field := range extraIgnoredFields {
 		ignoredPaths[field] = struct{}{}
