@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"testing"
 
+	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	mocktrace "go.opentelemetry.io/internal/trace"
 	"go.opentelemetry.io/propagation"
@@ -65,7 +66,7 @@ func BenchmarkExtractB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					_ = propagator.Extract(ctx, req.Header)
+					_, _ = propagator.Extract(ctx, req.Header)
 				}
 			})
 		}
@@ -112,7 +113,7 @@ func BenchmarkInjectB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					propagator.Inject(ctx, req.Header)
+					propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
 				}
 			})
 		}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/api/core"
+	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	mocktrace "go.opentelemetry.io/internal/trace"
 )
@@ -17,7 +18,7 @@ func BenchmarkInject(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t.Inject(ctx, req.Header)
+			t.Inject(ctx, dctx.NewEmptyMap(), req.Header)
 		}
 	})
 }

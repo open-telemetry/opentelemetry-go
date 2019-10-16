@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/api/core"
+	dctx "go.opentelemetry.io/api/distributedcontext"
 )
 
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
@@ -26,12 +27,12 @@ type NoopTextFormatPropagator struct{}
 var _ TextFormatPropagator = NoopTextFormatPropagator{}
 
 // Inject does nothing.
-func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {
+func (np NoopTextFormatPropagator) Inject(ctx context.Context, correlationCtx dctx.Map, supplier Supplier) {
 }
 
 // Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) core.SpanContext {
-	return core.EmptySpanContext()
+func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
+	return core.EmptySpanContext(), dctx.NewEmptyMap()
 }
 
 // GetAllKeys returns empty list of strings.

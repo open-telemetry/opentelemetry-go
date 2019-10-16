@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	dctx "go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	mocktrace "go.opentelemetry.io/internal/trace"
 	"go.opentelemetry.io/propagation"
@@ -65,7 +66,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				gotSc := propagator.Extract(ctx, req.Header)
+				gotSc, _ := propagator.Extract(ctx, req.Header)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
@@ -111,7 +112,7 @@ func TestInjectB3(t *testing.T) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-				propagator.Inject(ctx, req.Header)
+				propagator.Inject(ctx, dctx.NewEmptyMap(), req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v
