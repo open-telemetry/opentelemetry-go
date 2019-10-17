@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"log"
+	"sync"
 
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
@@ -24,6 +25,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 const defaultServiceName = "OpenTelemetry"
@@ -138,9 +140,18 @@ type Tag struct {
 
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
 type Exporter struct {
+	once     sync.Once
 	process  *gen.Process
 	bundler  *bundler.Bundler
 	uploader batchUploader
+}
+
+// RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
+func (e *Exporter) RegisterSimpleSpanProcessor() {
+	e.once.Do(func() {
+		ssp := trace.NewSimpleSpanProcessor(e)
+		trace.RegisterSpanProcessor(ssp)
+	})
 }
 
 var _ export.SpanSyncer = (*Exporter)(nil)

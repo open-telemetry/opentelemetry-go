@@ -19,8 +19,10 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"sync"
 
 	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 // Options are the options to be used when initializing a stdout export.
@@ -32,6 +34,7 @@ type Options struct {
 
 // Exporter is an implementation of trace.Exporter that writes spans to stdout.
 type Exporter struct {
+	once         sync.Once
 	pretty       bool
 	outputWriter io.Writer
 }
@@ -41,6 +44,14 @@ func NewExporter(o Options) (*Exporter, error) {
 		pretty:       o.PrettyPrint,
 		outputWriter: os.Stdout,
 	}, nil
+}
+
+// RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
+func (e *Exporter) RegisterSimpleSpanProcessor() {
+	e.once.Do(func() {
+		ssp := trace.NewSimpleSpanProcessor(e)
+		trace.RegisterSpanProcessor(ssp)
+	})
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
