@@ -11,11 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package othttp
 
 import (
+	"context"
 	"io"
 	"net/http"
+
+	"go.opentelemetry.io/api/propagation"
 )
 
 var _ io.ReadCloser = &bodyWrapper{}
@@ -24,7 +28,7 @@ var _ io.ReadCloser = &bodyWrapper{}
 // of bytes read and the last error
 type bodyWrapper struct {
 	io.ReadCloser
-	record func(n int) // must not be nil
+	record func(n int64) // must not be nil
 
 	read int64
 	err  error
@@ -32,9 +36,10 @@ type bodyWrapper struct {
 
 func (w *bodyWrapper) Read(b []byte) (int, error) {
 	n, err := w.ReadCloser.Read(b)
-	w.read += int64(n)
+	n1 := int64(n)
+	w.read += n1
 	w.err = err
-	w.record(n)
+	w.record(n1)
 	return n, err
 }
 
@@ -44,6 +49,10 @@ func (w *bodyWrapper) Close() error {
 
 var _ http.ResponseWriter = &respWriterWrapper{}
 
+type injector interface {
+	Inject(context.Context, propagation.Supplier)
+}
+
 // respWriterWrapper wraps a http.ResponseWriter in order to track the number of
 // bytes written, the last error, and to catch the returned statusCode
 // TODO: The wrapped http.ResponseWriter doesn't implement any of the optional
@@ -51,7 +60,11 @@ var _ http.ResponseWriter = &respWriterWrapper{}
 // that may be useful when using it in real life situations.
 type respWriterWrapper struct {
 	http.ResponseWriter
-	record func(n int) // must not be nil
+	record func(n int64) // must not be nil
+
+	// used to inject the header
+	ctx context.Context
+	injector
 
 	written     int64
 	statusCode  int
@@ -69,14 +82,19 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 		w.wroteHeader = true
 	}
 	n, err := w.ResponseWriter.Write(p)
-	w.record(n)
-	w.written += int64(n)
+	n1 := int64(n)
+	w.record(n1)
+	w.written += n1
 	w.err = err
 	return n, err
 }
 
 func (w *respWriterWrapper) WriteHeader(statusCode int) {
+	if w.wroteHeader {
+		return
+	}
 	w.wroteHeader = true
 	w.statusCode = statusCode
+	w.injector.Inject(w.ctx, w.Header())
 	w.ResponseWriter.WriteHeader(statusCode)
 }
