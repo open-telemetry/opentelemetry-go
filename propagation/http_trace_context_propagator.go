@@ -63,7 +63,7 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			headerValueBuilder.WriteRune(',')
 		}
 		firstIter = false
-		headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace(kv.Key.Name)))
+		headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace((string)(kv.Key))))
 		headerValueBuilder.WriteRune('=')
 		headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace(kv.Value.Emit())))
 		return true
