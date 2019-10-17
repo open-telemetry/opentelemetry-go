@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/api/core"
+	dctx "go.opentelemetry.io/api/distributedcontext"
 	apipropagation "go.opentelemetry.io/api/propagation"
 )
 
@@ -84,11 +85,11 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) core.SpanContext {
+func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) (core.SpanContext, dctx.Map) {
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier)
+		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
 	}
-	return b3.extract(supplier)
+	return b3.extract(supplier), dctx.NewEmptyMap()
 }
 
 func (b3 HTTPB3Propagator) GetAllKeys() []string {
