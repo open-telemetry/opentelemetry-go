@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/api/key"
+
 	apitrace "go.opentelemetry.io/api/trace"
 
 	"github.com/google/go-cmp/cmp"
@@ -42,6 +44,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := float64(123.456)
+	bytesValue := []byte("byte array")
 	boolTrue := true
 	statusMessage := "Unknown"
 
@@ -69,14 +72,11 @@ func Test_spanDataToThrift(t *testing.T) {
 					},
 				},
 				Attributes: []core.KeyValue{
-					{
-						Key:   core.Key("key"),
-						Value: core.Value{Type: core.STRING, String: keyValue},
-					},
-					{
-						Key:   core.Key("double"),
-						Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
-					},
+					key.String("key", keyValue),
+					key.Float64("double", doubleValue),
+					key.Bytes("bytes", bytesValue),
+					// Jaeger doesn't handle Uint tags, this should be ignored.
+					key.Uint64("ignored", 123),
 				},
 				// TODO: [rghetia] add events test after event is concrete type.
 				Status: codes.Unknown,
@@ -91,6 +91,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
+					{Key: "bytes", VType: gen.TagType_BINARY, VBinary: bytesValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},

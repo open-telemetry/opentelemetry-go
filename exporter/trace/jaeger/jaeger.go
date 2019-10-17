@@ -93,9 +93,12 @@ func NewExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, erro
 	if service == "" {
 		service = defaultServiceName
 	}
-	tags := make([]*gen.Tag, len(o.Process.Tags))
-	for i, tag := range o.Process.Tags {
-		tags[i] = attributeToTag(tag.key, tag.value)
+	tags := make([]*gen.Tag, 0, len(o.Process.Tags))
+	for _, tag := range o.Process.Tags {
+		t := keyValueToTag(tag)
+		if t != nil {
+			tags = append(tags, t)
+		}
 	}
 	e := &Exporter{
 		uploader: uploader,
@@ -128,14 +131,7 @@ type Process struct {
 	ServiceName string
 
 	// Tags are added to Jaeger Process exports
-	Tags []Tag
-}
-
-// Tag defines a key-value pair
-// It is limited to the possible conversions to *jaeger.Tag by attributeToTag
-type Tag struct {
-	key   string
-	value interface{}
+	Tags []core.KeyValue
 }
 
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
@@ -165,8 +161,10 @@ func (e *Exporter) ExportSpan(ctx context.Context, d *export.SpanData) {
 func spanDataToThrift(data *export.SpanData) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(data.Attributes))
 	for _, kv := range data.Attributes {
-		tag := coreAttributeToTag(kv)
-		tags = append(tags, tag)
+		tag := keyValueToTag(kv)
+		if tag != nil {
+			tags = append(tags, tag)
+		}
 	}
 
 	tags = append(tags, getInt64Tag("status.code", int64(data.Status)),
@@ -183,7 +181,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	for _, a := range data.MessageEvents {
 		fields := make([]*gen.Tag, 0, len(a.Attributes))
 		for _, kv := range a.Attributes {
-			tag := coreAttributeToTag(kv)
+			tag := keyValueToTag(kv)
 			if tag != nil {
 				fields = append(fields, tag)
 			}
@@ -222,7 +220,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 }
 
-func coreAttributeToTag(kv core.KeyValue) *gen.Tag {
+func keyValueToTag(kv core.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch kv.Value.Type {
 	case core.STRING:
@@ -248,6 +246,12 @@ func coreAttributeToTag(kv core.KeyValue) *gen.Tag {
 			Key:     string(kv.Key),
 			VDouble: &kv.Value.Float64,
 			VType:   gen.TagType_DOUBLE,
+		}
+	case core.BYTES:
+		tag = &gen.Tag{
+			Key:     string(kv.Key),
+			VBinary: kv.Value.Bytes,
+			VType:   gen.TagType_BINARY,
 		}
 	}
 	return tag
@@ -275,46 +279,6 @@ func getBoolTag(k string, b bool) *gen.Tag {
 		VBool: &b,
 		VType: gen.TagType_BOOL,
 	}
-}
-
-// TODO(rghetia): remove interface{}. see https://github.com/open-telemetry/opentelemetry-go/pull/112/files#r321444786
-func attributeToTag(key string, a interface{}) *gen.Tag {
-	var tag *gen.Tag
-	switch value := a.(type) {
-	case bool:
-		tag = &gen.Tag{
-			Key:   key,
-			VBool: &value,
-			VType: gen.TagType_BOOL,
-		}
-	case string:
-		tag = &gen.Tag{
-			Key:   key,
-			VStr:  &value,
-			VType: gen.TagType_STRING,
-		}
-	case int64:
-		tag = &gen.Tag{
-			Key:   key,
-			VLong: &value,
-			VType: gen.TagType_LONG,
-		}
-	case int32:
-		v := int64(value)
-		tag = &gen.Tag{
-			Key:   key,
-			VLong: &v,
-			VType: gen.TagType_LONG,
-		}
-	case float64:
-		v := float64(value)
-		tag = &gen.Tag{
-			Key:     key,
-			VDouble: &v,
-			VType:   gen.TagType_DOUBLE,
-		}
-	}
-	return tag
 }
 
 // Flush waits for exported trace spans to be uploaded.

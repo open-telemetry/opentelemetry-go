@@ -20,6 +20,9 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
+
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/jaeger"
 	"go.opentelemetry.io/sdk/trace"
@@ -34,6 +37,11 @@ func main() {
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
+			Tags: []core.KeyValue{
+				key.String("exporter", "jaeger"),
+				key.Float64("float", 312.23),
+				key.Bytes("bytes", []byte("byte array")),
+			},
 		}),
 	)
 	if err != nil {
