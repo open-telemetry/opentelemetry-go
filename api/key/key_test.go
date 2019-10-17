@@ -2,6 +2,7 @@ package key_test
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func TestKeyValueConstructors(t *testing.T) {
+
 	tt := []struct {
 		name     string
 		actual   core.KeyValue
@@ -110,7 +112,7 @@ func TestKeyValueConstructors(t *testing.T) {
 				Key: "k1",
 				Value: core.Value{
 					Int64: 123,
-					Type:  core.INT64,
+					Type:  IntType(123),
 				},
 			},
 		},
@@ -121,7 +123,7 @@ func TestKeyValueConstructors(t *testing.T) {
 				Key: "k1",
 				Value: core.Value{
 					Uint64: 123,
-					Type:   core.UINT64,
+					Type:   UintType(123),
 				},
 			},
 		},
@@ -134,4 +136,20 @@ func TestKeyValueConstructors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// IntType returns the core.ValueType depending on system int byte-size
+func IntType(v int) core.ValueType {
+	if unsafe.Sizeof(v) == 4 {
+		return core.INT32
+	}
+	return core.INT64
+}
+
+// UintType returns the core.ValueType depending on system uint byte-size
+func UintType(v uint) core.ValueType {
+	if unsafe.Sizeof(v) == 4 {
+		return core.UINT32
+	}
+	return core.UINT64
 }
