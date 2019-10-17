@@ -276,7 +276,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	}
 }
 
-func TestHttpTraceContextPropagator_GetAllKeys(t *testing.T) {
+func TestHTTPTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator propagation.HTTPTraceContextPropagator
 	want := []string{"Traceparent"}
 	got := propagator.GetAllKeys()

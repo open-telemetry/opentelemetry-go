@@ -145,7 +145,7 @@ func TestHTTPB3Propagator_GetAllKeys(t *testing.T) {
 	}
 }
 
-func TestHttpB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
+func TestHTTPsB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
 	propagator := propagation.HTTPB3Propagator{true}
 	want := []string{
 		propagation.B3SingleHeader,
