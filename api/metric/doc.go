@@ -22,9 +22,6 @@
 // - gauges
 // - measures
 //
-// There is also a special case of a gauge instrument called
-// observer. It will be discussed later.
-//
 // All instruments report either float64 or int64 values.
 //
 // The primary object that handles metrics is Meter. The
@@ -62,18 +59,9 @@
 // allows reporting negative values too. To report a new value, use
 // the Record function.
 //
-// A special case of a gauge is observer. It has the same role as
-// gauge, but reports values in a different way. The observer can be
-// created with NewFloat64Observer or NewInt64Observer and then
-// registered within a Meter with either RegisterInt64Observer or
-// RegisterFloat64Observer functions. These take a callback for
-// reporting the values. The callback will be called by the Meter when
-// it deems it necessary.
-//
-// All the basic kinds of instruments (so, not observers) also support
-// creating handles for a potentially more efficient reporting. The
-// handles have the same function names as the instruments (so counter
-// handle has Add, gauge handle has Set and measure handle has
-// Record). Handles can be created with the GetHandle function of the
-// respective instrument.
+// All the basic kinds of instruments also support creating handles
+// for a potentially more efficient reporting. The handles have the
+// same function names as the instruments (so counter handle has Add,
+// gauge handle has Set and measure handle has Record). Handles can be
+// created with the GetHandle function of the respective instrument.
 package metric // import "go.opentelemetry.io/api/metric"
