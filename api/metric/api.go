@@ -35,9 +35,6 @@ const (
 	GaugeKind
 	// MeasureKind describes a metric that supports Record().
 	MeasureKind
-	// ObserverKind describes a metric that reports measurement on
-	// demand.
-	ObserverKind
 )
 
 // Handle is the implementation-level interface to Set/Add/Record
@@ -57,14 +54,6 @@ type Handle interface {
 type LabelSet interface {
 	Meter() Meter
 }
-
-// ObservationCallback defines a type of the callback the observer
-// will use to report the measurement
-type ObservationCallback func(LabelSet, MeasurementValue)
-
-// ObserverCallback defines a type of the callback SDK will call for
-// the registered observers.
-type ObserverCallback func(Meter, Observer, ObservationCallback)
 
 // WithDescriptor is an interface that all metric implement.
 type WithDescriptor interface {
@@ -99,19 +88,6 @@ type Meter interface {
 	// DeleteHandle destroys the Handle and does a cleanup of the
 	// underlying resources.
 	DeleteHandle(Handle)
-
-	// RegisterObserver registers the observer with callback
-	// returning a measurement. When and how often the callback
-	// will be called is defined by SDK. This should not be used
-	// directly - prefer either RegisterInt64Observer or
-	// RegisterFloat64Observer, depending on the type of the
-	// observer to be registered.
-	RegisterObserver(Observer, ObserverCallback)
-	// UnregisterObserver removes the observer from registered
-	// observers. This should not be used directly - prefer either
-	// UnregisterInt64Observer or UnregisterFloat64Observer,
-	// depending on the type of the observer to be registered.
-	UnregisterObserver(Observer)
 }
 
 // DescriptorID is a unique identifier of a metric.
@@ -185,8 +161,8 @@ func (d *Descriptor) ValueKind() ValueKind {
 //
 // - for Counter, true implies that the metric is an up-down Counter
 //
-// - for Gauge/Observer, true implies that the metric is a
-//   non-descending Gauge/Observer
+// - for Gauge, true implies that the metric is a
+//   non-descending Gauge
 //
 // - for Measure, true implies that the metric supports positive and
 //   negative values
@@ -299,58 +275,4 @@ func (d Descriptor) Defined() bool {
 // RecordBatch reports to the global Meter.
 func RecordBatch(ctx context.Context, labels LabelSet, batch ...Measurement) {
 	GlobalMeter().RecordBatch(ctx, labels, batch...)
-}
-
-// Int64ObservationCallback defines a type of the callback the
-// observer will use to report the int64 measurement.
-type Int64ObservationCallback func(LabelSet, int64)
-
-// Int64ObserverCallback defines a type of the callback SDK will call
-// for the registered int64 observers.
-type Int64ObserverCallback func(Meter, Int64Observer, Int64ObservationCallback)
-
-// RegisterInt64Observer is a convenience wrapper around
-// Meter.RegisterObserver that provides a type-safe callback for
-// Int64Observer.
-func RegisterInt64Observer(meter Meter, observer Int64Observer, callback Int64ObserverCallback) {
-	cb := func(m Meter, o Observer, ocb ObservationCallback) {
-		iocb := func(l LabelSet, i int64) {
-			ocb(l, NewInt64MeasurementValue(i))
-		}
-		callback(m, Int64Observer{o}, iocb)
-	}
-	meter.RegisterObserver(observer.Observer, cb)
-}
-
-// UnregisterInt64Observer is a convenience wrapper around
-// Meter.UnregisterObserver for Int64Observer.
-func UnregisterInt64Observer(meter Meter, observer Int64Observer) {
-	meter.UnregisterObserver(observer.Observer)
-}
-
-// Float64ObservationCallback defines a type of the callback the
-// observer will use to report the float64 measurement.
-type Float64ObservationCallback func(LabelSet, float64)
-
-// Float64ObserverCallback defines a type of the callback SDK will
-// call for the registered float64 observers.
-type Float64ObserverCallback func(Meter, Float64Observer, Float64ObservationCallback)
-
-// RegisterFloat64Observer is a convenience wrapper around
-// Meter.RegisterObserver that provides a type-safe callback for
-// Float64Observer.
-func RegisterFloat64Observer(meter Meter, observer Float64Observer, callback Float64ObserverCallback) {
-	cb := func(m Meter, o Observer, ocb ObservationCallback) {
-		focb := func(l LabelSet, f float64) {
-			ocb(l, NewFloat64MeasurementValue(f))
-		}
-		callback(m, Float64Observer{o}, focb)
-	}
-	meter.RegisterObserver(observer.Observer, cb)
-}
-
-// UnregisterFloat64Observer is a convenience wrapper around
-// Meter.UnregisterObserver for Float64Observer.
-func UnregisterFloat64Observer(meter Meter, observer Float64Observer) {
-	meter.UnregisterObserver(observer.Observer)
 }

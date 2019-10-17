@@ -37,16 +37,8 @@ type (
 		measurements []Measurement
 	}
 
-	observerData struct {
-		observer Observer
-		callback ObserverCallback
-	}
-
-	observerMap map[DescriptorID]observerData
-
 	mockMeter struct {
 		measurementBatches []batch
-		observers          observerMap
 	}
 )
 
@@ -102,40 +94,4 @@ func (m *mockMeter) NewHandle(erm ExplicitReportingMetric, labels LabelSet) Hand
 }
 
 func (m *mockMeter) DeleteHandle(Handle) {
-}
-
-func (m *mockMeter) RegisterObserver(o Observer, cb ObserverCallback) {
-	id := o.Descriptor().ID()
-	if _, ok := m.observers[id]; ok {
-		return
-	}
-	data := observerData{
-		observer: o,
-		callback: cb,
-	}
-	if m.observers == nil {
-		m.observers = observerMap{
-			id: data,
-		}
-	} else {
-		m.observers[id] = data
-	}
-}
-
-func (m *mockMeter) UnregisterObserver(o Observer) {
-	delete(m.observers, o.Descriptor().ID())
-}
-
-func (m *mockMeter) PerformObservations() {
-	for _, data := range m.observers {
-		o := data.observer
-		descriptor := o.Descriptor()
-		ocb := func(l LabelSet, v MeasurementValue) {
-			m.RecordBatch(context.Background(), l, Measurement{
-				Descriptor: descriptor,
-				Value:      v,
-			})
-		}
-		data.callback(m, o, ocb)
-	}
 }
