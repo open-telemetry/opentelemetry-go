@@ -27,6 +27,8 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/testharness"
+	"go.opentelemetry.io/api/trace"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 )
@@ -41,6 +43,15 @@ func init() {
 	setupDefaultSamplerConfig()
 }
 
+func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
+	harness := testharness.NewHarness(t)
+	subjectFactory := func() trace.Tracer {
+		return apitrace.GlobalTracer()
+	}
+
+	harness.TestTracer(subjectFactory)
+}
+
 func setupDefaultSamplerConfig() {
 	// no random sampling, but sample children of sampled spans.
 	ApplyConfig(Config{DefaultSampler: ProbabilitySampler(0)})
@@ -52,14 +63,6 @@ type testExporter struct {
 
 func (t *testExporter) ExportSpan(ctx context.Context, d *export.SpanData) {
 	t.spans = append(t.spans, d)
-}
-
-func TestStartSpan(t *testing.T) {
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "StartSpan")
-	defer span.End()
-	if span == nil {
-		t.Errorf("span not started")
-	}
 }
 
 func TestSetName(t *testing.T) {
