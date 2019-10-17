@@ -22,6 +22,7 @@ import (
 )
 
 type tracer struct {
+	provider  *traceProvider
 	name      string
 	component string
 	resources []core.KeyValue

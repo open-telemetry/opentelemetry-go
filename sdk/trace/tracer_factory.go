@@ -16,20 +16,60 @@ package trace
 
 import (
 	"sync"
+	"sync/atomic"
+
+	"go.opentelemetry.io/sdk/export"
 
 	apitrace "go.opentelemetry.io/api/trace"
 )
 
+const (
+	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
+)
+
+type ProviderOptions struct {
+	syncers  []export.SpanSyncer
+	batchers []export.SpanBatcher
+}
+
+type ProviderOption func(*ProviderOptions)
+
 type traceProvider struct {
-	mu          sync.Mutex
-	namedTracer map[string]*tracer
+	o              *ProviderOptions
+	mu             sync.Mutex
+	namedTracer    map[string]*tracer
+	spanProcessors atomic.Value
 }
 
 var _ apitrace.Provider = &traceProvider{}
 
-const (
-	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
-)
+func NewProvider(opts ...ProviderOption) (apitrace.Provider, error) {
+
+	o := &ProviderOptions{}
+	for _, opt := range opts {
+		opt(o)
+	}
+	tp := &traceProvider{o: o}
+
+	new := make(spanProcessorMap)
+	for _, syncer := range o.syncers {
+		ssp := NewSimpleSpanProcessor(syncer)
+		// TODO(rghetia): if unregister is not required then there is no need for sync.Once
+		new[ssp] = &sync.Once{}
+	}
+
+	for _, batcher := range o.batchers {
+		bsp, err := NewBatchSpanProcessor(batcher)
+		if err != nil {
+			return nil, err
+		}
+		new[bsp] = &sync.Once{}
+	}
+	// TODO (rghetia): if span processors are only register during construction then simple
+	// map is sufficient.
+	p.spanProcessors.Store(new)
+	return tp, nil
+}
 
 func (p *traceProvider) GetTracer(name string) apitrace.Tracer {
 	p.mu.Lock()
@@ -39,8 +79,21 @@ func (p *traceProvider) GetTracer(name string) apitrace.Tracer {
 	}
 	t, ok := p.namedTracer[name]
 	if !ok {
-		t = &tracer{name: name}
+		t = &tracer{name: name, provider: p}
 		p.namedTracer[name] = t
 	}
 	return t
+}
+
+func (p *traceProvider) RegisterSpanProcessor(s SpanProcessor) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	new := make(spanProcessorMap)
+	if old, ok := spanProcessors.Load().(spanProcessorMap); ok {
+		for k, v := range old {
+			new[k] = v
+		}
+	}
+	new[s] = &sync.Once{}
+	p.spanProcessors.Store(new)
 }
