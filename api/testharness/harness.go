@@ -42,7 +42,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			ctxKey := "ctx key"
+			ctxKey := testCtxKey{}
 			ctxValue := "ctx value"
 			ctx := context.WithValue(context.Background(), ctxKey, ctxValue)
 
@@ -189,7 +189,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			ctxKey := "ctx key"
+			ctxKey := testCtxKey{}
 			ctxValue := "ctx value"
 			ctx := context.WithValue(context.Background(), ctxKey, ctxValue)
 
@@ -286,3 +286,5 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 		})
 	})
 }
+
+type testCtxKey struct{}
