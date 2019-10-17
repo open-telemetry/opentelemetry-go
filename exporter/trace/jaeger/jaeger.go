@@ -227,25 +227,25 @@ func coreAttributeToTag(kv core.KeyValue) *gen.Tag {
 	switch kv.Value.Type {
 	case core.STRING:
 		tag = &gen.Tag{
-			Key:   kv.Key.Name,
+			Key:   string(kv.Key),
 			VStr:  &kv.Value.String,
 			VType: gen.TagType_STRING,
 		}
 	case core.BOOL:
 		tag = &gen.Tag{
-			Key:   kv.Key.Name,
+			Key:   string(kv.Key),
 			VBool: &kv.Value.Bool,
 			VType: gen.TagType_BOOL,
 		}
 	case core.INT32, core.INT64:
 		tag = &gen.Tag{
-			Key:   kv.Key.Name,
+			Key:   string(kv.Key),
 			VLong: &kv.Value.Int64,
 			VType: gen.TagType_LONG,
 		}
 	case core.FLOAT32, core.FLOAT64:
 		tag = &gen.Tag{
-			Key:     kv.Key.Name,
+			Key:     string(kv.Key),
 			VDouble: &kv.Value.Float64,
 			VType:   gen.TagType_DOUBLE,
 		}

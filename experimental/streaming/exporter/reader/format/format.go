@@ -41,7 +41,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 				return true
 			}
 			buf.WriteString(" ")
-			buf.WriteString(kv.Key.Name)
+			buf.WriteString(string(kv.Key))
 			buf.WriteString("=")
 			buf.WriteString(kv.Value.Emit())
 			return true
@@ -81,7 +81,7 @@ func AppendEvent(buf *strings.Builder, data reader.Event) {
 		buf.WriteString(" (")
 		data.Attributes.Foreach(func(kv core.KeyValue) bool {
 			buf.WriteString(" ")
-			buf.WriteString(kv.Key.Name)
+			buf.WriteString(string(kv.Key))
 			buf.WriteString("=")
 			buf.WriteString(kv.Value.Emit())
 			return true
@@ -150,7 +150,7 @@ func formatMetricLabels(buf *strings.Builder, l distributedcontext.Map) {
 			buf.WriteString(",")
 		}
 		i++
-		buf.WriteString(kv.Key.Name)
+		buf.WriteString(string(kv.Key))
 		buf.WriteString("=")
 		buf.WriteString(kv.Value.Emit())
 		return true

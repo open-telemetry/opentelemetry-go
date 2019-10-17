@@ -170,7 +170,7 @@ func copyAttributes(out **tracepb.Span_Attributes, in []core.KeyValue) {
 		if av == nil {
 			continue
 		}
-		switch kv.Key.Name {
+		switch kv.Key {
 		case PathAttribute:
 			(*out).AttributeMap[labelHTTPPath] = av
 		case HostAttribute:
@@ -182,11 +182,11 @@ func copyAttributes(out **tracepb.Span_Attributes, in []core.KeyValue) {
 		case StatusCodeAttribute:
 			(*out).AttributeMap[labelHTTPStatusCode] = av
 		default:
-			if len(kv.Key.Name) > 128 {
+			if len(kv.Key) > 128 {
 				dropped++
 				continue
 			}
-			(*out).AttributeMap[kv.Key.Name] = av
+			(*out).AttributeMap[string(kv.Key)] = av
 		}
 	}
 	(*out).DroppedAttributesCount = dropped

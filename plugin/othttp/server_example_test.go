@@ -70,7 +70,7 @@ func ExampleNewHandler() {
 		default:
 			span := trace.CurrentSpan(ctx)
 			span.SetAttribute(
-				core.KeyValue{Key: core.Key{Name: "name"},
+				core.KeyValue{Key: "name",
 					Value: core.Value{Type: core.STRING, String: pp[1]},
 				},
 			)

@@ -26,7 +26,7 @@ func TestBool(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) core.Bool(v bool) KeyValue {}
-			have := core.Key{}.Bool(testcase.v)
+			have := core.Key("").Bool(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -51,7 +51,7 @@ func TestInt64(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Int64(v int64) KeyValue {
-			have := core.Key{}.Int64(testcase.v)
+			have := core.Key("").Int64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -76,7 +76,7 @@ func TestUint64(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Uint64(v uint64) KeyValue {
-			have := core.Key{}.Uint64(testcase.v)
+			have := core.Key("").Uint64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -101,7 +101,7 @@ func TestFloat64(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Float64(v float64) KeyValue {
-			have := core.Key{}.Float64(testcase.v)
+			have := core.Key("").Float64(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -126,7 +126,7 @@ func TestInt32(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Int32(v int32) KeyValue {
-			have := core.Key{}.Int32(testcase.v)
+			have := core.Key("").Int32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -151,7 +151,7 @@ func TestUint32(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Uint32(v uint32) KeyValue {
-			have := core.Key{}.Uint32(testcase.v)
+			have := core.Key("").Uint32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -176,7 +176,7 @@ func TestFloat32(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Float32(v float32) KeyValue {
-			have := core.Key{}.Float32(testcase.v)
+			have := core.Key("").Float32(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -201,7 +201,7 @@ func TestString(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) String(v string) KeyValue {
-			have := core.Key{}.String(testcase.v)
+			have := core.Key("").String(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -226,7 +226,7 @@ func TestBytes(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Bytes(v []byte) KeyValue {
-			have := core.Key{}.Bytes(testcase.v)
+			have := core.Key("").Bytes(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -257,7 +257,7 @@ func TestInt(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Int(v int) KeyValue {
-			have := core.Key{}.Int(testcase.v)
+			have := core.Key("").Int(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -288,7 +288,7 @@ func TestUint(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (k core.Key) Uint(v uint) KeyValue {
-			have := core.Key{}.Uint(testcase.v)
+			have := core.Key("").Uint(testcase.v)
 			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
 				t.Fatal(diff)
 			}
@@ -304,14 +304,12 @@ func TestDefined(t *testing.T) {
 	}{
 		{
 			name: "Key.Defined() returns true when len(v.Name) != 0",
-			k: core.Key{
-				Name: "foo",
-			},
+			k:    core.Key("foo"),
 			want: true,
 		},
 		{
 			name: "Key.Defined() returns false when len(v.Name) == 0",
-			k:    core.Key{},
+			k:    core.Key(""),
 			want: false,
 		},
 	} {

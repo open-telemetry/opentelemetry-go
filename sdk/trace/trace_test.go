@@ -229,7 +229,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []core.KeyValue{{
-			Key:   core.Key{Name: "key1"},
+			Key:   core.Key("key1"),
 			Value: core.Value{Type: core.STRING, String: "value1"},
 		}},
 		HasRemoteParent: true,
@@ -262,11 +262,11 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		Name:         "span0",
 		Attributes: []core.KeyValue{
 			{
-				Key:   core.Key{Name: "key1"},
+				Key:   core.Key("key1"),
 				Value: core.Value{Type: core.STRING, String: "value3"},
 			},
 			{
-				Key:   core.Key{Name: "key4"},
+				Key:   core.Key("key4"),
 				Value: core.Value{Type: core.STRING, String: "value4"},
 			},
 		},

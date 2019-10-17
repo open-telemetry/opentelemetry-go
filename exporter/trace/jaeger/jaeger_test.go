@@ -70,11 +70,11 @@ func Test_spanDataToThrift(t *testing.T) {
 				},
 				Attributes: []core.KeyValue{
 					{
-						Key:   core.Key{Name: "key"},
+						Key:   core.Key("key"),
 						Value: core.Value{Type: core.STRING, String: keyValue},
 					},
 					{
-						Key:   core.Key{Name: "double"},
+						Key:   core.Key("double"),
 						Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
 					},
 				},

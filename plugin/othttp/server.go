@@ -35,17 +35,17 @@ const (
 
 // Attribute keys that HTTPHandler could write out.
 const (
-	HostKeyName       = "http.host"        // the http host (http.Request.Host)
-	MethodKeyName     = "http.method"      // the http method (http.Request.Method)
-	PathKeyName       = "http.path"        // the http path (http.Request.URL.Path)
-	URLKeyName        = "http.url"         // the http url (http.Request.URL.String())
-	UserAgentKeyName  = "http.user_agent"  // the http user agent (http.Request.UserAgent())
-	RouteKeyName      = "http.route"       // the http route (ex: /users/:id)
-	StatusCodeKeyName = "http.status_code" // if set, the http status
-	ReadBytesKeyName  = "http.read_bytes"  // if anything was read from the request body, the total number of bytes read
-	ReadErrorKeyName  = "http.read_error"  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
-	WroteBytesKeyName = "http.wrote_bytes" // if anything was written to the response writer, the total number of bytes written
-	WriteErrorKeyName = "http.write_error" // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
+	HostKeyName       core.Key = "http.host"        // the http host (http.Request.Host)
+	MethodKeyName     core.Key = "http.method"      // the http method (http.Request.Method)
+	PathKeyName       core.Key = "http.path"        // the http path (http.Request.URL.Path)
+	URLKeyName        core.Key = "http.url"         // the http url (http.Request.URL.String())
+	UserAgentKeyName  core.Key = "http.user_agent"  // the http user agent (http.Request.UserAgent())
+	RouteKeyName      core.Key = "http.route"       // the http route (ex: /users/:id)
+	StatusCodeKeyName core.Key = "http.status_code" // if set, the http status
+	ReadBytesKeyName  core.Key = "http.read_bytes"  // if anything was read from the request body, the total number of bytes read
+	ReadErrorKeyName  core.Key = "http.read_error"  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
+	WroteBytesKeyName core.Key = "http.wrote_bytes" // if anything was written to the response writer, the total number of bytes written
+	WriteErrorKeyName core.Key = "http.write_error" // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
 )
 
 // HTTPHandler provides http middleware that corresponds to the http.Handler interface
@@ -151,7 +151,7 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.readEvent {
 		readRecordFunc = func(n int) {
 			span.AddEvent(ctx, "read", core.KeyValue{
-				Key: core.Key{Name: ReadBytesKeyName},
+				Key: ReadBytesKeyName,
 				Value: core.Value{
 					Type:  core.INT64,
 					Int64: int64(n),
@@ -165,7 +165,7 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.writeEvent {
 		writeRecordFunc = func(n int) {
 			span.AddEvent(ctx, "write", core.KeyValue{
-				Key: core.Key{Name: WroteBytesKeyName},
+				Key: WroteBytesKeyName,
 				Value: core.Value{
 					Type:  core.INT64,
 					Int64: int64(n),
@@ -189,31 +189,31 @@ func setBeforeServeAttributes(span trace.Span, host, method, path, url, uagent s
 	// are available to be mutated by the handler if needed.
 	span.SetAttributes(
 		core.KeyValue{
-			Key: core.Key{Name: HostKeyName},
+			Key: HostKeyName,
 			Value: core.Value{
 				Type:   core.STRING,
 				String: host,
 			}},
 		core.KeyValue{
-			Key: core.Key{Name: MethodKeyName},
+			Key: MethodKeyName,
 			Value: core.Value{
 				Type:   core.STRING,
 				String: method,
 			}},
 		core.KeyValue{
-			Key: core.Key{Name: PathKeyName},
+			Key: PathKeyName,
 			Value: core.Value{
 				Type:   core.STRING,
 				String: path,
 			}},
 		core.KeyValue{
-			Key: core.Key{Name: URLKeyName},
+			Key: URLKeyName,
 			Value: core.Value{
 				Type:   core.STRING,
 				String: url,
 			}},
 		core.KeyValue{
-			Key: core.Key{Name: UserAgentKeyName},
+			Key: UserAgentKeyName,
 			Value: core.Value{
 				Type:   core.STRING,
 				String: uagent,
@@ -228,7 +228,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 	if read > 0 {
 		kv = append(kv,
 			core.KeyValue{
-				Key: core.Key{Name: ReadBytesKeyName},
+				Key: ReadBytesKeyName,
 				Value: core.Value{
 					Type:  core.INT64,
 					Int64: read,
@@ -238,7 +238,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 	if rerr != nil && rerr != io.EOF {
 		kv = append(kv,
 			core.KeyValue{
-				Key: core.Key{Name: ReadErrorKeyName},
+				Key: ReadErrorKeyName,
 				Value: core.Value{
 					Type:   core.STRING,
 					String: rerr.Error(),
@@ -248,7 +248,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 	if wrote > 0 {
 		kv = append(kv,
 			core.KeyValue{
-				Key: core.Key{Name: WroteBytesKeyName},
+				Key: WroteBytesKeyName,
 				Value: core.Value{
 					Type:  core.INT64,
 					Int64: wrote,
@@ -258,7 +258,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 	if statusCode > 0 {
 		kv = append(kv,
 			core.KeyValue{
-				Key: core.Key{Name: StatusCodeKeyName},
+				Key: StatusCodeKeyName,
 				Value: core.Value{
 					Type:  core.INT64,
 					Int64: statusCode,
@@ -268,7 +268,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 	if werr != nil && werr != io.EOF {
 		kv = append(kv,
 			core.KeyValue{
-				Key: core.Key{Name: WriteErrorKeyName},
+				Key: WriteErrorKeyName,
 				Value: core.Value{
 					Type:   core.STRING,
 					String: werr.Error(),
@@ -284,7 +284,7 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttribute(
 			core.KeyValue{
-				Key: core.Key{Name: RouteKeyName},
+				Key: RouteKeyName,
 				Value: core.Value{
 					Type:   core.STRING,
 					String: route,
