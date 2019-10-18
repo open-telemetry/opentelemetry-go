@@ -5,8 +5,7 @@ export GO111MODULE=on
 EXAMPLES := \
 	./example/basic \
 	./example/http/client \
-	./example/http/server \
-	./experimental/streaming/example/basic
+	./example/http/server
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)

@@ -143,7 +143,8 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.SpanOption{}, h.spanOptions...) // start with the configured options
 
-	sc := h.prop.Extract(r.Context(), r.Header)
+	// TODO: do something with the correlation context
+	sc, _ := h.prop.Extract(r.Context(), r.Header)
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.SpanOption
 		if h.public {

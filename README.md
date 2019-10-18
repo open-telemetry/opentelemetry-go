@@ -105,12 +105,3 @@ attempt to maintain backwards compatibility with the alpha release.
 | Trace Context Propagation   | Alpha   | Unknown         |
 | OpenTracing Bridge          | Alpha   | October         |
 | OpenCensus Bridge           | Alpha   | Unknown         |
-
-## Experimental streaming SDK
-
-The `experimental/streaming` directory contains an experimental SDK
-that supports a low-level exporter.
-
-```
-go run experimental/streaming/example/basic/main.go
-```
