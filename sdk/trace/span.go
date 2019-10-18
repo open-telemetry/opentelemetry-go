@@ -169,7 +169,8 @@ func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...c
 
 func (s *span) SetName(name string) {
 	if s.data == nil {
-		// TODO: now what?
+		// TODO: When a span is not sampled in the first place, it contains incomplete data.
+		//  we need to define how to complete the span with the missing data.
 		return
 	}
 	s.data.Name = name
@@ -318,7 +319,7 @@ func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, 
 
 	// TODO: [rghetia] restore when spanstore is added.
 	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.Record {
-	if !span.spanContext.IsSampled() && !o.Record {
+	if !span.spanContext.IsSampled() {
 		return span
 	}
 

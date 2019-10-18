@@ -106,7 +106,6 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		recording:      spanOpts.Record,
 		Attributes:     oteldctx.NewMap(upsertMultiMapUpdate(spanOpts.Attributes...)),
 		StartTime:      startTime,
 		EndTime:        time.Time{},

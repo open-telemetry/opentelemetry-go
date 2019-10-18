@@ -103,7 +103,6 @@ type SpanOptions struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
 	Reference  Reference
-	Record     bool
 }
 
 // Reference is used to establish relationship between newly created span and the
@@ -156,15 +155,6 @@ func WithStartTime(t time.Time) SpanOption {
 func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
 		o.Attributes = attrs
-	}
-}
-
-// WithRecord specifies that the span should be recorded.
-// Note that the implementation may still override this preference,
-// e.g., if the span is a child in an unsampled trace.
-func WithRecord() SpanOption {
-	return func(o *SpanOptions) {
-		o.Record = true
 	}
 }
 

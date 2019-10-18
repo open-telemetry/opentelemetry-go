@@ -93,18 +93,21 @@ func TestSetName(t *testing.T) {
 			sampledBefore: true,
 			sampledAfter:  false,
 		},
-		{ // 2
-			name:          "barbar",
-			newName:       "barbaz",
-			sampledBefore: false,
-			sampledAfter:  false,
-		},
-		{ // 3
-			name:          "barbar",
-			newName:       "foobar",
-			sampledBefore: false,
-			sampledAfter:  true,
-		},
+		// TODO (paivagustavo): this test used `WithRecord` to force the span to have
+		//  a export data, this ensured that `SetName` worked nicely, but `WithRecord`
+		//  was removed from the API.
+		//{ // 2
+		//	name:          "barbar",
+		//	newName:       "barbaz",
+		//	sampledBefore: false,
+		//	sampledAfter:  false,
+		//},
+		//{ // 3
+		//	name:          "barbar",
+		//	newName:       "foobar",
+		//	sampledBefore: false,
+		//	sampledAfter:  true,
+		//},
 	} {
 		span := startNamedSpan(tt.name)
 		if !samplerIsCalled {
@@ -569,7 +572,6 @@ func startNamedSpan(name string) apitrace.Span {
 		context.Background(),
 		name,
 		apitrace.ChildOf(remoteSpanContext()),
-		apitrace.WithRecord(),
 	)
 	return span
 }

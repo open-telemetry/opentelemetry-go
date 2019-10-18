@@ -319,7 +319,6 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
 		opts.Reference = bReference.ToOtelReference()
-		opts.Record = true
 	})
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
