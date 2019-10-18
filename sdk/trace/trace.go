@@ -17,6 +17,7 @@ package trace
 import (
 	crand "crypto/rand"
 	"encoding/binary"
+	"go.opentelemetry.io/sdk/trace/internal"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -27,27 +28,16 @@ import (
 var config atomic.Value // access atomically
 
 func init() {
-	gen := &defaultIDGenerator{}
-	// initialize traceID and spanID generators.
-	var rngSeed int64
-	for _, p := range []interface{}{
-		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
-	} {
-		_ = binary.Read(crand.Reader, binary.LittleEndian, p)
-	}
-	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
-	gen.spanIDInc |= 1
-
 	config.Store(&Config{
 		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
-		IDGenerator:          gen,
+		IDGenerator:          defIDGenerator(),
 		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
 	})
 }
 
-var p *traceProvider
+var p *TraceProvider
 var registerProviderOnce sync.Once
 
 // RegisterProvider registers trace provider implementation as default Trace Provider.
@@ -56,7 +46,7 @@ var registerProviderOnce sync.Once
 // application before calling any tracing api.
 func RegisterProvider() apitrace.Provider {
 	registerProviderOnce.Do(func() {
-		p = &traceProvider{namedTracer: map[string]*tracer{}}
+		p = &TraceProvider{namedTracer: map[string]*tracer{}}
 		apitrace.SetGlobalProvider(p)
 	})
 	return p
@@ -75,4 +65,18 @@ func Register() apitrace.Tracer {
 		apitrace.SetGlobalTracer(tr)
 	})
 	return tr
+}
+
+func defIDGenerator() internal.IDGenerator {
+	gen := &defaultIDGenerator{}
+	// initialize traceID and spanID generators.
+	var rngSeed int64
+	for _, p := range []interface{}{
+		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
+	} {
+		_ = binary.Read(crand.Reader, binary.LittleEndian, p)
+	}
+	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
+	gen.spanIDInc |= 1
+	return gen
 }

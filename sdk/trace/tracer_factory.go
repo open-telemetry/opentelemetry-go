@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
@@ -27,35 +28,51 @@ const (
 	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
 )
 
+type currentSpanKeyType struct{}
+
+var (
+	currentSpanKey = &currentSpanKeyType{}
+)
 type ProviderOptions struct {
 	syncers  []export.SpanSyncer
 	batchers []export.SpanBatcher
+	config   Config
 }
 
 type ProviderOption func(*ProviderOptions)
 
-type traceProvider struct {
-	o              *ProviderOptions
+type TraceProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[string]*tracer
 	spanProcessors atomic.Value
+	config         atomic.Value // access atomically
+	currentSpanKey *currentSpanKeyType
 }
 
-var _ apitrace.Provider = &traceProvider{}
+var _ apitrace.Provider = &TraceProvider{}
 
-func NewProvider(opts ...ProviderOption) (apitrace.Provider, error) {
+func NewProvider(opts ...ProviderOption) (*TraceProvider, error) {
 
 	o := &ProviderOptions{}
+
 	for _, opt := range opts {
 		opt(o)
 	}
-	tp := &traceProvider{o: o}
 
-	new := make(spanProcessorMap)
+	tp := &TraceProvider{
+		namedTracer: make(map[string]*tracer, 0),
+	}
+	tp.config.Store(&Config{
+		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
+		IDGenerator:          defIDGenerator(),
+		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
+		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
+		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
+	})
+
 	for _, syncer := range o.syncers {
 		ssp := NewSimpleSpanProcessor(syncer)
-		// TODO(rghetia): if unregister is not required then there is no need for sync.Once
-		new[ssp] = &sync.Once{}
+		tp.RegisterSpanProcessor(ssp)
 	}
 
 	for _, batcher := range o.batchers {
@@ -63,15 +80,15 @@ func NewProvider(opts ...ProviderOption) (apitrace.Provider, error) {
 		if err != nil {
 			return nil, err
 		}
-		new[bsp] = &sync.Once{}
+		tp.RegisterSpanProcessor(bsp)
 	}
-	// TODO (rghetia): if span processors are only register during construction then simple
-	// map is sufficient.
-	p.spanProcessors.Store(new)
+
+	tp.ApplyConfig(o.config)
+
 	return tp, nil
 }
 
-func (p *traceProvider) GetTracer(name string) apitrace.Tracer {
+func (p *TraceProvider) GetTracer(name string) apitrace.Tracer {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {
@@ -85,15 +102,87 @@ func (p *traceProvider) GetTracer(name string) apitrace.Tracer {
 	return t
 }
 
-func (p *traceProvider) RegisterSpanProcessor(s SpanProcessor) {
+func (p *TraceProvider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	new := make(spanProcessorMap)
-	if old, ok := spanProcessors.Load().(spanProcessorMap); ok {
+	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
 		for k, v := range old {
 			new[k] = v
 		}
 	}
 	new[s] = &sync.Once{}
 	p.spanProcessors.Store(new)
+}
+
+// UnregisterSpanProcessor removes from the list of SpanProcessors the SpanProcessor that was
+// registered with the given name.
+func (p *TraceProvider) UnregisterSpanProcessor(s SpanProcessor) {
+	mu.Lock()
+	defer mu.Unlock()
+	new := make(spanProcessorMap)
+	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
+		for k, v := range old {
+			new[k] = v
+		}
+	}
+	if stopOnce, ok := new[s]; ok && stopOnce != nil {
+		stopOnce.Do(func() {
+			s.Shutdown()
+		})
+	}
+	delete(new, s)
+	p.spanProcessors.Store(new)
+}
+
+func (p *TraceProvider) ApplyConfig(cfg Config) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	c := *p.config.Load().(*Config)
+	if cfg.DefaultSampler != nil {
+		c.DefaultSampler = cfg.DefaultSampler
+	}
+	if cfg.IDGenerator != nil {
+		c.IDGenerator = cfg.IDGenerator
+	}
+	if cfg.MaxEventsPerSpan > 0 {
+		c.MaxEventsPerSpan = cfg.MaxEventsPerSpan
+	}
+	if cfg.MaxAttributesPerSpan > 0 {
+		c.MaxAttributesPerSpan = cfg.MaxAttributesPerSpan
+	}
+	if cfg.MaxLinksPerSpan > 0 {
+		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
+	}
+	p.config.Store(&c)
+}
+
+
+func (p *TraceProvider) setCurrentSpan(ctx context.Context, span apitrace.Span) context.Context {
+	return context.WithValue(ctx, currentSpanKey, span)
+}
+
+func (p *TraceProvider) currentSpan(ctx context.Context) apitrace.Span {
+	if span, has := ctx.Value(currentSpanKey).(apitrace.Span); has {
+		return span
+	}
+	return apitrace.NoopSpan{}
+}
+
+func WithSyncer(syncer export.SpanSyncer) ProviderOption {
+	return func (opts *ProviderOptions) {
+		opts.syncers = append(opts.syncers, syncer)
+	}
+}
+
+func WithBatcher(batcher export.SpanBatcher) ProviderOption {
+	return func(opts *ProviderOptions) {
+		opts.batchers = append(opts.batchers, batcher)
+	}
+}
+
+func WithConfig(config Config) ProviderOption {
+	return func(opts *ProviderOptions) {
+		opts.config = config
+	}
 }

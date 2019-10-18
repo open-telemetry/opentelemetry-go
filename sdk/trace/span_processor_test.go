@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
@@ -48,10 +47,12 @@ func (t *testSpanProcesor) Shutdown() {
 
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
+	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	sp := NewTestSpanProcessor()
-	sdktrace.RegisterSpanProcessor(sp)
-	defer sdktrace.UnregisterSpanProcessor(sp)
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
+	tp.RegisterSpanProcessor(sp)
+
+	tr := tp.GetTracer("SpanProcessor")
+	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
 	wantCount := 1
 	gotCount := len(sp.spansStarted)
@@ -66,14 +67,17 @@ func TestRegisterSpanProcessort(t *testing.T) {
 
 func TestUnregisterSpanProcessor(t *testing.T) {
 	name := "Start span after unregistering span processor"
+	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	sp := NewTestSpanProcessor()
-	sdktrace.RegisterSpanProcessor(sp)
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
+	tp.RegisterSpanProcessor(sp)
+
+	tr := tp.GetTracer("SpanProcessor")
+	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
-	sdktrace.UnregisterSpanProcessor(sp)
+	tp.UnregisterSpanProcessor(sp)
 
 	// start another span after unregistering span processor.
-	_, span = apitrace.GlobalTracer().Start(context.Background(), "Start span after unregister")
+	_, span = tr.Start(context.Background(), "Start span after unregister")
 	span.End()
 
 	wantCount := 1
@@ -90,10 +94,13 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 
 func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	name := "Unregister span processor while span is active"
+	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	sp := NewTestSpanProcessor()
-	sdktrace.RegisterSpanProcessor(sp)
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnStart")
-	sdktrace.UnregisterSpanProcessor(sp)
+	tp.RegisterSpanProcessor(sp)
+
+	tr := tp.GetTracer("SpanProcessor")
+	_, span := tr.Start(context.Background(), "OnStart")
+	tp.UnregisterSpanProcessor(sp)
 
 	span.End()
 
@@ -112,10 +119,13 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 
 func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
+	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	sp := NewTestSpanProcessor()
+
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
 	}
+	tp.RegisterSpanProcessor(sp)
 
 	wantCount := 1
 	sp.Shutdown()
@@ -128,6 +138,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
+	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
@@ -135,8 +146,8 @@ func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 
 	wantCount := 1
 
-	sdktrace.RegisterSpanProcessor(sp)
-	sdktrace.UnregisterSpanProcessor(sp)
+	tp.RegisterSpanProcessor(sp)
+	tp.UnregisterSpanProcessor(sp)
 
 	gotCount := sp.shutdownCount
 	if wantCount != gotCount {
@@ -144,7 +155,7 @@ func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	}
 
 	// Multiple UnregisterSpanProcessor should not trigger multiple Shutdown calls.
-	sdktrace.UnregisterSpanProcessor(sp)
+	tp.UnregisterSpanProcessor(sp)
 
 	gotCount = sp.shutdownCount
 	if wantCount != gotCount {

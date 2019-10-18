@@ -22,7 +22,7 @@ import (
 )
 
 type tracer struct {
-	provider  *traceProvider
+	provider  *TraceProvider
 	name      string
 	component string
 	resources []core.KeyValue
@@ -58,15 +58,12 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		}
 	}
 
-	spanName := name
-	if tr.name != "" {
-		spanName = tr.name + "/" + name
-	}
-	span := startSpanInternal(spanName, parent, remoteParent, opts)
+	spanName := tr.spanNameWithPrefix(name)
+	span := startSpanInternal(tr, spanName, parent, remoteParent, opts)
 	span.tracer = tr
 
 	if span.IsRecording() {
-		sps, _ := spanProcessors.Load().(spanProcessorMap)
+		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorMap)
 		for sp := range sps {
 			sp.OnStart(span.data)
 		}
@@ -103,4 +100,11 @@ func (tr *tracer) WithResources(res ...core.KeyValue) apitrace.Tracer {
 func (tr *tracer) WithComponent(component string) apitrace.Tracer {
 	tr.component = component
 	return tr
+}
+
+func (tr *tracer) spanNameWithPrefix(name string) string {
+	if tr.name != "" {
+		return tr.name + "/" + name
+	}
+	return name
 }
