@@ -17,10 +17,11 @@ package trace
 import (
 	crand "crypto/rand"
 	"encoding/binary"
-	"go.opentelemetry.io/sdk/trace/internal"
 	"math/rand"
 	"sync"
 	"sync/atomic"
+
+	"go.opentelemetry.io/sdk/trace/internal"
 
 	apitrace "go.opentelemetry.io/api/trace"
 )
@@ -35,21 +36,6 @@ func init() {
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
 	})
-}
-
-var p *TraceProvider
-var registerProviderOnce sync.Once
-
-// RegisterProvider registers trace provider implementation as default Trace Provider.
-// It creates single instance of trace provider and registers it once.
-// Recommended use is to call RegisterProvider in main() of an
-// application before calling any tracing api.
-func RegisterProvider() apitrace.Provider {
-	registerProviderOnce.Do(func() {
-		p = &TraceProvider{namedTracer: map[string]*tracer{}}
-		apitrace.SetGlobalProvider(p)
-	})
-	return p
 }
 
 var tr *tracer

@@ -76,7 +76,7 @@ func TestSetName(t *testing.T) {
 		t.Logf("called sampler for name %q", p.Name)
 		return SamplingDecision{Sample: strings.HasPrefix(p.Name, "SetName/foo")}
 	})
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler:fooSampler}))
+	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
 
 	//defer setupDefaultSamplerConfig()
 	type testCase struct {
@@ -590,7 +590,7 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *TraceProvider, trName string) apitrace.Span {
+func startSpan(tp *Provider, trName string) apitrace.Span {
 	return startNamedSpan(tp, trName, "span0")
 }
 
@@ -598,7 +598,7 @@ func startSpan(tp *TraceProvider, trName string) apitrace.Span {
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *TraceProvider, trName, name string) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string) apitrace.Span {
 	_, span := tp.GetTracer(trName).Start(
 		context.Background(),
 		name,

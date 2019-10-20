@@ -16,12 +16,13 @@ package main
 
 import (
 	"context"
-	"time"
+	"log"
 
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/example/namedtracer/foo"
+	"go.opentelemetry.io/exporter/trace/stdout"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -31,14 +32,24 @@ var (
 	anotherKey = key.New("ex.com/another")
 )
 
+var tp *sdktrace.Provider
+
 // initTracer registers sdktrace as trace provider. It also registers exporter with
-// sdktrace. In this example it is PrintExporter. Any default configuration such as
+// sdktrace. In this example it is stdout.Exporter. Any default configuration such as
 // default sampling should be done here.
 func initTracer() {
-	sdktrace.RegisterProvider()
-	ssp := sdktrace.NewSimpleSpanProcessor(&sdktrace.PrintExporter{})
-	sdktrace.RegisterSpanProcessor(ssp)
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	var err error
+	exp, err := stdout.NewExporter(stdout.Options{})
+	if err != nil {
+		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		return
+	}
+	tp, err = sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	if err != nil {
+		log.Panicf("failed to initialize trace provider %v\n", err)
+	}
+	trace.SetGlobalProvider(tp)
 }
 
 func main() {
@@ -46,7 +57,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := trace.GlobalProvider().GetTracer("example/namedtracer/main")
+	tracer := tp.GetTracer("example/namedtracer/main")
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,
@@ -65,7 +76,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// sleep 5 seconds to print span data
-	time.Sleep(5 * time.Second)
 }

@@ -7,4 +7,5 @@ coverage.*
 /example/basic/basic
 /example/http/client/client
 /example/http/server/server
+/example/namedtracer/namedtracer
 /experimental/streaming/example/basic/basic

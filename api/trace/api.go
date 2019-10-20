@@ -43,9 +43,6 @@ type Tracer interface {
 		operation string,
 		body func(ctx context.Context) error,
 	) error
-
-	// CurrentSpan returns currently active span from the context.
-	CurrentSpan(ctx context.Context) Span
 }
 
 type EndOptions struct {

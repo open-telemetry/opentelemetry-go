@@ -15,7 +15,6 @@
 package trace
 
 import (
-	"context"
 	"sync"
 	"sync/atomic"
 
@@ -28,11 +27,6 @@ const (
 	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
 )
 
-type currentSpanKeyType struct{}
-
-var (
-	currentSpanKey = &currentSpanKeyType{}
-)
 type ProviderOptions struct {
 	syncers  []export.SpanSyncer
 	batchers []export.SpanBatcher
@@ -41,17 +35,16 @@ type ProviderOptions struct {
 
 type ProviderOption func(*ProviderOptions)
 
-type TraceProvider struct {
+type Provider struct {
 	mu             sync.Mutex
 	namedTracer    map[string]*tracer
 	spanProcessors atomic.Value
 	config         atomic.Value // access atomically
-	currentSpanKey *currentSpanKeyType
 }
 
-var _ apitrace.Provider = &TraceProvider{}
+var _ apitrace.Provider = &Provider{}
 
-func NewProvider(opts ...ProviderOption) (*TraceProvider, error) {
+func NewProvider(opts ...ProviderOption) (*Provider, error) {
 
 	o := &ProviderOptions{}
 
@@ -59,8 +52,8 @@ func NewProvider(opts ...ProviderOption) (*TraceProvider, error) {
 		opt(o)
 	}
 
-	tp := &TraceProvider{
-		namedTracer: make(map[string]*tracer, 0),
+	tp := &Provider{
+		namedTracer: make(map[string]*tracer),
 	}
 	tp.config.Store(&Config{
 		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
@@ -88,7 +81,7 @@ func NewProvider(opts ...ProviderOption) (*TraceProvider, error) {
 	return tp, nil
 }
 
-func (p *TraceProvider) GetTracer(name string) apitrace.Tracer {
+func (p *Provider) GetTracer(name string) apitrace.Tracer {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {
@@ -102,7 +95,7 @@ func (p *TraceProvider) GetTracer(name string) apitrace.Tracer {
 	return t
 }
 
-func (p *TraceProvider) RegisterSpanProcessor(s SpanProcessor) {
+func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	new := make(spanProcessorMap)
@@ -117,7 +110,7 @@ func (p *TraceProvider) RegisterSpanProcessor(s SpanProcessor) {
 
 // UnregisterSpanProcessor removes from the list of SpanProcessors the SpanProcessor that was
 // registered with the given name.
-func (p *TraceProvider) UnregisterSpanProcessor(s SpanProcessor) {
+func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
 	new := make(spanProcessorMap)
@@ -135,7 +128,7 @@ func (p *TraceProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	p.spanProcessors.Store(new)
 }
 
-func (p *TraceProvider) ApplyConfig(cfg Config) {
+func (p *Provider) ApplyConfig(cfg Config) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	c := *p.config.Load().(*Config)
@@ -157,20 +150,8 @@ func (p *TraceProvider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
-
-func (p *TraceProvider) setCurrentSpan(ctx context.Context, span apitrace.Span) context.Context {
-	return context.WithValue(ctx, currentSpanKey, span)
-}
-
-func (p *TraceProvider) currentSpan(ctx context.Context) apitrace.Span {
-	if span, has := ctx.Value(currentSpanKey).(apitrace.Span); has {
-		return span
-	}
-	return apitrace.NoopSpan{}
-}
-
 func WithSyncer(syncer export.SpanSyncer) ProviderOption {
-	return func (opts *ProviderOptions) {
+	return func(opts *ProviderOptions) {
 		opts.syncers = append(opts.syncers, syncer)
 	}
 }

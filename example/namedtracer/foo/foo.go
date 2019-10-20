@@ -28,12 +28,15 @@ var (
 // SubOperation is simply an example to demonstrate the use of named tracer.
 // It creates a named tracer with its package path.
 func SubOperation(ctx context.Context) error {
+
+	// Using global provider. Alternative is to have application provide a getter
+	// for its component to get the instance of the provider.
 	tr := trace.GlobalProvider().GetTracer("example/namedtracer/foo")
 	return tr.WithSpan(
 		ctx,
 		"Sub operation...",
 		func(ctx context.Context) error {
-			tr.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
+			trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
 			trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 

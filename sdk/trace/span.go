@@ -53,8 +53,8 @@ type span struct {
 	//*spanStore
 	endOnce sync.Once
 
-	executionTracerTaskEnd func()          // ends the execution tracer span
-	tracer                 *tracer         // tracer used to create span.
+	executionTracerTaskEnd func()  // ends the execution tracer span
+	tracer                 *tracer // tracer used to create span.
 }
 
 var _ apitrace.Span = &span{}

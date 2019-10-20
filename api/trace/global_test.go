@@ -29,7 +29,6 @@ func (tp *TestProvider1) GetTracer(name string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
-
 func TestMulitpleGlobalProvider(t *testing.T) {
 
 	p1 := TestProvider1{}
