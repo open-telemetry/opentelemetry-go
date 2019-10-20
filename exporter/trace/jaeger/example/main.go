@@ -25,11 +25,10 @@ import (
 
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/jaeger"
-	"go.opentelemetry.io/sdk/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func main() {
-	trace.Register()
 	ctx := context.Background()
 
 	// Create Jaeger Exporter
@@ -52,9 +51,16 @@ func main() {
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
 	// probability.
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	apitrace.SetGlobalProvider(tp)
 
-	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
+	tr := apitrace.GlobalProvider().GetTracer("component-main")
+	ctx, span := tr.Start(ctx, "/foo")
 	bar(ctx)
 	span.End()
 
@@ -62,7 +68,8 @@ func main() {
 }
 
 func bar(ctx context.Context) {
-	_, span := apitrace.GlobalTracer().Start(ctx, "/bar")
+	tr := apitrace.GlobalProvider().GetTracer("component-bar")
+	_, span := tr.Start(ctx, "/bar")
 	defer span.End()
 
 	// Do bar...

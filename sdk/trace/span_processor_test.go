@@ -29,8 +29,8 @@ type testSpanProcesor struct {
 }
 
 func init() {
-	sdktrace.Register()
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	//sdktrace.Register()
+	//sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
 }
 
 func (t *testSpanProcesor) OnStart(s *export.SpanData) {

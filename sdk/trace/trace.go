@@ -19,24 +19,10 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"sync"
-	"sync/atomic"
-
-	"go.opentelemetry.io/sdk/trace/internal"
 
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/trace/internal"
 )
-
-var config atomic.Value // access atomically
-
-func init() {
-	config.Store(&Config{
-		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
-		IDGenerator:          defIDGenerator(),
-		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
-		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
-		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
-	})
-}
 
 var tr *tracer
 var registerOnce sync.Once

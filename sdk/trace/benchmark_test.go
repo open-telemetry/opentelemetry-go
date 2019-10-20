@@ -20,10 +20,11 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	apitrace "go.opentelemetry.io/api/trace"
 )
 
 func BenchmarkStartEndSpan(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark StartEndSpan")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -36,7 +37,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With 4 Attributes")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -56,7 +57,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With 8 Attributes")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -80,7 +81,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With all Attribute types")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -107,7 +108,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With all Attributes types twice")
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
 		b.ResetTimer()
@@ -144,6 +145,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
+	getTracer(b, "Benchmark traceID to string")
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{TraceID: core.TraceID{High: 1, Low: 0x2a}}
 
@@ -157,6 +159,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
+	getTracer(b, "Benchmark spanID to string")
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{SpanID: 1}
 		want := "0000000000000001"
@@ -171,12 +174,18 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
-		ApplyConfig(Config{DefaultSampler: AlwaysSample()})
 		fn(b)
 	})
 	b.Run("NeverSample", func(b *testing.B) {
 		b.ReportAllocs()
-		ApplyConfig(Config{DefaultSampler: NeverSample()})
 		fn(b)
 	})
+}
+
+func getTracer(b *testing.B, name string) apitrace.Tracer {
+	tp, err := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	if err != nil {
+		b.Fatalf("Failed to create trace provider for test %s\n", name)
+	}
+	return tp.GetTracer(name)
 }
