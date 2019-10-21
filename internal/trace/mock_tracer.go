@@ -57,9 +57,9 @@ func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(conte
 	return body(ctx)
 }
 
-// Start starts a MockSpan. It creates a new Span based on Reference SpanContext option.
-// TracdID is used from Reference Span Context and SpanID is assigned.
-// If Reference SpanContext option is not specified then random TraceID is used.
+// Start starts a MockSpan. It creates a new Span based on Relation SpanContext option.
+// TracdID is used from Relation Span Context and SpanID is assigned.
+// If Relation SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
 func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
 	var opts apitrace.SpanOptions
@@ -68,7 +68,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	}
 	var span *MockSpan
 	var sc core.SpanContext
-	if !opts.Reference.SpanContext.IsValid() {
+	if !opts.Relation.SpanContext.IsValid() {
 		sc = core.SpanContext{
 			TraceID: core.TraceID{
 				High: rand.Uint64(),
@@ -79,7 +79,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 			sc.TraceFlags = core.TraceFlagsSampled
 		}
 	} else {
-		sc = opts.Reference.SpanContext
+		sc = opts.Relation.SpanContext
 	}
 	sc.SpanID = atomic.AddUint64(mt.StartSpanID, 1)
 	span = &MockSpan{
