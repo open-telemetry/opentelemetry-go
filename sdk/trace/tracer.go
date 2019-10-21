@@ -39,10 +39,10 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		op(&opts)
 	}
 
-	if reference := opts.Reference; reference.SpanContext != core.EmptySpanContext() {
-		switch reference.RelationshipType {
+	if relation := opts.Relation; relation.SpanContext != core.EmptySpanContext() {
+		switch relation.RelationshipType {
 		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
-			parent = opts.Reference.SpanContext
+			parent = relation.SpanContext
 			remoteParent = true
 		default:
 			// Future relationship types may have different behavior,
