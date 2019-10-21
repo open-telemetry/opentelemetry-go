@@ -22,9 +22,9 @@ import (
 
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/stackdriver"
 	"go.opentelemetry.io/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/stackdriver"
 )
 
 func initTracer() {
