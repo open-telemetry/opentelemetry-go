@@ -62,11 +62,6 @@ func (t *testBatchExporter) get(idx int) *export.SpanData {
 
 var _ export.SpanBatcher = (*testBatchExporter)(nil)
 
-func init() {
-	//sdktrace.Register()
-	//sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
-}
-
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	_, err := sdktrace.NewBatchSpanProcessor(nil)
 	if err == nil {

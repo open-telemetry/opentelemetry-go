@@ -34,11 +34,6 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 
 var _ export.SpanSyncer = (*testExporter)(nil)
 
-func init() {
-	//sdktrace.Register()
-	//sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
-}
-
 func TestNewSimpleSpanProcessor(t *testing.T) {
 	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
 	if ssp == nil {

@@ -38,27 +38,17 @@ var (
 	sid = uint64(0x0102040810203040)
 )
 
-func init() {
-	//tp, err := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
-	//if err != nil {
-	//	panic("unable to instantiate trace provider")
-	//}
-	//Register()
-	//setupDefaultSamplerConfig()
-}
-
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
+	tp, err := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
+	if err != nil {
+		t.Fatalf("failed to create provider, err: %v\n", err)
+	}
 	harness := testharness.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
-		return apitrace.GlobalTracer()
+		return tp.GetTracer("")
 	}
 
 	harness.TestTracer(subjectFactory)
-}
-
-func setupDefaultSamplerConfig() {
-	// no random sampling, but sample children of sampled spans.
-	ApplyConfig(Config{DefaultSampler: ProbabilitySampler(0)})
 }
 
 type testExporter struct {
@@ -78,7 +68,6 @@ func TestSetName(t *testing.T) {
 	})
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
 
-	//defer setupDefaultSamplerConfig()
 	type testCase struct {
 		name          string
 		newName       string
@@ -625,11 +614,7 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 	if !span.SpanContext().IsSampled() {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
-	//var te testExporter
-	//p := NewSimpleSpanProcessor(&te)
-	//RegisterSpanProcessor(p)
 	span.End()
-	//UnregisterSpanProcessor(p)
 	if len(te.spans) != 1 {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
 	}
@@ -771,7 +756,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
-	tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
+	//tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
 	_, apiSpan = tr.Start(context.Background(), "foo")
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd

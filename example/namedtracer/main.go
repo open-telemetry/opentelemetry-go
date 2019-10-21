@@ -34,9 +34,7 @@ var (
 
 var tp *sdktrace.Provider
 
-// initTracer registers sdktrace as trace provider. It also registers exporter with
-// sdktrace. In this example it is stdout.Exporter. Any default configuration such as
-// default sampling should be done here.
+// initTracer creates a new trace provider instance and registers it as global trace provider.
 func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.Options{})
