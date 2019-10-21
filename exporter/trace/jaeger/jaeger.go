@@ -16,6 +16,7 @@ package jaeger
 
 import (
 	"context"
+	"encoding/binary"
 	"log"
 	"sync"
 
@@ -196,8 +197,8 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	var refs []*gen.SpanRef
 	for _, link := range data.Links {
 		refs = append(refs, &gen.SpanRef{
-			TraceIdHigh: int64(link.TraceID.High),
-			TraceIdLow:  int64(link.TraceID.Low),
+			TraceIdHigh: int64(binary.BigEndian.Uint64(link.TraceID[0:8])),
+			TraceIdLow:  int64(binary.BigEndian.Uint64(link.TraceID[8:16])),
 			SpanId:      int64(link.SpanID),
 			// TODO(paivagustavo): properly set the reference type when specs are defined
 			//  see https://github.com/open-telemetry/opentelemetry-specification/issues/65
@@ -206,8 +207,8 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 
 	return &gen.Span{
-		TraceIdHigh:   int64(data.SpanContext.TraceID.High),
-		TraceIdLow:    int64(data.SpanContext.TraceID.Low),
+		TraceIdHigh:   int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[0:8])),
+		TraceIdLow:    int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[8:16])),
 		SpanId:        int64(data.SpanContext.SpanID),
 		ParentSpanId:  int64(data.ParentSpanID),
 		OperationName: data.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"

@@ -17,6 +17,7 @@ package stdout
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 	"time"
@@ -26,6 +27,13 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
 )
+
+func traceIdFromString(s string) core.TraceID {
+	b, _ := hex.DecodeString(s)
+	t := core.TraceID{}
+	copy(t[:], b)
+	return t
+}
 
 func TestExporter_ExportSpan(t *testing.T) {
 	ex, err := NewExporter(Options{})
@@ -39,7 +47,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
+	traceID := traceIdFromString("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 	keyValue := "value"
 	doubleValue := float64(123.456)
@@ -70,7 +78,9 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	got := b.String()
 	expectedOutput := `{"SpanContext":{` +
-		`"TraceID":{"High":72623859790382856,"Low":651345242494996240},` +
+		//`"TraceID":{"High":72623859790382856,"Low":651345242494996240},` +
+		// FIXME should this printed as an array of bytes?
+		`"TraceID":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],` +
 		`"SpanID":72623859790382856,"TraceFlags":0},` +
 		`"ParentSpanID":0,` +
 		`"SpanKind":0,` +

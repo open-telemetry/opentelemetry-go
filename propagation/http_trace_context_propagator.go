@@ -16,6 +16,7 @@ package propagation
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -46,10 +47,9 @@ var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-
 func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
-		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
+		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
 			supportedVersion,
-			sc.TraceID.High,
-			sc.TraceID.Low,
+			sc.TraceIDString(),
 			sc.SpanID,
 			sc.TraceFlags&core.TraceFlagsSampled)
 		supplier.Set(TraceparentHeader, h)
@@ -124,13 +124,13 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 	}
 	var sc core.SpanContext
 
-	sc.TraceID.High = result
+	binary.BigEndian.PutUint64(sc.TraceID[0:8], result)
 
 	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
 	if err != nil {
 		return core.EmptySpanContext()
 	}
-	sc.TraceID.Low = result
+	binary.BigEndian.PutUint64(sc.TraceID[8:16], result)
 
 	if len(sections[2]) != 16 {
 		return core.EmptySpanContext()

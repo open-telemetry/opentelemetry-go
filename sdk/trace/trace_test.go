@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	tid = core.TraceID{High: 0x0102030405060708, Low: 0x0102040810203040}
+	tid = traceIdFromString("01020304050607080102040810203040")
 	sid = uint64(0x0102040810203040)
 )
 
@@ -374,8 +374,8 @@ func TestAddLinks(t *testing.T) {
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 
 	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
 	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
@@ -411,8 +411,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 
 	span.Link(sc1, key.New("key1").String("value1"))
 	span.Link(sc2,
@@ -445,9 +445,9 @@ func TestLinks(t *testing.T) {
 func TestLinksOverLimit(t *testing.T) {
 	cfg := Config{MaxLinksPerSpan: 2}
 	ApplyConfig(cfg)
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
-	sc3 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x3}, SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 
 	span := startSpan()
 	k2v2 := key.New("key2").String("value2")
@@ -730,7 +730,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		"foo",
 		apitrace.ChildOf(
 			core.SpanContext{
-				TraceID:    core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f},
+				TraceID:    traceIdFromString("0102030405060708090a0b0c0d0e0f"),
 				SpanID:     uint64(0x0001020304050607),
 				TraceFlags: 0,
 			},

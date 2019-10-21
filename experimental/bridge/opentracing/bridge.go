@@ -16,6 +16,7 @@ package opentracing
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -512,7 +513,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !ok {
 		return ot.ErrInvalidCarrier
 	}
-	hhcarrier.Set(traceIDHeader, traceIDString(bridgeSC.otelSpanContext.TraceID))
+	hhcarrier.Set(traceIDHeader, bridgeSC.otelSpanContext.TraceIDString())
 	hhcarrier.Set(spanIDHeader, spanIDToString(bridgeSC.otelSpanContext.SpanID))
 	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
 	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
@@ -521,12 +522,6 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 		return true
 	})
 	return nil
-}
-
-// mostly copied from core/span_context.go, but I prefer not to rely
-// on some impl details
-func traceIDString(traceID otelcore.TraceID) string {
-	return fmt.Sprintf("%.16x%.16x", traceID.High, traceID.Low)
 }
 
 func spanIDToString(spanID uint64) string {
@@ -601,7 +596,8 @@ func traceIDFromString(s string) (otelcore.TraceID, error) {
 	if err != nil {
 		return traceID, err
 	}
-	traceID.High, traceID.Low = high, low
+	binary.BigEndian.PutUint64(traceID[0:8], high)
+	binary.BigEndian.PutUint64(traceID[8:16], low)
 	return traceID, nil
 }
 

@@ -145,11 +145,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 		}
 		return traceID
 	}
-	uints := t.getNRandUint64(2)
-	return otelcore.TraceID{
-		High: uints[0],
-		Low:  uints[1],
-	}
+	return t.getRandTraceID()
 }
 
 func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) uint64 {
@@ -183,17 +179,19 @@ func (t *MockTracer) getSpanID() uint64 {
 }
 
 func (t *MockTracer) getRandUint64() uint64 {
-	return t.getNRandUint64(1)[0]
-}
-
-func (t *MockTracer) getNRandUint64(n int) []uint64 {
-	uints := make([]uint64, n)
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
-	for i := 0; i < n; i++ {
-		uints[i] = t.rand.Uint64()
-	}
-	return uints
+	return t.rand.Uint64()
+}
+
+func (t *MockTracer) getRandTraceID() otelcore.TraceID {
+	t.randLock.Lock()
+	defer t.randLock.Unlock()
+
+	tid := otelcore.TraceID{}
+	t.rand.Read(tid[:])
+
+	return tid
 }
 
 func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrace.Span) context.Context {

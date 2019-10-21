@@ -16,6 +16,7 @@ package propagation_test
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"testing"
@@ -31,9 +32,16 @@ import (
 )
 
 var (
-	traceID = core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+	traceID = traceIdFromString("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID  = uint64(0x00f067aa0ba902b7)
 )
+
+func traceIdFromString(s string) core.TraceID {
+	b, _ := hex.DecodeString(s)
+	t := core.TraceID{}
+	copy(t[:], b)
+	return t
+}
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 	trace.SetGlobalTracer(&mocktrace.MockTracer{})

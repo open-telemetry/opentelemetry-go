@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"encoding/binary"
 	"go.opentelemetry.io/api/core"
 )
 
@@ -52,7 +53,7 @@ func ProbabilitySampler(fraction float64) Sampler {
 		if p.ParentContext.IsSampled() {
 			return SamplingDecision{Sample: true}
 		}
-		x := p.TraceID.High >> 1
+		x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 		return SamplingDecision{Sample: x < traceIDUpperBound}
 	})
 }

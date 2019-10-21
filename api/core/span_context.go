@@ -15,13 +15,14 @@
 package core
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 )
 
-type TraceID struct {
-	High uint64
-	Low  uint64
-}
+type TraceID [16]byte
+
+var nilTraceID TraceID
 
 const (
 	traceFlagsBitMaskSampled = byte(0x01)
@@ -49,7 +50,7 @@ func (sc SpanContext) IsValid() bool {
 }
 
 func (sc SpanContext) HasTraceID() bool {
-	return sc.TraceID.High != 0 || sc.TraceID.Low != 0
+	return !bytes.Equal(sc.TraceID[:], nilTraceID[:])
 }
 
 func (sc SpanContext) HasSpanID() bool {
@@ -61,9 +62,7 @@ func (sc SpanContext) SpanIDString() string {
 }
 
 func (sc SpanContext) TraceIDString() string {
-	p1 := fmt.Sprintf("%.16x", sc.TraceID.High)
-	p2 := fmt.Sprintf("%.16x", sc.TraceID.Low)
-	return p1 + p2
+	return hex.EncodeToString(sc.TraceID[:])
 }
 
 func (sc SpanContext) IsSampled() bool {

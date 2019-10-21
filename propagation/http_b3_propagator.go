@@ -16,6 +16,8 @@ package propagation
 
 import (
 	"context"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -66,10 +68,10 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 		if b3.SingleHeader {
 			sampled := sc.TraceFlags & core.TraceFlagsSampled
 			supplier.Set(B3SingleHeader,
-				fmt.Sprintf("%.16x%.16x-%.16x-%.1d", sc.TraceID.High, sc.TraceID.Low, sc.SpanID, sampled))
+				fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
 		} else {
 			supplier.Set(B3TraceIDHeader,
-				fmt.Sprintf("%.16x%.16x", sc.TraceID.High, sc.TraceID.Low))
+				fmt.Sprintf("%s", sc.TraceIDString()))
 			supplier.Set(B3SpanIDHeader,
 				fmt.Sprintf("%.16x", sc.SpanID))
 
@@ -184,12 +186,19 @@ func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier)
 // extractTraceID parses the value of the X-B3-TraceId b3Header.
 func (b3 HTTPB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
 	if hexStr32ByteRegex.MatchString(tid) {
-		traceID.High, _ = strconv.ParseUint(tid[0:(16)], 16, 64)
-		traceID.Low, _ = strconv.ParseUint(tid[(16):32], 16, 64)
+		high, _ := strconv.ParseUint(tid[0:(16)], 16, 64)
+		low, _ := strconv.ParseUint(tid[(16):32], 16, 64)
+		binary.BigEndian.PutUint64(traceID[0:8], high)
+		binary.BigEndian.PutUint64(traceID[8:16], low)
 		ok = true
 	} else if b3.SingleHeader && hexStr16ByteRegex.MatchString(tid) {
-		traceID.Low, _ = strconv.ParseUint(tid[:16], 16, 64)
-		ok = true
+		b, err := hex.DecodeString(tid)
+		if err != nil {
+			ok = false
+		} else {
+			copy(traceID[:], b)
+			ok = true
+		}
 	}
 	return traceID, ok
 }

@@ -2,6 +2,7 @@ package propagation
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"testing"
 
@@ -27,8 +28,11 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 		var (
 			id      uint64
 			spanID  = uint64(0x00f067aa0ba902b7)
-			traceID = core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+			traceID = core.TraceID{}
 		)
+		bt, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
+		copy(traceID[:], bt)
+
 		mockTracer := &mocktrace.MockTracer{
 			Sampled:     false,
 			StartSpanID: &id,
