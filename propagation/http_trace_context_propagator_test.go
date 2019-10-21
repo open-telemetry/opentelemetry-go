@@ -32,11 +32,11 @@ import (
 )
 
 var (
-	traceID = traceIdFromString("4bf92f3577b34da6a3ce929d0e0e4736")
+	traceID = traceIDFromString("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID  = uint64(0x00f067aa0ba902b7)
 )
 
-func traceIdFromString(s string) core.TraceID {
+func traceIDFromString(s string) core.TraceID {
 	b, _ := hex.DecodeString(s)
 	t := core.TraceID{}
 	copy(t[:], b)

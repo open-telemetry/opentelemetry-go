@@ -16,6 +16,7 @@ package trace
 
 import (
 	"encoding/binary"
+
 	"go.opentelemetry.io/api/core"
 )
 

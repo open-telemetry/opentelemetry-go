@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	tid = traceIdFromString("01020304050607080102040810203040")
+	tid = traceIDFromString("01020304050607080102040810203040")
 	sid = uint64(0x0102040810203040)
 )
 
@@ -730,7 +730,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		"foo",
 		apitrace.ChildOf(
 			core.SpanContext{
-				TraceID:    traceIdFromString("0102030405060708090a0b0c0d0e0f"),
+				TraceID:    traceIDFromString("0102030405060708090a0b0c0d0e0f"),
 				SpanID:     uint64(0x0001020304050607),
 				TraceFlags: 0,
 			},

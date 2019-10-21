@@ -197,7 +197,7 @@ func generateSpan(t *testing.T, option testOption) {
 	}
 }
 
-func traceIdFromString(s string) core.TraceID {
+func traceIDFromString(s string) core.TraceID {
 	b, _ := hex.DecodeString(s)
 	t := core.TraceID{}
 	copy(t[:], b)
@@ -205,7 +205,7 @@ func traceIdFromString(s string) core.TraceID {
 }
 
 func getSpanContext() core.SpanContext {
-	tid := traceIdFromString("01020304050607080102040810203040")
+	tid := traceIDFromString("01020304050607080102040810203040")
 	sid := uint64(0x0102040810203040)
 	return core.SpanContext{
 		TraceID:    tid,

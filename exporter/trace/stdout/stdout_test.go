@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/sdk/export"
 )
 
-func traceIdFromString(s string) core.TraceID {
+func traceIDFromString(s string) core.TraceID {
 	b, _ := hex.DecodeString(s)
 	t := core.TraceID{}
 	copy(t[:], b)
@@ -47,7 +47,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID := traceIdFromString("0102030405060708090a0b0c0d0e0f10")
+	traceID := traceIDFromString("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 	keyValue := "value"
 	doubleValue := float64(123.456)

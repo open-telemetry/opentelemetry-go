@@ -25,9 +25,9 @@ import (
 )
 
 func TestExtractSpanContextFromBytes(t *testing.T) {
-	bTraceId, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
+	bTraceID, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
 	traceID := core.TraceID{}
-	copy(traceID[:], bTraceId)
+	copy(traceID[:], bTraceID)
 
 	spanID := uint64(0x00f067aa0ba902b7)
 	propagator := propagation.BinaryPropagator()
@@ -123,9 +123,9 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 }
 
 func TestConvertSpanContextToBytes(t *testing.T) {
-	bTraceId, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
+	bTraceID, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
 	traceID := core.TraceID{}
-	copy(traceID[:], bTraceId)
+	copy(traceID[:], bTraceID)
 
 	spanID := uint64(0x00f067aa0ba902b7)
 	propagator := propagation.BinaryPropagator()

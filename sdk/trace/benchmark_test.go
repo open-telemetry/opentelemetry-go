@@ -144,7 +144,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 	})
 }
 
-func traceIdFromString(s string) core.TraceID {
+func traceIDFromString(s string) core.TraceID {
 	b, _ := hex.DecodeString(s)
 	t := core.TraceID{}
 	copy(t[:], b)
@@ -153,7 +153,7 @@ func traceIdFromString(s string) core.TraceID {
 
 func BenchmarkTraceID_DotString(b *testing.B) {
 	traceBenchmark(b, func(b *testing.B) {
-		sc := core.SpanContext{TraceID: traceIdFromString("0000000000000001000000000000002a")}
+		sc := core.SpanContext{TraceID: traceIDFromString("0000000000000001000000000000002a")}
 
 		want := "0000000000000001000000000000002a"
 		for i := 0; i < b.N; i++ {

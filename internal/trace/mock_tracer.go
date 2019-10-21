@@ -70,7 +70,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	var sc core.SpanContext
 	if !opts.Reference.SpanContext.IsValid() {
 		sc = core.SpanContext{}
-		rand.Read(sc.TraceID[:])
+		_, _ = rand.Read(sc.TraceID[:])
 
 		if mt.Sampled {
 			sc.TraceFlags = core.TraceFlagsSampled

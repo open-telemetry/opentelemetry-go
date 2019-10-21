@@ -70,8 +70,7 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 			supplier.Set(B3SingleHeader,
 				fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
 		} else {
-			supplier.Set(B3TraceIDHeader,
-				fmt.Sprintf("%s", sc.TraceIDString()))
+			supplier.Set(B3TraceIDHeader, sc.TraceIDString())
 			supplier.Set(B3SpanIDHeader,
 				fmt.Sprintf("%.16x", sc.SpanID))
 

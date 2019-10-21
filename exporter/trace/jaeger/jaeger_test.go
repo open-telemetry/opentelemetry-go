@@ -35,7 +35,7 @@ import (
 
 // TODO(rghetia): Test export.
 
-func traceIdFromString(s string) core.TraceID {
+func traceIDFromString(s string) core.TraceID {
 	b, _ := hex.DecodeString(s)
 	t := core.TraceID{}
 	copy(t[:], b)
@@ -44,10 +44,10 @@ func traceIdFromString(s string) core.TraceID {
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID := traceIdFromString("0102030405060708090a0b0c0d0e0f10")
+	traceID := traceIDFromString("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 
-	linkTraceID := traceIdFromString("0102030405060709090a0b0c0d0e0f11")
+	linkTraceID := traceIDFromString("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID := uint64(0x0102030405060709)
 
 	keyValue := "value"
