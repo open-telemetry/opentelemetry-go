@@ -19,6 +19,21 @@ import (
 	"math"
 )
 
+//go:generate stringer -type=ValueKind
+
+// ValueKind describes the data type of the measurement value the
+// metric generates.
+type ValueKind int8
+
+const (
+	// Int64ValueKind means that the metric generates values of
+	// type int64.
+	Int64ValueKind ValueKind = iota
+	// Float64ValueKind means that the metric generates values of
+	// type float64.
+	Float64ValueKind
+)
+
 // MeasurementValue represents either an integral or a floating point
 // value of a measurement. It needs to be accompanied with a
 // descriptor of a metric that generated this value to decide what

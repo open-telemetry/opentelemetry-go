@@ -29,78 +29,40 @@ type Int64Measure struct {
 }
 
 // Float64MeasureHandle is a handle for Float64Measure.
+//
+// It inherits the Release function from commonHandle.
 type Float64MeasureHandle struct {
-	Handle
+	commonHandle
 }
 
 // Int64MeasureHandle is a handle for Int64Measure.
+//
+// It inherits the Release function from commonHandle.
 type Int64MeasureHandle struct {
-	Handle
+	commonHandle
 }
 
-// MeasureOptionApplier is an interface for applying metric options
-// that are valid only for measure metrics.
-type MeasureOptionApplier interface {
-	// ApplyMeasureOption is used to make some measure-specific
-	// changes in the Descriptor.
-	ApplyMeasureOption(*Descriptor)
-}
-
-type measureOptionWrapper struct {
-	F Option
-}
-
-var (
-	_ MeasureOptionApplier    = measureOptionWrapper{}
-	_ ExplicitReportingMetric = Float64Measure{}
-	_ ExplicitReportingMetric = Int64Measure{}
-)
-
-func (o measureOptionWrapper) ApplyMeasureOption(d *Descriptor) {
-	o.F(d)
-}
-
-func newMeasure(name string, valueKind ValueKind, mos ...MeasureOptionApplier) commonMetric {
-	m := registerCommonMetric(name, MeasureKind, valueKind)
-	for _, opt := range mos {
-		opt.ApplyMeasureOption(m.Descriptor())
-	}
-	return m
-}
-
-// NewFloat64Measure creates a new measure for float64.
-func NewFloat64Measure(name string, mos ...MeasureOptionApplier) (c Float64Measure) {
-	c.commonMetric = newMeasure(name, Float64ValueKind, mos...)
-	return
-}
-
-// NewInt64Measure creates a new measure for int64.
-func NewInt64Measure(name string, mos ...MeasureOptionApplier) (c Int64Measure) {
-	c.commonMetric = newMeasure(name, Int64ValueKind, mos...)
-	return
-}
-
-// GetHandle creates a handle for this measure. The labels should
+// AcquireHandle creates a handle for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Measure) GetHandle(labels LabelSet) (h Float64MeasureHandle) {
-	h.Handle = c.getHandle(labels)
+func (c *Float64Measure) AcquireHandle(labels LabelSet) (h Float64MeasureHandle) {
+	h.commonHandle = c.acquireCommonHandle(labels)
 	return
 }
 
-// GetHandle creates a handle for this measure. The labels should
+// AcquireHandle creates a handle for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Measure) GetHandle(labels LabelSet) (h Int64MeasureHandle) {
-	h.Handle = c.getHandle(labels)
+func (c *Int64Measure) AcquireHandle(labels LabelSet) (h Int64MeasureHandle) {
+	h.commonHandle = c.acquireCommonHandle(labels)
 	return
 }
 
@@ -140,10 +102,10 @@ func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet)
 
 // Record adds a new value to the list of measure's records.
 func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	h.RecordOne(ctx, NewFloat64MeasurementValue(value))
+	h.recordOne(ctx, NewFloat64MeasurementValue(value))
 }
 
 // Record adds a new value to the list of measure's records.
 func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	h.RecordOne(ctx, NewInt64MeasurementValue(value))
+	h.recordOne(ctx, NewInt64MeasurementValue(value))
 }

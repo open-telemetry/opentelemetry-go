@@ -29,78 +29,40 @@ type Int64Gauge struct {
 }
 
 // Float64GaugeHandle is a handle for Float64Gauge.
+//
+// It inherits the Release function from commonHandle.
 type Float64GaugeHandle struct {
-	Handle
+	commonHandle
 }
 
 // Int64GaugeHandle is a handle for Int64Gauge.
+//
+// It inherits the Release function from commonHandle.
 type Int64GaugeHandle struct {
-	Handle
+	commonHandle
 }
 
-// GaugeOptionApplier is an interface for applying metric options that
-// are valid only for gauge metrics.
-type GaugeOptionApplier interface {
-	// ApplyGaugeOption is used to make some gauge-specific
-	// changes in the Descriptor.
-	ApplyGaugeOption(*Descriptor)
-}
-
-type gaugeOptionWrapper struct {
-	F Option
-}
-
-var (
-	_ GaugeOptionApplier      = gaugeOptionWrapper{}
-	_ ExplicitReportingMetric = Float64Gauge{}
-	_ ExplicitReportingMetric = Int64Gauge{}
-)
-
-func (o gaugeOptionWrapper) ApplyGaugeOption(d *Descriptor) {
-	o.F(d)
-}
-
-func newGauge(name string, valueKind ValueKind, mos ...GaugeOptionApplier) commonMetric {
-	m := registerCommonMetric(name, GaugeKind, valueKind)
-	for _, opt := range mos {
-		opt.ApplyGaugeOption(m.Descriptor())
-	}
-	return m
-}
-
-// NewFloat64Gauge creates a new gauge for float64.
-func NewFloat64Gauge(name string, mos ...GaugeOptionApplier) (g Float64Gauge) {
-	g.commonMetric = newGauge(name, Float64ValueKind, mos...)
-	return
-}
-
-// NewInt64Gauge creates a new gauge for int64.
-func NewInt64Gauge(name string, mos ...GaugeOptionApplier) (g Int64Gauge) {
-	g.commonMetric = newGauge(name, Int64ValueKind, mos...)
-	return
-}
-
-// GetHandle creates a handle for this gauge. The labels should
+// AcquireHandle creates a handle for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) GetHandle(labels LabelSet) (h Float64GaugeHandle) {
-	h.Handle = g.getHandle(labels)
+func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
+	h.commonHandle = g.acquireCommonHandle(labels)
 	return
 }
 
-// GetHandle creates a handle for this gauge. The labels should
+// AcquireHandle creates a handle for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) GetHandle(labels LabelSet) (h Int64GaugeHandle) {
-	h.Handle = g.getHandle(labels)
+func (g *Int64Gauge) AcquireHandle(labels LabelSet) (h Int64GaugeHandle) {
+	h.commonHandle = g.acquireCommonHandle(labels)
 	return
 }
 
@@ -140,10 +102,10 @@ func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 
 // Set assigns the passed value to the value of the gauge.
 func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
-	h.RecordOne(ctx, NewFloat64MeasurementValue(value))
+	h.recordOne(ctx, NewFloat64MeasurementValue(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
 func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
-	h.RecordOne(ctx, NewInt64MeasurementValue(value))
+	h.recordOne(ctx, NewInt64MeasurementValue(value))
 }
