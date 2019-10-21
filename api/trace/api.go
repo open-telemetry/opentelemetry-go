@@ -102,14 +102,14 @@ type SpanOption func(*SpanOptions)
 type SpanOptions struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
-	Reference  Reference
+	Relation   Relation
 	Record     bool
 }
 
-// Reference is used to establish relationship between newly created span and the
+// Relation is used to establish relationship between newly created span and the
 // other span. The other span could be related as a parent or linked or any other
 // future relationship type.
-type Reference struct {
+type Relation struct {
 	core.SpanContext
 	RelationshipType
 }
@@ -171,7 +171,7 @@ func WithRecord() SpanOption {
 // ChildOf. TODO: do we need this?.
 func ChildOf(sc core.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
-		o.Reference = Reference{
+		o.Relation = Relation{
 			SpanContext:      sc,
 			RelationshipType: ChildOfRelationship,
 		}
@@ -181,7 +181,7 @@ func ChildOf(sc core.SpanContext) SpanOption {
 // FollowsFrom. TODO: do we need this?.
 func FollowsFrom(sc core.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
-		o.Reference = Reference{
+		o.Relation = Relation{
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
 		}

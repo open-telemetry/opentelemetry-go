@@ -160,9 +160,9 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.Sp
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanContext {
-	if spanOpts.Reference.RelationshipType == oteltrace.ChildOfRelationship &&
-		spanOpts.Reference.SpanContext.IsValid() {
-		return spanOpts.Reference.SpanContext
+	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
+		spanOpts.Relation.SpanContext.IsValid() {
+		return spanOpts.Relation.SpanContext
 	}
 	if parentSpanContext := oteltrace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
 		return parentSpanContext
