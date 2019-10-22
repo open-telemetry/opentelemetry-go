@@ -24,14 +24,17 @@ import (
 // Instrument is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type Instrument interface {
+	// AcquireHandle creates a Handle to record metrics with
+	// precomputed labels.
 	AcquireHandle(labels LabelSet) Handle
+	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, value MeasurementValue, labels LabelSet)
 }
 
 // Handle is the implementation-level interface to Set/Add/Record
 // individual metrics with precomputed labels.
 type Handle interface {
-	// RecordOne allows the SDK to observe a single metric event
+	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, value MeasurementValue)
 	// Release frees the resources associated with this handle. It
 	// does not affect the metric this handle was created through.
@@ -42,6 +45,12 @@ type Handle interface {
 // might create a dependency. Putting this here means we can't re-use
 // a LabelSet between metrics and tracing, even when they are the same
 // SDK.
+
+// TODO(krnowak): I wonder if this should just be:
+//
+// type LabelSet interface{}
+//
+// Not sure how the Meter function is useful.
 
 // LabelSet is an implementation-level interface that represents a
 // []core.KeyValue for use as pre-defined labels in the metrics API.
@@ -121,11 +130,23 @@ type Meter interface {
 	// be read by the application.
 	Labels(context.Context, ...core.KeyValue) LabelSet
 
+	// NewInt64Counter creates a new integral counter with a given
+	// name and customized with passed options.
 	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	// NewFloat64Counter creates a new floating point counter with
+	// a given name and customized with passed options.
 	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
+	// NewInt64Gauge creates a new integral gauge with a given
+	// name and customized with passed options.
 	NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
+	// NewFloat64Gauge creates a new floating point gauge with a
+	// given name and customized with passed options.
 	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
+	// NewInt64Measure creates a new integral measure with a given
+	// name and customized with passed options.
 	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	// NewFloat64Measure creates a new floating point measure with
+	// a given name and customized with passed options.
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
 	// RecordBatch atomically records a batch of measurements.
