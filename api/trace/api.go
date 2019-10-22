@@ -24,6 +24,12 @@ import (
 	"go.opentelemetry.io/api/distributedcontext"
 )
 
+type Provider interface {
+	// GetTracer creates a named tracer that implements Tracer interface.
+	// If the name is an empty string then provider uses default name.
+	GetTracer(name string) Tracer
+}
+
 type Tracer interface {
 	// Start a span.
 	Start(context.Context, string, ...SpanOption) (context.Context, Span)
@@ -135,11 +141,6 @@ const (
 type Link struct {
 	core.SpanContext
 	Attributes []core.KeyValue
-}
-
-// Start starts a new span using registered global tracer.
-func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	return GlobalTracer().Start(ctx, name, opts...)
 }
 
 // WithStartTime sets the start time of the span to provided time t, when it is started.

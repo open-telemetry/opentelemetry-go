@@ -44,22 +44,18 @@ func ExampleNewHandler() {
 	a painting
 	*/
 
-	//import sdktrace "go.opentelemetry.io/sdk/trace"
-	sdktrace.Register()
-
 	// Write spans to stdout
 	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Wrap stdout exporter with SimpleSpanProcessor and register the processor.
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	sdktrace.RegisterSpanProcessor(ssp)
-
-	// For the example, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	trace.SetGlobalProvider(tp)
 
 	figureOutName := func(ctx context.Context, s string) (string, error) {
 		pp := strings.SplitN(s, "/", 2)

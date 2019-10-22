@@ -15,27 +15,30 @@
 package trace_test
 
 import (
-	"context"
-	"fmt"
+	"testing"
 
 	"go.opentelemetry.io/api/trace"
 )
 
-// This example shows how to use trace.Start and (*Span).End to capture
-// a function execution in a Span. It assumes that the function
-// has a context.Context argument.
-func ExampleStart() {
-	printEvens := func(ctx context.Context) {
-		_, span := trace.GlobalTracer().Start(ctx, "my/package.Function")
-		defer span.End()
+type TestProvider1 struct {
+}
 
-		for i := 0; i < 10; i++ {
-			if i%2 == 0 {
-				fmt.Printf("Even!\n")
-			}
-		}
+var _ trace.Provider = &TestProvider1{}
+
+func (tp *TestProvider1) GetTracer(name string) trace.Tracer {
+	return &trace.NoopTracer{}
+}
+
+func TestMulitpleGlobalProvider(t *testing.T) {
+
+	p1 := TestProvider1{}
+	p2 := trace.NoopTraceProvider{}
+	trace.SetGlobalProvider(&p1)
+	trace.SetGlobalProvider(&p2)
+
+	got := trace.GlobalProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
 	}
-
-	ctx := context.Background()
-	printEvens(ctx)
 }

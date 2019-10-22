@@ -62,11 +62,6 @@ func (t *testBatchExporter) get(idx int) *export.SpanData {
 
 var _ export.SpanBatcher = (*testBatchExporter)(nil)
 
-func init() {
-	sdktrace.Register()
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
-}
-
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	_, err := sdktrace.NewBatchSpanProcessor(nil)
 	if err == nil {
@@ -143,13 +138,15 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
+		tp := basicProvider(t)
 		ssp := createAndRegisterBatchSP(t, option, &te)
 		if ssp == nil {
 			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 		}
-		sdktrace.RegisterSpanProcessor(ssp)
+		tp.RegisterSpanProcessor(ssp)
+		tr := tp.GetTracer("BatchSpanProcessorWithOptions")
 
-		generateSpan(t, option)
+		generateSpan(t, tr, option)
 
 		time.Sleep(option.waitTime)
 
@@ -172,7 +169,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		if wantTraceID != gotTraceID {
 			t.Errorf("%s: first exported span: got %+v, want %+v\n", option.name, gotTraceID, wantTraceID)
 		}
-		sdktrace.UnregisterSpanProcessor(ssp)
+		tp.UnregisterSpanProcessor(ssp)
 	}
 }
 
@@ -181,16 +178,15 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	if ssp == nil {
 		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}
-	sdktrace.RegisterSpanProcessor(ssp)
 	return ssp
 }
 
-func generateSpan(t *testing.T, option testOption) {
+func generateSpan(t *testing.T, tr apitrace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
 		sc.TraceID.High = uint64(i + 1)
-		_, span := apitrace.GlobalTracer().Start(context.Background(), option.name, apitrace.ChildOf(sc))
+		_, span := tr.Start(context.Background(), option.name, apitrace.ChildOf(sc))
 		span.End()
 	}
 }
