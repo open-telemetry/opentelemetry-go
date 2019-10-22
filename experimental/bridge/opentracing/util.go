@@ -21,9 +21,9 @@ import (
 // NewTracerPair is a utility function that creates a BridgeTracer
 // that forwards the calls to the WrapperTracer that wraps the passed
 // tracer.
-func NewTracerPair(tracer oteltrace.Tracer) (*BridgeTracer, *WrapperTracer) {
+func NewTracerPair(tracer oteltrace.Tracer) (*BridgeTracer, *WrapperProvider) {
 	bridgeTracer := NewBridgeTracer()
-	wrapperTracer := NewWrapperTracer(bridgeTracer, tracer)
-	bridgeTracer.SetOpenTelemetryTracer(wrapperTracer)
-	return bridgeTracer, wrapperTracer
+	wrapperProvider := NewWrappedProvider(bridgeTracer, tracer)
+	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.GetTracer(""))
+	return bridgeTracer, wrapperProvider
 }

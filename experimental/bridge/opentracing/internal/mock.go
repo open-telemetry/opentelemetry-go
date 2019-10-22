@@ -16,7 +16,9 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -41,6 +43,30 @@ var (
 type MockContextKeyValue struct {
 	Key   interface{}
 	Value interface{}
+}
+
+type MockProvider struct {
+	tr *MockTracer
+}
+
+var _ oteltrace.Provider = (*MockProvider)(nil)
+
+func (p *MockProvider) GetTracer(_ string) oteltrace.Tracer {
+	return p.tr
+}
+
+func NewMockProvider() oteltrace.Provider {
+	return &MockProvider{
+		tr: &MockTracer{
+			Resources:             oteldctx.NewEmptyMap(),
+			FinishedSpans:         nil,
+			SpareTraceIDs:         nil,
+			SpareSpanIDs:          nil,
+			SpareContextKeyValues: nil,
+
+			rand: rand.New(rand.NewSource(time.Now().Unix())),
+		},
+	}
 }
 
 type MockTracer struct {
@@ -97,6 +123,8 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
+	fmt.Printf("Start trace. tr %p\n", t)
+	debug.PrintStack()
 	spanContext := otelcore.SpanContext{
 		TraceID:    t.getTraceID(ctx, &spanOpts),
 		SpanID:     t.getSpanID(),
@@ -135,9 +163,11 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 
 func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.TraceID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
+		fmt.Printf("parent span is valid\n")
 		return parent.TraceID
 	}
 	if len(t.SpareTraceIDs) > 0 {
+		fmt.Printf("generate span from %v\n", t.SpareTraceIDs)
 		traceID := t.SpareTraceIDs[0]
 		t.SpareTraceIDs = t.SpareTraceIDs[1:]
 		if len(t.SpareTraceIDs) == 0 {
@@ -146,6 +176,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 		return traceID
 	}
 	uints := t.getNRandUint64(2)
+	fmt.Printf("return random trace  %v\n", uints)
 	return otelcore.TraceID{
 		High: uints[0],
 		Low:  uints[1],

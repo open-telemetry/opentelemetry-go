@@ -26,7 +26,7 @@ import (
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	internal "go.opentelemetry.io/experimental/bridge/opentracing/internal"
+	"go.opentelemetry.io/experimental/bridge/opentracing/internal"
 )
 
 type mixedAPIsTestCase struct {
@@ -111,19 +111,24 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
-		mockOtelTracer := internal.NewMockTracer()
-		otTracer, otelTracer := NewTracerPair(mockOtelTracer)
+		tp := internal.NewMockProvider()
+
+		mockOtelTracer := tp.GetTracer("")
+		fmt.Printf("Otel Tracer in TestMixedAPIs %p\n", mockOtelTracer)
+		otTracer, otelProvider := NewTracerPair(mockOtelTracer)
+		oteltrace.SetGlobalProvider(otelProvider)
 		otTracer.SetWarningHandler(func(msg string) {
 			t.Log(msg)
 		})
 		ctx := context.Background()
 
-		oteltrace.SetGlobalTracer(otelTracer)
+		//oteltrace.SetGlobalTracer(otelTracer)
 		ot.SetGlobalTracer(otTracer)
+		fmt.Printf("OT Tracer in TestMixedAPIs %p\n", otTracer)
 
-		tc.setup(t, mockOtelTracer)
+		tc.setup(t, mockOtelTracer.(*internal.MockTracer))
 		tc.run(t, ctx)
-		tc.check(t, mockOtelTracer)
+		tc.check(t, mockOtelTracer.(*internal.MockTracer))
 	}
 }
 
@@ -424,7 +429,8 @@ func (tm *tracerMessTest) setup(t *testing.T, tracer *internal.MockTracer) {
 
 func (tm *tracerMessTest) check(t *testing.T, tracer *internal.MockTracer) {
 	globalOtTracer := ot.GlobalTracer()
-	globalOtelTracer := oteltrace.GlobalTracer()
+	globalOtelTracer := oteltrace.GlobalProvider().GetTracer("")
+	fmt.Printf("Tracer in check %p\n", globalOtelTracer)
 	if len(tm.recordedOTSpanTracers) != 3 {
 		t.Errorf("Expected 3 recorded OpenTracing tracers from spans, got %d", len(tm.recordedOTSpanTracers))
 	}
@@ -537,15 +543,19 @@ func min(a, b int) int {
 }
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
-	ctx, span := oteltrace.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name))
+	tr := oteltrace.GlobalProvider().GetTracer("")
+	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name))
+	fmt.Printf("Tracer in runOtelOTOtel %p, span %p, span content %v\n", tr, span, span)
 	defer span.End()
 	callback(t, ctx)
 	func(ctx2 context.Context) {
 		span, ctx2 := ot.StartSpanFromContext(ctx2, fmt.Sprintf("%sOtel_OT_Otel", name))
+		fmt.Printf("Tracer in runOtelOTOtel span2 %p, content %v\n", span, span)
 		defer span.Finish()
 		callback(t, ctx2)
 		func(ctx3 context.Context) {
-			ctx3, span := oteltrace.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name))
+			ctx3, span := tr.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name))
+			fmt.Printf("Tracer in runOtelOTOtel span3 %p, content %v\n", span, span)
 			defer span.End()
 			callback(t, ctx3)
 		}(ctx2)
@@ -553,11 +563,12 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 }
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
+	tr := oteltrace.GlobalProvider().GetTracer("")
 	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name))
 	defer span.Finish()
 	callback(t, ctx)
 	func(ctx2 context.Context) {
-		ctx2, span := oteltrace.Start(ctx2, fmt.Sprintf("%sOT_Otel_OT", name))
+		ctx2, span := tr.Start(ctx2, fmt.Sprintf("%sOT_Otel_OT", name))
 		defer span.End()
 		callback(t, ctx2)
 		func(ctx3 context.Context) {

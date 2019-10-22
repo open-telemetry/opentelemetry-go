@@ -22,6 +22,22 @@ import (
 	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
+type WrapperProvider struct {
+	wTracer *WrapperTracer
+}
+
+var _ oteltrace.Provider = (*WrapperProvider)(nil)
+
+func (p *WrapperProvider) GetTracer(name string) oteltrace.Tracer {
+	return p.wTracer
+}
+
+func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperProvider {
+	return &WrapperProvider{
+		wTracer: NewWrapperTracer(bridge, tracer),
+	}
+}
+
 // WrapperTracer is a wrapper around an OpenTelemetry tracer. It
 // mostly forwards the calls to the wrapped tracer, but also does some
 // extra steps like setting up a context with the active OpenTracing
