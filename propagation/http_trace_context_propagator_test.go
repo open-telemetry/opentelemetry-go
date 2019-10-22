@@ -36,7 +36,6 @@ var (
 )
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	var propagator propagation.HTTPTraceContextPropagator
 	tests := []struct {
 		name   string
@@ -130,7 +129,6 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	var propagator propagation.HTTPTraceContextPropagator
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
@@ -279,7 +277,6 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	propagator := propagation.HTTPTraceContextPropagator{}
 	tests := []struct {
 		name    string
@@ -368,7 +365,6 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	propagator := propagation.HTTPTraceContextPropagator{}
 	tests := []struct {
 		name   string
