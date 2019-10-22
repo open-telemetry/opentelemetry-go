@@ -168,6 +168,9 @@ func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...c
 }
 
 func (s *span) SetName(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.data == nil {
 		// TODO: now what?
 		return
