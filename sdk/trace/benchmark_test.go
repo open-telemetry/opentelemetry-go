@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package trace_test
 
 import (
 	"context"
@@ -20,10 +20,12 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	apitrace "go.opentelemetry.io/api/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func BenchmarkStartEndSpan(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark StartEndSpan")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -36,7 +38,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With 4 Attributes")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -56,7 +58,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With 8 Attributes")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -80,7 +82,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With all Attribute types")
 
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
@@ -107,7 +109,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
-	t := tracer{}
+	t := getTracer(b, "Benchmark Start With all Attributes types twice")
 	traceBenchmark(b, func(b *testing.B) {
 		ctx := context.Background()
 		b.ResetTimer()
@@ -171,12 +173,18 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
-		ApplyConfig(Config{DefaultSampler: AlwaysSample()})
 		fn(b)
 	})
 	b.Run("NeverSample", func(b *testing.B) {
 		b.ReportAllocs()
-		ApplyConfig(Config{DefaultSampler: NeverSample()})
 		fn(b)
 	})
+}
+
+func getTracer(b *testing.B, name string) apitrace.Tracer {
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
+	if err != nil {
+		b.Fatalf("Failed to create trace provider for test %s\n", name)
+	}
+	return tp.GetTracer(name)
 }

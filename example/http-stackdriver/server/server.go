@@ -28,8 +28,6 @@ import (
 )
 
 func initTracer() {
-	sdktrace.Register()
-
 	projectID := os.Getenv("PROJECT_ID")
 
 	// Create Stackdriver exporter to be able to retrieve
@@ -40,17 +38,21 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := exporter.RegisterBatchSpanProcessor(); err != nil {
-		log.Fatal(err)
-	}
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	trace.SetGlobalProvider(tp)
 }
 
 func main() {
 	initTracer()
+
+	tr := trace.GlobalProvider().GetTracer("stackdriver/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
@@ -59,7 +61,7 @@ func main() {
 			MultiKV: entries,
 		})))
 
-		ctx, span := trace.GlobalTracer().Start(
+		ctx, span := tr.Start(
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),

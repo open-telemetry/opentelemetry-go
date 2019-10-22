@@ -25,13 +25,11 @@ import (
 
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/jaeger"
-	"go.opentelemetry.io/sdk/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
-func main() {
-	trace.Register()
-	ctx := context.Background()
-
+// initTracer creates a new trace provider instance and registers it as global trace provider.
+func initTracer() func() {
 	// Create Jaeger Exporter
 	exporter, err := jaeger.NewExporter(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
@@ -52,17 +50,33 @@ func main() {
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
 	// probability.
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	apitrace.SetGlobalProvider(tp)
+	return func() {
+		exporter.Flush()
+	}
+}
 
-	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
+func main() {
+	fn := initTracer()
+	defer fn()
+
+	ctx := context.Background()
+
+	tr := apitrace.GlobalProvider().GetTracer("component-main")
+	ctx, span := tr.Start(ctx, "/foo")
 	bar(ctx)
 	span.End()
-
-	exporter.Flush()
 }
 
 func bar(ctx context.Context) {
-	_, span := apitrace.GlobalTracer().Start(ctx, "/bar")
+	tr := apitrace.GlobalProvider().GetTracer("component-bar")
+	_, span := tr.Start(ctx, "/bar")
 	defer span.End()
 
 	// Do bar...
