@@ -145,6 +145,13 @@ type OptionApplier interface {
 	ApplyOption(*Options)
 }
 
+// CounterGaugeOptionApplier is an interface for applying metric
+// options that are valid for counter or gauge metrics.
+type CounterGaugeOptionApplier interface {
+	CounterOptionApplier
+	GaugeOptionApplier
+}
+
 type optionWrapper struct {
 	F Option
 }
@@ -159,6 +166,11 @@ type gaugeOptionWrapper struct {
 
 type measureOptionWrapper struct {
 	F Option
+}
+
+type counterGaugeOptionWrapper struct {
+	FC Option
+	FG Option
 }
 
 var (
@@ -196,6 +208,14 @@ func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
 	o.F(opts)
 }
 
+func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
+	o.FC(opts)
+}
+
+func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+	o.FG(opts)
+}
+
 // WithDescription applies provided description.
 func WithDescription(desc string) OptionApplier {
 	return optionWrapper{
@@ -224,30 +244,25 @@ func WithKeys(keys ...core.Key) OptionApplier {
 	}
 }
 
-// WithNonMonotonic sets whether a counter is permitted to go up AND
-// down.
-func WithNonMonotonic(nonMonotonic bool) CounterOptionApplier {
-	return counterOptionWrapper{
-		F: func(opts *Options) {
-			opts.Alternate = nonMonotonic
+// WithMonotonic sets whether a counter or a gauge is not permitted to
+// go down.
+func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
+	return counterGaugeOptionWrapper{
+		FC: func(opts *Options) {
+			opts.Alternate = !monotonic
 		},
-	}
-}
-
-// WithMonotonic sets whether a gauge is not permitted to go down.
-func WithMonotonic(monotonic bool) GaugeOptionApplier {
-	return gaugeOptionWrapper{
-		F: func(opts *Options) {
+		FG: func(opts *Options) {
 			opts.Alternate = monotonic
 		},
 	}
 }
 
-// WithSigned sets whether a measure is permitted to be negative.
-func WithSigned(signed bool) MeasureOptionApplier {
+// WithAbsolute sets whether a measure is not permitted to be
+// negative.
+func WithAbsolute(absolute bool) MeasureOptionApplier {
 	return measureOptionWrapper{
 		F: func(opts *Options) {
-			opts.Alternate = signed
+			opts.Alternate = !absolute
 		},
 	}
 }

@@ -105,7 +105,7 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "nonmonotonic",
 			opts: []CounterOptionApplier{
-				WithNonMonotonic(true),
+				WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -115,8 +115,8 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "nonmonotonic, but not really",
 			opts: []CounterOptionApplier{
-				WithNonMonotonic(true),
-				WithNonMonotonic(false),
+				WithMonotonic(false),
+				WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -325,9 +325,9 @@ func TestMeasureOptions(t *testing.T) {
 			alt:  false,
 		},
 		{
-			name: "signed",
+			name: "not absolute",
 			opts: []MeasureOptionApplier{
-				WithSigned(true),
+				WithAbsolute(false),
 			},
 			keys: nil,
 			desc: "",
@@ -335,10 +335,10 @@ func TestMeasureOptions(t *testing.T) {
 			alt:  true,
 		},
 		{
-			name: "signed, but not really",
+			name: "not absolute, but not really",
 			opts: []MeasureOptionApplier{
-				WithSigned(true),
-				WithSigned(false),
+				WithAbsolute(false),
+				WithAbsolute(true),
 			},
 			keys: nil,
 			desc: "",
