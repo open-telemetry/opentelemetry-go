@@ -144,11 +144,6 @@ type Link struct {
 	Attributes []core.KeyValue
 }
 
-// Start starts a new span using registered global tracer.
-func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	return GlobalTracer().Start(ctx, name, opts...)
-}
-
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absensce of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.

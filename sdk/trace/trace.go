@@ -18,26 +18,9 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"math/rand"
-	"sync"
 
-	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/trace/internal"
 )
-
-var tr *tracer
-var registerOnce sync.Once
-
-// Register registers tracer implementation as default Tracer.
-// It creates single instance of tracer and registers it once.
-// Recommended use is to call Register in main() of an
-// application before calling any tracing api.
-func Register() apitrace.Tracer {
-	registerOnce.Do(func() {
-		tr = &tracer{}
-		apitrace.SetGlobalTracer(tr)
-	})
-	return tr
-}
 
 func defIDGenerator() internal.IDGenerator {
 	gen := &defaultIDGenerator{}
