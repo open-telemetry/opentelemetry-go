@@ -794,3 +794,35 @@ func TestCustomStartEndTime(t *testing.T) {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
 	}
 }
+
+func TestWithSpanKind(t *testing.T) {
+	_, span := apitrace.GlobalTracer().Start(context.Background(), "WithoutSpanKind")
+	spanData, err := endSpan(span)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if spanData.SpanKind != apitrace.SpanKindInternal {
+		t.Errorf("Default value of Spankind should be Internal: got %+v, want %+v\n", spanData.SpanKind, apitrace.SpanKindInternal)
+	}
+
+	sks := []apitrace.SpanKind{
+		apitrace.SpanKindInternal,
+		apitrace.SpanKindServer,
+		apitrace.SpanKindClient,
+		apitrace.SpanKindProducer,
+		apitrace.SpanKindConsumer,
+	}
+
+	for _, sk := range sks {
+		_, span := apitrace.GlobalTracer().Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
+		spanData, err := endSpan(span)
+		if err != nil {
+			t.Error(err.Error())
+		}
+
+		if spanData.SpanKind != sk {
+			t.Errorf("WithSpanKind check: got %+v, want %+v\n", spanData.SpanKind, sks)
+		}
+	}
+}
