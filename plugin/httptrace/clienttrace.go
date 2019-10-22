@@ -54,8 +54,7 @@ func newClientTracer(ctx context.Context) *clientTracer {
 		Context: ctx,
 		levels:  make(map[string]trace.Span),
 	}
-	ct.tr = trace.GlobalProvider().GetTracer("http.client/trace")
-	//TODO(rghetia): rename 'http.request' to 'request'. same with other span names.
+	ct.tr = trace.GlobalProvider().GetTracer("go.opentelemetry.io/plugin/httptrace")
 	ct.open("http.request")
 	return ct
 }

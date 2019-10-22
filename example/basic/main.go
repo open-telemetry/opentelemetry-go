@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	tracer = trace.GlobalTracer()
+	tracer = trace.GlobalProvider().GetTracer("ex.com/basic")
 
 	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
 

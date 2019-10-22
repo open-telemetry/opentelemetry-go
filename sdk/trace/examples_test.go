@@ -25,8 +25,9 @@ import (
 // a function execution in a Span. It assumes that the function
 // has a context.Context argument.
 func ExampleStart() {
+	provider := trace.GlobalProvider()
 	printEvens := func(ctx context.Context) {
-		_, span := trace.GlobalTracer().Start(ctx, "my/package.Function")
+		_, span := provider.GetTracer("example").Start(ctx, "my/package.Function")
 		defer span.End()
 
 		for i := 0; i < 10; i++ {
