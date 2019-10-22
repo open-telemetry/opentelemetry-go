@@ -16,7 +16,6 @@ package opentracing
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -32,7 +31,7 @@ import (
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -553,7 +552,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		ck := http.CanonicalHeaderKey(k)
 		switch ck {
 		case traceIDHeader:
-			traceID, err := traceIDFromString(v)
+			traceID, err := otelcore.TraceIDFromHex(v)
 			if err != nil {
 				return err
 			}
@@ -581,24 +580,6 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrSpanContextNotFound
 	}
 	return bridgeSC, nil
-}
-
-func traceIDFromString(s string) (otelcore.TraceID, error) {
-	traceID := otelcore.TraceID{}
-	if len(s) != 32 {
-		return traceID, fmt.Errorf("invalid trace ID")
-	}
-	high, err := strconv.ParseUint(s[0:16], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	low, err := strconv.ParseUint(s[16:32], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	binary.BigEndian.PutUint64(traceID[0:8], high)
-	binary.BigEndian.PutUint64(traceID[8:16], low)
-	return traceID, nil
 }
 
 func spanIDFromString(s string) (uint64, error) {

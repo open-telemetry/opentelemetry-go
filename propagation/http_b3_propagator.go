@@ -16,7 +16,6 @@ package propagation
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"regexp"
@@ -185,11 +184,9 @@ func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier)
 // extractTraceID parses the value of the X-B3-TraceId b3Header.
 func (b3 HTTPB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
 	if hexStr32ByteRegex.MatchString(tid) {
-		high, _ := strconv.ParseUint(tid[0:(16)], 16, 64)
-		low, _ := strconv.ParseUint(tid[(16):32], 16, 64)
-		binary.BigEndian.PutUint64(traceID[0:8], high)
-		binary.BigEndian.PutUint64(traceID[8:16], low)
-		ok = true
+		var err error
+		traceID, err = core.TraceIDFromHex(tid)
+		ok = err == nil
 	} else if b3.SingleHeader && hexStr16ByteRegex.MatchString(tid) {
 		b, err := hex.DecodeString(tid)
 		if err != nil {

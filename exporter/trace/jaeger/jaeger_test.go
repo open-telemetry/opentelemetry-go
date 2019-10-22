@@ -16,7 +16,6 @@ package jaeger
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"sort"
 	"testing"
 	"time"
@@ -35,19 +34,12 @@ import (
 
 // TODO(rghetia): Test export.
 
-func traceIDFromString(s string) core.TraceID {
-	b, _ := hex.DecodeString(s)
-	t := core.TraceID{}
-	copy(t[:], b)
-	return t
-}
-
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID := traceIDFromString("0102030405060708090a0b0c0d0e0f10")
+	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 
-	linkTraceID := traceIDFromString("0102030405060709090a0b0c0d0e0f11")
+	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID := uint64(0x0102030405060709)
 
 	keyValue := "value"

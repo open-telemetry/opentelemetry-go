@@ -34,11 +34,12 @@ import (
 )
 
 var (
-	tid = traceIDFromString("01020304050607080102040810203040")
+	tid core.TraceID
 	sid = uint64(0x0102040810203040)
 )
 
 func init() {
+	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
 	Register()
 	setupDefaultSamplerConfig()
 }
@@ -725,12 +726,14 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
+	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+
 	_, apiSpan = apitrace.GlobalTracer().Start(
 		context.Background(),
 		"foo",
 		apitrace.ChildOf(
 			core.SpanContext{
-				TraceID:    traceIDFromString("0102030405060708090a0b0c0d0e0f"),
+				TraceID:    tID,
 				SpanID:     uint64(0x0001020304050607),
 				TraceFlags: 0,
 			},

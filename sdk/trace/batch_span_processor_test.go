@@ -17,7 +17,6 @@ package trace_test
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"sync"
 	"testing"
 	"time"
@@ -197,15 +196,8 @@ func generateSpan(t *testing.T, option testOption) {
 	}
 }
 
-func traceIDFromString(s string) core.TraceID {
-	b, _ := hex.DecodeString(s)
-	t := core.TraceID{}
-	copy(t[:], b)
-	return t
-}
-
 func getSpanContext() core.SpanContext {
-	tid := traceIDFromString("01020304050607080102040810203040")
+	tid, _ := core.TraceIDFromHex("01020304050607080102040810203040")
 	sid := uint64(0x0102040810203040)
 	return core.SpanContext{
 		TraceID:    tid,

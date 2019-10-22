@@ -16,7 +16,6 @@ package propagation
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -118,24 +117,17 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 		return core.EmptySpanContext()
 	}
 
-	result, err := strconv.ParseUint(sections[1][0:16], 16, 64)
-	if err != nil {
-		return core.EmptySpanContext()
-	}
 	var sc core.SpanContext
 
-	binary.BigEndian.PutUint64(sc.TraceID[0:8], result)
-
-	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
+	_, err = hex.Decode(sc.TraceID[0:16], []byte(sections[1][0:32]))
 	if err != nil {
 		return core.EmptySpanContext()
 	}
-	binary.BigEndian.PutUint64(sc.TraceID[8:16], result)
 
 	if len(sections[2]) != 16 {
 		return core.EmptySpanContext()
 	}
-	result, err = strconv.ParseUint(sections[2][0:], 16, 64)
+	result, err := strconv.ParseUint(sections[2][0:], 16, 64)
 	if err != nil {
 		return core.EmptySpanContext()
 	}

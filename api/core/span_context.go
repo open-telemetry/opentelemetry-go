@@ -17,12 +17,9 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 )
-
-type TraceID [16]byte
-
-var nilTraceID TraceID
 
 const (
 	traceFlagsBitMaskSampled = byte(0x01)
@@ -34,15 +31,52 @@ const (
 	TraceFlagsUnused  = traceFlagsBitMaskUnused
 )
 
+type TraceID [16]byte
+
+var nilTraceID TraceID
+
+// TraceIDFromHex returns a TraceID from a hex string with 16 length.
+func TraceIDFromHex(h string) (TraceID, error) {
+	t := TraceID{}
+	if len(h) != 32 {
+		return t, fmt.Errorf("invalid trace ID")
+	}
+
+	b, err := hex.DecodeString(h)
+	if err != nil {
+		return t, err
+	}
+	copy(t[:], b)
+	return t, nil
+}
+
 type SpanContext struct {
 	TraceID    TraceID
 	SpanID     uint64
 	TraceFlags byte
 }
 
+var _ json.Marshaler = (*SpanContext)(nil)
+
 // EmptySpanContext is meant for internal use to return invalid span context during error conditions.
 func EmptySpanContext() SpanContext {
 	return SpanContext{}
+}
+
+// MarshalJSON implements a custom marshal function to encode SpanContext
+// in a human readable format, with hex encoded TraceID and SpanID.
+func (sc SpanContext) MarshalJSON() ([]byte, error) {
+	type JSONSpanContext struct {
+		TraceID    string
+		SpanID     string
+		TraceFlags byte
+	}
+
+	return json.Marshal(JSONSpanContext{
+		TraceID:    sc.TraceIDString(),
+		SpanID:     sc.SpanIDString(),
+		TraceFlags: sc.TraceFlags,
+	})
 }
 
 func (sc SpanContext) IsValid() bool {
