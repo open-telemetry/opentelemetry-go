@@ -146,7 +146,6 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
-	getTracer(b, "Benchmark traceID to string")
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{TraceID: core.TraceID{High: 1, Low: 0x2a}}
 
@@ -160,7 +159,6 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	getTracer(b, "Benchmark spanID to string")
 	traceBenchmark(b, func(b *testing.B) {
 		sc := core.SpanContext{SpanID: 1}
 		want := "0000000000000001"
