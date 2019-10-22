@@ -311,14 +311,14 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		opt.Apply(&sso)
 	}
 	// TODO: handle links, needs SpanData to be in the API first?
-	bReference, _ := otSpanReferencesToBridgeReferenceAndLinks(sso.References)
+	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
 	// TODO: handle span kind, needs SpanData to be in the API first?
 	attributes, _, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.SpanOptions) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
-		opts.Reference = bReference.ToOtelReference()
+		opts.Relation = bRelation.ToOtelRelation()
 		opts.Record = true
 	})
 	if checkCtx != checkCtx2 {
@@ -330,8 +330,8 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		otelSpan.SetStatus(codes.Unknown)
 	}
 	var otSpanContext ot.SpanContext
-	if bReference.spanContext != nil {
-		otSpanContext = bReference.spanContext
+	if bRelation.spanContext != nil {
+		otSpanContext = bRelation.spanContext
 	}
 	sctx := newBridgeSpanContext(otelSpan.SpanContext(), otSpanContext)
 	span := &bridgeSpan{
@@ -435,27 +435,27 @@ func otTagToOtelCoreKey(k string) otelcore.Key {
 	return otelcore.Key(k)
 }
 
-type bridgeReference struct {
+type bridgeRelation struct {
 	spanContext      *bridgeSpanContext
 	relationshipType oteltrace.RelationshipType
 }
 
-func (r bridgeReference) ToOtelReference() oteltrace.Reference {
+func (r bridgeRelation) ToOtelRelation() oteltrace.Relation {
 	if r.spanContext == nil {
-		return oteltrace.Reference{}
+		return oteltrace.Relation{}
 	}
-	return oteltrace.Reference{
+	return oteltrace.Relation{
 		SpanContext:      r.spanContext.otelSpanContext,
 		RelationshipType: r.relationshipType,
 	}
 }
 
-func otSpanReferencesToBridgeReferenceAndLinks(references []ot.SpanReference) (bridgeReference, []*bridgeSpanContext) {
+func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (bridgeRelation, []*bridgeSpanContext) {
 	if len(references) == 0 {
-		return bridgeReference{}, nil
+		return bridgeRelation{}, nil
 	}
 	first := references[0]
-	bReference := bridgeReference{
+	relation := bridgeRelation{
 		spanContext:      mustGetBridgeSpanContext(first.ReferencedContext),
 		relationshipType: otSpanReferenceTypeToOtelRelationshipType(first.Type),
 	}
@@ -463,7 +463,7 @@ func otSpanReferencesToBridgeReferenceAndLinks(references []ot.SpanReference) (b
 	for _, reference := range references[1:] {
 		links = append(links, mustGetBridgeSpanContext(reference.ReferencedContext))
 	}
-	return bReference, links
+	return relation, links
 }
 
 func mustGetBridgeSpanContext(ctx ot.SpanContext) *bridgeSpanContext {
