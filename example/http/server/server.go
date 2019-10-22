@@ -27,8 +27,6 @@ import (
 )
 
 func initTracer() {
-	sdktrace.Register()
-
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
 	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
@@ -39,11 +37,17 @@ func initTracer() {
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	trace.SetGlobalProvider(tp)
 }
 
 func main() {
 	initTracer()
+	tr := trace.GlobalProvider().GetTracer("example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
@@ -52,7 +56,7 @@ func main() {
 			MultiKV: entries,
 		})))
 
-		ctx, span := trace.GlobalTracer().Start(
+		ctx, span := tr.Start(
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),

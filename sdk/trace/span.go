@@ -53,8 +53,8 @@ type span struct {
 	//*spanStore
 	endOnce sync.Once
 
-	executionTracerTaskEnd func()          // ends the execution tracer span
-	tracer                 apitrace.Tracer // tracer used to create span.
+	executionTracerTaskEnd func()  // ends the execution tracer span
+	tracer                 *tracer // tracer used to create span.
 }
 
 var _ apitrace.Span = &span{}
@@ -123,7 +123,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 		opt(&opts)
 	}
 	s.endOnce.Do(func() {
-		sps, _ := spanProcessors.Load().(spanProcessorMap)
+		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
@@ -172,7 +172,8 @@ func (s *span) SetName(name string) {
 		// TODO: now what?
 		return
 	}
-	s.data.Name = name
+	spanName := s.tracer.spanNameWithPrefix(name)
+	s.data.Name = spanName
 	// SAMPLING
 	noParent := s.data.ParentSpanID == 0
 	var ctx core.SpanContext
@@ -187,8 +188,8 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
-		name:         name,
-		cfg:          config.Load().(*Config),
+		name:         spanName,
+		cfg:          s.tracer.provider.config.Load().(*Config),
 		span:         s,
 	}
 	makeSamplingDecision(data)
@@ -294,12 +295,12 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
+func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
-	cfg := config.Load().(*Config)
+	cfg := tr.provider.config.Load().(*Config)
 
 	if parent == core.EmptySpanContext() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()

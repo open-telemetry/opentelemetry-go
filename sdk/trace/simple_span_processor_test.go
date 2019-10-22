@@ -34,11 +34,6 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 
 var _ export.SpanSyncer = (*testExporter)(nil)
 
-func init() {
-	sdktrace.Register()
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
-}
-
 func TestNewSimpleSpanProcessor(t *testing.T) {
 	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
 	if ssp == nil {
@@ -54,12 +49,14 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
+	tp := basicProvider(t)
 	te := testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(&te)
 	if ssp == nil {
 		t.Errorf("Error creating new instance of SimpleSpanProcessor with nil Exporter\n")
 	}
-	sdktrace.RegisterSpanProcessor(ssp)
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.GetTracer("SimpleSpanProcessor")
 	tid := core.TraceID{High: 0x0102030405060708, Low: 0x0102040810203040}
 	sid := uint64(0x0102040810203040)
 	sc := core.SpanContext{
@@ -67,7 +64,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "OnEnd", apitrace.ChildOf(sc))
+	_, span := tr.Start(context.Background(), "OnEnd", apitrace.ChildOf(sc))
 	span.End()
 
 	wantTraceID := tid
