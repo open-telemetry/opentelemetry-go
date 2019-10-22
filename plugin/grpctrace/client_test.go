@@ -17,11 +17,20 @@ package grpctrace_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/api/trace/testtrace"
 	"go.opentelemetry.io/internal/matchers"
 	"go.opentelemetry.io/plugin/grpctrace"
 )
@@ -102,9 +111,155 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		subject := grpctrace.NewUnaryClientInterceptor()
 
 		err := subject(context.Background(), "", nil, nil, nil, invoker)
-
 		e.Expect(err).ToEqual(expectedErr)
 	})
+
+	t.Run("uses a no-op tracer if none is provided", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		var actualCtx context.Context
+
+		invoker := func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+			actualCtx = ctx
+
+			return nil
+		}
+		subject := grpctrace.NewUnaryClientInterceptor()
+
+		err := subject(context.Background(), "test", nil, nil, nil, invoker)
+		e.Expect(err).ToBeNil()
+
+		span := trace.CurrentSpan(actualCtx)
+
+		e.Expect(span).NotToBeNil()
+		e.Expect(span.Tracer()).ToEqual(trace.NoopTracer{})
+	})
+
+	t.Run("wraps the invoker in a span with the expected default values", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		var actualCtx context.Context
+
+		invoker := func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+			actualCtx = ctx
+
+			return nil
+		}
+		tracer := testtrace.NewTracer()
+		subject := grpctrace.NewUnaryClientInterceptor(grpctrace.UnaryClientInterceptorWithTracer(tracer))
+
+		expectedService := "Service"
+		expectedPeerHostname := "example.com"
+		expectedPeerPort := "1234"
+
+		ctx := peer.NewContext(context.Background(), &peer.Peer{
+			Addr: testAddress(fmt.Sprintf("%s:%s", expectedPeerHostname, expectedPeerPort)),
+		})
+		expectedMethod := fmt.Sprintf("package.%s/Method", expectedService)
+		fullMethod := fmt.Sprintf("/%s", expectedMethod)
+
+		start := time.Now()
+
+		err := subject(ctx, fullMethod, nil, nil, nil, invoker)
+		e.Expect(err).ToBeNil()
+
+		end := time.Now()
+
+		span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+		e.Expect(ok).ToBeTrue()
+
+		e.Expect(span.Tracer()).ToEqual(tracer)
+
+		e.Expect(span.Name()).ToEqual(expectedMethod)
+
+		e.Expect(span.StartTime()).ToBeTemporally(matchers.AfterOrSameTime, start)
+		e.Expect(span.StartTime()).ToBeTemporally(matchers.BeforeOrSameTime, end)
+
+		endTime, ok := span.EndTime()
+		e.Expect(ok).ToBeTrue()
+		e.Expect(endTime).ToBeTemporally(matchers.AfterOrSameTime, span.StartTime())
+		e.Expect(endTime).ToBeTemporally(matchers.BeforeOrSameTime, end)
+
+		expectedAttrs := []core.KeyValue{
+			core.Key("component").String("grpc"),
+			core.Key("peer.service").String(expectedService),
+			core.Key("peer.hostname").String(expectedPeerHostname),
+			core.Key("peer.port").String(expectedPeerPort),
+		}
+		e.Expect(span.Attributes()).ToContain(expectedAttrs)
+	})
+
+	t.Run("does not end the span until after the invoker is complete", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		var actualCtx context.Context
+		var ended bool
+
+		invoker := func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+			actualCtx = ctx
+
+			span, ok := trace.CurrentSpan(ctx).(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			ended = span.Ended()
+
+			return nil
+		}
+		tracer := testtrace.NewTracer()
+		subject := grpctrace.NewUnaryClientInterceptor(grpctrace.UnaryClientInterceptorWithTracer(tracer))
+
+		err := subject(context.Background(), "test", nil, nil, nil, invoker)
+		e.Expect(err).ToBeNil()
+
+		e.Expect(ended).ToBeFalse()
+
+		span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+		e.Expect(ok).ToBeTrue()
+
+		e.Expect(span.Ended()).ToBeTrue()
+	})
+
+	for _, c := range grpcCodes {
+		code := c // needs a separate variable in order to be parallelizable
+
+		t.Run(fmt.Sprintf("sets the appropriate status on the span for error code %v", code), func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			var actualCtx context.Context
+			expectedErr := status.Error(code, code.String())
+
+			invoker := func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+				actualCtx = ctx
+
+				return expectedErr
+			}
+
+			tracer := testtrace.NewTracer()
+			subject := grpctrace.NewUnaryClientInterceptor(grpctrace.UnaryClientInterceptorWithTracer(tracer))
+
+			err := subject(context.Background(), "", nil, nil, nil, invoker)
+
+			switch code {
+			case codes.OK:
+				e.Expect(err).ToBeNil()
+			default:
+				e.Expect(err).ToEqual(expectedErr)
+			}
+
+			span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			e.Expect(span.Status()).ToEqual(code)
+		})
+	}
 }
 
 func TestStreamClientInterceptor(t *testing.T) {
@@ -237,6 +392,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 		e.Expect(err).ToBeNil()
 		e.Expect(actualSendMsgM).ToEqual(expectedSendMsgM)
 
+		err = stream.SendMsg(nil)
+		e.Expect(err).ToBeNil()
+
 		expectedSendMsgErr = errors.New("test SendMsg error")
 		err = stream.SendMsg(nil)
 		e.Expect(err).ToEqual(expectedSendMsgErr)
@@ -245,6 +403,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 		err = stream.RecvMsg(expectedRecvMsgM)
 		e.Expect(err).ToBeNil()
 		e.Expect(actualRecvMsgM).ToEqual(expectedRecvMsgM)
+
+		err = stream.RecvMsg(nil)
+		e.Expect(err).ToBeNil()
 
 		expectedRecvMsgErr = errors.New("test RecvMsg error")
 		err = stream.RecvMsg(nil)
@@ -301,4 +462,16 @@ func (cs *testClientStream) SendMsg(m interface{}) error {
 
 func (cs *testClientStream) RecvMsg(m interface{}) error {
 	return cs.recvMsg(m)
+}
+
+var _ net.Addr = (testAddress)("")
+
+type testAddress string
+
+func (a testAddress) String() string {
+	return string(a)
+}
+
+func (a testAddress) Network() string {
+	return "tcp"
 }

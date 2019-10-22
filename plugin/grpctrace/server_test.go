@@ -17,11 +17,19 @@ package grpctrace_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/api/trace/testtrace"
 	"go.opentelemetry.io/internal/matchers"
 	"go.opentelemetry.io/plugin/grpctrace"
 )
@@ -83,9 +91,133 @@ func TestUnaryServerInterceptor(t *testing.T) {
 		subject := grpctrace.NewUnaryServerInterceptor()
 
 		_, err := subject(context.Background(), nil, &grpc.UnaryServerInfo{}, handler)
-
 		e.Expect(err).ToEqual(expectedErr)
 	})
+
+	t.Run("wraps the invoker in a span with the expected default values", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		var actualCtx context.Context
+
+		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+			actualCtx = ctx
+
+			return nil, nil
+		}
+		tracer := testtrace.NewTracer()
+		subject := grpctrace.NewUnaryServerInterceptor(grpctrace.UnaryServerInterceptorWithTracer(tracer))
+
+		expectedService := "Service"
+		expectedPeerHostname := "example.com"
+		expectedPeerPort := "1234"
+
+		ctx := peer.NewContext(context.Background(), &peer.Peer{
+			Addr: testAddress(fmt.Sprintf("%s:%s", expectedPeerHostname, expectedPeerPort)),
+		})
+		expectedMethod := fmt.Sprintf("package.%s/Method", expectedService)
+		fullMethod := fmt.Sprintf("/%s", expectedMethod)
+
+		start := time.Now()
+
+		_, err := subject(ctx, nil, &grpc.UnaryServerInfo{
+			FullMethod: fullMethod,
+		}, handler)
+		e.Expect(err).ToBeNil()
+
+		end := time.Now()
+
+		span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+		e.Expect(ok).ToBeTrue()
+
+		e.Expect(span.Tracer()).ToEqual(tracer)
+
+		e.Expect(span.Name()).ToEqual(expectedMethod)
+
+		e.Expect(span.StartTime()).ToBeTemporally(matchers.AfterOrSameTime, start)
+		e.Expect(span.StartTime()).ToBeTemporally(matchers.BeforeOrSameTime, end)
+
+		endTime, ok := span.EndTime()
+		e.Expect(ok).ToBeTrue()
+		e.Expect(endTime).ToBeTemporally(matchers.AfterOrSameTime, span.StartTime())
+		e.Expect(endTime).ToBeTemporally(matchers.BeforeOrSameTime, end)
+
+		expectedAttrs := []core.KeyValue{
+			core.Key("component").String("grpc"),
+			core.Key("peer.service").String(expectedService),
+			core.Key("peer.hostname").String(expectedPeerHostname),
+			core.Key("peer.port").String(expectedPeerPort),
+		}
+		e.Expect(span.Attributes()).ToContain(expectedAttrs)
+	})
+
+	t.Run("does not end the span until after the handler is complete", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		var actualCtx context.Context
+		var ended bool
+
+		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+			actualCtx = ctx
+
+			span, ok := trace.CurrentSpan(ctx).(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			ended = span.Ended()
+
+			return nil, nil
+		}
+		tracer := testtrace.NewTracer()
+		subject := grpctrace.NewUnaryServerInterceptor(grpctrace.UnaryServerInterceptorWithTracer(tracer))
+
+		_, err := subject(context.Background(), nil, &grpc.UnaryServerInfo{}, handler)
+		e.Expect(err).ToBeNil()
+
+		e.Expect(ended).ToBeFalse()
+
+		span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+		e.Expect(ok).ToBeTrue()
+
+		e.Expect(span.Ended()).ToBeTrue()
+	})
+
+	for _, c := range grpcCodes {
+		code := c // needs a separate variable in order to be parallelizable
+
+		t.Run(fmt.Sprintf("sets the appropriate status on the span for error code %v", code), func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			var actualCtx context.Context
+			expectedErr := status.Error(code, code.String())
+
+			handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+				actualCtx = ctx
+
+				return nil, expectedErr
+			}
+			tracer := testtrace.NewTracer()
+			subject := grpctrace.NewUnaryServerInterceptor(grpctrace.UnaryServerInterceptorWithTracer(tracer))
+
+			_, err := subject(context.Background(), nil, &grpc.UnaryServerInfo{}, handler)
+
+			switch code {
+			case codes.OK:
+				e.Expect(err).ToBeNil()
+			default:
+				e.Expect(err).ToEqual(expectedErr)
+			}
+
+			span, ok := trace.CurrentSpan(actualCtx).(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			e.Expect(span.Status()).ToEqual(code)
+		})
+	}
 }
 
 func TestStreamServerInterceptor(t *testing.T) {
@@ -241,7 +373,6 @@ func TestStreamServerInterceptor(t *testing.T) {
 		subject := grpctrace.NewStreamServerInterceptor()
 
 		err := subject(nil, nil, nil, handler)
-
 		e.Expect(err).ToEqual(expectedErr)
 	})
 }

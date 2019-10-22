@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpctrace_test
+package grpctrace // import "go.opentelemetry.io/plugin/grpctrace"
 
-import "google.golang.org/grpc/codes"
+import (
+	"path"
+	"strings"
+)
 
-var grpcCodes = []codes.Code{
-	codes.OK,
-	codes.Canceled,
-	codes.Unknown,
-	codes.InvalidArgument,
-	codes.DeadlineExceeded,
-	codes.NotFound,
-	codes.AlreadyExists,
-	codes.PermissionDenied,
-	codes.ResourceExhausted,
-	codes.FailedPrecondition,
-	codes.Aborted,
-	codes.OutOfRange,
-	codes.Unimplemented,
-	codes.Internal,
-	codes.Unavailable,
-	codes.DataLoss,
-	codes.Unauthenticated,
+const (
+	componentKey    = "component"
+	componentValue  = "grpc"
+	peerServiceKey  = "peer.service"
+	peerHostnameKey = "peer.hostname"
+	peerPortKey     = "peer.port"
+)
+
+func serviceFromMethod(method string) string {
+	return strings.TrimLeft(path.Ext(path.Dir(method)), ".")
 }
 
-type testCtxKey struct{}
+func nameFromMethod(method string) string {
+	return strings.TrimLeft(method, "/")
+}
