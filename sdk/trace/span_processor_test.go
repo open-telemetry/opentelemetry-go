@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/sdk/export"
-	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 type testSpanProcesor struct {
@@ -42,8 +41,7 @@ func (t *testSpanProcesor) Shutdown() {
 
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
-	tp, _ := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -63,8 +61,7 @@ func TestRegisterSpanProcessort(t *testing.T) {
 
 func TestUnregisterSpanProcessor(t *testing.T) {
 	name := "Start span after unregistering span processor"
-	tp, _ := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -91,8 +88,7 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 
 func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	name := "Unregister span processor while span is active"
-	tp, _ := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -117,8 +113,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 
 func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
-	tp, _ := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
 
 	if sp == nil {
@@ -137,8 +132,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
-	tp, _ := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")

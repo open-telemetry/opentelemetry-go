@@ -49,7 +49,7 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
-	tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp := basicProvider(t)
 	te := testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(&te)
 	if ssp == nil {

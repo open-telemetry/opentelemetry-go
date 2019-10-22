@@ -138,7 +138,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
-		tp, _ := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+		tp := basicProvider(t)
 		ssp := createAndRegisterBatchSP(t, option, &te)
 		if ssp == nil {
 			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
@@ -178,7 +178,6 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	if ssp == nil {
 		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}
-	//sdktrace.RegisterSpanProcessor(ssp)
 	return ssp
 }
 

@@ -95,6 +95,7 @@ func (p *Provider) GetTracer(name string) apitrace.Tracer {
 	return t
 }
 
+// RegisterSpanProcessor adds the given SpanProcessor to the list of SpanProcessors
 func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -108,8 +109,7 @@ func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 	p.spanProcessors.Store(new)
 }
 
-// UnregisterSpanProcessor removes from the list of SpanProcessors the SpanProcessor that was
-// registered with the given name.
+// UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors
 func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -128,6 +128,8 @@ func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
 	p.spanProcessors.Store(new)
 }
 
+// ApplyConfig changes the configuration of the provider.
+// If a field in the configuration is empty or nil then its original value is preserved.
 func (p *Provider) ApplyConfig(cfg Config) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

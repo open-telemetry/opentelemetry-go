@@ -50,7 +50,6 @@ func ExampleNewHandler() {
 		log.Fatal(err)
 	}
 
-	//import sdktrace "go.opentelemetry.io/sdk/trace"
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
