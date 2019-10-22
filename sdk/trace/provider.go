@@ -27,6 +27,7 @@ const (
 	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
 )
 
+// ProviderOptions
 type ProviderOptions struct {
 	syncers  []export.SpanSyncer
 	batchers []export.SpanBatcher
@@ -44,6 +45,9 @@ type Provider struct {
 
 var _ apitrace.Provider = &Provider{}
 
+// NewProvider creates an instance of trace provider. Optional
+// parameter configures the provider with common options applicable
+// to all tracer instances that will be created by this provider.
 func NewProvider(opts ...ProviderOption) (*Provider, error) {
 
 	o := &ProviderOptions{}
@@ -152,18 +156,27 @@ func (p *Provider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
+// WithSyncer options appends the syncer to the existing list of Syncers.
+// This option can be used multiple times.
+// The Syncers are wrapped into SimpleSpanProcessors and registered
+// with the provider.
 func WithSyncer(syncer export.SpanSyncer) ProviderOption {
 	return func(opts *ProviderOptions) {
 		opts.syncers = append(opts.syncers, syncer)
 	}
 }
 
+// WithBatch options appends the batcher to the existing list of Batchers.
+// This option can be used multiple times.
+// The Batchers are wrapped into BatchedSpanProcessors and registered
+// with the provider.
 func WithBatcher(batcher export.SpanBatcher) ProviderOption {
 	return func(opts *ProviderOptions) {
 		opts.batchers = append(opts.batchers, batcher)
 	}
 }
 
+// WithConfig option sets the configuration to provider.
 func WithConfig(config Config) ProviderOption {
 	return func(opts *ProviderOptions) {
 		opts.config = config

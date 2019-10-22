@@ -115,7 +115,6 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
 	tp := basicProvider(t)
 	sp := NewTestSpanProcessor()
-
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
 	}

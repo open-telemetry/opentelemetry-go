@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package trace_test
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func BenchmarkStartEndSpan(b *testing.B) {
@@ -183,7 +184,7 @@ func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 }
 
 func getTracer(b *testing.B, name string) apitrace.Tracer {
-	tp, err := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)
 	}

@@ -34,7 +34,7 @@ var (
 
 var tp *sdktrace.Provider
 
-// initTracer creates a new trace provider instance and registers it as global trace provider.
+// initTracer creates and registers trace provider instance.
 func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.Options{})

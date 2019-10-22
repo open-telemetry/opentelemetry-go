@@ -25,7 +25,7 @@ var (
 	lemonsKey = key.New("ex.com/lemons")
 )
 
-// SubOperation is simply an example to demonstrate the use of named tracer.
+// SubOperation is an example to demonstrate the use of named tracer.
 // It creates a named tracer with its package path.
 func SubOperation(ctx context.Context) error {
 
