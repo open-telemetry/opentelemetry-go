@@ -64,7 +64,7 @@ func EmptySpanContext() SpanContext {
 }
 
 // MarshalJSON implements a custom marshal function to encode SpanContext
-// in a human readable format, with hex encoded TraceID and SpanID.
+// in a human readable format with hex encoded TraceID and SpanID.
 func (sc SpanContext) MarshalJSON() ([]byte, error) {
 	type JSONSpanContext struct {
 		TraceID    string
