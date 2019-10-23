@@ -131,6 +131,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	defaultOpts := []Option{
 		WithTracer(trace.GlobalProvider().GetTracer("go.opentelemtry.io/plugin/othttp")),
 		WithPropagator(prop.HTTPTraceContextPropagator{}),
+		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
 	for _, opt := range append(defaultOpts, opts...) {

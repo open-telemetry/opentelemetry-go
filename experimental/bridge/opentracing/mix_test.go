@@ -478,6 +478,12 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 	// the last finished span has no parent
 	parentSpanIDs := append(spanIDs[1:], 0)
 
+	sks := map[uint64]oteltrace.SpanKind{
+		3456: oteltrace.SpanKindProducer,
+		2345: oteltrace.SpanKindInternal,
+		1234: oteltrace.SpanKindClient,
+	}
+
 	if len(tracer.FinishedSpans) != expectedSpanCount {
 		t.Errorf("Expected %d finished spans, got %d", expectedSpanCount, len(tracer.FinishedSpans))
 	}
@@ -493,6 +499,9 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 		}
 		if span.ParentSpanID != expectedParentSpanID {
 			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
+		}
+		if span.SpanKind != sks[span.SpanContext().SpanID] {
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
 		}
 	}
 }
@@ -535,7 +544,7 @@ func min(a, b int) int {
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
 	tr := oteltrace.GlobalProvider().GetTracer("")
-	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name))
+	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
 	defer span.End()
 	callback(t, ctx)
 	func(ctx2 context.Context) {
@@ -543,7 +552,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 		defer span.Finish()
 		callback(t, ctx2)
 		func(ctx3 context.Context) {
-			ctx3, span := tr.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name))
+			ctx3, span := tr.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name), oteltrace.WithSpanKind(oteltrace.SpanKindProducer))
 			defer span.End()
 			callback(t, ctx3)
 		}(ctx2)
@@ -552,7 +561,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
 	tr := oteltrace.GlobalProvider().GetTracer("")
-	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name))
+	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
 	defer span.Finish()
 	callback(t, ctx)
 	func(ctx2 context.Context) {
@@ -560,7 +569,7 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 		defer span.End()
 		callback(t, ctx2)
 		func(ctx3 context.Context) {
-			span, ctx3 := ot.StartSpanFromContext(ctx3, fmt.Sprintf("%sOTOtel_OT_", name))
+			span, ctx3 := ot.StartSpanFromContext(ctx3, fmt.Sprintf("%sOTOtel_OT_", name), ot.Tag{Key: "span.kind", Value: "producer"})
 			defer span.Finish()
 			callback(t, ctx3)
 		}(ctx2)

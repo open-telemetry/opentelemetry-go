@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 )
 
@@ -62,7 +63,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 				Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
 			},
 		},
-		Status: codes.Unknown,
+		SpanKind: trace.SpanKindInternal,
+		Status:   codes.Unknown,
 	}
 	ex.ExportSpan(context.Background(), testSpan)
 
@@ -73,7 +75,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
 		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":0,` +
-		`"SpanKind":0,` +
+		`"SpanKind":"internal",` +
 		`"Name":"/foo",` +
 		`"StartTime":` + string(expectedSerializedNow) + "," +
 		`"EndTime":` + string(expectedSerializedNow) + "," +

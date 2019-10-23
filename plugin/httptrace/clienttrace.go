@@ -60,7 +60,7 @@ func newClientTracer(ctx context.Context) *clientTracer {
 }
 
 func (ct *clientTracer) open(name string, attrs ...core.KeyValue) {
-	_, sp := ct.tr.Start(ct.Context, name, trace.WithAttributes(attrs...))
+	_, sp := ct.tr.Start(ct.Context, name, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ct.root == nil {
