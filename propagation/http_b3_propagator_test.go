@@ -53,7 +53,6 @@ func TestExtractB3(t *testing.T) {
 			tests:        extractInvalidB3SingleHeader,
 		},
 	}
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 
 	for _, tg := range testGroup {
 		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
@@ -97,7 +96,6 @@ func TestInjectB3(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	trace.SetGlobalTracer(mockTracer)
 
 	for _, tg := range testGroup {
 		id = 0
@@ -145,7 +143,7 @@ func TestHTTPB3Propagator_GetAllKeys(t *testing.T) {
 	}
 }
 
-func TestHttpB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
+func TestHTTPB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
 	propagator := propagation.HTTPB3Propagator{true}
 	want := []string{
 		propagation.B3SingleHeader,

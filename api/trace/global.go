@@ -16,21 +16,24 @@ package trace
 
 import "sync/atomic"
 
-// The process global tracer could have process-wide resource
-// tags applied directly, or we can have a SetGlobal tracer to
-// install a default tracer w/ resources.
-var global atomic.Value
-
-// GlobalTracer return tracer registered with global registry.
-// If no tracer is registered then an instance of noop Tracer is returned.
-func GlobalTracer() Tracer {
-	if t := global.Load(); t != nil {
-		return t.(Tracer)
-	}
-	return NoopTracer{}
+type globalProvider struct {
+	p Provider
 }
 
-// SetGlobalTracer sets provided tracer as a global tracer.
-func SetGlobalTracer(t Tracer) {
-	global.Store(t)
+var globalP atomic.Value
+
+// GlobalProvider returns trace provider registered with global registry.
+// If no trace provider is registered then an instance of NoopTraceProvider is returned.
+// Use the trace provider to create a named tracer. E.g.
+//     tracer := trace.GlobalProvider().GetTracer("example.com/foo")
+func GlobalProvider() Provider {
+	if gp := globalP.Load(); gp != nil {
+		return gp.(globalProvider).p
+	}
+	return NoopTraceProvider{}
+}
+
+// SetGlobalProvider sets the provider as a global trace provider.
+func SetGlobalProvider(m Provider) {
+	globalP.Store(globalProvider{p: m})
 }
