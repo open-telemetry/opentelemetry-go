@@ -504,10 +504,7 @@ func reverse(length int, swap func(i, j int)) {
 }
 
 func simpleTraceID() otelcore.TraceID {
-	return otelcore.TraceID{
-		High: 1357,
-		Low:  2468,
-	}
+	return [16]byte{123, 42}
 }
 
 func simpleSpanIDs(count int) []uint64 {

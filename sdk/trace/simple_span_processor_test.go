@@ -55,9 +55,10 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	if ssp == nil {
 		t.Errorf("Error creating new instance of SimpleSpanProcessor with nil Exporter\n")
 	}
+
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.GetTracer("SimpleSpanProcessor")
-	tid := core.TraceID{High: 0x0102030405060708, Low: 0x0102040810203040}
+	tid, _ := core.TraceIDFromHex("01020304050607080102040810203040")
 	sid := uint64(0x0102040810203040)
 	sc := core.SpanContext{
 		TraceID:    tid,

@@ -39,7 +39,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
+	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 	keyValue := "value"
 	doubleValue := float64(123.456)
@@ -70,8 +70,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	got := b.String()
 	expectedOutput := `{"SpanContext":{` +
-		`"TraceID":{"High":72623859790382856,"Low":651345242494996240},` +
-		`"SpanID":72623859790382856,"TraceFlags":0},` +
+		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
+		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":0,` +
 		`"SpanKind":0,` +
 		`"Name":"/foo",` +

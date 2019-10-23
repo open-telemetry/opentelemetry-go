@@ -15,6 +15,7 @@
 package propagation_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -24,7 +25,10 @@ import (
 )
 
 func TestExtractSpanContextFromBytes(t *testing.T) {
-	traceID := core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+	bTraceID, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
+	traceID := core.TraceID{}
+	copy(traceID[:], bTraceID)
+
 	spanID := uint64(0x00f067aa0ba902b7)
 	propagator := propagation.BinaryPropagator()
 	tests := []struct {
@@ -119,7 +123,10 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 }
 
 func TestConvertSpanContextToBytes(t *testing.T) {
-	traceID := core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+	bTraceID, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
+	traceID := core.TraceID{}
+	copy(traceID[:], bTraceID)
+
 	spanID := uint64(0x00f067aa0ba902b7)
 	propagator := propagation.BinaryPropagator()
 	tests := []struct {

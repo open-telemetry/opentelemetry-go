@@ -34,9 +34,13 @@ import (
 )
 
 var (
-	tid = core.TraceID{High: 0x0102030405060708, Low: 0x0102040810203040}
+	tid core.TraceID
 	sid = uint64(0x0102040810203040)
 )
+
+func init() {
+	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
+}
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	tp, err := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
@@ -386,8 +390,8 @@ func TestAddLinks(t *testing.T) {
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 
 	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
 	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
@@ -426,8 +430,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 
 	span.Link(sc1, key.New("key1").String("value1"))
 	span.Link(sc2,
@@ -460,12 +464,13 @@ func TestLinks(t *testing.T) {
 func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+
+	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 	span := startSpan(tp, "LinksOverLimit")
-	sc1 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x1}, SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x2}, SpanID: 0x3}
-	sc3 := core.SpanContext{TraceID: core.TraceID{High: 0x1, Low: 0x3}, SpanID: 0x3}
 
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
@@ -741,12 +746,14 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
+	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+
 	_, apiSpan = tr.Start(
 		context.Background(),
 		"foo",
 		apitrace.ChildOf(
 			core.SpanContext{
-				TraceID:    core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f},
+				TraceID:    tID,
 				SpanID:     uint64(0x0001020304050607),
 				TraceFlags: 0,
 			},

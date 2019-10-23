@@ -31,7 +31,7 @@ import (
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -512,7 +512,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !ok {
 		return ot.ErrInvalidCarrier
 	}
-	hhcarrier.Set(traceIDHeader, traceIDString(bridgeSC.otelSpanContext.TraceID))
+	hhcarrier.Set(traceIDHeader, bridgeSC.otelSpanContext.TraceIDString())
 	hhcarrier.Set(spanIDHeader, spanIDToString(bridgeSC.otelSpanContext.SpanID))
 	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
 	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
@@ -521,12 +521,6 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 		return true
 	})
 	return nil
-}
-
-// mostly copied from core/span_context.go, but I prefer not to rely
-// on some impl details
-func traceIDString(traceID otelcore.TraceID) string {
-	return fmt.Sprintf("%.16x%.16x", traceID.High, traceID.Low)
 }
 
 func spanIDToString(spanID uint64) string {
@@ -558,7 +552,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		ck := http.CanonicalHeaderKey(k)
 		switch ck {
 		case traceIDHeader:
-			traceID, err := traceIDFromString(v)
+			traceID, err := otelcore.TraceIDFromHex(v)
 			if err != nil {
 				return err
 			}
@@ -586,23 +580,6 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrSpanContextNotFound
 	}
 	return bridgeSC, nil
-}
-
-func traceIDFromString(s string) (otelcore.TraceID, error) {
-	traceID := otelcore.TraceID{}
-	if len(s) != 32 {
-		return traceID, fmt.Errorf("invalid trace ID")
-	}
-	high, err := strconv.ParseUint(s[0:16], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	low, err := strconv.ParseUint(s[16:32], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	traceID.High, traceID.Low = high, low
-	return traceID, nil
 }
 
 func spanIDFromString(s string) (uint64, error) {

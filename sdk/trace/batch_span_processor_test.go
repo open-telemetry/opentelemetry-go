@@ -16,6 +16,7 @@ package trace_test
 
 import (
 	"context"
+	"encoding/binary"
 	"sync"
 	"testing"
 	"time"
@@ -164,7 +165,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		// Check first Span is reported. Most recent one is dropped.
 		sc := getSpanContext()
 		wantTraceID := sc.TraceID
-		wantTraceID.High = 1
+		binary.BigEndian.PutUint64(wantTraceID[0:8], uint64(1))
 		gotTraceID := te.get(0).SpanContext.TraceID
 		if wantTraceID != gotTraceID {
 			t.Errorf("%s: first exported span: got %+v, want %+v\n", option.name, gotTraceID, wantTraceID)
@@ -185,14 +186,14 @@ func generateSpan(t *testing.T, tr apitrace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
-		sc.TraceID.High = uint64(i + 1)
+		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		_, span := tr.Start(context.Background(), option.name, apitrace.ChildOf(sc))
 		span.End()
 	}
 }
 
 func getSpanContext() core.SpanContext {
-	tid := core.TraceID{High: 0x0102030405060708, Low: 0x0102040810203040}
+	tid, _ := core.TraceIDFromHex("01020304050607080102040810203040")
 	sid := uint64(0x0102040810203040)
 	return core.SpanContext{
 		TraceID:    tid,
