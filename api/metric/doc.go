@@ -36,9 +36,10 @@
 // example could be bank account balance or bytes downloaded. Counters
 // can be created with either NewFloat64Counter or
 // NewInt64Counter. Counters expect non-negative values by default to
-// be reported. This can be changed with the WithNonMonotonic option
-// passed to the New*Counter function - this allows reporting negative
-// values. To report the new value, use an Add function.
+// be reported. This can be changed with the WithMonotonic option
+// (passing false as a parameter) passed to the Meter.New*Counter
+// function - this allows reporting negative values. To report the new
+// value, use an Add function.
 //
 // Gauges are instruments that are reporting a current state of a
 // value. An example could be voltage or temperature. Gauges can be
@@ -55,13 +56,14 @@
 // time or lines of code in the project over time. Measures can be
 // created with either NewFloat64Measure or NewInt64Measure. Measures
 // by default take only non-negative values. This can be changed with
-// the WithSigned option passed to the New*Measure function - this
-// allows reporting negative values too. To report a new value, use
-// the Record function.
+// the WithAbsolute option (passing false as a parameter) passed to
+// the New*Measure function - this allows reporting negative values
+// too. To report a new value, use the Record function.
 //
 // All the basic kinds of instruments also support creating handles
 // for a potentially more efficient reporting. The handles have the
 // same function names as the instruments (so counter handle has Add,
 // gauge handle has Set and measure handle has Record). Handles can be
-// created with the GetHandle function of the respective instrument.
+// created with the AcquireHandle function of the respective
+// instrument. When done with the handle, call Release on it.
 package metric // import "go.opentelemetry.io/api/metric"

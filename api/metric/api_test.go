@@ -22,6 +22,8 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/unit"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestCounterOptions(t *testing.T) {
@@ -103,7 +105,7 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "nonmonotonic",
 			opts: []CounterOptionApplier{
-				WithNonMonotonic(true),
+				WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -113,8 +115,8 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "nonmonotonic, but not really",
 			opts: []CounterOptionApplier{
-				WithNonMonotonic(true),
-				WithNonMonotonic(false),
+				WithMonotonic(false),
+				WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -122,24 +124,16 @@ func TestCounterOptions(t *testing.T) {
 			alt:  false,
 		},
 	}
-	checkCounterDescriptor := func(tt testcase, vk ValueKind, d *Descriptor) {
-		e := descriptor{
-			name: tt.name,
-			keys: tt.keys,
-			desc: tt.desc,
-			unit: tt.unit,
-			alt:  tt.alt,
-			kind: CounterKind,
-			vk:   vk,
-		}
-		checkDescriptor(t, e, d)
-	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		f := NewFloat64Counter(tt.name, tt.opts...)
-		checkCounterDescriptor(tt, Float64ValueKind, f.Descriptor())
-		i := NewInt64Counter(tt.name, tt.opts...)
-		checkCounterDescriptor(tt, Int64ValueKind, i.Descriptor())
+		opts := &Options{}
+		ApplyCounterOptions(opts, tt.opts...)
+		checkOptions(t, opts, &Options{
+			Description: tt.desc,
+			Unit:        tt.unit,
+			Keys:        tt.keys,
+			Alternate:   tt.alt,
+		})
 	}
 }
 
@@ -241,24 +235,16 @@ func TestGaugeOptions(t *testing.T) {
 			alt:  false,
 		},
 	}
-	checkGaugeDescriptor := func(tt testcase, vk ValueKind, d *Descriptor) {
-		e := descriptor{
-			name: tt.name,
-			keys: tt.keys,
-			desc: tt.desc,
-			unit: tt.unit,
-			alt:  tt.alt,
-			kind: GaugeKind,
-			vk:   vk,
-		}
-		checkDescriptor(t, e, d)
-	}
 	for idx, tt := range testcases {
 		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		f := NewFloat64Gauge(tt.name, tt.opts...)
-		checkGaugeDescriptor(tt, Float64ValueKind, f.Descriptor())
-		i := NewInt64Gauge(tt.name, tt.opts...)
-		checkGaugeDescriptor(tt, Int64ValueKind, i.Descriptor())
+		opts := &Options{}
+		ApplyGaugeOptions(opts, tt.opts...)
+		checkOptions(t, opts, &Options{
+			Description: tt.desc,
+			Unit:        tt.unit,
+			Keys:        tt.keys,
+			Alternate:   tt.alt,
+		})
 	}
 }
 
@@ -339,9 +325,9 @@ func TestMeasureOptions(t *testing.T) {
 			alt:  false,
 		},
 		{
-			name: "signed",
+			name: "not absolute",
 			opts: []MeasureOptionApplier{
-				WithSigned(true),
+				WithAbsolute(false),
 			},
 			keys: nil,
 			desc: "",
@@ -349,10 +335,10 @@ func TestMeasureOptions(t *testing.T) {
 			alt:  true,
 		},
 		{
-			name: "signed, but not really",
+			name: "not absolute, but not really",
 			opts: []MeasureOptionApplier{
-				WithSigned(true),
-				WithSigned(false),
+				WithAbsolute(false),
+				WithAbsolute(true),
 			},
 			keys: nil,
 			desc: "",
@@ -360,156 +346,112 @@ func TestMeasureOptions(t *testing.T) {
 			alt:  false,
 		},
 	}
-	checkMeasureDescriptor := func(tt testcase, vk ValueKind, d *Descriptor) {
-		e := descriptor{
-			name: tt.name,
-			keys: tt.keys,
-			desc: tt.desc,
-			unit: tt.unit,
-			alt:  tt.alt,
-			kind: MeasureKind,
-			vk:   vk,
-		}
-		checkDescriptor(t, e, d)
-	}
 	for idx, tt := range testcases {
 		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		f := NewFloat64Measure(tt.name, tt.opts...)
-		checkMeasureDescriptor(tt, Float64ValueKind, f.Descriptor())
-		i := NewInt64Measure(tt.name, tt.opts...)
-		checkMeasureDescriptor(tt, Int64ValueKind, i.Descriptor())
+		opts := &Options{}
+		ApplyMeasureOptions(opts, tt.opts...)
+		checkOptions(t, opts, &Options{
+			Description: tt.desc,
+			Unit:        tt.unit,
+			Keys:        tt.keys,
+			Alternate:   tt.alt,
+		})
 	}
 }
 
-type descriptor struct {
-	name string
-	keys []core.Key
-	desc string
-	unit unit.Unit
-	alt  bool
-	kind Kind
-	vk   ValueKind
-}
-
-func checkDescriptor(t *testing.T, e descriptor, d *Descriptor) {
-	if e.name != d.Name() {
-		t.Errorf("Expected name %q, got %q", e.name, d.Name())
-	}
-	if len(e.keys) != len(d.Keys()) {
-		t.Errorf("Expected %d key(s), got %d", len(e.keys), len(d.Keys()))
-	}
-	minLen := len(e.keys)
-	if minLen > len(d.Keys()) {
-		minLen = len(d.Keys())
-	}
-	for i := 0; i < minLen; i++ {
-		if e.keys[i] != d.Keys()[i] {
-			t.Errorf("Expected key %q, got %q", e.keys[i], d.Keys()[i])
-		}
-	}
-	if e.desc != d.Description() {
-		t.Errorf("Expected description %q, got %q", e.desc, d.Description())
-	}
-	if e.unit != d.Unit() {
-		t.Errorf("Expected unit %q, got %q", e.unit, d.Unit())
-	}
-	if e.alt != d.Alternate() {
-		t.Errorf("Expected alternate %v, got %v", e.alt, d.Alternate())
-	}
-	if e.vk != d.ValueKind() {
-		t.Errorf("Expected value kind %q, got %q", e.vk, d.ValueKind())
-	}
-	if e.kind != d.Kind() {
-		t.Errorf("Expected kind %q, got %q", e.kind, d.Kind())
+func checkOptions(t *testing.T, got *Options, expected *Options) {
+	if diff := cmp.Diff(got, expected); diff != "" {
+		t.Errorf("Compare options: -got +want %s", diff)
 	}
 }
 
 func TestCounter(t *testing.T) {
 	{
-		c := NewFloat64Counter("ajwaj")
 		meter := newMockMeter()
+		c := meter.NewFloat64Counter("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		c.Add(ctx, 42, labels)
-		handle := c.GetHandle(labels)
+		handle := c.AcquireHandle(labels)
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, meter, c.Descriptor())
+		checkBatches(t, ctx, labels, meter, Float64ValueKind, c.instrument)
 	}
 	{
-		c := NewInt64Counter("ajwaj")
 		meter := newMockMeter()
+		c := meter.NewInt64Counter("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		c.Add(ctx, 42, labels)
-		handle := c.GetHandle(labels)
+		handle := c.AcquireHandle(labels)
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, meter, c.Descriptor())
+		checkBatches(t, ctx, labels, meter, Int64ValueKind, c.instrument)
 	}
 }
 
 func TestGauge(t *testing.T) {
 	{
-		g := NewFloat64Gauge("ajwaj")
 		meter := newMockMeter()
+		g := meter.NewFloat64Gauge("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		g.Set(ctx, 42, labels)
-		handle := g.GetHandle(labels)
+		handle := g.AcquireHandle(labels)
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, g.Descriptor())
+		checkBatches(t, ctx, labels, meter, Float64ValueKind, g.instrument)
 	}
 	{
-		g := NewInt64Gauge("ajwaj")
 		meter := newMockMeter()
+		g := meter.NewInt64Gauge("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		g.Set(ctx, 42, labels)
-		handle := g.GetHandle(labels)
+		handle := g.AcquireHandle(labels)
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, g.Descriptor())
+		checkBatches(t, ctx, labels, meter, Int64ValueKind, g.instrument)
 	}
 }
 
 func TestMeasure(t *testing.T) {
 	{
-		m := NewFloat64Measure("ajwaj")
 		meter := newMockMeter()
+		m := meter.NewFloat64Measure("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		m.Record(ctx, 42, labels)
-		handle := m.GetHandle(labels)
+		handle := m.AcquireHandle(labels)
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, meter, m.Descriptor())
+		checkBatches(t, ctx, labels, meter, Float64ValueKind, m.instrument)
 	}
 	{
-		m := NewInt64Measure("ajwaj")
 		meter := newMockMeter()
+		m := meter.NewInt64Measure("ajwaj")
 		ctx := context.Background()
-		labels := meter.DefineLabels(ctx)
+		labels := meter.Labels(ctx)
 		m.Record(ctx, 42, labels)
-		handle := m.GetHandle(labels)
+		handle := m.AcquireHandle(labels)
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, meter, m.Descriptor())
+		checkBatches(t, ctx, labels, meter, Int64ValueKind, m.instrument)
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, descriptor *Descriptor) {
+func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind ValueKind, instrument Instrument) {
 	t.Helper()
 	if len(meter.measurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.measurementBatches))
 	}
+	ourInstrument := instrument.(*mockInstrument)
 	ourLabelSet := labels.(*mockLabelSet)
 	minLen := 3
 	if minLen > len(meter.measurementBatches) {
@@ -538,15 +480,15 @@ func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *moc
 		}
 		for j := 0; j < minMLen; j++ {
 			measurement := got.measurements[j]
-			if measurement.Descriptor != descriptor {
-				d := func(d *Descriptor) string {
-					return fmt.Sprintf("(ptr: %p, descriptor %#v)", d, d)
+			if measurement.instrument != ourInstrument {
+				d := func(i *mockInstrument) string {
+					return fmt.Sprintf("(ptr: %p, instrument %#v)", i, i)
 				}
-				t.Errorf("Wrong recorded descriptor in measurement %d in batch %d, expected %s, got %s", j, i, d(descriptor), d(measurement.Descriptor))
+				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.instrument))
 			}
-			ft := fortyTwo(t, descriptor.ValueKind())
-			if measurement.Value.RawCompare(ft.AsRaw(), descriptor.ValueKind()) != 0 {
-				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(descriptor.ValueKind()), measurement.Value.Emit(descriptor.ValueKind()))
+			ft := fortyTwo(t, kind)
+			if measurement.value.RawCompare(ft.AsRaw(), kind) != 0 {
+				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(kind), measurement.value.Emit(kind))
 			}
 		}
 	}

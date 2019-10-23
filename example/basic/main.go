@@ -32,16 +32,16 @@ var (
 	barKey     = key.New("ex.com/bar")
 	lemonsKey  = key.New("ex.com/lemons")
 	anotherKey = key.New("ex.com/another")
+)
 
-	oneMetric = metric.NewFloat64Gauge("ex.com/one",
+func main() {
+	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo = metric.NewFloat64Measure("ex.com/two")
-)
+	measureTwo := meter.NewFloat64Measure("ex.com.two")
 
-func main() {
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,
@@ -49,11 +49,13 @@ func main() {
 		distributedcontext.Insert(barKey.String("bar1")),
 	)
 
-	commonLabels := meter.DefineLabels(ctx, lemonsKey.Int(10))
+	commonLabels := meter.Labels(ctx, lemonsKey.Int(10))
 
-	gauge := oneMetric.GetHandle(commonLabels)
+	gauge := oneMetric.AcquireHandle(commonLabels)
+	defer gauge.Release()
 
-	measure := measureTwo.GetHandle(commonLabels)
+	measure := measureTwo.AcquireHandle(commonLabels)
+	defer measure.Release()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
