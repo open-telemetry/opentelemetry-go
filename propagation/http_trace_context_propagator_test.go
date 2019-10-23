@@ -31,9 +31,14 @@ import (
 )
 
 var (
-	traceID = core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+	traceID = mustTraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID  = uint64(0x00f067aa0ba902b7)
 )
+
+func mustTraceIDFromHex(s string) (t core.TraceID) {
+	t, _ = core.TraceIDFromHex(s)
+	return
+}
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 	var propagator propagation.HTTPTraceContextPropagator

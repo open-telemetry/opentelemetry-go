@@ -38,8 +38,7 @@ func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
 		return nil
 	}
 	var b [29]byte
-	binary.BigEndian.PutUint64(b[2:10], sc.TraceID.High)
-	binary.BigEndian.PutUint64(b[10:18], sc.TraceID.Low)
+	copy(b[2:18], sc.TraceID[:])
 	b[18] = 1
 	binary.BigEndian.PutUint64(b[19:27], sc.SpanID)
 	b[27] = 2
@@ -55,8 +54,7 @@ func (bp binaryPropagator) FromBytes(b []byte) (sc core.SpanContext) {
 	}
 	b = b[1:]
 	if len(b) >= 17 && b[0] == 0 {
-		sc.TraceID.High = binary.BigEndian.Uint64(b[1:9])
-		sc.TraceID.Low = binary.BigEndian.Uint64(b[9:17])
+		copy(sc.TraceID[:], b[1:17])
 		b = b[17:]
 	} else {
 		return core.EmptySpanContext()

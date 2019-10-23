@@ -59,9 +59,7 @@ func (gen *defaultIDGenerator) NewTraceID() core.TraceID {
 	defer gen.Unlock()
 	// Construct the trace ID from two outputs of traceIDRand, with a constant
 	// added to each half for additional entropy.
-	tid := core.TraceID{
-		High: gen.traceIDRand.Uint64() + gen.traceIDAdd[0],
-		Low:  gen.traceIDRand.Uint64() + gen.traceIDAdd[1],
-	}
+	tid := core.TraceID{}
+	gen.traceIDRand.Read(tid[:])
 	return tid
 }

@@ -29,22 +29,22 @@ func TestIsValid(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.IsValid() returns true if sc has both an Trace ID and Span ID",
-			tid:  core.TraceID{High: uint64(42)},
+			tid:  core.TraceID([16]byte{1}),
 			sid:  uint64(42),
 			want: true,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has neither an Trace ID nor Span ID",
-			tid:  core.TraceID{High: uint64(0)},
+			tid:  core.TraceID([16]byte{}),
 			sid:  uint64(0),
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Span ID but not a Trace ID",
-			tid:  core.TraceID{High: uint64(0)},
+			tid:  core.TraceID([16]byte{}),
 			sid:  uint64(42),
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Trace ID but not a Span ID",
-			tid:  core.TraceID{High: uint64(42)},
+			tid:  core.TraceID([16]byte{1}),
 			sid:  uint64(0),
 			want: false,
 		},
@@ -62,6 +62,50 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
+func TestIsValidFromHex(t *testing.T) {
+	for _, testcase := range []struct {
+		name  string
+		hex   string
+		tid   core.TraceID
+		valid bool
+	}{
+		{
+			name:  "Valid TraceID",
+			tid:   core.TraceID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
+			hex:   "80f198ee56343ba864fe8b2a57d3eff7",
+			valid: true,
+		}, {
+			name:  "Invalid TraceID with invalid length",
+			hex:   "80f198ee56343ba864fe8b2a57d3eff",
+			valid: false,
+		}, {
+			name:  "Invalid TraceID with invalid char",
+			hex:   "80f198ee56343ba864fe8b2a57d3efg7",
+			valid: false,
+		}, {
+			name:  "Invalid TraceID with uppercase",
+			hex:   "80f198ee56343ba864fe8b2a57d3efF7",
+			valid: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			tid, err := core.TraceIDFromHex(testcase.hex)
+
+			if testcase.valid && err != nil {
+				t.Errorf("Expected TraceID %s to be valid but end with error %s", testcase.hex, err.Error())
+			}
+
+			if !testcase.valid && err == nil {
+				t.Errorf("Expected TraceID %s to be invalid but end no error", testcase.hex)
+			}
+
+			if tid != testcase.tid {
+				t.Errorf("Want: %v, but have: %v", testcase.tid, tid)
+			}
+		})
+	}
+}
+
 func TestHasTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
@@ -70,20 +114,12 @@ func TestHasTraceID(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.HasTraceID() returns true if both Low and High are nonzero",
-			tid:  core.TraceID{High: uint64(42), Low: uint64(42)},
+			tid:  core.TraceID([16]byte{1}),
 			want: true,
 		}, {
 			name: "SpanContext.HasTraceID() returns false if neither Low nor High are nonzero",
 			tid:  core.TraceID{},
 			want: false,
-		}, {
-			name: "SpanContext.HasTraceID() returns true if High != 0",
-			tid:  core.TraceID{High: uint64(42)},
-			want: true,
-		}, {
-			name: "SpanContext.HasTraceID() returns true if Low != 0",
-			tid:  core.TraceID{Low: uint64(42)},
-			want: true,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -158,12 +194,9 @@ func TestTraceIDString(t *testing.T) {
 		{
 			name: "SpanContext.TraceIDString returns string representation of self.TraceID values > 0",
 			sc: core.SpanContext{
-				TraceID: core.TraceID{
-					High: uint64(42),
-					Low:  uint64(42),
-				},
+				TraceID: core.TraceID([16]byte{255}),
 			},
-			want: `000000000000002a000000000000002a`,
+			want: `ff000000000000000000000000000000`,
 		}, {
 			name: "SpanContext.TraceIDString returns string representation of self.TraceID values == 0",
 			sc:   core.SpanContext{TraceID: core.TraceID{}},
@@ -189,20 +222,14 @@ func TestSpanContextIsSampled(t *testing.T) {
 		{
 			name: "sampled",
 			sc: core.SpanContext{
-				TraceID: core.TraceID{
-					High: uint64(42),
-					Low:  uint64(42),
-				},
+				TraceID:    core.TraceID([16]byte{1}),
 				TraceFlags: core.TraceFlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "sampled plus unused",
 			sc: core.SpanContext{
-				TraceID: core.TraceID{
-					High: uint64(42),
-					Low:  uint64(42),
-				},
+				TraceID:    core.TraceID([16]byte{1}),
 				TraceFlags: core.TraceFlagsSampled | core.TraceFlagsUnused,
 			},
 			want: true,
