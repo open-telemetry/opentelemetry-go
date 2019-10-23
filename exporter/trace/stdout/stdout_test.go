@@ -18,9 +18,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"go.opentelemetry.io/api/trace"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/api/trace"
 
 	"google.golang.org/grpc/codes"
 
