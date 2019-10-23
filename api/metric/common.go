@@ -16,63 +16,55 @@ package metric
 
 import (
 	"context"
-	"sync/atomic"
-)
-
-var (
-	descriptorID uint64
 )
 
 type commonMetric struct {
-	d *Descriptor
+	instrument Instrument
 }
 
-var _ ExplicitReportingMetric = commonMetric{}
-
-func (m commonMetric) Descriptor() *Descriptor {
-	return m.d
+type commonHandle struct {
+	handle Handle
 }
 
-func (m commonMetric) SupportHandle() hiddenType {
-	return hiddenType{}
-}
-
-func (m commonMetric) getHandle(labels LabelSet) Handle {
-	return labels.Meter().NewHandle(m, labels)
+func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
+	return newCommonHandle(m.instrument.AcquireHandle(labels))
 }
 
 func (m commonMetric) float64Measurement(value float64) Measurement {
-	return Measurement{
-		Descriptor: m.d,
-		Value:      NewFloat64MeasurementValue(value),
-	}
+	return newMeasurement(m.instrument, NewFloat64MeasurementValue(value))
 }
 
 func (m commonMetric) int64Measurement(value int64) Measurement {
-	return Measurement{
-		Descriptor: m.d,
-		Value:      NewInt64MeasurementValue(value),
-	}
+	return newMeasurement(m.instrument, NewInt64MeasurementValue(value))
 }
 
 func (m commonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
-	labels.Meter().RecordBatch(ctx, labels, Measurement{
-		Descriptor: m.d,
-		Value:      value,
-	})
+	m.instrument.RecordOne(ctx, value, labels)
 }
 
-func registerCommonMetric(name string, kind Kind, valueKind ValueKind) commonMetric {
+func (h commonHandle) recordOne(ctx context.Context, value MeasurementValue) {
+	h.handle.RecordOne(ctx, value)
+}
+
+func (h commonHandle) Release() {
+	h.handle.Release()
+}
+
+func newCommonMetric(instrument Instrument) commonMetric {
 	return commonMetric{
-		d: registerDescriptor(name, kind, valueKind),
+		instrument: instrument,
 	}
 }
 
-func registerDescriptor(name string, kind Kind, valueKind ValueKind) *Descriptor {
-	return &Descriptor{
-		name:      name,
-		kind:      kind,
-		valueKind: valueKind,
-		id:        DescriptorID(atomic.AddUint64(&descriptorID, 1)),
+func newCommonHandle(handle Handle) commonHandle {
+	return commonHandle{
+		handle: handle,
+	}
+}
+
+func newMeasurement(instrument Instrument, value MeasurementValue) Measurement {
+	return Measurement{
+		instrument: instrument,
+		value:      value,
 	}
 }

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Kind,ValueKind
-
 package metric
 
 import (
@@ -23,25 +21,24 @@ import (
 	"go.opentelemetry.io/api/unit"
 )
 
-// Kind categorizes different kinds of metric.
-type Kind int
-
-const (
-	// Invalid describes an invalid metric.
-	Invalid Kind = iota
-	// CounterKind describes a metric that supports Add().
-	CounterKind
-	// GaugeKind describes a metric that supports Set().
-	GaugeKind
-	// MeasureKind describes a metric that supports Record().
-	MeasureKind
-)
+// Instrument is the implementation-level interface Set/Add/Record
+// individual metrics without precomputed labels.
+type Instrument interface {
+	// AcquireHandle creates a Handle to record metrics with
+	// precomputed labels.
+	AcquireHandle(labels LabelSet) Handle
+	// RecordOne allows the SDK to observe a single metric event.
+	RecordOne(ctx context.Context, value MeasurementValue, labels LabelSet)
+}
 
 // Handle is the implementation-level interface to Set/Add/Record
-// individual metrics.
+// individual metrics with precomputed labels.
 type Handle interface {
-	// RecordOne allows the SDK to observe a single metric event
+	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, value MeasurementValue)
+	// Release frees the resources associated with this handle. It
+	// does not affect the metric this handle was created through.
+	Release()
 }
 
 // TODO this belongs outside the metrics API, in some sense, but that
@@ -49,135 +46,115 @@ type Handle interface {
 // a LabelSet between metrics and tracing, even when they are the same
 // SDK.
 
-// LabelSet represents a []core.KeyValue for use as pre-defined labels
-// in the metrics API.
+// TODO(krnowak): I wonder if this should just be:
+//
+// type LabelSet interface{}
+//
+// Not sure how the Meter function is useful.
+
+// LabelSet is an implementation-level interface that represents a
+// []core.KeyValue for use as pre-defined labels in the metrics API.
 type LabelSet interface {
 	Meter() Meter
 }
 
-// WithDescriptor is an interface that all metric implement.
-type WithDescriptor interface {
-	// Descriptor returns a descriptor of this metric.
-	Descriptor() *Descriptor
+// Options contains some options for metrics of any kind.
+type Options struct {
+	// Description is an optional field describing the metric
+	// instrument.
+	Description string
+	// Unit is an optional field describing the metric instrument.
+	Unit unit.Unit
+	// Keys are recommended keys determined in the handles
+	// obtained for the metric.
+	Keys []core.Key
+	// Alternate defines the property of metric value dependent on
+	// a metric type.
+	//
+	// - for Counter, true implies that the metric is an up-down
+	//   Counter
+	//
+	// - for Gauge, true implies that the metric is a
+	//   non-descending Gauge
+	//
+	// - for Measure, true implies that the metric supports
+	//   positive and negative values
+	Alternate bool
 }
 
-type hiddenType struct{}
+// CounterOptionApplier is an interface for applying metric options
+// that are valid only for counter metrics.
+type CounterOptionApplier interface {
+	// ApplyCounterOption is used to make some general or
+	// counter-specific changes in the Options.
+	ApplyCounterOption(*Options)
+}
 
-// ExplicitReportingMetric is an interface that is implemented only by
-// metrics that support getting a Handle.
-type ExplicitReportingMetric interface {
-	WithDescriptor
-	// SupportHandle is a dummy function that can be only
-	// implemented in this package.
-	SupportHandle() hiddenType
+// GaugeOptionApplier is an interface for applying metric options that
+// are valid only for gauge metrics.
+type GaugeOptionApplier interface {
+	// ApplyGaugeOption is used to make some general or
+	// gauge-specific changes in the Options.
+	ApplyGaugeOption(*Options)
+}
+
+// MeasureOptionApplier is an interface for applying metric options
+// that are valid only for measure metrics.
+type MeasureOptionApplier interface {
+	// ApplyMeasureOption is used to make some general or
+	// measure-specific changes in the Options.
+	ApplyMeasureOption(*Options)
+}
+
+// Measurement is used for reporting a batch of metric
+// values. Instances of this type should be created by instruments
+// (Int64Counter.Measurement()).
+type Measurement struct {
+	instrument Instrument
+	value      MeasurementValue
+}
+
+// Instrument returns an instrument that created this measurement.
+func (m Measurement) Instrument() Instrument {
+	return m.instrument
+}
+
+// Value returns a value recorded in this measurement.
+func (m Measurement) Value() MeasurementValue {
+	return m.value
 }
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	// DefineLabels returns a reference to a set of labels that
-	// cannot be read by the application.
-	DefineLabels(context.Context, ...core.KeyValue) LabelSet
+	// Labels returns a reference to a set of labels that cannot
+	// be read by the application.
+	Labels(context.Context, ...core.KeyValue) LabelSet
+
+	// NewInt64Counter creates a new integral counter with a given
+	// name and customized with passed options.
+	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	// NewFloat64Counter creates a new floating point counter with
+	// a given name and customized with passed options.
+	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
+	// NewInt64Gauge creates a new integral gauge with a given
+	// name and customized with passed options.
+	NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
+	// NewFloat64Gauge creates a new floating point gauge with a
+	// given name and customized with passed options.
+	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
+	// NewInt64Measure creates a new integral measure with a given
+	// name and customized with passed options.
+	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	// NewFloat64Measure creates a new floating point measure with
+	// a given name and customized with passed options.
+	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
-
-	// NewHandle creates a Handle that contains the passed
-	// key-value pairs. This should not be used directly - prefer
-	// using GetHandle function of a metric.
-	NewHandle(ExplicitReportingMetric, LabelSet) Handle
-	// DeleteHandle destroys the Handle and does a cleanup of the
-	// underlying resources.
-	DeleteHandle(Handle)
-}
-
-// DescriptorID is a unique identifier of a metric.
-type DescriptorID uint64
-
-// ValueKind describes the data type of the measurement value the
-// metric generates.
-type ValueKind int8
-
-const (
-	// Int64ValueKind means that the metric generates values of
-	// type int64.
-	Int64ValueKind ValueKind = iota
-	// Float64ValueKind means that the metric generates values of
-	// type float64.
-	Float64ValueKind
-)
-
-// Descriptor represents a named metric with recommended
-// local-aggregation keys.
-type Descriptor struct {
-	name        string
-	kind        Kind
-	keys        []core.Key
-	id          DescriptorID
-	description string
-	unit        unit.Unit
-	valueKind   ValueKind
-	alternate   bool
-}
-
-// Name is a required field describing this metric descriptor, should
-// have length > 0.
-func (d *Descriptor) Name() string {
-	return d.name
-}
-
-// Kind is the metric kind of this descriptor.
-func (d *Descriptor) Kind() Kind {
-	return d.kind
-}
-
-// Keys are recommended keys determined in the handles obtained for
-// this metric.
-func (d *Descriptor) Keys() []core.Key {
-	return d.keys
-}
-
-// ID is uniquely assigned to support per-SDK registration.
-func (d *Descriptor) ID() DescriptorID {
-	return d.id
-}
-
-// Description is an optional field describing this metric descriptor.
-func (d *Descriptor) Description() string {
-	return d.description
-}
-
-// Unit is an optional field describing this metric descriptor.
-func (d *Descriptor) Unit() unit.Unit {
-	return d.unit
-}
-
-// ValueKind describes the type of values the metric produces.
-func (d *Descriptor) ValueKind() ValueKind {
-	return d.valueKind
-}
-
-// Alternate defines the property of metric value dependent on a
-// metric type.
-//
-// - for Counter, true implies that the metric is an up-down Counter
-//
-// - for Gauge, true implies that the metric is a
-//   non-descending Gauge
-//
-// - for Measure, true implies that the metric supports positive and
-//   negative values
-func (d *Descriptor) Alternate() bool {
-	return d.alternate
-}
-
-// Measurement is used for reporting a batch of metric values.
-type Measurement struct {
-	Descriptor *Descriptor
-	Value      MeasurementValue
 }
 
 // Option supports specifying the various metric options.
-type Option func(*Descriptor)
+type Option func(*Options)
 
 // OptionApplier is an interface for applying metric options that are
 // valid for all the kinds of metrics.
@@ -185,37 +162,87 @@ type OptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
 	MeasureOptionApplier
-	// ApplyOption is used to make some changes in the Descriptor.
-	ApplyOption(*Descriptor)
+	// ApplyOption is used to make some general changes in the
+	// Options.
+	ApplyOption(*Options)
+}
+
+// CounterGaugeOptionApplier is an interface for applying metric
+// options that are valid for counter or gauge metrics.
+type CounterGaugeOptionApplier interface {
+	CounterOptionApplier
+	GaugeOptionApplier
 }
 
 type optionWrapper struct {
 	F Option
 }
 
-var _ OptionApplier = optionWrapper{}
-
-func (o optionWrapper) ApplyCounterOption(d *Descriptor) {
-	o.ApplyOption(d)
+type counterOptionWrapper struct {
+	F Option
 }
 
-func (o optionWrapper) ApplyGaugeOption(d *Descriptor) {
-	o.ApplyOption(d)
+type gaugeOptionWrapper struct {
+	F Option
 }
 
-func (o optionWrapper) ApplyMeasureOption(d *Descriptor) {
-	o.ApplyOption(d)
+type measureOptionWrapper struct {
+	F Option
 }
 
-func (o optionWrapper) ApplyOption(d *Descriptor) {
-	o.F(d)
+type counterGaugeOptionWrapper struct {
+	FC Option
+	FG Option
+}
+
+var (
+	_ OptionApplier        = optionWrapper{}
+	_ CounterOptionApplier = counterOptionWrapper{}
+	_ GaugeOptionApplier   = gaugeOptionWrapper{}
+	_ MeasureOptionApplier = measureOptionWrapper{}
+)
+
+func (o optionWrapper) ApplyCounterOption(opts *Options) {
+	o.ApplyOption(opts)
+}
+
+func (o optionWrapper) ApplyGaugeOption(opts *Options) {
+	o.ApplyOption(opts)
+}
+
+func (o optionWrapper) ApplyMeasureOption(opts *Options) {
+	o.ApplyOption(opts)
+}
+
+func (o optionWrapper) ApplyOption(opts *Options) {
+	o.F(opts)
+}
+
+func (o counterOptionWrapper) ApplyCounterOption(opts *Options) {
+	o.F(opts)
+}
+
+func (o gaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+	o.F(opts)
+}
+
+func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
+	o.F(opts)
+}
+
+func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
+	o.FC(opts)
+}
+
+func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+	o.FG(opts)
 }
 
 // WithDescription applies provided description.
 func WithDescription(desc string) OptionApplier {
 	return optionWrapper{
-		F: func(d *Descriptor) {
-			d.description = desc
+		F: func(opts *Options) {
+			opts.Description = desc
 		},
 	}
 }
@@ -223,56 +250,41 @@ func WithDescription(desc string) OptionApplier {
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) OptionApplier {
 	return optionWrapper{
-		F: func(d *Descriptor) {
-			d.unit = unit
+		F: func(opts *Options) {
+			opts.Unit = unit
 		},
 	}
 }
 
-// WithKeys applies required label keys. Multiple `WithKeys` options
-// accumulate.
+// WithKeys applies recommended label keys. Multiple `WithKeys`
+// options accumulate.
 func WithKeys(keys ...core.Key) OptionApplier {
 	return optionWrapper{
-		F: func(d *Descriptor) {
-			d.keys = append(d.keys, keys...)
+		F: func(opts *Options) {
+			opts.Keys = append(opts.Keys, keys...)
 		},
 	}
 }
 
-// WithNonMonotonic sets whether a counter is permitted to go up AND
-// down.
-func WithNonMonotonic(nm bool) CounterOptionApplier {
-	return counterOptionWrapper{
-		F: func(d *Descriptor) {
-			d.alternate = nm
+// WithMonotonic sets whether a counter or a gauge is not permitted to
+// go down.
+func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
+	return counterGaugeOptionWrapper{
+		FC: func(opts *Options) {
+			opts.Alternate = !monotonic
+		},
+		FG: func(opts *Options) {
+			opts.Alternate = monotonic
 		},
 	}
 }
 
-// WithMonotonic sets whether a gauge is not permitted to go down.
-func WithMonotonic(m bool) GaugeOptionApplier {
-	return gaugeOptionWrapper{
-		F: func(d *Descriptor) {
-			d.alternate = m
-		},
-	}
-}
-
-// WithSigned sets whether a measure is permitted to be negative.
-func WithSigned(s bool) MeasureOptionApplier {
+// WithAbsolute sets whether a measure is not permitted to be
+// negative.
+func WithAbsolute(absolute bool) MeasureOptionApplier {
 	return measureOptionWrapper{
-		F: func(d *Descriptor) {
-			d.alternate = s
+		F: func(opts *Options) {
+			opts.Alternate = !absolute
 		},
 	}
-}
-
-// Defined returns true when the descriptor has been registered.
-func (d Descriptor) Defined() bool {
-	return len(d.name) != 0
-}
-
-// RecordBatch reports to the global Meter.
-func RecordBatch(ctx context.Context, labels LabelSet, batch ...Measurement) {
-	GlobalMeter().RecordBatch(ctx, labels, batch...)
 }
