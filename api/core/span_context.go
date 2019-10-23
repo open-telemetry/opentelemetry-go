@@ -67,7 +67,7 @@ func TraceIDFromHex(h string) (TraceID, error) {
 	copy(t[:], b)
 
 	if !t.isValid() {
-		return t, errors.New("trace-id can't be all zero.")
+		return t, errors.New("trace-id can't be all zero")
 	}
 	return t, nil
 }
