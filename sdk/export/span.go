@@ -27,7 +27,7 @@ import (
 type SpanData struct {
 	SpanContext  core.SpanContext
 	ParentSpanID uint64
-	SpanKind     int
+	SpanKind     apitrace.SpanKind
 	Name         string
 	StartTime    time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset

@@ -110,6 +110,7 @@ type SpanOptions struct {
 	StartTime  time.Time
 	Relation   Relation
 	Record     bool
+	SpanKind   SpanKind
 }
 
 // Relation is used to establish relationship between newly created span and the
@@ -143,8 +144,20 @@ type Link struct {
 	Attributes []core.KeyValue
 }
 
+// SpanKind represents the role of a Span inside a Trace. Often, this defines how a Span
+// will be processed and visualized by various backends.
+type SpanKind string
+
+const (
+	SpanKindInternal SpanKind = "internal"
+	SpanKindServer   SpanKind = "server"
+	SpanKindClient   SpanKind = "client"
+	SpanKindProducer SpanKind = "producer"
+	SpanKindConsumer SpanKind = "consumer"
+)
+
 // WithStartTime sets the start time of the span to provided time t, when it is started.
-// In absensce of this option, wall clock time is used as start time.
+// In absence of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.
 func WithStartTime(t time.Time) SpanOption {
 	return func(o *SpanOptions) {
@@ -186,5 +199,12 @@ func FollowsFrom(sc core.SpanContext) SpanOption {
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
 		}
+	}
+}
+
+// WithSpanKind specifies the role a Span on a Trace.
+func WithSpanKind(sk SpanKind) SpanOption {
+	return func(o *SpanOptions) {
+		o.SpanKind = sk
 	}
 }

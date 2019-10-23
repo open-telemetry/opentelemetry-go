@@ -27,7 +27,7 @@ import (
 	otelkey "go.opentelemetry.io/api/key"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
 var (
@@ -97,6 +97,10 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
+	spanKind := spanOpts.SpanKind
+	if spanKind == "" {
+		spanKind = oteltrace.SpanKindInternal
+	}
 	spanContext := otelcore.SpanContext{
 		TraceID:    t.getTraceID(ctx, &spanOpts),
 		SpanID:     t.getSpanID(),
@@ -112,6 +116,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		EndTime:        time.Time{},
 		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
 		Events:         nil,
+		SpanKind:       spanKind,
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.SetCurrentSpan(ctx, span)
@@ -209,6 +214,7 @@ type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer oteltrace.Tracer
 	spanContext    otelcore.SpanContext
+	SpanKind       oteltrace.SpanKind
 	recording      bool
 
 	Attributes   oteldctx.Map
