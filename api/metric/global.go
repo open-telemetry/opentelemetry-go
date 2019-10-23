@@ -14,7 +14,9 @@
 
 package metric
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 var global atomic.Value
 
