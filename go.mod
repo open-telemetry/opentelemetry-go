@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.46.3
-	github.com/apache/thrift v0.12.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.3.2
