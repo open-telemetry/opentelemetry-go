@@ -464,7 +464,7 @@ func TestLinks(t *testing.T) {
 func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
-  
+
 	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
 	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
