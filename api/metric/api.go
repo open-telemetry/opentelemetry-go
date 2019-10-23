@@ -162,7 +162,8 @@ type OptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
 	MeasureOptionApplier
-	// ApplyOption is used to make some changes in the Descriptor.
+	// ApplyOption is used to make some general changes in the
+	// Options.
 	ApplyOption(*Options)
 }
 

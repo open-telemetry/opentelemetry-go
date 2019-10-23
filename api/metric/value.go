@@ -35,9 +35,9 @@ const (
 )
 
 // MeasurementValue represents either an integral or a floating point
-// value of a measurement. It needs to be accompanied with a
-// descriptor of a metric that generated this value to decide what
-// type of value it represents.
+// value of a measurement. It needs to be accompanied with a value
+// kind or some source that provides a value kind describing this
+// measurement value.
 type MeasurementValue uint64
 
 // NewInt64MeasurementValue creates an integral MeasurementValue.
@@ -56,15 +56,17 @@ func newFromRaw(raw uint64) MeasurementValue {
 }
 
 // AsInt64 assumes that the measurement value contains an int64 and
-// returns it as such. Make sure that metric that generated this value
-// has indeed Int64ValueKind in its descriptor.
+// returns it as such. Make sure that the accompanying source of value
+// kind indeed tells you its a 64 bit integral measurement value,
+// otherwise the returned int64 will be wrong.
 func (v MeasurementValue) AsInt64() int64 {
 	return rawToInt64(v.AsRaw())
 }
 
 // AsFloat64 assumes that the measurement value contains a float64 and
-// returns it as such. Make sure that metric that generated this value
-// has indeed Int64ValueKind in its descriptor.
+// returns it as such. Make sure that the accompanying source of value
+// kind indeed tells you its a 64 bit floating point measurement
+// value, otherwise the returned float64 will be wrong.
 func (v MeasurementValue) AsFloat64() float64 {
 	return rawToFloat64(v.AsRaw())
 }

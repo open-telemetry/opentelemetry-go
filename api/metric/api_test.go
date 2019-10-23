@@ -482,7 +482,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *moc
 			measurement := got.measurements[j]
 			if measurement.instrument != ourInstrument {
 				d := func(i *mockInstrument) string {
-					return fmt.Sprintf("(ptr: %p, descriptor %#v)", i, i)
+					return fmt.Sprintf("(ptr: %p, instrument %#v)", i, i)
 				}
 				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.instrument))
 			}
