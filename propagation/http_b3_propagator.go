@@ -17,6 +17,7 @@ package propagation
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -55,6 +56,8 @@ type HTTPB3Propagator struct {
 }
 
 var _ apipropagation.TextFormatPropagator = HTTPB3Propagator{}
+
+var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
 
 func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
