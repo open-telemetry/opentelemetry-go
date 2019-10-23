@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -35,11 +36,28 @@ type TraceID [16]byte
 
 var nilTraceID TraceID
 
-// TraceIDFromHex returns a TraceID from a hex string with 16 length.
+func (t TraceID) isValid() bool {
+	return !bytes.Equal(t[:], nilTraceID[:])
+}
+
+// TraceIDFromHex returns a TraceID from a hex string if it is compliant
+// with the w3 trace-context specification.
+// See more at https://www.w3.org/TR/trace-context/#trace-id
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
-		return t, fmt.Errorf("invalid trace ID")
+		return t, errors.New("hex encoded trace-id must have length equals to 32")
+	}
+
+	for _, r := range h {
+		switch {
+		case 'a' <= r && r <= 'f':
+			continue
+		case '0' <= r && r <= '9':
+			continue
+		default:
+			return t, errors.New("trace-id can only contain [0-9a-f] characters, all lowercase")
+		}
 	}
 
 	b, err := hex.DecodeString(h)
@@ -47,6 +65,10 @@ func TraceIDFromHex(h string) (TraceID, error) {
 		return t, err
 	}
 	copy(t[:], b)
+
+	if !t.isValid() {
+		return t, errors.New("trace-id can't be all zero.")
+	}
 	return t, nil
 }
 
@@ -84,7 +106,7 @@ func (sc SpanContext) IsValid() bool {
 }
 
 func (sc SpanContext) HasTraceID() bool {
-	return !bytes.Equal(sc.TraceID[:], nilTraceID[:])
+	return sc.TraceID.isValid()
 }
 
 func (sc SpanContext) HasSpanID() bool {

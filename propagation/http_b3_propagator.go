@@ -16,9 +16,7 @@ package propagation
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -57,9 +55,6 @@ type HTTPB3Propagator struct {
 }
 
 var _ apipropagation.TextFormatPropagator = HTTPB3Propagator{}
-
-var hexStr32ByteRegex = regexp.MustCompile("^[a-f0-9]{32}$")
-var hexStr16ByteRegex = regexp.MustCompile("^[a-f0-9]{16}$")
 
 func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
@@ -183,20 +178,8 @@ func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier)
 
 // extractTraceID parses the value of the X-B3-TraceId b3Header.
 func (b3 HTTPB3Propagator) extractTraceID(tid string) (traceID core.TraceID, ok bool) {
-	if hexStr32ByteRegex.MatchString(tid) {
-		var err error
-		traceID, err = core.TraceIDFromHex(tid)
-		ok = err == nil
-	} else if b3.SingleHeader && hexStr16ByteRegex.MatchString(tid) {
-		b, err := hex.DecodeString(tid)
-		if err != nil {
-			ok = false
-		} else {
-			copy(traceID[:], b)
-			ok = true
-		}
-	}
-	return traceID, ok
+	traceID, err := core.TraceIDFromHex(tid)
+	return traceID, err == nil
 }
 
 // extractSpanID parses the value of the X-B3-SpanId or X-B3-ParentSpanId headers.
