@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"go.opentelemetry.io/api/trace"
 	"testing"
 	"time"
 
@@ -62,7 +63,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 				Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
 			},
 		},
-		Status: codes.Unknown,
+		SpanKind: trace.SpanKindInternal,
+		Status:   codes.Unknown,
 	}
 	ex.ExportSpan(context.Background(), testSpan)
 
@@ -73,7 +75,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"TraceID":{"High":72623859790382856,"Low":651345242494996240},` +
 		`"SpanID":72623859790382856,"TraceFlags":0},` +
 		`"ParentSpanID":0,` +
-		`"SpanKind":0,` +
+		`"SpanKind":"internal",` +
 		`"Name":"/foo",` +
 		`"StartTime":` + string(expectedSerializedNow) + "," +
 		`"EndTime":` + string(expectedSerializedNow) + "," +

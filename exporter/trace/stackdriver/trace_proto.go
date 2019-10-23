@@ -71,7 +71,7 @@ func protoFromSpanData(s *export.SpanData, projectID string) *tracepb.Span {
 	switch s.SpanKind {
 	// TODO(ymotongpoo): add cases for "Send" and "Recv".
 	default:
-		name = fmt.Sprintf("Span.%d-%s", s.SpanKind, name)
+		name = fmt.Sprintf("Span.%s-%s", s.SpanKind, name)
 	}
 
 	sp := &tracepb.Span{

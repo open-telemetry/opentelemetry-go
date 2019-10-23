@@ -238,6 +238,7 @@ func TestSetSpanAttributes(t *testing.T) {
 			Key:   core.Key("key1"),
 			Value: core.Value{Type: core.STRING, String: "value1"},
 		}},
+		SpanKind:        "internal",
 		HasRemoteParent: true,
 	}
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -277,6 +278,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 				Value: core.Value{Type: core.STRING, String: "value4"},
 			},
 		},
+		SpanKind:              "internal",
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}
@@ -322,6 +324,7 @@ func TestEvents(t *testing.T) {
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
+		SpanKind: "internal",
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -372,6 +375,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
+		SpanKind:                 "internal",
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -411,6 +415,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
+		SpanKind: "internal",
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
@@ -451,6 +456,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
+		SpanKind: "internal",
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -492,6 +498,7 @@ func TestLinksOverLimit(t *testing.T) {
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
+		SpanKind:         "internal",
 	}
 	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -538,6 +545,7 @@ func TestSetSpanStatus(t *testing.T) {
 		},
 		ParentSpanID:    sid,
 		Name:            "SpanStatus/span0",
+		SpanKind:        "internal",
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
 	}
@@ -796,8 +804,12 @@ func TestCustomStartEndTime(t *testing.T) {
 }
 
 func TestWithSpanKind(t *testing.T) {
-	_, span := apitrace.GlobalTracer().Start(context.Background(), "WithoutSpanKind")
-	spanData, err := endSpan(span)
+	var te testExporter
+	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tr := tp.GetTracer("withSpanKind")
+
+	_, span := tr.Start(context.Background(), "WithoutSpanKind")
+	spanData, err := endSpan(&te, span)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -815,8 +827,12 @@ func TestWithSpanKind(t *testing.T) {
 	}
 
 	for _, sk := range sks {
-		_, span := apitrace.GlobalTracer().Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
-		spanData, err := endSpan(span)
+		var te testExporter
+		tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+		tr := tp.GetTracer("withSpanKind")
+
+		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
+		spanData, err := endSpan(&te, span)
 		if err != nil {
 			t.Error(err.Error())
 		}
