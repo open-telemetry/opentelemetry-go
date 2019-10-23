@@ -501,7 +501,7 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
 		}
 		if span.SpanKind != sks[span.SpanContext().SpanID] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have spank.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
 		}
 	}
 }

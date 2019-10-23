@@ -834,9 +834,7 @@ func TestWithSpanKind(t *testing.T) {
 	}
 
 	for _, sk := range sks {
-		var te testExporter
-		tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
-		tr := tp.GetTracer("withSpanKind")
+		te.spans = nil
 
 		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
 		spanData, err := endSpan(&te, span)
