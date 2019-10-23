@@ -41,7 +41,7 @@ func (t TraceID) isValid() bool {
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant
-// with the w3 trace-context specification.
+// with the w3c trace-context specification.
 // See more at https://www.w3.org/TR/trace-context/#trace-id
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
