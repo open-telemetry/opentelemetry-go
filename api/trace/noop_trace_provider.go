@@ -14,24 +14,11 @@
 
 package trace
 
-import (
-	crand "crypto/rand"
-	"encoding/binary"
-	"math/rand"
+type NoopTraceProvider struct{}
 
-	"go.opentelemetry.io/sdk/trace/internal"
-)
+var _ Provider = NoopTraceProvider{}
 
-func defIDGenerator() internal.IDGenerator {
-	gen := &defaultIDGenerator{}
-	// initialize traceID and spanID generators.
-	var rngSeed int64
-	for _, p := range []interface{}{
-		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
-	} {
-		_ = binary.Read(crand.Reader, binary.LittleEndian, p)
-	}
-	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
-	gen.spanIDInc |= 1
-	return gen
+// GetTracer returns noop implementation of Tracer.
+func (p NoopTraceProvider) GetTracer(name string) Tracer {
+	return NoopTracer{}
 }

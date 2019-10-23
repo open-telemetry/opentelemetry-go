@@ -46,10 +46,9 @@ var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-
 func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
-		h := fmt.Sprintf("%.2x-%.16x%.16x-%.16x-%.2x",
+		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
 			supportedVersion,
-			sc.TraceID.High,
-			sc.TraceID.Low,
+			sc.TraceIDString(),
 			sc.SpanID,
 			sc.TraceFlags&core.TraceFlagsSampled)
 		supplier.Set(TraceparentHeader, h)
@@ -118,24 +117,17 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 		return core.EmptySpanContext()
 	}
 
-	result, err := strconv.ParseUint(sections[1][0:16], 16, 64)
-	if err != nil {
-		return core.EmptySpanContext()
-	}
 	var sc core.SpanContext
 
-	sc.TraceID.High = result
-
-	result, err = strconv.ParseUint(sections[1][16:32], 16, 64)
+	_, err = hex.Decode(sc.TraceID[0:16], []byte(sections[1][0:32]))
 	if err != nil {
 		return core.EmptySpanContext()
 	}
-	sc.TraceID.Low = result
 
 	if len(sections[2]) != 16 {
 		return core.EmptySpanContext()
 	}
-	result, err = strconv.ParseUint(sections[2][0:], 16, 64)
+	result, err := strconv.ParseUint(sections[2][0:], 16, 64)
 	if err != nil {
 		return core.EmptySpanContext()
 	}

@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package trace_test
 
 import (
 	"testing"
+
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
-// GlobalTracer return tracer registered with global registry.
-// If no tracer is registered then an instance of noop Tracer is returned.
-func TestGlobalTracer(t *testing.T) {
-	tracer := GlobalTracer()
-	if tracer == nil {
-		t.Fatalf("Failed to get tracer\n")
+var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}
+
+func basicProvider(t *testing.T) *sdktrace.Provider {
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
+	if err != nil {
+		t.Fatalf("failed to create provider, err: %v\n", err)
 	}
+	return tp
 }

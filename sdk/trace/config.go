@@ -15,8 +15,6 @@
 package trace
 
 import (
-	"sync"
-
 	"go.opentelemetry.io/sdk/trace/internal"
 )
 
@@ -38,8 +36,6 @@ type Config struct {
 	MaxLinksPerSpan int
 }
 
-var configWriteMu sync.Mutex
-
 const (
 	// DefaultMaxEventsPerSpan is default max number of message events per span
 	DefaultMaxEventsPerSpan = 128
@@ -50,28 +46,3 @@ const (
 	// DefaultMaxLinksPerSpan is default max number of links per span
 	DefaultMaxLinksPerSpan = 32
 )
-
-// ApplyConfig applies changes to the global tracing configuration.
-//
-// Fields not provided in the given config are going to be preserved.
-func ApplyConfig(cfg Config) {
-	configWriteMu.Lock()
-	defer configWriteMu.Unlock()
-	c := *config.Load().(*Config)
-	if cfg.DefaultSampler != nil {
-		c.DefaultSampler = cfg.DefaultSampler
-	}
-	if cfg.IDGenerator != nil {
-		c.IDGenerator = cfg.IDGenerator
-	}
-	if cfg.MaxEventsPerSpan > 0 {
-		c.MaxEventsPerSpan = cfg.MaxEventsPerSpan
-	}
-	if cfg.MaxAttributesPerSpan > 0 {
-		c.MaxAttributesPerSpan = cfg.MaxAttributesPerSpan
-	}
-	if cfg.MaxLinksPerSpan > 0 {
-		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
-	}
-	config.Store(&c)
-}

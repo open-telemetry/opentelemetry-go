@@ -16,7 +16,7 @@ package trace
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
 	"sync/atomic"
 
 	"go.opentelemetry.io/api/core"
@@ -69,12 +69,8 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	var span *MockSpan
 	var sc core.SpanContext
 	if !opts.Relation.SpanContext.IsValid() {
-		sc = core.SpanContext{
-			TraceID: core.TraceID{
-				High: rand.Uint64(),
-				Low:  rand.Uint64(),
-			},
-		}
+		sc = core.SpanContext{}
+		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
 			sc.TraceFlags = core.TraceFlagsSampled
 		}

@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"encoding/binary"
 	"sort"
 	"testing"
 	"time"
@@ -35,10 +36,10 @@ import (
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
+	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 
-	linkTraceID := core.TraceID{High: 0x0102030405060709, Low: 0x090a0b0c0d0e0f11}
+	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID := uint64(0x0102030405060709)
 
 	keyValue := "value"
@@ -99,8 +100,8 @@ func Test_spanDataToThrift(t *testing.T) {
 				References: []*gen.SpanRef{
 					{
 						RefType:     gen.SpanRefType_CHILD_OF,
-						TraceIdLow:  int64(linkTraceID.Low),
-						TraceIdHigh: int64(linkTraceID.High),
+						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
+						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
 						SpanId:      int64(linkSpanID),
 					},
 				},
