@@ -312,14 +312,14 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	}
 	// TODO: handle links, needs SpanData to be in the API first?
 	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
-	// TODO: handle span kind, needs SpanData to be in the API first?
-	attributes, _, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
+	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.SpanOptions) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
 		opts.Relation = bRelation.ToOtelRelation()
 		opts.Record = true
+		opts.SpanKind = kind
 	})
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
@@ -379,17 +379,16 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-type spanKindTODO struct{}
-
-func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, spanKindTODO, bool) {
-	kind := spanKindTODO{}
+func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, oteltrace.SpanKind, bool) {
+	kind := oteltrace.SpanKindInternal
 	error := false
 	var pairs []otelcore.KeyValue
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			// TODO: java has some notion of span kind, it
-			// probably is related to some proto stuff
+			if sk, ok := v.(string); ok {
+				kind = oteltrace.SpanKind(sk)
+			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {
 				error = true
