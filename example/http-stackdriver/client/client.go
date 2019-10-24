@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stackdriver"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
@@ -53,12 +54,12 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	trace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 }
 
 func main() {
 	initTracer()
-	tr := trace.GlobalProvider().GetTracer("stackdriver/example/client")
+	tr := global.TraceProvider().GetTracer("stackdriver/example/client")
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
