@@ -3,7 +3,6 @@ module go.opentelemetry.io
 go 1.13
 
 require (
-	github.com/apache/thrift v0.12.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golangci/gocyclo v0.0.0-20180528144436-0a533e8fa43d // indirect
@@ -23,7 +22,6 @@ require (
 	github.com/uudashr/gocognit v1.0.0 // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect
 	golang.org/x/tools v0.0.0-20191015211201-9c6d90b5a7d0
-	google.golang.org/api v0.9.0
 	google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb // indirect
 	google.golang.org/grpc v1.24.0
 	mvdan.cc/unparam v0.0.0-20190917161559-b83a221c10a2 // indirect
