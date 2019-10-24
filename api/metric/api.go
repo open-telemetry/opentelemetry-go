@@ -28,14 +28,14 @@ type Instrument interface {
 	// precomputed labels.
 	AcquireHandle(labels LabelSet) Handle
 	// RecordOne allows the SDK to observe a single metric event.
-	RecordOne(ctx context.Context, value MeasurementValue, labels LabelSet)
+	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
 }
 
 // Handle is the implementation-level interface to Set/Add/Record
 // individual metrics with precomputed labels.
 type Handle interface {
 	// RecordOne allows the SDK to observe a single metric event.
-	RecordOne(ctx context.Context, value MeasurementValue)
+	RecordOne(ctx context.Context, number core.Number)
 	// Release frees the resources associated with this handle. It
 	// does not affect the metric this handle was created through.
 	Release()
@@ -111,7 +111,7 @@ type MeasureOptionApplier interface {
 // (Int64Counter.Measurement()).
 type Measurement struct {
 	instrument Instrument
-	value      MeasurementValue
+	number     core.Number
 }
 
 // Instrument returns an instrument that created this measurement.
@@ -119,9 +119,9 @@ func (m Measurement) Instrument() Instrument {
 	return m.instrument
 }
 
-// Value returns a value recorded in this measurement.
-func (m Measurement) Value() MeasurementValue {
-	return m.value
+// Number returns a number recorded in this measurement.
+func (m Measurement) Number() core.Number {
+	return m.number
 }
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.

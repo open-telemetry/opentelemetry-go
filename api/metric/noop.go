@@ -16,7 +16,7 @@ var _ Instrument = noopInstrument{}
 var _ Handle = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (noopHandle) RecordOne(context.Context, MeasurementValue) {
+func (noopHandle) RecordOne(context.Context, core.Number) {
 }
 
 func (noopHandle) Release() {
@@ -26,7 +26,7 @@ func (noopInstrument) AcquireHandle(LabelSet) Handle {
 	return noopHandle{}
 }
 
-func (noopInstrument) RecordOne(context.Context, MeasurementValue, LabelSet) {
+func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
 func (noopLabelSet) Meter() Meter {

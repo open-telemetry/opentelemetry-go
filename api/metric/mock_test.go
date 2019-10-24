@@ -27,10 +27,10 @@ type (
 	}
 
 	mockInstrument struct {
-		name      string
-		kind      mockKind
-		valueKind ValueKind
-		opts      Options
+		name       string
+		kind       mockKind
+		numberKind core.NumberKind
+		opts       Options
 	}
 
 	mockLabelSet struct {
@@ -52,7 +52,7 @@ type (
 
 	mockMeasurement struct {
 		instrument *mockInstrument
-		value      MeasurementValue
+		number     core.Number
 	}
 )
 
@@ -76,21 +76,21 @@ func (i *mockInstrument) AcquireHandle(labels LabelSet) Handle {
 	}
 }
 
-func (i *mockInstrument) RecordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
-	doRecordBatch(labels.(*mockLabelSet), ctx, i, value)
+func (i *mockInstrument) RecordOne(ctx context.Context, number core.Number, labels LabelSet) {
+	doRecordBatch(labels.(*mockLabelSet), ctx, i, number)
 }
 
-func (h *mockHandle) RecordOne(ctx context.Context, value MeasurementValue) {
-	doRecordBatch(h.labelSet, ctx, h.instrument, value)
+func (h *mockHandle) RecordOne(ctx context.Context, number core.Number) {
+	doRecordBatch(h.labelSet, ctx, h.instrument, number)
 }
 
 func (h *mockHandle) Release() {
 }
 
-func doRecordBatch(labelSet *mockLabelSet, ctx context.Context, instrument *mockInstrument, value MeasurementValue) {
+func doRecordBatch(labelSet *mockLabelSet, ctx context.Context, instrument *mockInstrument, number core.Number) {
 	labelSet.meter.recordMockBatch(ctx, labelSet, mockMeasurement{
 		instrument: instrument,
-		value:      value,
+		number:     number,
 	})
 }
 
@@ -114,65 +114,65 @@ func (m *mockMeter) Labels(ctx context.Context, labels ...core.KeyValue) LabelSe
 }
 
 func (m *mockMeter) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
-	instrument := m.newCounterInstrument(name, Int64ValueKind, cos...)
+	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
 	return WrapInt64CounterInstrument(instrument)
 }
 
 func (m *mockMeter) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
-	instrument := m.newCounterInstrument(name, Float64ValueKind, cos...)
+	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
 	return WrapFloat64CounterInstrument(instrument)
 }
 
-func (m *mockMeter) newCounterInstrument(name string, valueKind ValueKind, cos ...CounterOptionApplier) *mockInstrument {
+func (m *mockMeter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...CounterOptionApplier) *mockInstrument {
 	opts := Options{}
 	ApplyCounterOptions(&opts, cos...)
 	return &mockInstrument{
-		name:      name,
-		kind:      mockKindCounter,
-		valueKind: valueKind,
-		opts:      opts,
+		name:       name,
+		kind:       mockKindCounter,
+		numberKind: numberKind,
+		opts:       opts,
 	}
 }
 
 func (m *mockMeter) NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
-	instrument := m.newGaugeInstrument(name, Int64ValueKind, gos...)
+	instrument := m.newGaugeInstrument(name, core.Int64NumberKind, gos...)
 	return WrapInt64GaugeInstrument(instrument)
 }
 
 func (m *mockMeter) NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
-	instrument := m.newGaugeInstrument(name, Float64ValueKind, gos...)
+	instrument := m.newGaugeInstrument(name, core.Float64NumberKind, gos...)
 	return WrapFloat64GaugeInstrument(instrument)
 }
 
-func (m *mockMeter) newGaugeInstrument(name string, valueKind ValueKind, gos ...GaugeOptionApplier) *mockInstrument {
+func (m *mockMeter) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...GaugeOptionApplier) *mockInstrument {
 	opts := Options{}
 	ApplyGaugeOptions(&opts, gos...)
 	return &mockInstrument{
-		name:      name,
-		kind:      mockKindGauge,
-		valueKind: valueKind,
-		opts:      opts,
+		name:       name,
+		kind:       mockKindGauge,
+		numberKind: numberKind,
+		opts:       opts,
 	}
 }
 
 func (m *mockMeter) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
-	instrument := m.newMeasureInstrument(name, Int64ValueKind, mos...)
+	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
 	return WrapInt64MeasureInstrument(instrument)
 }
 
 func (m *mockMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
-	instrument := m.newMeasureInstrument(name, Float64ValueKind, mos...)
+	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
 	return WrapFloat64MeasureInstrument(instrument)
 }
 
-func (m *mockMeter) newMeasureInstrument(name string, valueKind ValueKind, mos ...MeasureOptionApplier) *mockInstrument {
+func (m *mockMeter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...MeasureOptionApplier) *mockInstrument {
 	opts := Options{}
 	ApplyMeasureOptions(&opts, mos...)
 	return &mockInstrument{
-		name:      name,
-		kind:      mockKindMeasure,
-		valueKind: valueKind,
-		opts:      opts,
+		name:       name,
+		kind:       mockKindMeasure,
+		numberKind: numberKind,
+		opts:       opts,
 	}
 }
 
@@ -183,7 +183,7 @@ func (m *mockMeter) RecordBatch(ctx context.Context, labels LabelSet, measuremen
 		m := measurements[i]
 		mm[i] = mockMeasurement{
 			instrument: m.Instrument().(*mockInstrument),
-			value:      m.Value(),
+			number:     m.Number(),
 		}
 	}
 	m.recordMockBatch(ctx, ourLabelSet, mm...)
