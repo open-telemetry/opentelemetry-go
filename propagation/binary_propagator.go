@@ -15,8 +15,6 @@
 package propagation
 
 import (
-	"encoding/binary"
-
 	"go.opentelemetry.io/api/core"
 	apipropagation "go.opentelemetry.io/api/propagation"
 )
@@ -40,7 +38,7 @@ func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
 	var b [29]byte
 	copy(b[2:18], sc.TraceID[:])
 	b[18] = 1
-	binary.BigEndian.PutUint64(b[19:27], sc.SpanID)
+	copy(b[19:27], sc.SpanID[:])
 	b[27] = 2
 	b[28] = sc.TraceFlags
 	return b[:]
@@ -60,7 +58,7 @@ func (bp binaryPropagator) FromBytes(b []byte) (sc core.SpanContext) {
 		return core.EmptySpanContext()
 	}
 	if len(b) >= 9 && b[0] == 1 {
-		sc.SpanID = binary.BigEndian.Uint64(b[1:9])
+		copy(sc.SpanID[:], b[1:9])
 		b = b[9:]
 	}
 	if len(b) >= 2 && b[0] == 2 {

@@ -161,8 +161,8 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 
 func BenchmarkSpanID_DotString(b *testing.B) {
 	traceBenchmark(b, func(b *testing.B) {
-		sc := core.SpanContext{SpanID: 1}
-		want := "0000000000000001"
+		sc := core.SpanContext{SpanID: core.SpanID{1}}
+		want := "1000000000000000"
 		for i := 0; i < b.N; i++ {
 			if got := sc.SpanIDString(); got != want {
 				b.Fatalf("got = %q want = %q", got, want)

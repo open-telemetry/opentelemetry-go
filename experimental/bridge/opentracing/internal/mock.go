@@ -47,7 +47,7 @@ type MockTracer struct {
 	Resources             oteldctx.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []otelcore.TraceID
-	SpareSpanIDs          []uint64
+	SpareSpanIDs          []otelcore.SpanID
 	SpareContextKeyValues []MockContextKeyValue
 
 	randLock sync.Mutex
@@ -153,11 +153,11 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) uint64 {
+func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.SpanID
 	}
-	return 0
+	return otelcore.SpanID{}
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanContext {
@@ -171,7 +171,7 @@ func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltra
 	return otelcore.EmptySpanContext()
 }
 
-func (t *MockTracer) getSpanID() uint64 {
+func (t *MockTracer) getSpanID() otelcore.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
@@ -180,13 +180,17 @@ func (t *MockTracer) getSpanID() uint64 {
 		}
 		return spanID
 	}
-	return t.getRandUint64()
+	return t.getRandSpanID()
 }
 
-func (t *MockTracer) getRandUint64() uint64 {
+func (t *MockTracer) getRandSpanID() otelcore.SpanID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
-	return t.rand.Uint64()
+
+	sid := otelcore.SpanID{}
+	t.rand.Read(sid[:])
+
+	return sid
 }
 
 func (t *MockTracer) getRandTraceID() otelcore.TraceID {
@@ -220,7 +224,7 @@ type MockSpan struct {
 	Attributes   oteldctx.Map
 	StartTime    time.Time
 	EndTime      time.Time
-	ParentSpanID uint64
+	ParentSpanID otelcore.SpanID
 	Events       []MockEvent
 }
 
