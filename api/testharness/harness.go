@@ -17,9 +17,14 @@ package testharness
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
+	"time"
+
+	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/internal/matchers"
 )
@@ -285,6 +290,122 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
 		})
 	})
+
+	h.testSpan(subjectFactory)
+}
+
+func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
+	var methods = map[string]func(span trace.Span){
+		"#End": func(span trace.Span) {
+			span.End()
+		},
+		"#AddEvent": func(span trace.Span) {
+			span.AddEvent(context.Background(), "test event")
+		},
+		"#AddEventWithTimestamp": func(span trace.Span) {
+			span.AddEventWithTimestamp(context.Background(), time.Now(), "test event")
+		},
+		"#AddLink": func(span trace.Span) {
+			span.AddLink(trace.Link{})
+		},
+		"#Link": func(span trace.Span) {
+			span.Link(core.SpanContext{})
+		},
+		"#SetStatus": func(span trace.Span) {
+			span.SetStatus(codes.Internal)
+		},
+		"#SetName": func(span trace.Span) {
+			span.SetName("new name")
+		},
+		"#SetAttribute": func(span trace.Span) {
+			span.SetAttribute(core.Key("key").String("value"))
+		},
+		"#SetAttributes": func(span trace.Span) {
+			span.SetAttributes(core.Key("key1").String("value"), core.Key("key2").Int(123))
+		},
+		"#ModifyAttribute": func(span trace.Span) {
+			span.SetAttribute(core.Key("key").String("original value"))
+
+			span.ModifyAttribute(distributedcontext.Mutator{
+				MutatorOp: distributedcontext.UPSERT,
+				KeyValue:  core.Key("key").String("new value"),
+			})
+		},
+		"#ModifyAttributes": func(span trace.Span) {
+			span.SetAttribute(core.Key("key1").String("original value"))
+
+			span.ModifyAttributes(distributedcontext.Mutator{
+				MutatorOp: distributedcontext.UPSERT,
+				KeyValue:  core.Key("key1").String("new value"),
+			}, distributedcontext.Mutator{
+				MutatorOp: distributedcontext.INSERT,
+				KeyValue:  core.Key("key2").Int(123),
+			})
+		},
+	}
+	var mechanisms = map[string]func() trace.Span{
+		"Span created via Tracer#Start": func() trace.Span {
+			tracer := tracerFactory()
+			_, subject := tracer.Start(context.Background(), "test")
+
+			return subject
+		},
+		"Span created via Tracer#WithSpan": func() trace.Span {
+			tracer := tracerFactory()
+
+			var actualCtx context.Context
+
+			_ = tracer.WithSpan(context.Background(), "test", func(ctx context.Context) error {
+				actualCtx = ctx
+
+				return nil
+			})
+
+			return trace.CurrentSpan(actualCtx)
+		},
+	}
+
+	for mechanismName, mechanism := range mechanisms {
+		h.t.Run(mechanismName, func(t *testing.T) {
+			for methodName, method := range methods {
+				t.Run(methodName, func(t *testing.T) {
+					t.Run("is thread-safe", func(t *testing.T) {
+						t.Parallel()
+
+						span := mechanism()
+
+						wg := &sync.WaitGroup{}
+						wg.Add(2)
+
+						go func() {
+							defer wg.Done()
+
+							method(span)
+						}()
+
+						go func() {
+							defer wg.Done()
+
+							method(span)
+						}()
+
+						wg.Wait()
+					})
+				})
+			}
+
+			t.Run("#End", func(t *testing.T) {
+				t.Run("can be called multiple times", func(t *testing.T) {
+					t.Parallel()
+
+					span := mechanism()
+
+					span.End()
+					span.End()
+				})
+			})
+		})
+	}
 }
 
 type testCtxKey struct{}
