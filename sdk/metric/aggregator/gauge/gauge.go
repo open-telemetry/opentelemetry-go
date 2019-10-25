@@ -105,7 +105,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	atomic.StorePointer(&g.live, unsafe.Pointer(ngd))
 }
 
-func (g *Aggregator) updateMonotonic(number core.Number, desc export.Descriptor) {
+func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
 	}

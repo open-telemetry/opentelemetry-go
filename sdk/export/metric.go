@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/unit"
 )
 
@@ -36,6 +35,18 @@ type MetricAggregator interface {
 	Collect(context.Context, MetricRecord, MetricBatcher)
 }
 
+// MetricRecord is the unit of export, pairing a metric
+// instrument and set of labels.
+type MetricRecord interface {
+	// Descriptor() describes the metric instrument.
+	Descriptor() *Descriptor
+
+	// Labels() describe the labsels corresponding the
+	// aggregation being performed.
+	Labels() []core.KeyValue
+}
+
+// MetricKind describes the kind of instrument.
 type MetricKind int8
 
 const (
@@ -44,24 +55,63 @@ const (
 	MeasureMetricKind
 )
 
-type Descriptor interface {
-	Name() string
-	MetricKind() MetricKind
-	Keys() []core.Key
-	Description() string
-	Unit() unit.Unit
-	NumberKind() core.NumberKind
-	Alternate() bool
-	ID() metric.InstrumentID
+// Descriptor describes a metric instrument to the exporter.
+type Descriptor struct {
+	name        string
+	metricKind  MetricKind
+	keys        []core.Key
+	description string
+	unit        unit.Unit
+	numberKind  core.NumberKind
+	alternate   bool
 }
 
-// MetricRecord is the unit of export, pairing a metric
-// instrument and set of labels.
-type MetricRecord interface {
-	// Descriptor() describes the metric instrument.
-	Descriptor() Descriptor
+// NewDescriptor builds a new descriptor, for use by `Meter`
+// implementations.
+func NewDescriptor(
+	name string,
+	metricKind MetricKind,
+	keys []core.Key,
+	description string,
+	unit unit.Unit,
+	numberKind core.NumberKind,
+	alternate bool,
+) *Descriptor {
+	return &Descriptor{
+		name:        name,
+		metricKind:  metricKind,
+		keys:        keys,
+		description: description,
+		unit:        unit,
+		numberKind:  numberKind,
+		alternate:   alternate,
+	}
+}
 
-	// Labels() describe the labsels corresponding the
-	// aggregation being performed.
-	Labels() []core.KeyValue
+func (d *Descriptor) Name() string {
+	return d.name
+}
+
+func (d *Descriptor) MetricKind() MetricKind {
+	return d.metricKind
+}
+
+func (d *Descriptor) Keys() []core.Key {
+	return d.keys
+}
+
+func (d *Descriptor) Description() string {
+	return d.description
+}
+
+func (d *Descriptor) Unit() unit.Unit {
+	return d.unit
+}
+
+func (d *Descriptor) NumberKind() core.NumberKind {
+	return d.numberKind
+}
+
+func (d *Descriptor) Alternate() bool {
+	return d.alternate
 }

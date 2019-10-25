@@ -23,23 +23,12 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/metric"
 	api "go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/unit"
 	"go.opentelemetry.io/sdk/export"
 )
 
 type (
-	descriptor struct {
-		id          api.InstrumentID
-		name        string
-		metricKind  export.MetricKind
-		keys        []core.Key
-		description string
-		unit        unit.Unit
-		numberKind  core.NumberKind
-		alternate   bool
-	}
-
 	// SDK implements the OpenTelemetry Meter API.
 	SDK struct {
 		// current maps `mapkey` to *record.
@@ -65,13 +54,10 @@ type (
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
-
-		// descriptorID is the yet-unused descriptor id
-		descriptorID uint64
 	}
 
 	instrument struct {
-		descriptor *descriptor
+		descriptor *export.Descriptor
 		meter      *SDK
 	}
 
@@ -90,8 +76,8 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		id      api.InstrumentID
-		encoded string
+		descriptor *export.Descriptor
+		encoded    string
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -103,7 +89,7 @@ type (
 		labels *labels
 
 		// descriptor describes the metric instrument.
-		descriptor *descriptor
+		descriptor *export.Descriptor
 
 		// refcount counts the number of active handles on
 		// referring to this record.  active handles prevent
@@ -148,52 +134,28 @@ type (
 )
 
 var (
-	_            api.Meter           = &SDK{}
-	_            api.LabelSet        = &labels{}
-	_            api.Instrument      = &instrument{}
-	_            api.Handle          = &record{}
-	hazardRecord                     = &record{}
-	_            export.MetricRecord = &record{}
-	_            export.Descriptor   = &descriptor{}
+	_ api.Meter           = &SDK{}
+	_ api.LabelSet        = &labels{}
+	_ api.InstrumentImpl  = &instrument{}
+	_ api.HandleImpl      = &record{}
+	_ export.MetricRecord = &record{}
+
+	// hazardRecord is used as a pointer value that indicates the
+	// value is not included in any list.  (`nil` would be
+	// ambiguous, since the final element in a list has `nil` as
+	// the next pointer).
+	hazardRecord = &record{}
 )
 
-func (d *descriptor) Name() string {
-	return d.name
-}
-
-func (d *descriptor) MetricKind() export.MetricKind {
-	return d.metricKind
-}
-
-func (d *descriptor) Keys() []core.Key {
-	return d.keys
-}
-
-func (d *descriptor) Description() string {
-	return d.description
-}
-
-func (d *descriptor) Unit() unit.Unit {
-	return d.unit
-}
-
-func (d *descriptor) NumberKind() core.NumberKind {
-	return d.numberKind
-}
-
-func (d *descriptor) Alternate() bool {
-	return d.alternate
-}
-
-func (d *descriptor) ID() api.InstrumentID {
-	return d.id
+func (i *instrument) Meter() api.Meter {
+	return i.meter
 }
 
 func (i *instrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map
 	mk := mapkey{
-		id:      i.descriptor.id,
-		encoded: ls.encoded,
+		descriptor: i.descriptor,
+		encoded:    ls.encoded,
 	}
 
 	// There's a memory allocation here.
@@ -219,7 +181,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls api.LabelSet) api.Handle {
+func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
@@ -229,10 +191,6 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 	h := i.acquireHandle(ourLs)
 	defer h.Release()
 	h.RecordOne(ctx, number)
-}
-
-func (i *instrument) ID() api.InstrumentID {
-	return i.descriptor.id
 }
 
 // New constructs a new *SDK that implements intermediate storage for
@@ -314,17 +272,14 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 }
 
 func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
-	id := api.InstrumentID(atomic.AddUint64(&m.descriptorID, 1))
-	descriptor := &descriptor{
-		name:        name,
-		metricKind:  metricKind,
-		keys:        opts.Keys,
-		id:          id,
-		description: opts.Description,
-		unit:        opts.Unit,
-		numberKind:  numberKind,
-		alternate:   opts.Alternate,
-	}
+	descriptor := export.NewDescriptor(
+		name,
+		metricKind,
+		opts.Keys,
+		opts.Description,
+		opts.Unit,
+		numberKind,
+		opts.Alternate)
 	return &instrument{
 		descriptor: descriptor,
 		meter:      m,
@@ -449,8 +404,17 @@ func (m *SDK) collect(ctx context.Context, r *record) {
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		meas.Instrument().RecordOne(ctx, meas.Number(), ls)
+		meas.Instrument().(api.InstrumentImpl).RecordOne(ctx, meas.Number(), ls)
 	}
+}
+
+// GetDescriptor returns the descriptor of an instrument, which is not
+// part of the public metric API.
+func (m *SDK) GetDescriptor(inst metric.InstrumentImpl) *export.Descriptor {
+	if ii, ok := inst.(*instrument); ok {
+		return ii.descriptor
+	}
+	return nil
 }
 
 func (l *labels) Meter() api.Meter {
@@ -491,12 +455,12 @@ func (r *record) Release() {
 
 func (r *record) mapkey() mapkey {
 	return mapkey{
-		id:      r.descriptor.id,
-		encoded: r.labels.encoded,
+		descriptor: r.descriptor,
+		encoded:    r.labels.encoded,
 	}
 }
 
-func (r *record) Descriptor() export.Descriptor {
+func (r *record) Descriptor() *export.Descriptor {
 	return r.descriptor
 }
 

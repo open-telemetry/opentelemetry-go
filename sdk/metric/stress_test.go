@@ -33,6 +33,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
 	api "go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/sdk/export"
 	sdk "go.opentelemetry.io/sdk/metric"
@@ -61,16 +62,12 @@ type (
 	}
 
 	testKey struct {
-		labels string
-		id     api.InstrumentID
-	}
-
-	withID interface {
-		ID() api.InstrumentID
+		labels     string
+		descriptor *export.Descriptor
 	}
 
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) withID
+		newInstrument  func(meter api.Meter, name string) withImpl
 		getUpdateValue func() core.Number
 		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
 		newStore       func() interface{}
@@ -82,6 +79,10 @@ type (
 		storeExpect  func(store interface{}, value core.Number)
 		readStore    func(store interface{}) core.Number
 		equalValues  func(a, b core.Number) bool
+	}
+
+	withImpl interface {
+		Impl() metric.InstrumentImpl
 	}
 
 	// gaugeState supports merging gauge values, for the case
@@ -142,14 +143,14 @@ func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(sdk, name)
-	id := instrument.ID()
+	descriptor := sdk.GetDescriptor(instrument.Impl())
 	kvs := someLabels()
 	clabs := canonicalizeLabels(kvs)
 	labs := sdk.Labels(context.Background(), kvs...)
 	dur := getPeriod()
 	key := testKey{
-		labels: clabs,
-		id:     id,
+		labels:     clabs,
+		descriptor: descriptor,
 	}
 	for {
 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
@@ -223,8 +224,8 @@ func (f *testFixture) AggregatorFor(record export.MetricRecord) export.MetricAgg
 func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, agg export.MetricAggregator) {
 	desc := record.Descriptor()
 	key := testKey{
-		labels: canonicalizeLabels(record.Labels()),
-		id:     desc.ID(),
+		labels:     canonicalizeLabels(record.Labels()),
+		descriptor: desc,
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -298,7 +299,7 @@ func float64sEqual(a, b core.Number) bool {
 
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withID {
+		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
@@ -344,7 +345,7 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withID {
+		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
@@ -395,7 +396,7 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withID {
+		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() core.Number {
@@ -447,7 +448,7 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withID {
+		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() core.Number {
