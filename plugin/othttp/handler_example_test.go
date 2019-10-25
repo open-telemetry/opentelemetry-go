@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stdout"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/plugin/othttp"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
@@ -55,7 +56,7 @@ func ExampleNewHandler() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	trace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 
 	figureOutName := func(ctx context.Context, s string) (string, error) {
 		pp := strings.SplitN(s, "/", 2)

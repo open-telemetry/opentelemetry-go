@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package global_test
 
 import (
 	"testing"
 
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 )
 
 type TestProvider1 struct {
@@ -33,10 +34,10 @@ func TestMulitpleGlobalProvider(t *testing.T) {
 
 	p1 := TestProvider1{}
 	p2 := trace.NoopTraceProvider{}
-	trace.SetGlobalProvider(&p1)
-	trace.SetGlobalProvider(&p2)
+	global.SetTraceProvider(&p1)
+	global.SetTraceProvider(&p2)
 
-	got := trace.GlobalProvider()
+	got := global.TraceProvider()
 	want := &p2
 	if got != want {
 		t.Fatalf("Provider: got %p, want %p\n", got, want)

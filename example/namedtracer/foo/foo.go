@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 )
 
 var (
@@ -31,7 +32,7 @@ func SubOperation(ctx context.Context) error {
 
 	// Using global provider. Alternative is to have application provide a getter
 	// for its component to get the instance of the provider.
-	tr := trace.GlobalProvider().GetTracer("example/namedtracer/foo")
+	tr := global.TraceProvider().GetTracer("example/namedtracer/foo")
 	return tr.WithSpan(
 		ctx,
 		"Sub operation...",
