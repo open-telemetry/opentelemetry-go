@@ -38,7 +38,6 @@ import (
 	sdk "go.opentelemetry.io/sdk/metric"
 	"go.opentelemetry.io/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/sdk/metric/internal"
 )
 
 const (
@@ -66,27 +65,30 @@ type (
 		id     api.InstrumentID
 	}
 
+	withID interface {
+		ID() api.InstrumentID
+	}
+
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) interface{}
-		getID          func(interface{}) api.InstrumentID
-		getUpdateValue func() interface{}
-		operate        func(interface{}, context.Context, interface{}, api.LabelSet)
+		newInstrument  func(meter api.Meter, name string) withID
+		getUpdateValue func() core.Number
+		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
 		// counters, different for gauges, to ensure we are
 		// testing the timestamps correctly.
-		storeCollect func(store, value interface{}, ts time.Time)
-		storeExpect  func(store, value interface{})
-		readStore    func(store interface{}) interface{}
-		equalValues  func(a, b interface{}) bool
+		storeCollect func(store interface{}, value core.Number, ts time.Time)
+		storeExpect  func(store interface{}, value core.Number)
+		readStore    func(store interface{}) core.Number
+		equalValues  func(a, b core.Number) bool
 	}
 
 	// gaugeState supports merging gauge values, for the case
 	// where a race condition causes duplicate records.  We always
 	// take the later timestamp.
 	gaugeState struct {
-		raw uint64
+		raw core.Number
 		ts  time.Time
 	}
 )
@@ -140,7 +142,7 @@ func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(sdk, name)
-	id := f.impl.getID(instrument)
+	id := instrument.ID()
 	kvs := someLabels()
 	clabs := canonicalizeLabels(kvs)
 	labs := sdk.Labels(context.Background(), kvs...)
@@ -234,18 +236,10 @@ func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, ag
 
 	switch desc.MetricKind() {
 	case export.CounterMetricKind:
-		if desc.NumberKind() == core.Int64NumberKind {
-			f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsInt64(), time.Time{})
-		} else {
-			f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsFloat64(), time.Time{})
-		}
+		f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsNumber(), time.Time{})
 	case export.GaugeMetricKind:
 		gauge := agg.(*gauge.Aggregator)
-		if desc.NumberKind() == core.Int64NumberKind {
-			f.impl.storeCollect(actual, gauge.AsInt64(), gauge.Timestamp())
-		} else {
-			f.impl.storeCollect(actual, gauge.AsFloat64(), gauge.Timestamp())
-		}
+		f.impl.storeCollect(actual, gauge.AsNumber(), gauge.Timestamp())
 	default:
 		panic("Not used in this test")
 	}
@@ -291,26 +285,23 @@ func stressTest(t *testing.T, impl testImpl) {
 	fixture.assertTest(numCollect)
 }
 
-func int64sEqual(a, b interface{}) bool {
-	return a.(int64) == b.(int64)
+func int64sEqual(a, b core.Number) bool {
+	return a.AsInt64() == b.AsInt64()
 }
 
-func float64sEqual(a, b interface{}) bool {
-	diff := math.Abs(a.(float64) - b.(float64))
-	return diff < math.Abs(a.(float64))*epsilon
+func float64sEqual(a, b core.Number) bool {
+	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
+	return diff < math.Abs(a.AsFloat64())*epsilon
 }
 
 // Counters
 
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) interface{} {
+		newInstrument: func(meter api.Meter, name string) withID {
 			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getID: func(c interface{}) api.InstrumentID {
-			return c.(api.Int64Counter).ID()
-		},
-		getUpdateValue: func() interface{} {
+		getUpdateValue: func() core.Number {
 			var offset int64
 			if nonMonotonic {
 				offset = -50
@@ -318,25 +309,26 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 			for {
 				x := offset + int64(rand.Intn(100))
 				if x != 0 {
-					return x
+					return core.NewInt64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value interface{}, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
 			counter := inst.(api.Int64Counter)
-			counter.Add(ctx, value.(int64), labels)
+			counter.Add(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
-			return internal.NewAtomicInt64(new(uint64))
+			n := core.NewInt64Number(0)
+			return &n
 		},
-		storeCollect: func(store, value interface{}, _ time.Time) {
-			store.(internal.AtomicInt64).Add(value.(int64))
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddInt64Atomic(value.AsInt64())
 		},
-		storeExpect: func(store, value interface{}) {
-			store.(internal.AtomicInt64).Add(value.(int64))
+		storeExpect: func(store interface{}, value core.Number) {
+			store.(*core.Number).AddInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) interface{} {
-			return store.(internal.AtomicInt64).Load()
+		readStore: func(store interface{}) core.Number {
+			return store.(*core.Number).AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
 	}
@@ -352,13 +344,10 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) interface{} {
+		newInstrument: func(meter api.Meter, name string) withID {
 			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getID: func(c interface{}) api.InstrumentID {
-			return c.(api.Float64Counter).ID()
-		},
-		getUpdateValue: func() interface{} {
+		getUpdateValue: func() core.Number {
 			var offset float64
 			if nonMonotonic {
 				offset = -0.5
@@ -366,25 +355,26 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 			for {
 				x := offset + rand.Float64()
 				if x != 0 {
-					return x
+					return core.NewFloat64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value interface{}, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
 			counter := inst.(api.Float64Counter)
-			counter.Add(ctx, value.(float64), labels)
+			counter.Add(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
-			return internal.NewAtomicFloat64(new(uint64))
+			n := core.NewFloat64Number(0.0)
+			return &n
 		},
-		storeCollect: func(store, value interface{}, _ time.Time) {
-			store.(internal.AtomicFloat64).Add(value.(float64))
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		storeExpect: func(store, value interface{}) {
-			store.(internal.AtomicFloat64).Add(value.(float64))
+		storeExpect: func(store interface{}, value core.Number) {
+			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) interface{} {
-			return store.(internal.AtomicFloat64).Load()
+		readStore: func(store interface{}) core.Number {
+			return store.(*core.Number).AsNumberAtomic()
 		},
 		equalValues: float64sEqual,
 	}
@@ -405,41 +395,40 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) interface{} {
+		newInstrument: func(meter api.Meter, name string) withID {
 			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getID: func(c interface{}) api.InstrumentID {
-			return c.(api.Int64Gauge).ID()
-		},
-		getUpdateValue: func() interface{} {
+		getUpdateValue: func() core.Number {
 			if !monotonic {
 				r1 := rand.Int63()
-				return rand.Int63() - r1
+				return core.NewInt64Number(rand.Int63() - r1)
 			}
-			return int64(time.Since(startTime))
+			return core.NewInt64Number(int64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value interface{}, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
 			gauge := inst.(api.Int64Gauge)
-			gauge.Set(ctx, value.(int64), labels)
+			gauge.Set(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
-			return &gaugeState{}
+			return &gaugeState{
+				raw: core.NewInt64Number(0),
+			}
 		},
-		storeCollect: func(store, value interface{}, ts time.Time) {
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
 			gs := store.(*gaugeState)
 
 			if !ts.Before(gs.ts) {
 				gs.ts = ts
-				internal.NewAtomicInt64(&gs.raw).Store(value.(int64))
+				gs.raw.SetInt64Atomic(value.AsInt64())
 			}
 		},
-		storeExpect: func(store, value interface{}) {
+		storeExpect: func(store interface{}, value core.Number) {
 			gs := store.(*gaugeState)
-			internal.NewAtomicInt64(&gs.raw).Store(value.(int64))
+			gs.raw.SetInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) interface{} {
+		readStore: func(store interface{}) core.Number {
 			gs := store.(*gaugeState)
-			return internal.NewAtomicInt64(&gs.raw).Load()
+			return gs.raw.AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
 	}
@@ -458,40 +447,39 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) interface{} {
+		newInstrument: func(meter api.Meter, name string) withID {
 			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getID: func(c interface{}) api.InstrumentID {
-			return c.(api.Float64Gauge).ID()
-		},
-		getUpdateValue: func() interface{} {
+		getUpdateValue: func() core.Number {
 			if !monotonic {
-				return (-0.5 + rand.Float64()) * 100000
+				return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 			}
-			return float64(time.Since(startTime))
+			return core.NewFloat64Number(float64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value interface{}, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
 			gauge := inst.(api.Float64Gauge)
-			gauge.Set(ctx, value.(float64), labels)
+			gauge.Set(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
-			return &gaugeState{}
+			return &gaugeState{
+				raw: core.NewFloat64Number(0),
+			}
 		},
-		storeCollect: func(store, value interface{}, ts time.Time) {
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
 			gs := store.(*gaugeState)
 
 			if !ts.Before(gs.ts) {
 				gs.ts = ts
-				internal.NewAtomicFloat64(&gs.raw).Store(value.(float64))
+				gs.raw.SetFloat64Atomic(value.AsFloat64())
 			}
 		},
-		storeExpect: func(store, value interface{}) {
+		storeExpect: func(store interface{}, value core.Number) {
 			gs := store.(*gaugeState)
-			internal.NewAtomicFloat64(&gs.raw).Store(value.(float64))
+			gs.raw.SetFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) interface{} {
+		readStore: func(store interface{}) core.Number {
 			gs := store.(*gaugeState)
-			return internal.NewAtomicFloat64(&gs.raw).Load()
+			return gs.raw.AsNumberAtomic()
 		},
 		equalValues: float64sEqual,
 	}

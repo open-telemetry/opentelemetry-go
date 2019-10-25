@@ -41,13 +41,8 @@ func New() *Aggregator {
 }
 
 // AsInt64 returns the accumulated count as an int64.
-func (c *Aggregator) AsInt64() int64 {
-	return c.save.AsInt64()
-}
-
-// AsFloat64 returns the accumulated count as an float64.
-func (c *Aggregator) AsFloat64() float64 {
-	return c.save.AsFloat64()
+func (c *Aggregator) AsNumber() core.Number {
+	return c.save.AsNumber()
 }
 
 // Collect saves the current value (atomically) and exports it.

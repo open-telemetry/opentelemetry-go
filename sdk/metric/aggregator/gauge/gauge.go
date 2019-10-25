@@ -65,13 +65,8 @@ func New() *Aggregator {
 }
 
 // AsInt64 returns the recorded gauge value as an int64.
-func (g *Aggregator) AsInt64() int64 {
-	return (*gaugeData)(g.save).value.AsInt64()
-}
-
-// AsFloat64 returns the recorded gauge value as an float64.
-func (g *Aggregator) AsFloat64() float64 {
-	return (*gaugeData)(g.save).value.AsFloat64()
+func (g *Aggregator) AsNumber() core.Number {
+	return (*gaugeData)(g.save).value.AsNumber()
 }
 
 // Timestamp returns the timestamp of the alst recorded gauge value.
