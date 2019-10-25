@@ -26,7 +26,7 @@ type globalProvider struct {
 
 var globalP atomic.Value
 
-// TraceProvider returns registered global trace provider.
+// TraceProvider returns the registered global trace provider.
 // If none is registered then an instance of NoopTraceProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().GetTracer("example.com/foo")
@@ -37,7 +37,7 @@ func TraceProvider() trace.Provider {
 	return trace.NoopTraceProvider{}
 }
 
-// SetTraceProvider configures the provider as a global trace provider.
+// SetTraceProvider registers p as the global trace provider.
 func SetTraceProvider(p trace.Provider) {
 	globalP.Store(globalProvider{p: p})
 }
