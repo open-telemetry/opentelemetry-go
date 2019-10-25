@@ -16,22 +16,19 @@ package counter
 
 import (
 	"context"
-	"math"
-	"sync/atomic"
 
-	api "go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/internal"
 )
 
 type (
 	// Aggregator aggregates counter events.
 	Aggregator struct {
 		// live holds current increments to this counter record
-		live uint64
+		live core.Number
 
 		// save is a temporary used during Collect()
-		save uint64
+		save core.Number
 	}
 )
 
@@ -45,19 +42,22 @@ func New() *Aggregator {
 
 // AsInt64 returns the accumulated count as an int64.
 func (c *Aggregator) AsInt64() int64 {
-	return int64(c.save)
+	return c.save.AsInt64()
 }
 
 // AsFloat64 returns the accumulated count as an float64.
 func (c *Aggregator) AsFloat64() float64 {
-	return math.Float64frombits(c.save)
+	return c.save.AsFloat64()
 }
 
 // Collect saves the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	c.save = atomic.SwapUint64(&c.live, 0)
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
+	zero := core.NewZeroNumber(kind)
+	c.save = c.live.SwapNumberAtomic(zero)
 
-	if c.save == 0 {
+	if c.save.IsZero(kind) {
 		return
 	}
 
@@ -65,23 +65,13 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 }
 
 // Collect updates the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, value api.MeasurementValue, rec export.MetricRecord) {
-	// TODO: See https://github.com/open-telemetry/opentelemetry-go/issues/196
-	// Assumption is that `value` has a type corresponding to
-	// `descriptor.ValueKind()`, which is not enforced for
-	// RecordBatch measurements.  The AsInt64(), AsFloat64(), and
-	// IsNegative() tests here are incorrect if the kind is a
-	// variable.
-	descriptor := rec.Descriptor()
-
-	if !descriptor.Alternate() && value.IsNegative(descriptor.ValueKind()) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
+	if !desc.Alternate() && number.IsNegative(kind) {
 		// TODO warn
 		return
 	}
 
-	if descriptor.ValueKind() == api.Int64ValueKind {
-		internal.NewAtomicInt64(&c.live).Add(value.AsInt64())
-	} else {
-		internal.NewAtomicFloat64(&c.live).Add(value.AsFloat64())
-	}
+	c.live.AddNumberAtomic(kind, number)
 }

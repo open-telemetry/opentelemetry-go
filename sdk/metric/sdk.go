@@ -24,14 +24,22 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	api "go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/unit"
 	"go.opentelemetry.io/sdk/export"
 )
 
-var _ api.Meter = &SDK{}
-var _ api.LabelSet = &labels{}
-var hazardRecord = &record{}
-
 type (
+	descriptor struct {
+		id          api.InstrumentID
+		name        string
+		metricKind  export.MetricKind
+		keys        []core.Key
+		description string
+		unit        unit.Unit
+		numberKind  core.NumberKind
+		alternate   bool
+	}
+
 	// SDK implements the OpenTelemetry Meter API.
 	SDK struct {
 		// current maps `mapkey` to *record.
@@ -57,6 +65,14 @@ type (
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
+
+		// descriptorID is the yet-unused descriptor id
+		descriptorID uint64
+	}
+
+	instrument struct {
+		descriptor *descriptor
+		meter      *SDK
 	}
 
 	// sortedLabels are used to de-duplicate and canonicalize labels.
@@ -74,7 +90,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		id      api.DescriptorID
+		id      api.InstrumentID
 		encoded string
 	}
 
@@ -87,7 +103,7 @@ type (
 		labels *labels
 
 		// descriptor describes the metric instrument.
-		descriptor *api.Descriptor
+		descriptor *descriptor
 
 		// refcount counts the number of active handles on
 		// referring to this record.  active handles prevent
@@ -131,6 +147,94 @@ type (
 	}
 )
 
+var (
+	_            api.Meter           = &SDK{}
+	_            api.LabelSet        = &labels{}
+	_            api.Instrument      = &instrument{}
+	_            api.Handle          = &record{}
+	hazardRecord                     = &record{}
+	_            export.MetricRecord = &record{}
+	_            export.Descriptor   = &descriptor{}
+)
+
+func (d *descriptor) Name() string {
+	return d.name
+}
+
+func (d *descriptor) MetricKind() export.MetricKind {
+	return d.metricKind
+}
+
+func (d *descriptor) Keys() []core.Key {
+	return d.keys
+}
+
+func (d *descriptor) Description() string {
+	return d.description
+}
+
+func (d *descriptor) Unit() unit.Unit {
+	return d.unit
+}
+
+func (d *descriptor) NumberKind() core.NumberKind {
+	return d.numberKind
+}
+
+func (d *descriptor) Alternate() bool {
+	return d.alternate
+}
+
+func (d *descriptor) ID() api.InstrumentID {
+	return d.id
+}
+
+func (i *instrument) acquireHandle(ls *labels) *record {
+	// Create lookup key for sync.Map
+	mk := mapkey{
+		id:      i.descriptor.id,
+		encoded: ls.encoded,
+	}
+
+	// There's a memory allocation here.
+	rec := &record{
+		labels:         ls,
+		descriptor:     i.descriptor,
+		refcount:       1,
+		collectedEpoch: -1,
+		modifiedEpoch:  0,
+	}
+
+	// Load/Store: there's a memory allocation to place `mk` into
+	// an interface here.
+	if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
+		// Existing record case.
+		rec = actual.(*record)
+		atomic.AddInt64(&rec.refcount, 1)
+		return rec
+	}
+	rec.recorder = i.meter.exporter.AggregatorFor(rec)
+
+	i.meter.addPrimary(rec)
+	return rec
+}
+
+func (i *instrument) AcquireHandle(ls api.LabelSet) api.Handle {
+	labs := i.meter.labsFor(ls)
+	return i.acquireHandle(labs)
+}
+
+func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+	ourLs := i.meter.labsFor(ls)
+	h := i.acquireHandle(ourLs)
+	defer h.Release()
+	h.RecordOne(ctx, number)
+}
+
+func (i *instrument) ID() api.InstrumentID {
+	return i.descriptor.id
+}
+
 // New constructs a new *SDK that implements intermediate storage for
 // metric instrument events, suporting configurable aggregation.
 //
@@ -152,7 +256,7 @@ func New(exporter export.MetricBatcher) *SDK {
 
 // DefineLabels returns a LabelSet corresponding to the arguments.
 // Labels are de-duplicated, with last-value-wins semantics.
-func (m *SDK) DefineLabels(_ context.Context, kvs ...core.KeyValue) api.LabelSet {
+func (m *SDK) Labels(_ context.Context, kvs ...core.KeyValue) api.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
 	// statsd for labels, allowing an optimization for statsd
@@ -209,72 +313,64 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-// NewHandle returns an interface used to implement handles in the
-// OpenTelemetry API.  This takes a reference and will persist until
-// the recorder is deleted.
-func (m *SDK) NewHandle(inst api.ExplicitReportingMetric, ls api.LabelSet) api.Handle {
-	desc := inst.Descriptor()
-	// Create lookup key for sync.Map
-	labs := m.labsFor(ls)
-	mk := mapkey{
-		id:      desc.ID(),
-		encoded: labs.encoded,
+func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
+	id := api.InstrumentID(atomic.AddUint64(&m.descriptorID, 1))
+	descriptor := &descriptor{
+		name:        name,
+		metricKind:  metricKind,
+		keys:        opts.Keys,
+		id:          id,
+		description: opts.Description,
+		unit:        opts.Unit,
+		numberKind:  numberKind,
+		alternate:   opts.Alternate,
 	}
-
-	// There's a memory allocation here.
-	rec := &record{
-		labels:         labs,
-		descriptor:     desc,
-		refcount:       1,
-		collectedEpoch: -1,
-		modifiedEpoch:  0,
+	return &instrument{
+		descriptor: descriptor,
+		meter:      m,
 	}
-
-	// Load/Store: there's a memory allocation to place `mk` into an interface here.
-	if actual, loaded := m.current.LoadOrStore(mk, rec); loaded {
-		// Existing record case.
-		rec = actual.(*record)
-		atomic.AddInt64(&rec.refcount, 1)
-		return rec
-	}
-	rec.recorder = m.exporter.AggregatorFor(rec)
-
-	m.addPrimary(rec)
-	return rec
 }
 
-// DeleteHandle removes a reference on the underlying record.  This
-// method checks for a race with `Collect()`, which may have (tried to)
-// reclaim an idle recorder, and restores the situation.
-func (m *SDK) DeleteHandle(r api.Handle) {
-	rec, _ := r.(*record)
-	if rec == nil {
-		return
-	}
+func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
+	opts := api.Options{}
+	api.ApplyCounterOptions(&opts, cos...)
+	return m.newInstrument(name, export.CounterMetricKind, numberKind, &opts)
+}
 
-	for {
-		collected := atomic.LoadInt64(&rec.collectedEpoch)
-		modified := atomic.LoadInt64(&rec.modifiedEpoch)
+func (m *SDK) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
+	opts := api.Options{}
+	api.ApplyGaugeOptions(&opts, gos...)
+	return m.newInstrument(name, export.GaugeMetricKind, numberKind, &opts)
+}
 
-		updated := collected + 1
+func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
+	opts := api.Options{}
+	api.ApplyMeasureOptions(&opts, mos...)
+	return m.newInstrument(name, export.MeasureMetricKind, numberKind, &opts)
+}
 
-		if modified == updated {
-			// No change
-			break
-		}
-		if !atomic.CompareAndSwapInt64(&rec.modifiedEpoch, modified, updated) {
-			continue
-		}
+func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
+	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...))
+}
 
-		if modified < collected {
-			// This record could have been reclaimed.
-			m.saveFromReclaim(rec)
-		}
+func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) api.Float64Counter {
+	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...))
+}
 
-		break
-	}
+func (m *SDK) NewInt64Gauge(name string, gos ...api.GaugeOptionApplier) api.Int64Gauge {
+	return api.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, core.Int64NumberKind, gos...))
+}
 
-	_ = atomic.AddInt64(&rec.refcount, -1)
+func (m *SDK) NewFloat64Gauge(name string, gos ...api.GaugeOptionApplier) api.Float64Gauge {
+	return api.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, core.Float64NumberKind, gos...))
+}
+
+func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) api.Int64Measure {
+	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...))
+}
+
+func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) api.Float64Measure {
+	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
 }
 
 // saveFromReclaim puts a record onto the "reclaim" list when it
@@ -350,17 +446,10 @@ func (m *SDK) collect(ctx context.Context, r *record) {
 	}
 }
 
-// RecordSingle enters a single metric event.
-func (m *SDK) RecordOne(ctx context.Context, ls api.LabelSet, measurement api.Measurement) {
-	r := m.NewHandle(measurement.Instrument, ls)
-	defer m.DeleteHandle(r)
-	r.RecordOne(ctx, measurement.Value)
-}
-
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		m.RecordOne(ctx, ls, meas)
+		meas.Instrument().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
@@ -368,20 +457,46 @@ func (l *labels) Meter() api.Meter {
 	return l.meter
 }
 
-func (r *record) RecordOne(ctx context.Context, value api.MeasurementValue) {
+func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	if r.recorder != nil {
-		r.recorder.Update(ctx, value, r)
+		r.recorder.Update(ctx, number, r)
 	}
+}
+
+func (r *record) Release() {
+	for {
+		collected := atomic.LoadInt64(&r.collectedEpoch)
+		modified := atomic.LoadInt64(&r.modifiedEpoch)
+
+		updated := collected + 1
+
+		if modified == updated {
+			// No change
+			break
+		}
+		if !atomic.CompareAndSwapInt64(&r.modifiedEpoch, modified, updated) {
+			continue
+		}
+
+		if modified < collected {
+			// This record could have been reclaimed.
+			r.labels.meter.saveFromReclaim(r)
+		}
+
+		break
+	}
+
+	_ = atomic.AddInt64(&r.refcount, -1)
 }
 
 func (r *record) mapkey() mapkey {
 	return mapkey{
-		id:      r.descriptor.ID(),
+		id:      r.descriptor.id,
 		encoded: r.labels.encoded,
 	}
 }
 
-func (r *record) Descriptor() *api.Descriptor {
+func (r *record) Descriptor() export.Descriptor {
 	return r.descriptor
 }
 

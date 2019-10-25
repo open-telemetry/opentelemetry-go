@@ -29,6 +29,10 @@ func (noopInstrument) AcquireHandle(LabelSet) Handle {
 func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
+func (noopInstrument) ID() InstrumentID {
+	return 0
+}
+
 func (noopLabelSet) Meter() Meter {
 	return noopMeter{}
 }

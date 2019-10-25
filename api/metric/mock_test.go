@@ -27,6 +27,7 @@ type (
 	}
 
 	mockInstrument struct {
+		id         InstrumentID
 		name       string
 		kind       mockKind
 		numberKind core.NumberKind
@@ -46,6 +47,7 @@ type (
 
 	mockMeter struct {
 		measurementBatches []batch
+		instrumentID       InstrumentID
 	}
 
 	mockKind int8
@@ -78,6 +80,10 @@ func (i *mockInstrument) AcquireHandle(labels LabelSet) Handle {
 
 func (i *mockInstrument) RecordOne(ctx context.Context, number core.Number, labels LabelSet) {
 	doRecordBatch(labels.(*mockLabelSet), ctx, i, number)
+}
+
+func (i *mockInstrument) ID() InstrumentID {
+	return i.id
 }
 
 func (h *mockHandle) RecordOne(ctx context.Context, number core.Number) {
@@ -126,7 +132,9 @@ func (m *mockMeter) NewFloat64Counter(name string, cos ...CounterOptionApplier) 
 func (m *mockMeter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...CounterOptionApplier) *mockInstrument {
 	opts := Options{}
 	ApplyCounterOptions(&opts, cos...)
+	m.instrumentID++
 	return &mockInstrument{
+		id:         m.instrumentID,
 		name:       name,
 		kind:       mockKindCounter,
 		numberKind: numberKind,

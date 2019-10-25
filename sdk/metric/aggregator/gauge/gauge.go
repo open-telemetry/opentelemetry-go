@@ -16,12 +16,11 @@ package gauge
 
 import (
 	"context"
-	"math"
 	"sync/atomic"
 	"time"
 	"unsafe"
 
-	api "go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
 )
 
@@ -29,9 +28,6 @@ import (
 // the best of its ability, but it will not retain any memory of
 // infrequently used gauges.  Exporters may wish to enforce this, or
 // they may simply treat monotonic as a semantic hint.
-
-// TODO: There's a potential for wrongly-typed data to arrive still:
-// See https://github.com/open-telemetry/opentelemetry-go/issues/196
 
 type (
 
@@ -50,7 +46,7 @@ type (
 	// a sequence number to determine the winner of a race.
 	gaugeData struct {
 		// value is the int64- or float64-encoded Set() data
-		value uint64
+		value core.Number
 
 		// timestamp indicates when this record was submitted.
 		// this can be used to pick a winner when multiple
@@ -70,12 +66,12 @@ func New() *Aggregator {
 
 // AsInt64 returns the recorded gauge value as an int64.
 func (g *Aggregator) AsInt64() int64 {
-	return int64((*gaugeData)(g.save).value)
+	return (*gaugeData)(g.save).value.AsInt64()
 }
 
 // AsFloat64 returns the recorded gauge value as an float64.
 func (g *Aggregator) AsFloat64() float64 {
-	return math.Float64frombits((*gaugeData)(g.save).value)
+	return (*gaugeData)(g.save).value.AsFloat64()
 }
 
 // Timestamp returns the timestamp of the alst recorded gauge value.
@@ -97,58 +93,39 @@ func (g *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 }
 
 // Collect updates the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, value api.MeasurementValue, rec export.MetricRecord) {
-	descriptor := rec.Descriptor()
-	if !descriptor.Alternate() {
-		g.updateNonMonotonic(value)
+func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+	desc := rec.Descriptor()
+	if !desc.Alternate() {
+		g.updateNonMonotonic(number)
 	} else {
-		g.updateMonotonic(value, descriptor)
+		g.updateMonotonic(number, desc)
 	}
 }
 
-func (g *Aggregator) updateNonMonotonic(value api.MeasurementValue) {
+func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	ngd := &gaugeData{
-		value:     value.AsRaw(),
+		value:     number,
 		timestamp: time.Now(),
 	}
 	atomic.StorePointer(&g.live, unsafe.Pointer(ngd))
 }
 
-func (g *Aggregator) updateMonotonic(value api.MeasurementValue, descriptor *api.Descriptor) {
+func (g *Aggregator) updateMonotonic(number core.Number, desc export.Descriptor) {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
 	}
+	kind := desc.NumberKind()
 
 	for {
 		gd := (*gaugeData)(atomic.LoadPointer(&g.live))
 
-		if descriptor.ValueKind() == api.Int64ValueKind {
-			nv := value.AsInt64()
-
-			if gd != nil {
-				ov := int64(gd.value)
-
-				if ov > nv {
-					// TODO warn
-					return
-				}
+		if gd != nil {
+			if gd.value.CompareNumber(kind, number) > 0 {
+				// TODO warn
+				return
 			}
-
-			ngd.value = uint64(nv)
-		} else {
-			nv := value.AsFloat64()
-
-			if gd != nil {
-				ov := math.Float64frombits(gd.value)
-
-				if ov > nv {
-					// TODO warn
-					return
-				}
-			}
-
-			ngd.value = math.Float64bits(nv)
 		}
+		ngd.value = number
 
 		if atomic.CompareAndSwapPointer(&g.live, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
 			return

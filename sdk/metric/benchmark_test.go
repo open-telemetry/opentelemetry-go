@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/sdk/export"
 	sdk "go.opentelemetry.io/sdk/metric"
 	"go.opentelemetry.io/sdk/metric/aggregator/counter"
@@ -47,12 +46,12 @@ func newFixture(b *testing.B) *benchFixture {
 }
 
 func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
-	switch rec.Descriptor().Kind() {
-	case metric.CounterKind:
+	switch rec.Descriptor().MetricKind() {
+	case export.CounterMetricKind:
 		return counter.New()
-	case metric.GaugeKind:
+	case export.GaugeMetricKind:
 		return gauge.New()
-	case metric.MeasureKind:
+	case export.MeasureMetricKind:
 		if strings.HasSuffix(rec.Descriptor().Name(), "maxsumcount") {
 			return maxsumcount.New()
 		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
@@ -90,7 +89,7 @@ func benchmarkLabels(b *testing.B, n int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.sdk.DefineLabels(ctx, labs...)
+		fix.sdk.Labels(ctx, labs...)
 	}
 }
 
@@ -120,8 +119,8 @@ func BenchmarkLabels_16(b *testing.B) {
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewInt64Counter("int64.counter")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -130,30 +129,26 @@ func BenchmarkInt64CounterAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64CounterGetHandle(b *testing.B) {
+func BenchmarkInt64CounterAcquireHandle(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewInt64Counter("int64.counter")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := cnt.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := cnt.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewInt64Counter("int64.counter")
-	handle := cnt.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
+	handle := cnt.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -165,8 +160,8 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 func BenchmarkFloat64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewFloat64Counter("float64.counter")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewFloat64Counter("float64.counter")
 
 	b.ResetTimer()
 
@@ -175,30 +170,26 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkFloat64CounterGetHandle(b *testing.B) {
+func BenchmarkFloat64CounterAcquireHandle(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewFloat64Counter("float64.counter")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewFloat64Counter("float64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := cnt.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := cnt.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	cnt := metric.NewFloat64Counter("float64.counter")
-	handle := cnt.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	cnt := fix.sdk.NewFloat64Counter("float64.counter")
+	handle := cnt.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -212,8 +203,8 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 func BenchmarkInt64GaugeAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewInt64Gauge("int64.gauge")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewInt64Gauge("int64.gauge")
 
 	b.ResetTimer()
 
@@ -222,30 +213,26 @@ func BenchmarkInt64GaugeAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64GaugeGetHandle(b *testing.B) {
+func BenchmarkInt64GaugeAcquireHandle(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewInt64Gauge("int64.gauge")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewInt64Gauge("int64.gauge")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := gau.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := gau.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewInt64Gauge("int64.gauge")
-	handle := gau.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewInt64Gauge("int64.gauge")
+	handle := gau.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -257,8 +244,8 @@ func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 func BenchmarkFloat64GaugeAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewFloat64Gauge("float64.gauge")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
 
 	b.ResetTimer()
 
@@ -267,30 +254,26 @@ func BenchmarkFloat64GaugeAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkFloat64GaugeGetHandle(b *testing.B) {
+func BenchmarkFloat64GaugeAcquireHandle(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewFloat64Gauge("float64.gauge")
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := gau.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := gau.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	gau := metric.NewFloat64Gauge("float64.gauge")
-	handle := gau.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
+	handle := gau.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -304,8 +287,8 @@ func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewInt64Measure(name)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewInt64Measure(name)
 
 	b.ResetTimer()
 
@@ -314,30 +297,26 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkInt64MeasureGetHandle(b *testing.B, name string) {
+func benchmarkInt64MeasureAcquireHandle(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewInt64Measure(name)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewInt64Measure(name)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := mea.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := mea.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewInt64Measure(name)
-	handle := mea.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewInt64Measure(name)
+	handle := mea.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -349,8 +328,8 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewFloat64Measure(name)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewFloat64Measure(name)
 
 	b.ResetTimer()
 
@@ -359,30 +338,26 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureGetHandle(b *testing.B, name string) {
+func benchmarkFloat64MeasureAcquireHandle(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewFloat64Measure(name)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewFloat64Measure(name)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle := mea.GetHandle(labs)
-
-		// Note: this causes a memory allocation as handle is
-		// turned into an interface.  Should be fixable.  Can
-		// we make Release() a method on the handle itself?
-		fix.sdk.DeleteHandle(handle)
+		handle := mea.AcquireHandle(labs)
+		handle.Release()
 	}
 }
 
 func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.DefineLabels(ctx, makeLabels(1)...)
-	mea := metric.NewFloat64Measure(name)
-	handle := mea.GetHandle(labs)
+	labs := fix.sdk.Labels(ctx, makeLabels(1)...)
+	mea := fix.sdk.NewFloat64Measure(name)
+	handle := mea.AcquireHandle(labs)
 
 	b.ResetTimer()
 
@@ -397,8 +372,8 @@ func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
 	benchmarkInt64MeasureAdd(b, "int64.maxsumcount")
 }
 
-func BenchmarkInt64MaxSumCountGetHandle(b *testing.B) {
-	benchmarkInt64MeasureGetHandle(b, "int64.maxsumcount")
+func BenchmarkInt64MaxSumCountAcquireHandle(b *testing.B) {
+	benchmarkInt64MeasureAcquireHandle(b, "int64.maxsumcount")
 }
 
 func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
@@ -409,8 +384,8 @@ func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
 	benchmarkFloat64MeasureAdd(b, "float64.maxsumcount")
 }
 
-func BenchmarkFloat64MaxSumCountGetHandle(b *testing.B) {
-	benchmarkFloat64MeasureGetHandle(b, "float64.maxsumcount")
+func BenchmarkFloat64MaxSumCountAcquireHandle(b *testing.B) {
+	benchmarkFloat64MeasureAcquireHandle(b, "float64.maxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
@@ -423,8 +398,8 @@ func BenchmarkInt64DDSketchAdd(b *testing.B) {
 	benchmarkInt64MeasureAdd(b, "int64.ddsketch")
 }
 
-func BenchmarkInt64DDSketchGetHandle(b *testing.B) {
-	benchmarkInt64MeasureGetHandle(b, "int64.ddsketch")
+func BenchmarkInt64DDSketchAcquireHandle(b *testing.B) {
+	benchmarkInt64MeasureAcquireHandle(b, "int64.ddsketch")
 }
 
 func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
@@ -435,8 +410,8 @@ func BenchmarkFloat64DDSketchAdd(b *testing.B) {
 	benchmarkFloat64MeasureAdd(b, "float64.ddsketch")
 }
 
-func BenchmarkFloat64DDSketchGetHandle(b *testing.B) {
-	benchmarkFloat64MeasureGetHandle(b, "float64.ddsketch")
+func BenchmarkFloat64DDSketchAcquireHandle(b *testing.B) {
+	benchmarkFloat64MeasureAcquireHandle(b, "float64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {

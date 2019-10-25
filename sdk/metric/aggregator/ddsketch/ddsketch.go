@@ -18,7 +18,8 @@ import (
 	"sync"
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
-	api "go.opentelemetry.io/api/metric"
+
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
 )
 
@@ -61,20 +62,16 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 }
 
 // Collect updates the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, value api.MeasurementValue, rec export.MetricRecord) {
-	descriptor := rec.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
 
-	if !descriptor.Alternate() && value.IsNegative(descriptor.ValueKind()) {
+	if !desc.Alternate() && number.IsNegative(kind) {
 		// TODO warn
 		return
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if descriptor.ValueKind() == api.Int64ValueKind {
-		c.live.Add(float64(value.AsInt64()))
-	} else {
-		c.live.Add(float64(value.AsFloat64()))
-	}
+	c.live.Add(number.CoerceToFloat64(kind))
 }

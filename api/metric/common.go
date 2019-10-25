@@ -44,6 +44,10 @@ func (m commonMetric) recordOne(ctx context.Context, number core.Number, labels 
 	m.instrument.RecordOne(ctx, number, labels)
 }
 
+func (m commonMetric) ID() InstrumentID {
+	return m.instrument.ID()
+}
+
 func (h commonHandle) recordOne(ctx context.Context, number core.Number) {
 	h.handle.RecordOne(ctx, number)
 }

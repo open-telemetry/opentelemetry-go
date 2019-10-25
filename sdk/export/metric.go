@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/unit"
 )
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -26,7 +27,7 @@ import (
 type MetricAggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.
-	Update(context.Context, metric.MeasurementValue, MetricRecord)
+	Update(context.Context, core.Number, MetricRecord)
 
 	// Collect is called during the SDK Collect() to
 	// finish one period of aggregation.  Collect() is
@@ -35,11 +36,30 @@ type MetricAggregator interface {
 	Collect(context.Context, MetricRecord, MetricBatcher)
 }
 
+type MetricKind int8
+
+const (
+	CounterMetricKind MetricKind = iota
+	GaugeMetricKind
+	MeasureMetricKind
+)
+
+type Descriptor interface {
+	Name() string
+	MetricKind() MetricKind
+	Keys() []core.Key
+	Description() string
+	Unit() unit.Unit
+	NumberKind() core.NumberKind
+	Alternate() bool
+	ID() metric.InstrumentID
+}
+
 // MetricRecord is the unit of export, pairing a metric
 // instrument and set of labels.
 type MetricRecord interface {
 	// Descriptor() describes the metric instrument.
-	Descriptor() *metric.Descriptor
+	Descriptor() Descriptor
 
 	// Labels() describe the labsels corresponding the
 	// aggregation being performed.

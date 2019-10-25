@@ -16,12 +16,9 @@ package maxsumcount
 
 import (
 	"context"
-	"math"
-	"sync/atomic"
 
-	api "go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/internal"
 )
 
 type (
@@ -33,9 +30,9 @@ type (
 	}
 
 	state struct {
-		count uint64
-		sum   uint64
-		max   uint64
+		count core.Number
+		sum   core.Number
+		max   core.Number
 	}
 )
 
@@ -48,31 +45,34 @@ func New() *Aggregator {
 
 // SumAsInt64 returns the accumulated sum as an int64.
 func (c *Aggregator) SumAsInt64() int64 {
-	return int64(c.save.sum)
+	return c.save.sum.AsInt64()
 }
 
 // SumAsFloat64 returns the accumulated sum as an float64.
 func (c *Aggregator) SumAsFloat64() float64 {
-	return math.Float64frombits(c.save.sum)
+	return c.save.sum.AsFloat64()
 }
 
 // Count returns the accumulated count.
 func (c *Aggregator) Count() uint64 {
-	return c.save.count
+	return c.save.count.AsUint64()
 }
 
 // MaxAsInt64 returns the accumulated max as an int64.
 func (c *Aggregator) MaxAsInt64() int64 {
-	return int64(c.save.max)
+	return c.save.max.AsInt64()
 }
 
 // MaxAsFloat64 returns the accumulated max as an float64.
 func (c *Aggregator) MaxAsFloat64() float64 {
-	return math.Float64frombits(c.save.max)
+	return c.save.max.AsFloat64()
 }
 
 // Collect saves the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
+	zero := core.NewZeroNumber(kind)
 
 	// N.B. There is no atomic operation that can update all three
 	// values at once, so there are races between Update() and
@@ -80,55 +80,34 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	// knowing that individually the three parts of this aggregation
 	// could be spread across multiple collections in rare cases.
 
-	c.save.count = atomic.SwapUint64(&c.live.count, 0)
-	c.save.sum = atomic.SwapUint64(&c.live.sum, 0)
-	c.save.max = atomic.SwapUint64(&c.live.max, 0)
+	c.save.count.SetUint64(c.live.count.SwapUint64Atomic(0))
+	c.save.sum = c.live.sum.SwapNumberAtomic(zero)
+	c.save.max = c.live.max.SwapNumberAtomic(zero)
 
 	exp.Export(ctx, rec, c)
 }
 
 // Collect updates the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, value api.MeasurementValue, rec export.MetricRecord) {
-	descriptor := rec.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
 
-	if !descriptor.Alternate() && value.IsNegative(descriptor.ValueKind()) {
+	if !desc.Alternate() && number.IsNegative(kind) {
 		// TODO warn
 		return
 	}
 
-	atomic.AddUint64(&c.live.count, 1)
+	c.live.count.AddUint64Atomic(1)
+	c.live.sum.AddNumberAtomic(kind, number)
 
-	if descriptor.ValueKind() == api.Int64ValueKind {
-		internal.NewAtomicInt64(&c.live.sum).Add(value.AsInt64())
-	} else {
-		internal.NewAtomicFloat64(&c.live.sum).Add(value.AsFloat64())
-	}
+	for {
+		current := c.live.max.AsNumberAtomic()
 
-	if descriptor.ValueKind() == api.Int64ValueKind {
-		update := value.AsInt64()
-		for {
-			current := internal.NewAtomicInt64(&c.live.max).Load()
-
-			if update <= current {
-				break
-			}
-
-			if atomic.CompareAndSwapUint64(&c.live.max, uint64(current), uint64(update)) {
-				break
-			}
+		if number.CompareNumber(kind, current) <= 0 {
+			break
 		}
-	} else {
-		update := value.AsFloat64()
-		for {
-			current := internal.NewAtomicFloat64(&c.live.max).Load()
-
-			if update <= current {
-				break
-			}
-
-			if atomic.CompareAndSwapUint64(&c.live.max, math.Float64bits(current), math.Float64bits(update)) {
-				break
-			}
+		if c.live.max.CompareAndSwapNumber(current, number) {
+			break
 		}
 	}
 }

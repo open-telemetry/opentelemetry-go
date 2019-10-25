@@ -63,12 +63,12 @@ type (
 
 	testKey struct {
 		labels string
-		id     api.DescriptorID
+		id     api.InstrumentID
 	}
 
 	testImpl struct {
-		newInstrument  func(name string) interface{}
-		getDescriptor  func(interface{}) *api.Descriptor
+		newInstrument  func(meter api.Meter, name string) interface{}
+		getID          func(interface{}) api.InstrumentID
 		getUpdateValue func() interface{}
 		operate        func(interface{}, context.Context, interface{}, api.LabelSet)
 		newStore       func() interface{}
@@ -139,15 +139,15 @@ func someLabels() []core.KeyValue {
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
-	instrument := f.impl.newInstrument(name)
-	desc := f.impl.getDescriptor(instrument)
+	instrument := f.impl.newInstrument(sdk, name)
+	id := f.impl.getID(instrument)
 	kvs := someLabels()
 	clabs := canonicalizeLabels(kvs)
-	labs := sdk.DefineLabels(context.Background(), kvs...)
+	labs := sdk.Labels(context.Background(), kvs...)
 	dur := getPeriod()
 	key := testKey{
 		labels: clabs,
-		id:     desc.ID(),
+		id:     id,
 	}
 	for {
 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
@@ -208,10 +208,10 @@ func (f *testFixture) preCollect() {
 }
 
 func (f *testFixture) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
-	switch record.Descriptor().Kind() {
-	case api.CounterKind:
+	switch record.Descriptor().MetricKind() {
+	case export.CounterMetricKind:
 		return counter.New()
-	case api.GaugeKind:
+	case export.GaugeMetricKind:
 		return gauge.New()
 	default:
 		panic("Not implemented for this test")
@@ -232,20 +232,16 @@ func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, ag
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	// https://github.com/open-telemetry/opentelemetry-go/issues/196
-
-	descriptor := record.Descriptor()
-
-	switch descriptor.Kind() {
-	case api.CounterKind:
-		if descriptor.ValueKind() == api.Int64ValueKind {
+	switch desc.MetricKind() {
+	case export.CounterMetricKind:
+		if desc.NumberKind() == core.Int64NumberKind {
 			f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsInt64(), time.Time{})
 		} else {
 			f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsFloat64(), time.Time{})
 		}
-	case api.GaugeKind:
+	case export.GaugeMetricKind:
 		gauge := agg.(*gauge.Aggregator)
-		if descriptor.ValueKind() == api.Int64ValueKind {
+		if desc.NumberKind() == core.Int64NumberKind {
 			f.impl.storeCollect(actual, gauge.AsInt64(), gauge.Timestamp())
 		} else {
 			f.impl.storeCollect(actual, gauge.AsFloat64(), gauge.Timestamp())
@@ -308,11 +304,11 @@ func float64sEqual(a, b interface{}) bool {
 
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(name string) interface{} {
-			return api.NewInt64Counter(name, api.WithNonMonotonic(nonMonotonic))
+		newInstrument: func(meter api.Meter, name string) interface{} {
+			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getDescriptor: func(c interface{}) *api.Descriptor {
-			return c.(api.Int64Counter).Descriptor()
+		getID: func(c interface{}) api.InstrumentID {
+			return c.(api.Int64Counter).ID()
 		},
 		getUpdateValue: func() interface{} {
 			var offset int64
@@ -356,11 +352,11 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(name string) interface{} {
-			return api.NewFloat64Counter(name, api.WithNonMonotonic(nonMonotonic))
+		newInstrument: func(meter api.Meter, name string) interface{} {
+			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getDescriptor: func(c interface{}) *api.Descriptor {
-			return c.(api.Float64Counter).Descriptor()
+		getID: func(c interface{}) api.InstrumentID {
+			return c.(api.Float64Counter).ID()
 		},
 		getUpdateValue: func() interface{} {
 			var offset float64
@@ -409,11 +405,11 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(name string) interface{} {
-			return api.NewInt64Gauge(name, api.WithMonotonic(monotonic))
+		newInstrument: func(meter api.Meter, name string) interface{} {
+			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getDescriptor: func(c interface{}) *api.Descriptor {
-			return c.(api.Int64Gauge).Descriptor()
+		getID: func(c interface{}) api.InstrumentID {
+			return c.(api.Int64Gauge).ID()
 		},
 		getUpdateValue: func() interface{} {
 			if !monotonic {
@@ -462,11 +458,11 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(name string) interface{} {
-			return api.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
+		newInstrument: func(meter api.Meter, name string) interface{} {
+			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getDescriptor: func(c interface{}) *api.Descriptor {
-			return c.(api.Float64Gauge).Descriptor()
+		getID: func(c interface{}) api.InstrumentID {
+			return c.(api.Float64Gauge).ID()
 		},
 		getUpdateValue: func() interface{} {
 			if !monotonic {

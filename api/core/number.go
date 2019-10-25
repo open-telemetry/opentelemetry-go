@@ -31,6 +31,8 @@ const (
 	Int64NumberKind NumberKind = iota
 	// Float64NumberKind means that the Number stores float64.
 	Float64NumberKind
+	// Uint64NumberKind means that the Number stores uint64.
+	Uint64NumberKind
 )
 
 // Number represents either an integral or a floating point value. It
@@ -47,6 +49,8 @@ func NewZeroNumber(kind NumberKind) Number {
 		return NewInt64Number(0)
 	case Float64NumberKind:
 		return NewFloat64Number(0.)
+	case Uint64NumberKind:
+		return NewUint64Number(0)
 	}
 	return Number(0)
 }
@@ -64,6 +68,11 @@ func NewInt64Number(i int64) Number {
 // NewFloat64Number creates a floating point Number.
 func NewFloat64Number(f float64) Number {
 	return NewNumberFromRaw(float64ToRaw(f))
+}
+
+// NewInt64Number creates an integral Number.
+func NewUint64Number(u uint64) Number {
+	return NewNumberFromRaw(uint64ToRaw(u))
 }
 
 // - as x
@@ -92,6 +101,12 @@ func (n Number) AsFloat64() float64 {
 	return rawToFloat64(n.AsRaw())
 }
 
+// AsUint64 assumes that the value contains an uint64 and returns it
+// as such.
+func (n Number) AsUint64() uint64 {
+	return rawToUint64(n.AsRaw())
+}
+
 // - as x atomic
 
 // AsNumberAtomic gets the raw, uninterpreted raw value. Might be useful for
@@ -118,6 +133,12 @@ func (n *Number) AsFloat64Atomic() float64 {
 	return rawToFloat64(n.AsRawAtomic())
 }
 
+// AsUint64Atomic assumes that the number contains an uint64 and
+// atomically returns it as such.
+func (n *Number) AsUint64Atomic() uint64 {
+	return atomic.LoadUint64(n.AsUint64Ptr())
+}
+
 // - as x ptr
 
 // AsRawPtr gets the pointer to the raw, uninterpreted raw
@@ -132,6 +153,54 @@ func (n *Number) AsInt64Ptr() *int64 {
 
 func (n *Number) AsFloat64Ptr() *float64 {
 	return rawPtrToFloat64Ptr(n.AsRawPtr())
+}
+
+func (n *Number) AsUint64Ptr() *uint64 {
+	return rawPtrToUint64Ptr(n.AsRawPtr())
+}
+
+// - coerce
+
+func (n Number) CoerceToInt64(kind NumberKind) int64 {
+	switch kind {
+	case Int64NumberKind:
+		return n.AsInt64()
+	case Float64NumberKind:
+		return int64(n.AsFloat64())
+	case Uint64NumberKind:
+		return int64(n.AsUint64())
+	default:
+		// you get what you deserve
+		return 0
+	}
+}
+
+func (n Number) CoerceToFloat64(kind NumberKind) float64 {
+	switch kind {
+	case Int64NumberKind:
+		return float64(n.AsInt64())
+	case Float64NumberKind:
+		return n.AsFloat64()
+	case Uint64NumberKind:
+		return float64(n.AsUint64())
+	default:
+		// you get what you deserve
+		return 0
+	}
+}
+
+func (n Number) CoerceToUint64(kind NumberKind) uint64 {
+	switch kind {
+	case Int64NumberKind:
+		return uint64(n.AsInt64())
+	case Float64NumberKind:
+		return uint64(n.AsFloat64())
+	case Uint64NumberKind:
+		return n.AsUint64()
+	default:
+		// you get what you deserve
+		return 0
+	}
 }
 
 // - set
@@ -152,6 +221,10 @@ func (n *Number) SetFloat64(f float64) {
 	*n.AsFloat64Ptr() = f
 }
 
+func (n *Number) SetUint64(u uint64) {
+	*n.AsUint64Ptr() = u
+}
+
 // - set atomic
 
 func (n *Number) SetNumberAtomic(nn Number) {
@@ -168,6 +241,10 @@ func (n *Number) SetInt64Atomic(i int64) {
 
 func (n *Number) SetFloat64Atomic(f float64) {
 	atomic.StoreUint64(n.AsRawPtr(), float64ToRaw(f))
+}
+
+func (n *Number) SetUint64Atomic(u uint64) {
+	atomic.StoreUint64(n.AsUint64Ptr(), u)
 }
 
 // - swap
@@ -196,6 +273,12 @@ func (n *Number) SwapFloat64(f float64) float64 {
 	return old
 }
 
+func (n *Number) SwapUint64(u uint64) uint64 {
+	old := n.AsUint64()
+	n.SetUint64(u)
+	return old
+}
+
 // - swap atomic
 
 func (n *Number) SwapNumberAtomic(nn Number) Number {
@@ -214,6 +297,10 @@ func (n *Number) SwapFloat64Atomic(f float64) float64 {
 	return rawToFloat64(atomic.SwapUint64(n.AsRawPtr(), float64ToRaw(f)))
 }
 
+func (n *Number) SwapUint64Atomic(u uint64) uint64 {
+	return atomic.SwapUint64(n.AsUint64Ptr(), u)
+}
+
 // - add
 
 func (n *Number) AddNumber(kind NumberKind, nn Number) {
@@ -222,6 +309,8 @@ func (n *Number) AddNumber(kind NumberKind, nn Number) {
 		n.AddInt64(nn.AsInt64())
 	case Float64NumberKind:
 		n.AddFloat64(nn.AsFloat64())
+	case Uint64NumberKind:
+		n.AddUint64(nn.AsUint64())
 	}
 }
 
@@ -237,6 +326,10 @@ func (n *Number) AddFloat64(f float64) {
 	*n.AsFloat64Ptr() += f
 }
 
+func (n *Number) AddUint64(u uint64) {
+	*n.AsUint64Ptr() += u
+}
+
 // - add atomic
 
 func (n *Number) AddNumberAtomic(kind NumberKind, nn Number) {
@@ -245,6 +338,8 @@ func (n *Number) AddNumberAtomic(kind NumberKind, nn Number) {
 		n.AddInt64Atomic(nn.AsInt64())
 	case Float64NumberKind:
 		n.AddFloat64Atomic(nn.AsFloat64())
+	case Uint64NumberKind:
+		n.AddUint64Atomic(nn.AsUint64())
 	}
 }
 
@@ -265,6 +360,10 @@ func (n *Number) AddFloat64Atomic(f float64) {
 	}
 }
 
+func (n *Number) AddUint64Atomic(u uint64) {
+	atomic.AddUint64(n.AsUint64Ptr(), u)
+}
+
 // - compare and swap (atomic only)
 
 func (n *Number) CompareAndSwapNumber(on, nn Number) bool {
@@ -283,6 +382,10 @@ func (n *Number) CompareAndSwapFloat64(of, nf float64) bool {
 	return atomic.CompareAndSwapUint64(n.AsRawPtr(), float64ToRaw(of), float64ToRaw(nf))
 }
 
+func (n *Number) CompareAndSwapUint64(ou, nu uint64) bool {
+	return atomic.CompareAndSwapUint64(n.AsUint64Ptr(), ou, nu)
+}
+
 // - compare
 
 func (n Number) CompareNumber(kind NumberKind, nn Number) int {
@@ -291,6 +394,8 @@ func (n Number) CompareNumber(kind NumberKind, nn Number) int {
 		return n.CompareInt64(nn.AsInt64())
 	case Float64NumberKind:
 		return n.CompareFloat64(nn.AsFloat64())
+	case Uint64NumberKind:
+		return n.CompareUint64(nn.AsUint64())
 	default:
 		// you get what you deserve
 		return 0
@@ -299,6 +404,21 @@ func (n Number) CompareNumber(kind NumberKind, nn Number) int {
 
 func (n Number) CompareRaw(kind NumberKind, r uint64) int {
 	return n.CompareNumber(kind, NewNumberFromRaw(r))
+}
+
+// Int64Compare assumes that the Number contains an int64 and performs
+// a comparison between the value and the other value. It returns the
+// typical result of the compare function: -1 if the value is less
+// than the other, 0 if both are equal, 1 if the value is greater than
+// the other.
+func (n Number) CompareInt64(i int64) int {
+	this := n.AsInt64()
+	if this < i {
+		return -1
+	} else if this > i {
+		return 1
+	}
+	return 0
 }
 
 // Float64Compare assumes that the Number contains a float64 and
@@ -321,11 +441,11 @@ func (n Number) CompareFloat64(f float64) int {
 // typical result of the compare function: -1 if the value is less
 // than the other, 0 if both are equal, 1 if the value is greater than
 // the other.
-func (n Number) CompareInt64(i int64) int {
-	this := n.AsInt64()
-	if this < i {
+func (n Number) CompareUint64(u uint64) int {
+	this := n.AsUint64()
+	if this < u {
 		return -1
-	} else if this > i {
+	} else if this > u {
 		return 1
 	}
 	return 0
@@ -359,6 +479,8 @@ func (n Number) Emit(kind NumberKind) string {
 		return fmt.Sprintf("%d", n.AsInt64())
 	case Float64NumberKind:
 		return fmt.Sprintf("%f", n.AsFloat64())
+	case Uint64NumberKind:
+		return fmt.Sprintf("%d", n.AsUint64())
 	default:
 		return ""
 	}
@@ -372,6 +494,8 @@ func (n Number) compareWithZero(kind NumberKind) int {
 		return n.CompareInt64(0)
 	case Float64NumberKind:
 		return n.CompareFloat64(0.)
+	case Uint64NumberKind:
+		return n.CompareUint64(0)
 	default:
 		// you get what you deserve
 		return 0
@@ -394,10 +518,22 @@ func int64ToRaw(i int64) uint64 {
 	return uint64(i)
 }
 
+func rawToUint64(r uint64) uint64 {
+	return r
+}
+
+func uint64ToRaw(u uint64) uint64 {
+	return u
+}
+
 func rawPtrToFloat64Ptr(r *uint64) *float64 {
 	return (*float64)(unsafe.Pointer(r))
 }
 
 func rawPtrToInt64Ptr(r *uint64) *int64 {
 	return (*int64)(unsafe.Pointer(r))
+}
+
+func rawPtrToUint64Ptr(r *uint64) *uint64 {
+	return r
 }

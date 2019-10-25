@@ -21,6 +21,8 @@ import (
 	"go.opentelemetry.io/api/unit"
 )
 
+type InstrumentID uint64
+
 // Instrument is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type Instrument interface {
@@ -29,6 +31,7 @@ type Instrument interface {
 	AcquireHandle(labels LabelSet) Handle
 	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
+	ID() InstrumentID
 }
 
 // Handle is the implementation-level interface to Set/Add/Record
@@ -109,6 +112,14 @@ type MeasureOptionApplier interface {
 // Measurement is used for reporting a batch of metric
 // values. Instances of this type should be created by instruments
 // (Int64Counter.Measurement()).
+//
+// TODO: make it an interface? Would probably mean memory allocs on
+// batch recording… OTOH, we could prevent the user code from gaining
+// an access to the Instrument instance by dropping the Instrument
+// function. The Instrument interface would gain a function for
+// creating instances of Measurement, which would be used by
+// {Int,Float}64{Counter,Gauge,Measure} to create a safe Measurement
+// instance.
 type Measurement struct {
 	instrument Instrument
 	number     core.Number
