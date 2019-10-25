@@ -21,6 +21,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -199,6 +200,40 @@ func (e *Expectation) ToMatchInAnyOrder(expected interface{}) {
 			e.fail(fmt.Sprintf("Expected\n\t%v\nto contain the same elements as\n\t%v", e.actual, expected))
 		}
 	}
+}
+
+func (e *Expectation) ToBeTemporally(matcher TemporalMatcher, compareTo interface{}) {
+	if actual, ok := e.actual.(time.Time); ok {
+		if ct, ok := compareTo.(time.Time); ok {
+			switch matcher {
+			case Before:
+				if !actual.Before(ct) {
+					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before\n\t%v", e.actual, compareTo))
+				}
+			case BeforeOrSameTime:
+				if actual.After(ct) {
+					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before or at the same time as\n\t%v", e.actual, compareTo))
+				}
+			case After:
+				if !actual.After(ct) {
+					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after\n\t%v", e.actual, compareTo))
+				}
+			case AfterOrSameTime:
+				if actual.Before(ct) {
+					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after or at the same time as\n\t%v", e.actual, compareTo))
+				}
+			default:
+				e.fail("Cannot compare times with unexpected temporal matcher")
+			}
+		} else {
+			e.fail(fmt.Sprintf("Cannot compare to non-temporal value\n\t%v", compareTo))
+			return
+		}
+
+		return
+	}
+
+	e.fail(fmt.Sprintf("Cannot compare non-temporal value\n\t%v", e.actual))
 }
 
 func (e *Expectation) verifyExpectedNotNil(expected interface{}) {

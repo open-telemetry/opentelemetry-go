@@ -15,15 +15,57 @@
 package testtrace_test
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/api/testharness"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/api/trace/testtrace"
+	"go.opentelemetry.io/internal/matchers"
 )
 
 func TestTracer(t *testing.T) {
 	testharness.NewHarness(t).TestTracer(func() trace.Tracer {
 		return testtrace.NewTracer()
+	})
+
+	t.Run("#Start", func(t *testing.T) {
+		t.Run("starts a span with the expected name", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			subject := testtrace.NewTracer()
+
+			expectedName := "test name"
+
+			_, span := subject.Start(context.Background(), expectedName)
+
+			testSpan, ok := span.(*testtrace.Span)
+
+			e.Expect(ok).ToBeTrue()
+			e.Expect(testSpan.Name()).ToEqual(expectedName)
+		})
+
+		t.Run("uses the current time as the start time", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			subject := testtrace.NewTracer()
+
+			start := time.Now()
+
+			_, span := subject.Start(context.Background(), "test")
+
+			end := time.Now()
+
+			testSpan, ok := span.(*testtrace.Span)
+
+			e.Expect(ok).ToBeTrue()
+			e.Expect(testSpan.StartTime()).ToBeTemporally(matchers.AfterOrSameTime, start)
+			e.Expect(testSpan.StartTime()).ToBeTemporally(matchers.BeforeOrSameTime, end)
+		})
 	})
 }

@@ -16,6 +16,8 @@ package testtrace
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/trace"
@@ -24,13 +26,16 @@ import (
 var _ trace.Tracer = (*Tracer)(nil)
 
 type Tracer struct {
+	lock      *sync.Mutex
 	generator Generator
+	spans     []*Span
 }
 
 func NewTracer(opts ...TracerOption) *Tracer {
 	c := newTracerConfig(opts...)
 
 	return &Tracer{
+		lock:      &sync.Mutex{},
 		generator: c.generator,
 	}
 }
@@ -55,12 +60,22 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	spanID := t.generator.SpanID()
 
 	span := &Span{
+		lock:   &sync.Mutex{},
 		tracer: t,
 		spanContext: core.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
+		name:       name,
+		attributes: c.Attributes,
+		startTime:  time.Now(),
 	}
+
+	t.lock.Lock()
+
+	t.spans = append(t.spans, span)
+
+	t.lock.Unlock()
 
 	return trace.SetCurrentSpan(ctx, span), span
 }
@@ -69,6 +84,10 @@ func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx contex
 	ctx, _ = t.Start(ctx, name)
 
 	return body(ctx)
+}
+
+func (t *Tracer) Spans() []*Span {
+	return t.spans
 }
 
 type TracerOption func(*tracerConfig)
