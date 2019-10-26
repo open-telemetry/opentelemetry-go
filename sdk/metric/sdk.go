@@ -404,7 +404,7 @@ func (m *SDK) collect(ctx context.Context, r *record) {
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		meas.Instrument().(api.InstrumentImpl).RecordOne(ctx, meas.Number(), ls)
+		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 

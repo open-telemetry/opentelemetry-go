@@ -85,7 +85,7 @@ type Measurement struct {
 // Instrument returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (m Measurement) Instrument() InstrumentImpl {
+func (m Measurement) InstrumentImpl() InstrumentImpl {
 	return m.instrument
 }
 

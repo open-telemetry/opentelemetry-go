@@ -182,7 +182,7 @@ func (m *mockMeter) RecordBatch(ctx context.Context, labels LabelSet, measuremen
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = mockMeasurement{
-			instrument: m.Instrument().(*mockInstrument),
+			instrument: m.InstrumentImpl().(*mockInstrument),
 			number:     m.Number(),
 		}
 	}
