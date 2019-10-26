@@ -22,10 +22,12 @@ import (
 
 	"go.opentelemetry.io/api/key"
 
-	apitrace "go.opentelemetry.io/api/trace"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
+
+	apitrace "go.opentelemetry.io/api/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
@@ -33,6 +35,34 @@ import (
 )
 
 // TODO(rghetia): Test export.
+func TestNewExporter(t *testing.T) {
+	const (
+		serviceName = "test-service"
+		tagKey      = "key"
+		tagVal      = "val"
+	)
+	// Create Jaeger Exporter
+	exp, err := NewExporter(
+		WithCollectorEndpoint("http://localhost"),
+		WithProcess(Process{
+			ServiceName: serviceName,
+			Tags: []core.KeyValue{
+				key.String(tagKey, tagVal),
+			},
+		}),
+	)
+
+	assert.NoError(t, err)
+	assert.EqualValues(t, serviceName, exp.process.ServiceName)
+	assert.Len(t, exp.process.Tags, 1)
+
+	exp.RegisterSimpleSpanProcessor()
+	_, err = sdktrace.NewProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exp))
+
+	assert.NoError(t, err)
+}
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()

@@ -236,12 +236,9 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID: sid,
-		Name:         "SpanAttribute/span0",
-		Attributes: []core.KeyValue{{
-			Key:   core.Key("key1"),
-			Value: core.Value{Type: core.STRING, String: "value1"},
-		}},
+		ParentSpanID:    sid,
+		Name:            "SpanAttribute/span0",
+		Attributes:      []core.KeyValue{key.String("key1", "value1")},
 		SpanKind:        "internal",
 		HasRemoteParent: true,
 	}
@@ -273,14 +270,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "SpanAttributesOverLimit/span0",
 		Attributes: []core.KeyValue{
-			{
-				Key:   core.Key("key1"),
-				Value: core.Value{Type: core.STRING, String: "value3"},
-			},
-			{
-				Key:   core.Key("key4"),
-				Value: core.Value{Type: core.STRING, String: "value4"},
-			},
+			key.String("key1", "value3"),
+			key.String("key4", "value4"),
 		},
 		SpanKind:              "internal",
 		HasRemoteParent:       true,
