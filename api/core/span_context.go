@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 )
 
 const (
@@ -29,7 +28,21 @@ const (
 	// for SpanContext TraceFlags field when a trace is sampled.
 	TraceFlagsSampled = traceFlagsBitMaskSampled
 	TraceFlagsUnused  = traceFlagsBitMaskUnused
+
+	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
+
+	ErrInvalidTraceIDLength errorConst = "hex encoded trace-id must have length equals to 32"
+	ErrNilTraceID           errorConst = "trace-id can't be all zero"
+
+	ErrInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
+	ErrNilSpanID           errorConst = "span-id can't be all zero"
 )
+
+type errorConst string
+
+func (e errorConst) Error() string {
+	return string(e)
+}
 
 type TraceID [16]byte
 
@@ -65,7 +78,7 @@ func (s SpanID) MarshalJSON() ([]byte, error) {
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
-		return t, errors.New("hex encoded trace-id must have length equals to 32")
+		return t, ErrInvalidTraceIDLength
 	}
 
 	if err := decodeHex(h, t[:]); err != nil {
@@ -73,18 +86,18 @@ func TraceIDFromHex(h string) (TraceID, error) {
 	}
 
 	if !t.IsValid() {
-		return t, errors.New("trace-id can't be all zero")
+		return t, ErrNilTraceID
 	}
 	return t, nil
 }
 
-// TraceIDFromHex returns a SpanID from a hex string if it is compliant
+// SpanIDFromHex returns a SpanID from a hex string if it is compliant
 // with the w3c trace-context specification.
 // See more at https://www.w3.org/TR/trace-context/#parent-id
 func SpanIDFromHex(h string) (SpanID, error) {
 	s := SpanID{}
 	if len(h) != 16 {
-		return s, errors.New("hex encoded span-id must have length equals to 16")
+		return s, ErrInvalidSpanIDLength
 	}
 
 	if err := decodeHex(h, s[:]); err != nil {
@@ -92,7 +105,7 @@ func SpanIDFromHex(h string) (SpanID, error) {
 	}
 
 	if !s.IsValid() {
-		return s, errors.New("span-id can't be all zero")
+		return s, ErrNilSpanID
 	}
 	return s, nil
 }
@@ -105,7 +118,7 @@ func decodeHex(h string, b []byte) error {
 		case '0' <= r && r <= '9':
 			continue
 		default:
-			return errors.New("trace-id and span-id can only contain [0-9a-f] characters, all lowercase")
+			return ErrInvalidHexID
 		}
 	}
 
