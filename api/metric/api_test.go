@@ -446,7 +446,7 @@ func TestMeasure(t *testing.T) {
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind core.NumberKind, instrument Instrument) {
+func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind core.NumberKind, instrument InstrumentImpl) {
 	t.Helper()
 	if len(meter.measurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.measurementBatches))
