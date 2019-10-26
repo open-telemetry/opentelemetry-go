@@ -33,7 +33,7 @@ func (noopInstrument) Meter() Meter {
 	return noopMeter{}
 }
 
-func (noopMeter) Labels(context.Context, ...core.KeyValue) LabelSet {
+func (noopMeter) Labels(...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 

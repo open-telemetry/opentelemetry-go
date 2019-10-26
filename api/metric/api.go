@@ -98,7 +98,7 @@ func (m Measurement) Number() core.Number {
 type Meter interface {
 	// Labels returns a reference to a set of labels that cannot
 	// be read by the application.
-	Labels(context.Context, ...core.KeyValue) LabelSet
+	Labels(...core.KeyValue) LabelSet
 
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.

@@ -214,7 +214,7 @@ func New(exporter export.MetricBatcher) *SDK {
 
 // DefineLabels returns a LabelSet corresponding to the arguments.
 // Labels are de-duplicated, with last-value-wins semantics.
-func (m *SDK) Labels(_ context.Context, kvs ...core.KeyValue) api.LabelSet {
+func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
 	// statsd for labels, allowing an optimization for statsd

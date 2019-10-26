@@ -102,7 +102,7 @@ func newMockMeter() *mockMeter {
 	return &mockMeter{}
 }
 
-func (m *mockMeter) Labels(ctx context.Context, labels ...core.KeyValue) LabelSet {
+func (m *mockMeter) Labels(labels ...core.KeyValue) LabelSet {
 	ul := make(map[core.Key]core.Value)
 	for _, kv := range labels {
 		ul[kv.Key] = kv.Value
