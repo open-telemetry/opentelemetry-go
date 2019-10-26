@@ -57,6 +57,9 @@ type (
 		impl     testImpl
 		T        *testing.T
 
+		lock  sync.Mutex
+		lused map[string]bool
+
 		dupCheck  map[testKey]int
 		totalDups int64
 	}
@@ -121,22 +124,33 @@ func getPeriod() time.Duration {
 	return time.Duration(dur)
 }
 
-func someLabels() []core.KeyValue {
-	n := rand.Intn(4)
-	used := map[string]bool{}
+func (f *testFixture) someLabels() []core.KeyValue {
+	n := 1 + rand.Intn(3)
 	l := make([]core.KeyValue, n)
-	for i := 0; i < n; i++ {
-		var k string
-		for {
-			k = fmt.Sprint("k", rand.Intn(1000000000))
-			if !used[k] {
-				used[k] = true
-				break
+
+	for {
+		oused := map[string]bool{}
+		for i := 0; i < n; i++ {
+			var k string
+			for {
+				k = fmt.Sprint("k", rand.Intn(1000000000))
+				if !oused[k] {
+					oused[k] = true
+					break
+				}
 			}
+			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		lc := canonicalizeLabels(l)
+		f.lock.Lock()
+		avail := !f.lused[lc]
+		if avail {
+			f.lused[lc] = true
+			f.lock.Unlock()
+			return l
+		}
+		f.lock.Unlock()
 	}
-	return l
 }
 
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
@@ -144,7 +158,7 @@ func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(sdk, name)
 	descriptor := sdk.GetDescriptor(instrument.Impl())
-	kvs := someLabels()
+	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
 	labs := sdk.Labels(kvs...)
 	dur := getPeriod()
@@ -250,8 +264,9 @@ func stressTest(t *testing.T, impl testImpl) {
 	ctx := context.Background()
 	t.Parallel()
 	fixture := &testFixture{
-		T:    t,
-		impl: impl,
+		T:     t,
+		impl:  impl,
+		lused: map[string]bool{},
 	}
 	cc := concurrency()
 	sdk := sdk.New(fixture)
