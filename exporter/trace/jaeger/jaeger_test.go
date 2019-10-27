@@ -178,7 +178,7 @@ func Test_spanDataToThrift(t *testing.T) {
 					{
 						Timestamp: now.UnixNano() / 1000,
 						Fields: []*gen.Tag{
-							&gen.Tag{
+							{
 								Key:   "k1",
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
