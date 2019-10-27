@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"context"
 	"encoding/binary"
 	"sort"
 	"testing"
@@ -37,13 +38,14 @@ import (
 // TODO(rghetia): Test export.
 func TestNewExporter(t *testing.T) {
 	const (
-		serviceName = "test-service"
-		tagKey      = "key"
-		tagVal      = "val"
+		collectorEndpoint = "http://localhost"
+		serviceName       = "test-service"
+		tagKey            = "key"
+		tagVal            = "val"
 	)
 	// Create Jaeger Exporter
 	exp, err := NewExporter(
-		WithCollectorEndpoint("http://localhost"),
+		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
 			Tags: []core.KeyValue{
@@ -55,13 +57,48 @@ func TestNewExporter(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, serviceName, exp.process.ServiceName)
 	assert.Len(t, exp.process.Tags, 1)
+}
+
+func TestNewExporterShouldFailIfCollectorEndpoingEmpty(t *testing.T) {
+	_, err := NewExporter(
+		WithCollectorEndpoint(""),
+	)
+
+	assert.Error(t, err)
+}
+
+func TestExporter_ExportSpan(t *testing.T) {
+	const (
+		collectorEndpoint = "http://localhost"
+		serviceName       = "test-service"
+		tagKey            = "key"
+		tagVal            = "val"
+	)
+	// Create Jaeger Exporter
+	exp, err := NewExporter(
+		WithCollectorEndpoint(collectorEndpoint),
+		WithProcess(Process{
+			ServiceName: serviceName,
+			Tags: []core.KeyValue{
+				key.String(tagKey, tagVal),
+			},
+		}),
+	)
+
+	assert.NoError(t, err)
 
 	exp.RegisterSimpleSpanProcessor()
-	_, err = sdktrace.NewProvider(
+	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp))
 
 	assert.NoError(t, err)
+
+	apitrace.SetGlobalProvider(tp)
+	_, span := apitrace.GlobalProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
+	span.End()
+
+	assert.True(t, span.SpanContext().IsValid())
 }
 
 func Test_spanDataToThrift(t *testing.T) {
