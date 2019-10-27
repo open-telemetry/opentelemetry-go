@@ -35,7 +35,6 @@ import (
 	"go.opentelemetry.io/sdk/export"
 )
 
-// TODO(rghetia): Test export.
 func TestNewExporter(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
@@ -109,6 +108,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID := uint64(0x0102030405060709)
 
+	messageEventValue := "event-test"
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := float64(123.456)
@@ -146,7 +146,9 @@ func Test_spanDataToThrift(t *testing.T) {
 					// Jaeger doesn't handle Uint tags, this should be ignored.
 					key.Uint64("ignored", 123),
 				},
-				// TODO: [rghetia] add events test after event is concrete type.
+				MessageEvents: []export.Event{
+					{Message: messageEventValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+				},
 				Status: codes.Unknown,
 			},
 			want: &gen.Span{
@@ -172,7 +174,23 @@ func Test_spanDataToThrift(t *testing.T) {
 						SpanId:      int64(linkSpanID),
 					},
 				},
-				// TODO [rghetia]: check Logs when event is added.
+				Logs: []*gen.Log{
+					{
+						Timestamp: now.UnixNano() / 1000,
+						Fields: []*gen.Tag{
+							&gen.Tag{
+								Key:   "k1",
+								VStr:  &keyValue,
+								VType: gen.TagType_STRING,
+							},
+							{
+								Key:   "message",
+								VStr:  &messageEventValue,
+								VType: gen.TagType_STRING,
+							},
+						},
+					},
+				},
 			},
 		},
 	}
