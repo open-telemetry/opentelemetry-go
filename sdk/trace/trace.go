@@ -18,15 +18,11 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"math/rand"
-	"sync"
-	"sync/atomic"
 
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/trace/internal"
 )
 
-var config atomic.Value // access atomically
-
-func init() {
+func defIDGenerator() internal.IDGenerator {
 	gen := &defaultIDGenerator{}
 	// initialize traceID and spanID generators.
 	var rngSeed int64
@@ -37,27 +33,5 @@ func init() {
 	}
 	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
 	gen.spanIDInc |= 1
-
-	config.Store(&Config{
-		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
-		IDGenerator:          gen,
-		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
-		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
-		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
-	})
-}
-
-var tr *tracer
-var registerOnce sync.Once
-
-// Register registers tracer implementation as default Tracer.
-// It creates single instance of tracer and registers it once.
-// Recommended use is to call Register in main() of an
-// application before calling any tracing api.
-func Register() apitrace.Tracer {
-	registerOnce.Do(func() {
-		tr = &tracer{}
-		apitrace.SetGlobalTracer(tr)
-	})
-	return tr
+	return gen
 }

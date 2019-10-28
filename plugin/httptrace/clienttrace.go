@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 )
 
 var (
@@ -42,6 +43,8 @@ type clientTracer struct {
 	context.Context
 	httptrace.ClientTrace
 
+	tr trace.Tracer
+
 	levels map[string]trace.Span
 	root   trace.Span
 	mtx    sync.Mutex
@@ -52,12 +55,13 @@ func newClientTracer(ctx context.Context) *clientTracer {
 		Context: ctx,
 		levels:  make(map[string]trace.Span),
 	}
+	ct.tr = global.TraceProvider().GetTracer("go.opentelemetry.io/plugin/httptrace")
 	ct.open("http.request")
 	return ct
 }
 
 func (ct *clientTracer) open(name string, attrs ...core.KeyValue) {
-	_, sp := trace.Start(ct.Context, name, trace.WithAttributes(attrs...))
+	_, sp := ct.tr.Start(ct.Context, name, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ct.root == nil {

@@ -31,12 +31,16 @@ import (
 )
 
 var (
-	traceID = core.TraceID{High: 0x4bf92f3577b34da6, Low: 0xa3ce929d0e0e4736}
+	traceID = mustTraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID  = uint64(0x00f067aa0ba902b7)
 )
 
+func mustTraceIDFromHex(s string) (t core.TraceID) {
+	t, _ = core.TraceIDFromHex(s)
+	return
+}
+
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	var propagator propagation.HTTPTraceContextPropagator
 	tests := []struct {
 		name   string
@@ -130,7 +134,6 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	var propagator propagation.HTTPTraceContextPropagator
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
@@ -279,7 +282,6 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	propagator := propagation.HTTPTraceContextPropagator{}
 	tests := []struct {
 		name    string
@@ -368,7 +370,6 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	trace.SetGlobalTracer(&mocktrace.MockTracer{})
 	propagator := propagation.HTTPTraceContextPropagator{}
 	tests := []struct {
 		name   string
@@ -470,7 +471,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	}
 }
 
-func TestHttpTraceContextPropagator_GetAllKeys(t *testing.T) {
+func TestHTTPTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator propagation.HTTPTraceContextPropagator
 	want := []string{"Traceparent", "Correlation-Context"}
 	got := propagator.GetAllKeys()

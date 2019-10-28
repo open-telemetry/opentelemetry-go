@@ -27,7 +27,7 @@ import (
 	otelkey "go.opentelemetry.io/api/key"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
 var (
@@ -97,6 +97,10 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
+	spanKind := spanOpts.SpanKind
+	if spanKind == "" {
+		spanKind = oteltrace.SpanKindInternal
+	}
 	spanContext := otelcore.SpanContext{
 		TraceID:    t.getTraceID(ctx, &spanOpts),
 		SpanID:     t.getSpanID(),
@@ -112,6 +116,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		EndTime:        time.Time{},
 		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
 		Events:         nil,
+		SpanKind:       spanKind,
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.SetCurrentSpan(ctx, span)
@@ -145,11 +150,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 		}
 		return traceID
 	}
-	uints := t.getNRandUint64(2)
-	return otelcore.TraceID{
-		High: uints[0],
-		Low:  uints[1],
-	}
+	return t.getRandTraceID()
 }
 
 func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) uint64 {
@@ -183,17 +184,19 @@ func (t *MockTracer) getSpanID() uint64 {
 }
 
 func (t *MockTracer) getRandUint64() uint64 {
-	return t.getNRandUint64(1)[0]
-}
-
-func (t *MockTracer) getNRandUint64(n int) []uint64 {
-	uints := make([]uint64, n)
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
-	for i := 0; i < n; i++ {
-		uints[i] = t.rand.Uint64()
-	}
-	return uints
+	return t.rand.Uint64()
+}
+
+func (t *MockTracer) getRandTraceID() otelcore.TraceID {
+	t.randLock.Lock()
+	defer t.randLock.Unlock()
+
+	tid := otelcore.TraceID{}
+	t.rand.Read(tid[:])
+
+	return tid
 }
 
 func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrace.Span) context.Context {
@@ -211,6 +214,7 @@ type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer oteltrace.Tracer
 	spanContext    otelcore.SpanContext
+	SpanKind       oteltrace.SpanKind
 	recording      bool
 
 	Attributes   oteldctx.Map

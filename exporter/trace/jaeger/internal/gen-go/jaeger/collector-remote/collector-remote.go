@@ -14,8 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"github.com/apache/thrift/lib/go/thrift"
+
+	"go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 )
 
 func Usage() {
@@ -34,8 +35,8 @@ func main() {
 	var protocol string
 	var urlString string
 	var framed bool
-	var useHttp bool
-	var parsedUrl *url.URL
+	var useHTTP bool
+	var parsedURL *url.URL
 	var trans thrift.TTransport
 	_ = strconv.Atoi
 	_ = math.Abs
@@ -45,19 +46,19 @@ func main() {
 	flag.StringVar(&protocol, "P", "binary", "Specify the protocol (binary, compact, simplejson, json)")
 	flag.StringVar(&urlString, "u", "", "Specify the url")
 	flag.BoolVar(&framed, "framed", false, "Use framed transport")
-	flag.BoolVar(&useHttp, "http", false, "Use http")
+	flag.BoolVar(&useHTTP, "http", false, "Use http")
 	flag.Parse()
 
 	if len(urlString) > 0 {
 		var err error
-		parsedUrl, err = url.Parse(urlString)
+		parsedURL, err = url.Parse(urlString)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error parsing URL: ", err)
 			flag.Usage()
 		}
-		host = parsedUrl.Host
-		useHttp = len(parsedUrl.Scheme) <= 0 || parsedUrl.Scheme == "http"
-	} else if useHttp {
+		host = parsedURL.Host
+		useHTTP = len(parsedURL.Scheme) <= 0 || parsedURL.Scheme == "http"
+	} else if useHTTP {
 		_, err := url.Parse(fmt.Sprint("http://", host, ":", port))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error parsing URL: ", err)
@@ -67,8 +68,8 @@ func main() {
 
 	cmd := flag.Arg(0)
 	var err error
-	if useHttp {
-		trans, err = thrift.NewTHttpClient(parsedUrl.String())
+	if useHTTP {
+		trans, err = thrift.NewTHttpClient(parsedURL.String())
 	} else {
 		portStr := fmt.Sprint(port)
 		if strings.Contains(host, ":") {

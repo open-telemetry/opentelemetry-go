@@ -30,14 +30,12 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stackdriver"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func initTracer() {
-	// Register SDK as trace provider.
-	sdktrace.Register()
-
 	projectID := os.Getenv("PROJECT_ID")
 
 	// Create Stackdriver exporter to be able to retrieve
@@ -48,15 +46,20 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	exporter.RegisterSimpleSpanProcessor()
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	global.SetTraceProvider(tp)
 }
 
 func main() {
 	initTracer()
+	tr := global.TraceProvider().GetTracer("stackdriver/example/client")
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
@@ -65,7 +68,7 @@ func main() {
 
 	var body []byte
 
-	err := trace.GlobalTracer().WithSpan(ctx, "say hello",
+	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 

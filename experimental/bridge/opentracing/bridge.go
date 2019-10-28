@@ -31,7 +31,7 @@ import (
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -312,14 +312,14 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	}
 	// TODO: handle links, needs SpanData to be in the API first?
 	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
-	// TODO: handle span kind, needs SpanData to be in the API first?
-	attributes, _, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
+	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.SpanOptions) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
 		opts.Relation = bRelation.ToOtelRelation()
 		opts.Record = true
+		opts.SpanKind = kind
 	})
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
@@ -379,17 +379,16 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-type spanKindTODO struct{}
-
-func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, spanKindTODO, bool) {
-	kind := spanKindTODO{}
+func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, oteltrace.SpanKind, bool) {
+	kind := oteltrace.SpanKindInternal
 	error := false
 	var pairs []otelcore.KeyValue
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			// TODO: java has some notion of span kind, it
-			// probably is related to some proto stuff
+			if sk, ok := v.(string); ok {
+				kind = oteltrace.SpanKind(sk)
+			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {
 				error = true
@@ -512,7 +511,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !ok {
 		return ot.ErrInvalidCarrier
 	}
-	hhcarrier.Set(traceIDHeader, traceIDString(bridgeSC.otelSpanContext.TraceID))
+	hhcarrier.Set(traceIDHeader, bridgeSC.otelSpanContext.TraceIDString())
 	hhcarrier.Set(spanIDHeader, spanIDToString(bridgeSC.otelSpanContext.SpanID))
 	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
 	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
@@ -521,12 +520,6 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 		return true
 	})
 	return nil
-}
-
-// mostly copied from core/span_context.go, but I prefer not to rely
-// on some impl details
-func traceIDString(traceID otelcore.TraceID) string {
-	return fmt.Sprintf("%.16x%.16x", traceID.High, traceID.Low)
 }
 
 func spanIDToString(spanID uint64) string {
@@ -558,7 +551,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		ck := http.CanonicalHeaderKey(k)
 		switch ck {
 		case traceIDHeader:
-			traceID, err := traceIDFromString(v)
+			traceID, err := otelcore.TraceIDFromHex(v)
 			if err != nil {
 				return err
 			}
@@ -586,23 +579,6 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrSpanContextNotFound
 	}
 	return bridgeSC, nil
-}
-
-func traceIDFromString(s string) (otelcore.TraceID, error) {
-	traceID := otelcore.TraceID{}
-	if len(s) != 32 {
-		return traceID, fmt.Errorf("invalid trace ID")
-	}
-	high, err := strconv.ParseUint(s[0:16], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	low, err := strconv.ParseUint(s[16:32], 16, 64)
-	if err != nil {
-		return traceID, err
-	}
-	traceID.High, traceID.Low = high, low
-	return traceID, nil
 }
 
 func spanIDFromString(s string) (uint64, error) {

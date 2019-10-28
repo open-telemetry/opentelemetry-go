@@ -12,25 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package global_test
 
-import "sync/atomic"
+import (
+	"testing"
 
-// The process global tracer could have process-wide resource
-// tags applied directly, or we can have a SetGlobal tracer to
-// install a default tracer w/ resources.
-var global atomic.Value
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
+)
 
-// GlobalTracer return tracer registered with global registry.
-// If no tracer is registered then an instance of noop Tracer is returned.
-func GlobalTracer() Tracer {
-	if t := global.Load(); t != nil {
-		return t.(Tracer)
-	}
-	return NoopTracer{}
+type TestProvider1 struct {
 }
 
-// SetGlobalTracer sets provided tracer as a global tracer.
-func SetGlobalTracer(t Tracer) {
-	global.Store(t)
+var _ trace.Provider = &TestProvider1{}
+
+func (tp *TestProvider1) GetTracer(name string) trace.Tracer {
+	return &trace.NoopTracer{}
+}
+
+func TestMulitpleGlobalProvider(t *testing.T) {
+
+	p1 := TestProvider1{}
+	p2 := trace.NoopTraceProvider{}
+	global.SetTraceProvider(&p1)
+	global.SetTraceProvider(&p2)
+
+	got := global.TraceProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	}
 }

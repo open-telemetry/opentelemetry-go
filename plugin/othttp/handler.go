@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/propagation"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 	prop "go.opentelemetry.io/propagation"
 )
 
@@ -129,8 +130,9 @@ func WithMessageEvents(events ...event) Option {
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
-		WithTracer(trace.GlobalTracer()),
+		WithTracer(global.TraceProvider().GetTracer("go.opentelemtry.io/plugin/othttp")),
 		WithPropagator(prop.HTTPTraceContextPropagator{}),
+		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
 	for _, opt := range append(defaultOpts, opts...) {
