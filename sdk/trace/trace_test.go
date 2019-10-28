@@ -35,11 +35,12 @@ import (
 
 var (
 	tid core.TraceID
-	sid = uint64(0x0102040810203040)
+	sid core.SpanID
 )
 
 func init() {
 	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ = core.SpanIDFromHex("0102040810203040")
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
@@ -394,8 +395,8 @@ func TestAddLinks(t *testing.T) {
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
 	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
@@ -435,8 +436,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	span.Link(sc1, key.New("key1").String("value1"))
 	span.Link(sc2,
@@ -471,9 +472,9 @@ func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 	span := startSpan(tp, "LinksOverLimit")
@@ -632,10 +633,10 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
 	}
 	got := te.spans[0]
-	if got.SpanContext.SpanID == 0 {
+	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = 0
+	got.SpanContext.SpanID = core.SpanID{}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -755,6 +756,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	spans = append(spans, s) // never sample
 
 	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+	sID, _ := core.SpanIDFromHex("0001020304050607")
 
 	_, apiSpan = tr.Start(
 		context.Background(),
@@ -762,7 +764,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		apitrace.ChildOf(
 			core.SpanContext{
 				TraceID:    tID,
-				SpanID:     uint64(0x0001020304050607),
+				SpanID:     sID,
 				TraceFlags: 0,
 			},
 		),

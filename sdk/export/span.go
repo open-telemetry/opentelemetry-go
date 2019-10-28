@@ -26,7 +26,7 @@ import (
 // SpanData contains all the information collected by a span.
 type SpanData struct {
 	SpanContext  core.SpanContext
-	ParentSpanID uint64
+	ParentSpanID core.SpanID
 	SpanKind     apitrace.SpanKind
 	Name         string
 	StartTime    time.Time

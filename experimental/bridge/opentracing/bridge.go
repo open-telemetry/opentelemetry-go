@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -512,7 +511,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 		return ot.ErrInvalidCarrier
 	}
 	hhcarrier.Set(traceIDHeader, bridgeSC.otelSpanContext.TraceIDString())
-	hhcarrier.Set(spanIDHeader, spanIDToString(bridgeSC.otelSpanContext.SpanID))
+	hhcarrier.Set(spanIDHeader, bridgeSC.otelSpanContext.SpanIDString())
 	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
 	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
 		// we assume that keys are already canonicalized
@@ -520,10 +519,6 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 		return true
 	})
 	return nil
-}
-
-func spanIDToString(spanID uint64) string {
-	return fmt.Sprintf("%.16x", spanID)
 }
 
 func traceFlagsToString(opts byte) string {
@@ -557,7 +552,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 			}
 			bridgeSC.otelSpanContext.TraceID = traceID
 		case spanIDHeader:
-			spanID, err := spanIDFromString(v)
+			spanID, err := otelcore.SpanIDFromHex(v)
 			if err != nil {
 				return err
 			}
@@ -579,13 +574,6 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrSpanContextNotFound
 	}
 	return bridgeSC, nil
-}
-
-func spanIDFromString(s string) (uint64, error) {
-	if len(s) != 16 {
-		return 0, fmt.Errorf("invalid span ID")
-	}
-	return strconv.ParseUint(s, 16, 64)
 }
 
 func stringToTraceFlags(s string) byte {

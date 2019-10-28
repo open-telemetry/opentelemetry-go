@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/api/core"
@@ -119,7 +118,7 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 
 	var sc core.SpanContext
 
-	_, err = hex.Decode(sc.TraceID[0:16], []byte(sections[1][0:32]))
+	sc.TraceID, err = core.TraceIDFromHex(sections[1][:32])
 	if err != nil {
 		return core.EmptySpanContext()
 	}
@@ -127,11 +126,10 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 	if len(sections[2]) != 16 {
 		return core.EmptySpanContext()
 	}
-	result, err := strconv.ParseUint(sections[2][0:], 16, 64)
+	sc.SpanID, err = core.SpanIDFromHex(sections[2][:])
 	if err != nil {
 		return core.EmptySpanContext()
 	}
-	sc.SpanID = result
 
 	if len(sections[3]) != 2 {
 		return core.EmptySpanContext()

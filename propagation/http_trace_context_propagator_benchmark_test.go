@@ -2,7 +2,6 @@ package propagation
 
 import (
 	"context"
-	"encoding/hex"
 	"net/http"
 	"testing"
 
@@ -25,13 +24,9 @@ func BenchmarkInject(b *testing.B) {
 
 func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 	b.Run("SampledSpanContext", func(b *testing.B) {
-		var (
-			id      uint64
-			spanID  = uint64(0x00f067aa0ba902b7)
-			traceID = core.TraceID{}
-		)
-		bt, _ := hex.DecodeString("4bf92f3577b34da6a3ce929d0e0e4736")
-		copy(traceID[:], bt)
+		var id uint64
+		spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
+		traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 
 		mockTracer := &mocktrace.MockTracer{
 			Sampled:     false,

@@ -199,7 +199,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		refs = append(refs, &gen.SpanRef{
 			TraceIdHigh: int64(binary.BigEndian.Uint64(link.TraceID[0:8])),
 			TraceIdLow:  int64(binary.BigEndian.Uint64(link.TraceID[8:16])),
-			SpanId:      int64(link.SpanID),
+			SpanId:      int64(binary.BigEndian.Uint64(link.SpanID[:])),
 			// TODO(paivagustavo): properly set the reference type when specs are defined
 			//  see https://github.com/open-telemetry/opentelemetry-specification/issues/65
 			RefType: gen.SpanRefType_CHILD_OF,
@@ -209,8 +209,8 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	return &gen.Span{
 		TraceIdHigh:   int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[0:8])),
 		TraceIdLow:    int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[8:16])),
-		SpanId:        int64(data.SpanContext.SpanID),
-		ParentSpanId:  int64(data.ParentSpanID),
+		SpanId:        int64(binary.BigEndian.Uint64(data.SpanContext.SpanID[:])),
+		ParentSpanId:  int64(binary.BigEndian.Uint64(data.ParentSpanID[:])),
 		OperationName: data.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
 		Flags:         int32(data.SpanContext.TraceFlags),
 		StartTime:     data.StartTime.UnixNano() / 1000,
