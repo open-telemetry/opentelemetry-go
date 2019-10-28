@@ -14,9 +14,9 @@ package contains core data types, interfaces and no-op implementations that comp
 specification](https://github.com/open-telemetry/opentelemetry-specification).
 The `sdk` package is the reference implementation of the API.
 
-Libraries that produce telemetry data should only depend on `api`,
+Libraries that produce telemetry data should only depend on `api`
 and defer the choice of the SDK to the application developer. Applications may
-depend on `sdk` or another package that implements the API. 
+depend on `sdk` or another package that implements the API.
 
 To install the API and SDK packages,
 
@@ -89,9 +89,9 @@ See the [contributing file](CONTRIBUTING.md).
 ## Release Schedule
 
 OpenTelemetry Go is under active development. Below is the release schedule
-for the Go library. The first version of release isn't guaranteed to conform
+for the Go library. The first version of the release isn't guaranteed to conform
 to a specific version of the specification, and future releases will not
-attempt to maintain backwards compatibility with the alpha release.
+attempt to maintain backward compatibility with the alpha release.
 
 | Component                   | Version | Target Date     |
 | --------------------------- | ------- | --------------- |
