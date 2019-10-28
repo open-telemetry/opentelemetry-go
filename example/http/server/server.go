@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/stdout"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
@@ -42,12 +43,12 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	trace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 }
 
 func main() {
 	initTracer()
-	tr := trace.GlobalProvider().GetTracer("example/server")
+	tr := global.TraceProvider().GetTracer("example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)

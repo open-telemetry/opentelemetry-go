@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/example/namedtracer/foo"
 	"go.opentelemetry.io/exporter/trace/stdout"
+	"go.opentelemetry.io/global"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -47,7 +48,7 @@ func initTracer() {
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
 	}
-	trace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 }
 
 func main() {
