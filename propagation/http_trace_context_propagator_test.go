@@ -32,11 +32,16 @@ import (
 
 var (
 	traceID = mustTraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID  = uint64(0x00f067aa0ba902b7)
+	spanID  = mustSpanIDFromHex("00f067aa0ba902b7")
 )
 
 func mustTraceIDFromHex(s string) (t core.TraceID) {
 	t, _ = core.TraceIDFromHex(s)
+	return
+}
+
+func mustSpanIDFromHex(s string) (t core.SpanID) {
+	t, _ = core.SpanIDFromHex(s)
 	return
 }
 

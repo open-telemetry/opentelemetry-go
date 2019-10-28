@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"sync/atomic"
 
 	"go.opentelemetry.io/api/core"
@@ -77,7 +78,8 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	} else {
 		sc = opts.Relation.SpanContext
 	}
-	sc.SpanID = atomic.AddUint64(mt.StartSpanID, 1)
+
+	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))
 	span = &MockSpan{
 		sc:     sc,
 		tracer: mt,

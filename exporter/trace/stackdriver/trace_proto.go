@@ -82,7 +82,7 @@ func protoFromSpanData(s *export.SpanData, projectID string) *tracepb.Span {
 		EndTime:                 timestampProto(s.EndTime),
 		SameProcessAsParentSpan: &wrapperspb.BoolValue{Value: !s.HasRemoteParent},
 	}
-	if s.ParentSpanID != s.SpanContext.SpanID && s.ParentSpanID != 0 {
+	if s.ParentSpanID != s.SpanContext.SpanID && s.ParentSpanID.IsValid() {
 		sp.ParentSpanId = fmt.Sprintf("%.16x", s.ParentSpanID)
 	}
 	if s.Status != codes.OK {

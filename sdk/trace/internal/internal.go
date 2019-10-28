@@ -20,5 +20,5 @@ import "go.opentelemetry.io/api/core"
 // IDGenerator allows custom generators for TraceId and SpanId.
 type IDGenerator interface {
 	NewTraceID() core.TraceID
-	NewSpanID() uint64
+	NewSpanID() core.SpanID
 }

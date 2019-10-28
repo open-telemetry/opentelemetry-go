@@ -29,7 +29,7 @@ type Sampler func(SamplingParameters) SamplingDecision
 type SamplingParameters struct {
 	ParentContext   core.SpanContext
 	TraceID         core.TraceID
-	SpanID          uint64
+	SpanID          core.SpanID
 	Name            string
 	HasRemoteParent bool
 }
