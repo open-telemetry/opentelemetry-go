@@ -212,7 +212,7 @@ func (f *testFixture) assertTest(numCollect int) {
 		return true
 	})
 	if rsize != csize {
-		f.T.Error("Rsize != Csize", rsize, csize)
+		f.T.Error("Did not receive the correct set of metrics: Received != Expected", rsize, csize)
 	}
 
 	// Note: It's useful to know the test triggers this condition,
