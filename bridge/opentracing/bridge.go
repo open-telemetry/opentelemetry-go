@@ -30,7 +30,7 @@ import (
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -322,7 +322,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	})
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
-			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/experimental/bridge/opentracing/migration\n")
+			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/bridge/opentracing/migration\n")
 		})
 	}
 	if hadTrueErrorTag {

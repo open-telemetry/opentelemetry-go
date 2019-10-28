@@ -27,7 +27,7 @@ import (
 	otelkey "go.opentelemetry.io/api/key"
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	"go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	"go.opentelemetry.io/bridge/opentracing/migration"
 )
 
 var (
