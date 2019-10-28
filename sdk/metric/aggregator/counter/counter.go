@@ -52,10 +52,6 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	zero := core.NewZeroNumber(kind)
 	c.save = c.live.SwapNumberAtomic(zero)
 
-	if c.save.IsZero(kind) {
-		return
-	}
-
 	exp.Export(ctx, rec, c)
 }
 
