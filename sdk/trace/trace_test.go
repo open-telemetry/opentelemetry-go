@@ -136,17 +136,35 @@ func TestRecordingIsOff(t *testing.T) {
 }
 
 func TestSampling(t *testing.T) {
+	idg := defIDGenerator()
 	total := 10000
 	for name, tc := range map[string]struct {
-		sampler   Sampler
-		expect    float64
-		tolerance float64
+		sampler       Sampler
+		expect        float64
+		tolerance     float64
+		parent        bool
+		sampledParent bool
 	}{
-		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0, tolerance: 0},
+		// Span w/o a parent
 		"NeverSample":            {sampler: NeverSample(), expect: 0, tolerance: 0},
-		"ProbabilitySampler(25)": {sampler: ProbabilitySampler(0.25), expect: .25, tolerance: 0.015},
-		"ProbabilitySampler(50)": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015},
-		"ProbabilitySampler(75)": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015},
+		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0, tolerance: 0},
+		"ProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0},
+		"ProbabilitySampler_.25": {sampler: ProbabilitySampler(0.25), expect: .25, tolerance: 0.015},
+		"ProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015},
+		"ProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015},
+		"ProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0},
+		// Spans with a parent that is *not* sampled act like spans w/o a parent
+		"UnsampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: .25, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true},
+		// Spans with a parent that is sampled, will always sample, regardless of the probability
+		"SampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		// Spans with a sampled parent, but when using the NeverSample Sampler, aren't sampled
+		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, tolerance: 0, parent: true, sampledParent: true},
 	} {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
@@ -158,7 +176,18 @@ func TestSampling(t *testing.T) {
 			tr := p.GetTracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
-				_, span := tr.Start(context.Background(), "test")
+				var opts []apitrace.SpanOption
+				if tc.parent {
+					psc := core.SpanContext{
+						TraceID: idg.NewTraceID(),
+						SpanID:  idg.NewSpanID(),
+					}
+					if tc.sampledParent {
+						psc.TraceFlags = core.TraceFlagsSampled
+					}
+					opts = append(opts, apitrace.ChildOf(psc))
+				}
+				_, span := tr.Start(context.Background(), "test", opts...)
 				if span.SpanContext().IsSampled() {
 					sampled++
 				}
