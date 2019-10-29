@@ -1,5 +1,6 @@
 .tools/
 .idea/
+.vscode/
 *.iml
 *.so
 coverage.*
