@@ -66,16 +66,31 @@ func TestNewExporterShouldFailIfCollectorEndpoingEmpty(t *testing.T) {
 	assert.Error(t, err)
 }
 
+type testCollectorEnpoint struct {
+	spansUploaded []*gen.Span
+}
+
+func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
+	c.spansUploaded = append(c.spansUploaded, batch.Spans...)
+	return nil
+}
+
+var _ batchUploader = (*testCollectorEnpoint)(nil)
+
+func withTestCollectorEndpoint() func() (batchUploader, error) {
+	return func() (batchUploader, error) {
+		return &testCollectorEnpoint{}, nil
+	}
+}
 func TestExporter_ExportSpan(t *testing.T) {
 	const (
-		collectorEndpoint = "http://localhost"
-		serviceName       = "test-service"
-		tagKey            = "key"
-		tagVal            = "val"
+		serviceName = "test-service"
+		tagKey      = "key"
+		tagVal      = "val"
 	)
 	// Create Jaeger Exporter
 	exp, err := NewExporter(
-		WithCollectorEndpoint(collectorEndpoint),
+		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
 			Tags: []core.KeyValue{
@@ -86,7 +101,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	exp.RegisterSimpleSpanProcessor()
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp))
@@ -98,6 +112,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())
+
+	exp.Flush()
+	tc := exp.uploader.(*testCollectorEnpoint)
+	assert.True(t, len(tc.spansUploaded) > 0)
 }
 
 func Test_spanDataToThrift(t *testing.T) {

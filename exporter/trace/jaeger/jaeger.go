@@ -144,6 +144,7 @@ type Exporter struct {
 }
 
 // RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
+//TODO(eran-levy): deprecate - already registered in NewProvider
 func (e *Exporter) RegisterSimpleSpanProcessor() {
 	e.once.Do(func() {
 		ssp := trace.NewSimpleSpanProcessor(e)

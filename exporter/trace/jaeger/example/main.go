@@ -45,7 +45,6 @@ func initTracer() func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	exporter.RegisterSimpleSpanProcessor()
 
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
