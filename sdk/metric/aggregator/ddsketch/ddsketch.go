@@ -28,6 +28,7 @@ type (
 	Aggregator struct {
 		lock sync.Mutex
 		cfg  *sdk.Config
+		kind core.NumberKind
 		live *sdk.DDSketch
 		save *sdk.DDSketch
 	}
@@ -36,15 +37,36 @@ type (
 var _ export.MetricAggregator = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(cfg *sdk.Config) *Aggregator {
+func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
 		cfg:  cfg,
+		kind: desc.NumberKind(),
 		live: sdk.NewDDSketch(cfg),
 	}
 }
 
 func NewDefaultConfig() *sdk.Config {
 	return sdk.NewDefaultConfig()
+}
+
+func (c *Aggregator) Sum() float64 {
+	return c.save.Sum()
+}
+
+func (c *Aggregator) Count() int64 {
+	return c.save.Count()
+}
+
+func (c *Aggregator) Max() float64 {
+	return c.save.Quantile(1)
+}
+
+func (c *Aggregator) Min() float64 {
+	return c.save.Quantile(0)
+}
+
+func (c *Aggregator) Quantile(q float64) float64 {
+	return c.save.Quantile(q)
 }
 
 // Collect saves the current value (atomically) and exports it.

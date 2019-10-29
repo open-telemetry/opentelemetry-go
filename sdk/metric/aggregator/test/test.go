@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"math/rand"
+	"sort"
 	"testing"
 
 	"go.opentelemetry.io/api/core"
@@ -79,4 +80,24 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 			f(t, profile)
 		})
 	}
+}
+
+type Numbers []core.Number
+
+func (n *Numbers) Sort() {
+	sort.Slice(*n, func(i, j int) bool {
+		return (*n)[i] < (*n)[j]
+	})
+}
+
+func (n *Numbers) Sum(kind core.NumberKind) core.Number {
+	var sum core.Number
+	for _, num := range *n {
+		sum.AddNumber(kind, num)
+	}
+	return sum
+}
+
+func (n *Numbers) Count() int64 {
+	return int64(len(*n))
 }
