@@ -55,7 +55,7 @@ func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggr
 		if strings.HasSuffix(rec.Descriptor().Name(), "maxsumcount") {
 			return maxsumcount.New()
 		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
-			return ddsketch.New(ddsketch.NewDefaultConfig())
+			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
 		}
 	}
 	return nil

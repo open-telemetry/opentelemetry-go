@@ -101,3 +101,14 @@ func (n *Numbers) Sum(kind core.NumberKind) core.Number {
 func (n *Numbers) Count() int64 {
 	return int64(len(*n))
 }
+
+func NumberAsFloat(n core.Number, kind core.NumberKind) float64 {
+	switch kind {
+	case core.Float64NumberKind:
+		return n.AsFloat64()
+	case core.Int64NumberKind:
+		return float64(n.AsInt64())
+	default:
+		panic("Not tested")
+	}
+}

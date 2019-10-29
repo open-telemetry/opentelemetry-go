@@ -43,29 +43,19 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// SumAsInt64 returns the accumulated sum as an int64.
-func (c *Aggregator) SumAsInt64() int64 {
-	return c.save.sum.AsInt64()
-}
-
-// SumAsFloat64 returns the accumulated sum as an float64.
-func (c *Aggregator) SumAsFloat64() float64 {
-	return c.save.sum.AsFloat64()
+// Sum returns the accumulated sum as an int64.
+func (c *Aggregator) Sum() core.Number {
+	return c.save.sum
 }
 
 // Count returns the accumulated count.
-func (c *Aggregator) Count() uint64 {
-	return c.save.count.AsUint64()
+func (c *Aggregator) Count() int64 {
+	return int64(c.save.count.AsUint64())
 }
 
-// MaxAsInt64 returns the accumulated max as an int64.
-func (c *Aggregator) MaxAsInt64() int64 {
-	return c.save.max.AsInt64()
-}
-
-// MaxAsFloat64 returns the accumulated max as an float64.
-func (c *Aggregator) MaxAsFloat64() float64 {
-	return c.save.max.AsFloat64()
+// Max returns the accumulated max as an float64.
+func (c *Aggregator) Max() core.Number {
+	return c.save.max
 }
 
 // Collect saves the current value (atomically) and exports it.

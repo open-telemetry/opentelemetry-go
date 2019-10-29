@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ddsketch
+package maxsumcount
 
 import (
 	"context"
@@ -26,15 +26,13 @@ import (
 
 const count = 100
 
-// N.B. DDSketch only supports absolute measures
-
-func TestDDSketchAbsolute(t *testing.T) {
+func TestMaxSumCountAbsolute(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
 
-		agg := New(NewDefaultConfig(), record.Descriptor())
+		agg := New()
 
 		var all test.Numbers
 		for i := 0; i < count; i++ {
@@ -49,19 +47,13 @@ func TestDDSketchAbsolute(t *testing.T) {
 
 		require.InEpsilon(t,
 			test.NumberAsFloat(all.Sum(profile.NumberKind), profile.NumberKind),
-			agg.Sum(),
-			0.0000001,
+			test.NumberAsFloat(agg.Sum(), profile.NumberKind),
+			0.000000001,
 			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+		require.Equal(t, all.Count(), agg.Count(), "Same sum - absolute")
 		require.Equal(t,
-			test.NumberAsFloat(all[len(all)-1], profile.NumberKind),
+			all[len(all)-1],
 			agg.Max(),
-			"Same max - absolute")
-		// Median
-		require.InEpsilon(t,
-			test.NumberAsFloat(all[len(all)/2], profile.NumberKind),
-			agg.Quantile(0.5),
-			0.1,
-			"Same median - absolute")
+			"Same sum - absolute")
 	})
 }
