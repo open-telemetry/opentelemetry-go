@@ -21,10 +21,14 @@ type Value struct {
 	Uint64  uint64
 	Float64 float64
 	String  string
-	Bytes   []byte
 
-	// TODO See how segmentio/stats handles this type, it's much smaller.
-	// TODO Lazy value type?
+	// Note: this type could be made smaller by using a
+	// core.Number to represent four of these fields, e.g.,
+	// struct {
+	//   Type   ValueType
+	//   String string
+	//   Number Number
+	// }
 }
 
 const (
@@ -37,7 +41,6 @@ const (
 	FLOAT32
 	FLOAT64
 	STRING
-	BYTES
 )
 
 func (k Key) Bool(v bool) KeyValue {
@@ -120,16 +123,6 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
-func (k Key) Bytes(v []byte) KeyValue {
-	return KeyValue{
-		Key: k,
-		Value: Value{
-			Type:  BYTES,
-			Bytes: v,
-		},
-	}
-}
-
 func (k Key) Int(v int) KeyValue {
 	if unsafe.Sizeof(v) == 4 {
 		return k.Int32(int32(v))
@@ -148,7 +141,6 @@ func (k Key) Defined() bool {
 	return len(k) != 0
 }
 
-// TODO make this a lazy one-time conversion.
 func (v Value) Emit() string {
 	switch v.Type {
 	case BOOL:
@@ -161,8 +153,6 @@ func (v Value) Emit() string {
 		return fmt.Sprint(v.Float64)
 	case STRING:
 		return v.String
-	case BYTES:
-		return string(v.Bytes)
 	}
 	return "unknown"
 }
