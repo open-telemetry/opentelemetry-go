@@ -58,10 +58,16 @@ type (
 
 var _ export.MetricAggregator = &Aggregator{}
 
+// An unset gauge has zero timestamp and zero value.
+var unsetGauge = &gaugeData{}
+
 // New returns a new gauge aggregator.  This aggregator retains the
 // last value and timestamp that were recorded.
 func New() *Aggregator {
-	return &Aggregator{}
+	return &Aggregator{
+		live: unsafe.Pointer(unsetGauge),
+		save: unsafe.Pointer(unsetGauge),
+	}
 }
 
 // AsInt64 returns the recorded gauge value as an int64.
@@ -76,13 +82,7 @@ func (g *Aggregator) Timestamp() time.Time {
 
 // Collect saves the current value (atomically) and exports it.
 func (g *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	g.save = atomic.SwapPointer(&g.live, nil)
-
-	if g.save == nil {
-		// There is no current value. This indicates a harmless race
-		// involving Collect() and DeleteHandle().
-		return
-	}
+	g.save = atomic.LoadPointer(&g.live)
 
 	exp.Export(ctx, rec, g)
 }
@@ -115,11 +115,9 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 	for {
 		gd := (*gaugeData)(atomic.LoadPointer(&g.live))
 
-		if gd != nil {
-			if gd.value.CompareNumber(kind, number) >= 0 {
-				// TODO warn
-				return
-			}
+		if gd.value.CompareNumber(kind, number) >= 0 {
+			// TODO warn
+			return
 		}
 
 		if atomic.CompareAndSwapPointer(&g.live, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
