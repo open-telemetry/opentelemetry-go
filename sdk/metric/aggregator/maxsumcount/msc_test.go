@@ -46,8 +46,8 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 		all.Sort()
 
 		require.InEpsilon(t,
-			test.NumberAsFloat(all.Sum(profile.NumberKind), profile.NumberKind),
-			test.NumberAsFloat(agg.Sum(), profile.NumberKind),
+			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			agg.Sum().CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same sum - absolute")

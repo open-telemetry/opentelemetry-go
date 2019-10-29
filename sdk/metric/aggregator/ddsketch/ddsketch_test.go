@@ -48,18 +48,18 @@ func TestDDSketchAbsolute(t *testing.T) {
 		all.Sort()
 
 		require.InEpsilon(t,
-			test.NumberAsFloat(all.Sum(profile.NumberKind), profile.NumberKind),
+			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
 			agg.Sum(),
 			0.0000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
 		require.Equal(t,
-			test.NumberAsFloat(all[len(all)-1], profile.NumberKind),
+			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
 			agg.Max(),
 			"Same max - absolute")
 		// Median
 		require.InEpsilon(t,
-			test.NumberAsFloat(all[len(all)/2], profile.NumberKind),
+			all[len(all)/2].CoerceToFloat64(profile.NumberKind),
 			agg.Quantile(0.5),
 			0.1,
 			"Same median - absolute")
