@@ -38,7 +38,6 @@ func initTracer() func() {
 			Tags: []core.KeyValue{
 				key.String("exporter", "jaeger"),
 				key.Float64("float", 312.23),
-				key.Bytes("bytes", []byte("byte array")),
 			},
 		}),
 	)
