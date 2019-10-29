@@ -44,7 +44,7 @@ type (
 		// pool is a pool of labelset builders.
 		pool sync.Pool // *bytes.Buffer
 
-		// empty is the (singleton) result of DefineLabels()
+		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
 		empty labels
 
@@ -207,7 +207,7 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // periodically, this responsbility lies with the exporter, typically,
 // depending on the type of export.  For example, a pull-based
 // exporter will call Collect() when it receives a request to scrape
-// current metric values.  A push-based expofrter should configure its
+// current metric values.  A push-based exporter should configure its
 // own periodic collection.
 func New(exporter export.MetricBatcher) *SDK {
 	m := &SDK{
@@ -222,8 +222,8 @@ func New(exporter export.MetricBatcher) *SDK {
 	return m
 }
 
-// DefineLabels returns a LabelSet corresponding to the arguments.
-// Labels are de-duplicated, with last-value-wins semantics.
+// Labels returns a LabelSet corresponding to the arguments.  Passed
+// labels are de-duplicated, with last-value-wins semantics.
 func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
