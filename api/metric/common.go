@@ -16,14 +16,16 @@ package metric
 
 import (
 	"context"
+
+	"go.opentelemetry.io/api/core"
 )
 
 type commonMetric struct {
-	instrument Instrument
+	instrument InstrumentImpl
 }
 
 type commonHandle struct {
-	handle Handle
+	handle HandleImpl
 }
 
 func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
@@ -31,40 +33,44 @@ func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
 }
 
 func (m commonMetric) float64Measurement(value float64) Measurement {
-	return newMeasurement(m.instrument, NewFloat64MeasurementValue(value))
+	return newMeasurement(m.instrument, core.NewFloat64Number(value))
 }
 
 func (m commonMetric) int64Measurement(value int64) Measurement {
-	return newMeasurement(m.instrument, NewInt64MeasurementValue(value))
+	return newMeasurement(m.instrument, core.NewInt64Number(value))
 }
 
-func (m commonMetric) recordOne(ctx context.Context, value MeasurementValue, labels LabelSet) {
-	m.instrument.RecordOne(ctx, value, labels)
+func (m commonMetric) recordOne(ctx context.Context, number core.Number, labels LabelSet) {
+	m.instrument.RecordOne(ctx, number, labels)
 }
 
-func (h commonHandle) recordOne(ctx context.Context, value MeasurementValue) {
-	h.handle.RecordOne(ctx, value)
+func (m commonMetric) Impl() InstrumentImpl {
+	return m.instrument
+}
+
+func (h commonHandle) recordOne(ctx context.Context, number core.Number) {
+	h.handle.RecordOne(ctx, number)
 }
 
 func (h commonHandle) Release() {
 	h.handle.Release()
 }
 
-func newCommonMetric(instrument Instrument) commonMetric {
+func newCommonMetric(instrument InstrumentImpl) commonMetric {
 	return commonMetric{
 		instrument: instrument,
 	}
 }
 
-func newCommonHandle(handle Handle) commonHandle {
+func newCommonHandle(handle HandleImpl) commonHandle {
 	return commonHandle{
 		handle: handle,
 	}
 }
 
-func newMeasurement(instrument Instrument, value MeasurementValue) Measurement {
+func newMeasurement(instrument InstrumentImpl, number core.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
-		value:      value,
+		number:     number,
 	}
 }
