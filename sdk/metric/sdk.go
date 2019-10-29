@@ -29,7 +29,14 @@ import (
 )
 
 type (
-	// SDK implements the OpenTelemetry Meter API.
+	// SDK implements the OpenTelemetry Meter API.  The SDK is
+	// bound to a single export.MetricBatcher in `New()`.
+	//
+	// The SDK supports a Collect() API to gather and export
+	// current data.  Collect() should be arranged according to
+	// the exporter model.  Push-based exporters will setup a
+	// timer to call Collect() periodically.  Pull-based exporters
+	// will call Collect() when a pull request arrives.
 	SDK struct {
 		// current maps `mapkey` to *record.
 		current sync.Map
@@ -193,12 +200,15 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new *SDK that implements intermediate storage for
-// metric instrument events, suporting configurable aggregation.
+// New constructs a new SDK for the given exporter.  This SDK supports
+// only a single exporter.
 //
-// The SDK does not start any background process to periodically
-// collect metrics.  It is the caller's responsibility to arrange for
-// periodic collection by calling the `Collect()` method.
+// The SDK does not start any background process to collect itself
+// periodically, this responsbility lies with the exporter, typically,
+// depending on the type of export.  For example, a pull-based
+// exporter will call Collect() when it receives a request to scrape
+// current metric values.  A push-based expofrter should configure its
+// own periodic collection.
 func New(exporter export.MetricBatcher) *SDK {
 	m := &SDK{
 		pool: sync.Pool{
@@ -346,9 +356,11 @@ func (m *SDK) saveFromReclaim(rec *record) {
 }
 
 // Collect traverses the list of active records and exports data for
-// each instrument.
+// each active instrument.  Collect() may not be called concurrently.
+//
+// During the collection pass, the export.MetricBatcher will receive
+// one Export() call per current aggregation.
 func (m *SDK) Collect(ctx context.Context) {
-	// This logic relies on being single-threaded, enforce this.
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 

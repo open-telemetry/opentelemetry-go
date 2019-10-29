@@ -13,7 +13,26 @@
 // limitations under the License.
 
 /*
-Package metrics uses lock-free algorithms to maintain its internal state.
+
+Package metric implements the OpenTelemetry `Meter` API.  The SDK
+supports configurable metrics export behavior through a
+`export.MetricBatcher` API.  Most metrics behavior is controlled
+by the `MetricBatcher`, including:
+
+1. Selecting the concrete type of aggregation to use
+2. Receiving exported data during SDK.Collect()
+
+The call to SDK.Collect() initiates collection.  The SDK calls the
+`MetricBatcher` for each current record, asking the aggregator to
+export itself.  Aggregators, found in `./aggregators`, are responsible
+for receiving updates and exporting their current state.
+
+The SDK.Collect() API should be called by an exporter.  During the
+call to Collect(), the exporter receives calls in a single-threaded
+context.  No locking is required because the SDK.Collect() call
+prevents concurrency.
+
+The SDK uses lock-free algorithms to maintain its internal state.
 There are three central data structures at work:
 
 1. A sync.Map maps unique (InstrumentID, LabelSet) to records
