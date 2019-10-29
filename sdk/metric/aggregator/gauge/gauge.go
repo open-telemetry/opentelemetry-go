@@ -108,6 +108,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
+		value:     number,
 	}
 	kind := desc.NumberKind()
 
@@ -115,12 +116,11 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 		gd := (*gaugeData)(atomic.LoadPointer(&g.live))
 
 		if gd != nil {
-			if gd.value.CompareNumber(kind, number) > 0 {
+			if gd.value.CompareNumber(kind, number) >= 0 {
 				// TODO warn
 				return
 			}
 		}
-		ngd.value = number
 
 		if atomic.CompareAndSwapPointer(&g.live, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
 			return
