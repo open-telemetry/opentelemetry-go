@@ -9,5 +9,5 @@ replace (
 
 require (
 	go.opentelemetry.io v0.0.0-20191025183852-68310ab97435
-	go.opentelemetry.io/exporter/trace/jaeger v0.0.0-20191028194652-3ac3846357c2
+	go.opentelemetry.io/exporter/trace/jaeger v0.0.0-20191025183852-68310ab97435
 )
