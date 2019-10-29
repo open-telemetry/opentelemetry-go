@@ -19,7 +19,7 @@ import (
 
 	oteltrace "go.opentelemetry.io/api/trace"
 
-	migration "go.opentelemetry.io/experimental/bridge/opentracing/migration"
+	migration "go.opentelemetry.io/bridge/opentracing/migration"
 )
 
 type WrapperProvider struct {

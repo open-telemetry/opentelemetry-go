@@ -27,7 +27,7 @@ import (
 	oteltrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/global"
 
-	"go.opentelemetry.io/experimental/bridge/opentracing/internal"
+	"go.opentelemetry.io/bridge/opentracing/internal"
 )
 
 type mixedAPIsTestCase struct {
