@@ -165,8 +165,10 @@ func (v Value) Emit() string {
 	return sb.String()
 }
 
-// Encode writes the encoded value to `w`.  `tmp` should be an array
-// of at least 32 bytes.
+// Encode writes the encoded value to `w`.  `tmp` provides a temporary
+// buffer for this to work.  A correct result is ensured, even if the
+// temporary buffer is too small.  `tmp` should be at least 32 bytes to
+// ensure no allocations.
 func (v Value) Encode(w Encoder, tmp []byte) (n int, err error) {
 	tmp = tmp[:0]
 	switch v.Type {

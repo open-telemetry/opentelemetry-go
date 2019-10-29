@@ -15,6 +15,7 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -211,5 +212,59 @@ func TestNumberEncode(t *testing.T) {
 		if have != data.want {
 			t.Errorf("Invalid Encode() - got %s want %s", have, data.want)
 		}
+	}
+}
+
+func TestNumberEncodeShortBuffer(t *testing.T) {
+	for _, data := range testFormatData {
+		var sb strings.Builder
+		var tmp [1]byte
+		_, _ = data.num.Encode(data.kind, &sb, tmp[:])
+		have := sb.String()
+		if have != data.want {
+			t.Errorf("Invalid Encode() - got %s want %s", have, data.want)
+		}
+	}
+}
+
+func BenchmarkNumberEmitInt64(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		n := NewInt64Number(int64(i))
+		_ = n.Emit(Int64NumberKind)
+	}
+}
+
+func BenchmarkNumberEmitFloat64(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		n := NewFloat64Number(float64(i))
+		_ = n.Emit(Float64NumberKind)
+	}
+}
+
+func BenchmarkNumberEncodeInt64(b *testing.B) {
+	b.ReportAllocs()
+
+	var tmp [32]byte
+	var buf bytes.Buffer
+
+	for i := 0; i < b.N; i++ {
+		n := NewInt64Number(int64(i))
+		_, _ = n.Encode(Int64NumberKind, &buf, tmp[:])
+	}
+}
+
+func BenchmarkNumberEncodeFloat64(b *testing.B) {
+	b.ReportAllocs()
+
+	var tmp [32]byte
+	var buf bytes.Buffer
+
+	for i := 0; i < b.N; i++ {
+		n := NewFloat64Number(float64(i))
+		_, _ = n.Encode(Float64NumberKind, &buf, tmp[:])
 	}
 }

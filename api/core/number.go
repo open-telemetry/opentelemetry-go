@@ -481,9 +481,14 @@ func (n Number) Emit(kind NumberKind) string {
 	return sb.String()
 }
 
-// Encode writes the encoded value to `w`.
+// Encode writes the encoded value to `w`.  `tmp` provides a temporary
+// buffer for this to work.  A correct result is ensured, even if the
+// temporary buffer is too small.  `tmp` should be at least 32 bytes to
+// ensure no allocations.
 func (n Number) Encode(kind NumberKind, w Encoder, tmp []byte) (int, error) {
-	tmp = tmp[:0]
+	if tmp != nil {
+		tmp = tmp[:0]
+	}
 	switch kind {
 	case Int64NumberKind:
 		tmp = strconv.AppendInt(tmp, n.AsInt64(), 10)
