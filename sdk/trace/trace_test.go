@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -134,7 +135,42 @@ func TestRecordingIsOff(t *testing.T) {
 	}
 }
 
-// TODO: [rghetia] enable sampling test when Sampling is working.
+func TestSampling(t *testing.T) {
+	total := 10000
+	for name, tc := range map[string]struct {
+		sampler   Sampler
+		expect    float64
+		tolerance float64
+	}{
+		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0, tolerance: 0},
+		"NeverSample":            {sampler: NeverSample(), expect: 0, tolerance: 0},
+		"ProbabilitySampler(25)": {sampler: ProbabilitySampler(0.25), expect: .25, tolerance: 0.015},
+		"ProbabilitySampler(50)": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015},
+		"ProbabilitySampler(75)": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015},
+	} {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			p, err := NewProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
+			if err != nil {
+				t.Fatal("unexpected error:", err)
+			}
+			tr := p.GetTracer("test")
+			var sampled int
+			for i := 0; i < total; i++ {
+				_, span := tr.Start(context.Background(), "test")
+				if span.SpanContext().IsSampled() {
+					sampled++
+				}
+			}
+			got := float64(sampled) / float64(total)
+			diff := math.Abs(got - tc.expect)
+			if diff > tc.tolerance {
+				t.Errorf("got %f (diff: %f), expected %f (w/tolerance: %f)", got, diff, tc.expect, tc.tolerance)
+			}
+		})
+	}
+}
 
 func TestStartSpanWithChildOf(t *testing.T) {
 	tp, _ := NewProvider()

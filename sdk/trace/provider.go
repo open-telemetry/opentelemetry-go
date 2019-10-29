@@ -85,6 +85,8 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 	return tp, nil
 }
 
+// GetTracer with the given name. If a tracer for the given name does not exist,
+// it is created first. If the name is empty, DefaultTracerName is used.
 func (p *Provider) GetTracer(name string) apitrace.Tracer {
 	p.mu.Lock()
 	defer p.mu.Unlock()
