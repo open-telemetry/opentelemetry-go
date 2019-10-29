@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-// Instrument is the implementation-level interface Set/Add/Record
+// InstrumentImpl is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type InstrumentImpl interface {
 	// AcquireHandle creates a Handle to record metrics with
@@ -31,7 +31,7 @@ type InstrumentImpl interface {
 	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
 }
 
-// Handle is the implementation-level interface to Set/Add/Record
+// HandleImpl is the implementation-level interface to Set/Add/Record
 // individual metrics with precomputed labels.
 type HandleImpl interface {
 	// RecordOne allows the SDK to observe a single metric event.
