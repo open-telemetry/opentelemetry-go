@@ -113,4 +113,12 @@ func TestMonotoneGauge(t *testing.T) {
 	require.Equal(t, 5, batcher.collections)
 	require.Equal(t, core.NewInt64Number(2), *batcher.currentValue)
 	require.Equal(t, before, *batcher.currentTime)
+
+	// Update with the same value, update the timestamp.
+	handle.Set(ctx, 2)
+	sdk.Collect(ctx)
+
+	require.Equal(t, 6, batcher.collections)
+	require.Equal(t, core.NewInt64Number(2), *batcher.currentValue)
+	require.True(t, before.Before(*batcher.currentTime))
 }

@@ -115,7 +115,7 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 	for {
 		gd := (*gaugeData)(atomic.LoadPointer(&g.current))
 
-		if gd.value.CompareNumber(kind, number) >= 0 {
+		if gd.value.CompareNumber(kind, number) > 0 {
 			// TODO warn
 			return
 		}
