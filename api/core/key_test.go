@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -323,90 +324,106 @@ func TestDefined(t *testing.T) {
 	}
 }
 
+type formatTestCase struct {
+	name string
+	v    core.Value
+	want string
+}
+
+var formatTestData = []formatTestCase{
+	{
+		name: `test Key.Emit() can emit a string representing self.BOOL`,
+		v: core.Value{
+			Type: core.BOOL,
+			Bool: true,
+		},
+		want: "true",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.INT32`,
+		v: core.Value{
+			Type:  core.INT32,
+			Int64: 42,
+		},
+		want: "42",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.INT64`,
+		v: core.Value{
+			Type:  core.INT64,
+			Int64: 42,
+		},
+		want: "42",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.UINT32`,
+		v: core.Value{
+			Type:   core.UINT32,
+			Uint64: 42,
+		},
+		want: "42",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.UINT64`,
+		v: core.Value{
+			Type:   core.UINT64,
+			Uint64: 42,
+		},
+		want: "42",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.FLOAT32`,
+		v: core.Value{
+			Type:    core.FLOAT32,
+			Float64: 42.1,
+		},
+		want: "42.1",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.FLOAT64`,
+		v: core.Value{
+			Type:    core.FLOAT64,
+			Float64: 42.1,
+		},
+		want: "42.1",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.STRING`,
+		v: core.Value{
+			Type:   core.STRING,
+			String: "foo",
+		},
+		want: "foo",
+	},
+	{
+		name: `test Key.Emit() can emit a string representing self.BYTES`,
+		v: core.Value{
+			Type:  core.BYTES,
+			Bytes: []byte{'f', 'o', 'o'},
+		},
+		want: "foo",
+	},
+}
+
 func TestEmit(t *testing.T) {
-	for _, testcase := range []struct {
-		name string
-		v    core.Value
-		want string
-	}{
-		{
-			name: `test Key.Emit() can emit a string representing self.BOOL`,
-			v: core.Value{
-				Type: core.BOOL,
-				Bool: true,
-			},
-			want: "true",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v: core.Value{
-				Type:  core.INT32,
-				Int64: 42,
-			},
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.INT64`,
-			v: core.Value{
-				Type:  core.INT64,
-				Int64: 42,
-			},
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v: core.Value{
-				Type:   core.UINT32,
-				Uint64: 42,
-			},
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v: core.Value{
-				Type:   core.UINT64,
-				Uint64: 42,
-			},
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v: core.Value{
-				Type:    core.FLOAT32,
-				Float64: 42.1,
-			},
-			want: "42.1",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
-			v: core.Value{
-				Type:    core.FLOAT64,
-				Float64: 42.1,
-			},
-			want: "42.1",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.STRING`,
-			v: core.Value{
-				Type:   core.STRING,
-				String: "foo",
-			},
-			want: "foo",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.BYTES`,
-			v: core.Value{
-				Type:  core.BYTES,
-				Bytes: []byte{'f', 'o', 'o'},
-			},
-			want: "foo",
-		},
-	} {
+	for _, testcase := range formatTestData {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (v core.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestEncode(t *testing.T) {
+	for _, testcase := range formatTestData {
+		t.Run(testcase.name, func(t *testing.T) {
+			var sb strings.Builder
+			var tmp [32]byte
+			_, _ = testcase.v.Encode(&sb, tmp[:])
+			if sb.String() != testcase.want {
+				t.Errorf("Want: %s, but have: %s", testcase.want, sb.String())
 			}
 		})
 	}

@@ -45,9 +45,7 @@ func (c *Aggregator) AsNumber() core.Number {
 
 // Collect checkpoints the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-	zero := core.NewZeroNumber(kind)
+	zero := core.Number(0)
 	c.checkpoint = c.current.SwapNumberAtomic(zero)
 
 	exp.Export(ctx, rec, c)

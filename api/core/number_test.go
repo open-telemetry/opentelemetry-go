@@ -15,6 +15,9 @@
 package core
 
 import (
+	"fmt"
+	"math"
+	"strings"
 	"testing"
 	"unsafe"
 )
@@ -143,6 +146,70 @@ func TestNumber(t *testing.T) {
 			if got := tt.n.CompareRaw(tt.kind, tt.nums[i].AsRaw()); got != tt.cmps[i] {
 				t.Errorf("Number %#v (%s) compare check with %#v (%s) failed, expected %d, got %d", tt.n, tt.n.Emit(tt.kind), tt.nums[i], tt.nums[i].Emit(tt.kind), tt.cmps[i], got)
 			}
+		}
+	}
+}
+
+type testFormatCase struct {
+	num  Number
+	kind NumberKind
+	want string
+}
+
+func makeInt64Case(val int64) testFormatCase {
+	return testFormatCase{
+		num:  NewInt64Number(val),
+		kind: Int64NumberKind,
+		want: fmt.Sprintf("%d", val),
+	}
+}
+
+func makeFloat64Case(val float64) testFormatCase {
+	return testFormatCase{
+		num:  NewFloat64Number(val),
+		kind: Float64NumberKind,
+		want: fmt.Sprintf("%.*g", OutputFloatingPointPrecision, val),
+	}
+}
+
+var testFormatData = []testFormatCase{
+	makeInt64Case(100),
+	makeInt64Case(-100),
+	makeInt64Case(0),
+	makeInt64Case(math.MaxInt8),
+	makeInt64Case(math.MaxInt16),
+	makeInt64Case(math.MaxInt32),
+	makeInt64Case(math.MaxInt64),
+	makeInt64Case(math.MinInt8),
+	makeInt64Case(math.MinInt16),
+	makeInt64Case(math.MinInt32),
+	makeInt64Case(math.MinInt64),
+	makeFloat64Case(77),
+	makeFloat64Case(-77e-77),
+	makeFloat64Case(math.MaxFloat64),
+	makeFloat64Case(math.MaxFloat32),
+	makeFloat64Case(math.SmallestNonzeroFloat32),
+	makeFloat64Case(math.SmallestNonzeroFloat64),
+	makeFloat64Case(0.123456789123456789123456789123456789),
+}
+
+func TestNumberEmit(t *testing.T) {
+	for _, data := range testFormatData {
+		have := data.num.Emit(data.kind)
+		if have != data.want {
+			t.Errorf("Invalid Emit() - got %s want %s", have, data.want)
+		}
+	}
+}
+
+func TestNumberEncode(t *testing.T) {
+	for _, data := range testFormatData {
+		var sb strings.Builder
+		var tmp [32]byte
+		_, _ = data.num.Encode(data.kind, &sb, tmp[:])
+		have := sb.String()
+		if have != data.want {
+			t.Errorf("Invalid Encode() - got %s want %s", have, data.want)
 		}
 	}
 }

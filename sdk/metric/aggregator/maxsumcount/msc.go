@@ -60,9 +60,7 @@ func (c *Aggregator) Max() core.Number {
 
 // Collect saves the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-	zero := core.NewZeroNumber(kind)
+	zero := core.Number(0)
 
 	// N.B. There is no atomic operation that can update all three
 	// values at once, so there are races between Update() and

@@ -19,6 +19,8 @@ package core
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"unsafe"
 )
@@ -35,25 +37,18 @@ const (
 	Uint64NumberKind
 )
 
+var InvalidNumberKindError = fmt.Errorf("Invalid number kind")
+
+// OutputFloatingPointPrecision determines the maximum precision of
+// any floating point number encoded by this package.
+const OutputFloatingPointPrecision = 16
+
 // Number represents either an integral or a floating point value. It
 // needs to be accompanied with a source of NumberKind that describes
 // the actual type of the value stored within Number.
 type Number uint64
 
 // - constructors
-
-// NewZeroNumber
-func NewZeroNumber(kind NumberKind) Number {
-	switch kind {
-	case Int64NumberKind:
-		return NewInt64Number(0)
-	case Float64NumberKind:
-		return NewFloat64Number(0.)
-	case Uint64NumberKind:
-		return NewUint64Number(0)
-	}
-	return Number(0)
-}
 
 // NewNumberFromRaw creates a new Number from a raw value.
 func NewNumberFromRaw(r uint64) Number {
@@ -472,25 +467,35 @@ func (n Number) IsNegative(kind NumberKind) bool {
 
 // IsZero returns true if the actual value is equal to zero.
 func (n Number) IsZero(kind NumberKind) bool {
-	return n.compareWithZero(kind) == 0
+	return n.AsRaw() == 0
 }
 
 // - misc
 
-// Emit returns a string representation of the raw value of the
-// Number. A %d is used for integral values, %f for floating point
-// values.
+// Emit constructs a new string of this value, whereas Encode() emits
+// the string into an existing buffer.
 func (n Number) Emit(kind NumberKind) string {
+	var sb strings.Builder
+	var tmp [32]byte
+	_, _ = n.Encode(kind, &sb, tmp[:])
+	return sb.String()
+}
+
+// Encode writes the encoded value to `w`.
+func (n Number) Encode(kind NumberKind, w Encoder, tmp []byte) (int, error) {
+	tmp = tmp[:0]
 	switch kind {
 	case Int64NumberKind:
-		return fmt.Sprintf("%d", n.AsInt64())
+		tmp = strconv.AppendInt(tmp, n.AsInt64(), 10)
 	case Float64NumberKind:
-		return fmt.Sprintf("%f", n.AsFloat64())
+		// Note: 'x' format is much faster
+		tmp = strconv.AppendFloat(tmp, n.AsFloat64(), 'g', OutputFloatingPointPrecision, 64)
 	case Uint64NumberKind:
-		return fmt.Sprintf("%d", n.AsUint64())
+		tmp = strconv.AppendUint(tmp, n.AsUint64(), 10)
 	default:
-		return ""
+		return 0, InvalidNumberKindError
 	}
+	return w.Write(tmp)
 }
 
 // - private stuff

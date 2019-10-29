@@ -1,7 +1,8 @@
 package core
 
 import (
-	"fmt"
+	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -148,21 +149,46 @@ func (k Key) Defined() bool {
 	return len(k) != 0
 }
 
-// TODO make this a lazy one-time conversion.
+// Encoder supports formatting values without allocating temporary strings.
+type Encoder interface {
+	Write([]byte) (int, error)
+	WriteRune(rune) (int, error)
+	WriteString(string) (int, error)
+}
+
+// Emit constructs a new string of this value, whereas Encode() emits
+// the string into an existing buffer.
 func (v Value) Emit() string {
+	var sb strings.Builder
+	var tmp [32]byte
+	_, _ = v.Encode(&sb, tmp[:])
+	return sb.String()
+}
+
+// Encode writes the encoded value to `w`.  `tmp` should be an array
+// of at least 32 bytes.
+func (v Value) Encode(w Encoder, tmp []byte) (n int, err error) {
+	tmp = tmp[:0]
 	switch v.Type {
 	case BOOL:
-		return fmt.Sprint(v.Bool)
+		if v.Bool {
+			return w.WriteString("true")
+		}
+		return w.WriteString("false")
 	case INT32, INT64:
-		return fmt.Sprint(v.Int64)
+		tmp = strconv.AppendInt(tmp, v.Int64, 10)
 	case UINT32, UINT64:
-		return fmt.Sprint(v.Uint64)
+		tmp = strconv.AppendUint(tmp, v.Uint64, 10)
 	case FLOAT32, FLOAT64:
-		return fmt.Sprint(v.Float64)
+		// Note: 'x' format is much faster
+		tmp = strconv.AppendFloat(tmp, v.Float64, 'g', OutputFloatingPointPrecision, 64)
 	case STRING:
-		return v.String
+		return w.WriteString(v.String)
 	case BYTES:
-		return string(v.Bytes)
+		// TODO This must be removed, it's not safe
+		return w.Write(v.Bytes)
+	default:
+		// INVALID -> empty string
 	}
-	return "unknown"
+	return w.Write(tmp)
 }
