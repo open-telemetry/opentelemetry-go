@@ -19,14 +19,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/metric/aggregator/test"
 )
 
 const count = 100
-
-var testKinds = []core.NumberKind{core.Int64NumberKind, core.Float64NumberKind}
 
 func TestCounterMonotonic(t *testing.T) {
 	ctx := context.Background()

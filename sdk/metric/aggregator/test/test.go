@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/sdk/export"
 )
 
-var _ export.MetricBatcher = &TestMetricBatcher{}
-var _ export.MetricRecord = &testMetricRecord{}
+var _ export.MetricBatcher = &metricBatcher{}
+var _ export.MetricRecord = &metricRecord{}
 
 type Profile struct {
 	NumberKind core.NumberKind
@@ -32,13 +32,13 @@ type Profile struct {
 }
 
 var profiles = []Profile{
-	Profile{
+	{
 		NumberKind: core.Int64NumberKind,
 		Random: func(sign int) core.Number {
 			return core.NewInt64Number(int64(sign) * int64(rand.Intn(100000)))
 		},
 	},
-	Profile{
+	{
 		NumberKind: core.Float64NumberKind,
 		Random: func(sign int) core.Number {
 			return core.NewFloat64Number(float64(sign) * rand.Float64() * 100000)
@@ -46,31 +46,31 @@ var profiles = []Profile{
 	},
 }
 
-type TestMetricBatcher struct {
+type metricBatcher struct {
 }
 
-type testMetricRecord struct {
+type metricRecord struct {
 	descriptor *export.Descriptor
 }
 
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (*TestMetricBatcher, export.MetricRecord) {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (export.MetricBatcher, export.MetricRecord) {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
-	return &TestMetricBatcher{}, &testMetricRecord{descriptor: desc}
+	return &metricBatcher{}, &metricRecord{descriptor: desc}
 }
 
-func (t *testMetricRecord) Descriptor() *export.Descriptor {
+func (t *metricRecord) Descriptor() *export.Descriptor {
 	return t.descriptor
 }
 
-func (t *testMetricRecord) Labels() []core.KeyValue {
+func (t *metricRecord) Labels() []core.KeyValue {
 	return nil
 }
 
-func (m *TestMetricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
+func (m *metricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
 	return nil
 }
 
-func (m *TestMetricBatcher) Export(context.Context, export.MetricRecord, export.MetricAggregator) {
+func (m *metricBatcher) Export(context.Context, export.MetricRecord, export.MetricAggregator) {
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

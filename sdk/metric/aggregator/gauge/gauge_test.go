@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/metric/aggregator/test"
