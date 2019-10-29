@@ -10,7 +10,8 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 GOTEST=go test
-GOTEST_OPT?=-v -race -timeout 30s
+GOTEST_OPT?=-v -timeout 30s
+GOTEST_OPT_WITH_RACE     = $(GOTEST_OPT) -race
 GOTEST_OPT_WITH_COVERAGE = $(GOTEST_OPT) -coverprofile=coverage.txt -covermode=atomic
 
 .DEFAULT_GOAL := precommit
@@ -62,6 +63,7 @@ test-clean-work-tree:
 .PHONY: test
 test: examples
 	$(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
+	$(GOTEST) $(GOTEST_OPT_WITH_RACE) $(ALL_PKGS)
 
 .PHONY: test-386
 test-386:
