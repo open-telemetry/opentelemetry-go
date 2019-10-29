@@ -1,6 +1,6 @@
 module github.com/open-telemetry/opentelemetry-go/example/http
 
-go 1.12
+go 1.13
 
 replace go.opentelemetry.io => ../..
 

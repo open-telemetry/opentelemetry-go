@@ -1,6 +1,6 @@
 module go.opentelemetry.io/exporter/trace/stackdriver
 
-go 1.12
+go 1.13
 
 replace go.opentelemetry.io => ../../..
 
