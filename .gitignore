@@ -7,4 +7,7 @@ coverage.*
 /example/basic/basic
 /example/http/client/client
 /example/http/server/server
+/example/http-stackdriver/client/client
+/example/http-stackdriver/server/server
+/example/jaeger/jaeger
 /example/namedtracer/namedtracer

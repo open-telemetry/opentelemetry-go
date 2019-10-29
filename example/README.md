@@ -21,7 +21,7 @@ Example uses
 
 #### Prequisites
 
-- go 1.12 installed
+- go 1.13 installed
 - GOPATH is configured.
 
 #### 1 Download git repo

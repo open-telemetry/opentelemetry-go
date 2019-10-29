@@ -2,10 +2,7 @@ ALL_PKGS := $(shell GO111MODULE=on go list ./...)
 
 export GO111MODULE=on
 
-EXAMPLES := \
-	./example/basic \
-	./example/http/client \
-	./example/http/server
+EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
