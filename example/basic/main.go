@@ -50,7 +50,7 @@ func main() {
 		distributedcontext.Insert(barKey.String("bar1")),
 	)
 
-	commonLabels := meter.Labels(ctx, lemonsKey.Int(10))
+	commonLabels := meter.Labels(lemonsKey.Int(10))
 
 	gauge := oneMetric.AcquireHandle(commonLabels)
 	defer gauge.Release()

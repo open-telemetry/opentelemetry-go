@@ -14,11 +14,39 @@
 
 package metric
 
+import (
+	"context"
+
+	"go.opentelemetry.io/api/core"
+)
+
+// InstrumentImpl is the implementation-level interface Set/Add/Record
+// individual metrics without precomputed labels.
+type InstrumentImpl interface {
+	// AcquireHandle creates a Handle to record metrics with
+	// precomputed labels.
+	AcquireHandle(labels LabelSet) HandleImpl
+
+	// RecordOne allows the SDK to observe a single metric event.
+	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
+}
+
+// HandleImpl is the implementation-level interface to Set/Add/Record
+// individual metrics with precomputed labels.
+type HandleImpl interface {
+	// RecordOne allows the SDK to observe a single metric event.
+	RecordOne(ctx context.Context, number core.Number)
+
+	// Release frees the resources associated with this handle. It
+	// does not affect the metric this handle was created through.
+	Release()
+}
+
 // WrapInt64CounterInstrument wraps the instrument in the type-safe
 // wrapper as an integral counter.
 //
 // It is mostly intended for SDKs.
-func WrapInt64CounterInstrument(instrument Instrument) Int64Counter {
+func WrapInt64CounterInstrument(instrument InstrumentImpl) Int64Counter {
 	return Int64Counter{commonMetric: newCommonMetric(instrument)}
 }
 
@@ -26,7 +54,7 @@ func WrapInt64CounterInstrument(instrument Instrument) Int64Counter {
 // wrapper as an floating point counter.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64CounterInstrument(instrument Instrument) Float64Counter {
+func WrapFloat64CounterInstrument(instrument InstrumentImpl) Float64Counter {
 	return Float64Counter{commonMetric: newCommonMetric(instrument)}
 }
 
@@ -34,7 +62,7 @@ func WrapFloat64CounterInstrument(instrument Instrument) Float64Counter {
 // wrapper as an integral gauge.
 //
 // It is mostly intended for SDKs.
-func WrapInt64GaugeInstrument(instrument Instrument) Int64Gauge {
+func WrapInt64GaugeInstrument(instrument InstrumentImpl) Int64Gauge {
 	return Int64Gauge{commonMetric: newCommonMetric(instrument)}
 }
 
@@ -42,7 +70,7 @@ func WrapInt64GaugeInstrument(instrument Instrument) Int64Gauge {
 // wrapper as an floating point gauge.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64GaugeInstrument(instrument Instrument) Float64Gauge {
+func WrapFloat64GaugeInstrument(instrument InstrumentImpl) Float64Gauge {
 	return Float64Gauge{commonMetric: newCommonMetric(instrument)}
 }
 
@@ -50,7 +78,7 @@ func WrapFloat64GaugeInstrument(instrument Instrument) Float64Gauge {
 // wrapper as an integral measure.
 //
 // It is mostly intended for SDKs.
-func WrapInt64MeasureInstrument(instrument Instrument) Int64Measure {
+func WrapInt64MeasureInstrument(instrument InstrumentImpl) Int64Measure {
 	return Int64Measure{commonMetric: newCommonMetric(instrument)}
 }
 
@@ -58,7 +86,7 @@ func WrapInt64MeasureInstrument(instrument Instrument) Int64Measure {
 // wrapper as an floating point measure.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64MeasureInstrument(instrument Instrument) Float64Measure {
+func WrapFloat64MeasureInstrument(instrument InstrumentImpl) Float64Measure {
 	return Float64Measure{commonMetric: newCommonMetric(instrument)}
 }
 
