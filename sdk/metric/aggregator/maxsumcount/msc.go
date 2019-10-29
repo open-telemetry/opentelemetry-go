@@ -43,7 +43,7 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Sum returns the accumulated sum as an int64.
+// Sum returns the accumulated sum as a Number.
 func (c *Aggregator) Sum() core.Number {
 	return c.save.sum
 }
@@ -53,7 +53,7 @@ func (c *Aggregator) Count() int64 {
 	return int64(c.save.count.AsUint64())
 }
 
-// Max returns the accumulated max as an float64.
+// Max returns the accumulated max as a Number.
 func (c *Aggregator) Max() core.Number {
 	return c.save.max
 }
@@ -77,7 +77,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	exp.Export(ctx, rec, c)
 }
 
-// Collect updates the current value (atomically) for later export.
+// Update modifies the current value (atomically) for later export.
 func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()

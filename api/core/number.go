@@ -388,6 +388,11 @@ func (n *Number) CompareAndSwapUint64(ou, nu uint64) bool {
 
 // - compare
 
+// CompareNumber compares two Numbers given their kind.  Both numbers
+// should have the same kind.  This returns:
+//    0 if the numbers are equal
+//    -1 if the subject `n` is less than the argument `nn`
+//    +1 if the subject `n` is greater than the argument `nn`
 func (n Number) CompareNumber(kind NumberKind, nn Number) int {
 	switch kind {
 	case Int64NumberKind:
@@ -402,11 +407,13 @@ func (n Number) CompareNumber(kind NumberKind, nn Number) int {
 	}
 }
 
+// CompareRaw compares two numbers, where one is input as a raw
+// uint64, interpreting both values as a `kind` of number.
 func (n Number) CompareRaw(kind NumberKind, r uint64) int {
 	return n.CompareNumber(kind, NewNumberFromRaw(r))
 }
 
-// Int64Compare assumes that the Number contains an int64 and performs
+// CompareInt64 assumes that the Number contains an int64 and performs
 // a comparison between the value and the other value. It returns the
 // typical result of the compare function: -1 if the value is less
 // than the other, 0 if both are equal, 1 if the value is greater than
@@ -421,7 +428,7 @@ func (n Number) CompareInt64(i int64) int {
 	return 0
 }
 
-// Float64Compare assumes that the Number contains a float64 and
+// CompareFloat64 assumes that the Number contains a float64 and
 // performs a comparison between the value and the other value. It
 // returns the typical result of the compare function: -1 if the value
 // is less than the other, 0 if both are equal, 1 if the value is
@@ -436,7 +443,7 @@ func (n Number) CompareFloat64(f float64) int {
 	return 0
 }
 
-// Int64Compare assumes that the Number contains an int64 and performs
+// CompareUint64 assumes that the Number contains an uint64 and performs
 // a comparison between the value and the other value. It returns the
 // typical result of the compare function: -1 if the value is less
 // than the other, 0 if both are equal, 1 if the value is greater than

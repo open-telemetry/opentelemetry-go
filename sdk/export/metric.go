@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/api/unit"
 )
 
-// Aggregator implements a specific aggregation behavior, e.g., a
-// counter, a gauge, a histogram.
+// MetricAggregator implements a specific aggregation behavior, e.g.,
+// a counter, a gauge, a histogram.
 type MetricAggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.

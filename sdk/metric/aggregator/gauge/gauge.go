@@ -36,10 +36,10 @@ type (
 		// data is an atomic pointer to *gaugeData.  It is set
 		// to `nil` if the gauge has not been set since the
 		// last collection.
-		live unsafe.Pointer
+		current unsafe.Pointer
 
-		// N.B. Export is not called when save is nil
-		save unsafe.Pointer
+		// N.B. Export is not called when checkpoint is nil
+		checkpoint unsafe.Pointer
 	}
 
 	// gaugeData stores the current value of a gauge along with
@@ -65,29 +65,29 @@ var unsetGauge = &gaugeData{}
 // last value and timestamp that were recorded.
 func New() *Aggregator {
 	return &Aggregator{
-		live: unsafe.Pointer(unsetGauge),
-		save: unsafe.Pointer(unsetGauge),
+		current:    unsafe.Pointer(unsetGauge),
+		checkpoint: unsafe.Pointer(unsetGauge),
 	}
 }
 
-// AsInt64 returns the recorded gauge value as an int64.
+// AsNumber returns the recorded gauge value as an int64.
 func (g *Aggregator) AsNumber() core.Number {
-	return (*gaugeData)(g.save).value.AsNumber()
+	return (*gaugeData)(g.checkpoint).value.AsNumber()
 }
 
 // Timestamp returns the timestamp of the alst recorded gauge value.
 func (g *Aggregator) Timestamp() time.Time {
-	return (*gaugeData)(g.save).timestamp
+	return (*gaugeData)(g.checkpoint).timestamp
 }
 
-// Collect saves the current value (atomically) and exports it.
+// Collect checkpoints the current value (atomically) and exports it.
 func (g *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	g.save = atomic.LoadPointer(&g.live)
+	g.checkpoint = atomic.LoadPointer(&g.current)
 
 	exp.Export(ctx, rec, g)
 }
 
-// Collect updates the current value (atomically) for later export.
+// Update modifies the current value (atomically) for later export.
 func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
 	desc := rec.Descriptor()
 	if !desc.Alternate() {
@@ -102,7 +102,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 		value:     number,
 		timestamp: time.Now(),
 	}
-	atomic.StorePointer(&g.live, unsafe.Pointer(ngd))
+	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
 }
 
 func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
@@ -113,14 +113,14 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 	kind := desc.NumberKind()
 
 	for {
-		gd := (*gaugeData)(atomic.LoadPointer(&g.live))
+		gd := (*gaugeData)(atomic.LoadPointer(&g.current))
 
 		if gd.value.CompareNumber(kind, number) >= 0 {
 			// TODO warn
 			return
 		}
 
-		if atomic.CompareAndSwapPointer(&g.live, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
+		if atomic.CompareAndSwapPointer(&g.current, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
 			return
 		}
 	}
