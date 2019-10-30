@@ -20,8 +20,8 @@ import (
 
 func TestGlobalMeter(t *testing.T) {
 	m := GlobalMeter()
-	if _, ok := m.(noopMeter); !ok {
-		t.Errorf("Expected global meter to be a noopMeter instance, got an instance of %T", m)
+	if _, ok := m.(NoopMeter); !ok {
+		t.Errorf("Expected global meter to be a NoopMeter instance, got an instance of %T", m)
 	}
 
 	SetGlobalMeter(newMockMeter())
