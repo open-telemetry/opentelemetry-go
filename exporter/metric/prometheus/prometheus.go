@@ -1,3 +1,3 @@
 package prometheus
 
-type prometheusExporter struct{}
+// type prometheusExporter struct{}
