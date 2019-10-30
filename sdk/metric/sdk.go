@@ -263,7 +263,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 		_, _ = buf.WriteRune(delimiter)
 		_, _ = buf.WriteString(string(kv.Key))
 		_, _ = buf.WriteRune(':')
-		kv.Value.Encode(&buf, tmp[:])
+		kv.Value.Encode(buf, tmp[:])
 		delimiter = ','
 	}
 
