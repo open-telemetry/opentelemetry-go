@@ -60,10 +60,6 @@ func (c *Aggregator) Max() core.Number {
 
 // Collect checkpoints the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-	zero := core.NewZeroNumber(kind)
-
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -75,8 +71,8 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	// be spread across multiple collections in rare cases.
 
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
-	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(zero)
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(zero)
+	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
 
 	exp.Export(ctx, rec, c)
 }

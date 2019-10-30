@@ -50,11 +50,11 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 			agg.Sum().CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg.Count(), "Same sum - absolute")
+		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
 		require.Equal(t,
 			all[len(all)-1],
 			agg.Max(),
-			"Same sum - absolute")
+			"Same ma - absolute")
 	})
 }
 
@@ -92,7 +92,7 @@ func TestMaxSumCountMerge(t *testing.T) {
 			agg1.Sum().CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg1.Count(), "Same sum - absolute")
+		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
 		require.Equal(t,
 			all[len(all)-1],
 			agg1.Max(),
