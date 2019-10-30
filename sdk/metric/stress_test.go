@@ -111,7 +111,7 @@ func canonicalizeLabels(ls []core.KeyValue) string {
 	for _, kv := range copy {
 		b.WriteString(string(kv.Key))
 		b.WriteString("=")
-		kv.Value.Encode(&b, tmp[:])
+		_, _ = kv.Value.Encode(&b, tmp[:])
 		b.WriteString("$")
 	}
 	return b.String()

@@ -68,7 +68,7 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace(kv.Value.Emit())))
 		} else {
 			var tmp [32]byte
-			kv.Value.Encode(&headerValueBuilder, tmp[:])
+			_, _ = kv.Value.Encode(&headerValueBuilder, tmp[:])
 		}
 		return true
 	})
