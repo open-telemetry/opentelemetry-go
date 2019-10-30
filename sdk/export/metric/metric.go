@@ -67,7 +67,7 @@ type Record interface {
 	// Descriptor() describes the metric instrument.
 	Descriptor() *Descriptor
 
-	// Labels() describe the labsels corresponding the
+	// Labels() describe the labels corresponding to the
 	// aggregation being performed.
 	Labels() []core.KeyValue
 }
