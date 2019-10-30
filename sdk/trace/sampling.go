@@ -39,16 +39,18 @@ type SamplingDecision struct {
 	Sample bool
 }
 
-// ProbabilitySampler returns a Sampler that samples a given fraction of traces.
-//
-// It also samples spans whose parents are sampled.
+// ProbabilitySampler samples a given fraction of traces. Fractions >= 1 will
+// always sample. If the parent span is sampled, then it's child spans will
+// automatically be sampled. Fractions <0 are treated as zero, but spans may
+// still be sampled if their parent is.
 func ProbabilitySampler(fraction float64) Sampler {
-	if !(fraction >= 0) {
-		fraction = 0
-	} else if fraction >= 1 {
+	if fraction >= 1 {
 		return AlwaysSample()
 	}
 
+	if fraction <= 0 {
+		fraction = 0
+	}
 	traceIDUpperBound := uint64(fraction * (1 << 63))
 	return Sampler(func(p SamplingParameters) SamplingDecision {
 		if p.ParentContext.IsSampled() {
