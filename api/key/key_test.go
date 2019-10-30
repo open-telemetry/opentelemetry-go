@@ -95,17 +95,6 @@ func TestKeyValueConstructors(t *testing.T) {
 			},
 		},
 		{
-			name:   "Bytes",
-			actual: key.Bytes("k1", []byte("v1")),
-			expected: core.KeyValue{
-				Key: "k1",
-				Value: core.Value{
-					Type:  core.BYTES,
-					Bytes: []byte("v1"),
-				},
-			},
-		},
-		{
 			name:   "Int",
 			actual: key.Int("k1", 123),
 			expected: core.KeyValue{

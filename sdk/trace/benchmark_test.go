@@ -99,9 +99,8 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 				key.New("key6").Uint32(123),
 				key.New("key7").Float64(123.456),
 				key.New("key8").Float32(123.456),
-				key.New("key9").Bytes([]byte{1, 2, 3, 4}),
-				key.New("key10").Int(123),
-				key.New("key11").Uint(123),
+				key.New("key9").Int(123),
+				key.New("key10").Uint(123),
 			)
 			span.End()
 		}
@@ -125,7 +124,6 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 				key.New("key6").Uint32(123),
 				key.New("key7").Float64(123.456),
 				key.New("key8").Float32(123.456),
-				key.New("key9").Bytes([]byte{1, 2, 3, 4}),
 				key.New("key10").Int(123),
 				key.New("key11").Uint(123),
 				key.New("key21").Bool(false),
@@ -136,7 +134,6 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 				key.New("key26").Uint32(123),
 				key.New("key27").Float64(123.456),
 				key.New("key28").Float32(123.456),
-				key.New("key29").Bytes([]byte{1, 2, 3, 4}),
 				key.New("key210").Int(123),
 				key.New("key211").Uint(123),
 			)
