@@ -40,10 +40,6 @@ func String(k, v string) core.KeyValue {
 	return New(k).String(v)
 }
 
-func Bytes(k string, v []byte) core.KeyValue {
-	return New(k).Bytes(v)
-}
-
 func Int(k string, v int) core.KeyValue {
 	return New(k).Int(v)
 }
