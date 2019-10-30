@@ -69,19 +69,6 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) WithResources(attributes ...otelcore.KeyValue) oteltrace.Tracer {
-	t.Resources = t.Resources.Apply(upsertMultiMapUpdate(attributes...))
-	return t
-}
-
-func (t *MockTracer) WithComponent(name string) oteltrace.Tracer {
-	return t.WithResources(otelkey.New("component").String(name))
-}
-
-func (t *MockTracer) WithService(name string) oteltrace.Tracer {
-	return t.WithResources(otelkey.New("service").String(name))
-}
-
 func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	ctx, span := t.Start(ctx, name)
 	defer span.End()
@@ -111,12 +98,14 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      spanOpts.Record,
-		Attributes:     oteldctx.NewMap(upsertMultiMapUpdate(spanOpts.Attributes...)),
-		StartTime:      startTime,
-		EndTime:        time.Time{},
-		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
-		Events:         nil,
-		SpanKind:       spanKind,
+		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+			MultiKV: spanOpts.Attributes,
+		}),
+		StartTime:    startTime,
+		EndTime:      time.Time{},
+		ParentSpanID: t.getParentSpanID(ctx, &spanOpts),
+		Events:       nil,
+		SpanKind:     spanKind,
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.SetCurrentSpan(ctx, span)
@@ -252,22 +241,14 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttribute(attribute otelcore.KeyValue) {
-	s.applyUpdate(upsertMapUpdate(attribute))
-}
-
-func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
-	s.applyUpdate(upsertMultiMapUpdate(attributes...))
-}
-
-func (s *MockSpan) ModifyAttribute(mutator oteldctx.Mutator) {
 	s.applyUpdate(oteldctx.MapUpdate{
-		SingleMutator: mutator,
+		SingleKV: attribute,
 	})
 }
 
-func (s *MockSpan) ModifyAttributes(mutators ...oteldctx.Mutator) {
+func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
 	s.applyUpdate(oteldctx.MapUpdate{
-		MultiMutator: mutators,
+		MultiKV: attributes,
 	})
 }
 
@@ -306,7 +287,9 @@ func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Tim
 		CtxAttributes: oteldctx.FromContext(ctx),
 		Timestamp:     timestamp,
 		Msg:           msg,
-		Attributes:    oteldctx.NewMap(upsertMultiMapUpdate(attrs...)),
+		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+			MultiKV: attrs,
+		}),
 	})
 }
 
@@ -320,39 +303,4 @@ func (s *MockSpan) Link(sc otelcore.SpanContext, attrs ...otelcore.KeyValue) {
 
 func (s *MockSpan) OverrideTracer(tracer oteltrace.Tracer) {
 	s.officialTracer = tracer
-}
-
-func upsertMapUpdate(kv otelcore.KeyValue) oteldctx.MapUpdate {
-	return singleMutatorMapUpdate(oteldctx.UPSERT, kv)
-}
-
-func upsertMultiMapUpdate(kvs ...otelcore.KeyValue) oteldctx.MapUpdate {
-	return multiMutatorMapUpdate(oteldctx.UPSERT, kvs...)
-}
-
-func singleMutatorMapUpdate(op oteldctx.MutatorOp, kv otelcore.KeyValue) oteldctx.MapUpdate {
-	return oteldctx.MapUpdate{
-		SingleMutator: keyValueToMutator(op, kv),
-	}
-}
-
-func multiMutatorMapUpdate(op oteldctx.MutatorOp, kvs ...otelcore.KeyValue) oteldctx.MapUpdate {
-	return oteldctx.MapUpdate{
-		MultiMutator: keyValuesToMutators(op, kvs...),
-	}
-}
-
-func keyValuesToMutators(op oteldctx.MutatorOp, kvs ...otelcore.KeyValue) []oteldctx.Mutator {
-	var mutators []oteldctx.Mutator
-	for _, kv := range kvs {
-		mutators = append(mutators, keyValueToMutator(op, kv))
-	}
-	return mutators
-}
-
-func keyValueToMutator(op oteldctx.MutatorOp, kv otelcore.KeyValue) oteldctx.Mutator {
-	return oteldctx.Mutator{
-		MutatorOp: op,
-		KeyValue:  kv,
-	}
 }
