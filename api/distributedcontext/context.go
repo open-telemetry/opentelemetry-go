@@ -17,6 +17,8 @@ package distributedcontext
 import (
 	"context"
 	"runtime/pprof"
+
+	"go.opentelemetry.io/api/core"
 )
 
 type ctxEntriesType struct{}
@@ -29,9 +31,9 @@ func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxEntriesKey, m)
 }
 
-func NewContext(ctx context.Context, mutators ...Mutator) context.Context {
+func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
-		MultiMutator: mutators,
+		MultiKV: keyvalues,
 	}))
 }
 

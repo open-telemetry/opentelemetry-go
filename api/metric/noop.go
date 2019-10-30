@@ -6,12 +6,12 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-type noopMeter struct{}
+type NoopMeter struct{}
 type noopHandle struct{}
 type noopLabelSet struct{}
 type noopInstrument struct{}
 
-var _ Meter = noopMeter{}
+var _ Meter = NoopMeter{}
 var _ InstrumentImpl = noopInstrument{}
 var _ HandleImpl = noopHandle{}
 var _ LabelSet = noopLabelSet{}
@@ -30,36 +30,36 @@ func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
 func (noopInstrument) Meter() Meter {
-	return noopMeter{}
+	return NoopMeter{}
 }
 
-func (noopMeter) Labels(...core.KeyValue) LabelSet {
+func (NoopMeter) Labels(...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 
-func (noopMeter) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
+func (NoopMeter) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
 	return WrapInt64CounterInstrument(noopInstrument{})
 }
 
-func (noopMeter) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
+func (NoopMeter) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
 	return WrapFloat64CounterInstrument(noopInstrument{})
 }
 
-func (noopMeter) NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
+func (NoopMeter) NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
 	return WrapInt64GaugeInstrument(noopInstrument{})
 }
 
-func (noopMeter) NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
+func (NoopMeter) NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
 	return WrapFloat64GaugeInstrument(noopInstrument{})
 }
 
-func (noopMeter) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
+func (NoopMeter) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
 	return WrapInt64MeasureInstrument(noopInstrument{})
 }
 
-func (noopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
+func (NoopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
 	return WrapFloat64MeasureInstrument(noopInstrument{})
 }
 
-func (noopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
+func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 }
