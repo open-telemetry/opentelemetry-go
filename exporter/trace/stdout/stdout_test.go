@@ -77,11 +77,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Attributes":[` +
 		`{` +
 		`"Key":"key",` +
-		`"Value":{"Type":8,"Value":"value"}` +
+		`"Value":{"Type":"STRING","Value":"value"}` +
 		`},` +
 		`{` +
 		`"Key":"double",` +
-		`"Value":{"Type":7,"Value":123.456}` +
+		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
 		`"MessageEvents":null,` +

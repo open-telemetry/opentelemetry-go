@@ -60,7 +60,7 @@ func (e *Exporter) RegisterSimpleSpanProcessor() {
 }
 
 type jsonValue struct {
-	Type  core.ValueType
+	Type  string
 	Value interface{}
 }
 
@@ -116,7 +116,7 @@ func toJSONAttributes(attributes []core.KeyValue) []jsonKeyValue {
 	jsonAttrs := make([]jsonKeyValue, len(attributes))
 	for i := 0; i < len(attributes); i++ {
 		jsonAttrs[i].Key = attributes[i].Key
-		jsonAttrs[i].Value.Type = attributes[i].Value.Type()
+		jsonAttrs[i].Value.Type = attributes[i].Value.Type().String()
 		jsonAttrs[i].Value.Value = attributes[i].Value.AsInterface()
 	}
 	return jsonAttrs
