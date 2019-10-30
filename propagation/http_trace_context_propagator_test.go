@@ -471,6 +471,12 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 						"%s: Inject Correlation-Context missing part of header: %s in %s", tt.name, inHeader, gotHeader,
 					)
 				}
+				delete(headerParts, inHeader)
+			}
+			if len(headerParts) != 0 {
+				t.Errorf(
+					"%s: Extra data found in header: %v", tt.name, headerParts,
+				)
 			}
 		})
 	}

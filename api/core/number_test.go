@@ -227,6 +227,17 @@ func TestNumberEncodeShortBuffer(t *testing.T) {
 	}
 }
 
+func TestNumberZero(t *testing.T) {
+	zero := Number(0)
+	zerof := NewFloat64Number(0)
+	zeroi := NewInt64Number(0)
+	zerou := NewUint64Number(0)
+
+	if zero != zerof || zero != zeroi || zero != zerou {
+		t.Errorf("Invalid zero representations")
+	}
+}
+
 func BenchmarkNumberEmitInt64(b *testing.B) {
 	b.ReportAllocs()
 
