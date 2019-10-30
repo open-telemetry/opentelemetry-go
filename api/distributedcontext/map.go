@@ -18,13 +18,8 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
-type MeasureMetadata struct {
-	TTL int // -1 == infinite, 0 == do not propagate
-}
-
 type entry struct {
 	value core.Value
-	meta  MeasureMetadata
 }
 
 type rawMap map[core.Key]entry
