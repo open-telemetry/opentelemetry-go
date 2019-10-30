@@ -82,6 +82,7 @@ func withTestCollectorEndpoint() func() (batchUploader, error) {
 		return &testCollectorEnpoint{}, nil
 	}
 }
+
 func TestExporter_ExportSpan(t *testing.T) {
 	const (
 		serviceName = "test-service"
@@ -116,6 +117,29 @@ func TestExporter_ExportSpan(t *testing.T) {
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
 	assert.True(t, len(tc.spansUploaded) > 0)
+}
+
+func TestNewExporterWithAgentEndpoint(t *testing.T) {
+	const agentEndpoint = "localhost:6831"
+	// Create Jaeger Exporter
+	_, err := NewExporter(
+		WithAgentEndpoint(agentEndpoint),
+	)
+	assert.NoError(t, err)
+}
+
+func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
+	//empty
+	_, err := NewExporter(
+		WithAgentEndpoint(""),
+	)
+	assert.Error(t, err)
+
+	//invalid endpoint addr
+	_, err = NewExporter(
+		WithAgentEndpoint("http://localhost"),
+	)
+	assert.Error(t, err)
 }
 
 func Test_spanDataToThrift(t *testing.T) {
