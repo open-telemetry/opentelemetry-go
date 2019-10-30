@@ -12,22 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package metric_test
 
 import (
 	"testing"
+
+	"go.opentelemetry.io/api/metric"
+	mock "go.opentelemetry.io/internal/metric"
 )
 
 func TestGlobalMeter(t *testing.T) {
-	m := GlobalMeter()
-	if _, ok := m.(noopMeter); !ok {
-		t.Errorf("Expected global meter to be a noopMeter instance, got an instance of %T", m)
+	m := metric.GlobalMeter()
+	if _, ok := m.(metric.NoopMeter); !ok {
+		t.Errorf("Expected global meter to be a NoopMeter instance, got an instance of %T", m)
 	}
 
-	SetGlobalMeter(newMockMeter())
+	metric.SetGlobalMeter(mock.NewMeter())
 
-	m = GlobalMeter()
-	if _, ok := m.(*mockMeter); !ok {
-		t.Errorf("Expected global meter to be a *mockMetric.MockMeter instance, got an instance of %T", m)
+	m = metric.GlobalMeter()
+	if _, ok := m.(*mock.Meter); !ok {
+		t.Errorf("Expected global meter to be a *mock.Meter instance, got an instance of %T", m)
 	}
 }
