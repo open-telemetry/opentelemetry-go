@@ -42,19 +42,6 @@ type Number uint64
 
 // - constructors
 
-// NewZeroNumber
-func NewZeroNumber(kind NumberKind) Number {
-	switch kind {
-	case Int64NumberKind:
-		return NewInt64Number(0)
-	case Float64NumberKind:
-		return NewFloat64Number(0.)
-	case Uint64NumberKind:
-		return NewUint64Number(0)
-	}
-	return Number(0)
-}
-
 // NewNumberFromRaw creates a new Number from a raw value.
 func NewNumberFromRaw(r uint64) Number {
 	return Number(r)

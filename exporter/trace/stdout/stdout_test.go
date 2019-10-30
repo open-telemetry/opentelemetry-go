@@ -82,11 +82,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Attributes":[` +
 		`{` +
 		`"Key":"key",` +
-		`"Value":{"Type":8,"Bool":false,"Int64":0,"Uint64":0,"Float64":0,"String":"value","Bytes":null}` +
+		`"Value":{"Type":8,"Bool":false,"Int64":0,"Uint64":0,"Float64":0,"String":"value"}` +
 		`},` +
 		`{` +
 		`"Key":"double",` +
-		`"Value":{"Type":7,"Bool":false,"Int64":0,"Uint64":0,"Float64":123.456,"String":"","Bytes":null}` +
+		`"Value":{"Type":7,"Bool":false,"Int64":0,"Uint64":0,"Float64":123.456,"String":""}` +
 		`}` +
 		`],` +
 		`"MessageEvents":null,` +

@@ -422,8 +422,6 @@ func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {
 		return key.Uint(val)
 	case string:
 		return key.String(val)
-	case []byte:
-		return key.Bytes(val)
 	default:
 		return key.String(fmt.Sprint(v))
 	}

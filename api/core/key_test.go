@@ -209,31 +209,6 @@ func TestString(t *testing.T) {
 	}
 }
 
-func TestBytes(t *testing.T) {
-	for _, testcase := range []struct {
-		name string
-		v    []byte
-		want core.Value
-	}{
-		{
-			name: "Key.Bytes() correctly returns keys's internal []byte value",
-			v:    []byte{'f', 'o', 'o'},
-			want: core.Value{
-				Type:  core.BYTES,
-				Bytes: []byte{'f', 'o', 'o'},
-			},
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (k core.Key) Bytes(v []byte) KeyValue {
-			have := core.Key("").Bytes(testcase.v)
-			if diff := cmp.Diff(testcase.want, have.Value); diff != "" {
-				t.Fatal(diff)
-			}
-		})
-	}
-}
-
 func TestInt(t *testing.T) {
 	WTYPE := core.INT64
 	if unsafe.Sizeof(int(42)) == 4 {
@@ -390,14 +365,6 @@ func TestEmit(t *testing.T) {
 			v: core.Value{
 				Type:   core.STRING,
 				String: "foo",
-			},
-			want: "foo",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.BYTES`,
-			v: core.Value{
-				Type:  core.BYTES,
-				Bytes: []byte{'f', 'o', 'o'},
 			},
 			want: "foo",
 		},
