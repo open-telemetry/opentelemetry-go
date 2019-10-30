@@ -37,7 +37,7 @@ const (
 	Uint64NumberKind
 )
 
-var InvalidNumberKindError = fmt.Errorf("Invalid number kind")
+var ErrInvalidNumberKindError = fmt.Errorf("Invalid number kind")
 
 // OutputFloatingPointPrecision determines the maximum precision of
 // any floating point number encoded by this package.
@@ -498,7 +498,7 @@ func (n Number) Encode(kind NumberKind, w Encoder, tmp []byte) (int, error) {
 	case Uint64NumberKind:
 		tmp = strconv.AppendUint(tmp, n.AsUint64(), 10)
 	default:
-		return 0, InvalidNumberKindError
+		return 0, ErrInvalidNumberKindError
 	}
 	return w.Write(tmp)
 }
