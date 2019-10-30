@@ -17,27 +17,50 @@ package global_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/global"
 )
 
-type TestProvider1 struct {
-}
+type (
+	testTraceProvider struct{}
+	testMeterProvider struct{}
+)
 
-var _ trace.Provider = &TestProvider1{}
+var (
+	_ trace.Provider  = &testTraceProvider{}
+	_ metric.Provider = &testMeterProvider{}
+)
 
-func (tp *TestProvider1) GetTracer(name string) trace.Tracer {
+func (*testTraceProvider) GetTracer(name string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
-func TestMulitpleGlobalProvider(t *testing.T) {
+func (*testMeterProvider) GetMeter(name string) metric.Meter {
+	return &metric.NoopMeter{}
+}
 
-	p1 := TestProvider1{}
-	p2 := trace.NoopTraceProvider{}
+func TestMulitpleGlobalTracerProvider(t *testing.T) {
+
+	p1 := testTraceProvider{}
+	p2 := trace.NoopProvider{}
 	global.SetTraceProvider(&p1)
 	global.SetTraceProvider(&p2)
 
 	got := global.TraceProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	}
+}
+
+func TestMulitpleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := metric.NoopProvider{}
+	global.SetMeterProvider(&p1)
+	global.SetMeterProvider(&p2)
+
+	got := global.MeterProvider()
 	want := &p2
 	if got != want {
 		t.Fatalf("Provider: got %p, want %p\n", got, want)
