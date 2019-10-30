@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	apidctx "go.opentelemetry.io/api/distributedcontext"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/internal"
@@ -97,14 +96,6 @@ func (s *span) SetAttributes(attributes ...core.KeyValue) {
 		return
 	}
 	s.copyToCappedAttributes(attributes...)
-}
-
-// ModifyAttribute does nothing.
-func (s *span) ModifyAttribute(mutator apidctx.Mutator) {
-}
-
-// ModifyAttributes does nothing.
-func (s *span) ModifyAttributes(mutators ...apidctx.Mutator) {
 }
 
 func (s *span) End(options ...apitrace.EndOption) {
