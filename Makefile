@@ -1,5 +1,3 @@
-ALL_PKGS := $(shell GO111MODULE=on go list ./...)
-
 export GO111MODULE=on
 
 EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
@@ -34,22 +32,30 @@ precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/string
 	# TODO: Fix this on windows.
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "compiling all packages in $${dir}"; \
-	  (cd "$${dir}" && go build ./...); \
+	  (cd "$${dir}" && \
+	    go build ./... && \
+	    go test -run xxxxxMatchNothingxxxxx ./... >/dev/null); \
 	done
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
-	  (cd "$${dir}" && $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
+	  (cd "$${dir}" && \
+	    $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go mod tidy in $${dir}"; \
-	  (cd "$${dir}" && go mod tidy); \
+	  (cd "$${dir}" && \
+	    go mod tidy); \
 	done
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	$(GOTEST) $(GOTEST_OPT_WITH_COVERAGE) $(ALL_PKGS)
-	go tool cover -html=coverage.txt -o coverage.html
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go test ./... + coverage in $${dir}"; \
+	  (cd "$${dir}" && \
+	    $(GOTEST) $(GOTEST_OPT_WITH_COVERAGE) ./... && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	done
 
 .PHONY: circle-ci
 circle-ci: precommit test-clean-work-tree test-with-coverage test-386 examples
@@ -66,22 +72,25 @@ test-clean-work-tree:
 
 .PHONY: test
 test: examples
-	$(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
-	$(GOTEST) $(GOTEST_OPT_WITH_RACE) $(ALL_PKGS)
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go test ./... + race in $${dir}"; \
+	  (cd "$${dir}" && \
+	    $(GOTEST) $(GOTEST_OPT) ./... && \
+	    $(GOTEST) $(GOTEST_OPT_WITH_RACE) ./...); \
+	done
 
 .PHONY: test-386
 test-386:
-	GOARCH=386 $(GOTEST) -v -timeout 30s $(ALL_PKGS)
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go test ./... GOARCH 386 in $${dir}"; \
+	  (cd "$${dir}" && \
+	    GOARCH=386 $(GOTEST) -v -timeout 30s ./...); \
+	done
 
 .PHONY: examples
 examples:
 	@set -e; for ex in $(EXAMPLES); do \
 	  echo "Building $${ex}"; \
-	  (cd "$${ex}" && go build .); \
+	  (cd "$${ex}" && \
+	   go build .); \
 	done
-
-all-pkgs:
-	@echo $(ALL_PKGS) | tr ' ' '\n' | sort
-
-all-docs:
-	@echo $(ALL_DOCS) | tr ' ' '\n' | sort
