@@ -34,10 +34,8 @@ type Map struct {
 }
 
 type MapUpdate struct {
-	SingleKV      core.KeyValue
-	MultiKV       []core.KeyValue
-	SingleMutator Mutator
-	MultiMutator  []Mutator
+	SingleKV core.KeyValue
+	MultiKV  []core.KeyValue
 }
 
 func newMap(raw rawMap) Map {
@@ -55,7 +53,7 @@ func NewMap(update MapUpdate) Map {
 }
 
 func (m Map) Apply(update MapUpdate) Map {
-	r := make(rawMap, len(m.m)+len(update.MultiKV)+len(update.MultiMutator))
+	r := make(rawMap, len(m.m)+len(update.MultiKV))
 	for k, v := range m.m {
 		r[k] = v
 	}
@@ -68,12 +66,6 @@ func (m Map) Apply(update MapUpdate) Map {
 		r[kv.Key] = entry{
 			value: kv.Value,
 		}
-	}
-	if update.SingleMutator.Key.Defined() {
-		r.apply(update.SingleMutator)
-	}
-	for _, mutator := range update.MultiMutator {
-		r.apply(mutator)
 	}
 	if len(r) == 0 {
 		r = nil
@@ -106,27 +98,5 @@ func (m Map) Foreach(f func(kv core.KeyValue) bool) {
 		}) {
 			return
 		}
-	}
-}
-
-func (r rawMap) apply(mutator Mutator) {
-	key := mutator.KeyValue.Key
-	content := entry{
-		value: mutator.KeyValue.Value,
-		meta:  mutator.MeasureMetadata,
-	}
-	switch mutator.MutatorOp {
-	case INSERT:
-		if _, ok := r[key]; !ok {
-			r[key] = content
-		}
-	case UPDATE:
-		if _, ok := r[key]; ok {
-			r[key] = content
-		}
-	case UPSERT:
-		r[key] = content
-	case DELETE:
-		delete(r, key)
 	}
 }

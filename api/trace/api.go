@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedcontext"
 )
 
 type Provider interface {
@@ -94,10 +93,6 @@ type Span interface {
 	// Set span attributes
 	SetAttribute(core.KeyValue)
 	SetAttributes(...core.KeyValue)
-
-	// Modify and delete span attributes
-	ModifyAttribute(distributedcontext.Mutator)
-	ModifyAttributes(...distributedcontext.Mutator)
 }
 
 // SpanOption apply changes to SpanOptions.

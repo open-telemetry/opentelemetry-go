@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/internal/matchers"
 )
@@ -322,25 +321,6 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 		},
 		"#SetAttributes": func(span trace.Span) {
 			span.SetAttributes(core.Key("key1").String("value"), core.Key("key2").Int(123))
-		},
-		"#ModifyAttribute": func(span trace.Span) {
-			span.SetAttribute(core.Key("key").String("original value"))
-
-			span.ModifyAttribute(distributedcontext.Mutator{
-				MutatorOp: distributedcontext.UPSERT,
-				KeyValue:  core.Key("key").String("new value"),
-			})
-		},
-		"#ModifyAttributes": func(span trace.Span) {
-			span.SetAttribute(core.Key("key1").String("original value"))
-
-			span.ModifyAttributes(distributedcontext.Mutator{
-				MutatorOp: distributedcontext.UPSERT,
-				KeyValue:  core.Key("key1").String("new value"),
-			}, distributedcontext.Mutator{
-				MutatorOp: distributedcontext.INSERT,
-				KeyValue:  core.Key("key2").Int(123),
-			})
 		},
 	}
 	var mechanisms = map[string]func() trace.Span{
