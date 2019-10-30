@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package metric_test
 
 import (
 	"context"
@@ -21,7 +21,9 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/unit"
+	mock "go.opentelemetry.io/internal/metric"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -29,7 +31,7 @@ import (
 func TestCounterOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []CounterOptionApplier
+		opts []metric.CounterOptionApplier
 		keys []core.Key
 		desc string
 		unit unit.Unit
@@ -46,10 +48,10 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []CounterOptionApplier{
-				WithKeys(key.New("foo"), key.New("foo2")),
-				WithKeys(key.New("bar"), key.New("bar2")),
-				WithKeys(key.New("baz"), key.New("baz2")),
+			opts: []metric.CounterOptionApplier{
+				metric.WithKeys(key.New("foo"), key.New("foo2")),
+				metric.WithKeys(key.New("bar"), key.New("bar2")),
+				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
 				key.New("foo"), key.New("foo2"),
@@ -62,8 +64,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []CounterOptionApplier{
-				WithDescription("stuff"),
+			opts: []metric.CounterOptionApplier{
+				metric.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -72,9 +74,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []CounterOptionApplier{
-				WithDescription("stuff"),
-				WithDescription("things"),
+			opts: []metric.CounterOptionApplier{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -83,8 +85,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []CounterOptionApplier{
-				WithUnit("s"),
+			opts: []metric.CounterOptionApplier{
+				metric.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -93,9 +95,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []CounterOptionApplier{
-				WithUnit("s"),
-				WithUnit("h"),
+			opts: []metric.CounterOptionApplier{
+				metric.WithUnit("s"),
+				metric.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -104,8 +106,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "nonmonotonic",
-			opts: []CounterOptionApplier{
-				WithMonotonic(false),
+			opts: []metric.CounterOptionApplier{
+				metric.WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -114,9 +116,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "nonmonotonic, but not really",
-			opts: []CounterOptionApplier{
-				WithMonotonic(false),
-				WithMonotonic(true),
+			opts: []metric.CounterOptionApplier{
+				metric.WithMonotonic(false),
+				metric.WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -126,9 +128,9 @@ func TestCounterOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		opts := &Options{}
-		ApplyCounterOptions(opts, tt.opts...)
-		checkOptions(t, opts, &Options{
+		opts := &metric.Options{}
+		metric.ApplyCounterOptions(opts, tt.opts...)
+		checkOptions(t, opts, &metric.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -140,7 +142,7 @@ func TestCounterOptions(t *testing.T) {
 func TestGaugeOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []GaugeOptionApplier
+		opts []metric.GaugeOptionApplier
 		keys []core.Key
 		desc string
 		unit unit.Unit
@@ -157,10 +159,10 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []GaugeOptionApplier{
-				WithKeys(key.New("foo"), key.New("foo2")),
-				WithKeys(key.New("bar"), key.New("bar2")),
-				WithKeys(key.New("baz"), key.New("baz2")),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithKeys(key.New("foo"), key.New("foo2")),
+				metric.WithKeys(key.New("bar"), key.New("bar2")),
+				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
 				key.New("foo"), key.New("foo2"),
@@ -173,8 +175,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []GaugeOptionApplier{
-				WithDescription("stuff"),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -183,9 +185,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []GaugeOptionApplier{
-				WithDescription("stuff"),
-				WithDescription("things"),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -194,8 +196,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []GaugeOptionApplier{
-				WithUnit("s"),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -204,9 +206,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []GaugeOptionApplier{
-				WithUnit("s"),
-				WithUnit("h"),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithUnit("s"),
+				metric.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -215,8 +217,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "monotonic",
-			opts: []GaugeOptionApplier{
-				WithMonotonic(true),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -225,9 +227,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "monotonic, but not really",
-			opts: []GaugeOptionApplier{
-				WithMonotonic(true),
-				WithMonotonic(false),
+			opts: []metric.GaugeOptionApplier{
+				metric.WithMonotonic(true),
+				metric.WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -237,9 +239,9 @@ func TestGaugeOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		opts := &Options{}
-		ApplyGaugeOptions(opts, tt.opts...)
-		checkOptions(t, opts, &Options{
+		opts := &metric.Options{}
+		metric.ApplyGaugeOptions(opts, tt.opts...)
+		checkOptions(t, opts, &metric.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -251,7 +253,7 @@ func TestGaugeOptions(t *testing.T) {
 func TestMeasureOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []MeasureOptionApplier
+		opts []metric.MeasureOptionApplier
 		keys []core.Key
 		desc string
 		unit unit.Unit
@@ -268,10 +270,10 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []MeasureOptionApplier{
-				WithKeys(key.New("foo"), key.New("foo2")),
-				WithKeys(key.New("bar"), key.New("bar2")),
-				WithKeys(key.New("baz"), key.New("baz2")),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithKeys(key.New("foo"), key.New("foo2")),
+				metric.WithKeys(key.New("bar"), key.New("bar2")),
+				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
 			keys: []core.Key{
 				key.New("foo"), key.New("foo2"),
@@ -284,8 +286,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []MeasureOptionApplier{
-				WithDescription("stuff"),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -294,9 +296,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []MeasureOptionApplier{
-				WithDescription("stuff"),
-				WithDescription("things"),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -305,8 +307,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []MeasureOptionApplier{
-				WithUnit("s"),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -315,9 +317,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []MeasureOptionApplier{
-				WithUnit("s"),
-				WithUnit("h"),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithUnit("s"),
+				metric.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -326,8 +328,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "not absolute",
-			opts: []MeasureOptionApplier{
-				WithAbsolute(false),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithAbsolute(false),
 			},
 			keys: nil,
 			desc: "",
@@ -336,9 +338,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "not absolute, but not really",
-			opts: []MeasureOptionApplier{
-				WithAbsolute(false),
-				WithAbsolute(true),
+			opts: []metric.MeasureOptionApplier{
+				metric.WithAbsolute(false),
+				metric.WithAbsolute(true),
 			},
 			keys: nil,
 			desc: "",
@@ -348,9 +350,9 @@ func TestMeasureOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		opts := &Options{}
-		ApplyMeasureOptions(opts, tt.opts...)
-		checkOptions(t, opts, &Options{
+		opts := &metric.Options{}
+		metric.ApplyMeasureOptions(opts, tt.opts...)
+		checkOptions(t, opts, &metric.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -359,7 +361,7 @@ func TestMeasureOptions(t *testing.T) {
 	}
 }
 
-func checkOptions(t *testing.T, got *Options, expected *Options) {
+func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 	if diff := cmp.Diff(got, expected); diff != "" {
 		t.Errorf("Compare options: -got +want %s", diff)
 	}
@@ -367,7 +369,7 @@ func checkOptions(t *testing.T, got *Options, expected *Options) {
 
 func TestCounter(t *testing.T) {
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		c := meter.NewFloat64Counter("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -376,10 +378,10 @@ func TestCounter(t *testing.T) {
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, c.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, c.Impl())
 	}
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		c := meter.NewInt64Counter("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -388,13 +390,13 @@ func TestCounter(t *testing.T) {
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, c.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, c.Impl())
 	}
 }
 
 func TestGauge(t *testing.T) {
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		g := meter.NewFloat64Gauge("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -403,10 +405,10 @@ func TestGauge(t *testing.T) {
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.Impl())
 	}
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		g := meter.NewInt64Gauge("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -415,13 +417,13 @@ func TestGauge(t *testing.T) {
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.Impl())
 	}
 }
 
 func TestMeasure(t *testing.T) {
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		m := meter.NewFloat64Measure("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -430,10 +432,10 @@ func TestMeasure(t *testing.T) {
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, m.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, m.Impl())
 	}
 	{
-		meter := newMockMeter()
+		meter := mock.NewMeter()
 		m := meter.NewInt64Measure("ajwaj")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -442,53 +444,53 @@ func TestMeasure(t *testing.T) {
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.Impl())
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind core.NumberKind, instrument InstrumentImpl) {
+func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, meter *mock.Meter, kind core.NumberKind, instrument metric.InstrumentImpl) {
 	t.Helper()
-	if len(meter.measurementBatches) != 3 {
-		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.measurementBatches))
+	if len(meter.MeasurementBatches) != 3 {
+		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.MeasurementBatches))
 	}
-	ourInstrument := instrument.(*mockInstrument)
-	ourLabelSet := labels.(*mockLabelSet)
+	ourInstrument := instrument.(*mock.Instrument)
+	ourLabelSet := labels.(*mock.LabelSet)
 	minLen := 3
-	if minLen > len(meter.measurementBatches) {
-		minLen = len(meter.measurementBatches)
+	if minLen > len(meter.MeasurementBatches) {
+		minLen = len(meter.MeasurementBatches)
 	}
 	for i := 0; i < minLen; i++ {
-		got := meter.measurementBatches[i]
-		if got.ctx != ctx {
+		got := meter.MeasurementBatches[i]
+		if got.Ctx != ctx {
 			d := func(c context.Context) string {
 				return fmt.Sprintf("(ptr: %p, ctx %#v)", c, c)
 			}
-			t.Errorf("Wrong recorded context in batch %d, expected %s, got %s", i, d(ctx), d(got.ctx))
+			t.Errorf("Wrong recorded context in batch %d, expected %s, got %s", i, d(ctx), d(got.Ctx))
 		}
-		if got.labelSet != ourLabelSet {
-			d := func(l *mockLabelSet) string {
-				return fmt.Sprintf("(ptr: %p, labels %#v)", l, l.labels)
+		if got.LabelSet != ourLabelSet {
+			d := func(l *mock.LabelSet) string {
+				return fmt.Sprintf("(ptr: %p, labels %#v)", l, l.Labels)
 			}
-			t.Errorf("Wrong recorded label set in batch %d, expected %s, got %s", i, d(ourLabelSet), d(got.labelSet))
+			t.Errorf("Wrong recorded label set in batch %d, expected %s, got %s", i, d(ourLabelSet), d(got.LabelSet))
 		}
-		if len(got.measurements) != 1 {
-			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(got.measurements))
+		if len(got.Measurements) != 1 {
+			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(got.Measurements))
 		}
 		minMLen := 1
-		if minMLen > len(got.measurements) {
-			minMLen = len(got.measurements)
+		if minMLen > len(got.Measurements) {
+			minMLen = len(got.Measurements)
 		}
 		for j := 0; j < minMLen; j++ {
-			measurement := got.measurements[j]
-			if measurement.instrument != ourInstrument {
-				d := func(i *mockInstrument) string {
+			measurement := got.Measurements[j]
+			if measurement.Instrument != ourInstrument {
+				d := func(i *mock.Instrument) string {
 					return fmt.Sprintf("(ptr: %p, instrument %#v)", i, i)
 				}
-				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.instrument))
+				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.Instrument))
 			}
 			ft := fortyTwo(t, kind)
-			if measurement.number.CompareNumber(kind, ft) != 0 {
-				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(kind), measurement.number.Emit(kind))
+			if measurement.Number.CompareNumber(kind, ft) != 0 {
+				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(kind), measurement.Number.Emit(kind))
 			}
 		}
 	}
