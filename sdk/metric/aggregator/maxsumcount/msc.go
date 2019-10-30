@@ -60,10 +60,6 @@ func (c *Aggregator) Max() core.Number {
 
 // Collect saves the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-	zero := core.NewZeroNumber(kind)
-
 	// N.B. There is no atomic operation that can update all three
 	// values at once, so there are races between Update() and
 	// Collect().  Therefore, atomically swap fields independently,
@@ -71,8 +67,8 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	// could be spread across multiple collections in rare cases.
 
 	c.save.count.SetUint64(c.live.count.SwapUint64Atomic(0))
-	c.save.sum = c.live.sum.SwapNumberAtomic(zero)
-	c.save.max = c.live.max.SwapNumberAtomic(zero)
+	c.save.sum = c.live.sum.SwapNumberAtomic(core.Number(0))
+	c.save.max = c.live.max.SwapNumberAtomic(core.Number(0))
 
 	exp.Export(ctx, rec, c)
 }
