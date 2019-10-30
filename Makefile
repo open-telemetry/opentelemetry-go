@@ -33,6 +33,10 @@ precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/string
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	# TODO: Fix this on windows.
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "compiling all packages in $${dir}"; \
+	  (cd "$${dir}" && go build ./...); \
+	done
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
 	done
