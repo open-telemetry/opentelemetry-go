@@ -14,6 +14,8 @@
 
 package core
 
+//go:generate stringer -type=ValueType
+
 import (
 	"fmt"
 	"unsafe"
