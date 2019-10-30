@@ -248,12 +248,6 @@ func keyValueToTag(kv core.KeyValue) *gen.Tag {
 			VDouble: &kv.Value.Float64,
 			VType:   gen.TagType_DOUBLE,
 		}
-	case core.BYTES:
-		tag = &gen.Tag{
-			Key:     string(kv.Key),
-			VBinary: kv.Value.Bytes,
-			VType:   gen.TagType_BINARY,
-		}
 	}
 	return tag
 }
