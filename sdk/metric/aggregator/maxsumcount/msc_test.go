@@ -57,3 +57,45 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 			"Same sum - absolute")
 	})
 }
+
+func TestMaxSumCountMerge(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+
+		agg1 := New()
+		agg2 := New()
+
+		var all test.Numbers
+
+		for i := 0; i < count; i++ {
+			x := profile.Random(+1)
+			all = append(all, x)
+			agg1.Update(ctx, x, record)
+		}
+		for i := 0; i < count; i++ {
+			x := profile.Random(+1)
+			all = append(all, x)
+			agg2.Update(ctx, x, record)
+		}
+
+		agg1.Collect(ctx, record, batcher)
+		agg2.Collect(ctx, record, batcher)
+
+		agg1.Merge(agg2, record.Descriptor())
+
+		all.Sort()
+
+		require.InEpsilon(t,
+			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			agg1.Sum().CoerceToFloat64(profile.NumberKind),
+			0.000000001,
+			"Same sum - absolute")
+		require.Equal(t, all.Count(), agg1.Count(), "Same sum - absolute")
+		require.Equal(t,
+			all[len(all)-1],
+			agg1.Max(),
+			"Same max - absolute")
+	})
+}
