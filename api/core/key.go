@@ -197,41 +197,41 @@ func (v *Value) Type() ValueType {
 	return v.vtype
 }
 
-func (v Value) AsBool() bool {
+func (v *Value) AsBool() bool {
 	return rawToBool(v.numeric)
 }
 
-func (v Value) AsInt32() int32 {
+func (v *Value) AsInt32() int32 {
 	return rawToInt32(v.numeric)
 }
 
-func (v Value) AsInt64() int64 {
+func (v *Value) AsInt64() int64 {
 	return rawToInt64(v.numeric)
 }
 
-func (v Value) AsUint32() uint32 {
+func (v *Value) AsUint32() uint32 {
 	return rawToUint32(v.numeric)
 }
 
-func (v Value) AsUint64() uint64 {
+func (v *Value) AsUint64() uint64 {
 	return rawToUint64(v.numeric)
 }
 
-func (v Value) AsFloat32() float32 {
+func (v *Value) AsFloat32() float32 {
 	return rawToFloat32(v.numeric)
 }
 
-func (v Value) AsFloat64() float64 {
+func (v *Value) AsFloat64() float64 {
 	return rawToFloat64(v.numeric)
 }
 
-func (v Value) AsString() string {
+func (v *Value) AsString() string {
 	return v.stringly
 }
 
 type unknownValueType struct{}
 
-func (v Value) AsInterface() interface{} {
+func (v *Value) AsInterface() interface{} {
 	switch v.Type() {
 	case BOOL:
 		return v.AsBool()
@@ -253,7 +253,7 @@ func (v Value) AsInterface() interface{} {
 	return unknownValueType{}
 }
 
-func (v Value) Emit() string {
+func (v *Value) Emit() string {
 	if v.Type() == STRING {
 		return v.stringly
 	}
