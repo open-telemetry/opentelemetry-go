@@ -18,9 +18,7 @@ package core
 
 import (
 	"fmt"
-	"math"
 	"sync/atomic"
-	"unsafe"
 )
 
 // NumberKind describes the data type of the Number.
@@ -494,40 +492,4 @@ func (n Number) compareWithZero(kind NumberKind) int {
 		// you get what you deserve
 		return 0
 	}
-}
-
-func rawToFloat64(r uint64) float64 {
-	return math.Float64frombits(r)
-}
-
-func float64ToRaw(f float64) uint64 {
-	return math.Float64bits(f)
-}
-
-func rawToInt64(r uint64) int64 {
-	return int64(r)
-}
-
-func int64ToRaw(i int64) uint64 {
-	return uint64(i)
-}
-
-func rawToUint64(r uint64) uint64 {
-	return r
-}
-
-func uint64ToRaw(u uint64) uint64 {
-	return u
-}
-
-func rawPtrToFloat64Ptr(r *uint64) *float64 {
-	return (*float64)(unsafe.Pointer(r))
-}
-
-func rawPtrToInt64Ptr(r *uint64) *int64 {
-	return (*int64)(unsafe.Pointer(r))
-}
-
-func rawPtrToUint64Ptr(r *uint64) *uint64 {
-	return r
 }

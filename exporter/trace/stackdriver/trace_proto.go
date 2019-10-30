@@ -194,25 +194,25 @@ func copyAttributes(out **tracepb.Span_Attributes, in []core.KeyValue) {
 
 func attributeValue(kv core.KeyValue) *tracepb.AttributeValue {
 	value := kv.Value
-	switch value.Type {
+	switch value.Type() {
 	case core.BOOL:
 		return &tracepb.AttributeValue{
-			Value: &tracepb.AttributeValue_BoolValue{BoolValue: value.Bool},
+			Value: &tracepb.AttributeValue_BoolValue{BoolValue: value.AsBool()},
 		}
 	case core.INT64:
 		return &tracepb.AttributeValue{
-			Value: &tracepb.AttributeValue_IntValue{IntValue: value.Int64},
+			Value: &tracepb.AttributeValue_IntValue{IntValue: value.AsInt64()},
 		}
 	case core.FLOAT64:
 		// TODO: set double value if Stackdriver Trace support it in the future.
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_StringValue{
-				StringValue: trunc(strconv.FormatFloat(value.Float64, 'f', -1, 64),
+				StringValue: trunc(strconv.FormatFloat(value.AsFloat64(), 'f', -1, 64),
 					maxAttributeStringValue)},
 		}
 	case core.STRING:
 		return &tracepb.AttributeValue{
-			Value: &tracepb.AttributeValue_StringValue{StringValue: trunc(value.String, maxAttributeStringValue)},
+			Value: &tracepb.AttributeValue_StringValue{StringValue: trunc(value.AsString(), maxAttributeStringValue)},
 		}
 	}
 	return nil

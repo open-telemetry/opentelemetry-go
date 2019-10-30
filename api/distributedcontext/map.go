@@ -70,9 +70,6 @@ func (m Map) Apply(update MapUpdate) Map {
 
 func (m Map) Value(k core.Key) (core.Value, bool) {
 	entry, ok := m.m[k]
-	if !ok {
-		entry.value.Type = core.INVALID
-	}
 	return entry.value, ok
 }
 
