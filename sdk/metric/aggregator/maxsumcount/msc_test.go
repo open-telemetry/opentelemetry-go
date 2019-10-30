@@ -54,7 +54,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 		require.Equal(t,
 			all[len(all)-1],
 			agg.Max(),
-			"Same ma - absolute")
+			"Same max - absolute")
 	})
 }
 
