@@ -46,8 +46,8 @@ func main() {
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,
-		distributedcontext.Insert(fooKey.String("foo1")),
-		distributedcontext.Insert(barKey.String("bar1")),
+		fooKey.String("foo1"),
+		barKey.String("bar1"),
 	)
 
 	commonLabels := meter.Labels(lemonsKey.Int(10))
@@ -68,8 +68,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx,
-				distributedcontext.Insert(anotherKey.String("xyz"))),
+			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			oneMetric.Measurement(1.0),
