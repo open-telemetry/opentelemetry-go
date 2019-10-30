@@ -106,11 +106,12 @@ func canonicalizeLabels(ls []core.KeyValue) string {
 	sort.SliceStable(copy, func(i, j int) bool {
 		return copy[i].Key < copy[j].Key
 	})
+	var tmp [32]byte
 	var b strings.Builder
 	for _, kv := range copy {
 		b.WriteString(string(kv.Key))
 		b.WriteString("=")
-		b.WriteString(kv.Value.Emit())
+		kv.Value.Encode(&b, tmp[:])
 		b.WriteString("$")
 	}
 	return b.String()

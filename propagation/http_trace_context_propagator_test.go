@@ -447,7 +447,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 				"key6=123",
 				"key7=123",
 				"key8=123.567",
-				"key9=123.56700134277344",
+				"key9=123.5670013427734",
 				"key10=hi",
 			},
 		},
@@ -459,14 +459,14 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")
-			wantedLen := len(strings.Join(tt.wantInHeader, ","))
-			if wantedLen != len(gotHeader) {
-				t.Errorf(
-					"%s: Inject Correlation-Context incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
-				)
+
+			headerParts := map[string]bool{}
+
+			for _, item := range strings.Split(gotHeader, ",") {
+				headerParts[item] = true
 			}
 			for _, inHeader := range tt.wantInHeader {
-				if !strings.Contains(gotHeader, inHeader) {
+				if !headerParts[inHeader] {
 					t.Errorf(
 						"%s: Inject Correlation-Context missing part of header: %s in %s", tt.name, inHeader, gotHeader,
 					)
