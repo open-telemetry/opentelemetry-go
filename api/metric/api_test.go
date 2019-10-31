@@ -370,25 +370,25 @@ func TestCounter(t *testing.T) {
 		meter := newMockMeter()
 		c := meter.NewFloat64Counter("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
 		handle := c.AcquireHandle(labels)
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, meter, Float64ValueKind, c.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, c.instrument)
 	}
 	{
 		meter := newMockMeter()
 		c := meter.NewInt64Counter("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
 		handle := c.AcquireHandle(labels)
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, meter, Int64ValueKind, c.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, c.instrument)
 	}
 }
 
@@ -397,25 +397,25 @@ func TestGauge(t *testing.T) {
 		meter := newMockMeter()
 		g := meter.NewFloat64Gauge("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
 		handle := g.AcquireHandle(labels)
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, Float64ValueKind, g.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.instrument)
 	}
 	{
 		meter := newMockMeter()
 		g := meter.NewInt64Gauge("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
 		handle := g.AcquireHandle(labels)
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, Int64ValueKind, g.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.instrument)
 	}
 }
 
@@ -424,29 +424,29 @@ func TestMeasure(t *testing.T) {
 		meter := newMockMeter()
 		m := meter.NewFloat64Measure("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
 		handle := m.AcquireHandle(labels)
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, meter, Float64ValueKind, m.instrument)
+		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, m.instrument)
 	}
 	{
 		meter := newMockMeter()
 		m := meter.NewInt64Measure("ajwaj")
 		ctx := context.Background()
-		labels := meter.Labels(ctx)
+		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
 		handle := m.AcquireHandle(labels)
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, meter, Int64ValueKind, m.instrument)
+		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.instrument)
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind ValueKind, instrument Instrument) {
+func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *mockMeter, kind core.NumberKind, instrument InstrumentImpl) {
 	t.Helper()
 	if len(meter.measurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.measurementBatches))
@@ -487,20 +487,20 @@ func checkBatches(t *testing.T, ctx context.Context, labels LabelSet, meter *moc
 				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.instrument))
 			}
 			ft := fortyTwo(t, kind)
-			if measurement.value.RawCompare(ft.AsRaw(), kind) != 0 {
-				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(kind), measurement.value.Emit(kind))
+			if measurement.number.CompareNumber(kind, ft) != 0 {
+				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, ft.Emit(kind), measurement.number.Emit(kind))
 			}
 		}
 	}
 }
 
-func fortyTwo(t *testing.T, kind ValueKind) MeasurementValue {
+func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
 	switch kind {
-	case Int64ValueKind:
-		return NewInt64MeasurementValue(42)
-	case Float64ValueKind:
-		return NewFloat64MeasurementValue(42)
+	case core.Int64NumberKind:
+		return core.NewInt64Number(42)
+	case core.Float64NumberKind:
+		return core.NewFloat64Number(42)
 	}
 	t.Errorf("Invalid value kind %q", kind)
-	return NewInt64MeasurementValue(0)
+	return core.NewInt64Number(0)
 }

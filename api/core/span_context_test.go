@@ -24,28 +24,28 @@ func TestIsValid(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		tid  core.TraceID
-		sid  uint64
+		sid  core.SpanID
 		want bool
 	}{
 		{
 			name: "SpanContext.IsValid() returns true if sc has both an Trace ID and Span ID",
-			tid:  core.TraceID([16]byte{1}),
-			sid:  uint64(42),
+			tid:  [16]byte{1},
+			sid:  [8]byte{42},
 			want: true,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has neither an Trace ID nor Span ID",
 			tid:  core.TraceID([16]byte{}),
-			sid:  uint64(0),
+			sid:  [8]byte{},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Span ID but not a Trace ID",
 			tid:  core.TraceID([16]byte{}),
-			sid:  uint64(42),
+			sid:  [8]byte{42},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Trace ID but not a Span ID",
 			tid:  core.TraceID([16]byte{1}),
-			sid:  uint64(0),
+			sid:  [8]byte{},
 			want: false,
 		},
 	} {
@@ -141,7 +141,7 @@ func TestHasSpanID(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.HasSpanID() returns true if self.SpanID != 0",
-			sc:   core.SpanContext{SpanID: uint64(42)},
+			sc:   core.SpanContext{SpanID: [8]byte{42}},
 			want: true,
 		}, {
 			name: "SpanContext.HasSpanID() returns false if self.SpanID == 0",
@@ -167,8 +167,8 @@ func TestSpanIDString(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.SpanIDString returns string representation of self.TraceID values > 0",
-			sc:   core.SpanContext{SpanID: uint64(42)},
-			want: `000000000000002a`,
+			sc:   core.SpanContext{SpanID: [8]byte{42}},
+			want: `2a00000000000000`,
 		}, {
 			name: "SpanContext.SpanIDString returns string representation of self.TraceID values == 0",
 			sc:   core.SpanContext{},

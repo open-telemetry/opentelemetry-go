@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 
-	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/exporter/trace/jaeger"
+	"go.opentelemetry.io/global"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -55,7 +55,7 @@ func initTracer() func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	apitrace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 	return func() {
 		exporter.Flush()
 	}
@@ -67,14 +67,14 @@ func main() {
 
 	ctx := context.Background()
 
-	tr := apitrace.GlobalProvider().GetTracer("component-main")
+	tr := global.TraceProvider().GetTracer("component-main")
 	ctx, span := tr.Start(ctx, "/foo")
 	bar(ctx)
 	span.End()
 }
 
 func bar(ctx context.Context) {
-	tr := apitrace.GlobalProvider().GetTracer("component-bar")
+	tr := global.TraceProvider().GetTracer("component-bar")
 	_, span := tr.Start(ctx, "/bar")
 	defer span.End()
 

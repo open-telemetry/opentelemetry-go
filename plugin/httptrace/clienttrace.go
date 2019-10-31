@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 )
 
 var (
@@ -54,7 +55,7 @@ func newClientTracer(ctx context.Context) *clientTracer {
 		Context: ctx,
 		levels:  make(map[string]trace.Span),
 	}
-	ct.tr = trace.GlobalProvider().GetTracer("go.opentelemetry.io/plugin/httptrace")
+	ct.tr = global.TraceProvider().GetTracer("go.opentelemetry.io/plugin/httptrace")
 	ct.open("http.request")
 	return ct
 }

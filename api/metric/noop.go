@@ -12,28 +12,28 @@ type noopLabelSet struct{}
 type noopInstrument struct{}
 
 var _ Meter = noopMeter{}
-var _ Instrument = noopInstrument{}
-var _ Handle = noopHandle{}
+var _ InstrumentImpl = noopInstrument{}
+var _ HandleImpl = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (noopHandle) RecordOne(context.Context, MeasurementValue) {
+func (noopHandle) RecordOne(context.Context, core.Number) {
 }
 
 func (noopHandle) Release() {
 }
 
-func (noopInstrument) AcquireHandle(LabelSet) Handle {
+func (noopInstrument) AcquireHandle(LabelSet) HandleImpl {
 	return noopHandle{}
 }
 
-func (noopInstrument) RecordOne(context.Context, MeasurementValue, LabelSet) {
+func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
-func (noopLabelSet) Meter() Meter {
+func (noopInstrument) Meter() Meter {
 	return noopMeter{}
 }
 
-func (noopMeter) Labels(context.Context, ...core.KeyValue) LabelSet {
+func (noopMeter) Labels(...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 

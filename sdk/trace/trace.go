@@ -24,14 +24,8 @@ import (
 
 func defIDGenerator() internal.IDGenerator {
 	gen := &defaultIDGenerator{}
-	// initialize traceID and spanID generators.
 	var rngSeed int64
-	for _, p := range []interface{}{
-		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
-	} {
-		_ = binary.Read(crand.Reader, binary.LittleEndian, p)
-	}
-	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
-	gen.spanIDInc |= 1
+	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	gen.randSource = rand.New(rand.NewSource(rngSeed))
 	return gen
 }

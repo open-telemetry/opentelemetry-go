@@ -145,10 +145,10 @@ func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID := uint64(0x0102030405060708)
+	spanID, _ := core.SpanIDFromHex("0102030405060708")
 
 	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID := uint64(0x0102030405060709)
+	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
 
 	messageEventValue := "event-test"
 	keyValue := "value"
@@ -213,7 +213,7 @@ func Test_spanDataToThrift(t *testing.T) {
 						RefType:     gen.SpanRefType_CHILD_OF,
 						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
 						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
-						SpanId:      int64(linkSpanID),
+						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
 					},
 				},
 				Logs: []*gen.Log{

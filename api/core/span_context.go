@@ -18,8 +18,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
 )
 
 const (
@@ -30,14 +28,48 @@ const (
 	// for SpanContext TraceFlags field when a trace is sampled.
 	TraceFlagsSampled = traceFlagsBitMaskSampled
 	TraceFlagsUnused  = traceFlagsBitMaskUnused
+
+	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
+
+	ErrInvalidTraceIDLength errorConst = "hex encoded trace-id must have length equals to 32"
+	ErrNilTraceID           errorConst = "trace-id can't be all zero"
+
+	ErrInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
+	ErrNilSpanID           errorConst = "span-id can't be all zero"
 )
+
+type errorConst string
+
+func (e errorConst) Error() string {
+	return string(e)
+}
 
 type TraceID [16]byte
 
 var nilTraceID TraceID
+var _ json.Marshaler = nilTraceID
 
-func (t TraceID) isValid() bool {
+func (t TraceID) IsValid() bool {
 	return !bytes.Equal(t[:], nilTraceID[:])
+}
+
+// MarshalJSON implements a custom marshal function to encode TraceID as a hex string
+func (t TraceID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeToString(t[:]))
+}
+
+type SpanID [8]byte
+
+var nilSpanID SpanID
+var _ json.Marshaler = nilSpanID
+
+func (s SpanID) IsValid() bool {
+	return !bytes.Equal(s[:], nilSpanID[:])
+}
+
+// MarshalJSON implements a custom marshal function to encode SpanID as a hex string
+func (s SpanID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeToString(s[:]))
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant
@@ -46,9 +78,39 @@ func (t TraceID) isValid() bool {
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
-		return t, errors.New("hex encoded trace-id must have length equals to 32")
+		return t, ErrInvalidTraceIDLength
 	}
 
+	if err := decodeHex(h, t[:]); err != nil {
+		return t, err
+	}
+
+	if !t.IsValid() {
+		return t, ErrNilTraceID
+	}
+	return t, nil
+}
+
+// SpanIDFromHex returns a SpanID from a hex string if it is compliant
+// with the w3c trace-context specification.
+// See more at https://www.w3.org/TR/trace-context/#parent-id
+func SpanIDFromHex(h string) (SpanID, error) {
+	s := SpanID{}
+	if len(h) != 16 {
+		return s, ErrInvalidSpanIDLength
+	}
+
+	if err := decodeHex(h, s[:]); err != nil {
+		return s, err
+	}
+
+	if !s.IsValid() {
+		return s, ErrNilSpanID
+	}
+	return s, nil
+}
+
+func decodeHex(h string, b []byte) error {
 	for _, r := range h {
 		switch {
 		case 'a' <= r && r <= 'f':
@@ -56,49 +118,28 @@ func TraceIDFromHex(h string) (TraceID, error) {
 		case '0' <= r && r <= '9':
 			continue
 		default:
-			return t, errors.New("trace-id can only contain [0-9a-f] characters, all lowercase")
+			return ErrInvalidHexID
 		}
 	}
 
-	b, err := hex.DecodeString(h)
+	decoded, err := hex.DecodeString(h)
 	if err != nil {
-		return t, err
+		return err
 	}
-	copy(t[:], b)
 
-	if !t.isValid() {
-		return t, errors.New("trace-id can't be all zero")
-	}
-	return t, nil
+	copy(b[:], decoded)
+	return nil
 }
 
 type SpanContext struct {
 	TraceID    TraceID
-	SpanID     uint64
+	SpanID     SpanID
 	TraceFlags byte
 }
-
-var _ json.Marshaler = (*SpanContext)(nil)
 
 // EmptySpanContext is meant for internal use to return invalid span context during error conditions.
 func EmptySpanContext() SpanContext {
 	return SpanContext{}
-}
-
-// MarshalJSON implements a custom marshal function to encode SpanContext
-// in a human readable format with hex encoded TraceID and SpanID.
-func (sc SpanContext) MarshalJSON() ([]byte, error) {
-	type JSONSpanContext struct {
-		TraceID    string
-		SpanID     string
-		TraceFlags byte
-	}
-
-	return json.Marshal(JSONSpanContext{
-		TraceID:    sc.TraceIDString(),
-		SpanID:     sc.SpanIDString(),
-		TraceFlags: sc.TraceFlags,
-	})
 }
 
 func (sc SpanContext) IsValid() bool {
@@ -106,15 +147,16 @@ func (sc SpanContext) IsValid() bool {
 }
 
 func (sc SpanContext) HasTraceID() bool {
-	return sc.TraceID.isValid()
+	return sc.TraceID.IsValid()
 }
 
 func (sc SpanContext) HasSpanID() bool {
-	return sc.SpanID != 0
+	return sc.SpanID.IsValid()
 }
 
 func (sc SpanContext) SpanIDString() string {
-	return fmt.Sprintf("%.16x", sc.SpanID)
+	return hex.EncodeToString(sc.SpanID[:])
+
 }
 
 func (sc SpanContext) TraceIDString() string {

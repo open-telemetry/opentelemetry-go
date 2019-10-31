@@ -38,3 +38,26 @@ type SpanSyncer interface {
 type SpanBatcher interface {
 	ExportSpans(context.Context, []*SpanData)
 }
+
+// MetricBatcher is responsible for deciding which kind of aggregation
+// to use and gathering exported results from the SDK.  The standard SDK
+// supports binding only one of these interfaces, i.e., a single exporter.
+//
+// Multiple-exporters could be implemented by implementing this interface
+// for a group of MetricBatcher.
+type MetricBatcher interface {
+	// AggregatorFor should return the kind of aggregator
+	// suited to the requested export.  Returning `nil`
+	// indicates to ignore the metric update.
+	//
+	// Note: This is context-free because the handle should not be
+	// bound to the incoming context.  This call should not block.
+	AggregatorFor(MetricRecord) MetricAggregator
+
+	// Export receives pairs of records and aggregators
+	// during the SDK Collect().  Exporter implementations
+	// must access the specific aggregator to receive the
+	// exporter data, since the format of the data varies
+	// by aggregation.
+	Export(context.Context, MetricRecord, MetricAggregator)
+}

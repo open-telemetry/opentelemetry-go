@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -35,11 +36,12 @@ import (
 
 var (
 	tid core.TraceID
-	sid = uint64(0x0102040810203040)
+	sid core.SpanID
 )
 
 func init() {
 	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ = core.SpanIDFromHex("0102040810203040")
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
@@ -133,7 +135,71 @@ func TestRecordingIsOff(t *testing.T) {
 	}
 }
 
-// TODO: [rghetia] enable sampling test when Sampling is working.
+func TestSampling(t *testing.T) {
+	idg := defIDGenerator()
+	total := 10000
+	for name, tc := range map[string]struct {
+		sampler       Sampler
+		expect        float64
+		tolerance     float64
+		parent        bool
+		sampledParent bool
+	}{
+		// Span w/o a parent
+		"NeverSample":            {sampler: NeverSample(), expect: 0, tolerance: 0},
+		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0, tolerance: 0},
+		"ProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0},
+		"ProbabilitySampler_.25": {sampler: ProbabilitySampler(0.25), expect: .25, tolerance: 0.015},
+		"ProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015},
+		"ProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015},
+		"ProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0},
+		// Spans with a parent that is *not* sampled act like spans w/o a parent
+		"UnsampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: .25, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true},
+		// Spans with a parent that is sampled, will always sample, regardless of the probability
+		"SampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		// Spans with a sampled parent, but when using the NeverSample Sampler, aren't sampled
+		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, tolerance: 0, parent: true, sampledParent: true},
+	} {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			p, err := NewProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
+			if err != nil {
+				t.Fatal("unexpected error:", err)
+			}
+			tr := p.GetTracer("test")
+			var sampled int
+			for i := 0; i < total; i++ {
+				var opts []apitrace.SpanOption
+				if tc.parent {
+					psc := core.SpanContext{
+						TraceID: idg.NewTraceID(),
+						SpanID:  idg.NewSpanID(),
+					}
+					if tc.sampledParent {
+						psc.TraceFlags = core.TraceFlagsSampled
+					}
+					opts = append(opts, apitrace.ChildOf(psc))
+				}
+				_, span := tr.Start(context.Background(), "test", opts...)
+				if span.SpanContext().IsSampled() {
+					sampled++
+				}
+			}
+			got := float64(sampled) / float64(total)
+			diff := math.Abs(got - tc.expect)
+			if diff > tc.tolerance {
+				t.Errorf("got %f (diff: %f), expected %f (w/tolerance: %f)", got, diff, tc.expect, tc.tolerance)
+			}
+		})
+	}
+}
 
 func TestStartSpanWithChildOf(t *testing.T) {
 	tp, _ := NewProvider()
@@ -385,8 +451,8 @@ func TestAddLinks(t *testing.T) {
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
 	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
@@ -426,8 +492,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	span.Link(sc1, key.New("key1").String("value1"))
 	span.Link(sc2,
@@ -462,9 +528,9 @@ func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
-	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: 0x3}
+	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 	span := startSpan(tp, "LinksOverLimit")
@@ -623,10 +689,10 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
 	}
 	got := te.spans[0]
-	if got.SpanContext.SpanID == 0 {
+	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = 0
+	got.SpanContext.SpanID = core.SpanID{}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -746,6 +812,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	spans = append(spans, s) // never sample
 
 	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+	sID, _ := core.SpanIDFromHex("0001020304050607")
 
 	_, apiSpan = tr.Start(
 		context.Background(),
@@ -753,7 +820,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		apitrace.ChildOf(
 			core.SpanContext{
 				TraceID:    tID,
-				SpanID:     uint64(0x0001020304050607),
+				SpanID:     sID,
 				TraceFlags: 0,
 			},
 		),

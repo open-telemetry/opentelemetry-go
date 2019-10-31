@@ -178,7 +178,7 @@ func (s *span) SetName(name string) {
 	spanName := s.tracer.spanNameWithPrefix(name)
 	s.data.Name = spanName
 	// SAMPLING
-	noParent := s.data.ParentSpanID == 0
+	noParent := !s.data.ParentSpanID.IsValid()
 	var ctx core.SpanContext
 	if noParent {
 		ctx = core.EmptySpanContext()

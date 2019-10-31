@@ -12,28 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package global
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+
+	"go.opentelemetry.io/api/trace"
+)
 
 type globalProvider struct {
-	p Provider
+	p trace.Provider
 }
 
 var globalP atomic.Value
 
-// GlobalProvider returns trace provider registered with global registry.
-// If no trace provider is registered then an instance of NoopTraceProvider is returned.
+// TraceProvider returns the registered global trace provider.
+// If none is registered then an instance of NoopTraceProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
-//     tracer := trace.GlobalProvider().GetTracer("example.com/foo")
-func GlobalProvider() Provider {
+//     tracer := global.TraceProvider().GetTracer("example.com/foo")
+func TraceProvider() trace.Provider {
 	if gp := globalP.Load(); gp != nil {
 		return gp.(globalProvider).p
 	}
-	return NoopTraceProvider{}
+	return trace.NoopTraceProvider{}
 }
 
-// SetGlobalProvider sets the provider as a global trace provider.
-func SetGlobalProvider(m Provider) {
-	globalP.Store(globalProvider{p: m})
+// SetTraceProvider registers p as the global trace provider.
+func SetTraceProvider(p trace.Provider) {
+	globalP.Store(globalProvider{p: p})
 }

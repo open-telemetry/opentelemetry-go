@@ -21,10 +21,11 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 )
 
 var (
-	tracer = trace.GlobalProvider().GetTracer("ex.com/basic")
+	tracer = global.TraceProvider().GetTracer("ex.com/basic")
 
 	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
 
@@ -49,7 +50,7 @@ func main() {
 		distributedcontext.Insert(barKey.String("bar1")),
 	)
 
-	commonLabels := meter.Labels(ctx, lemonsKey.Int(10))
+	commonLabels := meter.Labels(lemonsKey.Int(10))
 
 	gauge := oneMetric.AcquireHandle(commonLabels)
 	defer gauge.Release()

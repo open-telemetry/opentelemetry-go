@@ -2,10 +2,7 @@ ALL_PKGS := $(shell GO111MODULE=on go list ./...)
 
 export GO111MODULE=on
 
-EXAMPLES := \
-	./example/basic \
-	./example/http/client \
-	./example/http/server
+EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
@@ -13,7 +10,8 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 GOTEST=go test
-GOTEST_OPT?=-v -race -timeout 30s
+GOTEST_OPT?=-v -timeout 30s
+GOTEST_OPT_WITH_RACE     = $(GOTEST_OPT) -race
 GOTEST_OPT_WITH_COVERAGE = $(GOTEST_OPT) -coverprofile=coverage.txt -covermode=atomic
 
 .DEFAULT_GOAL := precommit
@@ -34,6 +32,10 @@ $(TOOLS_DIR)/stringer: go.mod go.sum tools.go
 precommit: $(TOOLS_DIR)/golangci-lint  $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
 	# TODO: Fix this on windows.
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "compiling all packages in $${dir}"; \
+	  (cd "$${dir}" && go build ./...); \
+	done
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
@@ -65,6 +67,7 @@ test-clean-work-tree:
 .PHONY: test
 test: examples
 	$(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
+	$(GOTEST) $(GOTEST_OPT_WITH_RACE) $(ALL_PKGS)
 
 .PHONY: test-386
 test-386:

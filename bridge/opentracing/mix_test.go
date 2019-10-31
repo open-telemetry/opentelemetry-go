@@ -25,8 +25,9 @@ import (
 
 	otelcore "go.opentelemetry.io/api/core"
 	oteltrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 
-	"go.opentelemetry.io/experimental/bridge/opentracing/internal"
+	"go.opentelemetry.io/bridge/opentracing/internal"
 )
 
 type mixedAPIsTestCase struct {
@@ -118,7 +119,7 @@ func TestMixedAPIs(t *testing.T) {
 		})
 		ctx := context.Background()
 
-		oteltrace.SetGlobalProvider(otelProvider)
+		global.SetTraceProvider(otelProvider)
 		ot.SetGlobalTracer(otTracer)
 
 		tc.setup(t, mockOtelTracer)
@@ -131,7 +132,7 @@ func TestMixedAPIs(t *testing.T) {
 
 type simpleTest struct {
 	traceID otelcore.TraceID
-	spanIDs []uint64
+	spanIDs []otelcore.SpanID
 }
 
 func newSimpleTest() *simpleTest {
@@ -165,10 +166,10 @@ func (st *simpleTest) noop(t *testing.T, ctx context.Context) {
 
 type currentActiveSpanTest struct {
 	traceID otelcore.TraceID
-	spanIDs []uint64
+	spanIDs []otelcore.SpanID
 
-	recordedCurrentOtelSpanIDs []uint64
-	recordedActiveOTSpanIDs    []uint64
+	recordedCurrentOtelSpanIDs []otelcore.SpanID
+	recordedActiveOTSpanIDs    []otelcore.SpanID
 }
 
 func newCurrentActiveSpanTest() *currentActiveSpanTest {
@@ -219,7 +220,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 	spanID := oteltrace.CurrentSpan(ctx).SpanContext().SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
-	spanID = 0
+	spanID = otelcore.SpanID{}
 	if bridgeSpan, ok := ot.SpanFromContext(ctx).(*bridgeSpan); ok {
 		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
 	}
@@ -424,7 +425,7 @@ func (tm *tracerMessTest) setup(t *testing.T, tracer *internal.MockTracer) {
 
 func (tm *tracerMessTest) check(t *testing.T, tracer *internal.MockTracer) {
 	globalOtTracer := ot.GlobalTracer()
-	globalOtelTracer := oteltrace.GlobalProvider().GetTracer("")
+	globalOtelTracer := global.TraceProvider().GetTracer("")
 	if len(tm.recordedOTSpanTracers) != 3 {
 		t.Errorf("Expected 3 recorded OpenTracing tracers from spans, got %d", len(tm.recordedOTSpanTracers))
 	}
@@ -465,23 +466,23 @@ func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) {
 
 // helpers
 
-func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID otelcore.TraceID, expectedSpanIDs []uint64) {
+func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID otelcore.TraceID, expectedSpanIDs []otelcore.SpanID) {
 	expectedSpanCount := len(expectedSpanIDs)
 
 	// reverse spanIDs, since first span ID belongs to root, that
 	// finishes last
-	spanIDs := make([]uint64, len(expectedSpanIDs))
+	spanIDs := make([]otelcore.SpanID, len(expectedSpanIDs))
 	copy(spanIDs, expectedSpanIDs)
 	reverse(len(spanIDs), func(i, j int) {
 		spanIDs[i], spanIDs[j] = spanIDs[j], spanIDs[i]
 	})
 	// the last finished span has no parent
-	parentSpanIDs := append(spanIDs[1:], 0)
+	parentSpanIDs := append(spanIDs[1:], otelcore.SpanID{})
 
-	sks := map[uint64]oteltrace.SpanKind{
-		3456: oteltrace.SpanKindProducer,
-		2345: oteltrace.SpanKindInternal,
-		1234: oteltrace.SpanKindClient,
+	sks := map[otelcore.SpanID]oteltrace.SpanKind{
+		{125}: oteltrace.SpanKindProducer,
+		{124}: oteltrace.SpanKindInternal,
+		{123}: oteltrace.SpanKindClient,
 	}
 
 	if len(tracer.FinishedSpans) != expectedSpanCount {
@@ -516,23 +517,16 @@ func simpleTraceID() otelcore.TraceID {
 	return [16]byte{123, 42}
 }
 
-func simpleSpanIDs(count int) []uint64 {
-	base := []uint64{
-		1234,
-		2345,
-		3456,
-		4567,
-		5678,
-		6789,
+func simpleSpanIDs(count int) []otelcore.SpanID {
+	base := []otelcore.SpanID{
+		{123},
+		{124},
+		{125},
+		{126},
+		{127},
+		{128},
 	}
-	if count <= len(base) {
-		return base[:count]
-	}
-	count -= len(base)
-	for i := 0; i < count; i++ {
-		base = append(base, base[i]*10)
-	}
-	return base
+	return base[:count]
 }
 
 func min(a, b int) int {
@@ -543,7 +537,7 @@ func min(a, b int) int {
 }
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
-	tr := oteltrace.GlobalProvider().GetTracer("")
+	tr := global.TraceProvider().GetTracer("")
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
 	defer span.End()
 	callback(t, ctx)
@@ -560,7 +554,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 }
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
-	tr := oteltrace.GlobalProvider().GetTracer("")
+	tr := global.TraceProvider().GetTracer("")
 	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
 	defer span.Finish()
 	callback(t, ctx)

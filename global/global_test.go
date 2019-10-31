@@ -12,4 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal // import "go.opentelemetry.io/experimental/bridge/opentracing/internal"
+package global_test
+
+import (
+	"testing"
+
+	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
+)
+
+type TestProvider1 struct {
+}
+
+var _ trace.Provider = &TestProvider1{}
+
+func (tp *TestProvider1) GetTracer(name string) trace.Tracer {
+	return &trace.NoopTracer{}
+}
+
+func TestMulitpleGlobalProvider(t *testing.T) {
+
+	p1 := TestProvider1{}
+	p2 := trace.NoopTraceProvider{}
+	global.SetTraceProvider(&p1)
+	global.SetTraceProvider(&p2)
+
+	got := global.TraceProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	}
+}
