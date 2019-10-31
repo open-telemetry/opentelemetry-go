@@ -17,6 +17,7 @@ package core
 //go:generate stringer -type=ValueType
 
 import (
+	"fmt"
 	"strconv"
 	"unsafe"
 )
@@ -262,9 +263,9 @@ func (v *Value) Emit() string {
 	case UINT32, UINT64:
 		return strconv.FormatUint(v.AsUint64(), 10)
 	case FLOAT32:
-		return strconv.FormatFloat(float64(v.AsFloat32()), 'f', -1, 32)
+		return fmt.Sprint(v.AsFloat32())
 	case FLOAT64:
-		return strconv.FormatFloat(v.AsFloat64(), 'f', -1, 64)
+		return fmt.Sprint(v.AsFloat64())
 	case STRING:
 		return v.stringly
 	default:
