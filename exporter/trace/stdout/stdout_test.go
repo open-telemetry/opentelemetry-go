@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 )
@@ -54,14 +55,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StartTime: now,
 		EndTime:   now,
 		Attributes: []core.KeyValue{
-			{
-				Key:   core.Key("key"),
-				Value: core.Value{Type: core.STRING, String: keyValue},
-			},
-			{
-				Key:   core.Key("double"),
-				Value: core.Value{Type: core.FLOAT64, Float64: doubleValue},
-			},
+			key.String("key", keyValue),
+			key.Float64("double", doubleValue),
 		},
 		SpanKind: trace.SpanKindInternal,
 		Status:   codes.Unknown,
@@ -82,11 +77,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Attributes":[` +
 		`{` +
 		`"Key":"key",` +
-		`"Value":{"Type":8,"Bool":false,"Int64":0,"Uint64":0,"Float64":0,"String":"value"}` +
+		`"Value":{"Type":"STRING","Value":"value"}` +
 		`},` +
 		`{` +
 		`"Key":"double",` +
-		`"Value":{"Type":7,"Bool":false,"Int64":0,"Uint64":0,"Float64":123.456,"String":""}` +
+		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
 		`"MessageEvents":null,` +

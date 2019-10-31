@@ -223,29 +223,47 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 
 func keyValueToTag(kv core.KeyValue) *gen.Tag {
 	var tag *gen.Tag
-	switch kv.Value.Type {
+	switch kv.Value.Type() {
 	case core.STRING:
+		s := kv.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
-			VStr:  &kv.Value.String,
+			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
 	case core.BOOL:
+		b := kv.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
-			VBool: &kv.Value.Bool,
+			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case core.INT32, core.INT64:
+	case core.INT32:
+		i := int64(kv.Value.AsInt32())
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
-			VLong: &kv.Value.Int64,
+			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case core.FLOAT32, core.FLOAT64:
+	case core.INT64:
+		i := kv.Value.AsInt64()
+		tag = &gen.Tag{
+			Key:   string(kv.Key),
+			VLong: &i,
+			VType: gen.TagType_LONG,
+		}
+	case core.FLOAT32:
+		f := float64(kv.Value.AsFloat32())
 		tag = &gen.Tag{
 			Key:     string(kv.Key),
-			VDouble: &kv.Value.Float64,
+			VDouble: &f,
+			VType:   gen.TagType_DOUBLE,
+		}
+	case core.FLOAT64:
+		f := kv.Value.AsFloat64()
+		tag = &gen.Tag{
+			Key:     string(kv.Key),
+			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
 		}
 	}
