@@ -33,12 +33,10 @@ type (
 
 	// Aggregator aggregates gauge events.
 	Aggregator struct {
-		// data is an atomic pointer to *gaugeData.  It is set
-		// to `nil` if the gauge has not been set since the
-		// last collection.
+		// current is an atomic pointer to *gaugeData.  It is never nil.
 		current unsafe.Pointer
 
-		// N.B. Export is not called when checkpoint is nil
+		// checkpoint is a copy of the current value taken in Collect()
 		checkpoint unsafe.Pointer
 	}
 
@@ -124,4 +122,35 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 			return
 		}
 	}
+}
+
+func (g *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		// TODO warn
+		return
+	}
+
+	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))
+	ogd := (*gaugeData)(atomic.LoadPointer(&o.checkpoint))
+
+	if desc.Alternate() {
+		// Monotonic: use the greater value
+		cmp := ggd.value.CompareNumber(desc.NumberKind(), ogd.value)
+
+		if cmp > 0 {
+			return
+		}
+
+		if cmp < 0 {
+			g.checkpoint = unsafe.Pointer(ogd)
+			return
+		}
+	}
+	// Non-monotonic gauge or equal values
+	if ggd.timestamp.After(ogd.timestamp) {
+		return
+	}
+
+	g.checkpoint = unsafe.Pointer(ogd)
 }

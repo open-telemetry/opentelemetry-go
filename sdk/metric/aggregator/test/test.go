@@ -85,9 +85,19 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 type Numbers []core.Number
 
 func (n *Numbers) Sort() {
-	sort.Slice(*n, func(i, j int) bool {
-		return (*n)[i] < (*n)[j]
-	})
+	sort.Sort(n)
+}
+
+func (n *Numbers) Less(i, j int) bool {
+	return (*n)[i] < (*n)[j]
+}
+
+func (n *Numbers) Len() int {
+	return len(*n)
+}
+
+func (n *Numbers) Swap(i, j int) {
+	(*n)[i], (*n)[j] = (*n)[j], (*n)[i]
 }
 
 func (n *Numbers) Sum(kind core.NumberKind) core.Number {
@@ -100,4 +110,31 @@ func (n *Numbers) Sum(kind core.NumberKind) core.Number {
 
 func (n *Numbers) Count() int64 {
 	return int64(len(*n))
+}
+
+func (n *Numbers) Median(kind core.NumberKind) core.Number {
+	if !sort.IsSorted(n) {
+		panic("Sort these numbers before calling Median")
+	}
+
+	l := len(*n)
+	if l%2 == 1 {
+		return (*n)[l/2]
+	}
+
+	lower := (*n)[l/2-1]
+	upper := (*n)[l/2]
+
+	sum := lower
+	sum.AddNumber(kind, upper)
+
+	switch kind {
+	case core.Uint64NumberKind:
+		return core.NewUint64Number(sum.AsUint64() / 2)
+	case core.Int64NumberKind:
+		return core.NewInt64Number(sum.AsInt64() / 2)
+	case core.Float64NumberKind:
+		return core.NewFloat64Number(sum.AsFloat64() / 2)
+	}
+	panic("unknown number kind")
 }
