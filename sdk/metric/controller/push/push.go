@@ -57,6 +57,8 @@ func (c *Controller) Start() {
 
 func (c *Controller) Stop() {
 	close(c.ch)
+
+	// TODO wait for the last run, flush, etc.
 }
 
 func (c *Controller) run() {

@@ -16,12 +16,17 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/exporter/metric/stateless/stdout"
 	"go.opentelemetry.io/global"
+	"go.opentelemetry.io/sdk/metric/batcher/stateless"
+	"go.opentelemetry.io/sdk/metric/controller/push"
+	"go.opentelemetry.io/sdk/metric/selector/simple"
 )
 
 var (
@@ -35,6 +40,15 @@ var (
 )
 
 func main() {
+	selector := simple.New()
+	batcher := stateless.New(selector)
+	exporter := stdout.New(stdout.Options{PrettyPrint: true})
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+	defer pusher.Stop()
+
+	global.SetMeterProvider(pusher)
+
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
@@ -63,16 +77,18 @@ func main() {
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
-		gauge.Set(ctx, 1)
+		for {
+			gauge.Set(ctx, 1)
 
-		meter.RecordBatch(
-			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-			commonLabels,
+			meter.RecordBatch(
+				// Note: call-site variables added as context Entries:
+				distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+				commonLabels,
 
-			oneMetric.Measurement(1.0),
-			measureTwo.Measurement(2.0),
-		)
+				oneMetric.Measurement(1.0),
+				measureTwo.Measurement(2.0),
+			)
+		}
 
 		return tracer.WithSpan(
 			ctx,

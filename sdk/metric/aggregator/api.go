@@ -20,6 +20,9 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
+// TODO: Add Min() support to maxsumcount?  It's the same as
+// Quantile(0) but cheap to compute like Max().
+
 type (
 	Sum interface {
 		Sum() core.Number
@@ -31,10 +34,6 @@ type (
 
 	Max interface {
 		Max() core.Number
-	}
-
-	Min interface {
-		Min() core.Number
 	}
 
 	Quantile interface {
@@ -52,13 +51,8 @@ type (
 		Max
 	}
 
-	MaxSumCountMin interface {
-		MaxSumCount
-		Min
-	}
-
 	Distribution interface {
-		MaxSumCountMin
+		MaxSumCount
 		Quantile
 	}
 )

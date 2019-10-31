@@ -46,7 +46,7 @@ type (
 var _ export.MetricBatcher = &Batcher{}
 var _ export.MetricProducer = aggMap{}
 
-func NewBatcher(selector export.MetricAggregationSelector) *Batcher {
+func New(selector export.MetricAggregationSelector) *Batcher {
 	return &Batcher{
 		selector: selector,
 		dki:      dkiMap{},
