@@ -21,7 +21,7 @@ import (
 	traceclient "cloud.google.com/go/trace/apiv2"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // traceExporter is an imeplementation of trace.Exporter and trace.BatchExporter
@@ -88,7 +88,7 @@ func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) 
 	// tracer := apitrace.Register()
 	// ctx, span := tracer.Start(
 	// 	ctx,
-	// 	"go.opentelemetry.io/exporter/stackdriver.uploadSpans",
+	// 	"go.opentelemetry.io/otel/exporter/stackdriver.uploadSpans",
 	// )
 	// defer span.End()
 	// span.SetAttribute(key.New("num_spans").Int64(int64(len(spans))))

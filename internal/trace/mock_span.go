@@ -20,8 +20,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.

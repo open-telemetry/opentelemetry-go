@@ -31,14 +31,14 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/metric"
-	api "go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/sdk/export"
-	sdk "go.opentelemetry.io/sdk/metric"
-	"go.opentelemetry.io/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	api "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
 const (

@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package propagation contains propagators for different format and carriers.
-package propagation // import "go.opentelemetry.io/propagation"
+package propagation // import "go.opentelemetry.io/otel/propagation"

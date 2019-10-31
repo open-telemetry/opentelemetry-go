@@ -18,8 +18,8 @@ import (
 	"math/rand"
 	"sync"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/trace/internal"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
 
 type defaultIDGenerator struct {

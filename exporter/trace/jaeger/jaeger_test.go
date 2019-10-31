@@ -21,19 +21,20 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/global"
+
+	apitrace "go.opentelemetry.io/otel/api/trace"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/global"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"go.opentelemetry.io/api/core"
-	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	gen "go.opentelemetry.io/otel/exporter/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 func TestNewExporter(t *testing.T) {
