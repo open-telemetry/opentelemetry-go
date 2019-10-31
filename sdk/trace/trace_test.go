@@ -304,14 +304,13 @@ func TestSetSpanAttributes(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "SpanAttribute/span0",
-		Attributes: []core.KeyValue{{
-			Key:   core.Key("key1"),
-			Value: core.Value{Type: core.STRING, String: "value1"},
-		}},
+		Attributes: []core.KeyValue{
+			key.String("key1", "value1"),
+		},
 		SpanKind:        "internal",
 		HasRemoteParent: true,
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributes: -got +want %s", diff)
 	}
 }
@@ -339,20 +338,14 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "SpanAttributesOverLimit/span0",
 		Attributes: []core.KeyValue{
-			{
-				Key:   core.Key("key1"),
-				Value: core.Value{Type: core.STRING, String: "value3"},
-			},
-			{
-				Key:   core.Key("key4"),
-				Value: core.Value{Type: core.STRING, String: "value4"},
-			},
+			key.String("key1", "value3"),
+			key.String("key4", "value4"),
 		},
 		SpanKind:              "internal",
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
 	}
 }
@@ -396,7 +389,7 @@ func TestEvents(t *testing.T) {
 		},
 		SpanKind: "internal",
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
 	}
 }
@@ -447,7 +440,7 @@ func TestEventsOverLimit(t *testing.T) {
 		HasRemoteParent:          true,
 		SpanKind:                 "internal",
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
 	}
 }
@@ -487,7 +480,7 @@ func TestAddLinks(t *testing.T) {
 		},
 		SpanKind: "internal",
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
 	}
 }
@@ -528,7 +521,7 @@ func TestLinks(t *testing.T) {
 		},
 		SpanKind: "internal",
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
 }
@@ -571,7 +564,7 @@ func TestLinksOverLimit(t *testing.T) {
 		HasRemoteParent:  true,
 		SpanKind:         "internal",
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(export.Event{})); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
 	}
 }
@@ -620,9 +613,13 @@ func TestSetSpanStatus(t *testing.T) {
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
 	}
+}
+
+func cmpDiff(x, y interface{}) string {
+	return cmp.Diff(x, y, cmp.AllowUnexported(core.Value{}), cmp.AllowUnexported(export.Event{}))
 }
 
 func remoteSpanContext() core.SpanContext {

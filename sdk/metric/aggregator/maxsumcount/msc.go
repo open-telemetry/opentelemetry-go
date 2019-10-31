@@ -25,8 +25,8 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		live state
-		save state
+		current    state
+		checkpoint state
 	}
 
 	state struct {
@@ -45,30 +45,34 @@ func New() *Aggregator {
 
 // Sum returns the accumulated sum as a Number.
 func (c *Aggregator) Sum() core.Number {
-	return c.save.sum
+	return c.checkpoint.sum
 }
 
 // Count returns the accumulated count.
 func (c *Aggregator) Count() int64 {
-	return int64(c.save.count.AsUint64())
+	return int64(c.checkpoint.count.AsUint64())
 }
 
 // Max returns the accumulated max as a Number.
 func (c *Aggregator) Max() core.Number {
-	return c.save.max
+	return c.checkpoint.max
 }
 
-// Collect saves the current value (atomically) and exports it.
+// Collect checkpoints the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
 	// N.B. There is no atomic operation that can update all three
-	// values at once, so there are races between Update() and
-	// Collect().  Therefore, atomically swap fields independently,
-	// knowing that individually the three parts of this aggregation
-	// could be spread across multiple collections in rare cases.
+	// values at once without a memory allocation.
+	//
+	// This aggregator is intended to trade this correctness for
+	// speed.
+	//
+	// Therefore, atomically swap fields independently, knowing
+	// that individually the three parts of this aggregation could
+	// be spread across multiple collections in rare cases.
 
-	c.save.count.SetUint64(c.live.count.SwapUint64Atomic(0))
-	c.save.sum = c.live.sum.SwapNumberAtomic(core.Number(0))
-	c.save.max = c.live.max.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
+	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
 
 	exp.Export(ctx, rec, c)
 }
@@ -83,17 +87,32 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 		return
 	}
 
-	c.live.count.AddUint64Atomic(1)
-	c.live.sum.AddNumberAtomic(kind, number)
+	c.current.count.AddUint64Atomic(1)
+	c.current.sum.AddNumberAtomic(kind, number)
 
 	for {
-		current := c.live.max.AsNumberAtomic()
+		current := c.current.max.AsNumberAtomic()
 
 		if number.CompareNumber(kind, current) <= 0 {
 			break
 		}
-		if c.live.max.CompareAndSwapNumber(current, number) {
+		if c.current.max.CompareAndSwapNumber(current, number) {
 			break
 		}
+	}
+}
+
+func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		// TODO warn
+		return
+	}
+
+	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
+	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+
+	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
+		c.checkpoint.max.SetNumber(o.checkpoint.max)
 	}
 }

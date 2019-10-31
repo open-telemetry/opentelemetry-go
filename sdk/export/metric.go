@@ -33,6 +33,9 @@ type MetricAggregator interface {
 	// called in a single-threaded context.  Update()
 	// calls may arrive concurrently.
 	Collect(context.Context, MetricRecord, MetricBatcher)
+
+	// Merge combines state from two aggregators into one.
+	Merge(MetricAggregator, *Descriptor)
 }
 
 // MetricRecord is the unit of export, pairing a metric

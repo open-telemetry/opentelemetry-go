@@ -57,10 +57,56 @@ func TestDDSketchAbsolute(t *testing.T) {
 			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
 			agg.Max(),
 			"Same max - absolute")
-		// Median
 		require.InEpsilon(t,
-			all[len(all)/2].CoerceToFloat64(profile.NumberKind),
+			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
 			agg.Quantile(0.5),
+			0.1,
+			"Same median - absolute")
+	})
+}
+
+func TestDDSketchMerge(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+
+		agg1 := New(NewDefaultConfig(), record.Descriptor())
+		agg2 := New(NewDefaultConfig(), record.Descriptor())
+
+		var all test.Numbers
+		for i := 0; i < count; i++ {
+			x := profile.Random(+1)
+			all = append(all, x)
+			agg1.Update(ctx, x, record)
+		}
+
+		for i := 0; i < count; i++ {
+			x := profile.Random(+1)
+			all = append(all, x)
+			agg2.Update(ctx, x, record)
+		}
+
+		agg1.Collect(ctx, record, batcher)
+		agg2.Collect(ctx, record, batcher)
+
+		agg1.Merge(agg2, record.Descriptor())
+
+		all.Sort()
+
+		require.InEpsilon(t,
+			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			agg1.Sum(),
+			0.0000001,
+			"Same sum - absolute")
+		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+		require.Equal(t,
+			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
+			agg1.Max(),
+			"Same max - absolute")
+		require.InEpsilon(t,
+			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			agg1.Quantile(0.5),
 			0.1,
 			"Same median - absolute")
 	})
