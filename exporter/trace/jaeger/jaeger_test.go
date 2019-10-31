@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 
 	"go.opentelemetry.io/api/core"
@@ -108,15 +109,15 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	apitrace.SetGlobalProvider(tp)
-	_, span := apitrace.GlobalProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
+	global.SetTraceProvider(tp)
+	_, span := global.TraceProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())
 
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
-	assert.True(t, len(tc.spansUploaded) > 0)
+	assert.True(t, len(tc.spansUploaded) == 1)
 }
 
 func TestNewExporterWithAgentEndpoint(t *testing.T) {
