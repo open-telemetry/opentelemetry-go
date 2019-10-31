@@ -37,7 +37,7 @@ var (
 )
 
 // TraceProvider returns the registered global trace provider.
-// If none is registered then an instance of NoopProvider is returned.
+// If none is registered then an instance of trace.NoopProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().GetTracer("example.com/foo")
 func TraceProvider() trace.Provider {
@@ -47,15 +47,15 @@ func TraceProvider() trace.Provider {
 	return trace.NoopProvider{}
 }
 
-// SetTraceProvider registers p as the global trace provider.
+// SetTraceProvider registers `tp` as the global trace provider.
 func SetTraceProvider(tp trace.Provider) {
 	globalTracer.Store(traceProvider{tp: tp})
 }
 
-// MeterProvider returns the registered global trace provider.
-// If none is registered then an instance of NoopMeterProvider is returned.
-// Use the trace provider to create a named tracer. E.g.
-//     tracer := global.MeterProvider().GetMeterr("example.com/foo")
+// MeterProvider returns the registered global meter provider.
+// If none is registered then an instance of metric.NoopProvider is returned.
+// Use the trace provider to create a named meter. E.g.
+//     meter := global.MeterProvider().GetMeter("example.com/foo")
 func MeterProvider() metric.Provider {
 	if gp := globalMeter.Load(); gp != nil {
 		return gp.(meterProvider).mp
@@ -63,7 +63,7 @@ func MeterProvider() metric.Provider {
 	return metric.NoopProvider{}
 }
 
-// SetMeterProvider registers p as the global trace provider.
+// SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.Provider) {
 	globalMeter.Store(meterProvider{mp: mp})
 }
