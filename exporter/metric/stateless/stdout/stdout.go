@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
@@ -45,13 +46,18 @@ type Options struct {
 	Quantiles []float64
 }
 
-type Exposition struct {
+type expoBatch struct {
+	Timestamp time.Time  `json:"time,omitempty"`
+	Updates   []expoLine `json:"updates,omitempty"`
+}
+
+type expoLine struct {
 	Name      string      `json:"name"`
 	Max       interface{} `json:"max,omitempty"`
 	Sum       interface{} `json:"sum,omitempty"`
 	Count     interface{} `json:"count,omitempty"`
 	LastValue interface{} `json:"last,omitempty"`
-	Timestamp interface{} `json:"time,omitempty"`
+	Timestamp time.Time   `json:"time,omitempty"`
 }
 
 var _ export.MetricExporter = &Exporter{}
@@ -66,9 +72,9 @@ func New(options Options) *Exporter {
 }
 
 func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
-	var expose Exposition
+	var batch expoBatch
 	producer.Foreach(func(agg export.MetricAggregator, desc *export.Descriptor, labelValues []core.Value) {
-		expose = Exposition{}
+		var expose expoLine
 		if sum, ok := agg.(aggregator.Sum); ok {
 			expose.Sum = sum.Sum().Emit(desc.NumberKind())
 
@@ -112,19 +118,21 @@ func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 
 		expose.Name = sb.String()
 
-		var data []byte
-		var err error
-		if e.options.PrettyPrint {
-			data, err = json.MarshalIndent(expose, "", "\t")
-		} else {
-			data, err = json.Marshal(expose)
-		}
-
-		if err != nil {
-			fmt.Fprintf(e.options.File, "JSON encode error: %v\n", err)
-			return
-		}
-
-		fmt.Fprintln(e.options.File, string(data))
+		batch.Updates = append(batch.Updates, expose)
 	})
+
+	var data []byte
+	var err error
+	if e.options.PrettyPrint {
+		data, err = json.MarshalIndent(batch, "", "\t")
+	} else {
+		data, err = json.Marshal(batch)
+	}
+
+	if err != nil {
+		fmt.Fprintf(e.options.File, "JSON encode error: %v\n", err)
+		return
+	}
+
+	fmt.Fprintln(e.options.File, string(data))
 }

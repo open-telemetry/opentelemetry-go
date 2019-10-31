@@ -41,7 +41,7 @@ var (
 func main() {
 	selector := simple.New()
 	batcher := stateless.New(selector)
-	exporter := stdout.New(stdout.Options{PrettyPrint: false})
+	exporter := stdout.New(stdout.Options{PrettyPrint: true})
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 	defer pusher.Stop()
