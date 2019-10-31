@@ -46,13 +46,9 @@ type SpanBatcher interface {
 // Multiple-exporters could be implemented by implementing this interface
 // for a group of MetricBatcher.
 type MetricBatcher interface {
-	// AggregatorFor should return the kind of aggregator
-	// suited to the requested export.  Returning `nil`
-	// indicates to ignore the metric update.
-	//
-	// Note: This is context-free because the handle should not be
-	// bound to the incoming context.  This call should not block.
-	AggregatorFor(MetricRecord) MetricAggregator
+	// MetricAggregationSelector is responsible for selecting the
+	// concrete type of aggregation used for a metric in the SDK.
+	MetricAggregationSelector
 
 	// Export receives pairs of records and aggregators
 	// during the SDK Collect().  Exporter implementations

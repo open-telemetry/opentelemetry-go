@@ -21,6 +21,20 @@ import (
 	"go.opentelemetry.io/api/unit"
 )
 
+// MetricAggregationSelector supports selecting the kind of aggregator
+// to use at runtime for a specific metric instrument.
+type MetricAggregationSelector interface {
+	// AggregatorFor should return the kind of aggregator suited
+	// to the requested export.  Returning `nil` indicates to
+	// ignore this metric instrument.  Although it is not
+	// required, this should return a consistent type to avoid
+	// confusion in later stages of the metrics export process.
+	//
+	// Note: This is context-free because the handle should not be
+	// bound to the incoming context.  This call should not block.
+	AggregatorFor(MetricRecord) MetricAggregator
+}
+
 // MetricAggregator implements a specific aggregation behavior, e.g.,
 // a counter, a gauge, a histogram.
 type MetricAggregator interface {
@@ -47,6 +61,9 @@ type MetricRecord interface {
 	// Labels() describe the labsels corresponding the
 	// aggregation being performed.
 	Labels() []core.KeyValue
+}
+
+type MetricEncoder interface {
 }
 
 // MetricKind describes the kind of instrument.
