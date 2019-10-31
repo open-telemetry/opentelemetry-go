@@ -62,14 +62,13 @@ func NewUint64Number(u uint64) Number {
 
 // - as x
 
-// AsNumber gets the raw, uninterpreted raw value. Might be useful for
-// some atomic operations.
+// AsNumber gets the Number.
 func (n Number) AsNumber() Number {
 	return n
 }
 
-// AsRaw gets the raw, uninterpreted raw value. Might be useful for
-// some atomic operations.
+// AsRaw gets the uninterpreted raw value. Might be useful for some
+// atomic operations.
 func (n Number) AsRaw() uint64 {
 	return uint64(n)
 }
@@ -94,32 +93,31 @@ func (n Number) AsUint64() uint64 {
 
 // - as x atomic
 
-// AsNumberAtomic gets the raw, uninterpreted raw value. Might be useful for
-// some atomic operations.
+// AsNumberAtomic gets the Number atomically.
 func (n *Number) AsNumberAtomic() Number {
 	return NewNumberFromRaw(n.AsRawAtomic())
 }
 
-// AsRawAtomic gets atomically the raw, uninterpreted raw value. Might
-// be useful for some atomic operations.
+// AsRawAtomic gets the uninterpreted raw value atomically. Might be
+// useful for some atomic operations.
 func (n *Number) AsRawAtomic() uint64 {
 	return atomic.LoadUint64(n.AsRawPtr())
 }
 
-// AsInt64Atomic assumes that the number contains an int64 and
-// atomically returns it as such.
+// AsInt64Atomic assumes that the number contains an int64 and returns
+// it as such atomically.
 func (n *Number) AsInt64Atomic() int64 {
 	return atomic.LoadInt64(n.AsInt64Ptr())
 }
 
-// AsFloat64 assumes that the measurement value contains a float64 and
-// returns it as such.
+// AsFloat64Atomic assumes that the measurement value contains a
+// float64 and returns it as such atomically.
 func (n *Number) AsFloat64Atomic() float64 {
 	return rawToFloat64(n.AsRawAtomic())
 }
 
-// AsUint64Atomic assumes that the number contains an uint64 and
-// atomically returns it as such.
+// AsUint64Atomic assumes that the number contains a uint64 and
+// returns it as such atomically.
 func (n *Number) AsUint64Atomic() uint64 {
 	return atomic.LoadUint64(n.AsUint64Ptr())
 }
@@ -132,20 +130,28 @@ func (n *Number) AsRawPtr() *uint64 {
 	return (*uint64)(n)
 }
 
+// AsInt64Ptr assumes that the number contains an int64 and returns a
+// pointer to it.
 func (n *Number) AsInt64Ptr() *int64 {
 	return rawPtrToInt64Ptr(n.AsRawPtr())
 }
 
+// AsFloat64Ptr assumes that the number contains a float64 and returns a
+// pointer to it.
 func (n *Number) AsFloat64Ptr() *float64 {
 	return rawPtrToFloat64Ptr(n.AsRawPtr())
 }
 
+// AsUint64Ptr assumes that the number contains a uint64 and returns a
+// pointer to it.
 func (n *Number) AsUint64Ptr() *uint64 {
 	return rawPtrToUint64Ptr(n.AsRawPtr())
 }
 
 // - coerce
 
+// CoerceToInt64 casts the number to int64. May result in
+// data/precision loss.
 func (n Number) CoerceToInt64(kind NumberKind) int64 {
 	switch kind {
 	case Int64NumberKind:
@@ -160,6 +166,8 @@ func (n Number) CoerceToInt64(kind NumberKind) int64 {
 	}
 }
 
+// CoerceToFloat64 casts the number to float64. May result in
+// data/precision loss.
 func (n Number) CoerceToFloat64(kind NumberKind) float64 {
 	switch kind {
 	case Int64NumberKind:
@@ -174,6 +182,8 @@ func (n Number) CoerceToFloat64(kind NumberKind) float64 {
 	}
 }
 
+// CoerceToUint64 casts the number to uint64. May result in
+// data/precision loss.
 func (n Number) CoerceToUint64(kind NumberKind) uint64 {
 	switch kind {
 	case Int64NumberKind:
@@ -190,74 +200,107 @@ func (n Number) CoerceToUint64(kind NumberKind) uint64 {
 
 // - set
 
+// SetNumber sets the number to the passed number. Both should be of
+// the same kind.
 func (n *Number) SetNumber(nn Number) {
 	*n.AsRawPtr() = nn.AsRaw()
 }
 
+// SetRaw sets the number to the passed raw value. Both number and the
+// raw number should represent the same kind.
 func (n *Number) SetRaw(r uint64) {
 	*n.AsRawPtr() = r
 }
 
+// SetInt64 assumes that the number contains an int64 and sets it to
+// the passed value.
 func (n *Number) SetInt64(i int64) {
 	*n.AsInt64Ptr() = i
 }
 
+// SetFloat64 assumes that the number contains a float64 and sets it
+// to the passed value.
 func (n *Number) SetFloat64(f float64) {
 	*n.AsFloat64Ptr() = f
 }
 
+// SetUint64 assumes that the number contains a uint64 and sets it to
+// the passed value.
 func (n *Number) SetUint64(u uint64) {
 	*n.AsUint64Ptr() = u
 }
 
 // - set atomic
 
+// SetNumberAtomic sets the number to the passed number
+// atomically. Both should be of the same kind.
 func (n *Number) SetNumberAtomic(nn Number) {
 	atomic.StoreUint64(n.AsRawPtr(), nn.AsRaw())
 }
 
+// SetRawAtomic sets the number to the passed raw value
+// atomically. Both number and the raw number should represent the
+// same kind.
 func (n *Number) SetRawAtomic(r uint64) {
 	atomic.StoreUint64(n.AsRawPtr(), r)
 }
 
+// SetInt64Atomic assumes that the number contains an int64 and sets
+// it to the passed value atomically.
 func (n *Number) SetInt64Atomic(i int64) {
 	atomic.StoreInt64(n.AsInt64Ptr(), i)
 }
 
+// SetFloat64Atomic assumes that the number contains a float64 and
+// sets it to the passed value atomically.
 func (n *Number) SetFloat64Atomic(f float64) {
 	atomic.StoreUint64(n.AsRawPtr(), float64ToRaw(f))
 }
 
+// SetUint64Atomic assumes that the number contains a uint64 and sets
+// it to the passed value atomically.
 func (n *Number) SetUint64Atomic(u uint64) {
 	atomic.StoreUint64(n.AsUint64Ptr(), u)
 }
 
 // - swap
 
+// SwapNumber sets the number to the passed number and returns the old
+// number. Both this number and the passed number should be of the
+// same kind.
 func (n *Number) SwapNumber(nn Number) Number {
 	old := *n
 	n.SetNumber(nn)
 	return old
 }
 
+// SwapRaw sets the number to the passed raw value and returns the old
+// raw value. Both number and the raw number should represent the same
+// kind.
 func (n *Number) SwapRaw(r uint64) uint64 {
 	old := n.AsRaw()
 	n.SetRaw(r)
 	return old
 }
 
+// SwapInt64 assumes that the number contains an int64, sets it to the
+// passed value and returns the old int64 value.
 func (n *Number) SwapInt64(i int64) int64 {
 	old := n.AsInt64()
 	n.SetInt64(i)
 	return old
 }
 
+// SwapFloat64 assumes that the number contains an float64, sets it to
+// the passed value and returns the old float64 value.
 func (n *Number) SwapFloat64(f float64) float64 {
 	old := n.AsFloat64()
 	n.SetFloat64(f)
 	return old
 }
 
+// SwapUint64 assumes that the number contains an uint64, sets it to
+// the passed value and returns the old uint64 value.
 func (n *Number) SwapUint64(u uint64) uint64 {
 	old := n.AsUint64()
 	n.SetUint64(u)
@@ -266,28 +309,43 @@ func (n *Number) SwapUint64(u uint64) uint64 {
 
 // - swap atomic
 
+// SwapNumberAtomic sets the number to the passed number and returns
+// the old number atomically. Both this number and the passed number
+// should be of the same kind.
 func (n *Number) SwapNumberAtomic(nn Number) Number {
 	return NewNumberFromRaw(atomic.SwapUint64(n.AsRawPtr(), nn.AsRaw()))
 }
 
+// SwapRawAtomic sets the number to the passed raw value and returns
+// the old raw value atomically. Both number and the raw number should
+// represent the same kind.
 func (n *Number) SwapRawAtomic(r uint64) uint64 {
 	return atomic.SwapUint64(n.AsRawPtr(), r)
 }
 
+// SwapInt64Atomic assumes that the number contains an int64, sets it
+// to the passed value and returns the old int64 value atomically.
 func (n *Number) SwapInt64Atomic(i int64) int64 {
 	return atomic.SwapInt64(n.AsInt64Ptr(), i)
 }
 
+// SwapFloat64Atomic assumes that the number contains an float64, sets
+// it to the passed value and returns the old float64 value
+// atomically.
 func (n *Number) SwapFloat64Atomic(f float64) float64 {
 	return rawToFloat64(atomic.SwapUint64(n.AsRawPtr(), float64ToRaw(f)))
 }
 
+// SwapUint64Atomic assumes that the number contains an uint64, sets
+// it to the passed value and returns the old uint64 value atomically.
 func (n *Number) SwapUint64Atomic(u uint64) uint64 {
 	return atomic.SwapUint64(n.AsUint64Ptr(), u)
 }
 
 // - add
 
+// AddNumber assumes that this and the passed number are of the passed
+// kind and adds the passed number to this number.
 func (n *Number) AddNumber(kind NumberKind, nn Number) {
 	switch kind {
 	case Int64NumberKind:
@@ -299,24 +357,34 @@ func (n *Number) AddNumber(kind NumberKind, nn Number) {
 	}
 }
 
+// AddRaw assumes that this number and the passed raw value are of the
+// passed kind and adds the passed raw value to this number.
 func (n *Number) AddRaw(kind NumberKind, r uint64) {
 	n.AddNumber(kind, NewNumberFromRaw(r))
 }
 
+// AddInt64 assumes that the number contains an int64 and adds the
+// passed int64 to it.
 func (n *Number) AddInt64(i int64) {
 	*n.AsInt64Ptr() += i
 }
 
+// AddFloat64 assumes that the number contains a float64 and adds the
+// passed float64 to it.
 func (n *Number) AddFloat64(f float64) {
 	*n.AsFloat64Ptr() += f
 }
 
+// AddUint64 assumes that the number contains a uint64 and adds the
+// passed uint64 to it.
 func (n *Number) AddUint64(u uint64) {
 	*n.AsUint64Ptr() += u
 }
 
 // - add atomic
 
+// AddNumberAtomic assumes that this and the passed number are of the
+// passed kind and adds the passed number to this number atomically.
 func (n *Number) AddNumberAtomic(kind NumberKind, nn Number) {
 	switch kind {
 	case Int64NumberKind:
@@ -328,14 +396,21 @@ func (n *Number) AddNumberAtomic(kind NumberKind, nn Number) {
 	}
 }
 
+// AddRawAtomic assumes that this number and the passed raw value are
+// of the passed kind and adds the passed raw value to this number
+// atomically.
 func (n *Number) AddRawAtomic(kind NumberKind, r uint64) {
 	n.AddNumberAtomic(kind, NewNumberFromRaw(r))
 }
 
+// AddInt64Atomic assumes that the number contains an int64 and adds
+// the passed int64 to it atomically.
 func (n *Number) AddInt64Atomic(i int64) {
 	atomic.AddInt64(n.AsInt64Ptr(), i)
 }
 
+// AddFloat64Atomic assumes that the number contains a float64 and
+// adds the passed float64 to it atomically.
 func (n *Number) AddFloat64Atomic(f float64) {
 	for {
 		o := n.AsFloat64Atomic()
@@ -345,28 +420,42 @@ func (n *Number) AddFloat64Atomic(f float64) {
 	}
 }
 
+// AddUint64Atomic assumes that the number contains a uint64 and
+// atomically adds the passed uint64 to it.
 func (n *Number) AddUint64Atomic(u uint64) {
 	atomic.AddUint64(n.AsUint64Ptr(), u)
 }
 
 // - compare and swap (atomic only)
 
+// CompareAndSwapNumber does the atomic CAS operation on this
+// number. This number and passed old and new numbers should be of the
+// same kind.
 func (n *Number) CompareAndSwapNumber(on, nn Number) bool {
 	return atomic.CompareAndSwapUint64(n.AsRawPtr(), on.AsRaw(), nn.AsRaw())
 }
 
+// CompareAndSwapRaw does the atomic CAS operation on this
+// number. This number and passed old and new raw values should be of
+// the same kind.
 func (n *Number) CompareAndSwapRaw(or, nr uint64) bool {
 	return atomic.CompareAndSwapUint64(n.AsRawPtr(), or, nr)
 }
 
+// CompareAndSwapInt64 assumes that this number contains an int64 and
+// does the atomic CAS operation on it.
 func (n *Number) CompareAndSwapInt64(oi, ni int64) bool {
 	return atomic.CompareAndSwapInt64(n.AsInt64Ptr(), oi, ni)
 }
 
+// CompareAndSwapFloat64 assumes that this number contains a float64 and
+// does the atomic CAS operation on it.
 func (n *Number) CompareAndSwapFloat64(of, nf float64) bool {
 	return atomic.CompareAndSwapUint64(n.AsRawPtr(), float64ToRaw(of), float64ToRaw(nf))
 }
 
+// CompareAndSwapUint64 assumes that this number contains a uint64 and
+// does the atomic CAS operation on it.
 func (n *Number) CompareAndSwapUint64(ou, nu uint64) bool {
 	return atomic.CompareAndSwapUint64(n.AsUint64Ptr(), ou, nu)
 }
