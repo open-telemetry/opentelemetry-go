@@ -80,18 +80,16 @@ func main() {
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
-		for {
-			gauge.Set(ctx, 1)
+		gauge.Set(ctx, 1)
 
-			meter.RecordBatch(
-				// Note: call-site variables added as context Entries:
-				distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-				commonLabels,
+		meter.RecordBatch(
+			// Note: call-site variables added as context Entries:
+			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			commonLabels,
 
-				oneMetric.Measurement(1.0),
-				measureTwo.Measurement(2.0),
-			)
-		}
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
+		)
 
 		return tracer.WithSpan(
 			ctx,
@@ -110,7 +108,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// TODO: How to flush?
-	// loader.Flush()
 }
