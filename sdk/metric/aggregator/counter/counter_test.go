@@ -91,3 +91,31 @@ func TestCounterNonMonotonic(t *testing.T) {
 		require.Equal(t, sum, agg.AsNumber(), "Same sum - monotonic")
 	})
 }
+
+func TestCounterMerge(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		agg1 := New()
+		agg2 := New()
+
+		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+
+		sum := core.Number(0)
+		for i := 0; i < count; i++ {
+			x := profile.Random(+1)
+			sum.AddNumber(profile.NumberKind, x)
+			agg1.Update(ctx, x, record)
+			agg2.Update(ctx, x, record)
+		}
+
+		agg1.Collect(ctx, record, batcher)
+		agg2.Collect(ctx, record, batcher)
+
+		agg1.Merge(agg2, record.Descriptor())
+
+		sum.AddNumber(record.Descriptor().NumberKind(), sum)
+
+		require.Equal(t, sum, agg1.AsNumber(), "Same sum - monotonic")
+	})
+}

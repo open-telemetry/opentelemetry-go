@@ -26,8 +26,7 @@ import (
 
 var (
 	tracer = global.TraceProvider().GetTracer("ex.com/basic")
-
-	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
+	meter  = global.MeterProvider().GetMeter("ex.com/basic") // TODO: should share resources ^^^?
 
 	fooKey     = key.New("ex.com/foo")
 	barKey     = key.New("ex.com/bar")
