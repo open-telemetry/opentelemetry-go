@@ -321,10 +321,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttribute(key.New("key1").String("value1"))
-	span.SetAttribute(key.New("key2").String("value2"))
-	span.SetAttribute(key.New("key1").String("value3")) // Replace key1.
-	span.SetAttribute(key.New("key4").String("value4")) // Remove key2 and add key4
+	span.SetAttribute(key.Bool("key1", true))
+	span.SetAttribute(key.String("key2", "value2"))
+	span.SetAttribute(key.Bool("key1", false)) // Replace key1.
+	span.SetAttribute(key.Int64("key4", 4))    // Remove key2 and add key4
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -338,8 +338,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "SpanAttributesOverLimit/span0",
 		Attributes: []core.KeyValue{
-			key.String("key1", "value3"),
-			key.String("key4", "value4"),
+			key.Bool("key1", false),
+			key.Int64("key4", 4),
 		},
 		SpanKind:              "internal",
 		HasRemoteParent:       true,
@@ -356,13 +356,13 @@ func TestEvents(t *testing.T) {
 
 	span := startSpan(tp, "Events")
 	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
-	k3v3 := key.New("key3").String("value3")
+	k2v2 := key.Bool("key2", true)
+	k3v3 := key.Int64("key3", 3)
 
 	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.New("key2").String("value2"),
-		key.New("key3").String("value3"),
+		key.Bool("key2", true),
+		key.Int64("key3", 3),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -401,17 +401,17 @@ func TestEventsOverLimit(t *testing.T) {
 
 	span := startSpan(tp, "EventsOverLimit")
 	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
+	k2v2 := key.Bool("key2", false)
 	k3v3 := key.New("key3").String("value3")
 
 	span.AddEvent(context.Background(), "fooDrop", key.New("key1").String("value1"))
 	span.AddEvent(context.Background(), "barDrop",
-		key.New("key2").String("value2"),
+		key.Bool("key2", true),
 		key.New("key3").String("value3"),
 	)
 	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.New("key2").String("value2"),
+		key.Bool("key2", false),
 		key.New("key3").String("value3"),
 	)
 	got, err := endSpan(te, span)

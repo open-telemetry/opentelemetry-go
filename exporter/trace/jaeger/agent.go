@@ -77,7 +77,7 @@ func (a *agentClientUDP) EmitBatch(batch *gen.Batch) error {
 		return err
 	}
 	if a.thriftBuffer.Len() > a.maxPacketSize {
-		return fmt.Errorf("Data does not fit within one UDP packet; size %d, max %d, spans %d",
+		return fmt.Errorf("data does not fit within one UDP packet; size %d, max %d, spans %d",
 			a.thriftBuffer.Len(), a.maxPacketSize, len(batch.Spans))
 	}
 	_, err := a.connUDP.Write(a.thriftBuffer.Bytes())

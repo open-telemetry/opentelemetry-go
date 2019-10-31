@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"context"
 	"encoding/binary"
 	"sort"
 	"testing"
@@ -22,17 +23,125 @@ import (
 
 	"go.opentelemetry.io/api/key"
 
-	apitrace "go.opentelemetry.io/api/trace"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
+
+	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 
 	"go.opentelemetry.io/api/core"
 	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/sdk/export"
 )
 
-// TODO(rghetia): Test export.
+func TestNewExporter(t *testing.T) {
+	const (
+		collectorEndpoint = "http://localhost"
+		serviceName       = "test-service"
+		tagKey            = "key"
+		tagVal            = "val"
+	)
+	// Create Jaeger Exporter
+	exp, err := NewExporter(
+		WithCollectorEndpoint(collectorEndpoint),
+		WithProcess(Process{
+			ServiceName: serviceName,
+			Tags: []core.KeyValue{
+				key.String(tagKey, tagVal),
+			},
+		}),
+	)
+
+	assert.NoError(t, err)
+	assert.EqualValues(t, serviceName, exp.process.ServiceName)
+	assert.Len(t, exp.process.Tags, 1)
+}
+
+func TestNewExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+	_, err := NewExporter(
+		WithCollectorEndpoint(""),
+	)
+
+	assert.Error(t, err)
+}
+
+type testCollectorEnpoint struct {
+	spansUploaded []*gen.Span
+}
+
+func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
+	c.spansUploaded = append(c.spansUploaded, batch.Spans...)
+	return nil
+}
+
+var _ batchUploader = (*testCollectorEnpoint)(nil)
+
+func withTestCollectorEndpoint() func() (batchUploader, error) {
+	return func() (batchUploader, error) {
+		return &testCollectorEnpoint{}, nil
+	}
+}
+
+func TestExporter_ExportSpan(t *testing.T) {
+	const (
+		serviceName = "test-service"
+		tagKey      = "key"
+		tagVal      = "val"
+	)
+	// Create Jaeger Exporter
+	exp, err := NewExporter(
+		withTestCollectorEndpoint(),
+		WithProcess(Process{
+			ServiceName: serviceName,
+			Tags: []core.KeyValue{
+				key.String(tagKey, tagVal),
+			},
+		}),
+	)
+
+	assert.NoError(t, err)
+
+	tp, err := sdktrace.NewProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exp))
+
+	assert.NoError(t, err)
+
+	global.SetTraceProvider(tp)
+	_, span := global.TraceProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
+	span.End()
+
+	assert.True(t, span.SpanContext().IsValid())
+
+	exp.Flush()
+	tc := exp.uploader.(*testCollectorEnpoint)
+	assert.True(t, len(tc.spansUploaded) == 1)
+}
+
+func TestNewExporterWithAgentEndpoint(t *testing.T) {
+	const agentEndpoint = "localhost:6831"
+	// Create Jaeger Exporter
+	_, err := NewExporter(
+		WithAgentEndpoint(agentEndpoint),
+	)
+	assert.NoError(t, err)
+}
+
+func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
+	//empty
+	_, err := NewExporter(
+		WithAgentEndpoint(""),
+	)
+	assert.Error(t, err)
+
+	//invalid endpoint addr
+	_, err = NewExporter(
+		WithAgentEndpoint("http://localhost"),
+	)
+	assert.Error(t, err)
+}
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
@@ -42,6 +151,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
 
+	messageEventValue := "event-test"
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := float64(123.456)
@@ -77,7 +187,9 @@ func Test_spanDataToThrift(t *testing.T) {
 					// Jaeger doesn't handle Uint tags, this should be ignored.
 					key.Uint64("ignored", 123),
 				},
-				// TODO: [rghetia] add events test after event is concrete type.
+				MessageEvents: []export.Event{
+					{Message: messageEventValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+				},
 				Status: codes.Unknown,
 			},
 			want: &gen.Span{
@@ -102,7 +214,23 @@ func Test_spanDataToThrift(t *testing.T) {
 						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
 					},
 				},
-				// TODO [rghetia]: check Logs when event is added.
+				Logs: []*gen.Log{
+					{
+						Timestamp: now.UnixNano() / 1000,
+						Fields: []*gen.Tag{
+							{
+								Key:   "k1",
+								VStr:  &keyValue,
+								VType: gen.TagType_STRING,
+							},
+							{
+								Key:   "message",
+								VStr:  &messageEventValue,
+								VType: gen.TagType_STRING,
+							},
+						},
+					},
+				},
 			},
 		},
 	}
