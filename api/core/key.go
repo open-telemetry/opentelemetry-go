@@ -17,7 +17,7 @@ package core
 //go:generate stringer -type=ValueType
 
 import (
-	"fmt"
+	"strconv"
 	"unsafe"
 )
 
@@ -254,12 +254,20 @@ func (v *Value) AsInterface() interface{} {
 }
 
 func (v *Value) Emit() string {
-	if v.Type() == STRING {
+	switch v.Type() {
+	case BOOL:
+		return strconv.FormatBool(v.AsBool())
+	case INT32, INT64:
+		return strconv.FormatInt(v.AsInt64(), 10)
+	case UINT32, UINT64:
+		return strconv.FormatUint(v.AsUint64(), 10)
+	case FLOAT32:
+		return strconv.FormatFloat(float64(v.AsFloat32()), 'f', -1, 32)
+	case FLOAT64:
+		return strconv.FormatFloat(v.AsFloat64(), 'f', -1, 64)
+	case STRING:
 		return v.stringly
-	}
-	i := v.AsInterface()
-	if _, ok := i.(unknownValueType); ok {
+	default:
 		return "unknown"
 	}
-	return fmt.Sprint(i)
 }
