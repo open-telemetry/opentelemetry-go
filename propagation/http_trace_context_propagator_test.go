@@ -361,7 +361,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			totalDiff := ""
 			wantCorCtx.Foreach(func(kv core.KeyValue) bool {
 				val, _ := gotCorCtx.Value(kv.Key)
-				diff := cmp.Diff(kv, core.KeyValue{Key: kv.Key, Value: val})
+				diff := cmp.Diff(kv, core.KeyValue{Key: kv.Key, Value: val}, cmp.AllowUnexported(core.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -436,7 +436,6 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 				key.New("key7").Uint64(123),
 				key.New("key8").Float64(123.567),
 				key.New("key9").Float32(123.567),
-				key.New("key10").Bytes([]byte{0x68, 0x69}),
 			},
 			wantInHeader: []string{
 				"key1=true",
@@ -447,8 +446,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 				"key6=123",
 				"key7=123",
 				"key8=123.567",
-				"key9=123.56700134277344",
-				"key10=hi",
+				"key9=123.567",
 			},
 		},
 	}

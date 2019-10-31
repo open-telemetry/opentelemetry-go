@@ -20,7 +20,12 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
+	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/api/core"
+	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/trace"
 )
@@ -54,15 +59,72 @@ func (e *Exporter) RegisterSimpleSpanProcessor() {
 	})
 }
 
+type jsonValue struct {
+	Type  string
+	Value interface{}
+}
+
+type jsonKeyValue struct {
+	Key   core.Key
+	Value jsonValue
+}
+
+type jsonSpanData struct {
+	SpanContext              core.SpanContext
+	ParentSpanID             core.SpanID
+	SpanKind                 apitrace.SpanKind
+	Name                     string
+	StartTime                time.Time
+	EndTime                  time.Time
+	Attributes               []jsonKeyValue
+	MessageEvents            []export.Event
+	Links                    []apitrace.Link
+	Status                   codes.Code
+	HasRemoteParent          bool
+	DroppedAttributeCount    int
+	DroppedMessageEventCount int
+	DroppedLinkCount         int
+	ChildSpanCount           int
+}
+
+func marshalSpanData(data *export.SpanData, pretty bool) ([]byte, error) {
+	jsd := jsonSpanData{
+		SpanContext:              data.SpanContext,
+		ParentSpanID:             data.ParentSpanID,
+		SpanKind:                 data.SpanKind,
+		Name:                     data.Name,
+		StartTime:                data.StartTime,
+		EndTime:                  data.EndTime,
+		Attributes:               toJSONAttributes(data.Attributes),
+		MessageEvents:            data.MessageEvents,
+		Links:                    data.Links,
+		Status:                   data.Status,
+		HasRemoteParent:          data.HasRemoteParent,
+		DroppedAttributeCount:    data.DroppedAttributeCount,
+		DroppedMessageEventCount: data.DroppedMessageEventCount,
+		DroppedLinkCount:         data.DroppedLinkCount,
+		ChildSpanCount:           data.ChildSpanCount,
+	}
+
+	if pretty {
+		return json.MarshalIndent(jsd, "", "\t")
+	}
+	return json.Marshal(jsd)
+}
+
+func toJSONAttributes(attributes []core.KeyValue) []jsonKeyValue {
+	jsonAttrs := make([]jsonKeyValue, len(attributes))
+	for i := 0; i < len(attributes); i++ {
+		jsonAttrs[i].Key = attributes[i].Key
+		jsonAttrs[i].Value.Type = attributes[i].Value.Type().String()
+		jsonAttrs[i].Value.Value = attributes[i].Value.AsInterface()
+	}
+	return jsonAttrs
+}
+
 // ExportSpan writes a SpanData in json format to stdout.
 func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
-	var jsonSpan []byte
-	var err error
-	if e.pretty {
-		jsonSpan, err = json.MarshalIndent(data, "", "\t")
-	} else {
-		jsonSpan, err = json.Marshal(data)
-	}
+	jsonSpan, err := marshalSpanData(data, e.pretty)
 	if err != nil {
 		// ignore writer failures for now
 		_, _ = e.outputWriter.Write([]byte("Error converting spanData to json: " + err.Error()))

@@ -60,8 +60,8 @@ func main() {
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,
-		distributedcontext.Insert(fooKey.String("foo1")),
-		distributedcontext.Insert(barKey.String("bar1")),
+		fooKey.String("foo1"),
+		barKey.String("bar1"),
 	)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {

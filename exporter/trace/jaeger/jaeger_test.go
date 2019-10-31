@@ -154,7 +154,6 @@ func Test_spanDataToThrift(t *testing.T) {
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := float64(123.456)
-	bytesValue := []byte("byte array")
 	boolTrue := true
 	statusMessage := "Unknown"
 
@@ -184,7 +183,6 @@ func Test_spanDataToThrift(t *testing.T) {
 				Attributes: []core.KeyValue{
 					key.String("key", keyValue),
 					key.Float64("double", doubleValue),
-					key.Bytes("bytes", bytesValue),
 					// Jaeger doesn't handle Uint tags, this should be ignored.
 					key.Uint64("ignored", 123),
 				},
@@ -203,7 +201,6 @@ func Test_spanDataToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
-					{Key: "bytes", VType: gen.TagType_BINARY, VBinary: bytesValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
