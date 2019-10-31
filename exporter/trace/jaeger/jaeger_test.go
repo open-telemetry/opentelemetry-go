@@ -59,7 +59,7 @@ func TestNewExporter(t *testing.T) {
 	assert.Len(t, exp.process.Tags, 1)
 }
 
-func TestNewExporterShouldFailIfCollectorEndpoingEmpty(t *testing.T) {
+func TestNewExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
 	_, err := NewExporter(
 		WithCollectorEndpoint(""),
 	)
