@@ -17,8 +17,8 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	apimetric "go.opentelemetry.io/api/metric"
+	"go.opentelemetry.io/otel/api/core"
+	apimetric "go.opentelemetry.io/otel/api/metric"
 )
 
 type (

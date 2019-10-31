@@ -66,4 +66,4 @@
 // gauge handle has Set and measure handle has Record). Handles can be
 // created with the AcquireHandle function of the respective
 // instrument. When done with the handle, call Release on it.
-package metric // import "go.opentelemetry.io/api/metric"
+package metric // import "go.opentelemetry.io/otel/api/metric"

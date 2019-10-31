@@ -21,9 +21,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/trace"
-	mocktrace "go.opentelemetry.io/internal/trace"
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/trace"
+	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func TestExtractB3(t *testing.T) {

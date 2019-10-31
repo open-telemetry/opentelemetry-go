@@ -19,9 +19,9 @@ import (
 	"net/http"
 	"testing"
 
-	"go.opentelemetry.io/api/trace"
-	mocktrace "go.opentelemetry.io/internal/trace"
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/trace"
+	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func BenchmarkExtractB3(b *testing.B) {

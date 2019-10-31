@@ -17,8 +17,8 @@ package export
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/unit"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/unit"
 )
 
 // MetricAggregator implements a specific aggregation behavior, e.g.,

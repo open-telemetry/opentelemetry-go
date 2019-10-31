@@ -19,8 +19,8 @@ import (
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // Aggregator aggregates measure events.

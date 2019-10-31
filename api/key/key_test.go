@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
