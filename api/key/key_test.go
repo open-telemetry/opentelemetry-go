@@ -72,6 +72,14 @@ func TestKeyValueConstructors(t *testing.T) {
 			},
 		},
 		{
+			name:   "String",
+			actual: key.String("k1", "123.5"),
+			expected: core.KeyValue{
+				Key:   "k1",
+				Value: core.String("123.5"),
+			},
+		},
+		{
 			name:   "Int",
 			actual: key.Int("k1", 123),
 			expected: core.KeyValue{
