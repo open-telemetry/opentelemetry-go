@@ -50,14 +50,14 @@ type MetricBatcher interface {
 	// concrete type of aggregation used for a metric in the SDK.
 	MetricAggregationSelector
 
-	// GetProducer is the interface used by exporters to access
-	// aggregate checkpoints after collection.
-	GetProducer() MetricProducer
-
-	// Export receives pairs of records and aggregators
+	// Process receives pairs of records and aggregators
 	// during the SDK Collect().  Exporter implementations
 	// must access the specific aggregator to receive the
 	// exporter data, since the format of the data varies
 	// by aggregation.
-	Export(context.Context, MetricRecord, MetricAggregator)
+	Process(context.Context, MetricRecord, MetricAggregator)
+
+	// ReadCheckpoint is the interface used by exporters to access
+	// aggregate checkpoints after collection.
+	ReadCheckpoint() MetricProducer
 }

@@ -71,7 +71,11 @@ func (m *metricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggr
 	return nil
 }
 
-func (m *metricBatcher) Export(context.Context, export.MetricRecord, export.MetricAggregator) {
+func (m *metricBatcher) ReadCheckpoint() export.MetricProducer {
+	return nil
+}
+
+func (m *metricBatcher) Process(context.Context, export.MetricRecord, export.MetricAggregator) {
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

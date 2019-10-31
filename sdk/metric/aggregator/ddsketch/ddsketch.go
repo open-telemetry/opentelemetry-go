@@ -82,9 +82,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	c.current = replace
 	c.lock.Unlock()
 
-	if c.checkpoint.Count() != 0 {
-		exp.Export(ctx, rec, c)
-	}
+	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.

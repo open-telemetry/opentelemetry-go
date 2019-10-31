@@ -63,12 +63,17 @@ type MetricRecord interface {
 	Labels() []core.KeyValue
 }
 
-type MetricEncoder interface {
-	Encode(context.Context, MetricProducer)
+// MetricExporter handles presentation of the checkpoint of aggregate
+// metrics.  This is the final stage of a metrics export pipeline,
+// where metric data are formatted for a specific system.
+type MetricExporter interface {
+	Export(context.Context, MetricProducer)
 }
 
+// MetricProducer allows a MetricExporter to access a checkpoint of
+// aggregated metrics one at a time.
 type MetricProducer interface {
-	Next() MetricAggregator
+	Foreach(func(MetricAggregator, *Descriptor, []core.Value))
 }
 
 // MetricKind describes the kind of instrument.

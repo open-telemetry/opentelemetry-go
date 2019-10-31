@@ -68,12 +68,12 @@ func New() *Aggregator {
 	}
 }
 
-// AsNumber returns the recorded gauge value as an int64.
-func (g *Aggregator) AsNumber() core.Number {
+// LastValue returns the last-recorded gauge value as a Number.
+func (g *Aggregator) LastValue() core.Number {
 	return (*gaugeData)(g.checkpoint).value.AsNumber()
 }
 
-// Timestamp returns the timestamp of the alst recorded gauge value.
+// Timestamp returns the timestamp of the last recorded gauge value.
 func (g *Aggregator) Timestamp() time.Time {
 	return (*gaugeData)(g.checkpoint).timestamp
 }
@@ -82,7 +82,7 @@ func (g *Aggregator) Timestamp() time.Time {
 func (g *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 
-	exp.Export(ctx, rec, g)
+	exp.Process(ctx, rec, g)
 }
 
 // Update modifies the current value (atomically) for later export.

@@ -23,23 +23,27 @@ import (
 	sdk "go.opentelemetry.io/sdk/metric"
 )
 
+// Controller organizes a periodic push of metric data.
 type Controller struct {
-	sdk     *sdk.SDK
-	batcher export.MetricBatcher
-	encoder export.MetricEncoder
-	ticker  *time.Ticker
-	ch      chan struct{}
+	sdk      *sdk.SDK
+	batcher  export.MetricBatcher
+	exporter export.MetricExporter
+	ticker   *time.Ticker
+	ch       chan struct{}
 }
 
-// var _ metric.Provider = &Controller{}
+var _ metric.Provider = &Controller{}
 
-func New(batcher export.MetricBatcher, encoder export.MetricEncoder, period time.Duration) *Controller {
+// New constructs a Controller, an implementation of metric.Provider,
+// using the provider batcher, exporter, period.  The batcher itself
+// is configured with aggregation policy selection.
+func New(batcher export.MetricBatcher, exporter export.MetricExporter, period time.Duration) *Controller {
 	return &Controller{
-		sdk:     sdk.New(batcher),
-		batcher: batcher,
-		encoder: encoder,
-		ticker:  time.NewTicker(period),
-		ch:      make(chan struct{}),
+		sdk:      sdk.New(batcher),
+		batcher:  batcher,
+		exporter: exporter,
+		ticker:   time.NewTicker(period),
+		ch:       make(chan struct{}),
 	}
 }
 
@@ -69,5 +73,5 @@ func (c *Controller) run() {
 func (c *Controller) tick() {
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
-	c.encoder.Encode(ctx, c.batcher.GetProducer())
+	c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
 }

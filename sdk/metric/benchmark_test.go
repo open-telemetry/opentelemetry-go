@@ -61,7 +61,11 @@ func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggr
 	return nil
 }
 
-func (bf *benchFixture) Export(ctx context.Context, rec export.MetricRecord, agg export.MetricAggregator) {
+func (bf *benchFixture) Process(ctx context.Context, rec export.MetricRecord, agg export.MetricAggregator) {
+}
+
+func (bf *benchFixture) ReadCheckpoint() export.MetricProducer {
+	return nil
 }
 
 func makeLabels(n int) []core.KeyValue {

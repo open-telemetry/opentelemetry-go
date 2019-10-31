@@ -47,7 +47,7 @@ func TestGaugeNonMonotonic(t *testing.T) {
 
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, last, agg.AsNumber(), "Same last value - non-monotonic")
+		require.Equal(t, last, agg.LastValue(), "Same last value - non-monotonic")
 	})
 }
 
@@ -69,7 +69,7 @@ func TestGaugeMonotonic(t *testing.T) {
 
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, last, agg.AsNumber(), "Same last value - monotonic")
+		require.Equal(t, last, agg.LastValue(), "Same last value - monotonic")
 	})
 }
 
@@ -91,7 +91,7 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, first, agg.AsNumber(), "Same last value - monotonic")
+		require.Equal(t, first, agg.LastValue(), "Same last value - monotonic")
 	})
 }
 
@@ -121,7 +121,7 @@ func TestGaugeNormalMerge(t *testing.T) {
 		agg1.Merge(agg2, record.Descriptor())
 
 		require.Equal(t, t2, agg1.Timestamp(), "Merged timestamp - non-monotonic")
-		require.Equal(t, first2, agg1.AsNumber(), "Merged value - non-monotonic")
+		require.Equal(t, first2, agg1.LastValue(), "Merged value - non-monotonic")
 	})
 }
 
@@ -146,7 +146,7 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 
 		agg1.Merge(agg2, record.Descriptor())
 
-		require.Equal(t, first2, agg1.AsNumber(), "Merged value - monotonic")
+		require.Equal(t, first2, agg1.LastValue(), "Merged value - monotonic")
 		require.Equal(t, agg2.Timestamp(), agg1.Timestamp(), "Merged timestamp - monotonic")
 	})
 }

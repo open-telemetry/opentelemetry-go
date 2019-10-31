@@ -41,14 +41,18 @@ func (m *monotoneBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAg
 	return gauge.New()
 }
 
-func (m *monotoneBatcher) Export(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (m *monotoneBatcher) ReadCheckpoint() export.MetricProducer {
+	return nil
+}
+
+func (m *monotoneBatcher) Process(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
 	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
 	require.Equal(m.t, 1, len(record.Labels()))
 	require.Equal(m.t, "a", string(record.Labels()[0].Key))
 	require.Equal(m.t, "b", record.Labels()[0].Value.Emit())
 
 	gauge := agg.(*gauge.Aggregator)
-	val := gauge.AsNumber()
+	val := gauge.LastValue()
 	ts := gauge.Timestamp()
 
 	m.currentValue = &val

@@ -38,8 +38,8 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// AsNumber returns the accumulated count as an int64.
-func (c *Aggregator) AsNumber() core.Number {
+// Sum returns the accumulated count as a Number.
+func (c *Aggregator) Sum() core.Number {
 	return c.checkpoint.AsNumber()
 }
 
@@ -47,7 +47,7 @@ func (c *Aggregator) AsNumber() core.Number {
 func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
 
-	exp.Export(ctx, rec, c)
+	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.

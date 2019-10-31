@@ -74,7 +74,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
 	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
 
-	exp.Export(ctx, rec, c)
+	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.

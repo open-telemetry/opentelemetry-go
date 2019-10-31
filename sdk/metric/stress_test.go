@@ -222,7 +222,7 @@ func (f *testFixture) assertTest(numCollect int) {
 }
 
 func (f *testFixture) preCollect() {
-	// Collect calls Export in a single-threaded context. No need
+	// Collect calls Process in a single-threaded context. No need
 	// to lock this struct.
 	f.dupCheck = map[testKey]int{}
 }
@@ -238,7 +238,11 @@ func (f *testFixture) AggregatorFor(record export.MetricRecord) export.MetricAgg
 	}
 }
 
-func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (f *testFixture) ReadCheckpoint() export.MetricProducer {
+	return nil
+}
+
+func (f *testFixture) Process(ctx context.Context, record export.MetricRecord, agg export.MetricAggregator) {
 	desc := record.Descriptor()
 	key := testKey{
 		labels:     canonicalizeLabels(record.Labels()),
@@ -254,10 +258,10 @@ func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, ag
 
 	switch desc.MetricKind() {
 	case export.CounterMetricKind:
-		f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsNumber(), time.Time{})
+		f.impl.storeCollect(actual, agg.(*counter.Aggregator).Sum(), time.Time{})
 	case export.GaugeMetricKind:
 		gauge := agg.(*gauge.Aggregator)
-		f.impl.storeCollect(actual, gauge.AsNumber(), gauge.Timestamp())
+		f.impl.storeCollect(actual, gauge.LastValue(), gauge.Timestamp())
 	default:
 		panic("Not used in this test")
 	}

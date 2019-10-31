@@ -44,7 +44,7 @@ func TestCounterMonotonic(t *testing.T) {
 
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, sum, agg.AsNumber(), "Same sum - monotonic")
+		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
 }
 
@@ -64,7 +64,7 @@ func TestCounterMonotonicNegative(t *testing.T) {
 		agg.Update(ctx, sum, record)
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, sum, agg.AsNumber(), "Same sum - monotonic")
+		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
 }
 
@@ -88,7 +88,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 
 		agg.Collect(ctx, record, batcher)
 
-		require.Equal(t, sum, agg.AsNumber(), "Same sum - monotonic")
+		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
 }
 
@@ -116,6 +116,6 @@ func TestCounterMerge(t *testing.T) {
 
 		sum.AddNumber(record.Descriptor().NumberKind(), sum)
 
-		require.Equal(t, sum, agg1.AsNumber(), "Same sum - monotonic")
+		require.Equal(t, sum, agg1.Sum(), "Same sum - monotonic")
 	})
 }

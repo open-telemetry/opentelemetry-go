@@ -36,7 +36,7 @@ type (
 		// NOTE: When only a single exporter is in use,
 		// there's a potential to avoid encoding the labels
 		// twice, since this class has to encode them once.
-		labels []core.KeyValue
+		labels []core.Value
 	}
 
 	dkiMap map[*export.Descriptor]map[core.Key]int
@@ -44,6 +44,7 @@ type (
 )
 
 var _ export.MetricBatcher = &Batcher{}
+var _ export.MetricProducer = aggMap{}
 
 func NewBatcher(selector export.MetricAggregationSelector) *Batcher {
 	return &Batcher{
@@ -57,7 +58,7 @@ func (b *Batcher) AggregatorFor(record export.MetricRecord) export.MetricAggrega
 	return b.selector.AggregatorFor(record)
 }
 
-func (b *Batcher) Export(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
 	desc := record.Descriptor()
 	keys := desc.Keys()
 
@@ -113,9 +114,22 @@ func (b *Batcher) Export(_ context.Context, record export.MetricRecord, agg expo
 	if !ok {
 		b.agg[encoded] = aggEntry{
 			aggregator: agg,
+			labels:     canon,
 			descriptor: record.Descriptor(),
 		}
 	} else {
 		rag.aggregator.Merge(agg, record.Descriptor())
+	}
+}
+
+func (b *Batcher) ReadCheckpoint() export.MetricProducer {
+	checkpoint := b.agg
+	b.agg = aggMap{}
+	return checkpoint
+}
+
+func (c aggMap) Foreach(f func(export.MetricAggregator, *export.Descriptor, []core.Value)) {
+	for _, entry := range c {
+		f(entry.aggregator, entry.descriptor, entry.labels)
 	}
 }
