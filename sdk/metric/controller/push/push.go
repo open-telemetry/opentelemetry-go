@@ -69,8 +69,5 @@ func (c *Controller) run() {
 func (c *Controller) tick() {
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
-	c.encoder.Encode(ctx, c.batcher)
-
-	// TODO MetricBatcher has to implement MetricProducer, what is the method
-	// to iterate over the checkpoint?
+	c.encoder.Encode(ctx, c.batcher.GetProducer())
 }

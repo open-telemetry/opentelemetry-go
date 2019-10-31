@@ -68,6 +68,7 @@ type MetricEncoder interface {
 }
 
 type MetricProducer interface {
+	Next() MetricAggregator
 }
 
 // MetricKind describes the kind of instrument.
