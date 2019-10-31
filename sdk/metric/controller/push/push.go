@@ -16,6 +16,7 @@ package push
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/api/metric"
@@ -29,6 +30,7 @@ type Controller struct {
 	batcher  export.MetricBatcher
 	exporter export.MetricExporter
 	ticker   *time.Ticker
+	wg       sync.WaitGroup
 	ch       chan struct{}
 }
 
@@ -52,19 +54,22 @@ func (c *Controller) GetMeter(name string) metric.Meter {
 }
 
 func (c *Controller) Start() {
+	c.wg.Add(1)
 	go c.run()
 }
 
 func (c *Controller) Stop() {
 	close(c.ch)
+	c.wg.Wait()
 
-	// TODO wait for the last run, flush, etc.
+	c.tick()
 }
 
 func (c *Controller) run() {
 	for {
 		select {
 		case <-c.ch:
+			c.wg.Done()
 			return
 		case <-c.ticker.C:
 			c.tick()

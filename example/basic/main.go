@@ -31,7 +31,6 @@ import (
 
 var (
 	tracer = global.TraceProvider().GetTracer("ex.com/basic")
-	meter  = global.MeterProvider().GetMeter("ex.com/basic") // TODO: should share resources ^^^?
 
 	fooKey     = key.New("ex.com/foo")
 	barKey     = key.New("ex.com/bar")
@@ -42,12 +41,16 @@ var (
 func main() {
 	selector := simple.New()
 	batcher := stateless.New(selector)
-	exporter := stdout.New(stdout.Options{PrettyPrint: true})
+	exporter := stdout.New(stdout.Options{PrettyPrint: false})
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 	defer pusher.Stop()
 
 	global.SetMeterProvider(pusher)
+
+	// Note: Have to get the meter after the global is
+	// initialized.  See OTEP 0005.
+	meter := global.MeterProvider().GetMeter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
@@ -77,18 +80,16 @@ func main() {
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
-		for {
-			gauge.Set(ctx, 1)
+		gauge.Set(ctx, 1)
 
-			meter.RecordBatch(
-				// Note: call-site variables added as context Entries:
-				distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-				commonLabels,
+		meter.RecordBatch(
+			// Note: call-site variables added as context Entries:
+			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			commonLabels,
 
-				oneMetric.Measurement(1.0),
-				measureTwo.Measurement(2.0),
-			)
-		}
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
+		)
 
 		return tracer.WithSpan(
 			ctx,

@@ -74,8 +74,12 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	}
 
 	// Compute the value list.  Note: Unspecified values become
-	// empty strings.
+	// empty strings.  TODO: pin this down.
 	canon := make([]core.Value, len(keys))
+
+	for i := 0; i < len(keys); i++ {
+		canon[i] = core.String("")
+	}
 
 	for _, kv := range record.Labels() {
 		pos, ok := ki[kv.Key]

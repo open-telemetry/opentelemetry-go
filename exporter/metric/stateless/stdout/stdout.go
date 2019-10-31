@@ -92,17 +92,23 @@ func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 		var sb strings.Builder
 
 		sb.WriteString(desc.Name())
-		sb.WriteRune('{')
 
-		for i, k := range desc.Keys() {
-			sb.WriteString(string(k))
-			sb.WriteRune('=')
-			sb.WriteRune('"')
-			sb.WriteString(labelValues[i].Emit())
-			sb.WriteRune('"')
+		if len(desc.Keys()) > 0 {
+			sb.WriteRune('{')
 		}
 
-		sb.WriteRune('}')
+		for i, k := range desc.Keys() {
+			if i > 0 {
+				sb.WriteRune(',')
+			}
+			sb.WriteString(string(k))
+			sb.WriteRune('=')
+			sb.WriteString(labelValues[i].Emit())
+		}
+
+		if len(desc.Keys()) > 0 {
+			sb.WriteRune('}')
+		}
 
 		expose.Name = sb.String()
 
