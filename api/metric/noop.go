@@ -6,15 +6,21 @@ import (
 	"go.opentelemetry.io/api/core"
 )
 
+type NoopProvider struct{}
 type NoopMeter struct{}
 type noopHandle struct{}
 type noopLabelSet struct{}
 type noopInstrument struct{}
 
+var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
 var _ InstrumentImpl = noopInstrument{}
 var _ HandleImpl = noopHandle{}
 var _ LabelSet = noopLabelSet{}
+
+func (NoopProvider) GetMeter(name string) Meter {
+	return NoopMeter{}
+}
 
 func (noopHandle) RecordOne(context.Context, core.Number) {
 }

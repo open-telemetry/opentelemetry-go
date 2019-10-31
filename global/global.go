@@ -17,27 +17,53 @@ package global
 import (
 	"sync/atomic"
 
+	"go.opentelemetry.io/api/metric"
 	"go.opentelemetry.io/api/trace"
 )
 
-type globalProvider struct {
-	p trace.Provider
-}
+type (
+	traceProvider struct {
+		tp trace.Provider
+	}
 
-var globalP atomic.Value
+	meterProvider struct {
+		mp metric.Provider
+	}
+)
+
+var (
+	globalTracer atomic.Value
+	globalMeter  atomic.Value
+)
 
 // TraceProvider returns the registered global trace provider.
-// If none is registered then an instance of NoopTraceProvider is returned.
+// If none is registered then an instance of trace.NoopProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().GetTracer("example.com/foo")
 func TraceProvider() trace.Provider {
-	if gp := globalP.Load(); gp != nil {
-		return gp.(globalProvider).p
+	if gp := globalTracer.Load(); gp != nil {
+		return gp.(traceProvider).tp
 	}
-	return trace.NoopTraceProvider{}
+	return trace.NoopProvider{}
 }
 
-// SetTraceProvider registers p as the global trace provider.
-func SetTraceProvider(p trace.Provider) {
-	globalP.Store(globalProvider{p: p})
+// SetTraceProvider registers `tp` as the global trace provider.
+func SetTraceProvider(tp trace.Provider) {
+	globalTracer.Store(traceProvider{tp: tp})
+}
+
+// MeterProvider returns the registered global meter provider.
+// If none is registered then an instance of metric.NoopProvider is returned.
+// Use the trace provider to create a named meter. E.g.
+//     meter := global.MeterProvider().GetMeter("example.com/foo")
+func MeterProvider() metric.Provider {
+	if gp := globalMeter.Load(); gp != nil {
+		return gp.(meterProvider).mp
+	}
+	return metric.NoopProvider{}
+}
+
+// SetMeterProvider registers `mp` as the global meter provider.
+func SetMeterProvider(mp metric.Provider) {
+	globalMeter.Store(meterProvider{mp: mp})
 }
