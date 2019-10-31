@@ -101,3 +101,13 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	defer c.lock.Unlock()
 	c.current.Add(number.CoerceToFloat64(kind))
 }
+
+func (c *Aggregator) Merge(oa export.MetricAggregator, d *export.Descriptor) {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		// TODO warn
+		return
+	}
+
+	c.checkpoint.Merge(o.checkpoint)
+}
