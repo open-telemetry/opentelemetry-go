@@ -64,6 +64,10 @@ type MetricRecord interface {
 }
 
 type MetricEncoder interface {
+	Encode(context.Context, MetricProducer)
+}
+
+type MetricProducer interface {
 }
 
 // MetricKind describes the kind of instrument.

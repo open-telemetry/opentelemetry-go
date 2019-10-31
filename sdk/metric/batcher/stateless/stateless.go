@@ -88,12 +88,13 @@ func (b *Batcher) Export(_ context.Context, record export.MetricRecord, agg expo
 	//
 	// Note the opportunity to use an export-specific
 	// representation here, then avoid recomputing it in the
-	// exporter. For example, depending on the exporter, we could
+	// exporter.  For example, depending on the exporter, we could
 	// use an OpenMetrics representation, a statsd representation,
 	// etc.  This only benefits a single exporter, of course.
 	//
-	// Note also the possibility to cache this lookup in the form
-	// (Descriptor, LabelSet)->Encoded.
+	// Note also the possibility to speed this computation of
+	// "encoded" from "canon" in the form of a (Descriptor,
+	// LabelSet)->Encoded cache.
 	var sb strings.Builder
 	for i := 0; i < len(keys); i++ {
 		sb.WriteString(string(keys[i]))
@@ -107,7 +108,7 @@ func (b *Batcher) Export(_ context.Context, record export.MetricRecord, agg expo
 
 	encoded := sb.String()
 
-	// Perform the group-by.
+	// Reduce dimensionality.
 	rag, ok := b.agg[encoded]
 	if !ok {
 		b.agg[encoded] = aggEntry{
