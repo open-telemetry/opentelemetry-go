@@ -21,7 +21,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
-	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
+	gen "go.opentelemetry.io/otel/exporter/trace/jaeger/internal/gen-go/jaeger"
 )
 
 // udpPacketMaxLength is the max size of UDP packet we want to send, synced with jaeger-agent

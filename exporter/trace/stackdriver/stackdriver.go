@@ -26,9 +26,9 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Option is function type that is passed to the exporter initialization function.
@@ -78,12 +78,12 @@ type options struct {
 	BatchDelayThreshold time.Duration
 
 	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing.
-	// See the detailed definition in https://godoc.org/go.opentelemetry.io/sdk/trace#BatchSpanProcessorOptions.
+	// See the detailed definition in https://godoc.org/go.opentelemetry.io/otel/sdk/trace#BatchSpanProcessorOptions.
 	// Default is 2048. Optional.
 	MaxQueueSize int
 
 	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
-	// See the detailed definition in https://godoc.org/go.opentelemetry.io/sdk/trace#BatchSpanProcessorOptions.
+	// See the detailed definition in https://godoc.org/go.opentelemetry.io/otel/sdk/trace#BatchSpanProcessorOptions.
 	// Default is 512. Optional.
 	MaxExportBatchSize int
 

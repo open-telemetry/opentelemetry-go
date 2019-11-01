@@ -1,11 +1,11 @@
 # OpenTelemetry-Go
 
 [![Circle CI](https://circleci.com/gh/open-telemetry/opentelemetry-go.svg?style=svg)](https://circleci.com/gh/open-telemetry/opentelemetry-go)
-[![Docs](https://godoc.org/go.opentelemetry.io?status.svg)](http://godoc.org/go.opentelemetry.io)
-[![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io)](https://goreportcard.com/report/go.opentelemetry.io)
+[![Docs](https://godoc.org/go.opentelemetry.io/otel?status.svg)](http://godoc.org/go.opentelemetry.io/otel)
+[![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/otel)](https://goreportcard.com/report/go.opentelemetry.io/otel)
 [![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go.svg)](https://gitter.im/open-telemetry/opentelemetry-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-The Go [OpenTelemetry](https://opentelemetry.io/) client.
+The Go [OpenTelemetry](https://opentelemetry.io/otel/) client.
 
 ## Installation
 
@@ -22,7 +22,7 @@ depend on `sdk` or another package that implements the API.
 To install the API and SDK packages,
 
 ```
-$ go get -u go.opentelemetry.io
+$ go get -u go.opentelemetry.io/otel
 ```
 
 ## Quick Start
@@ -34,9 +34,9 @@ import (
 	"context"
 	"log"
 
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/stdout"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func initTracer() {
@@ -78,7 +78,7 @@ func main() {
 ```
 
 See the [API
-documentation](https://go.opentelemetry.io/) for more
+documentation](https://go.opentelemetry.io/otel/) for more
 detail, and the
 [opentelemetry-example-app](./example/README.md)
 for a complete example.

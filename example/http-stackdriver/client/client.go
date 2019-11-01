@@ -26,13 +26,13 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/stackdriver"
-	"go.opentelemetry.io/global"
-	"go.opentelemetry.io/plugin/httptrace"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/plugin/httptrace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func initTracer() {

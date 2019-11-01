@@ -22,11 +22,11 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/api/core"
-	dctx "go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/key"
-	apipropagation "go.opentelemetry.io/api/propagation"
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	apipropagation "go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
