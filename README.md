@@ -3,6 +3,7 @@
 [![Circle CI](https://circleci.com/gh/open-telemetry/opentelemetry-go.svg?style=svg)](https://circleci.com/gh/open-telemetry/opentelemetry-go)
 [![Docs](https://godoc.org/go.opentelemetry.io?status.svg)](http://godoc.org/go.opentelemetry.io)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io)](https://goreportcard.com/report/go.opentelemetry.io)
+[![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go.svg)](https://gitter.im/open-telemetry/opentelemetry-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 The Go [OpenTelemetry](https://opentelemetry.io/) client.
 
