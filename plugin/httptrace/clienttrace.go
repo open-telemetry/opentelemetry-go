@@ -83,7 +83,7 @@ func (ct *clientTracer) close(name string) {
 		delete(ct.levels, name)
 	} else {
 		// open is not finished before close is called.
-		ct.levels[name] = s
+		ct.levels[name] = trace.NoopSpan{}
 	}
 }
 
