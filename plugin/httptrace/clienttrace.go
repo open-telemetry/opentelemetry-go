@@ -17,7 +17,6 @@ package httptrace
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http/httptrace"
 	"net/textproto"
 	"strings"
@@ -67,7 +66,13 @@ func (ct *clientTracer) open(name string, attrs ...core.KeyValue) {
 	if ct.root == nil {
 		ct.root = sp
 	}
-	ct.levels[name] = sp
+	if _, ok := ct.levels[name]; ok {
+		// close was called before open is handled.
+		sp.End()
+		delete(ct.levels, name)
+	} else {
+		ct.levels[name] = sp
+	}
 }
 
 func (ct *clientTracer) close(name string) {
@@ -77,7 +82,8 @@ func (ct *clientTracer) close(name string) {
 		s.End()
 		delete(ct.levels, name)
 	} else {
-		panic(fmt.Sprintf("failed to find span %s in levels.", name))
+		// open is not finished before close is called.
+		ct.levels[name] = s
 	}
 }
 
