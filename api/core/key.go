@@ -258,9 +258,13 @@ func (v *Value) Emit() string {
 	switch v.Type() {
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
-	case INT32, INT64:
+	case INT32:
+		return strconv.FormatInt(int64(v.AsInt32()), 10)
+	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
-	case UINT32, UINT64:
+	case UINT32:
+		return strconv.FormatUint(uint64(v.AsUint32()), 10)
+	case UINT64:
 		return strconv.FormatUint(v.AsUint64(), 10)
 	case FLOAT32:
 		return fmt.Sprint(v.AsFloat32())
