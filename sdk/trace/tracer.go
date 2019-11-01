@@ -60,6 +60,10 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 	spanName := tr.spanNameWithPrefix(name)
 	span := startSpanInternal(tr, spanName, parent, remoteParent, opts)
+	for _, l := range opts.Links {
+		span.AddLink(l)
+	}
+
 	span.tracer = tr
 
 	if span.IsRecording() {
