@@ -25,8 +25,8 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // Option is function type that is passed to the exporter initialization function.

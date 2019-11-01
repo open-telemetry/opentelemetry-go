@@ -22,12 +22,12 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/api/core"
-	oteldctx "go.opentelemetry.io/api/distributedcontext"
-	otelkey "go.opentelemetry.io/api/key"
-	oteltrace "go.opentelemetry.io/api/trace"
+	otelcore "go.opentelemetry.io/otel/api/core"
+	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
+	otelkey "go.opentelemetry.io/otel/api/key"
+	oteltrace "go.opentelemetry.io/otel/api/trace"
 
-	"go.opentelemetry.io/bridge/opentracing/migration"
+	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 var (

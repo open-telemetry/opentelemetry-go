@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 func TestValue(t *testing.T) {
@@ -201,5 +201,45 @@ func TestEmit(t *testing.T) {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
+	}
+}
+
+func BenchmarkEmitBool(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		n := core.Bool(i%2 == 0)
+		_ = n.Emit()
+	}
+}
+
+func BenchmarkEmitInt64(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		n := core.Int64(int64(i))
+		_ = n.Emit()
+	}
+}
+
+func BenchmarkEmitUInt64(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		n := core.Uint64(uint64(i))
+		_ = n.Emit()
+	}
+}
+
+func BenchmarkEmitFloat64(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		n := core.Float64(float64(i))
+		_ = n.Emit()
+	}
+}
+
+func BenchmarkEmitFloat32(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		n := core.Float32(float32(i))
+		_ = n.Emit()
 	}
 }

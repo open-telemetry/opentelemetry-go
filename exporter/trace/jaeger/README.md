@@ -4,5 +4,5 @@ OpenTelemetry Jaeger exporter
 
 ## Installation
 ```
-go get -u go.opentelemetry.io/exporter/trace/jaeger
+go get -u go.opentelemetry.io/otel/exporter/trace/jaeger
 ```
