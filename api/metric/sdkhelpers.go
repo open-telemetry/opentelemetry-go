@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 // InstrumentImpl is the implementation-level interface Set/Add/Record

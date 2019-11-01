@@ -21,10 +21,10 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/internal"
+	"go.opentelemetry.io/otel/api/core"
+	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 // span implements apitrace.Span interface.

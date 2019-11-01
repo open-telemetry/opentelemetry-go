@@ -22,12 +22,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/core"
-	dctx "go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/trace"
-	mocktrace "go.opentelemetry.io/internal/trace"
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
+	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 var (

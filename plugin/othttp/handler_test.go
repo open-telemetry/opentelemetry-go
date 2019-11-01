@@ -20,9 +20,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/propagation"
 
-	mocktrace "go.opentelemetry.io/internal/trace"
+	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func TestBasics(t *testing.T) {

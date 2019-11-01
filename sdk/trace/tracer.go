@@ -17,8 +17,8 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 type tracer struct {

@@ -19,8 +19,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // SpanData contains all the information collected by a span.

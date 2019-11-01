@@ -17,8 +17,8 @@ package propagation
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	dctx "go.opentelemetry.io/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/core"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.

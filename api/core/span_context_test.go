@@ -17,7 +17,7 @@ package core_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 func TestIsValid(t *testing.T) {

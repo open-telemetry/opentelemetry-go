@@ -18,11 +18,11 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/propagation"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/global"
-	prop "go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/global"
+	prop "go.opentelemetry.io/otel/propagation"
 )
 
 var _ http.Handler = &Handler{}
@@ -80,7 +80,7 @@ func WithPublicEndpoint() Option {
 
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
-// go.opentelemetry.io/propagation.HTTPTraceContextPropagator is used.
+// go.opentelemetry.io/otel/propagation.HTTPTraceContextPropagator is used.
 func WithPropagator(p propagation.TextFormatPropagator) Option {
 	return func(h *Handler) {
 		h.prop = p

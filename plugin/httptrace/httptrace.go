@@ -18,9 +18,9 @@ import (
 	"context"
 	"net/http"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 const (

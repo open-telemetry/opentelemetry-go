@@ -27,10 +27,10 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	otelcore "go.opentelemetry.io/api/core"
-	oteltrace "go.opentelemetry.io/api/trace"
+	otelcore "go.opentelemetry.io/otel/api/core"
+	oteltrace "go.opentelemetry.io/otel/api/trace"
 
-	"go.opentelemetry.io/bridge/opentracing/migration"
+	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -322,7 +322,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	})
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
-			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/bridge/opentracing/migration\n")
+			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n")
 		})
 	}
 	if hadTrueErrorTag {
