@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/trace"
 
-	"go.opentelemetry.io/api/core"
-	dctx "go.opentelemetry.io/api/distributedcontext"
-	apipropagation "go.opentelemetry.io/api/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 
 const (

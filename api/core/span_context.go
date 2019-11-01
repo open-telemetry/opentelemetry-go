@@ -44,30 +44,38 @@ func (e errorConst) Error() string {
 	return string(e)
 }
 
+// TraceID is a unique identity of a trace.
 type TraceID [16]byte
 
 var nilTraceID TraceID
 var _ json.Marshaler = nilTraceID
 
+// IsValid checks whether the trace ID is valid. A valid trace ID does
+// not consist of zeros only.
 func (t TraceID) IsValid() bool {
 	return !bytes.Equal(t[:], nilTraceID[:])
 }
 
-// MarshalJSON implements a custom marshal function to encode TraceID as a hex string
+// MarshalJSON implements a custom marshal function to encode TraceID
+// as a hex string.
 func (t TraceID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(t[:]))
 }
 
+// SpanID is a unique identify of a span in a trace.
 type SpanID [8]byte
 
 var nilSpanID SpanID
 var _ json.Marshaler = nilSpanID
 
+// IsValid checks whether the span ID is valid. A valid span ID does
+// not consist of zeros only.
 func (s SpanID) IsValid() bool {
 	return !bytes.Equal(s[:], nilSpanID[:])
 }
 
-// MarshalJSON implements a custom marshal function to encode SpanID as a hex string
+// MarshalJSON implements a custom marshal function to encode SpanID
+// as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(s[:]))
 }
@@ -131,38 +139,49 @@ func decodeHex(h string, b []byte) error {
 	return nil
 }
 
+// SpanContext contains basic information about the span - its trace
+// ID, span ID and trace flags.
 type SpanContext struct {
 	TraceID    TraceID
 	SpanID     SpanID
 	TraceFlags byte
 }
 
-// EmptySpanContext is meant for internal use to return invalid span context during error conditions.
+// EmptySpanContext is meant for internal use to return invalid span
+// context during error conditions.
 func EmptySpanContext() SpanContext {
 	return SpanContext{}
 }
 
+// IsValid checks if the span context is valid. A valid span context
+// has a valid trace ID and a valid span ID.
 func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
 }
 
+// HasTraceID checks if the span context has a valid trace ID.
 func (sc SpanContext) HasTraceID() bool {
 	return sc.TraceID.IsValid()
 }
 
+// HasSpanID checks if the span context has a valid span ID.
 func (sc SpanContext) HasSpanID() bool {
 	return sc.SpanID.IsValid()
 }
 
+// SpanIDString returns a hex string representation of the span ID in
+// the span context.
 func (sc SpanContext) SpanIDString() string {
 	return hex.EncodeToString(sc.SpanID[:])
-
 }
 
+// TraceIDString returns a hex string representation of the trace ID
+// in the span context.
 func (sc SpanContext) TraceIDString() string {
 	return hex.EncodeToString(sc.TraceID[:])
 }
 
+// IsSampled check if the sampling bit in trace flags is set.
 func (sc SpanContext) IsSampled() bool {
 	return sc.TraceFlags&traceFlagsBitMaskSampled == traceFlagsBitMaskSampled
 }

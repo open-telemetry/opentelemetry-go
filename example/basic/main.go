@@ -17,17 +17,16 @@ package main
 import (
 	"context"
 
-	"go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/global"
+	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/global"
 )
 
 var (
 	tracer = global.TraceProvider().GetTracer("ex.com/basic")
-
-	meter = metric.GlobalMeter() // TODO: should share resources ^^^?
+	meter  = global.MeterProvider().GetMeter("ex.com/basic") // TODO: should share resources ^^^?
 
 	fooKey     = key.New("ex.com/foo")
 	barKey     = key.New("ex.com/bar")

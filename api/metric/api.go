@@ -17,9 +17,16 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/unit"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/unit"
 )
+
+// Provider supports named Meter instances.
+type Provider interface {
+	// GetMeter gets a named Meter interface.  If the name is an
+	// empty string, the provider uses a default name.
+	GetMeter(name string) Meter
+}
 
 // LabelSet is an implementation-level interface that represents a
 // []core.KeyValue for use as pre-defined labels in the metrics API.

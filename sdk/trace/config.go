@@ -15,7 +15,7 @@
 package trace
 
 import (
-	"go.opentelemetry.io/sdk/trace/internal"
+	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
 
 // Config represents the global tracing configuration.

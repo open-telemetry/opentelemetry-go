@@ -23,10 +23,10 @@ import (
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	gen "go.opentelemetry.io/exporter/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/otel/api/core"
+	gen "go.opentelemetry.io/otel/exporter/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 const defaultServiceName = "OpenTelemetry"
@@ -144,6 +144,7 @@ type Exporter struct {
 }
 
 // RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
+//TODO(eran-levy): deprecate - already registered in NewProvider
 func (e *Exporter) RegisterSimpleSpanProcessor() {
 	e.once.Do(func() {
 		ssp := trace.NewSimpleSpanProcessor(e)

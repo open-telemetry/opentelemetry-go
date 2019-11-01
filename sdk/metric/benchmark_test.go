@@ -21,14 +21,14 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/sdk/export"
-	sdk "go.opentelemetry.io/sdk/metric"
-	"go.opentelemetry.io/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/sdk/export"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 )
 
 type benchFixture struct {

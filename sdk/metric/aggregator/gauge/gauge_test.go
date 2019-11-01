@@ -21,9 +21,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
 const count = 100
@@ -92,5 +92,61 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 		agg.Collect(ctx, record, batcher)
 
 		require.Equal(t, first, agg.AsNumber(), "Same last value - monotonic")
+	})
+}
+
+func TestGaugeNormalMerge(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		agg1 := New()
+		agg2 := New()
+
+		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, false)
+
+		first1 := profile.Random(+1)
+		first2 := profile.Random(+1)
+		first1.AddNumber(profile.NumberKind, first2)
+
+		agg1.Update(ctx, first1, record)
+		agg2.Update(ctx, first2, record)
+
+		agg1.Collect(ctx, record, batcher)
+		agg2.Collect(ctx, record, batcher)
+
+		t1 := agg1.Timestamp()
+		t2 := agg2.Timestamp()
+		require.True(t, t1.Before(t2))
+
+		agg1.Merge(agg2, record.Descriptor())
+
+		require.Equal(t, t2, agg1.Timestamp(), "Merged timestamp - non-monotonic")
+		require.Equal(t, first2, agg1.AsNumber(), "Merged value - non-monotonic")
+	})
+}
+
+func TestGaugeMonotonicMerge(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		agg1 := New()
+		agg2 := New()
+
+		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, true)
+
+		first1 := profile.Random(+1)
+		agg1.Update(ctx, first1, record)
+
+		first2 := profile.Random(+1)
+		first2.AddNumber(profile.NumberKind, first1)
+		agg2.Update(ctx, first2, record)
+
+		agg1.Collect(ctx, record, batcher)
+		agg2.Collect(ctx, record, batcher)
+
+		agg1.Merge(agg2, record.Descriptor())
+
+		require.Equal(t, first2, agg1.AsNumber(), "Merged value - monotonic")
+		require.Equal(t, agg2.Timestamp(), agg1.Timestamp(), "Merged timestamp - monotonic")
 	})
 }

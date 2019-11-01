@@ -18,13 +18,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/sdk/export"
 
-	apitrace "go.opentelemetry.io/api/trace"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 const (
-	defaultTracerName = "go.opentelemetry.io/sdk/tracer"
+	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 )
 
 // ProviderOptions

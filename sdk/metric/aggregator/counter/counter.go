@@ -17,8 +17,8 @@ package counter
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // Aggregator aggregates counter events.
@@ -60,4 +60,13 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	}
 
 	c.current.AddNumberAtomic(kind, number)
+}
+
+func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		// TODO warn
+		return
+	}
+	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
 }

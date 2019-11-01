@@ -1,7 +1,7 @@
-module go.opentelemetry.io/example/namedtracer
+module go.opentelemetry.io/otel/example/namedtracer
 
 go 1.13
 
-replace go.opentelemetry.io => ../..
+replace go.opentelemetry.io/otel => ../..
 
-require go.opentelemetry.io v0.0.0-20191025183852-68310ab97435
+require go.opentelemetry.io/otel v0.0.0-00010101000000-000000000000

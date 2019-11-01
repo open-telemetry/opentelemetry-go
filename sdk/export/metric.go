@@ -17,8 +17,8 @@ package export
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/unit"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/unit"
 )
 
 // MetricAggregator implements a specific aggregation behavior, e.g.,
@@ -33,6 +33,9 @@ type MetricAggregator interface {
 	// called in a single-threaded context.  Update()
 	// calls may arrive concurrently.
 	Collect(context.Context, MetricRecord, MetricBatcher)
+
+	// Merge combines state from two aggregators into one.
+	Merge(MetricAggregator, *Descriptor)
 }
 
 // MetricRecord is the unit of export, pairing a metric
