@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"strconv"
 	"unsafe"
 )
 
@@ -303,12 +304,24 @@ func (v *Value) AsInterface() interface{} {
 
 // Emit returns a string representation of Value's data.
 func (v *Value) Emit() string {
-	if v.Type() == STRING {
+	switch v.Type() {
+	case BOOL:
+		return strconv.FormatBool(v.AsBool())
+	case INT32:
+		return strconv.FormatInt(int64(v.AsInt32()), 10)
+	case INT64:
+		return strconv.FormatInt(v.AsInt64(), 10)
+	case UINT32:
+		return strconv.FormatUint(uint64(v.AsUint32()), 10)
+	case UINT64:
+		return strconv.FormatUint(v.AsUint64(), 10)
+	case FLOAT32:
+		return fmt.Sprint(v.AsFloat32())
+	case FLOAT64:
+		return fmt.Sprint(v.AsFloat64())
+	case STRING:
 		return v.stringly
-	}
-	i := v.AsInterface()
-	if _, ok := i.(unknownValueType); ok {
+	default:
 		return "unknown"
 	}
-	return fmt.Sprint(i)
 }
