@@ -16,12 +16,20 @@ package array
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"unsafe"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
+)
+
+var (
+	// TODO: move this up one level into the aggregator API
+	ErrEmptyDataSet    = fmt.Errorf("The result is not defined on an empty data set")
+	ErrInvalidQuantile = fmt.Errorf("The requested quantile is out of range")
 )
 
 type (
@@ -41,30 +49,30 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// // Sum returns the sum of the checkpoint.
-// func (c *Aggregator) Sum() float64 {
-// 	return c.checkpoint.Sum()
-// }
+// Sum returns the sum of the checkpoint.
+func (c *Aggregator) Sum() core.Number {
+	return c.ckptSum
+}
 
-// // Count returns the count of the checkpoint.
-// func (c *Aggregator) Count() int64 {
-// 	return c.checkpoint.Count()
-// }
+// Count returns the count of the checkpoint.
+func (c *Aggregator) Count() int64 {
+	return int64(len(c.checkpoint))
+}
 
-// // Max returns the max of the checkpoint.
-// func (c *Aggregator) Max() float64 {
-// 	return c.checkpoint.Quantile(1)
-// }
+// Max returns the max of the checkpoint.
+func (c *Aggregator) Max() (core.Number, error) {
+	return c.checkpoint.Quantile(1)
+}
 
-// // Min returns the min of the checkpoint.
-// func (c *Aggregator) Min() float64 {
-// 	return c.checkpoint.Quantile(0)
-// }
+// Min returns the min of the checkpoint.
+func (c *Aggregator) Min() (core.Number, error) {
+	return c.checkpoint.Quantile(0)
+}
 
-// // Quantile returns the estimated quantile of the checkpoint.
-// func (c *Aggregator) Quantile(q float64) float64 {
-// 	return c.checkpoint.Quantile(q)
-// }
+// Quantile returns the estimated quantile of the checkpoint.
+func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	return c.checkpoint.Quantile(q)
+}
 
 func (a *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
 	a.lock.Lock()
@@ -74,8 +82,6 @@ func (a *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
-	// Note: You can _almost_ just sort the raw representation, but it fails
-	// in corner cases for floating point, having to do with NaN, +/-Inf, +/-0.
 	a.sort(kind)
 
 	a.ckptSum = core.Number(0)
@@ -133,12 +139,19 @@ func (a *Aggregator) sort(kind core.NumberKind) {
 }
 
 func combine(a, b Points, kind core.NumberKind) Points {
-	result := make(Points, len(a)+len(b))
-	// HERE
-	for len(a) != 0 && len(b) != 0 {
-		// HERE
-	}
+	result := make(Points, 0, len(a)+len(b))
 
+	for len(a) != 0 && len(b) != 0 {
+		if a[0].CompareNumber(kind, b[0]) < 0 {
+			result = append(result, a[0])
+			a = a[1:]
+		} else {
+			result = append(result, b[0])
+			b = b[1:]
+		}
+	}
+	result = append(result, a...)
+	result = append(result, b...)
 	return result
 }
 
@@ -155,4 +168,30 @@ func (p *Points) Less(i, j int) bool {
 
 func (p *Points) Swap(i, j int) {
 	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
+}
+
+// Quantile returns the least X such that Pr(x<X)>=q, where X is an
+// element of the data set.
+func (p *Points) Quantile(q float64) (core.Number, error) {
+	if len(*p) == 0 {
+		return core.Number(0), ErrEmptyDataSet
+	}
+
+	if q < 0 || q > 1 {
+		return core.Number(0), ErrInvalidQuantile
+	}
+
+	if q == 0 || len(*p) == 1 {
+		return (*p)[0], nil
+	} else if q == 1 {
+		return (*p)[len(*p)-1], nil
+	}
+
+	// Note: There's no interpolation being done here.  There are
+	// many definitions for "quantile", some interpolate, some do
+	// not.  What is expected?
+	position := float64(len(*p)-1) * q
+	ceil := int(math.Ceil(position))
+	return (*p)[ceil], nil
+
 }

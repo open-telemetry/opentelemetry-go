@@ -15,31 +15,72 @@
 package array
 
 import (
+	"context"
 	"fmt"
-	"math"
-	"sort"
 	"testing"
 
-	"go.opentelemetry.io/api/core"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/sdk/metric/aggregator/test"
 )
 
-func TestRawFloatSort(t *testing.T) {
-	floats := []core.Number{
-		core.NewFloat64Number(0),
-		core.NewFloat64Number(+1. * 0.),
-		core.NewFloat64Number(1. / math.Inf(-1)),
-		core.NewFloat64Number(1. / math.Inf(+1)),
-		core.NewFloat64Number(+1),
-		core.NewFloat64Number(-1),
+func TestArrayAbsolute(t *testing.T) {
+	// Test with an odd an even number of measurements
+	for count := 999; count <= 1000; count++ {
+		// Test absolute and non-absolute
+		for _, absolute := range []bool{false, true} {
+			t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
+				// Test integer and floating point
+				test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+					ctx := context.Background()
+
+					batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !absolute)
+
+					agg := New()
+
+					all := test.NewNumbers(profile.NumberKind)
+
+					for i := 0; i < count; i++ {
+						x := profile.Random(+1)
+						all.Append(x)
+						agg.Update(ctx, x, record)
+
+						if !absolute {
+							y := profile.Random(-1)
+							all.Append(y)
+							agg.Update(ctx, y, record)
+						}
+					}
+
+					agg.Collect(ctx, record, batcher)
+
+					all.Sort()
+
+					require.InEpsilon(t,
+						all.Sum().CoerceToFloat64(profile.NumberKind),
+						agg.Sum().CoerceToFloat64(profile.NumberKind),
+						0.0000001,
+						"Same sum - absolute")
+					require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+
+					min, err := agg.Min()
+					require.Nil(t, err)
+					require.Equal(t, all.Min(), min, "Same min - absolute")
+
+					max, err := agg.Max()
+					require.Nil(t, err)
+					require.Equal(t, all.Max(), max, "Same max - absolute")
+
+					qx, err := agg.Quantile(0.5)
+					require.Nil(t, err)
+					require.Equal(t, all.Median(), qx, "Same median - absolute")
+				})
+			})
+		}
 	}
-
-	sort.Slice(floats, func(i, j int) bool {
-		return int64(floats[i]) < int64(floats[j])
-	})
-
-	for _, n := range floats {
-		fmt.Println("F=", n.Emit(core.Float64NumberKind))
-	}
-
-	panic("Anyway")
 }
+
+// TODO: test empty, test small, test NaN and other stuff
+
+// TODO: test merge
