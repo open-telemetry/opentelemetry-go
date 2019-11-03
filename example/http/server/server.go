@@ -19,12 +19,12 @@ import (
 	"log"
 	"net/http"
 
-	"go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/trace/stdout"
-	"go.opentelemetry.io/global"
-	"go.opentelemetry.io/plugin/httptrace"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/plugin/httptrace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func initTracer() {
@@ -34,7 +34,6 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	exporter.RegisterSimpleSpanProcessor()
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.

@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event // import "go.opentelemetry.io/api/event"
+package event // import "go.opentelemetry.io/otel/api/event"

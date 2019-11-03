@@ -23,11 +23,11 @@ import (
 	//otext "github.com/opentracing/opentracing-go/ext"
 	//otlog "github.com/opentracing/opentracing-go/log"
 
-	otelcore "go.opentelemetry.io/api/core"
-	oteltrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/global"
+	otelcore "go.opentelemetry.io/otel/api/core"
+	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/global"
 
-	"go.opentelemetry.io/bridge/opentracing/internal"
+	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 )
 
 type mixedAPIsTestCase struct {

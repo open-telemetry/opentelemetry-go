@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package propagation contains interface definition for Binary and TextFormat propagators.
-package propagation // import "go.opentelemetry.io/api/propagation"
+package propagation // import "go.opentelemetry.io/otel/api/propagation"

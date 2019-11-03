@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // SpanProcessor is interface to add hooks to start and end method invocations.

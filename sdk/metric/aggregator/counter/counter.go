@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package counter
+package counter // import "go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // Aggregator aggregates counter events.

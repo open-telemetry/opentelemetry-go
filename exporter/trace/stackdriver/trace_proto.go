@@ -27,9 +27,9 @@ import (
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	opentelemetry "go.opentelemetry.io/sdk"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	opentelemetry "go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 const (

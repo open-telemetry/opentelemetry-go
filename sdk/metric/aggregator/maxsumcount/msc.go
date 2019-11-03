@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package maxsumcount
+package maxsumcount // import "go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 
 import (
 	"context"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 type (

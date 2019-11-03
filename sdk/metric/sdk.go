@@ -22,10 +22,10 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/metric"
-	api "go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
+	api "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 type (

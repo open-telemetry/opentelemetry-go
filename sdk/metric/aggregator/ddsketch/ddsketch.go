@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package ddsketch
+package ddsketch // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 
 import (
 	"context"
@@ -20,9 +20,9 @@ import (
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates measure events.

@@ -12,4 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core // import "go.opentelemetry.io/api/core"
+// This package provides basic types used in OpenTelemetry - keys,
+// values, numbers and span contexts.
+package core // import "go.opentelemetry.io/otel/api/core"

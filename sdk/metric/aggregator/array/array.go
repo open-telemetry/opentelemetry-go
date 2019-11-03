@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package array
+package array // import "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 
 import (
 	"context"
@@ -21,9 +21,9 @@ import (
 	"sync"
 	"unsafe"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (

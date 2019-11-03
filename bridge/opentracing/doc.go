@@ -97,4 +97,4 @@
 // LogFields() function, so when the call to the function gets
 // translated to OpenTelemetry AddEvent() function, an empty context
 // is passed.
-package opentracing // import "go.opentelemetry.io/bridge/opentracing"
+package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
