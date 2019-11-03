@@ -43,6 +43,10 @@ type Options struct {
 	// Quantiles are the desired aggregation quantiles for measure
 	// metric data, used when the configured aggregator supports
 	// quantiles.
+	//
+	// Note: this exporter is meant as a demonstration; a real
+	// exporter may wish to configure quantiles on a per-metric
+	// basis.
 	Quantiles []float64
 }
 
