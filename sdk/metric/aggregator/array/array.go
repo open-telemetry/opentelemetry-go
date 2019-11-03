@@ -68,26 +68,26 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (a *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
-	a.lock.Lock()
-	a.checkpoint, a.current = a.current, nil
-	a.lock.Unlock()
+func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+	c.lock.Lock()
+	c.checkpoint, c.current = c.current, nil
+	c.lock.Unlock()
 
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
-	a.sort(kind)
+	c.sort(kind)
 
-	a.ckptSum = core.Number(0)
+	c.ckptSum = core.Number(0)
 
-	for _, v := range a.checkpoint {
-		a.ckptSum.AddNumber(kind, v)
+	for _, v := range c.checkpoint {
+		c.ckptSum.AddNumber(kind, v)
 	}
 
-	exp.Export(ctx, rec, a)
+	exp.Export(ctx, rec, c)
 }
 
-func (a *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
@@ -102,29 +102,29 @@ func (a *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 		return
 	}
 
-	a.lock.Lock()
-	a.current = append(a.current, number)
-	a.lock.Unlock()
+	c.lock.Lock()
+	c.current = append(c.current, number)
+	c.lock.Unlock()
 }
 
-func (a *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn
 		return
 	}
 
-	a.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
-	a.checkpoint = combine(a.checkpoint, o.checkpoint, desc.NumberKind())
+	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
+	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
 }
 
-func (a *Aggregator) sort(kind core.NumberKind) {
+func (c *Aggregator) sort(kind core.NumberKind) {
 	switch kind {
 	case core.Float64NumberKind:
-		sort.Float64s(*(*[]float64)(unsafe.Pointer(&a.checkpoint)))
+		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint)))
 
 	case core.Int64NumberKind:
-		sort.Sort(&a.checkpoint)
+		sort.Sort(&c.checkpoint)
 
 	default:
 		// NOTE: This can't happen because the SDK doesn't
