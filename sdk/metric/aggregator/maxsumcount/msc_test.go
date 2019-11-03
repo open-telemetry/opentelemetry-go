@@ -52,9 +52,12 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 			0.000000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+
+		max, err := agg.Max()
+		require.Nil(t, err)
 		require.Equal(t,
 			all.Max(),
-			agg.Max(),
+			max,
 			"Same max - absolute")
 	})
 }
@@ -94,9 +97,12 @@ func TestMaxSumCountMerge(t *testing.T) {
 			0.000000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+
+		max, err := agg1.Max()
+		require.Nil(t, err)
 		require.Equal(t,
 			all.Max(),
-			agg1.Max(),
+			max,
 			"Same max - absolute")
 	})
 }

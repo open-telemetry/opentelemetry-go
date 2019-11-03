@@ -16,7 +16,6 @@ package ddsketch
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,21 +47,25 @@ func TestDDSketchAbsolute(t *testing.T) {
 
 		all.Sort()
 
-		fmt.Println("HEY", all.Sum().CoerceToFloat64(profile.NumberKind), agg.Sum())
-
 		require.InEpsilon(t,
 			all.Sum().CoerceToFloat64(profile.NumberKind),
-			agg.Sum(),
+			agg.Sum().CoerceToFloat64(profile.NumberKind),
 			0.0000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+
+		max, err := agg.Max()
+		require.Nil(t, err)
 		require.Equal(t,
-			all.Max().CoerceToFloat64(profile.NumberKind),
-			agg.Max(),
+			all.Max(),
+			max,
 			"Same max - absolute")
+
+		median, err := agg.Quantile(0.5)
+		require.Nil(t, err)
 		require.InEpsilon(t,
 			all.Median().CoerceToFloat64(profile.NumberKind),
-			agg.Quantile(0.5),
+			median.CoerceToFloat64(profile.NumberKind),
 			0.1,
 			"Same median - absolute")
 	})
@@ -99,17 +102,23 @@ func TestDDSketchMerge(t *testing.T) {
 
 		require.InEpsilon(t,
 			all.Sum().CoerceToFloat64(profile.NumberKind),
-			agg1.Sum(),
+			agg1.Sum().CoerceToFloat64(profile.NumberKind),
 			0.0000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+
+		max, err := agg1.Max()
+		require.Nil(t, err)
 		require.Equal(t,
-			all.Max().CoerceToFloat64(profile.NumberKind),
-			agg1.Max(),
+			all.Max(),
+			max,
 			"Same max - absolute")
+
+		median, err := agg1.Quantile(0.5)
+		require.Nil(t, err)
 		require.InEpsilon(t,
 			all.Median().CoerceToFloat64(profile.NumberKind),
-			agg1.Quantile(0.5),
+			median.CoerceToFloat64(profile.NumberKind),
 			0.1,
 			"Same median - absolute")
 	})

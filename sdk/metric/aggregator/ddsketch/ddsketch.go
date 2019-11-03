@@ -15,12 +15,14 @@ package ddsketch
 
 import (
 	"context"
+	"math"
 	"sync"
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates measure events.
@@ -49,8 +51,8 @@ func NewDefaultConfig() *sdk.Config {
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() float64 {
-	return c.checkpoint.Sum()
+func (c *Aggregator) Sum() core.Number {
+	return c.toNumber(c.checkpoint.Sum())
 }
 
 // Count returns the count of the checkpoint.
@@ -59,18 +61,29 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the max of the checkpoint.
-func (c *Aggregator) Max() float64 {
-	return c.checkpoint.Quantile(1)
+func (c *Aggregator) Max() (core.Number, error) {
+	return c.Quantile(1)
 }
 
 // Min returns the min of the checkpoint.
-func (c *Aggregator) Min() float64 {
-	return c.checkpoint.Quantile(0)
+func (c *Aggregator) Min() (core.Number, error) {
+	return c.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of the checkpoint.
-func (c *Aggregator) Quantile(q float64) float64 {
-	return c.checkpoint.Quantile(q)
+func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	f := c.checkpoint.Quantile(q)
+	if math.IsNaN(f) {
+		return core.Number(0), aggregator.ErrInvalidQuantile
+	}
+	return c.toNumber(f), nil
+}
+
+func (c *Aggregator) toNumber(f float64) core.Number {
+	if c.kind == core.Float64NumberKind {
+		return core.NewFloat64Number(f)
+	}
+	return core.NewInt64Number(int64(f))
 }
 
 // Collect checkpoints the current value (atomically) and exports it.

@@ -54,8 +54,8 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the accumulated max as a Number.
-func (c *Aggregator) Max() core.Number {
-	return c.checkpoint.max
+func (c *Aggregator) Max() (core.Number, error) {
+	return c.checkpoint.max, nil
 }
 
 // Collect checkpoints the current value (atomically) and exports it.

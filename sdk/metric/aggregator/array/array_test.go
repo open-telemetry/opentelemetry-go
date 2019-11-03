@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/sdk/metric/aggregator"
 	"go.opentelemetry.io/sdk/metric/aggregator/test"
 )
 
@@ -185,15 +186,15 @@ func TestArrayErrors(t *testing.T) {
 
 		_, err := agg.Max()
 		require.Error(t, err)
-		require.Equal(t, err, ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrEmptyDataSet)
 
 		_, err = agg.Min()
 		require.Error(t, err)
-		require.Equal(t, err, ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrEmptyDataSet)
 
 		_, err = agg.Quantile(0.1)
 		require.Error(t, err)
-		require.Equal(t, err, ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrEmptyDataSet)
 
 		ctx := context.Background()
 
@@ -214,11 +215,11 @@ func TestArrayErrors(t *testing.T) {
 
 		_, err = agg.Quantile(-0.0001)
 		require.Error(t, err)
-		require.Equal(t, err, ErrInvalidQuantile)
+		require.Equal(t, err, aggregator.ErrInvalidQuantile)
 
 		_, err = agg.Quantile(1.0001)
 		require.Error(t, err)
-		require.Equal(t, err, ErrInvalidQuantile)
+		require.Equal(t, err, aggregator.ErrInvalidQuantile)
 	})
 }
 

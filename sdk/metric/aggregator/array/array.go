@@ -16,7 +16,6 @@ package array
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -24,12 +23,7 @@ import (
 
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/sdk/export"
-)
-
-var (
-	// TODO: move this up one level into the aggregator API
-	ErrEmptyDataSet    = fmt.Errorf("The result is not defined on an empty data set")
-	ErrInvalidQuantile = fmt.Errorf("The requested quantile is out of range")
+	"go.opentelemetry.io/sdk/metric/aggregator"
 )
 
 type (
@@ -175,11 +169,11 @@ func (p *Points) Swap(i, j int) {
 // element of the data set.
 func (p *Points) Quantile(q float64) (core.Number, error) {
 	if len(*p) == 0 {
-		return core.Number(0), ErrEmptyDataSet
+		return core.Number(0), aggregator.ErrEmptyDataSet
 	}
 
 	if q < 0 || q > 1 {
-		return core.Number(0), ErrInvalidQuantile
+		return core.Number(0), aggregator.ErrInvalidQuantile
 	}
 
 	if q == 0 || len(*p) == 1 {
