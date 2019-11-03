@@ -56,6 +56,8 @@ func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggr
 			return maxsumcount.New()
 		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
 			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
+		} else if strings.HasSuffix(rec.Descriptor().Name(), "array") {
+			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
 		}
 	}
 	return nil
@@ -409,4 +411,30 @@ func BenchmarkFloat64DDSketchAcquireHandle(b *testing.B) {
 
 func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
 	benchmarkFloat64MeasureHandleAdd(b, "float64.ddsketch")
+}
+
+// Array
+
+func BenchmarkInt64ArrayAdd(b *testing.B) {
+	benchmarkInt64MeasureAdd(b, "int64.array")
+}
+
+func BenchmarkInt64ArrayAcquireHandle(b *testing.B) {
+	benchmarkInt64MeasureAcquireHandle(b, "int64.array")
+}
+
+func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
+	benchmarkInt64MeasureHandleAdd(b, "int64.array")
+}
+
+func BenchmarkFloat64ArrayAdd(b *testing.B) {
+	benchmarkFloat64MeasureAdd(b, "float64.array")
+}
+
+func BenchmarkFloat64ArrayAcquireHandle(b *testing.B) {
+	benchmarkFloat64MeasureAcquireHandle(b, "float64.array")
+}
+
+func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
+	benchmarkFloat64MeasureHandleAdd(b, "float64.array")
 }
