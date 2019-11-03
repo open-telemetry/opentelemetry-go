@@ -97,13 +97,16 @@ func (a *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
+	if kind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
+		// TODO warn
+		// NOTE: add this to the specification.
+		return
+	}
+
 	if !desc.Alternate() && number.IsNegative(kind) {
 		// TODO warn
 		return
 	}
-
-	// TODO should we accept NaN values?  They confuse quantile computation.  If not,
-	// should it become part of the metrics specification?
 
 	a.lock.Lock()
 	a.current = append(a.current, number)
@@ -124,8 +127,6 @@ func (a *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) 
 func (a *Aggregator) sort(kind core.NumberKind) {
 	switch kind {
 	case core.Float64NumberKind:
-		// Sorting floats is tricky because of NaN, Inf, and
-		// signed zeros.  Let the standard library do it.
 		sort.Float64s(*(*[]float64)(unsafe.Pointer(&a.checkpoint)))
 
 	case core.Int64NumberKind:
@@ -193,5 +194,4 @@ func (p *Points) Quantile(q float64) (core.Number, error) {
 	position := float64(len(*p)-1) * q
 	ceil := int(math.Ceil(position))
 	return (*p)[ceil], nil
-
 }

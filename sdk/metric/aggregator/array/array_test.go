@@ -200,7 +200,13 @@ func TestArrayErrors(t *testing.T) {
 		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
 
 		agg.Update(ctx, core.Number(0), record)
+
+		if profile.NumberKind == core.Float64NumberKind {
+			agg.Update(ctx, core.NewFloat64Number(math.NaN()), record)
+		}
 		agg.Collect(ctx, record, batcher)
+
+		require.Equal(t, int64(1), agg.Count(), "NaN value was not counted")
 
 		num, err := agg.Quantile(0)
 		require.Nil(t, err)
@@ -223,12 +229,10 @@ func TestArrayFloat64(t *testing.T) {
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating
-				// points, including NaN, signed zeros, Inf,
-				// etc.
+				// points except for NaN, which is invalid.
 				return []float64{
 					0,
 					math.Inf(sign),
-					math.NaN(),
 					1 / math.Inf(sign),
 					1,
 					2,
@@ -276,14 +280,9 @@ func TestArrayFloat64(t *testing.T) {
 
 			require.Equal(t, all.Count(), agg.Count(), "Same count")
 
-			// Note: NaN is the min value by the Go
-			// sorting rules.  It's never equal to itself.
 			min, err := agg.Min()
 			require.Nil(t, err)
-			require.True(t, math.IsNaN(min.AsFloat64()), "Same min")
-			fmt.Println("H", all.Min().AsFloat64(), min.AsFloat64())
-			// Hmmmm....
-			require.True(t, math.IsNaN(all.Min().AsFloat64()), "Same min")
+			require.Equal(t, all.Min(), min, "Same min")
 
 			max, err := agg.Max()
 			require.Nil(t, err)
