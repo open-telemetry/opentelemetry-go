@@ -40,7 +40,6 @@ var (
 
 type clientTracer struct {
 	context.Context
-	httptrace.ClientTrace
 
 	tr trace.Tracer
 
@@ -49,14 +48,33 @@ type clientTracer struct {
 	mtx         sync.Mutex
 }
 
-func newClientTracer(ctx context.Context) *clientTracer {
+func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]trace.Span),
 	}
+
 	ct.tr = global.TraceProvider().GetTracer("go.opentelemetry.io/otel/plugin/httptrace")
 	ct.start("http.request", "http.request")
-	return ct
+
+	return &httptrace.ClientTrace{
+		GetConn:              ct.getConn,
+		GotConn:              ct.gotConn,
+		PutIdleConn:          ct.putIdleConn,
+		GotFirstResponseByte: ct.gotFirstResponseByte,
+		Got100Continue:       ct.got100Continue,
+		Got1xxResponse:       ct.got1xxResponse,
+		DNSStart:             ct.dnsStart,
+		DNSDone:              ct.dnsDone,
+		ConnectStart:         ct.connectStart,
+		ConnectDone:          ct.connectDone,
+		TLSHandshakeStart:    ct.tlsHandshakeStart,
+		TLSHandshakeDone:     ct.tlsHandshakeDone,
+		WroteHeaderField:     ct.wroteHeaderField,
+		WroteHeaders:         ct.wroteHeaders,
+		Wait100Continue:      ct.wait100Continue,
+		WroteRequest:         ct.wroteRequest,
+	}
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {

@@ -51,7 +51,7 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 
 var _ export.SpanSyncer = (*testExporter)(nil)
 
-func TestClientTrace(t *testing.T) {
+func TestHTTPRequestWithClientTrace(t *testing.T) {
 	exp := &testExporter{
 		spanMap: make(map[string][]*export.SpanData),
 	}
@@ -145,5 +145,121 @@ func TestClientTrace(t *testing.T) {
 		if diff := cmp.Diff(actualAttrs, expectedAttrs); diff != "" {
 			t.Fatalf("[span %s] Attributes are different: %v", tl.name, diff)
 		}
+	}
+}
+
+func TestConcurrentConnectionStart(t *testing.T) {
+	exp := &testExporter{
+		spanMap: make(map[string][]*export.SpanData),
+	}
+	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	global.SetTraceProvider(tp)
+
+	ct := httptrace.NewClientTrace(context.Background())
+
+	tts := []struct {
+		name string
+		run  func()
+	}{
+		{
+			name: "Open1Close1Open2Close2",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+			},
+		},
+		{
+			name: "Open2Close2Open1Close1",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+			},
+		},
+		{
+			name: "Open1Open2Close1Close2",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+			},
+		},
+		{
+			name: "Open1Open2Close2Close1",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+			},
+		},
+		{
+			name: "Open2Open1Close1Close2",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+			},
+		},
+		{
+			name: "Open2Open1Close2Close1",
+			run: func() {
+				exp.spanMap = make(map[string][]*export.SpanData)
+
+				ct.ConnectStart("tcp", "[::1]:3000")
+				ct.ConnectStart("tcp", "127.0.0.1:3000")
+				ct.ConnectDone("tcp", "[::1]:3000", nil)
+				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
+			},
+		},
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.run()
+			spans := exp.spanMap["go.opentelemetry.io/otel/plugin/httptrace/http.connect"]
+
+			if l := len(spans); l != 2 {
+				t.Fatalf("Expected 2 'http.connect' traces but found %d", l)
+			}
+
+			remotes := make(map[string]struct{})
+			for _, span := range spans {
+				if l := len(span.Attributes); l != 1 {
+					t.Fatalf("Expected 1 attribute on each span but found %d", l)
+				}
+
+				attr := span.Attributes[0]
+				if attr.Key != "http.remote" {
+					t.Fatalf("Expected attribute to be 'http.remote' but found %s", attr.Key)
+				}
+				remotes[attr.Value.Emit()] = struct{}{}
+			}
+
+			if l := len(remotes); l != 2 {
+				t.Fatalf("Expected 2 different 'http.remote' but found %d", l)
+			}
+
+			for _, remote := range []string{"127.0.0.1:3000", "[::1]:3000"} {
+				if _, ok := remotes[remote]; !ok {
+					t.Fatalf("Missing remote %s", remote)
+				}
+			}
+		})
 	}
 }
