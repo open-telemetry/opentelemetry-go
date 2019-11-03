@@ -46,6 +46,10 @@ func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 }
 
 // NewDefaultConfig returns a new, default DDSketch config.
+//
+// TODO: The Config constructor should probably set minValue to -Inf
+// to aggregate metrics with absolute=false.  This requires providing values
+// for alpha and maxNumBins
 func NewDefaultConfig() *sdk.Config {
 	return sdk.NewDefaultConfig()
 }
