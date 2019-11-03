@@ -34,10 +34,11 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 
 		agg := New()
 
-		var all test.Numbers
+		all := test.NewNumbers(profile.NumberKind)
+
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg.Update(ctx, x, record)
 		}
 
@@ -46,13 +47,13 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 		all.Sort()
 
 		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Sum().CoerceToFloat64(profile.NumberKind),
 			agg.Sum().CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
 		require.Equal(t,
-			all[len(all)-1],
+			all.Max(),
 			agg.Max(),
 			"Same max - absolute")
 	})
@@ -67,16 +68,16 @@ func TestMaxSumCountMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		var all test.Numbers
+		all := test.NewNumbers(profile.NumberKind)
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg1.Update(ctx, x, record)
 		}
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg2.Update(ctx, x, record)
 		}
 
@@ -88,13 +89,13 @@ func TestMaxSumCountMerge(t *testing.T) {
 		all.Sort()
 
 		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Sum().CoerceToFloat64(profile.NumberKind),
 			agg1.Sum().CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
 		require.Equal(t,
-			all[len(all)-1],
+			all.Max(),
 			agg1.Max(),
 			"Same max - absolute")
 	})

@@ -16,6 +16,7 @@ package ddsketch
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,10 +37,10 @@ func TestDDSketchAbsolute(t *testing.T) {
 
 		agg := New(NewDefaultConfig(), record.Descriptor())
 
-		var all test.Numbers
+		all := test.NewNumbers(profile.NumberKind)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg.Update(ctx, x, record)
 		}
 
@@ -47,18 +48,20 @@ func TestDDSketchAbsolute(t *testing.T) {
 
 		all.Sort()
 
+		fmt.Println("HEY", all.Sum().CoerceToFloat64(profile.NumberKind), agg.Sum())
+
 		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Sum().CoerceToFloat64(profile.NumberKind),
 			agg.Sum(),
 			0.0000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
 		require.Equal(t,
-			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
+			all.Max().CoerceToFloat64(profile.NumberKind),
 			agg.Max(),
 			"Same max - absolute")
 		require.InEpsilon(t,
-			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Median().CoerceToFloat64(profile.NumberKind),
 			agg.Quantile(0.5),
 			0.1,
 			"Same median - absolute")
@@ -74,16 +77,16 @@ func TestDDSketchMerge(t *testing.T) {
 		agg1 := New(NewDefaultConfig(), record.Descriptor())
 		agg2 := New(NewDefaultConfig(), record.Descriptor())
 
-		var all test.Numbers
+		all := test.NewNumbers(profile.NumberKind)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg1.Update(ctx, x, record)
 		}
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
-			all = append(all, x)
+			all.Append(x)
 			agg2.Update(ctx, x, record)
 		}
 
@@ -95,17 +98,17 @@ func TestDDSketchMerge(t *testing.T) {
 		all.Sort()
 
 		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Sum().CoerceToFloat64(profile.NumberKind),
 			agg1.Sum(),
 			0.0000001,
 			"Same sum - absolute")
 		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
 		require.Equal(t,
-			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
+			all.Max().CoerceToFloat64(profile.NumberKind),
 			agg1.Max(),
 			"Same max - absolute")
 		require.InEpsilon(t,
-			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
+			all.Median().CoerceToFloat64(profile.NumberKind),
 			agg1.Quantile(0.5),
 			0.1,
 			"Same median - absolute")
