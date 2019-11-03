@@ -15,17 +15,19 @@ package httptrace_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	"go.opentelemetry.io/otel/sdk/export"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"net/http"
-	"net/http/httptest"
-	"sync"
-	"testing"
 )
 
 type testExporter struct {
