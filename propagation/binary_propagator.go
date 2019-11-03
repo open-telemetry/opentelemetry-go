@@ -15,8 +15,8 @@
 package propagation
 
 import (
-	"go.opentelemetry.io/api/core"
-	apipropagation "go.opentelemetry.io/api/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 
 type binaryPropagator struct{}

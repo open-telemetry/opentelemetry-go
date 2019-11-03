@@ -18,18 +18,24 @@ package core
 
 import (
 	"fmt"
+	"strconv"
 	"unsafe"
 )
 
+// Key represents the key part in key-value pairs. It's a string. The
+// allowed character set in the key depends on the use of the key.
 type Key string
 
+// KeyValue holds a key and value pair.
 type KeyValue struct {
 	Key   Key
 	Value Value
 }
 
+// ValueType describes the type of the data Value holds.
 type ValueType int
 
+// Value represents the value part in key-value pairs.
 type Value struct {
 	vtype    ValueType
 	numeric  uint64
@@ -38,17 +44,18 @@ type Value struct {
 }
 
 const (
-	INVALID ValueType = iota
-	BOOL
-	INT32
-	INT64
-	UINT32
-	UINT64
-	FLOAT32
-	FLOAT64
-	STRING
+	INVALID ValueType = iota // No value.
+	BOOL                     // Boolean value, use AsBool() to get it.
+	INT32                    // 32 bit signed integral value, use AsInt32() to get it.
+	INT64                    // 64 bit signed integral value, use AsInt64() to get it.
+	UINT32                   // 32 bit unsigned integral value, use AsUint32() to get it.
+	UINT64                   // 64 bit unsigned integral value, use AsUint64() to get it.
+	FLOAT32                  // 32 bit floating point value, use AsFloat32() to get it.
+	FLOAT64                  // 64 bit floating point value, use AsFloat64() to get it.
+	STRING                   // String value, use AsString() to get it.
 )
 
+// Bool creates a BOOL Value.
 func Bool(v bool) Value {
 	return Value{
 		vtype:   BOOL,
@@ -56,6 +63,7 @@ func Bool(v bool) Value {
 	}
 }
 
+// Int64 creates an INT64 Value.
 func Int64(v int64) Value {
 	return Value{
 		vtype:   INT64,
@@ -63,6 +71,7 @@ func Int64(v int64) Value {
 	}
 }
 
+// Uint64 creates a UINT64 Value.
 func Uint64(v uint64) Value {
 	return Value{
 		vtype:   UINT64,
@@ -70,6 +79,7 @@ func Uint64(v uint64) Value {
 	}
 }
 
+// Float64 creates a FLOAT64 Value.
 func Float64(v float64) Value {
 	return Value{
 		vtype:   FLOAT64,
@@ -77,6 +87,7 @@ func Float64(v float64) Value {
 	}
 }
 
+// Int32 creates an INT32 Value.
 func Int32(v int32) Value {
 	return Value{
 		vtype:   INT32,
@@ -84,6 +95,7 @@ func Int32(v int32) Value {
 	}
 }
 
+// Uint32 creates a UINT32 Value.
 func Uint32(v uint32) Value {
 	return Value{
 		vtype:   UINT32,
@@ -91,6 +103,7 @@ func Uint32(v uint32) Value {
 	}
 }
 
+// Float32 creates a FLOAT32 Value.
 func Float32(v float32) Value {
 	return Value{
 		vtype:   FLOAT32,
@@ -98,6 +111,7 @@ func Float32(v float32) Value {
 	}
 }
 
+// String creates a STRING Value.
 func String(v string) Value {
 	return Value{
 		vtype:    STRING,
@@ -105,6 +119,8 @@ func String(v string) Value {
 	}
 }
 
+// Int creates either an INT32 or an INT64 Value, depending on whether
+// the int type is 32 or 64 bits wide.
 func Int(v int) Value {
 	if unsafe.Sizeof(v) == 4 {
 		return Int32(int32(v))
@@ -112,6 +128,8 @@ func Int(v int) Value {
 	return Int64(int64(v))
 }
 
+// Uint creates either a UINT32 or a UINT64 Value, depending on
+// whether the uint type is 32 or 64 bits wide.
 func Uint(v uint) Value {
 	if unsafe.Sizeof(v) == 4 {
 		return Uint32(uint32(v))
@@ -119,6 +137,7 @@ func Uint(v uint) Value {
 	return Uint64(uint64(v))
 }
 
+// Bool creates a KeyValue instance with a BOOL Value.
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -126,6 +145,7 @@ func (k Key) Bool(v bool) KeyValue {
 	}
 }
 
+// Int64 creates a KeyValue instance with an INT64 Value.
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -133,6 +153,7 @@ func (k Key) Int64(v int64) KeyValue {
 	}
 }
 
+// Uint64 creates a KeyValue instance with a UINT64 Value.
 func (k Key) Uint64(v uint64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -140,6 +161,7 @@ func (k Key) Uint64(v uint64) KeyValue {
 	}
 }
 
+// Float64 creates a KeyValue instance with a FLOAT64 Value.
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -147,6 +169,7 @@ func (k Key) Float64(v float64) KeyValue {
 	}
 }
 
+// Int32 creates a KeyValue instance with an INT32 Value.
 func (k Key) Int32(v int32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -154,6 +177,7 @@ func (k Key) Int32(v int32) KeyValue {
 	}
 }
 
+// Uint32 creates a KeyValue instance with a UINT32 Value.
 func (k Key) Uint32(v uint32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -161,6 +185,7 @@ func (k Key) Uint32(v uint32) KeyValue {
 	}
 }
 
+// Float32 creates a KeyValue instance with a FLOAT32 Value.
 func (k Key) Float32(v float32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -168,6 +193,7 @@ func (k Key) Float32(v float32) KeyValue {
 	}
 }
 
+// String creates a KeyValue instance with a STRING Value.
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -175,6 +201,8 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
+// Int creates a KeyValue instance with either an INT32 or an INT64
+// Value, depending on whether the int type is 32 or 64 bits wide.
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -182,6 +210,8 @@ func (k Key) Int(v int) KeyValue {
 	}
 }
 
+// Uint creates a KeyValue instance with either an UINT32 or an UINT64
+// Value, depending on whether the uint type is 32 or 64 bits wide.
 func (k Key) Uint(v uint) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -189,48 +219,67 @@ func (k Key) Uint(v uint) KeyValue {
 	}
 }
 
+// Defined returns true for non-empty keys.
 func (k Key) Defined() bool {
 	return len(k) != 0
 }
 
+// Type returns a type of the Value.
 func (v *Value) Type() ValueType {
 	return v.vtype
 }
 
+// Bool returns the bool value. Make sure that the Value's type is
+// BOOL.
 func (v *Value) AsBool() bool {
 	return rawToBool(v.numeric)
 }
 
+// AsInt32 returns the int32 value. Make sure that the Value's type is
+// INT32.
 func (v *Value) AsInt32() int32 {
 	return rawToInt32(v.numeric)
 }
 
+// AsInt64 returns the int64 value. Make sure that the Value's type is
+// INT64.
 func (v *Value) AsInt64() int64 {
 	return rawToInt64(v.numeric)
 }
 
+// AsUint32 returns the uint32 value. Make sure that the Value's type
+// is UINT32.
 func (v *Value) AsUint32() uint32 {
 	return rawToUint32(v.numeric)
 }
 
+// AsUint64 returns the uint64 value. Make sure that the Value's type is
+// UINT64.
 func (v *Value) AsUint64() uint64 {
 	return rawToUint64(v.numeric)
 }
 
+// AsFloat32 returns the float32 value. Make sure that the Value's
+// type is FLOAT32.
 func (v *Value) AsFloat32() float32 {
 	return rawToFloat32(v.numeric)
 }
 
+// AsFloat64 returns the float64 value. Make sure that the Value's
+// type is FLOAT64.
 func (v *Value) AsFloat64() float64 {
 	return rawToFloat64(v.numeric)
 }
 
+// AsString returns the string value. Make sure that the Value's type
+// is STRING.
 func (v *Value) AsString() string {
 	return v.stringly
 }
 
 type unknownValueType struct{}
 
+// AsInterface returns Value's data as interface{}.
 func (v *Value) AsInterface() interface{} {
 	switch v.Type() {
 	case BOOL:
@@ -253,13 +302,26 @@ func (v *Value) AsInterface() interface{} {
 	return unknownValueType{}
 }
 
+// Emit returns a string representation of Value's data.
 func (v *Value) Emit() string {
-	if v.Type() == STRING {
+	switch v.Type() {
+	case BOOL:
+		return strconv.FormatBool(v.AsBool())
+	case INT32:
+		return strconv.FormatInt(int64(v.AsInt32()), 10)
+	case INT64:
+		return strconv.FormatInt(v.AsInt64(), 10)
+	case UINT32:
+		return strconv.FormatUint(uint64(v.AsUint32()), 10)
+	case UINT64:
+		return strconv.FormatUint(v.AsUint64(), 10)
+	case FLOAT32:
+		return fmt.Sprint(v.AsFloat32())
+	case FLOAT64:
+		return fmt.Sprint(v.AsFloat64())
+	case STRING:
 		return v.stringly
-	}
-	i := v.AsInterface()
-	if _, ok := i.(unknownValueType); ok {
+	default:
 		return "unknown"
 	}
-	return fmt.Sprint(i)
 }

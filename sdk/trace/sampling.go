@@ -17,7 +17,7 @@ package trace
 import (
 	"encoding/binary"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 const defaultSamplingProbability = 1e-4

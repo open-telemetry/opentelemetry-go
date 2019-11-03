@@ -18,15 +18,15 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/exporter/metric/stdout"
-	"go.opentelemetry.io/global"
-	"go.opentelemetry.io/sdk/metric/batcher/stateful"
-	"go.opentelemetry.io/sdk/metric/controller/push"
-	"go.opentelemetry.io/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporter/metric/stdout"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/stateful"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 var (

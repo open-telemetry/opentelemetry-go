@@ -12,4 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package key // import "go.opentelemetry.io/api/key"
+// This package provides convenience functions for creating keys and
+// key-value pairs.
+package key // import "go.opentelemetry.io/otel/api/key"

@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/api/unit"
-	mock "go.opentelemetry.io/internal/metric"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/unit"
+	mock "go.opentelemetry.io/otel/internal/metric"
 
 	"github.com/google/go-cmp/cmp"
 )

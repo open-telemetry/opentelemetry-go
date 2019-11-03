@@ -17,7 +17,7 @@ package trace_test
 import (
 	"testing"
 
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}

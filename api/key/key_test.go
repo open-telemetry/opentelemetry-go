@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
@@ -69,6 +69,14 @@ func TestKeyValueConstructors(t *testing.T) {
 			expected: core.KeyValue{
 				Key:   "k1",
 				Value: core.Float32(123.5),
+			},
+		},
+		{
+			name:   "String",
+			actual: key.String("k1", "123.5"),
+			expected: core.KeyValue{
+				Key:   "k1",
+				Value: core.String("123.5"),
 			},
 		},
 		{

@@ -19,8 +19,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/propagation"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func TestExtractSpanContextFromBytes(t *testing.T) {

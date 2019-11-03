@@ -35,20 +35,20 @@ To create a new PR, fork the project in GitHub and clone the upstream
 repo:
 
 ```sh
-$ go get -d go.opentelemetry.io
+$ go get -d go.opentelemetry.io/otel
 ```
 
 (This may print some warning about "build constraints exclude all Go
 files", just ignore it.)
 
-This will put the project in `${GOPATH}/src/go.opentelemetry.io`. You
+This will put the project in `${GOPATH}/src/go.opentelemetry.io/otel`. You
 can alternatively use `git` directly with:
 
 ```sh
 $ git clone https://github.com/open-telemetry/opentelemetry-go
 ```
 
-(Note that `git clone` is *not* using the `go.opentelemetry.io` name -
+(Note that `git clone` is *not* using the `go.opentelemetry.io/otel` name -
 that name is a kind of a redirector to GitHub that `go get` can
 understand, but `git` does not.)
 

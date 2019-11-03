@@ -23,9 +23,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/internal/matchers"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/matchers"
 )
 
 type Harness struct {

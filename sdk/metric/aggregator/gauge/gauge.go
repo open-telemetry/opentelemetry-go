@@ -20,8 +20,8 @@ import (
 	"time"
 	"unsafe"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 // Note: This aggregator enforces the behavior of monotonic gauges to

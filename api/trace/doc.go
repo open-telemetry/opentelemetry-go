@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace // import "go.opentelemetry.io/api/trace"
+package trace // import "go.opentelemetry.io/otel/api/trace"
