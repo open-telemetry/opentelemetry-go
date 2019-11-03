@@ -59,8 +59,8 @@ func newClientTracer(ctx context.Context) *clientTracer {
 	return ct
 }
 
-func (ct *clientTracer) start(hook, span string, attrs ...core.KeyValue) {
-	_, sp := ct.tr.Start(ct.Context, span, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
+	_, sp := ct.tr.Start(ct.Context, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	// TODO(paivagustavo): remove this for loop when `trace.WithAttributes(attrs...)` works.
 	for _, attr := range attrs {
 		sp.SetAttribute(attr)
@@ -79,11 +79,16 @@ func (ct *clientTracer) start(hook, span string, attrs ...core.KeyValue) {
 	}
 }
 
-func (ct *clientTracer) end(hook string) {
+func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	if s, ok := ct.activeHooks[hook]; ok {
-		s.End()
+	if span, ok := ct.activeHooks[hook]; ok {
+		if err != nil {
+			span.SetStatus(codes.Unknown)
+			span.SetAttribute(MessageKey.String(err.Error()))
+		}
+		span.SetAttributes(attrs...)
+		span.End()
 		delete(ct.activeHooks, hook)
 	} else {
 		// start is not finished before end is called.
@@ -102,31 +107,27 @@ func (ct *clientTracer) getConn(host string) {
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
-	ct.span("http.getconn").SetAttributes(
+	ct.end("http.getconn",
+		nil,
 		HTTPRemoteAddr.String(info.Conn.RemoteAddr().String()),
 		HTTPLocalAddr.String(info.Conn.LocalAddr().String()),
 	)
-	ct.end("http.getconn")
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
-	if err != nil {
-		ct.span("http.receive").SetAttribute(MessageKey.String(err.Error()))
-		ct.span("http.receive").SetStatus(codes.Unknown)
-	}
-	ct.end("http.receive")
+	ct.end("http.receive", err)
 }
 
 func (ct *clientTracer) gotFirstResponseByte() {
 	ct.start("http.receive", "http.receive")
 }
 
-func (ct *clientTracer) dnsStart(httptrace.DNSStartInfo) {
-	ct.start("http.dns", "http.dns")
+func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
+	ct.start("http.dns", "http.dns", HostKey.String(info.Host))
 }
 
-func (ct *clientTracer) dnsDone(httptrace.DNSDoneInfo) {
-	ct.end("http.dns")
+func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
+	ct.end("http.dns", info.Err)
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
@@ -134,22 +135,22 @@ func (ct *clientTracer) connectStart(network, addr string) {
 }
 
 func (ct *clientTracer) connectDone(network, addr string, err error) {
-	ct.end("http.connect." + addr)
+	ct.end("http.connect."+addr, err)
 }
 
 func (ct *clientTracer) tlsHandshakeStart() {
 	ct.start("http.tls", "http.tls")
 }
 
-func (ct *clientTracer) tlsHandshakeDone(tls.ConnectionState, error) {
-	ct.end("http.tls")
+func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
+	ct.end("http.tls", err)
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttribute(key.New("http." + strings.ToLower(k)).String(sa2s(v)))
+	ct.root.SetAttribute(key.String("http."+strings.ToLower(k), sliceToString(v)))
 }
 
 func (ct *clientTracer) wroteHeaders() {
@@ -161,7 +162,7 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 		ct.root.SetAttribute(MessageKey.String(info.Err.Error()))
 		ct.root.SetStatus(codes.Unknown)
 	}
-	ct.end("http.send")
+	ct.end("http.send", info.Err)
 }
 
 func (ct *clientTracer) got100Continue() {
@@ -180,10 +181,8 @@ func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) er
 	return nil
 }
 
-func sa2s(value []string) string {
-	if len(value) == 1 {
-		return value[0]
-	} else if len(value) == 0 {
+func sliceToString(value []string) string {
+	if len(value) == 0 {
 		return "undefined"
 	}
 	return strings.Join(value, ",")
@@ -197,7 +196,7 @@ func sm2s(value map[string][]string) string {
 		}
 		buf.WriteString(k)
 		buf.WriteString("=")
-		buf.WriteString(sa2s(v))
+		buf.WriteString(sliceToString(v))
 	}
 	return buf.String()
 }
