@@ -15,16 +15,17 @@ package httptrace_test
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
-	"sync"
-	"testing"
-	"time"
-
+	"github.com/google/go-cmp/cmp"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	"go.opentelemetry.io/otel/sdk/export"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
 )
 
 type testExporter struct {
@@ -49,8 +50,6 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 var _ export.SpanSyncer = (*testExporter)(nil)
 
 func TestClientTrace(t *testing.T) {
-	var wg sync.WaitGroup
-
 	exp := &testExporter{
 		spanMap: make(map[string][]*export.SpanData),
 	}
@@ -65,75 +64,84 @@ func TestClientTrace(t *testing.T) {
 		}),
 	)
 	defer ts.Close()
+	address := ts.Listener.Addr()
 
 	client := ts.Client()
-	iterations := 50
-	for i := 0; i < iterations; i++ {
-		wg.Add(1)
-		go func() {
-			err := tr.WithSpan(context.Background(), "test",
-				func(ctx context.Context) error {
-					req, _ := http.NewRequest("GET", ts.URL, nil)
+	err := tr.WithSpan(context.Background(), "test",
+		func(ctx context.Context) error {
+			req, _ := http.NewRequest("GET", ts.URL, nil)
+			_, req = httptrace.W3C(ctx, req)
 
-					_, req = httptrace.W3C(ctx, req)
-
-					res, err := client.Do(req)
-					if err != nil {
-						return err
-					}
-					res.Body.Close()
-
-					return nil
-				})
-
+			res, err := client.Do(req)
 			if err != nil {
-				panic("unexpected error in http request")
+				t.Fatalf("Request failed: %s", err.Error())
 			}
-			wg.Done()
-		}()
+			_ = res.Body.Close()
+
+			return nil
+		})
+	if err != nil {
+		panic("unexpected error in http request: " + err.Error())
 	}
-	wg.Wait()
-	time.Sleep(100 * time.Millisecond)
-	exp.mu.Lock()
+
 	testLen := []struct {
-		name             string
-		len              int
-		ignoreExactMatch bool
+		name       string
+		attributes []core.KeyValue
 	}{
 		{
-			name:             "go.opentelemetry.io/otel/plugin/httptrace/http.connect",
-			len:              iterations,
-			ignoreExactMatch: true,
+			name:       "go.opentelemetry.io/otel/plugin/httptrace/http.connect",
+			attributes: []core.KeyValue{key.String("http.remote", address.String())},
 		},
 		{
 			name: "go.opentelemetry.io/otel/plugin/httptrace/http.getconn",
-			len:  iterations,
+			attributes: []core.KeyValue{
+				key.String("http.remote", address.String()),
+				key.String("http.host", address.String()),
+			},
 		},
 		{
 			name: "go.opentelemetry.io/otel/plugin/httptrace/http.receive",
-			len:  iterations,
 		},
 		{
 			name: "go.opentelemetry.io/otel/plugin/httptrace/http.send",
-			len:  iterations,
 		},
 		{
 			name: "httptrace/client/test",
-			len:  iterations,
 		},
 	}
 	for _, tl := range testLen {
-		want := tl.len
 		spans, ok := exp.spanMap[tl.name]
 		if !ok {
 			t.Fatalf("no spans found with the name %s, %v", tl.name, exp.spanMap)
 		}
-		got := len(spans)
-		if !tl.ignoreExactMatch {
-			if got != want {
-				t.Fatalf("got %d, want %d spans", got, want)
+
+		if len(spans) != 1 {
+			t.Fatalf("Expected exactly one span for %s but found %d", tl.name, len(spans))
+		}
+		span := spans[0]
+
+		actualAttrs := make(map[core.Key]string)
+		for _, attr := range span.Attributes {
+			actualAttrs[attr.Key] = attr.Value.Emit()
+		}
+
+		expectedAttrs := make(map[core.Key]string)
+		for _, attr := range tl.attributes {
+			expectedAttrs[attr.Key] = attr.Value.Emit()
+		}
+
+		if tl.name == "go.opentelemetry.io/otel/plugin/httptrace/http.getconn" {
+			local := key.New("http.local")
+			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
+			if _, ok := actualAttrs[local]; ok {
+				delete(actualAttrs, local)
+			} else {
+				t.Fatalf("[span %s] is missing attribute %v", tl.name, local)
 			}
 		}
+
+		if diff := cmp.Diff(actualAttrs, expectedAttrs); diff != "" {
+			t.Fatalf("[span %s] Attributes are different: %v", tl.name, diff)
+		}
 	}
-	exp.mu.Unlock()
 }

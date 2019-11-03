@@ -44,64 +44,69 @@ type clientTracer struct {
 
 	tr trace.Tracer
 
-	levels map[string]trace.Span
-	root   trace.Span
-	mtx    sync.Mutex
+	activeHooks map[string]trace.Span
+	root        trace.Span
+	mtx         sync.Mutex
 }
 
 func newClientTracer(ctx context.Context) *clientTracer {
 	ct := &clientTracer{
-		Context: ctx,
-		levels:  make(map[string]trace.Span),
+		Context:     ctx,
+		activeHooks: make(map[string]trace.Span),
 	}
 	ct.tr = global.TraceProvider().GetTracer("go.opentelemetry.io/otel/plugin/httptrace")
-	ct.open("http.request")
+	ct.start("http.request", "http.request")
 	return ct
 }
 
-func (ct *clientTracer) open(name string, attrs ...core.KeyValue) {
-	_, sp := ct.tr.Start(ct.Context, name, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+func (ct *clientTracer) start(hook, span string, attrs ...core.KeyValue) {
+	_, sp := ct.tr.Start(ct.Context, span, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+	// TODO(paivagustavo): remove this for loop when `trace.WithAttributes(attrs...)` works.
+	for _, attr := range attrs {
+		sp.SetAttribute(attr)
+	}
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ct.root == nil {
 		ct.root = sp
 	}
-	if _, ok := ct.levels[name]; ok {
-		// close was called before open is handled.
+	if _, ok := ct.activeHooks[hook]; ok {
+		// end was called before start is handled.
 		sp.End()
-		delete(ct.levels, name)
+		delete(ct.activeHooks, hook)
 	} else {
-		ct.levels[name] = sp
+		ct.activeHooks[hook] = sp
 	}
 }
 
-func (ct *clientTracer) close(name string) {
+func (ct *clientTracer) end(hook string) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	if s, ok := ct.levels[name]; ok {
+	if s, ok := ct.activeHooks[hook]; ok {
 		s.End()
-		delete(ct.levels, name)
+		delete(ct.activeHooks, hook)
 	} else {
-		// open is not finished before close is called.
-		ct.levels[name] = trace.NoopSpan{}
+		// start is not finished before end is called.
+		ct.activeHooks[hook] = trace.NoopSpan{}
 	}
 }
 
-func (ct *clientTracer) span(name string) trace.Span {
+func (ct *clientTracer) span(hook string) trace.Span {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	return ct.levels[name]
+	return ct.activeHooks[hook]
 }
 
 func (ct *clientTracer) getConn(host string) {
-	ct.open("http.getconn", HostKey.String(host))
+	ct.start("http.getconn", "http.getconn", HostKey.String(host))
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
-	ct.span("http.getconn").SetAttribute(HTTPRemoteAddr.String(info.Conn.RemoteAddr().String()))
-	ct.span("http.getconn").SetAttribute(HTTPLocalAddr.String(info.Conn.LocalAddr().String()))
-
-	ct.close("http.getconn")
+	ct.span("http.getconn").SetAttributes(
+		HTTPRemoteAddr.String(info.Conn.RemoteAddr().String()),
+		HTTPLocalAddr.String(info.Conn.LocalAddr().String()),
+	)
+	ct.end("http.getconn")
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
@@ -109,46 +114,46 @@ func (ct *clientTracer) putIdleConn(err error) {
 		ct.span("http.receive").SetAttribute(MessageKey.String(err.Error()))
 		ct.span("http.receive").SetStatus(codes.Unknown)
 	}
-	ct.close("http.receive")
+	ct.end("http.receive")
 }
 
 func (ct *clientTracer) gotFirstResponseByte() {
-	ct.open("http.receive")
+	ct.start("http.receive", "http.receive")
 }
 
 func (ct *clientTracer) dnsStart(httptrace.DNSStartInfo) {
-	ct.open("http.dns")
+	ct.start("http.dns", "http.dns")
 }
 
 func (ct *clientTracer) dnsDone(httptrace.DNSDoneInfo) {
-	ct.close("http.dns")
+	ct.end("http.dns")
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
-	ct.open("http.connect")
+	ct.start("http.connect."+addr, "http.connect", HTTPRemoteAddr.String(addr))
 }
 
 func (ct *clientTracer) connectDone(network, addr string, err error) {
-	ct.close("http.connect")
+	ct.end("http.connect." + addr)
 }
 
 func (ct *clientTracer) tlsHandshakeStart() {
-	ct.open("http.tls")
+	ct.start("http.tls", "http.tls")
 }
 
 func (ct *clientTracer) tlsHandshakeDone(tls.ConnectionState, error) {
-	ct.close("http.tls")
+	ct.end("http.tls")
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.span("http.headers") == nil {
-		ct.open("http.headers")
+		ct.start("http.headers", "http.headers")
 	}
 	ct.root.SetAttribute(key.New("http." + strings.ToLower(k)).String(sa2s(v)))
 }
 
 func (ct *clientTracer) wroteHeaders() {
-	ct.open("http.send")
+	ct.start("http.send", "http.send")
 }
 
 func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
@@ -156,7 +161,7 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 		ct.root.SetAttribute(MessageKey.String(info.Err.Error()))
 		ct.root.SetStatus(codes.Unknown)
 	}
-	ct.close("http.send")
+	ct.end("http.send")
 }
 
 func (ct *clientTracer) got100Continue() {
