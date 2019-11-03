@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stateless
+package stateless // import "go.opentelemetry.io/otel/sdk/metric/batcher/stateless"
 
 import (
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/batcher/stateful"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/stateful"
 )
 
 type Batcher struct {

@@ -57,4 +57,4 @@ new handles are created and atomically cleared during collect.  The
 reclaim list is used as a second chance, in case there is a race
 between looking up a record and record deletion.
 */
-package metric
+package metric // import "go.opentelemetry.io/otel/sdk/metric"

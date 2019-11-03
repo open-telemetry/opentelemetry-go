@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push
+package push // import "go.opentelemetry.io/otel/sdk/metric/controller/push"
 
 import (
 	"context"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/api/metric"
-	"go.opentelemetry.io/sdk/export"
-	sdk "go.opentelemetry.io/sdk/metric"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
 // Controller organizes a periodic push of metric data.

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator
+package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
 
 import (
 	"time"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 // TODO: Add Min() support to maxsumcount?  It's the same as

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple
+package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simpler"
 
 import (
-	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 )
 
 type selector struct{}
