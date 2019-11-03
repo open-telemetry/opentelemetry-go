@@ -161,11 +161,11 @@ func TestDDSketchMerge(t *testing.T) {
 	// Test absolute and non-absolute
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			ut := updateTest{
+			mt := mergeTest{
 				absolute: absolute,
 			}
 			// Test integer and floating point
-			test.RunProfiles(t, ut.run)
+			test.RunProfiles(t, mt.run)
 		})
 	}
 }
