@@ -17,6 +17,7 @@ package core
 //go:generate stringer -type=ValueType
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"unsafe"
@@ -324,4 +325,15 @@ func (v *Value) Emit() string {
 	default:
 		return "unknown"
 	}
+}
+
+// MarshalJSON returns the JSON encoding of the Value.
+func (v *Value) MarshalJSON() ([]byte, error) {
+	var jsonVal struct {
+		Type  string
+		Value interface{}
+	}
+	jsonVal.Type = v.Type().String()
+	jsonVal.Value = v.AsInterface()
+	return json.Marshal(jsonVal)
 }
