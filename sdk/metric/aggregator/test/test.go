@@ -138,6 +138,12 @@ func (n *Numbers) Max() core.Number {
 	return n.numbers[len(n.numbers)-1]
 }
 
+// Median() is an alias for Quantile(0.5).
 func (n *Numbers) Median() core.Number {
+	// Note that len(n.numbers) is 1 greater than the max element
+	// index, so dividing by two rounds up.  This gives the
+	// intended definition for Quantile() in tests, which is to
+	// return the smallest element that is at or above the
+	// specified quantile.
 	return n.numbers[len(n.numbers)/2]
 }
