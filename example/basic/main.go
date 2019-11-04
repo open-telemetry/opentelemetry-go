@@ -53,7 +53,8 @@ func initTracer() {
 func main() {
 	initTracer()
 	tracer := global.TraceProvider().GetTracer("ex.com/basic")
-	meter := global.MeterProvider().GetMeter("ex.com/basic") // TODO: should share resources ^^^?
+	// TODO: Meter doesn't work yet, check if resources to be shared afterwards.
+	meter := global.MeterProvider().GetMeter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
