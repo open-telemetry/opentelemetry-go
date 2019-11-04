@@ -79,10 +79,6 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	_, sp := ct.tr.Start(ct.Context, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
-	// TODO(paivagustavo): remove this for loop when `trace.WithAttributes(attrs...)` works.
-	for _, attr := range attrs {
-		sp.SetAttribute(attr)
-	}
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ct.root == nil {
