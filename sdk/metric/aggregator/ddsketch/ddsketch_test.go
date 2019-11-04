@@ -16,6 +16,7 @@ package ddsketch
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,90 +25,147 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
-const count = 100
+const count = 1000
 
-// N.B. DDSketch only supports absolute measures
+type updateTest struct {
+	absolute bool
+}
 
-func TestDDSketchAbsolute(t *testing.T) {
+func (ut *updateTest) run(t *testing.T, profile test.Profile) {
+	ctx := context.Background()
+	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !ut.absolute)
+
+	agg := New(NewDefaultConfig(), record.Descriptor())
+
+	all := test.NewNumbers(profile.NumberKind)
+	for i := 0; i < count; i++ {
+		x := profile.Random(+1)
+		all.Append(x)
+		agg.Update(ctx, x, record)
+
+		if !ut.absolute {
+			y := profile.Random(-1)
+			all.Append(y)
+			agg.Update(ctx, y, record)
+		}
+	}
+
+	agg.Collect(ctx, record, batcher)
+
+	all.Sort()
+
+	require.InDelta(t,
+		all.Sum().CoerceToFloat64(profile.NumberKind),
+		agg.Sum().CoerceToFloat64(profile.NumberKind),
+		1,
+		"Same sum - absolute")
+	require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+
+	max, err := agg.Max()
+	require.Nil(t, err)
+	require.Equal(t,
+		all.Max(),
+		max,
+		"Same max - absolute")
+
+	median, err := agg.Quantile(0.5)
+	require.Nil(t, err)
+	require.InDelta(t,
+		all.Median().CoerceToFloat64(profile.NumberKind),
+		median.CoerceToFloat64(profile.NumberKind),
+		10,
+		"Same median - absolute")
+}
+
+func TestDDSketchUpdate(t *testing.T) {
+	// Test absolute and non-absolute
+	for _, absolute := range []bool{false, true} {
+		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
+			ut := updateTest{
+				absolute: absolute,
+			}
+			// Test integer and floating point
+			test.RunProfiles(t, ut.run)
+		})
+	}
+}
+
+type mergeTest struct {
+	absolute bool
+}
+
+func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !mt.absolute)
 
-		agg := New(NewDefaultConfig(), record.Descriptor())
+	agg1 := New(NewDefaultConfig(), record.Descriptor())
+	agg2 := New(NewDefaultConfig(), record.Descriptor())
 
-		var all test.Numbers
-		for i := 0; i < count; i++ {
-			x := profile.Random(+1)
-			all = append(all, x)
-			agg.Update(ctx, x, record)
+	all := test.NewNumbers(profile.NumberKind)
+	for i := 0; i < count; i++ {
+		x := profile.Random(+1)
+		all.Append(x)
+		agg1.Update(ctx, x, record)
+
+		if !mt.absolute {
+			y := profile.Random(-1)
+			all.Append(y)
+			agg1.Update(ctx, y, record)
 		}
+	}
 
-		agg.Collect(ctx, record, batcher)
+	for i := 0; i < count; i++ {
+		x := profile.Random(+1)
+		all.Append(x)
+		agg2.Update(ctx, x, record)
 
-		all.Sort()
+		if !mt.absolute {
+			y := profile.Random(-1)
+			all.Append(y)
+			agg2.Update(ctx, y, record)
+		}
+	}
 
-		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
-			agg.Sum(),
-			0.0000001,
-			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
-		require.Equal(t,
-			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
-			agg.Max(),
-			"Same max - absolute")
-		require.InEpsilon(t,
-			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
-			agg.Quantile(0.5),
-			0.1,
-			"Same median - absolute")
-	})
+	agg1.Collect(ctx, record, batcher)
+	agg2.Collect(ctx, record, batcher)
+
+	agg1.Merge(agg2, record.Descriptor())
+
+	all.Sort()
+
+	require.InDelta(t,
+		all.Sum().CoerceToFloat64(profile.NumberKind),
+		agg1.Sum().CoerceToFloat64(profile.NumberKind),
+		1,
+		"Same sum - absolute")
+	require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+
+	max, err := agg1.Max()
+	require.Nil(t, err)
+	require.Equal(t,
+		all.Max(),
+		max,
+		"Same max - absolute")
+
+	median, err := agg1.Quantile(0.5)
+	require.Nil(t, err)
+	require.InDelta(t,
+		all.Median().CoerceToFloat64(profile.NumberKind),
+		median.CoerceToFloat64(profile.NumberKind),
+		10,
+		"Same median - absolute")
 }
 
 func TestDDSketchMerge(t *testing.T) {
-	ctx := context.Background()
-
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
-
-		agg1 := New(NewDefaultConfig(), record.Descriptor())
-		agg2 := New(NewDefaultConfig(), record.Descriptor())
-
-		var all test.Numbers
-		for i := 0; i < count; i++ {
-			x := profile.Random(+1)
-			all = append(all, x)
-			agg1.Update(ctx, x, record)
-		}
-
-		for i := 0; i < count; i++ {
-			x := profile.Random(+1)
-			all = append(all, x)
-			agg2.Update(ctx, x, record)
-		}
-
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
-
-		agg1.Merge(agg2, record.Descriptor())
-
-		all.Sort()
-
-		require.InEpsilon(t,
-			all.Sum(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
-			agg1.Sum(),
-			0.0000001,
-			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
-		require.Equal(t,
-			all[len(all)-1].CoerceToFloat64(profile.NumberKind),
-			agg1.Max(),
-			"Same max - absolute")
-		require.InEpsilon(t,
-			all.Median(profile.NumberKind).CoerceToFloat64(profile.NumberKind),
-			agg1.Quantile(0.5),
-			0.1,
-			"Same median - absolute")
-	})
+	// Test absolute and non-absolute
+	for _, absolute := range []bool{false, true} {
+		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
+			mt := mergeTest{
+				absolute: absolute,
+			}
+			// Test integer and floating point
+			test.RunProfiles(t, mt.run)
+		})
+	}
 }

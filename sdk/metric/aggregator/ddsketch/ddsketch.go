@@ -11,16 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package ddsketch
+package ddsketch // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 
 import (
 	"context"
+	"math"
 	"sync"
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates measure events.
@@ -44,13 +46,17 @@ func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 }
 
 // NewDefaultConfig returns a new, default DDSketch config.
+//
+// TODO: The Config constructor should probably set minValue to -Inf
+// to aggregate metrics with absolute=false.  This requires providing values
+// for alpha and maxNumBins
 func NewDefaultConfig() *sdk.Config {
 	return sdk.NewDefaultConfig()
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() float64 {
-	return c.checkpoint.Sum()
+func (c *Aggregator) Sum() core.Number {
+	return c.toNumber(c.checkpoint.Sum())
 }
 
 // Count returns the count of the checkpoint.
@@ -59,18 +65,29 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the max of the checkpoint.
-func (c *Aggregator) Max() float64 {
-	return c.checkpoint.Quantile(1)
+func (c *Aggregator) Max() (core.Number, error) {
+	return c.Quantile(1)
 }
 
 // Min returns the min of the checkpoint.
-func (c *Aggregator) Min() float64 {
-	return c.checkpoint.Quantile(0)
+func (c *Aggregator) Min() (core.Number, error) {
+	return c.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of the checkpoint.
-func (c *Aggregator) Quantile(q float64) float64 {
-	return c.checkpoint.Quantile(q)
+func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	f := c.checkpoint.Quantile(q)
+	if math.IsNaN(f) {
+		return core.Number(0), aggregator.ErrInvalidQuantile
+	}
+	return c.toNumber(f), nil
+}
+
+func (c *Aggregator) toNumber(f float64) core.Number {
+	if c.kind == core.Float64NumberKind {
+		return core.NewFloat64Number(f)
+	}
+	return core.NewInt64Number(int64(f))
 }
 
 // Collect checkpoints the current value (atomically) and exports it.

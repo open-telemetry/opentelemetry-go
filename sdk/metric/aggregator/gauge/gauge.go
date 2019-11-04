@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gauge
+package gauge // import "go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 
 import (
 	"context"
