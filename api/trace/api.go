@@ -142,14 +142,16 @@ type Link struct {
 
 // SpanKind represents the role of a Span inside a Trace. Often, this defines how a Span
 // will be processed and visualized by various backends.
-type SpanKind string
+type SpanKind int
 
 const (
-	SpanKindInternal SpanKind = "internal"
-	SpanKindServer   SpanKind = "server"
-	SpanKindClient   SpanKind = "client"
-	SpanKindProducer SpanKind = "producer"
-	SpanKindConsumer SpanKind = "consumer"
+	// These match the proto definition, see opentelemetry/proto/trace/v1/trace.proto
+	SpanKindUnspecified SpanKind = 0
+	SpanKindInternal    SpanKind = 1
+	SpanKindServer      SpanKind = 2
+	SpanKindClient      SpanKind = 3
+	SpanKindProducer    SpanKind = 4
+	SpanKindConsumer    SpanKind = 5
 )
 
 // WithStartTime sets the start time of the span to provided time t, when it is started.

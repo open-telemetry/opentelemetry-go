@@ -322,7 +322,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		startTime = time.Now()
 	}
 	sk := o.SpanKind
-	if sk == "" {
+	if sk == apitrace.SpanKindUnspecified {
 		sk = apitrace.SpanKindInternal
 	}
 	span.data = &export.SpanData{

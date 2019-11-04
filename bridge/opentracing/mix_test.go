@@ -20,8 +20,6 @@ import (
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
-	//otext "github.com/opentracing/opentracing-go/ext"
-	//otlog "github.com/opentracing/opentracing-go/log"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

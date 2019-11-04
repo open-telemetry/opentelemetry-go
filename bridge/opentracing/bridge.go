@@ -385,8 +385,17 @@ func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			if sk, ok := v.(string); ok {
-				kind = oteltrace.SpanKind(sk)
+			if s, ok := v.(string); ok {
+				switch strings.ToLower(s) {
+				case "client":
+					kind = oteltrace.SpanKindClient
+				case "server":
+					kind = oteltrace.SpanKindServer
+				case "producer":
+					kind = oteltrace.SpanKindProducer
+				case "consumer":
+					kind = oteltrace.SpanKindConsumer
+				}
 			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {

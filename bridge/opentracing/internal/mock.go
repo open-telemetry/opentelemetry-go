@@ -85,7 +85,14 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		startTime = time.Now()
 	}
 	spanKind := spanOpts.SpanKind
-	if spanKind == "" {
+	switch spanKind {
+	case oteltrace.SpanKindInternal,
+		oteltrace.SpanKindServer,
+		oteltrace.SpanKindClient,
+		oteltrace.SpanKindProducer,
+		oteltrace.SpanKindConsumer:
+		// valid
+	default:
 		spanKind = oteltrace.SpanKindInternal
 	}
 	spanContext := otelcore.SpanContext{

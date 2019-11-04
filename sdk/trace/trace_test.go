@@ -285,8 +285,6 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 	}
 }
 
-// TODO: [rghetia] Equivalent of SpanKind Test.
-
 func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
@@ -307,7 +305,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 		},
-		SpanKind:        "internal",
+		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -341,7 +339,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
 		},
-		SpanKind:              "internal",
+		SpanKind:              apitrace.SpanKindInternal,
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}
@@ -387,7 +385,7 @@ func TestEvents(t *testing.T) {
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -438,7 +436,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
-		SpanKind:                 "internal",
+		SpanKind:                 apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -478,7 +476,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
@@ -519,7 +517,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -562,7 +560,7 @@ func TestLinksOverLimit(t *testing.T) {
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
-		SpanKind:         "internal",
+		SpanKind:         apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -609,7 +607,7 @@ func TestSetSpanStatus(t *testing.T) {
 		},
 		ParentSpanID:    sid,
 		Name:            "SpanStatus/span0",
-		SpanKind:        "internal",
+		SpanKind:        apitrace.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
 	}
