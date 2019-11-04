@@ -61,6 +61,10 @@ type MetricRecord interface {
 	// Labels() describe the labsels corresponding the
 	// aggregation being performed.
 	Labels() []core.KeyValue
+
+	// EncodedLabels are a unique string-encoded form of Labels()
+	// suitable for use as a map key.
+	EncodedLabels() string
 }
 
 // MetricExporter handles presentation of the checkpoint of aggregate
@@ -73,7 +77,7 @@ type MetricExporter interface {
 // MetricProducer allows a MetricExporter to access a checkpoint of
 // aggregated metrics one at a time.
 type MetricProducer interface {
-	Foreach(func(MetricAggregator, *Descriptor, []core.Value))
+	Foreach(func(MetricAggregator, *Descriptor, []core.KeyValue))
 }
 
 // MetricKind describes the kind of instrument.

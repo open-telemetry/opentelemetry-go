@@ -67,6 +67,10 @@ func (t *metricRecord) Labels() []core.KeyValue {
 	return nil
 }
 
+func (t *metricRecord) EncodedLabels() string {
+	return ""
+}
+
 func (m *metricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
 	return nil
 }

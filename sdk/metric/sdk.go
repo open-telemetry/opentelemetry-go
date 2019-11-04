@@ -479,3 +479,7 @@ func (r *record) Descriptor() *export.Descriptor {
 func (r *record) Labels() []core.KeyValue {
 	return r.labels.sorted
 }
+
+func (r *record) EncodedLabels() string {
+	return r.labels.encoded
+}

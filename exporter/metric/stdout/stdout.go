@@ -77,7 +77,7 @@ func New(options Options) *Exporter {
 
 func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 	var batch expoBatch
-	producer.Foreach(func(agg export.MetricAggregator, desc *export.Descriptor, labelValues []core.Value) {
+	producer.Foreach(func(agg export.MetricAggregator, desc *export.Descriptor, labels []core.KeyValue) {
 		var expose expoLine
 		if sum, ok := agg.(aggregator.Sum); ok {
 			expose.Sum = sum.Sum().Emit(desc.NumberKind())
@@ -103,20 +103,20 @@ func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 
 		sb.WriteString(desc.Name())
 
-		if len(desc.Keys()) > 0 {
+		if len(labels) > 0 {
 			sb.WriteRune('{')
 		}
 
-		for i, k := range desc.Keys() {
+		for i, label := range labels {
 			if i > 0 {
 				sb.WriteRune(',')
 			}
-			sb.WriteString(string(k))
+			sb.WriteString(string(label.Key))
 			sb.WriteRune('=')
-			sb.WriteString(labelValues[i].Emit())
+			sb.WriteString(label.Value.Emit())
 		}
 
-		if len(desc.Keys()) > 0 {
+		if len(labels) > 0 {
 			sb.WriteRune('}')
 		}
 

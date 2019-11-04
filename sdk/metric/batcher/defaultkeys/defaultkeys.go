@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stateful // import "go.opentelemetry.io/otel/sdk/metric/batcher/stateful"
+package defaultkeys // import "go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 
 import (
 	"context"
@@ -27,6 +27,7 @@ type (
 		dki      dkiMap
 		agg      aggMap
 		selector export.MetricAggregationSelector
+		stateful bool
 	}
 
 	aggEntry struct {
@@ -36,7 +37,7 @@ type (
 		// NOTE: When only a single exporter is in use,
 		// there's a potential to avoid encoding the labels
 		// twice, since this class has to encode them once.
-		labels []core.Value
+		labels []core.KeyValue
 	}
 
 	dkiMap map[*export.Descriptor]map[core.Key]int
@@ -46,11 +47,12 @@ type (
 var _ export.MetricBatcher = &Batcher{}
 var _ export.MetricProducer = aggMap{}
 
-func New(selector export.MetricAggregationSelector) *Batcher {
+func New(selector export.MetricAggregationSelector, stateful bool) *Batcher {
 	return &Batcher{
 		selector: selector,
 		dki:      dkiMap{},
 		agg:      aggMap{},
+		stateful: stateful,
 	}
 }
 
@@ -74,11 +76,12 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	}
 
 	// Compute the value list.  Note: Unspecified values become
-	// empty strings.  TODO: pin this down.
-	canon := make([]core.Value, len(keys))
+	// empty strings.  TODO: pin this down, we have no appropriate
+	// Value constructor.
+	canon := make([]core.KeyValue, len(keys))
 
-	for i := 0; i < len(keys); i++ {
-		canon[i] = core.String("")
+	for i, key := range keys {
+		canon[i] = key.String("")
 	}
 
 	for _, kv := range record.Labels() {
@@ -86,7 +89,7 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 		if !ok {
 			continue
 		}
-		canon[pos] = kv.Value
+		canon[pos].Value = kv.Value
 	}
 
 	// Compute an encoded lookup key.
@@ -104,7 +107,7 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	for i := 0; i < len(keys); i++ {
 		sb.WriteString(string(keys[i]))
 		sb.WriteRune('=')
-		sb.WriteString(canon[i].Emit())
+		sb.WriteString(canon[i].Value.Emit())
 
 		if i < len(keys)-1 {
 			sb.WriteRune(',')
@@ -119,23 +122,22 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 		b.agg[encoded] = aggEntry{
 			aggregator: agg,
 			labels:     canon,
-			descriptor: record.Descriptor(),
+			descriptor: desc,
 		}
 	} else {
-		rag.aggregator.Merge(agg, record.Descriptor())
+		rag.aggregator.Merge(agg, desc)
 	}
-}
-
-func (b *Batcher) Reset() {
-	b.agg = aggMap{}
 }
 
 func (b *Batcher) ReadCheckpoint() export.MetricProducer {
 	checkpoint := b.agg
+	if !b.stateful {
+		b.agg = aggMap{}
+	}
 	return checkpoint
 }
 
-func (c aggMap) Foreach(f func(export.MetricAggregator, *export.Descriptor, []core.Value)) {
+func (c aggMap) Foreach(f func(export.MetricAggregator, *export.Descriptor, []core.KeyValue)) {
 	for _, entry := range c {
 		f(entry.aggregator, entry.descriptor, entry.labels)
 	}

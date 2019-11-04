@@ -12,25 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stateless // import "go.opentelemetry.io/otel/sdk/metric/batcher/stateless"
+package sampling // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sampling"
 
-import (
-	"go.opentelemetry.io/otel/sdk/export"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/stateful"
-)
+// import "github.com/lightstep/varopt"
 
-type Batcher struct {
-	*stateful.Batcher
-}
-
-func New(selector export.MetricAggregationSelector) *Batcher {
-	return &Batcher{
-		Batcher: stateful.New(selector),
-	}
-}
-
-func (b *Batcher) ReadCheckpoint() export.MetricProducer {
-	checkpoint := b.Batcher.ReadCheckpoint()
-	b.Batcher.Reset()
-	return checkpoint
-}
+// var _ = varopt.Varopt{}
