@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -27,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Options are the options to be used when initializing a stdout export.
@@ -39,7 +37,6 @@ type Options struct {
 
 // Exporter is an implementation of trace.Exporter that writes spans to stdout.
 type Exporter struct {
-	once         sync.Once
 	pretty       bool
 	outputWriter io.Writer
 }
@@ -49,14 +46,6 @@ func NewExporter(o Options) (*Exporter, error) {
 		pretty:       o.PrettyPrint,
 		outputWriter: os.Stdout,
 	}, nil
-}
-
-// RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
-func (e *Exporter) RegisterSimpleSpanProcessor() {
-	e.once.Do(func() {
-		ssp := trace.NewSimpleSpanProcessor(e)
-		trace.RegisterSpanProcessor(ssp)
-	})
 }
 
 type jsonValue struct {

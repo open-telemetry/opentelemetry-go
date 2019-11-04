@@ -27,10 +27,16 @@ const (
 	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 )
 
+// batcher contains export.SpanBatcher and its options.
+type batcher struct {
+	b    export.SpanBatcher
+	opts []BatchSpanProcessorOption
+}
+
 // ProviderOptions
 type ProviderOptions struct {
 	syncers  []export.SpanSyncer
-	batchers []export.SpanBatcher
+	batchers []batcher
 	config   Config
 }
 
@@ -73,7 +79,7 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 	}
 
 	for _, batcher := range o.batchers {
-		bsp, err := NewBatchSpanProcessor(batcher)
+		bsp, err := NewBatchSpanProcessor(batcher.b, batcher.opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -172,9 +178,9 @@ func WithSyncer(syncer export.SpanSyncer) ProviderOption {
 // This option can be used multiple times.
 // The Batchers are wrapped into BatchedSpanProcessors and registered
 // with the provider.
-func WithBatcher(batcher export.SpanBatcher) ProviderOption {
+func WithBatcher(b export.SpanBatcher, bopts ...BatchSpanProcessorOption) ProviderOption {
 	return func(opts *ProviderOptions) {
-		opts.batchers = append(opts.batchers, batcher)
+		opts.batchers = append(opts.batchers, batcher{b, bopts})
 	}
 }
 

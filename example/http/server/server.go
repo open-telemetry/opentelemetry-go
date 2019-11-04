@@ -34,7 +34,6 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	exporter.RegisterSimpleSpanProcessor()
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.

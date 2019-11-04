@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	traceapi "cloud.google.com/go/trace/apiv2"
@@ -28,7 +27,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/sdk/export"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Option is function type that is passed to the exporter initialization function.
@@ -70,22 +68,6 @@ type options struct {
 	// to the underlying Stackdriver Trace API client.
 	// Optional.
 	TraceClientOptions []option.ClientOption
-
-	// BatchDelayThreshold determines the max amount of time
-	// the exporter can wait before uploading view data or trace spans to
-	// the backend.
-	// Optional.
-	BatchDelayThreshold time.Duration
-
-	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing.
-	// See the detailed definition in https://godoc.org/go.opentelemetry.io/otel/sdk/trace#BatchSpanProcessorOptions.
-	// Default is 2048. Optional.
-	MaxQueueSize int
-
-	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
-	// See the detailed definition in https://godoc.org/go.opentelemetry.io/otel/sdk/trace#BatchSpanProcessorOptions.
-	// Default is 512. Optional.
-	MaxExportBatchSize int
 
 	// TraceSpansBufferMaxBytes is the maximum size (in bytes) of spans that
 	// will be buffered in memory before being dropped.
@@ -178,9 +160,7 @@ const defaultTimeout = 5 * time.Second
 // TODO(yoshifumi): add a metrics exporter once the spec definition
 // process and the sampler implementation are done.
 type Exporter struct {
-	once          sync.Once
 	traceExporter *traceExporter
-	spanProcessor trace.SpanProcessor
 }
 
 // NewExporter creates a new Exporter thats implements trace.Exporter.
@@ -226,36 +206,6 @@ func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.
 	return context.WithTimeout(ctx, timeout)
 }
 
-// RegisterBatchSpanProcessor registers e as BatchSpanProcessor.
-func (e *Exporter) RegisterBatchSpanProcessor() error {
-	opts := []trace.BatchSpanProcessorOption{}
-
-	if e.traceExporter.o.BatchDelayThreshold > 0 {
-		opts = append(opts, trace.WithScheduleDelayMillis(e.traceExporter.o.BatchDelayThreshold))
-	}
-	if e.traceExporter.o.MaxQueueSize > 0 {
-		opts = append(opts, trace.WithMaxQueueSize(e.traceExporter.o.MaxQueueSize))
-	}
-	if e.traceExporter.o.MaxExportBatchSize > 0 {
-		opts = append(opts, trace.WithMaxExportBatchSize(e.traceExporter.o.MaxExportBatchSize))
-	}
-
-	var err error
-	e.once.Do(func() {
-		e.spanProcessor, err = trace.NewBatchSpanProcessor(e, opts...)
-		trace.RegisterSpanProcessor(e.spanProcessor)
-	})
-	return err
-}
-
-// RegisterSimpleSpanProcessor registers e as SimpleSpanProcessor.
-func (e *Exporter) RegisterSimpleSpanProcessor() {
-	e.once.Do(func() {
-		e.spanProcessor = trace.NewSimpleSpanProcessor(e)
-		trace.RegisterSpanProcessor(e.spanProcessor)
-	})
-}
-
 // ExportSpan exports a SpanData to Stackdriver Trace.
 func (e *Exporter) ExportSpan(ctx context.Context, sd *export.SpanData) {
 	if len(e.traceExporter.o.DefaultTraceAttributes) > 0 {
@@ -285,10 +235,4 @@ func (e *Exporter) sdWithDefaultTraceAttributes(sd *export.SpanData) *export.Spa
 	}
 	newSD.Attributes = append(newSD.Attributes, sd.Attributes...)
 	return &newSD
-}
-
-// Shutdown unregisters spanProcessor.
-func (e *Exporter) Shutdown() {
-	trace.UnregisterSpanProcessor(e.spanProcessor)
-	e.spanProcessor = nil
 }
