@@ -16,25 +16,46 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var (
-	tracer = global.TraceProvider().GetTracer("ex.com/basic")
-	meter  = global.MeterProvider().GetMeter("ex.com/basic") // TODO: should share resources ^^^?
-
 	fooKey     = key.New("ex.com/foo")
 	barKey     = key.New("ex.com/bar")
 	lemonsKey  = key.New("ex.com/lemons")
 	anotherKey = key.New("ex.com/another")
 )
 
+// initTracer creates and registers trace provider instance.
+func initTracer() {
+	var err error
+	exp, err := stdout.NewExporter(stdout.Options{PrettyPrint: false})
+	if err != nil {
+		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		return
+	}
+	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	if err != nil {
+		log.Panicf("failed to initialize trace provider %v\n", err)
+	}
+	global.SetTraceProvider(tp)
+}
+
 func main() {
+	initTracer()
+	tracer := global.TraceProvider().GetTracer("ex.com/basic")
+	// TODO: Meter doesn't work yet, check if resources to be shared afterwards.
+	meter := global.MeterProvider().GetMeter("ex.com/basic")
+
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
@@ -91,7 +112,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// TODO: How to flush?
-	// loader.Flush()
 }
