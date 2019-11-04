@@ -145,7 +145,12 @@ type Link struct {
 type SpanKind int
 
 const (
-	// These match the proto definition, see opentelemetry/proto/trace/v1/trace.proto
+	// As a convenience, these match the proto definition, see
+	// opentelemetry/proto/trace/v1/trace.proto
+	//
+	// The unspecified value is not a valid `SpanKind`.  Use
+	// `ValidateSpanKind()` to coerce a span kind to a valid
+	// value.
 	SpanKindUnspecified SpanKind = 0
 	SpanKindInternal    SpanKind = 1
 	SpanKindServer      SpanKind = 2
@@ -153,6 +158,22 @@ const (
 	SpanKindProducer    SpanKind = 4
 	SpanKindConsumer    SpanKind = 5
 )
+
+// ValidateSpanKind returns a valid span kind value.  This will coerce
+// invalid values into the default value, SpanKindInternal.
+func ValidateSpanKind(spanKind SpanKind) SpanKind {
+	switch spanKind {
+	case SpanKindInternal,
+		SpanKindServer,
+		SpanKindClient,
+		SpanKindProducer,
+		SpanKindConsumer:
+		// valid
+		return spanKind
+	default:
+		return SpanKindInternal
+	}
+}
 
 // String returns the specified name of the SpanKind in lower-case.
 func (sk SpanKind) String() string {
