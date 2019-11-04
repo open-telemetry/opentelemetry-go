@@ -150,11 +150,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.SpanOption
 		if h.public {
-			// TODO: If the endpoint is a public endpoint, it should start a new trace
-			// and incoming remote sctx should be added as a link
-			// (WithLinks(links...), this option doesn't exist yet). Replace ChildOf
-			// below with something like: opt = trace.WithLinks(sc)
-			opt = trace.ChildOf(sc)
+			// If the endpoint is a public endpoint, it should start a new trace
+			// and incoming remote sctx should be added as a link.
+			opt = trace.LinkedTo(sc)
 		} else { // not a private endpoint, so assume child relationship
 			opt = trace.ChildOf(sc)
 		}
