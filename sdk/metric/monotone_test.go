@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
@@ -37,11 +37,11 @@ type monotoneBatcher struct {
 	currentTime  *time.Time
 }
 
-func (m *monotoneBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
+func (m *monotoneBatcher) AggregatorFor(rec export.Record) export.Aggregator {
 	return gauge.New()
 }
 
-func (m *monotoneBatcher) Export(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (m *monotoneBatcher) Export(_ context.Context, record export.Record, agg export.Aggregator) {
 	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
 	require.Equal(m.t, 1, len(record.Labels()))
 	require.Equal(m.t, "a", string(record.Labels()[0].Key))

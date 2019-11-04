@@ -34,7 +34,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	gen "go.opentelemetry.io/otel/exporter/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 func TestNewExporter(t *testing.T) {

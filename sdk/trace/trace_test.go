@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 var (

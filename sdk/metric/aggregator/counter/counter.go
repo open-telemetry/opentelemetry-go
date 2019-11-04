@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // Aggregator aggregates counter events.
@@ -30,7 +30,7 @@ type Aggregator struct {
 	checkpoint core.Number
 }
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // New returns a new counter aggregator.  This aggregator computes an
 // atomic sum.
@@ -44,14 +44,14 @@ func (c *Aggregator) AsNumber() core.Number {
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
 
 	exp.Export(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 	if !desc.Alternate() && number.IsNegative(kind) {
@@ -62,7 +62,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	c.current.AddNumberAtomic(kind, number)
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn

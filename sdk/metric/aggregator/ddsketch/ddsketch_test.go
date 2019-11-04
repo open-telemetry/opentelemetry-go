@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -32,7 +32,7 @@ func TestDDSketchAbsolute(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg := New(NewDefaultConfig(), record.Descriptor())
 
@@ -69,7 +69,7 @@ func TestDDSketchMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg1 := New(NewDefaultConfig(), record.Descriptor())
 		agg2 := New(NewDefaultConfig(), record.Descriptor())

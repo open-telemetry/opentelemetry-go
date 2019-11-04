@@ -29,7 +29,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	opentelemetry "go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 const (

@@ -21,7 +21,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // Note: This aggregator enforces the behavior of monotonic gauges to
@@ -54,7 +54,7 @@ type (
 	}
 )
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // An unset gauge has zero timestamp and zero value.
 var unsetGauge = &gaugeData{}
@@ -79,14 +79,14 @@ func (g *Aggregator) Timestamp() time.Time {
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
-func (g *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (g *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 
 	exp.Export(ctx, rec, g)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
@@ -124,7 +124,7 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 	}
 }
 
-func (g *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn
