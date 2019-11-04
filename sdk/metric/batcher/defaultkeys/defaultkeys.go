@@ -33,9 +33,7 @@ type (
 	aggEntry struct {
 		aggregator export.MetricAggregator
 		descriptor *export.Descriptor
-
-		labels  []core.KeyValue
-		encoded string
+		labels     []core.KeyValue
 	}
 
 	dkiMap map[*export.Descriptor]map[core.Key]int
