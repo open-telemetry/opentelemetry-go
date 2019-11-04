@@ -58,6 +58,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 			key.String("key", keyValue),
 			key.Float64("double", doubleValue),
 		},
+		MessageEvents: []export.Event{
+			{Message: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
+			{Message: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
+		},
 		SpanKind: trace.SpanKindInternal,
 		Status:   codes.Unknown,
 	}
@@ -84,7 +88,28 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
-		`"MessageEvents":null,` +
+		`"MessageEvents":[` +
+		`{` +
+		`"Message":"foo",` +
+		`"Attributes":[` +
+		`{` +
+		`"Key":"key",` +
+		`"Value":{"Type":"STRING","Value":"value"}` +
+		`}` +
+		`],` +
+		`"Time":` + string(expectedSerializedNow) +
+		`},` +
+		`{` +
+		`"Message":"bar",` +
+		`"Attributes":[` +
+		`{` +
+		`"Key":"double",` +
+		`"Value":{"Type":"FLOAT64","Value":123.456}` +
+		`}` +
+		`],` +
+		`"Time":` + string(expectedSerializedNow) +
+		`}` +
+		`],` +
 		`"Links":null,` +
 		`"Status":2,` +
 		`"HasRemoteParent":false,` +

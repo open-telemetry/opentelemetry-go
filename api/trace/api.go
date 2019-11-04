@@ -103,6 +103,7 @@ type SpanOption func(*SpanOptions)
 type SpanOptions struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
+	Links      []Link
 	Relation   Relation
 	Record     bool
 	SpanKind   SpanKind
@@ -194,6 +195,13 @@ func FollowsFrom(sc core.SpanContext) SpanOption {
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
 		}
+	}
+}
+
+// LinkedTo allows instantiating a Span with initial Links.
+func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) SpanOption {
+	return func(o *SpanOptions) {
+		o.Links = append(o.Links, Link{sc, attrs})
 	}
 }
 

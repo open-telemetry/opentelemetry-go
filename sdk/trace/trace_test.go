@@ -287,6 +287,33 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 
 // TODO: [rghetia] Equivalent of SpanKind Test.
 
+func TestSetSpanAttributesOnStart(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(key.String("key1", "value1")))
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "StartSpanAttribute/span0",
+		Attributes: []core.KeyValue{
+			key.String("key1", "value1"),
+		},
+		SpanKind:        "internal",
+		HasRemoteParent: true,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesOnStart: -got +want %s", diff)
+	}
+}
+
 func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
@@ -655,20 +682,20 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string) apitrace.Span {
-	return startNamedSpan(tp, trName, "span0")
+func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
+	return startNamedSpan(tp, trName, "span0", args...)
 }
 
 // startNamed Span is a test utility func that starts a span with a
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
+	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
 	_, span := tp.GetTracer(trName).Start(
 		context.Background(),
 		name,
-		apitrace.ChildOf(remoteSpanContext()),
-		apitrace.WithRecord(),
+		args...,
 	)
 	return span
 }
