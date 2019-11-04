@@ -154,6 +154,24 @@ const (
 	SpanKindConsumer    SpanKind = 5
 )
 
+// String returns the specified name of the SpanKind in lower-case.
+func (sk SpanKind) String() string {
+	switch sk {
+	case SpanKindInternal:
+		return "internal"
+	case SpanKindServer:
+		return "server"
+	case SpanKindClient:
+		return "client"
+	case SpanKindProducer:
+		return "producer"
+	case SpanKindConsumer:
+		return "consumer"
+	default:
+		return "unspecified"
+	}
+}
+
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absence of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.

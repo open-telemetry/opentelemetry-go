@@ -63,6 +63,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 	for _, l := range opts.Links {
 		span.AddLink(l)
 	}
+	span.SetAttributes(opts.Attributes...)
 
 	span.tracer = tr
 
