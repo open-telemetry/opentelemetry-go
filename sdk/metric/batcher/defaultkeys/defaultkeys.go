@@ -16,7 +16,6 @@ package defaultkeys // import "go.opentelemetry.io/otel/sdk/metric/batcher/defau
 
 import (
 	"context"
-	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export"
@@ -24,32 +23,37 @@ import (
 
 type (
 	Batcher struct {
+		selector export.MetricAggregationSelector
+		lencoder export.MetricLabelEncoder
+		stateful bool
 		dki      dkiMap
 		agg      aggMap
-		selector export.MetricAggregationSelector
-		stateful bool
 	}
 
 	aggEntry struct {
 		aggregator export.MetricAggregator
 		descriptor *export.Descriptor
 
-		// NOTE: When only a single exporter is in use,
-		// there's a potential to avoid encoding the labels
-		// twice, since this class has to encode them once.
-		labels []core.KeyValue
+		labels  []core.KeyValue
+		encoded string
 	}
 
 	dkiMap map[*export.Descriptor]map[core.Key]int
 	aggMap map[string]aggEntry
+
+	producer struct {
+		aggMap   aggMap
+		lencoder export.MetricLabelEncoder
+	}
 )
 
 var _ export.MetricBatcher = &Batcher{}
-var _ export.MetricProducer = aggMap{}
+var _ export.MetricProducer = &producer{}
 
-func New(selector export.MetricAggregationSelector, stateful bool) *Batcher {
+func New(selector export.MetricAggregationSelector, lencoder export.MetricLabelEncoder, stateful bool) *Batcher {
 	return &Batcher{
 		selector: selector,
+		lencoder: lencoder,
 		dki:      dkiMap{},
 		agg:      aggMap{},
 		stateful: stateful,
@@ -84,6 +88,9 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 		canon[i] = key.String("")
 	}
 
+	// Note also the possibility to speed this computation of
+	// "encoded" via "canon" in the form of a (Descriptor,
+	// LabelSet)->(Labels, Encoded) cache.
 	for _, kv := range record.Labels() {
 		pos, ok := ki[kv.Key]
 		if !ok {
@@ -93,28 +100,7 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	}
 
 	// Compute an encoded lookup key.
-	//
-	// Note the opportunity to use an export-specific
-	// representation here, then avoid recomputing it in the
-	// exporter.  For example, depending on the exporter, we could
-	// use an OpenMetrics representation, a statsd representation,
-	// etc.  This only benefits a single exporter, of course.
-	//
-	// Note also the possibility to speed this computation of
-	// "encoded" from "canon" in the form of a (Descriptor,
-	// LabelSet)->Encoded cache.
-	var sb strings.Builder
-	for i := 0; i < len(keys); i++ {
-		sb.WriteString(string(keys[i]))
-		sb.WriteRune('=')
-		sb.WriteString(canon[i].Value.Emit())
-
-		if i < len(keys)-1 {
-			sb.WriteRune(',')
-		}
-	}
-
-	encoded := sb.String()
+	encoded := b.lencoder.EncodeLabels(canon)
 
 	// Reduce dimensionality.
 	rag, ok := b.agg[encoded]
@@ -134,11 +120,20 @@ func (b *Batcher) ReadCheckpoint() export.MetricProducer {
 	if !b.stateful {
 		b.agg = aggMap{}
 	}
-	return checkpoint
+	return &producer{
+		aggMap:   checkpoint,
+		lencoder: b.lencoder,
+	}
 }
 
-func (c aggMap) Foreach(f func(export.MetricAggregator, *export.Descriptor, []core.KeyValue)) {
-	for _, entry := range c {
-		f(entry.aggregator, entry.descriptor, entry.labels)
+func (p *producer) Foreach(f func(export.MetricAggregator, export.ProducedRecord)) {
+	for encoded, entry := range p.aggMap {
+		pr := export.ProducedRecord{
+			Descriptor:    entry.descriptor,
+			Labels:        entry.labels,
+			Encoder:       p.lencoder,
+			EncodedLabels: encoded,
+		}
+		f(entry.aggregator, pr)
 	}
 }

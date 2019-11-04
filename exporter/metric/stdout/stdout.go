@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
@@ -77,7 +76,10 @@ func New(options Options) *Exporter {
 
 func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 	var batch expoBatch
-	producer.Foreach(func(agg export.MetricAggregator, desc *export.Descriptor, labels []core.KeyValue) {
+	producer.Foreach(func(agg export.MetricAggregator, record export.ProducedRecord) {
+		desc := record.Descriptor
+		labels := record.Labels // HERE TODO
+
 		var expose expoLine
 		if sum, ok := agg.(aggregator.Sum); ok {
 			expose.Sum = sum.Sum().Emit(desc.NumberKind())
@@ -105,18 +107,7 @@ func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
 
 		if len(labels) > 0 {
 			sb.WriteRune('{')
-		}
-
-		for i, label := range labels {
-			if i > 0 {
-				sb.WriteRune(',')
-			}
-			sb.WriteString(string(label.Key))
-			sb.WriteRune('=')
-			sb.WriteString(label.Value.Emit())
-		}
-
-		if len(labels) > 0 {
+			sb.WriteString(record.EncodedLabels)
 			sb.WriteRune('}')
 		}
 

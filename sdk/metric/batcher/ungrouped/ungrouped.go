@@ -81,8 +81,12 @@ func (b *Batcher) ReadCheckpoint() export.MetricProducer {
 	return checkpoint
 }
 
-func (c batchMap) Foreach(f func(export.MetricAggregator, *export.Descriptor, []core.KeyValue)) {
+func (c batchMap) Foreach(f func(export.MetricAggregator, export.ProducedRecord)) {
 	for key, value := range c {
-		f(value.aggregator, key.descriptor, value.labels)
+		pr := export.ProducedRecord{
+			Descriptor: key.descriptor,
+			Labels:     value.labels,
+		}
+		f(value.aggregator, pr)
 	}
 }

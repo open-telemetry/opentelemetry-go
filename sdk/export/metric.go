@@ -74,10 +74,26 @@ type MetricExporter interface {
 	Export(context.Context, MetricProducer)
 }
 
+// MetricLabelEncoder enables an optimization for export pipelines that
+// use text to encode their label sets.  This interface allows configuring
+// the encoder used in the SDK and/or the MetricBatcher so that by the
+// time the exporter is called, the same encoding may be used.
+type MetricLabelEncoder interface {
+	EncodeLabels([]core.KeyValue) string
+}
+
+// ProducedRecord
+type ProducedRecord struct {
+	Descriptor    *Descriptor
+	Labels        []core.KeyValue
+	Encoder       MetricLabelEncoder
+	EncodedLabels string
+}
+
 // MetricProducer allows a MetricExporter to access a checkpoint of
 // aggregated metrics one at a time.
 type MetricProducer interface {
-	Foreach(func(MetricAggregator, *Descriptor, []core.KeyValue))
+	Foreach(func(MetricAggregator, ProducedRecord))
 }
 
 // MetricKind describes the kind of instrument.

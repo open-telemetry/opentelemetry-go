@@ -15,7 +15,6 @@
 package metric
 
 import (
-	"bytes"
 	"context"
 	"sort"
 	"sync"
@@ -34,15 +33,12 @@ type (
 	//
 	// The SDK supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
-	// the exporter model.  Push-based exporters will setup a
-	// timer to call Collect() periodically.  Pull-based exporters
+	// the batcher model.  Push-based batchers will setup a
+	// timer to call Collect() periodically.  Pull-based batchers
 	// will call Collect() when a pull request arrives.
 	SDK struct {
 		// current maps `mapkey` to *record.
 		current sync.Map
-
-		// pool is a pool of labelset builders.
-		pool sync.Pool // *bytes.Buffer
 
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
@@ -56,8 +52,11 @@ type (
 		// incremented in `Collect()`.
 		currentEpoch int64
 
-		// exporter is the configured exporter+configuration.
-		exporter export.MetricBatcher
+		// batcher is the configured batcher+configuration.
+		batcher export.MetricBatcher
+
+		// lencoder determines how labels are uniquely encoded.
+		lencoder export.MetricLabelEncoder
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -119,7 +118,7 @@ type (
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
-		// metric was disabled by the exporter.
+		// metric was disabled by the batcher.
 		recorder export.MetricAggregator
 
 		// next contains the next pointer for both the primary
@@ -182,7 +181,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		atomic.AddInt64(&rec.refcount, 1)
 		return rec
 	}
-	rec.recorder = i.meter.exporter.AggregatorFor(rec)
+	rec.recorder = i.meter.batcher.AggregatorFor(rec)
 
 	i.meter.addPrimary(rec)
 	return rec
@@ -200,23 +199,19 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new SDK for the given exporter.  This SDK supports
-// only a single exporter.
+// New constructs a new SDK for the given batcher.  This SDK supports
+// only a single batcher.
 //
 // The SDK does not start any background process to collect itself
-// periodically, this responsbility lies with the exporter, typically,
+// periodically, this responsbility lies with the batcher, typically,
 // depending on the type of export.  For example, a pull-based
-// exporter will call Collect() when it receives a request to scrape
-// current metric values.  A push-based exporter should configure its
+// batcher will call Collect() when it receives a request to scrape
+// current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(exporter export.MetricBatcher) *SDK {
+func New(batcher export.MetricBatcher, lencoder export.MetricLabelEncoder) *SDK {
 	m := &SDK{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &bytes.Buffer{}
-			},
-		},
-		exporter: exporter,
+		batcher:  batcher,
+		lencoder: lencoder,
 	}
 	m.empty.meter = m
 	return m
@@ -228,9 +223,9 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
 	// statsd for labels, allowing an optimization for statsd
-	// exporters.  This could be made configurable in the
+	// batchers.  This could be made configurable in the
 	// constructor, to support the same optimization for different
-	// exporters.
+	// batchers.
 
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -251,24 +246,12 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	}
 	sorted = sorted[0:oi]
 
-	// Serialize.
-	buf := m.pool.Get().(*bytes.Buffer)
-	defer m.pool.Put(buf)
-	buf.Reset()
-	_, _ = buf.WriteRune('|')
-	delimiter := '#'
-	for _, kv := range sorted {
-		_, _ = buf.WriteRune(delimiter)
-		_, _ = buf.WriteString(string(kv.Key))
-		_, _ = buf.WriteRune(':')
-		_, _ = buf.WriteString(kv.Value.Emit())
-		delimiter = ','
-	}
+	encoded := m.lencoder.EncodeLabels(sorted)
 
 	return &labels{
 		meter:   m,
 		sorted:  sorted,
-		encoded: buf.String(),
+		encoded: encoded,
 	}
 }
 
@@ -409,7 +392,7 @@ func (m *SDK) Collect(ctx context.Context) {
 
 func (m *SDK) collect(ctx context.Context, r *record) {
 	if r.recorder != nil {
-		r.recorder.Collect(ctx, r, m.exporter)
+		r.recorder.Collect(ctx, r, m.batcher)
 	}
 }
 

@@ -24,7 +24,8 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
 	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -40,8 +41,8 @@ var (
 
 func main() {
 	selector := simple.New()
-	batcher := ungrouped.New(selector, true)
 	exporter := stdout.New(stdout.Options{PrettyPrint: true})
+	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 	defer pusher.Stop()
@@ -80,18 +81,16 @@ func main() {
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
-		for {
-			gauge.Set(ctx, 1)
+		gauge.Set(ctx, 1)
 
-			meter.RecordBatch(
-				// Note: call-site variables added as context Entries:
-				distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-				commonLabels,
+		meter.RecordBatch(
+			// Note: call-site variables added as context Entries:
+			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			commonLabels,
 
-				oneMetric.Measurement(1.0),
-				measureTwo.Measurement(2.0),
-			)
-		}
+			oneMetric.Measurement(1.0),
+			measureTwo.Measurement(2.0),
+		)
 
 		return tracer.WithSpan(
 			ctx,

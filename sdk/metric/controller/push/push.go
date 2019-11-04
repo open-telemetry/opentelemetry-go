@@ -40,8 +40,14 @@ var _ metric.Provider = &Controller{}
 // using the provider batcher, exporter, period.  The batcher itself
 // is configured with aggregation policy selection.
 func New(batcher export.MetricBatcher, exporter export.MetricExporter, period time.Duration) *Controller {
+	lencoder, _ := exporter.(export.MetricLabelEncoder)
+
+	if lencoder == nil {
+		lencoder = sdk.DefaultLabelEncoder()
+	}
+
 	return &Controller{
-		sdk:      sdk.New(batcher),
+		sdk:      sdk.New(batcher, lencoder),
 		batcher:  batcher,
 		exporter: exporter,
 		ticker:   time.NewTicker(period),

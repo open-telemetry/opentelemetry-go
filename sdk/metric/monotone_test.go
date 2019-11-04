@@ -65,7 +65,7 @@ func TestMonotoneGauge(t *testing.T) {
 	batcher := &monotoneBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher)
+	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
 	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
