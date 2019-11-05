@@ -22,13 +22,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
 const count = 100
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 func TestGaugeNonMonotonic(t *testing.T) {
 	ctx := context.Background()
@@ -36,7 +36,7 @@ func TestGaugeNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
 		var last core.Number
 		for i := 0; i < count; i++ {
@@ -57,7 +57,7 @@ func TestGaugeMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, true)
+		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		small := profile.Random(+1)
 		last := small
@@ -79,7 +79,7 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, true)
+		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first := profile.Random(+1)
 		agg.Update(ctx, first, record)
@@ -102,7 +102,7 @@ func TestGaugeNormalMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -132,7 +132,7 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeMetricKind, profile.NumberKind, true)
+		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first1 := profile.Random(+1)
 		agg1.Update(ctx, first1, record)

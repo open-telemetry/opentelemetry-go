@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 const (

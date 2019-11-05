@@ -21,7 +21,8 @@ import (
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -34,7 +35,7 @@ type Aggregator struct {
 	checkpoint *sdk.DDSketch
 }
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
 func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
@@ -91,7 +92,7 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
@@ -105,7 +106,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
@@ -119,7 +120,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	c.current.Add(number.CoerceToFloat64(kind))
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, d *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn

@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -36,7 +36,7 @@ type updateTest struct {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !ut.absolute)
+	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 
 	agg := New()
 
@@ -106,7 +106,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !mt.absolute)
+	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New()
 	agg2 := New()
@@ -198,7 +198,7 @@ func TestArrayErrors(t *testing.T) {
 
 		ctx := context.Background()
 
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg.Update(ctx, core.Number(0), record)
 
@@ -226,7 +226,7 @@ func TestArrayErrors(t *testing.T) {
 func TestArrayFloat64(t *testing.T) {
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, core.Float64NumberKind, !absolute)
+			batcher, record := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating

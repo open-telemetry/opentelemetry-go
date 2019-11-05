@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -227,18 +227,18 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (f *testFixture) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
+func (f *testFixture) AggregatorFor(record export.Record) export.Aggregator {
 	switch record.Descriptor().MetricKind() {
-	case export.CounterMetricKind:
+	case export.CounterKind:
 		return counter.New()
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		return gauge.New()
 	default:
 		panic("Not implemented for this test")
 	}
 }
 
-func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (f *testFixture) Export(ctx context.Context, record export.Record, agg export.Aggregator) {
 	desc := record.Descriptor()
 	key := testKey{
 		labels:     canonicalizeLabels(record.Labels()),
@@ -253,9 +253,9 @@ func (f *testFixture) Export(ctx context.Context, record export.MetricRecord, ag
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
 	switch desc.MetricKind() {
-	case export.CounterMetricKind:
+	case export.CounterKind:
 		f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsNumber(), time.Time{})
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		gauge := agg.(*gauge.Aggregator)
 		f.impl.storeCollect(actual, gauge.AsNumber(), gauge.Timestamp())
 	default:

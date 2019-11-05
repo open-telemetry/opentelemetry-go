@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )

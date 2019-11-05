@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package export
+package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
@@ -21,26 +21,49 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 )
 
-// MetricAggregator implements a specific aggregation behavior, e.g.,
+// Batcher is responsible for deciding which kind of aggregation
+// to use and gathering exported results from the SDK.  The standard SDK
+// supports binding only one of these interfaces, i.e., a single exporter.
+//
+// Multiple-exporters could be implemented by implementing this interface
+// for a group of Batcher.
+type Batcher interface {
+	// AggregatorFor should return the kind of aggregator
+	// suited to the requested export.  Returning `nil`
+	// indicates to ignore the metric update.
+	//
+	// Note: This is context-free because the handle should not be
+	// bound to the incoming context.  This call should not block.
+	AggregatorFor(Record) Aggregator
+
+	// Export receives pairs of records and aggregators
+	// during the SDK Collect().  Exporter implementations
+	// must access the specific aggregator to receive the
+	// exporter data, since the format of the data varies
+	// by aggregation.
+	Export(context.Context, Record, Aggregator)
+}
+
+// Aggregator implements a specific aggregation behavior, e.g.,
 // a counter, a gauge, a histogram.
-type MetricAggregator interface {
+type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.
-	Update(context.Context, core.Number, MetricRecord)
+	Update(context.Context, core.Number, Record)
 
 	// Collect is called during the SDK Collect() to
 	// finish one period of aggregation.  Collect() is
 	// called in a single-threaded context.  Update()
 	// calls may arrive concurrently.
-	Collect(context.Context, MetricRecord, MetricBatcher)
+	Collect(context.Context, Record, Batcher)
 
 	// Merge combines state from two aggregators into one.
-	Merge(MetricAggregator, *Descriptor)
+	Merge(Aggregator, *Descriptor)
 }
 
-// MetricRecord is the unit of export, pairing a metric
+// Record is the unit of export, pairing a metric
 // instrument and set of labels.
-type MetricRecord interface {
+type Record interface {
 	// Descriptor() describes the metric instrument.
 	Descriptor() *Descriptor
 
@@ -49,19 +72,19 @@ type MetricRecord interface {
 	Labels() []core.KeyValue
 }
 
-// MetricKind describes the kind of instrument.
-type MetricKind int8
+// Kind describes the kind of instrument.
+type Kind int8
 
 const (
-	CounterMetricKind MetricKind = iota
-	GaugeMetricKind
-	MeasureMetricKind
+	CounterKind Kind = iota
+	GaugeKind
+	MeasureKind
 )
 
 // Descriptor describes a metric instrument to the exporter.
 type Descriptor struct {
 	name        string
-	metricKind  MetricKind
+	metricKind  Kind
 	keys        []core.Key
 	description string
 	unit        unit.Unit
@@ -70,10 +93,10 @@ type Descriptor struct {
 }
 
 // NewDescriptor builds a new descriptor, for use by `Meter`
-// implementations.
+// implementations to interface with a metric export pipeline.
 func NewDescriptor(
 	name string,
-	metricKind MetricKind,
+	metricKind Kind,
 	keys []core.Key,
 	description string,
 	unit unit.Unit,
@@ -95,7 +118,7 @@ func (d *Descriptor) Name() string {
 	return d.name
 }
 
-func (d *Descriptor) MetricKind() MetricKind {
+func (d *Descriptor) MetricKind() Kind {
 	return d.metricKind
 }
 

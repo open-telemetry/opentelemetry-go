@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -30,7 +30,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg := New()
 
@@ -66,7 +66,7 @@ func TestMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg1 := New()
 		agg2 := New()

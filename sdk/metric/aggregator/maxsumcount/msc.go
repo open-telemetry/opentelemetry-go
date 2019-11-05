@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type (
@@ -36,7 +36,7 @@ type (
 	}
 )
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // New returns a new measure aggregator for computing max, sum, and count.
 func New() *Aggregator {
@@ -59,7 +59,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -78,7 +78,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
@@ -102,7 +102,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	}
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn

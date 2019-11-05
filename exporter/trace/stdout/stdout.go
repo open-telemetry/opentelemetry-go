@@ -20,7 +20,7 @@ import (
 	"io"
 	"os"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // Options are the options to be used when initializing a stdout export.

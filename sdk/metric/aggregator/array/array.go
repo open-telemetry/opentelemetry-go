@@ -22,7 +22,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -37,7 +37,7 @@ type (
 	Points []core.Number
 )
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 func New() *Aggregator {
 	return &Aggregator{}
@@ -68,7 +68,7 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()
@@ -87,7 +87,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	exp.Export(ctx, rec, c)
 }
 
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
@@ -107,7 +107,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 	c.lock.Unlock()
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		// TODO warn
