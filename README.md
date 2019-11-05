@@ -36,23 +36,21 @@ import (
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func initTracer() {
-	sdktrace.Register()
-
 	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	sdktrace.RegisterSpanProcessor(ssp)
-
-	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	sdktrace.ApplyConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()})
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	global.SetTraceProvider(tp)
 }
 
 func main() {
@@ -94,15 +92,15 @@ for the Go library. The first version of the release isn't guaranteed to conform
 to a specific version of the specification, and future releases will not
 attempt to maintain backward compatibility with the alpha release.
 
-| Component                   | Version | Target Date     |
-| --------------------------- | ------- | --------------- |
-| Tracing API                 | Alpha   | October 28 2019 |
-| Tracing SDK                 | Alpha   | October 28 2019 |
-| Metrics API                 | Alpha   | October 28 2019 |
-| Metrics SDK                 | Alpha   | October 28 2019 |
-| Zipkin Trace Exporter       | Alpha   | Unknown         |
-| Jaeger Trace Exporter       | Alpha   | October 28 2019 |
-| Prometheus Metrics Exporter | Alpha   | October 28 2019 |
-| Trace Context Propagation   | Alpha   | Unknown         |
-| OpenTracing Bridge          | Alpha   | October         |
-| OpenCensus Bridge           | Alpha   | Unknown         |
+| Component                   | Version      | Target Date     | Release Date     |
+| --------------------------- | ------------ | --------------- | ---------------- |
+| Tracing API                 | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
+| Tracing SDK                 | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
+| Metrics API                 | Alpha        | October 28 2019 | -                |
+| Metrics SDK                 | Alpha        | October 28 2019 | -                |
+| Zipkin Trace Exporter       | Alpha        | Unknown         | -                |
+| Jaeger Trace Exporter       | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
+| Prometheus Metrics Exporter | Alpha        | October 28 2019 | -                |
+| Trace Context Propagation   | Alpha v0.1.0 | Unknown         | November 05 2019 |
+| OpenTracing Bridge          | Alpha v0.1.0 | October         | November 05 2019 |
+| OpenCensus Bridge           | Alpha        | Unknown         | -                |
