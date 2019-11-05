@@ -187,7 +187,7 @@ func TestUnaryServerInterceptor(t *testing.T) {
 	for _, c := range grpcCodes {
 		code := c // needs a separate variable in order to be parallelizable
 
-		t.Run(fmt.Sprintf("sets the appropriate status on the span for error code %v", code), func(t *testing.T) {
+		t.Run(fmt.Sprintf("sets the appropriate status on the span for status code %v", code), func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
