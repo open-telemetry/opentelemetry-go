@@ -17,12 +17,12 @@ package testtrace
 import (
 	"encoding/binary"
 
-	"go.opentelemetry.io/api/core"
+	"go.opentelemetry.io/otel/api/core"
 )
 
 type Generator interface {
 	TraceID() core.TraceID
-	SpanID() uint64
+	SpanID() core.SpanID
 }
 
 var _ Generator = (*CountGenerator)(nil)
@@ -46,14 +46,18 @@ func (g *CountGenerator) TraceID() core.TraceID {
 
 	var traceID core.TraceID
 
-	binary.PutUvarint(traceID[0:8], g.traceIDLow)
-	binary.PutUvarint(traceID[8:], g.traceIDHigh)
+	binary.BigEndian.PutUint64(traceID[0:8], g.traceIDLow)
+	binary.BigEndian.PutUint64(traceID[8:], g.traceIDHigh)
 
 	return traceID
 }
 
-func (g *CountGenerator) SpanID() uint64 {
+func (g *CountGenerator) SpanID() core.SpanID {
 	g.spanID++
 
-	return g.spanID
+	var spanID core.SpanID
+
+	binary.BigEndian.PutUint64(spanID[:], g.spanID)
+
+	return spanID
 }

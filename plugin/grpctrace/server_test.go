@@ -27,11 +27,11 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/api/trace/testtrace"
-	"go.opentelemetry.io/internal/matchers"
-	"go.opentelemetry.io/plugin/grpctrace"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/internal/matchers"
+	"go.opentelemetry.io/otel/plugin/grpctrace"
 )
 
 func TestUnaryServerInterceptor(t *testing.T) {

@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 var _ trace.Tracer = (*Tracer)(nil)

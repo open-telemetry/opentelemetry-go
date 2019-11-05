@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 func NewUnaryServerInterceptor(opts ...UnaryServerInterceptorOption) grpc.UnaryServerInterceptor {

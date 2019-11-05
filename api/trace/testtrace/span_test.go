@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/api/trace/testtrace"
-	"go.opentelemetry.io/internal/matchers"
+	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/internal/matchers"
 )
 
 func TestSpan(t *testing.T) {

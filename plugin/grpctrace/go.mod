@@ -1,10 +1,10 @@
-module go.opentelemetry.io/plugin/grpctrace
+module go.opentelemetry.io/otel/plugin/grpctrace
 
 go 1.13
 
-replace go.opentelemetry.io => ../..
+replace go.opentelemetry.io/otel => ../..
 
 require (
-	go.opentelemetry.io v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel v0.1.0
 	google.golang.org/grpc v1.24.0
 )

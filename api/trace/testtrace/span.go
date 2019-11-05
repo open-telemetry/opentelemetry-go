@@ -21,9 +21,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/distributedcontext"
-	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 var _ trace.Span = (*Span)(nil)
@@ -90,10 +89,6 @@ func (s *Span) SetAttributes(attrs ...core.KeyValue) {
 
 	s.attributes = append(s.attributes, attrs...)
 }
-
-func (s *Span) ModifyAttribute(mutator distributedcontext.Mutator) {}
-
-func (s *Span) ModifyAttributes(mutators ...distributedcontext.Mutator) {}
 
 func (s *Span) Name() string {
 	return s.name

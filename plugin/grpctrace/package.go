@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpctrace // import "go.opentelemetry.io/plugin/grpctrace"
+package grpctrace // import "go.opentelemetry.io/otel/plugin/grpctrace"
 
 import (
 	"path"
