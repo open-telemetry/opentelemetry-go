@@ -22,6 +22,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 type (
@@ -32,15 +35,39 @@ type (
 		URL string
 
 		// For packet-oriented transports, this limits the packet size.
-		MaxPacket int
+		MaxPacketSize int
 	}
 
 	Exporter struct {
 		config Config
+
+		buffer bytes.Buffer
 	}
 
 	formatCode string
 )
+
+var (
+	_ export.MetricExporter     = &Exporter{}
+	_ export.MetricLabelEncoder = &Exporter{}
+)
+
+func New(config Config) *Exporter {
+
+}
+
+func (e *Exporter) EncodeLabels([]core.KeyValue) string {
+	return ""
+}
+
+func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
+	producer.Foreach(e.exportOne)
+}
+
+func (e *Exporter) exportOne(MetricAggregator, ProducedRecord) {
+}
+
+// @@@ DEAD CODE BELOW
 
 const (
 	formatCounter   formatCode = "c"
