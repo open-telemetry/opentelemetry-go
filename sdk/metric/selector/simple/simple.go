@@ -15,7 +15,7 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simpler"
 
 import (
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
@@ -25,15 +25,15 @@ type selector struct{}
 
 // New returns a simple aggregation selector that uses counter, gauge,
 // and maxsumcount behavior for the three kinds of metric.
-func New() export.MetricAggregationSelector {
+func New() export.AggregationSelector {
 	return selector{}
 }
 
-func (s selector) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
+func (s selector) AggregatorFor(record export.Record) export.Aggregator {
 	switch record.Descriptor().MetricKind() {
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		return gauge.New()
-	case export.MeasureMetricKind:
+	case export.MeasureKind:
 		return maxsumcount.New()
 	default:
 		return counter.New()

@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -45,13 +45,13 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
+func (bf *benchFixture) AggregatorFor(rec export.Record) export.Aggregator {
 	switch rec.Descriptor().MetricKind() {
-	case export.CounterMetricKind:
+	case export.CounterKind:
 		return counter.New()
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		return gauge.New()
-	case export.MeasureMetricKind:
+	case export.MeasureKind:
 		if strings.HasSuffix(rec.Descriptor().Name(), "maxsumcount") {
 			return maxsumcount.New()
 		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
@@ -63,10 +63,10 @@ func (bf *benchFixture) AggregatorFor(rec export.MetricRecord) export.MetricAggr
 	return nil
 }
 
-func (bf *benchFixture) Process(ctx context.Context, rec export.MetricRecord, agg export.MetricAggregator) {
+func (bf *benchFixture) Process(ctx context.Context, rec export.Record, agg export.Aggregator) {
 }
 
-func (bf *benchFixture) ReadCheckpoint() export.MetricProducer {
+func (bf *benchFixture) ReadCheckpoint() export.Producer {
 	return nil
 }
 

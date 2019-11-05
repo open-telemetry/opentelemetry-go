@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -63,7 +63,7 @@ type expoLine struct {
 	Timestamp time.Time   `json:"time,omitempty"`
 }
 
-var _ export.MetricExporter = &Exporter{}
+var _ export.Exporter = &Exporter{}
 
 func New(options Options) *Exporter {
 	if options.File == nil {
@@ -74,9 +74,9 @@ func New(options Options) *Exporter {
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
+func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 	var batch expoBatch
-	producer.Foreach(func(agg export.MetricAggregator, record export.ProducedRecord) {
+	producer.Foreach(func(agg export.Aggregator, record export.ProducedRecord) {
 		desc := record.Descriptor
 		labels := record.Labels // HERE TODO
 

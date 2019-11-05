@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -33,7 +33,7 @@ func TestCounterMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -54,7 +54,7 @@ func TestCounterMonotonicNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		for i := 0; i < count; i++ {
 			agg.Update(ctx, profile.Random(-1), record)
@@ -74,7 +74,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, true)
+		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -99,7 +99,7 @@ func TestCounterMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {

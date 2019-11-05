@@ -18,12 +18,12 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type (
 	Batcher struct {
-		selector export.MetricAggregationSelector
+		selector export.AggregationSelector
 		batchMap batchMap
 		stateful bool
 	}
@@ -34,17 +34,17 @@ type (
 	}
 
 	batchValue struct {
-		aggregator export.MetricAggregator
+		aggregator export.Aggregator
 		labels     []core.KeyValue
 	}
 
 	batchMap map[batchKey]batchValue
 )
 
-var _ export.MetricBatcher = &Batcher{}
-var _ export.MetricProducer = batchMap{}
+var _ export.Batcher = &Batcher{}
+var _ export.Producer = batchMap{}
 
-func New(selector export.MetricAggregationSelector, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, stateful bool) *Batcher {
 	return &Batcher{
 		selector: selector,
 		batchMap: batchMap{},
@@ -52,11 +52,11 @@ func New(selector export.MetricAggregationSelector, stateful bool) *Batcher {
 	}
 }
 
-func (b *Batcher) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
+func (b *Batcher) AggregatorFor(record export.Record) export.Aggregator {
 	return b.selector.AggregatorFor(record)
 }
 
-func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (b *Batcher) Process(_ context.Context, record export.Record, agg export.Aggregator) {
 	desc := record.Descriptor()
 	key := batchKey{
 		descriptor: desc,
@@ -73,7 +73,7 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	}
 }
 
-func (b *Batcher) ReadCheckpoint() export.MetricProducer {
+func (b *Batcher) ReadCheckpoint() export.Producer {
 	checkpoint := b.batchMap
 	if !b.stateful {
 		b.batchMap = batchMap{}
@@ -81,7 +81,7 @@ func (b *Batcher) ReadCheckpoint() export.MetricProducer {
 	return checkpoint
 }
 
-func (c batchMap) Foreach(f func(export.MetricAggregator, export.ProducedRecord)) {
+func (c batchMap) Foreach(f func(export.Aggregator, export.ProducedRecord)) {
 	for key, value := range c {
 		pr := export.ProducedRecord{
 			Descriptor: key.descriptor,

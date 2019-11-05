@@ -21,11 +21,11 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-var _ export.MetricBatcher = &metricBatcher{}
-var _ export.MetricRecord = &metricRecord{}
+var _ export.Batcher = &metricBatcher{}
+var _ export.Record = &metricRecord{}
 
 const Magnitude = 1000
 
@@ -59,7 +59,7 @@ type metricRecord struct {
 	descriptor *export.Descriptor
 }
 
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (export.MetricBatcher, export.MetricRecord) {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (export.Batcher, export.Record) {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
 	return &metricBatcher{}, &metricRecord{descriptor: desc}
 }
@@ -76,15 +76,15 @@ func (t *metricRecord) EncodedLabels() string {
 	return ""
 }
 
-func (m *metricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
+func (m *metricBatcher) AggregatorFor(rec export.Record) export.Aggregator {
 	return nil
 }
 
-func (m *metricBatcher) ReadCheckpoint() export.MetricProducer {
+func (m *metricBatcher) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (m *metricBatcher) Process(context.Context, export.MetricRecord, export.MetricAggregator) {
+func (m *metricBatcher) Process(context.Context, export.Record, export.Aggregator) {
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

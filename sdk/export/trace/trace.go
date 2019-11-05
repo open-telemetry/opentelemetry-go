@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package export
+package trace // import "go.opentelemetry.io/otel/sdk/export/trace"
 
 import (
+	"context"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -22,6 +23,27 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
+
+// SpanSyncer is a type for functions that receive a single sampled trace span.
+//
+// The ExportSpan method is called synchronously. Therefore, it should not take
+// forever to process the span.
+//
+// The SpanData should not be modified.
+type SpanSyncer interface {
+	ExportSpan(context.Context, *SpanData)
+}
+
+// SpanBatcher is a type for functions that receive batched of sampled trace
+// spans.
+//
+// The ExportSpans method is called asynchronously. However its should not take
+// forever to process the spans.
+//
+// The SpanData should not be modified.
+type SpanBatcher interface {
+	ExportSpans(context.Context, []*SpanData)
+}
 
 // SpanData contains all the information collected by a span.
 type SpanData struct {

@@ -24,12 +24,12 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type (
 	// SDK implements the OpenTelemetry Meter API.  The SDK is
-	// bound to a single export.MetricBatcher in `New()`.
+	// bound to a single export.Batcher in `New()`.
 	//
 	// The SDK supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
@@ -53,10 +53,10 @@ type (
 		currentEpoch int64
 
 		// batcher is the configured batcher+configuration.
-		batcher export.MetricBatcher
+		batcher export.Batcher
 
 		// lencoder determines how labels are uniquely encoded.
-		lencoder export.MetricLabelEncoder
+		lencoder export.LabelEncoder
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -118,8 +118,8 @@ type (
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
-		// metric was disabled by the batcher.
-		recorder export.MetricAggregator
+		// metric was disabled by the exporter.
+		recorder export.Aggregator
 
 		// next contains the next pointer for both the primary
 		// and the reclaim lists.
@@ -140,11 +140,11 @@ type (
 )
 
 var (
-	_ api.Meter           = &SDK{}
-	_ api.LabelSet        = &labels{}
-	_ api.InstrumentImpl  = &instrument{}
-	_ api.HandleImpl      = &record{}
-	_ export.MetricRecord = &record{}
+	_ api.Meter          = &SDK{}
+	_ api.LabelSet       = &labels{}
+	_ api.InstrumentImpl = &instrument{}
+	_ api.HandleImpl     = &record{}
+	_ export.Record      = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -208,7 +208,7 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.MetricBatcher, lencoder export.MetricLabelEncoder) *SDK {
+func New(batcher export.Batcher, lencoder export.LabelEncoder) *SDK {
 	m := &SDK{
 		batcher:  batcher,
 		lencoder: lencoder,
@@ -282,19 +282,19 @@ func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKin
 func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyCounterOptions(&opts, cos...)
-	return m.newInstrument(name, export.CounterMetricKind, numberKind, &opts)
+	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
 }
 
 func (m *SDK) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyGaugeOptions(&opts, gos...)
-	return m.newInstrument(name, export.GaugeMetricKind, numberKind, &opts)
+	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
 }
 
 func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyMeasureOptions(&opts, mos...)
-	return m.newInstrument(name, export.MeasureMetricKind, numberKind, &opts)
+	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
 }
 
 func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
@@ -341,7 +341,7 @@ func (m *SDK) saveFromReclaim(rec *record) {
 // Collect traverses the list of active records and exports data for
 // each active instrument.  Collect() may not be called concurrently.
 //
-// During the collection pass, the export.MetricBatcher will receive
+// During the collection pass, the export.Batcher will receive
 // one Export() call per current aggregation.
 func (m *SDK) Collect(ctx context.Context) {
 	m.collectLock.Lock()

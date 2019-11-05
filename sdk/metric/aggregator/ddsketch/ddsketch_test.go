@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -33,8 +33,8 @@ type updateTest struct {
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !ut.absolute)
 
+	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 	agg := New(NewDefaultConfig(), record.Descriptor())
 
 	all := test.NewNumbers(profile.NumberKind)
@@ -96,8 +96,7 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !mt.absolute)
+	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New(NewDefaultConfig(), record.Descriptor())
 	agg2 := New(NewDefaultConfig(), record.Descriptor())

@@ -18,20 +18,20 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type (
 	Batcher struct {
-		selector export.MetricAggregationSelector
-		lencoder export.MetricLabelEncoder
+		selector export.AggregationSelector
+		lencoder export.LabelEncoder
 		stateful bool
 		dki      dkiMap
 		agg      aggMap
 	}
 
 	aggEntry struct {
-		aggregator export.MetricAggregator
+		aggregator export.Aggregator
 		descriptor *export.Descriptor
 		labels     []core.KeyValue
 	}
@@ -41,14 +41,14 @@ type (
 
 	producer struct {
 		aggMap   aggMap
-		lencoder export.MetricLabelEncoder
+		lencoder export.LabelEncoder
 	}
 )
 
-var _ export.MetricBatcher = &Batcher{}
-var _ export.MetricProducer = &producer{}
+var _ export.Batcher = &Batcher{}
+var _ export.Producer = &producer{}
 
-func New(selector export.MetricAggregationSelector, lencoder export.MetricLabelEncoder, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, lencoder export.LabelEncoder, stateful bool) *Batcher {
 	return &Batcher{
 		selector: selector,
 		lencoder: lencoder,
@@ -58,11 +58,11 @@ func New(selector export.MetricAggregationSelector, lencoder export.MetricLabelE
 	}
 }
 
-func (b *Batcher) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
+func (b *Batcher) AggregatorFor(record export.Record) export.Aggregator {
 	return b.selector.AggregatorFor(record)
 }
 
-func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
+func (b *Batcher) Process(_ context.Context, record export.Record, agg export.Aggregator) {
 	desc := record.Descriptor()
 	keys := desc.Keys()
 
@@ -113,7 +113,7 @@ func (b *Batcher) Process(_ context.Context, record export.MetricRecord, agg exp
 	}
 }
 
-func (b *Batcher) ReadCheckpoint() export.MetricProducer {
+func (b *Batcher) ReadCheckpoint() export.Producer {
 	checkpoint := b.agg
 	if !b.stateful {
 		b.agg = aggMap{}
@@ -124,7 +124,7 @@ func (b *Batcher) ReadCheckpoint() export.MetricProducer {
 	}
 }
 
-func (p *producer) Foreach(f func(export.MetricAggregator, export.ProducedRecord)) {
+func (p *producer) Foreach(f func(export.Aggregator, export.ProducedRecord)) {
 	for encoded, entry := range p.aggMap {
 		pr := export.ProducedRecord{
 			Descriptor:    entry.descriptor,

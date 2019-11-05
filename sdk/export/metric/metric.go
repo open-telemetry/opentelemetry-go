@@ -21,9 +21,32 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 )
 
-// MetricAggregationSelector supports selecting the kind of aggregator
+// Batcher is responsible for deciding which kind of aggregation
+// to use and gathering exported results from the SDK.  The standard SDK
+// supports binding only one of these interfaces, i.e., a single exporter.
+//
+// Multiple-exporters could be implemented by implementing this interface
+// for a group of Batcher.
+type Batcher interface {
+	// AggregationSelector is responsible for selecting the
+	// concrete type of aggregation used for a metric in the SDK.
+	AggregationSelector
+
+	// Process receives pairs of records and aggregators
+	// during the SDK Collect().  Exporter implementations
+	// must access the specific aggregator to receive the
+	// exporter data, since the format of the data varies
+	// by aggregation.
+	Process(context.Context, Record, Aggregator)
+
+	// ReadCheckpoint is the interface used by exporters to access
+	// aggregate checkpoints after collection.
+	ReadCheckpoint() Producer
+}
+
+// AggregationSelector supports selecting the kind of aggregator
 // to use at runtime for a specific metric instrument.
-type MetricAggregationSelector interface {
+type AggregationSelector interface {
 	// AggregatorFor should return the kind of aggregator suited
 	// to the requested export.  Returning `nil` indicates to
 	// ignore this metric instrument.  Although it is not
@@ -32,29 +55,29 @@ type MetricAggregationSelector interface {
 	//
 	// Note: This is context-free because the handle should not be
 	// bound to the incoming context.  This call should not block.
-	AggregatorFor(MetricRecord) MetricAggregator
+	AggregatorFor(Record) Aggregator
 }
 
-// MetricAggregator implements a specific aggregation behavior, e.g.,
+// Aggregator implements a specific aggregation behavior, e.g.,
 // a counter, a gauge, a histogram.
-type MetricAggregator interface {
+type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.
-	Update(context.Context, core.Number, MetricRecord)
+	Update(context.Context, core.Number, Record)
 
 	// Collect is called during the SDK Collect() to
 	// finish one period of aggregation.  Collect() is
 	// called in a single-threaded context.  Update()
 	// calls may arrive concurrently.
-	Collect(context.Context, MetricRecord, MetricBatcher)
+	Collect(context.Context, Record, Batcher)
 
 	// Merge combines state from two aggregators into one.
-	Merge(MetricAggregator, *Descriptor)
+	Merge(Aggregator, *Descriptor)
 }
 
-// MetricRecord is the unit of export, pairing a metric
+// Record is the unit of export, pairing a metric
 // instrument and set of labels.
-type MetricRecord interface {
+type Record interface {
 	// Descriptor() describes the metric instrument.
 	Descriptor() *Descriptor
 
@@ -67,18 +90,18 @@ type MetricRecord interface {
 	EncodedLabels() string
 }
 
-// MetricExporter handles presentation of the checkpoint of aggregate
+// Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.
-type MetricExporter interface {
-	Export(context.Context, MetricProducer)
+type Exporter interface {
+	Export(context.Context, Producer)
 }
 
-// MetricLabelEncoder enables an optimization for export pipelines that
+// LabelEncoder enables an optimization for export pipelines that
 // use text to encode their label sets.  This interface allows configuring
-// the encoder used in the SDK and/or the MetricBatcher so that by the
+// the encoder used in the SDK and/or the Batcher so that by the
 // time the exporter is called, the same encoding may be used.
-type MetricLabelEncoder interface {
+type LabelEncoder interface {
 	EncodeLabels([]core.KeyValue) string
 }
 
@@ -86,23 +109,23 @@ type MetricLabelEncoder interface {
 type ProducedRecord struct {
 	Descriptor    *Descriptor
 	Labels        []core.KeyValue
-	Encoder       MetricLabelEncoder
+	Encoder       LabelEncoder
 	EncodedLabels string
 }
 
-// MetricProducer allows a MetricExporter to access a checkpoint of
+// Producer allows a Exporter to access a checkpoint of
 // aggregated metrics one at a time.
-type MetricProducer interface {
-	Foreach(func(MetricAggregator, ProducedRecord))
+type Producer interface {
+	Foreach(func(Aggregator, ProducedRecord))
 }
 
-// MetricKind describes the kind of instrument.
+// Kind describes the kind of instrument.
 type MetricKind int8
 
 const (
-	CounterMetricKind MetricKind = iota
-	GaugeMetricKind
-	MeasureMetricKind
+	CounterKind MetricKind = iota
+	GaugeKind
+	MeasureKind
 )
 
 // Descriptor describes a metric instrument to the exporter.
