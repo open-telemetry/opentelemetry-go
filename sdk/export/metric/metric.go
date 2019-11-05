@@ -93,7 +93,7 @@ type Descriptor struct {
 }
 
 // NewDescriptor builds a new descriptor, for use by `Meter`
-// implementations.
+// implementations to interface with a metric export pipeline.
 func NewDescriptor(
 	name string,
 	metricKind Kind,
