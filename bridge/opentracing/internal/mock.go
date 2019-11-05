@@ -84,17 +84,6 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanKind := spanOpts.SpanKind
-	switch spanKind {
-	case oteltrace.SpanKindInternal,
-		oteltrace.SpanKindServer,
-		oteltrace.SpanKindClient,
-		oteltrace.SpanKindProducer,
-		oteltrace.SpanKindConsumer:
-		// valid
-	default:
-		spanKind = oteltrace.SpanKindInternal
-	}
 	spanContext := otelcore.SpanContext{
 		TraceID:    t.getTraceID(ctx, &spanOpts),
 		SpanID:     t.getSpanID(),
@@ -112,7 +101,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		EndTime:      time.Time{},
 		ParentSpanID: t.getParentSpanID(ctx, &spanOpts),
 		Events:       nil,
-		SpanKind:     spanKind,
+		SpanKind:     oteltrace.ValidateSpanKind(spanOpts.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.SetCurrentSpan(ctx, span)
