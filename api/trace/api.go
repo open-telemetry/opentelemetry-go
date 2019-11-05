@@ -142,15 +142,56 @@ type Link struct {
 
 // SpanKind represents the role of a Span inside a Trace. Often, this defines how a Span
 // will be processed and visualized by various backends.
-type SpanKind string
+type SpanKind int
 
 const (
-	SpanKindInternal SpanKind = "internal"
-	SpanKindServer   SpanKind = "server"
-	SpanKindClient   SpanKind = "client"
-	SpanKindProducer SpanKind = "producer"
-	SpanKindConsumer SpanKind = "consumer"
+	// As a convenience, these match the proto definition, see
+	// opentelemetry/proto/trace/v1/trace.proto
+	//
+	// The unspecified value is not a valid `SpanKind`.  Use
+	// `ValidateSpanKind()` to coerce a span kind to a valid
+	// value.
+	SpanKindUnspecified SpanKind = 0
+	SpanKindInternal    SpanKind = 1
+	SpanKindServer      SpanKind = 2
+	SpanKindClient      SpanKind = 3
+	SpanKindProducer    SpanKind = 4
+	SpanKindConsumer    SpanKind = 5
 )
+
+// ValidateSpanKind returns a valid span kind value.  This will coerce
+// invalid values into the default value, SpanKindInternal.
+func ValidateSpanKind(spanKind SpanKind) SpanKind {
+	switch spanKind {
+	case SpanKindInternal,
+		SpanKindServer,
+		SpanKindClient,
+		SpanKindProducer,
+		SpanKindConsumer:
+		// valid
+		return spanKind
+	default:
+		return SpanKindInternal
+	}
+}
+
+// String returns the specified name of the SpanKind in lower-case.
+func (sk SpanKind) String() string {
+	switch sk {
+	case SpanKindInternal:
+		return "internal"
+	case SpanKindServer:
+		return "server"
+	case SpanKindClient:
+		return "client"
+	case SpanKindProducer:
+		return "producer"
+	case SpanKindConsumer:
+		return "consumer"
+	default:
+		return "unspecified"
+	}
+}
 
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absence of this option, wall clock time is used as start time.

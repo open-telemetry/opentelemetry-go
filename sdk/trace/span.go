@@ -321,14 +321,10 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	sk := o.SpanKind
-	if sk == "" {
-		sk = apitrace.SpanKindInternal
-	}
 	span.data = &export.SpanData{
 		SpanContext:     span.spanContext,
 		StartTime:       startTime,
-		SpanKind:        sk,
+		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
 		Name:            name,
 		HasRemoteParent: remoteParent,
 	}
