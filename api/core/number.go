@@ -507,6 +507,8 @@ func (n Number) CompareInt64(i int64) int {
 // returns the typical result of the compare function: -1 if the value
 // is less than the other, 0 if both are equal, 1 if the value is
 // greater than the other.
+//
+// Do not compare NaN values.
 func (n Number) CompareFloat64(f float64) int {
 	this := n.AsFloat64()
 	if this < f {

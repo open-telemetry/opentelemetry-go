@@ -285,7 +285,32 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 	}
 }
 
-// TODO: [rghetia] Equivalent of SpanKind Test.
+func TestSetSpanAttributesOnStart(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(key.String("key1", "value1")))
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "StartSpanAttribute/span0",
+		Attributes: []core.KeyValue{
+			key.String("key1", "value1"),
+		},
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesOnStart: -got +want %s", diff)
+	}
+}
 
 func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
@@ -307,7 +332,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 		},
-		SpanKind:        "internal",
+		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -341,7 +366,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
 		},
-		SpanKind:              "internal",
+		SpanKind:              apitrace.SpanKindInternal,
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}
@@ -387,7 +412,7 @@ func TestEvents(t *testing.T) {
 			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -438,7 +463,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
-		SpanKind:                 "internal",
+		SpanKind:                 apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -478,7 +503,7 @@ func TestAddLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
@@ -519,7 +544,7 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: "internal",
+		SpanKind: apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -562,7 +587,7 @@ func TestLinksOverLimit(t *testing.T) {
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
-		SpanKind:         "internal",
+		SpanKind:         apitrace.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -609,7 +634,7 @@ func TestSetSpanStatus(t *testing.T) {
 		},
 		ParentSpanID:    sid,
 		Name:            "SpanStatus/span0",
-		SpanKind:        "internal",
+		SpanKind:        apitrace.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
 	}
@@ -655,20 +680,20 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string) apitrace.Span {
-	return startNamedSpan(tp, trName, "span0")
+func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
+	return startNamedSpan(tp, trName, "span0", args...)
 }
 
 // startNamed Span is a test utility func that starts a span with a
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
+	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
 	_, span := tp.GetTracer(trName).Start(
 		context.Background(),
 		name,
-		apitrace.ChildOf(remoteSpanContext()),
-		apitrace.WithRecord(),
+		args...,
 	)
 	return span
 }

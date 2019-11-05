@@ -12,17 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package httptrace
+package aggregator
 
-import (
-	"context"
-	"net/http"
-	"net/http/httptrace"
+import "fmt"
+
+var (
+	ErrEmptyDataSet    = fmt.Errorf("The result is not defined on an empty data set")
+	ErrInvalidQuantile = fmt.Errorf("The requested quantile is out of range")
 )
-
-// Client
-func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request) {
-	ctx = httptrace.WithClientTrace(ctx, NewClientTrace(ctx))
-	req = req.WithContext(ctx)
-	return ctx, req
-}
