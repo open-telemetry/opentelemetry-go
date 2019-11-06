@@ -58,8 +58,8 @@ type mockSpan struct{}
 var _ trace.Span = mockSpan{}
 
 // SpanContext returns an invalid span context.
-func (mockSpan) SpanContext() core.SpanContext {
-	return core.EmptySpanContext()
+func (mockSpan) SpanContext() otel.SpanContext {
+	return otel.EmptySpanContext()
 }
 
 // IsRecording always returns false for mockSpan.
@@ -80,11 +80,11 @@ func (mockSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (mockSpan) SetAttribute(attribute core.KeyValue) {
+func (mockSpan) SetAttribute(attribute otel.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
+func (mockSpan) SetAttributes(attributes ...otel.KeyValue) {
 }
 
 // End does nothing.
@@ -97,11 +97,11 @@ func (mockSpan) Tracer() trace.Tracer {
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 }
 
 // AddLink does nothing.
@@ -109,5 +109,5 @@ func (mockSpan) AddLink(link trace.Link) {
 }
 
 // Link does nothing.
-func (mockSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+func (mockSpan) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 }

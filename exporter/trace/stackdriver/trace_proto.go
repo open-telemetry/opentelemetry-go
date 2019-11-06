@@ -154,7 +154,7 @@ func timestampProto(t time.Time) *timestamppb.Timestamp {
 
 // copyAttributes copies a map of attributes to a proto map field.
 // It creates the map if it is nil.
-func copyAttributes(out **tracepb.Span_Attributes, in []core.KeyValue) {
+func copyAttributes(out **tracepb.Span_Attributes, in []otel.KeyValue) {
 	if len(in) == 0 {
 		return
 	}
@@ -192,25 +192,25 @@ func copyAttributes(out **tracepb.Span_Attributes, in []core.KeyValue) {
 	(*out).DroppedAttributesCount = dropped
 }
 
-func attributeValue(kv core.KeyValue) *tracepb.AttributeValue {
+func attributeValue(kv otel.KeyValue) *tracepb.AttributeValue {
 	value := kv.Value
 	switch value.Type() {
-	case core.BOOL:
+	case otel.BOOL:
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_BoolValue{BoolValue: value.AsBool()},
 		}
-	case core.INT64:
+	case otel.INT64:
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_IntValue{IntValue: value.AsInt64()},
 		}
-	case core.FLOAT64:
+	case otel.FLOAT64:
 		// TODO: set double value if Stackdriver Trace support it in the future.
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_StringValue{
 				StringValue: trunc(strconv.FormatFloat(value.AsFloat64(), 'f', -1, 64),
 					maxAttributeStringValue)},
 		}
-	case core.STRING:
+	case otel.STRING:
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_StringValue{StringValue: trunc(value.AsString(), maxAttributeStringValue)},
 		}

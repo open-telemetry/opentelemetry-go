@@ -200,10 +200,10 @@ func TestArrayErrors(t *testing.T) {
 
 		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg.Update(ctx, core.Number(0), record)
+		agg.Update(ctx, otel.Number(0), record)
 
-		if profile.NumberKind == core.Float64NumberKind {
-			agg.Update(ctx, core.NewFloat64Number(math.NaN()), record)
+		if profile.NumberKind == otel.Float64NumberKind {
+			agg.Update(ctx, otel.NewFloat64Number(math.NaN()), record)
 		}
 		agg.Collect(ctx, record, batcher)
 
@@ -211,7 +211,7 @@ func TestArrayErrors(t *testing.T) {
 
 		num, err := agg.Quantile(0)
 		require.Nil(t, err)
-		require.Equal(t, num, core.Number(0))
+		require.Equal(t, num, otel.Number(0))
 
 		_, err = agg.Quantile(-0.0001)
 		require.Error(t, err)
@@ -226,7 +226,7 @@ func TestArrayErrors(t *testing.T) {
 func TestArrayFloat64(t *testing.T) {
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			batcher, record := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
+			batcher, record := test.NewAggregatorTest(export.MeasureKind, otel.Float64NumberKind, !absolute)
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating
@@ -256,20 +256,20 @@ func TestArrayFloat64(t *testing.T) {
 				}
 			}
 
-			all := test.NewNumbers(core.Float64NumberKind)
+			all := test.NewNumbers(otel.Float64NumberKind)
 
 			ctx := context.Background()
 			agg := New()
 
 			for _, f := range fpsf(1) {
-				all.Append(core.NewFloat64Number(f))
-				agg.Update(ctx, core.NewFloat64Number(f), record)
+				all.Append(otel.NewFloat64Number(f))
+				agg.Update(ctx, otel.NewFloat64Number(f), record)
 			}
 
 			if !absolute {
 				for _, f := range fpsf(-1) {
-					all.Append(core.NewFloat64Number(f))
-					agg.Update(ctx, core.NewFloat64Number(f), record)
+					all.Append(otel.NewFloat64Number(f))
+					agg.Update(ctx, otel.NewFloat64Number(f), record)
 				}
 			}
 

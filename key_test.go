@@ -10,60 +10,60 @@ import (
 )
 
 func TestValue(t *testing.T) {
-	k := core.Key("test")
+	k := otel.Key("test")
 	bli := getBitlessInfo(42)
 	for _, testcase := range []struct {
 		name      string
-		value     core.Value
-		wantType  core.ValueType
+		value     otel.Value
+		wantType  otel.ValueType
 		wantValue interface{}
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
 			value:     k.Bool(true).Value,
-			wantType:  core.BOOL,
+			wantType:  otel.BOOL,
 			wantValue: true,
 		},
 		{
 			name:      "Key.Int64() correctly returns keys's internal int64 value",
 			value:     k.Int64(42).Value,
-			wantType:  core.INT64,
+			wantType:  otel.INT64,
 			wantValue: int64(42),
 		},
 		{
 			name:      "Key.Uint64() correctly returns keys's internal uint64 value",
 			value:     k.Uint64(42).Value,
-			wantType:  core.UINT64,
+			wantType:  otel.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			name:      "Key.Float64() correctly returns keys's internal float64 value",
 			value:     k.Float64(42.1).Value,
-			wantType:  core.FLOAT64,
+			wantType:  otel.FLOAT64,
 			wantValue: float64(42.1),
 		},
 		{
 			name:      "Key.Int32() correctly returns keys's internal int32 value",
 			value:     k.Int32(42).Value,
-			wantType:  core.INT32,
+			wantType:  otel.INT32,
 			wantValue: int32(42),
 		},
 		{
 			name:      "Key.Uint32() correctly returns keys's internal uint32 value",
 			value:     k.Uint32(42).Value,
-			wantType:  core.UINT32,
+			wantType:  otel.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			name:      "Key.Float32() correctly returns keys's internal float32 value",
 			value:     k.Float32(42.1).Value,
-			wantType:  core.FLOAT32,
+			wantType:  otel.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			name:      "Key.String() correctly returns keys's internal string value",
 			value:     k.String("foo").Value,
-			wantType:  core.STRING,
+			wantType:  otel.STRING,
 			wantValue: "foo",
 		},
 		{
@@ -93,8 +93,8 @@ func TestValue(t *testing.T) {
 type bitlessInfo struct {
 	intValue      int
 	uintValue     uint
-	signedType    core.ValueType
-	unsignedType  core.ValueType
+	signedType    otel.ValueType
+	unsignedType  otel.ValueType
 	signedValue   interface{}
 	unsignedValue interface{}
 }
@@ -104,8 +104,8 @@ func getBitlessInfo(i int) bitlessInfo {
 		return bitlessInfo{
 			intValue:      i,
 			uintValue:     uint(i),
-			signedType:    core.INT32,
-			unsignedType:  core.UINT32,
+			signedType:    otel.INT32,
+			unsignedType:  otel.UINT32,
 			signedValue:   int32(i),
 			unsignedValue: uint32(i),
 		}
@@ -113,8 +113,8 @@ func getBitlessInfo(i int) bitlessInfo {
 	return bitlessInfo{
 		intValue:      i,
 		uintValue:     uint(i),
-		signedType:    core.INT64,
-		unsignedType:  core.UINT64,
+		signedType:    otel.INT64,
+		unsignedType:  otel.UINT64,
 		signedValue:   int64(i),
 		unsignedValue: uint64(i),
 	}
@@ -123,22 +123,22 @@ func getBitlessInfo(i int) bitlessInfo {
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		k    core.Key
+		k    otel.Key
 		want bool
 	}{
 		{
 			name: "Key.Defined() returns true when len(v.Name) != 0",
-			k:    core.Key("foo"),
+			k:    otel.Key("foo"),
 			want: true,
 		},
 		{
 			name: "Key.Defined() returns false when len(v.Name) == 0",
-			k:    core.Key(""),
+			k:    otel.Key(""),
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//func (k core.Key) Defined() bool {
+			//func (k otel.Key) Defined() bool {
 			have := testcase.k.Defined()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -150,52 +150,52 @@ func TestDefined(t *testing.T) {
 func TestEmit(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		v    core.Value
+		v    otel.Value
 		want string
 	}{
 		{
 			name: `test Key.Emit() can emit a string representing self.BOOL`,
-			v:    core.Bool(true),
+			v:    otel.Bool(true),
 			want: "true",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v:    core.Int32(42),
+			v:    otel.Int32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
-			v:    core.Int64(42),
+			v:    otel.Int64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v:    core.Uint32(42),
+			v:    otel.Uint32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v:    core.Uint64(42),
+			v:    otel.Uint64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v:    core.Float32(42.1),
+			v:    otel.Float32(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
-			v:    core.Float64(42.1),
+			v:    otel.Float64(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.STRING`,
-			v:    core.String("foo"),
+			v:    otel.String("foo"),
 			want: "foo",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (v core.Value) Emit() string {
+			//proto: func (v otel.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -207,7 +207,7 @@ func TestEmit(t *testing.T) {
 func BenchmarkEmitBool(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Bool(i%2 == 0)
+		n := otel.Bool(i%2 == 0)
 		_ = n.Emit()
 	}
 }
@@ -215,7 +215,7 @@ func BenchmarkEmitBool(b *testing.B) {
 func BenchmarkEmitInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Int64(int64(i))
+		n := otel.Int64(int64(i))
 		_ = n.Emit()
 	}
 }
@@ -223,7 +223,7 @@ func BenchmarkEmitInt64(b *testing.B) {
 func BenchmarkEmitUInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Uint64(uint64(i))
+		n := otel.Uint64(uint64(i))
 		_ = n.Emit()
 	}
 }
@@ -231,7 +231,7 @@ func BenchmarkEmitUInt64(b *testing.B) {
 func BenchmarkEmitFloat64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Float64(float64(i))
+		n := otel.Float64(float64(i))
 		_ = n.Emit()
 	}
 }
@@ -239,7 +239,7 @@ func BenchmarkEmitFloat64(b *testing.B) {
 func BenchmarkEmitFloat32(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Float32(float32(i))
+		n := otel.Float32(float32(i))
 		_ = n.Emit()
 	}
 }

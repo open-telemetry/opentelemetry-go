@@ -29,8 +29,8 @@ type NoopSpan struct {
 var _ Span = (*NoopSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (NoopSpan) SpanContext() core.SpanContext {
-	return core.EmptySpanContext()
+func (NoopSpan) SpanContext() otel.SpanContext {
+	return otel.EmptySpanContext()
 }
 
 // IsRecording always returns false for NoopSpan.
@@ -47,11 +47,11 @@ func (NoopSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (NoopSpan) SetAttribute(attribute core.KeyValue) {
+func (NoopSpan) SetAttribute(attribute otel.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
+func (NoopSpan) SetAttributes(attributes ...otel.KeyValue) {
 }
 
 // End does nothing.
@@ -64,11 +64,11 @@ func (NoopSpan) Tracer() Tracer {
 }
 
 // AddEvent does nothing.
-func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 }
 
 // SetName does nothing.
@@ -80,5 +80,5 @@ func (NoopSpan) AddLink(link Link) {
 }
 
 // Link does nothing.
-func (NoopSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+func (NoopSpan) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 }

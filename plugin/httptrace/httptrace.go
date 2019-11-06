@@ -35,16 +35,16 @@ var (
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
-func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
+func Extract(ctx context.Context, req *http.Request) ([]otel.KeyValue, []otel.KeyValue, otel.SpanContext) {
 	sc, correlationCtx := propagator.Extract(ctx, req.Header)
 
-	attrs := []core.KeyValue{
+	attrs := []otel.KeyValue{
 		URLKey.String(req.URL.String()),
 		// Etc.
 	}
 
-	var correlationCtxKVs []core.KeyValue
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	var correlationCtxKVs []otel.KeyValue
+	correlationCtx.Foreach(func(kv otel.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})

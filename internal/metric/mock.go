@@ -30,13 +30,13 @@ type (
 	Instrument struct {
 		Name       string
 		Kind       Kind
-		NumberKind core.NumberKind
+		NumberKind otel.NumberKind
 		Opts       apimetric.Options
 	}
 
 	LabelSet struct {
 		TheMeter *Meter
-		Labels   map[core.Key]core.Value
+		Labels   map[otel.Key]otel.Value
 	}
 
 	Batch struct {
@@ -53,7 +53,7 @@ type (
 
 	Measurement struct {
 		Instrument *Instrument
-		Number     core.Number
+		Number     otel.Number
 	}
 )
 
@@ -77,18 +77,18 @@ func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleIm
 	}
 }
 
-func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+func (i *Instrument) RecordOne(ctx context.Context, number otel.Number, labels apimetric.LabelSet) {
 	doRecordBatch(ctx, labels.(*LabelSet), i, number)
 }
 
-func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
+func (h *Handle) RecordOne(ctx context.Context, number otel.Number) {
 	doRecordBatch(ctx, h.LabelSet, h.Instrument, number)
 }
 
 func (h *Handle) Release() {
 }
 
-func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number core.Number) {
+func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number otel.Number) {
 	labelSet.TheMeter.recordMockBatch(ctx, labelSet, Measurement{
 		Instrument: instrument,
 		Number:     number,
@@ -103,8 +103,8 @@ func NewMeter() *Meter {
 	return &Meter{}
 }
 
-func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
-	ul := make(map[core.Key]core.Value)
+func (m *Meter) Labels(labels ...otel.KeyValue) apimetric.LabelSet {
+	ul := make(map[otel.Key]otel.Value)
 	for _, kv := range labels {
 		ul[kv.Key] = kv.Value
 	}
@@ -115,16 +115,16 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 }
 
 func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
-	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
+	instrument := m.newCounterInstrument(name, otel.Int64NumberKind, cos...)
 	return apimetric.WrapInt64CounterInstrument(instrument)
 }
 
 func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Float64Counter {
-	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
+	instrument := m.newCounterInstrument(name, otel.Float64NumberKind, cos...)
 	return apimetric.WrapFloat64CounterInstrument(instrument)
 }
 
-func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
+func (m *Meter) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyCounterOptions(&opts, cos...)
 	return &Instrument{
@@ -136,16 +136,16 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 }
 
 func (m *Meter) NewInt64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Int64Gauge {
-	instrument := m.newGaugeInstrument(name, core.Int64NumberKind, gos...)
+	instrument := m.newGaugeInstrument(name, otel.Int64NumberKind, gos...)
 	return apimetric.WrapInt64GaugeInstrument(instrument)
 }
 
 func (m *Meter) NewFloat64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Float64Gauge {
-	instrument := m.newGaugeInstrument(name, core.Float64NumberKind, gos...)
+	instrument := m.newGaugeInstrument(name, otel.Float64NumberKind, gos...)
 	return apimetric.WrapFloat64GaugeInstrument(instrument)
 }
 
-func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
+func (m *Meter) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyGaugeOptions(&opts, gos...)
 	return &Instrument{
@@ -157,16 +157,16 @@ func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos 
 }
 
 func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Int64Measure {
-	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
+	instrument := m.newMeasureInstrument(name, otel.Int64NumberKind, mos...)
 	return apimetric.WrapInt64MeasureInstrument(instrument)
 }
 
 func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Float64Measure {
-	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
+	instrument := m.newMeasureInstrument(name, otel.Float64NumberKind, mos...)
 	return apimetric.WrapFloat64MeasureInstrument(instrument)
 }
 
-func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
+func (m *Meter) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyMeasureOptions(&opts, mos...)
 	return &Instrument{

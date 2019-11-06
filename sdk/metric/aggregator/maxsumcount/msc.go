@@ -30,9 +30,9 @@ type (
 	}
 
 	state struct {
-		count core.Number
-		sum   core.Number
-		max   core.Number
+		count otel.Number
+		sum   otel.Number
+		max   otel.Number
 	}
 )
 
@@ -44,7 +44,7 @@ func New() *Aggregator {
 }
 
 // Sum returns the accumulated sum as a Number.
-func (c *Aggregator) Sum() core.Number {
+func (c *Aggregator) Sum() otel.Number {
 	return c.checkpoint.sum
 }
 
@@ -54,7 +54,7 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the accumulated max as a Number.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (otel.Number, error) {
 	return c.checkpoint.max, nil
 }
 
@@ -71,14 +71,14 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 	// be spread across multiple collections in rare cases.
 
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
-	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(otel.Number(0))
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(otel.Number(0))
 
 	exp.Export(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
@@ -110,7 +110,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	}
 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+	c.checkpoint.count.AddNumber(otel.Uint64NumberKind, o.checkpoint.count)
 
 	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
 		c.checkpoint.max.SetNumber(o.checkpoint.max)

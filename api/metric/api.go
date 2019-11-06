@@ -29,7 +29,7 @@ type Provider interface {
 }
 
 // LabelSet is an implementation-level interface that represents a
-// []core.KeyValue for use as pre-defined labels in the metrics API.
+// []otel.KeyValue for use as pre-defined labels in the metrics API.
 type LabelSet interface {
 }
 
@@ -42,7 +42,7 @@ type Options struct {
 	Unit unit.Unit
 	// Keys are recommended keys determined in the handles
 	// obtained for the metric.
-	Keys []core.Key
+	Keys []otel.Key
 	// Alternate defines the property of metric value dependent on
 	// a metric type.
 	//
@@ -86,7 +86,7 @@ type MeasureOptionApplier interface {
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	instrument InstrumentImpl
-	number     core.Number
+	number     otel.Number
 }
 
 // Instrument returns the instrument that created this measurement.
@@ -97,7 +97,7 @@ func (m Measurement) InstrumentImpl() InstrumentImpl {
 }
 
 // Number returns a number recorded in this measurement.
-func (m Measurement) Number() core.Number {
+func (m Measurement) Number() otel.Number {
 	return m.number
 }
 
@@ -105,7 +105,7 @@ func (m Measurement) Number() core.Number {
 type Meter interface {
 	// Labels returns a reference to a set of labels that cannot
 	// be read by the application.
-	Labels(...core.KeyValue) LabelSet
+	Labels(...otel.KeyValue) LabelSet
 
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
@@ -235,7 +235,7 @@ func WithUnit(unit unit.Unit) OptionApplier {
 
 // WithKeys applies recommended label keys. Multiple `WithKeys`
 // options accumulate.
-func WithKeys(keys ...core.Key) OptionApplier {
+func WithKeys(keys ...otel.Key) OptionApplier {
 	return optionWrapper{
 		F: func(opts *Options) {
 			opts.Keys = append(opts.Keys, keys...)

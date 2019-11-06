@@ -27,9 +27,9 @@ type Sampler func(SamplingParameters) SamplingDecision
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   core.SpanContext
-	TraceID         core.TraceID
-	SpanID          core.SpanID
+	ParentContext   otel.SpanContext
+	TraceID         otel.TraceID
+	SpanID          otel.SpanID
 	Name            string
 	HasRemoteParent bool
 }

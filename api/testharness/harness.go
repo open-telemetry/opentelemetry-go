@@ -78,7 +78,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			ctx, span := subject.Start(context.Background(), "test")
 
 			e.Expect(span).NotToBeNil()
-			e.Expect(span.SpanContext()).NotToEqual(core.EmptySpanContext())
+			e.Expect(span.SpanContext()).NotToEqual(otel.EmptySpanContext())
 			e.Expect(trace.CurrentSpan(ctx)).ToEqual(span)
 		})
 
@@ -308,7 +308,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.AddLink(trace.Link{})
 		},
 		"#Link": func(span trace.Span) {
-			span.Link(core.SpanContext{})
+			span.Link(otel.SpanContext{})
 		},
 		"#SetStatus": func(span trace.Span) {
 			span.SetStatus(codes.Internal)
@@ -317,10 +317,10 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.SetName("new name")
 		},
 		"#SetAttribute": func(span trace.Span) {
-			span.SetAttribute(core.Key("key").String("value"))
+			span.SetAttribute(otel.Key("key").String("value"))
 		},
 		"#SetAttributes": func(span trace.Span) {
-			span.SetAttributes(core.Key("key1").String("value"), core.Key("key2").Int(123))
+			span.SetAttributes(otel.Key("key1").String("value"), otel.Key("key2").Int(123))
 		},
 	}
 	var mechanisms = map[string]func() trace.Span{

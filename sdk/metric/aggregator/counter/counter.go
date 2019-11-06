@@ -24,10 +24,10 @@ import (
 // Aggregator aggregates counter events.
 type Aggregator struct {
 	// current holds current increments to this counter record
-	current core.Number
+	current otel.Number
 
 	// checkpoint is a temporary used during Collect()
-	checkpoint core.Number
+	checkpoint otel.Number
 }
 
 var _ export.Aggregator = &Aggregator{}
@@ -39,19 +39,19 @@ func New() *Aggregator {
 }
 
 // AsNumber returns the accumulated count as an int64.
-func (c *Aggregator) AsNumber() core.Number {
+func (c *Aggregator) AsNumber() otel.Number {
 	return c.checkpoint.AsNumber()
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
 func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
-	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
+	c.checkpoint = c.current.SwapNumberAtomic(otel.Number(0))
 
 	exp.Export(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 	if !desc.Alternate() && number.IsNegative(kind) {

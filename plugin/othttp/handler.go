@@ -29,23 +29,23 @@ var _ http.Handler = &Handler{}
 
 // Attribute keys that the Handler can add to a span.
 const (
-	HostKey       = core.Key("http.host")        // the http host (http.Request.Host)
-	MethodKey     = core.Key("http.method")      // the http method (http.Request.Method)
-	PathKey       = core.Key("http.path")        // the http path (http.Request.URL.Path)
-	URLKey        = core.Key("http.url")         // the http url (http.Request.URL.String())
-	UserAgentKey  = core.Key("http.user_agent")  // the http user agent (http.Request.UserAgent())
-	RouteKey      = core.Key("http.route")       // the http route (ex: /users/:id)
-	StatusCodeKey = core.Key("http.status_code") // if set, the http status
-	ReadBytesKey  = core.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
-	ReadErrorKey  = core.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
-	WroteBytesKey = core.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
-	WriteErrorKey = core.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
+	HostKey       = otel.Key("http.host")        // the http host (http.Request.Host)
+	MethodKey     = otel.Key("http.method")      // the http method (http.Request.Method)
+	PathKey       = otel.Key("http.path")        // the http path (http.Request.URL.Path)
+	URLKey        = otel.Key("http.url")         // the http url (http.Request.URL.String())
+	UserAgentKey  = otel.Key("http.user_agent")  // the http user agent (http.Request.UserAgent())
+	RouteKey      = otel.Key("http.route")       // the http route (ex: /users/:id)
+	StatusCodeKey = otel.Key("http.status_code") // if set, the http status
+	ReadBytesKey  = otel.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
+	ReadErrorKey  = otel.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
+	WroteBytesKey = otel.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
+	WriteErrorKey = otel.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
 )
 
 // Handler is http middleware that corresponds to the http.Handler interface and
 // is designed to wrap a http.Mux (or equivalent), while individual routes on
 // the mux are wrapped with WithRouteTag. A Handler will add various attributes
-// to the span using the core.Keys defined in this package.
+// to the span using the otel.Keys defined in this package.
 type Handler struct {
 	operation string
 	handler   http.Handler
@@ -196,7 +196,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rerr, werr error) {
-	kv := make([]core.KeyValue, 0, 5)
+	kv := make([]otel.KeyValue, 0, 5)
 	// TODO: Consider adding an event after each read and write, possibly as an
 	// option (defaulting to off), so as to not create needlessly verbose spans.
 	if read > 0 {

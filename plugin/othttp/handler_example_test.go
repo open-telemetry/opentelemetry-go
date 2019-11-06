@@ -65,7 +65,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.CurrentSpan(ctx).SetAttribute(core.Key("name").String(pp[1]))
+			trace.CurrentSpan(ctx).SetAttribute(otel.Key("name").String(pp[1]))
 		}
 		return pp[1], err
 	}

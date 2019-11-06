@@ -32,7 +32,7 @@ func TestCounterOptions(t *testing.T) {
 	type testcase struct {
 		name string
 		opts []metric.CounterOptionApplier
-		keys []core.Key
+		keys []otel.Key
 		desc string
 		unit unit.Unit
 		alt  bool
@@ -53,7 +53,7 @@ func TestCounterOptions(t *testing.T) {
 				metric.WithKeys(key.New("bar"), key.New("bar2")),
 				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
-			keys: []core.Key{
+			keys: []otel.Key{
 				key.New("foo"), key.New("foo2"),
 				key.New("bar"), key.New("bar2"),
 				key.New("baz"), key.New("baz2"),
@@ -143,7 +143,7 @@ func TestGaugeOptions(t *testing.T) {
 	type testcase struct {
 		name string
 		opts []metric.GaugeOptionApplier
-		keys []core.Key
+		keys []otel.Key
 		desc string
 		unit unit.Unit
 		alt  bool
@@ -164,7 +164,7 @@ func TestGaugeOptions(t *testing.T) {
 				metric.WithKeys(key.New("bar"), key.New("bar2")),
 				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
-			keys: []core.Key{
+			keys: []otel.Key{
 				key.New("foo"), key.New("foo2"),
 				key.New("bar"), key.New("bar2"),
 				key.New("baz"), key.New("baz2"),
@@ -254,7 +254,7 @@ func TestMeasureOptions(t *testing.T) {
 	type testcase struct {
 		name string
 		opts []metric.MeasureOptionApplier
-		keys []core.Key
+		keys []otel.Key
 		desc string
 		unit unit.Unit
 		alt  bool
@@ -275,7 +275,7 @@ func TestMeasureOptions(t *testing.T) {
 				metric.WithKeys(key.New("bar"), key.New("bar2")),
 				metric.WithKeys(key.New("baz"), key.New("baz2")),
 			},
-			keys: []core.Key{
+			keys: []otel.Key{
 				key.New("foo"), key.New("foo2"),
 				key.New("bar"), key.New("bar2"),
 				key.New("baz"), key.New("baz2"),
@@ -378,7 +378,7 @@ func TestCounter(t *testing.T) {
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, c.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Float64NumberKind, c.Impl())
 	}
 	{
 		meter := mock.NewMeter()
@@ -390,7 +390,7 @@ func TestCounter(t *testing.T) {
 		handle.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, c.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Int64NumberKind, c.Impl())
 	}
 }
 
@@ -405,7 +405,7 @@ func TestGauge(t *testing.T) {
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Float64NumberKind, g.Impl())
 	}
 	{
 		meter := mock.NewMeter()
@@ -417,7 +417,7 @@ func TestGauge(t *testing.T) {
 		handle.Set(ctx, 42)
 		meter.RecordBatch(ctx, labels, g.Measurement(42))
 		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Int64NumberKind, g.Impl())
 	}
 }
 
@@ -432,7 +432,7 @@ func TestMeasure(t *testing.T) {
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, m.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Float64NumberKind, m.Impl())
 	}
 	{
 		meter := mock.NewMeter()
@@ -444,11 +444,11 @@ func TestMeasure(t *testing.T) {
 		handle.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.Impl())
+		checkBatches(t, ctx, labels, meter, otel.Int64NumberKind, m.Impl())
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, meter *mock.Meter, kind core.NumberKind, instrument metric.InstrumentImpl) {
+func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, meter *mock.Meter, kind otel.NumberKind, instrument metric.InstrumentImpl) {
 	t.Helper()
 	if len(meter.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.MeasurementBatches))
@@ -496,13 +496,13 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, met
 	}
 }
 
-func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
+func fortyTwo(t *testing.T, kind otel.NumberKind) otel.Number {
 	switch kind {
-	case core.Int64NumberKind:
-		return core.NewInt64Number(42)
-	case core.Float64NumberKind:
-		return core.NewFloat64Number(42)
+	case otel.Int64NumberKind:
+		return otel.NewInt64Number(42)
+	case otel.Float64NumberKind:
+		return otel.NewFloat64Number(42)
 	}
 	t.Errorf("Invalid value kind %q", kind)
-	return core.NewInt64Number(0)
+	return otel.NewInt64Number(0)
 }

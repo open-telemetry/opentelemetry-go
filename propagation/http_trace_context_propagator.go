@@ -49,14 +49,14 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 			supportedVersion,
 			sc.TraceIDString(),
 			sc.SpanID,
-			sc.TraceFlags&core.TraceFlagsSampled)
+			sc.TraceFlags&otel.TraceFlagsSampled)
 		supplier.Set(TraceparentHeader, h)
 	}
 
 	correlationCtx := dctx.FromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	correlationCtx.Foreach(func(kv otel.KeyValue) bool {
 		if !firstIter {
 			headerValueBuilder.WriteRune(',')
 		}
@@ -74,74 +74,74 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 
 func (hp HTTPTraceContextPropagator) Extract(
 	ctx context.Context, supplier apipropagation.Supplier,
-) (core.SpanContext, dctx.Map) {
+) (otel.SpanContext, dctx.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
 func (hp HTTPTraceContextPropagator) extractSpanContext(
 	ctx context.Context, supplier apipropagation.Supplier,
-) core.SpanContext {
+) otel.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	h = strings.Trim(h, "-")
 	if !traceCtxRegExp.MatchString(h) {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	sections := strings.Split(h, "-")
 	if len(sections) < 4 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if len(sections[0]) != 2 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	ver, err := hex.DecodeString(sections[0])
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if version == 0 && len(sections) != 4 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if len(sections[1]) != 32 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
-	var sc core.SpanContext
+	var sc otel.SpanContext
 
-	sc.TraceID, err = core.TraceIDFromHex(sections[1][:32])
+	sc.TraceID, err = otel.TraceIDFromHex(sections[1][:32])
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if len(sections[2]) != 16 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
-	sc.SpanID, err = core.SpanIDFromHex(sections[2][:])
+	sc.SpanID, err = otel.SpanIDFromHex(sections[2][:])
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if len(sections[3]) != 2 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	opts, err := hex.DecodeString(sections[3])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
-	sc.TraceFlags = opts[0] &^ core.TraceFlagsUnused
+	sc.TraceFlags = opts[0] &^ otel.TraceFlagsUnused
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	return sc
@@ -154,7 +154,7 @@ func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, 
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]core.KeyValue, 0, len(contextValues))
+	keyValues := make([]otel.KeyValue, 0, len(contextValues))
 	for _, contextValue := range contextValues {
 		valueAndProps := strings.Split(contextValue, ";")
 		if len(valueAndProps) < 1 {

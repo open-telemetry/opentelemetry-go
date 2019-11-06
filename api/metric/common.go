@@ -33,14 +33,14 @@ func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
 }
 
 func (m commonMetric) float64Measurement(value float64) Measurement {
-	return newMeasurement(m.instrument, core.NewFloat64Number(value))
+	return newMeasurement(m.instrument, otel.NewFloat64Number(value))
 }
 
 func (m commonMetric) int64Measurement(value int64) Measurement {
-	return newMeasurement(m.instrument, core.NewInt64Number(value))
+	return newMeasurement(m.instrument, otel.NewInt64Number(value))
 }
 
-func (m commonMetric) recordOne(ctx context.Context, number core.Number, labels LabelSet) {
+func (m commonMetric) recordOne(ctx context.Context, number otel.Number, labels LabelSet) {
 	m.instrument.RecordOne(ctx, number, labels)
 }
 
@@ -48,7 +48,7 @@ func (m commonMetric) Impl() InstrumentImpl {
 	return m.instrument
 }
 
-func (h commonHandle) recordOne(ctx context.Context, number core.Number) {
+func (h commonHandle) recordOne(ctx context.Context, number otel.Number) {
 	h.handle.RecordOne(ctx, number)
 }
 
@@ -68,7 +68,7 @@ func newCommonHandle(handle HandleImpl) commonHandle {
 	}
 }
 
-func newMeasurement(instrument InstrumentImpl, number core.Number) Measurement {
+func newMeasurement(instrument InstrumentImpl, number otel.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,

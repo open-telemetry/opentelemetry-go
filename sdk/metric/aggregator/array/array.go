@@ -31,10 +31,10 @@ type (
 		lock       sync.Mutex
 		current    Points
 		checkpoint Points
-		ckptSum    core.Number
+		ckptSum    otel.Number
 	}
 
-	Points []core.Number
+	Points []otel.Number
 )
 
 var _ export.Aggregator = &Aggregator{}
@@ -44,7 +44,7 @@ func New() *Aggregator {
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() core.Number {
+func (c *Aggregator) Sum() otel.Number {
 	return c.ckptSum
 }
 
@@ -54,17 +54,17 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the max of the checkpoint.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (otel.Number, error) {
 	return c.checkpoint.Quantile(1)
 }
 
 // Min returns the min of the checkpoint.
-func (c *Aggregator) Min() (core.Number, error) {
+func (c *Aggregator) Min() (otel.Number, error) {
 	return c.checkpoint.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of the checkpoint.
-func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+func (c *Aggregator) Quantile(q float64) (otel.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
@@ -78,7 +78,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 
 	c.sort(kind)
 
-	c.ckptSum = core.Number(0)
+	c.ckptSum = otel.Number(0)
 
 	for _, v := range c.checkpoint {
 		c.ckptSum.AddNumber(kind, v)
@@ -87,11 +87,11 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 	exp.Export(ctx, rec, c)
 }
 
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
-	if kind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
+	if kind == otel.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
 		// TODO warn
 		// NOTE: add this to the specification.
 		return
@@ -118,12 +118,12 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
 }
 
-func (c *Aggregator) sort(kind core.NumberKind) {
+func (c *Aggregator) sort(kind otel.NumberKind) {
 	switch kind {
-	case core.Float64NumberKind:
+	case otel.Float64NumberKind:
 		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint)))
 
-	case core.Int64NumberKind:
+	case otel.Int64NumberKind:
 		sort.Sort(&c.checkpoint)
 
 	default:
@@ -133,7 +133,7 @@ func (c *Aggregator) sort(kind core.NumberKind) {
 	}
 }
 
-func combine(a, b Points, kind core.NumberKind) Points {
+func combine(a, b Points, kind otel.NumberKind) Points {
 	result := make(Points, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
@@ -167,13 +167,13 @@ func (p *Points) Swap(i, j int) {
 
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
 // element of the data set.
-func (p *Points) Quantile(q float64) (core.Number, error) {
+func (p *Points) Quantile(q float64) (otel.Number, error) {
 	if len(*p) == 0 {
-		return core.Number(0), aggregator.ErrEmptyDataSet
+		return otel.Number(0), aggregator.ErrEmptyDataSet
 	}
 
 	if q < 0 || q > 1 {
-		return core.Number(0), aggregator.ErrInvalidQuantile
+		return otel.Number(0), aggregator.ErrInvalidQuantile
 	}
 
 	if q == 0 || len(*p) == 1 {

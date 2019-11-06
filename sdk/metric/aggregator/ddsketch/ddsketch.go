@@ -30,7 +30,7 @@ import (
 type Aggregator struct {
 	lock       sync.Mutex
 	cfg        *sdk.Config
-	kind       core.NumberKind
+	kind       otel.NumberKind
 	current    *sdk.DDSketch
 	checkpoint *sdk.DDSketch
 }
@@ -56,7 +56,7 @@ func NewDefaultConfig() *sdk.Config {
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() core.Number {
+func (c *Aggregator) Sum() otel.Number {
 	return c.toNumber(c.checkpoint.Sum())
 }
 
@@ -66,29 +66,29 @@ func (c *Aggregator) Count() int64 {
 }
 
 // Max returns the max of the checkpoint.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (otel.Number, error) {
 	return c.Quantile(1)
 }
 
 // Min returns the min of the checkpoint.
-func (c *Aggregator) Min() (core.Number, error) {
+func (c *Aggregator) Min() (otel.Number, error) {
 	return c.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of the checkpoint.
-func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+func (c *Aggregator) Quantile(q float64) (otel.Number, error) {
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
-		return core.Number(0), aggregator.ErrInvalidQuantile
+		return otel.Number(0), aggregator.ErrInvalidQuantile
 	}
 	return c.toNumber(f), nil
 }
 
-func (c *Aggregator) toNumber(f float64) core.Number {
-	if c.kind == core.Float64NumberKind {
-		return core.NewFloat64Number(f)
+func (c *Aggregator) toNumber(f float64) otel.Number {
+	if c.kind == otel.Float64NumberKind {
+		return otel.NewFloat64Number(f)
 	}
-	return core.NewInt64Number(int64(f))
+	return otel.NewInt64Number(int64(f))
 }
 
 // Collect checkpoints the current value (atomically) and exports it.
@@ -106,7 +106,7 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 

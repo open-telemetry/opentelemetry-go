@@ -38,7 +38,7 @@ func TestGaugeNonMonotonic(t *testing.T) {
 
 		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
-		var last core.Number
+		var last otel.Number
 		for i := 0; i < count; i++ {
 			x := profile.Random(rand.Intn(1)*2 - 1)
 			last = x

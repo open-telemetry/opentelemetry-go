@@ -47,15 +47,15 @@ type SpanBatcher interface {
 
 // SpanData contains all the information collected by a span.
 type SpanData struct {
-	SpanContext  core.SpanContext
-	ParentSpanID core.SpanID
+	SpanContext  otel.SpanContext
+	ParentSpanID otel.SpanID
 	SpanKind     apitrace.SpanKind
 	Name         string
 	StartTime    time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
 	EndTime                  time.Time
-	Attributes               []core.KeyValue
+	Attributes               []otel.KeyValue
 	MessageEvents            []Event
 	Links                    []apitrace.Link
 	Status                   codes.Code
@@ -75,7 +75,7 @@ type Event struct {
 	Message string
 
 	// Attributes contains a list of keyvalue pairs.
-	Attributes []core.KeyValue
+	Attributes []otel.KeyValue
 
 	// Time is the time at which this event was recorded.
 	Time time.Time

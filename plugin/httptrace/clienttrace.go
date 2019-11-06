@@ -77,7 +77,7 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	}
 }
 
-func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
+func (ct *clientTracer) start(hook, spanName string, attrs ...otel.KeyValue) {
 	_, sp := ct.tr.Start(ct.Context, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
@@ -93,7 +93,7 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	}
 }
 
-func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
+func (ct *clientTracer) end(hook string, err error, attrs ...otel.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if span, ok := ct.activeHooks[hook]; ok {

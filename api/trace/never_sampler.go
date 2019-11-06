@@ -30,9 +30,9 @@ type neverSampleSampler struct{}
 // It always returns a Decision with Sampled value set to false
 // and with Attributes set to an empty slice.
 func (ns neverSampleSampler) ShouldSample(
-	_ core.SpanContext,
+	_ otel.SpanContext,
 	_ bool,
-	_ core.TraceID,
+	_ otel.TraceID,
 	_ uint64,
 	_ string,
 ) Decision {

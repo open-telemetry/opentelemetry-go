@@ -24,7 +24,7 @@ import (
 
 func TestShouldSample(t *testing.T) {
 	gotD := AlwaysSampleSampler().ShouldSample(
-		core.SpanContext{}, false, core.TraceID{}, 0, "span")
+		otel.SpanContext{}, false, otel.TraceID{}, 0, "span")
 	wantD := Decision{Sampled: true}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
 		t.Errorf("Decision: +got, -want%v", diff)

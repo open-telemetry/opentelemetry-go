@@ -33,7 +33,7 @@ type monotoneBatcher struct {
 	t *testing.T
 
 	collections  int
-	currentValue *core.Number
+	currentValue *otel.Number
 	currentTime  *time.Time
 }
 
@@ -81,7 +81,7 @@ func TestMonotoneGauge(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.NotNil(t, batcher.currentValue)
-	require.Equal(t, core.NewInt64Number(1), *batcher.currentValue)
+	require.Equal(t, otel.NewInt64Number(1), *batcher.currentValue)
 	require.True(t, before.Before(*batcher.currentTime))
 
 	before = *batcher.currentTime
@@ -97,7 +97,7 @@ func TestMonotoneGauge(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.Equal(t, 3, batcher.collections)
-	require.Equal(t, core.NewInt64Number(2), *batcher.currentValue)
+	require.Equal(t, otel.NewInt64Number(2), *batcher.currentValue)
 	require.True(t, before.Before(*batcher.currentTime))
 
 	before = *batcher.currentTime
@@ -111,7 +111,7 @@ func TestMonotoneGauge(t *testing.T) {
 
 	// The value and timestamp are both unmodified
 	require.Equal(t, 5, batcher.collections)
-	require.Equal(t, core.NewInt64Number(2), *batcher.currentValue)
+	require.Equal(t, otel.NewInt64Number(2), *batcher.currentValue)
 	require.Equal(t, before, *batcher.currentTime)
 
 	// Update with the same value, update the timestamp.
@@ -119,6 +119,6 @@ func TestMonotoneGauge(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.Equal(t, 6, batcher.collections)
-	require.Equal(t, core.NewInt64Number(2), *batcher.currentValue)
+	require.Equal(t, otel.NewInt64Number(2), *batcher.currentValue)
 	require.True(t, before.Before(*batcher.currentTime))
 }

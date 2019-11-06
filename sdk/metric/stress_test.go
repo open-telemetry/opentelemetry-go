@@ -71,17 +71,17 @@ type (
 
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) withImpl
-		getUpdateValue func() core.Number
-		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
+		getUpdateValue func() otel.Number
+		operate        func(interface{}, context.Context, otel.Number, api.LabelSet)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
 		// counters, different for gauges, to ensure we are
 		// testing the timestamps correctly.
-		storeCollect func(store interface{}, value core.Number, ts time.Time)
-		storeExpect  func(store interface{}, value core.Number)
-		readStore    func(store interface{}) core.Number
-		equalValues  func(a, b core.Number) bool
+		storeCollect func(store interface{}, value otel.Number, ts time.Time)
+		storeExpect  func(store interface{}, value otel.Number)
+		readStore    func(store interface{}) otel.Number
+		equalValues  func(a, b otel.Number) bool
 	}
 
 	withImpl interface {
@@ -92,7 +92,7 @@ type (
 	// where a race condition causes duplicate records.  We always
 	// take the later timestamp.
 	gaugeState struct {
-		raw core.Number
+		raw otel.Number
 		ts  time.Time
 	}
 )
@@ -101,7 +101,7 @@ func concurrency() int {
 	return concurrencyPerCPU * runtime.NumCPU()
 }
 
-func canonicalizeLabels(ls []core.KeyValue) string {
+func canonicalizeLabels(ls []otel.KeyValue) string {
 	copy := append(ls[0:0:0], ls...)
 	sort.SliceStable(copy, func(i, j int) bool {
 		return copy[i].Key < copy[j].Key
@@ -124,9 +124,9 @@ func getPeriod() time.Duration {
 	return time.Duration(dur)
 }
 
-func (f *testFixture) someLabels() []core.KeyValue {
+func (f *testFixture) someLabels() []otel.KeyValue {
 	n := 1 + rand.Intn(3)
-	l := make([]core.KeyValue, n)
+	l := make([]otel.KeyValue, n)
 
 	for {
 		oused := map[string]bool{}
@@ -304,11 +304,11 @@ func stressTest(t *testing.T, impl testImpl) {
 	fixture.assertTest(numCollect)
 }
 
-func int64sEqual(a, b core.Number) bool {
+func int64sEqual(a, b otel.Number) bool {
 	return a.AsInt64() == b.AsInt64()
 }
 
-func float64sEqual(a, b core.Number) bool {
+func float64sEqual(a, b otel.Number) bool {
 	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
 	return diff < math.Abs(a.AsFloat64())*epsilon
 }
@@ -320,7 +320,7 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() otel.Number {
 			var offset int64
 			if nonMonotonic {
 				offset = -50
@@ -328,26 +328,26 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 			for {
 				x := offset + int64(rand.Intn(100))
 				if x != 0 {
-					return core.NewInt64Number(x)
+					return otel.NewInt64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
 			counter := inst.(api.Int64Counter)
 			counter.Add(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
-			n := core.NewInt64Number(0)
+			n := otel.NewInt64Number(0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		storeCollect: func(store interface{}, value otel.Number, _ time.Time) {
+			store.(*otel.Number).AddInt64Atomic(value.AsInt64())
 		},
-		storeExpect: func(store interface{}, value core.Number) {
-			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		storeExpect: func(store interface{}, value otel.Number) {
+			store.(*otel.Number).AddInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) core.Number {
-			return store.(*core.Number).AsNumberAtomic()
+		readStore: func(store interface{}) otel.Number {
+			return store.(*otel.Number).AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
 	}
@@ -366,7 +366,7 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() otel.Number {
 			var offset float64
 			if nonMonotonic {
 				offset = -0.5
@@ -374,26 +374,26 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 			for {
 				x := offset + rand.Float64()
 				if x != 0 {
-					return core.NewFloat64Number(x)
+					return otel.NewFloat64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
 			counter := inst.(api.Float64Counter)
 			counter.Add(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
-			n := core.NewFloat64Number(0.0)
+			n := otel.NewFloat64Number(0.0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		storeCollect: func(store interface{}, value otel.Number, _ time.Time) {
+			store.(*otel.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		storeExpect: func(store interface{}, value core.Number) {
-			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		storeExpect: func(store interface{}, value otel.Number) {
+			store.(*otel.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) core.Number {
-			return store.(*core.Number).AsNumberAtomic()
+		readStore: func(store interface{}) otel.Number {
+			return store.(*otel.Number).AsNumberAtomic()
 		},
 		equalValues: float64sEqual,
 	}
@@ -417,23 +417,23 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() otel.Number {
 			if !monotonic {
 				r1 := rand.Int63()
-				return core.NewInt64Number(rand.Int63() - r1)
+				return otel.NewInt64Number(rand.Int63() - r1)
 			}
-			return core.NewInt64Number(int64(time.Since(startTime)))
+			return otel.NewInt64Number(int64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
 			gauge := inst.(api.Int64Gauge)
 			gauge.Set(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
 			return &gaugeState{
-				raw: core.NewInt64Number(0),
+				raw: otel.NewInt64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value otel.Number, ts time.Time) {
 			gs := store.(*gaugeState)
 
 			if !ts.Before(gs.ts) {
@@ -441,11 +441,11 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 				gs.raw.SetInt64Atomic(value.AsInt64())
 			}
 		},
-		storeExpect: func(store interface{}, value core.Number) {
+		storeExpect: func(store interface{}, value otel.Number) {
 			gs := store.(*gaugeState)
 			gs.raw.SetInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) core.Number {
+		readStore: func(store interface{}) otel.Number {
 			gs := store.(*gaugeState)
 			return gs.raw.AsNumberAtomic()
 		},
@@ -469,22 +469,22 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 		newInstrument: func(meter api.Meter, name string) withImpl {
 			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() otel.Number {
 			if !monotonic {
-				return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
+				return otel.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 			}
-			return core.NewFloat64Number(float64(time.Since(startTime)))
+			return otel.NewFloat64Number(float64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
 			gauge := inst.(api.Float64Gauge)
 			gauge.Set(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
 			return &gaugeState{
-				raw: core.NewFloat64Number(0),
+				raw: otel.NewFloat64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value otel.Number, ts time.Time) {
 			gs := store.(*gaugeState)
 
 			if !ts.Before(gs.ts) {
@@ -492,11 +492,11 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 				gs.raw.SetFloat64Atomic(value.AsFloat64())
 			}
 		},
-		storeExpect: func(store interface{}, value core.Number) {
+		storeExpect: func(store interface{}, value otel.Number) {
 			gs := store.(*gaugeState)
 			gs.raw.SetFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) core.Number {
+		readStore: func(store interface{}) otel.Number {
 			gs := store.(*gaugeState)
 			return gs.raw.AsNumberAtomic()
 		},

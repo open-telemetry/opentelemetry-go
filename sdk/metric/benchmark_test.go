@@ -67,8 +67,8 @@ func (bf *benchFixture) AggregatorFor(rec export.Record) export.Aggregator {
 func (bf *benchFixture) Export(ctx context.Context, rec export.Record, agg export.Aggregator) {
 }
 
-func makeLabelSets(n int) [][]core.KeyValue {
-	r := make([][]core.KeyValue, n)
+func makeLabelSets(n int) [][]otel.KeyValue {
+	r := make([][]otel.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -77,9 +77,9 @@ func makeLabelSets(n int) [][]core.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []core.KeyValue {
+func makeLabels(n int) []otel.KeyValue {
 	used := map[string]bool{}
-	l := make([]core.KeyValue, n)
+	l := make([]otel.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {

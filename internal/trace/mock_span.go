@@ -26,17 +26,17 @@ import (
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
-	sc     core.SpanContext
+	sc     otel.SpanContext
 	tracer apitrace.Tracer
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
 
-// SpanContext returns associated core.SpanContext. If the receiver is nil it returns
-// an empty core.SpanContext
-func (ms *MockSpan) SpanContext() core.SpanContext {
+// SpanContext returns associated otel.SpanContext. If the receiver is nil it returns
+// an empty otel.SpanContext
+func (ms *MockSpan) SpanContext() otel.SpanContext {
 	if ms == nil {
-		core.EmptySpanContext()
+		otel.EmptySpanContext()
 	}
 	return ms.sc
 }
@@ -55,11 +55,11 @@ func (ms *MockSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (ms *MockSpan) SetAttribute(attribute core.KeyValue) {
+func (ms *MockSpan) SetAttribute(attribute otel.KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
+func (ms *MockSpan) SetAttributes(attributes ...otel.KeyValue) {
 }
 
 // End does nothing.
@@ -76,11 +76,11 @@ func (ms *MockSpan) Tracer() apitrace.Tracer {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 }
 
 // AddLink does nothing.
@@ -88,5 +88,5 @@ func (ms *MockSpan) AddLink(link apitrace.Link) {
 }
 
 // Link does nothing.
-func (ms *MockSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+func (ms *MockSpan) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 }

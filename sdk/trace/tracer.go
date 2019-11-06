@@ -25,14 +25,14 @@ type tracer struct {
 	provider  *Provider
 	name      string
 	component string
-	resources []core.KeyValue
+	resources []otel.KeyValue
 }
 
 var _ apitrace.Tracer = &tracer{}
 
 func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
 	var opts apitrace.SpanOptions
-	var parent core.SpanContext
+	var parent otel.SpanContext
 	var remoteParent bool
 
 	//TODO [rghetia] : Add new option for parent. If parent is configured then use that parent.
@@ -40,7 +40,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 		op(&opts)
 	}
 
-	if relation := opts.Relation; relation.SpanContext != core.EmptySpanContext() {
+	if relation := opts.Relation; relation.SpanContext != otel.EmptySpanContext() {
 		switch relation.RelationshipType {
 		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
 			parent = relation.SpanContext
@@ -96,7 +96,7 @@ func (tr *tracer) WithService(name string) apitrace.Tracer {
 }
 
 // WithResources does nothing and returns noop implementation of apitrace.Tracer.
-func (tr *tracer) WithResources(res ...core.KeyValue) apitrace.Tracer {
+func (tr *tracer) WithResources(res ...otel.KeyValue) apitrace.Tracer {
 	tr.resources = res
 	return tr
 }

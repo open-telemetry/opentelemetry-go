@@ -25,7 +25,7 @@ type NoopTracer struct{}
 var _ Tracer = NoopTracer{}
 
 // WithResources does nothing and returns noop implementation of Tracer.
-func (t NoopTracer) WithResources(attributes ...core.KeyValue) Tracer {
+func (t NoopTracer) WithResources(attributes ...otel.KeyValue) Tracer {
 	return t
 }
 

@@ -35,13 +35,13 @@ import (
 )
 
 var (
-	tid core.TraceID
-	sid core.SpanID
+	tid otel.TraceID
+	sid otel.SpanID
 )
 
 func init() {
-	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
-	sid, _ = core.SpanIDFromHex("0102040810203040")
+	tid, _ = otel.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ = otel.SpanIDFromHex("0102040810203040")
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
@@ -178,12 +178,12 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				var opts []apitrace.SpanOption
 				if tc.parent {
-					psc := core.SpanContext{
+					psc := otel.SpanContext{
 						TraceID: idg.NewTraceID(),
 						SpanID:  idg.NewSpanID(),
 					}
 					if tc.sampledParent {
-						psc.TraceFlags = core.TraceFlagsSampled
+						psc.TraceFlags = otel.TraceFlagsSampled
 					}
 					opts = append(opts, apitrace.ChildOf(psc))
 				}
@@ -205,7 +205,7 @@ func TestStartSpanWithChildOf(t *testing.T) {
 	tp, _ := NewProvider()
 	tr := tp.GetTracer("SpanWith ChildOf")
 
-	sc1 := core.SpanContext{
+	sc1 := otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x0,
@@ -220,7 +220,7 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		t.Error(err)
 	}
 
-	sc2 := core.SpanContext{
+	sc2 := otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
@@ -247,7 +247,7 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 	tp, _ := NewProvider()
 	tr := tp.GetTracer("SpanWith FollowsFrom")
 
-	sc1 := core.SpanContext{
+	sc1 := otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x0,
@@ -262,7 +262,7 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 		t.Error(err)
 	}
 
-	sc2 := core.SpanContext{
+	sc2 := otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
@@ -295,13 +295,13 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "StartSpanAttribute/span0",
-		Attributes: []core.KeyValue{
+		Attributes: []otel.KeyValue{
 			key.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
@@ -323,13 +323,13 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "SpanAttribute/span0",
-		Attributes: []core.KeyValue{
+		Attributes: []otel.KeyValue{
 			key.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
@@ -356,13 +356,13 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "SpanAttributesOverLimit/span0",
-		Attributes: []core.KeyValue{
+		Attributes: []otel.KeyValue{
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
 		},
@@ -401,7 +401,7 @@ func TestEvents(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -409,8 +409,8 @@ func TestEvents(t *testing.T) {
 		Name:            "Events/span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Message: "foo", Attributes: []otel.KeyValue{k1v1}},
+			{Message: "bar", Attributes: []otel.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -451,15 +451,15 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "EventsOverLimit/span0",
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Message: "foo", Attributes: []otel.KeyValue{k1v1}},
+			{Message: "bar", Attributes: []otel.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
@@ -478,11 +478,11 @@ func TestAddLinks(t *testing.T) {
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
-	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
-	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
+	link1 := apitrace.Link{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}}
+	link2 := apitrace.Link{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}}
 	span.AddLink(link1)
 	span.AddLink(link2)
 
@@ -492,7 +492,7 @@ func TestAddLinks(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -500,8 +500,8 @@ func TestAddLinks(t *testing.T) {
 		Name:            "AddLinks/span0",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
+			{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -519,8 +519,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	span.Link(sc1, key.New("key1").String("value1"))
 	span.Link(sc2,
@@ -533,7 +533,7 @@ func TestLinks(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -541,8 +541,8 @@ func TestLinks(t *testing.T) {
 		Name:            "Links/span0",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
+			{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -555,9 +555,9 @@ func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc3 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 	span := startSpan(tp, "LinksOverLimit")
@@ -575,15 +575,15 @@ func TestLinksOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "LinksOverLimit/span0",
 		Links: []apitrace.Link{
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
+			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}},
+			{SpanContext: sc3, Attributes: []otel.KeyValue{k3v3}},
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
@@ -600,7 +600,7 @@ func TestSetSpanName(t *testing.T) {
 
 	want := "SetSpanName/SpanName-1"
 	_, span := tp.GetTracer("SetSpanName").Start(context.Background(), "SpanName-1",
-		apitrace.ChildOf(core.SpanContext{
+		apitrace.ChildOf(otel.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
 			TraceFlags: 1,
@@ -628,7 +628,7 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -644,11 +644,11 @@ func TestSetSpanStatus(t *testing.T) {
 }
 
 func cmpDiff(x, y interface{}) string {
-	return cmp.Diff(x, y, cmp.AllowUnexported(core.Value{}), cmp.AllowUnexported(export.Event{}))
+	return cmp.Diff(x, y, cmp.AllowUnexported(otel.Value{}), cmp.AllowUnexported(export.Event{}))
 }
 
-func remoteSpanContext() core.SpanContext {
-	return core.SpanContext{
+func remoteSpanContext() otel.SpanContext {
+	return otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
@@ -657,7 +657,7 @@ func remoteSpanContext() core.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
+func checkChild(p otel.SpanContext, apiSpan apitrace.Span) error {
 	s := apiSpan.(*span)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
@@ -723,7 +723,7 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = core.SpanID{}
+	got.SpanContext.SpanID = otel.SpanID{}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -842,14 +842,14 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
-	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
-	sID, _ := core.SpanIDFromHex("0001020304050607")
+	tID, _ := otel.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+	sID, _ := otel.SpanIDFromHex("0001020304050607")
 
 	_, apiSpan = tr.Start(
 		context.Background(),
 		"foo",
 		apitrace.ChildOf(
-			core.SpanContext{
+			otel.SpanContext{
 				TraceID:    tID,
 				SpanID:     sID,
 				TraceFlags: 0,

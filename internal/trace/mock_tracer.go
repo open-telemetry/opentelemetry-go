@@ -39,7 +39,7 @@ type MockTracer struct {
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
 // WithResources does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
+func (mt *MockTracer) WithResources(attributes ...otel.KeyValue) apitrace.Tracer {
 	return mt
 }
 
@@ -68,12 +68,12 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 		op(&opts)
 	}
 	var span *MockSpan
-	var sc core.SpanContext
+	var sc otel.SpanContext
 	if !opts.Relation.SpanContext.IsValid() {
-		sc = core.SpanContext{}
+		sc = otel.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
-			sc.TraceFlags = core.TraceFlagsSampled
+			sc.TraceFlags = otel.TraceFlagsSampled
 		}
 	} else {
 		sc = opts.Relation.SpanContext

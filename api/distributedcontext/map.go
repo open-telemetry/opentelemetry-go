@@ -19,18 +19,18 @@ import (
 )
 
 type entry struct {
-	value core.Value
+	value otel.Value
 }
 
-type rawMap map[core.Key]entry
+type rawMap map[otel.Key]entry
 
 type Map struct {
 	m rawMap
 }
 
 type MapUpdate struct {
-	SingleKV core.KeyValue
-	MultiKV  []core.KeyValue
+	SingleKV otel.KeyValue
+	MultiKV  []otel.KeyValue
 }
 
 func newMap(raw rawMap) Map {
@@ -68,12 +68,12 @@ func (m Map) Apply(update MapUpdate) Map {
 	return newMap(r)
 }
 
-func (m Map) Value(k core.Key) (core.Value, bool) {
+func (m Map) Value(k otel.Key) (otel.Value, bool) {
 	entry, ok := m.m[k]
 	return entry.value, ok
 }
 
-func (m Map) HasValue(k core.Key) bool {
+func (m Map) HasValue(k otel.Key) bool {
 	_, has := m.Value(k)
 	return has
 }
@@ -82,9 +82,9 @@ func (m Map) Len() int {
 	return len(m.m)
 }
 
-func (m Map) Foreach(f func(kv core.KeyValue) bool) {
+func (m Map) Foreach(f func(kv otel.KeyValue) bool) {
 	for k, v := range m.m {
-		if !f(core.KeyValue{
+		if !f(otel.KeyValue{
 			Key:   k,
 			Value: v.value,
 		}) {

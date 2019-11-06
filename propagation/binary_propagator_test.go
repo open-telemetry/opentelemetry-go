@@ -24,14 +24,14 @@ import (
 )
 
 func TestExtractSpanContextFromBytes(t *testing.T) {
-	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
+	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
 
 	propagator := propagation.BinaryPropagator()
 	tests := []struct {
 		name   string
 		bytes  []byte
-		wantSc core.SpanContext
+		wantSc otel.SpanContext
 	}{
 		{
 			name: "future version of the proto",
@@ -40,10 +40,10 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x01, 0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7,
 				0x02, 0x01,
 			},
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
@@ -53,10 +53,10 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x01, 0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7,
 				0x02, 0x01,
 			},
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x00, 0x00, 0x4b, 0xf9, 0x2f, 0x35, 0x77, 0xb3, 0x4d, 0xa6, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36,
 				0x01, 0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7,
 			},
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -77,7 +77,7 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x02, 0x01,
 			},
-			wantSc: core.EmptySpanContext(),
+			wantSc: otel.EmptySpanContext(),
 		},
 		{
 			name: "zero span ID",
@@ -86,7 +86,7 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x02, 0x01,
 			},
-			wantSc: core.EmptySpanContext(),
+			wantSc: otel.EmptySpanContext(),
 		},
 		{
 			name: "wrong trace ID field number",
@@ -94,18 +94,18 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 				0x00, 0x01, 0x4b, 0xf9, 0x2f, 0x35, 0x77, 0xb3, 0x4d, 0xa6, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36,
 				0x01, 0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7,
 			},
-			wantSc: core.EmptySpanContext(),
+			wantSc: otel.EmptySpanContext(),
 		},
 		{
 			name: "short byte array",
 			bytes: []byte{
 				0x00, 0x00, 0x4b, 0xf9, 0x2f, 0x35, 0x77, 0xb3, 0x4d,
 			},
-			wantSc: core.EmptySpanContext(),
+			wantSc: otel.EmptySpanContext(),
 		},
 		{
 			name:   "nil byte array",
-			wantSc: core.EmptySpanContext(),
+			wantSc: otel.EmptySpanContext(),
 		},
 	}
 
@@ -120,21 +120,21 @@ func TestExtractSpanContextFromBytes(t *testing.T) {
 }
 
 func TestConvertSpanContextToBytes(t *testing.T) {
-	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
+	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
 
 	propagator := propagation.BinaryPropagator()
 	tests := []struct {
 		name  string
-		sc    core.SpanContext
+		sc    otel.SpanContext
 		bytes []byte
 	}{
 		{
 			name: "valid SpanContext, with sampling bit set",
-			sc: core.SpanContext{
+			sc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 			bytes: []byte{
 				0x00, 0x00, 0x4b, 0xf9, 0x2f, 0x35, 0x77, 0xb3, 0x4d, 0xa6, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36,
@@ -144,7 +144,7 @@ func TestConvertSpanContextToBytes(t *testing.T) {
 		},
 		{
 			name: "valid SpanContext, with sampling bit cleared",
-			sc: core.SpanContext{
+			sc: otel.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -156,7 +156,7 @@ func TestConvertSpanContextToBytes(t *testing.T) {
 		},
 		{
 			name: "invalid spancontext",
-			sc:   core.EmptySpanContext(),
+			sc:   otel.EmptySpanContext(),
 		},
 	}
 	for _, tt := range tests {

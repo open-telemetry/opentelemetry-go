@@ -21,9 +21,9 @@ type Sampler interface {
 	// or not sample the span to be created. Decision is based on a Sampler specific
 	// algorithm that takes into account one or more input parameters.
 	ShouldSample(
-		sc core.SpanContext,
+		sc otel.SpanContext,
 		remote bool,
-		traceID core.TraceID,
+		traceID otel.TraceID,
 		spanID uint64,
 		spanName string,
 	) Decision
@@ -40,5 +40,5 @@ type Decision struct {
 
 	// Attributes provides insight into Sample	r's decision process.
 	// It could be empty slice or nil if no attributes are recorded by the sampler.
-	Attributes []core.KeyValue
+	Attributes []otel.KeyValue
 }

@@ -23,8 +23,8 @@ import (
 func TestIsValid(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		tid  core.TraceID
-		sid  core.SpanID
+		tid  otel.TraceID
+		sid  otel.SpanID
 		want bool
 	}{
 		{
@@ -34,23 +34,23 @@ func TestIsValid(t *testing.T) {
 			want: true,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has neither an Trace ID nor Span ID",
-			tid:  core.TraceID([16]byte{}),
+			tid:  otel.TraceID([16]byte{}),
 			sid:  [8]byte{},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Span ID but not a Trace ID",
-			tid:  core.TraceID([16]byte{}),
+			tid:  otel.TraceID([16]byte{}),
 			sid:  [8]byte{42},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Trace ID but not a Span ID",
-			tid:  core.TraceID([16]byte{1}),
+			tid:  otel.TraceID([16]byte{1}),
 			sid:  [8]byte{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			sc := core.SpanContext{
+			sc := otel.SpanContext{
 				TraceID: testcase.tid,
 				SpanID:  testcase.sid,
 			}
@@ -66,12 +66,12 @@ func TestIsValidFromHex(t *testing.T) {
 	for _, testcase := range []struct {
 		name  string
 		hex   string
-		tid   core.TraceID
+		tid   otel.TraceID
 		valid bool
 	}{
 		{
 			name:  "Valid TraceID",
-			tid:   core.TraceID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
+			tid:   otel.TraceID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
 			hex:   "80f198ee56343ba864fe8b2a57d3eff7",
 			valid: true,
 		}, {
@@ -89,7 +89,7 @@ func TestIsValidFromHex(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			tid, err := core.TraceIDFromHex(testcase.hex)
+			tid, err := otel.TraceIDFromHex(testcase.hex)
 
 			if testcase.valid && err != nil {
 				t.Errorf("Expected TraceID %s to be valid but end with error %s", testcase.hex, err.Error())
@@ -109,22 +109,22 @@ func TestIsValidFromHex(t *testing.T) {
 func TestHasTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		tid  core.TraceID
+		tid  otel.TraceID
 		want bool
 	}{
 		{
 			name: "SpanContext.HasTraceID() returns true if both Low and High are nonzero",
-			tid:  core.TraceID([16]byte{1}),
+			tid:  otel.TraceID([16]byte{1}),
 			want: true,
 		}, {
 			name: "SpanContext.HasTraceID() returns false if neither Low nor High are nonzero",
-			tid:  core.TraceID{},
+			tid:  otel.TraceID{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (sc SpanContext) HasTraceID() bool{}
-			sc := core.SpanContext{TraceID: testcase.tid}
+			sc := otel.SpanContext{TraceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -136,16 +136,16 @@ func TestHasTraceID(t *testing.T) {
 func TestHasSpanID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   core.SpanContext
+		sc   otel.SpanContext
 		want bool
 	}{
 		{
 			name: "SpanContext.HasSpanID() returns true if self.SpanID != 0",
-			sc:   core.SpanContext{SpanID: [8]byte{42}},
+			sc:   otel.SpanContext{SpanID: [8]byte{42}},
 			want: true,
 		}, {
 			name: "SpanContext.HasSpanID() returns false if self.SpanID == 0",
-			sc:   core.SpanContext{},
+			sc:   otel.SpanContext{},
 			want: false,
 		},
 	} {
@@ -162,16 +162,16 @@ func TestHasSpanID(t *testing.T) {
 func TestSpanIDString(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   core.SpanContext
+		sc   otel.SpanContext
 		want string
 	}{
 		{
 			name: "SpanContext.SpanIDString returns string representation of self.TraceID values > 0",
-			sc:   core.SpanContext{SpanID: [8]byte{42}},
+			sc:   otel.SpanContext{SpanID: [8]byte{42}},
 			want: `2a00000000000000`,
 		}, {
 			name: "SpanContext.SpanIDString returns string representation of self.TraceID values == 0",
-			sc:   core.SpanContext{},
+			sc:   otel.SpanContext{},
 			want: `0000000000000000`,
 		},
 	} {
@@ -188,18 +188,18 @@ func TestSpanIDString(t *testing.T) {
 func TestTraceIDString(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   core.SpanContext
+		sc   otel.SpanContext
 		want string
 	}{
 		{
 			name: "SpanContext.TraceIDString returns string representation of self.TraceID values > 0",
-			sc: core.SpanContext{
-				TraceID: core.TraceID([16]byte{255}),
+			sc: otel.SpanContext{
+				TraceID: otel.TraceID([16]byte{255}),
 			},
 			want: `ff000000000000000000000000000000`,
 		}, {
 			name: "SpanContext.TraceIDString returns string representation of self.TraceID values == 0",
-			sc:   core.SpanContext{TraceID: core.TraceID{}},
+			sc:   otel.SpanContext{TraceID: otel.TraceID{}},
 			want: `00000000000000000000000000000000`,
 		},
 	} {
@@ -216,26 +216,26 @@ func TestTraceIDString(t *testing.T) {
 func TestSpanContextIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   core.SpanContext
+		sc   otel.SpanContext
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: core.SpanContext{
-				TraceID:    core.TraceID([16]byte{1}),
-				TraceFlags: core.TraceFlagsSampled,
+			sc: otel.SpanContext{
+				TraceID:    otel.TraceID([16]byte{1}),
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "sampled plus unused",
-			sc: core.SpanContext{
-				TraceID:    core.TraceID([16]byte{1}),
-				TraceFlags: core.TraceFlagsSampled | core.TraceFlagsUnused,
+			sc: otel.SpanContext{
+				TraceID:    otel.TraceID([16]byte{1}),
+				TraceFlags: otel.TraceFlagsSampled | otel.TraceFlagsUnused,
 			},
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   core.SpanContext{TraceID: core.TraceID{}},
+			sc:   otel.SpanContext{TraceID: otel.TraceID{}},
 			want: false,
 		},
 	} {

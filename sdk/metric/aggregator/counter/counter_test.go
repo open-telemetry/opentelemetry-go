@@ -35,7 +35,7 @@ func TestCounterMonotonic(t *testing.T) {
 
 		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
-		sum := core.Number(0)
+		sum := otel.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
@@ -76,7 +76,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 
 		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
 
-		sum := core.Number(0)
+		sum := otel.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			y := profile.Random(-1)
@@ -101,7 +101,7 @@ func TestCounterMerge(t *testing.T) {
 
 		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
-		sum := core.Number(0)
+		sum := otel.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)

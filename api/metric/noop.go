@@ -22,7 +22,7 @@ func (NoopProvider) GetMeter(name string) Meter {
 	return NoopMeter{}
 }
 
-func (noopHandle) RecordOne(context.Context, core.Number) {
+func (noopHandle) RecordOne(context.Context, otel.Number) {
 }
 
 func (noopHandle) Release() {
@@ -32,14 +32,14 @@ func (noopInstrument) AcquireHandle(LabelSet) HandleImpl {
 	return noopHandle{}
 }
 
-func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
+func (noopInstrument) RecordOne(context.Context, otel.Number, LabelSet) {
 }
 
 func (noopInstrument) Meter() Meter {
 	return NoopMeter{}
 }
 
-func (NoopMeter) Labels(...core.KeyValue) LabelSet {
+func (NoopMeter) Labels(...otel.KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 

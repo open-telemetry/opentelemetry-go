@@ -30,23 +30,23 @@ var _ export.Record = &metricRecord{}
 const Magnitude = 1000
 
 type Profile struct {
-	NumberKind core.NumberKind
-	Random     func(sign int) core.Number
+	NumberKind otel.NumberKind
+	Random     func(sign int) otel.Number
 }
 
 func newProfiles() []Profile {
 	rnd := rand.New(rand.NewSource(rand.Int63()))
 	return []Profile{
 		{
-			NumberKind: core.Int64NumberKind,
-			Random: func(sign int) core.Number {
-				return core.NewInt64Number(int64(sign) * int64(rnd.Intn(Magnitude+1)))
+			NumberKind: otel.Int64NumberKind,
+			Random: func(sign int) otel.Number {
+				return otel.NewInt64Number(int64(sign) * int64(rnd.Intn(Magnitude+1)))
 			},
 		},
 		{
-			NumberKind: core.Float64NumberKind,
-			Random: func(sign int) core.Number {
-				return core.NewFloat64Number(float64(sign) * rnd.Float64() * Magnitude)
+			NumberKind: otel.Float64NumberKind,
+			Random: func(sign int) otel.Number {
+				return otel.NewFloat64Number(float64(sign) * rnd.Float64() * Magnitude)
 			},
 		},
 	}
@@ -59,7 +59,7 @@ type metricRecord struct {
 	descriptor *export.Descriptor
 }
 
-func NewAggregatorTest(mkind export.Kind, nkind core.NumberKind, alternate bool) (export.Batcher, export.Record) {
+func NewAggregatorTest(mkind export.Kind, nkind otel.NumberKind, alternate bool) (export.Batcher, export.Record) {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
 	return &metricBatcher{}, &metricRecord{descriptor: desc}
 }
@@ -68,7 +68,7 @@ func (t *metricRecord) Descriptor() *export.Descriptor {
 	return t.descriptor
 }
 
-func (t *metricRecord) Labels() []core.KeyValue {
+func (t *metricRecord) Labels() []otel.KeyValue {
 	return nil
 }
 
@@ -88,17 +88,17 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 }
 
 type Numbers struct {
-	kind    core.NumberKind
-	numbers []core.Number
+	kind    otel.NumberKind
+	numbers []otel.Number
 }
 
-func NewNumbers(kind core.NumberKind) Numbers {
+func NewNumbers(kind otel.NumberKind) Numbers {
 	return Numbers{
 		kind: kind,
 	}
 }
 
-func (n *Numbers) Append(v core.Number) {
+func (n *Numbers) Append(v otel.Number) {
 	n.numbers = append(n.numbers, v)
 }
 
@@ -118,8 +118,8 @@ func (n *Numbers) Swap(i, j int) {
 	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }
 
-func (n *Numbers) Sum() core.Number {
-	var sum core.Number
+func (n *Numbers) Sum() otel.Number {
+	var sum otel.Number
 	for _, num := range n.numbers {
 		sum.AddNumber(n.kind, num)
 	}
@@ -130,16 +130,16 @@ func (n *Numbers) Count() int64 {
 	return int64(len(n.numbers))
 }
 
-func (n *Numbers) Min() core.Number {
+func (n *Numbers) Min() otel.Number {
 	return n.numbers[0]
 }
 
-func (n *Numbers) Max() core.Number {
+func (n *Numbers) Max() otel.Number {
 	return n.numbers[len(n.numbers)-1]
 }
 
 // Median() is an alias for Quantile(0.5).
-func (n *Numbers) Median() core.Number {
+func (n *Numbers) Median() otel.Number {
 	// Note that len(n.numbers) is 1 greater than the max element
 	// index, so dividing by two rounds up.  This gives the
 	// intended definition for Quantile() in tests, which is to

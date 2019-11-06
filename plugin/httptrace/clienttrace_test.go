@@ -88,15 +88,15 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	testLen := []struct {
 		name       string
-		attributes []core.KeyValue
+		attributes []otel.KeyValue
 	}{
 		{
 			name:       "go.opentelemetry.io/otel/plugin/httptrace/http.connect",
-			attributes: []core.KeyValue{key.String("http.remote", address.String())},
+			attributes: []otel.KeyValue{key.String("http.remote", address.String())},
 		},
 		{
 			name: "go.opentelemetry.io/otel/plugin/httptrace/http.getconn",
-			attributes: []core.KeyValue{
+			attributes: []otel.KeyValue{
 				key.String("http.remote", address.String()),
 				key.String("http.host", address.String()),
 			},
@@ -122,12 +122,12 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		}
 		span := spans[0]
 
-		actualAttrs := make(map[core.Key]string)
+		actualAttrs := make(map[otel.Key]string)
 		for _, attr := range span.Attributes {
 			actualAttrs[attr.Key] = attr.Value.Emit()
 		}
 
-		expectedAttrs := make(map[core.Key]string)
+		expectedAttrs := make(map[otel.Key]string)
 		for _, attr := range tl.attributes {
 			expectedAttrs[attr.Key] = attr.Value.Emit()
 		}

@@ -49,7 +49,7 @@ func TestNewExporter(t *testing.T) {
 		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
+			Tags: []otel.KeyValue{
 				key.String(tagKey, tagVal),
 			},
 		}),
@@ -96,7 +96,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
+			Tags: []otel.KeyValue{
 				key.String(tagKey, tagVal),
 			},
 		}),
@@ -146,11 +146,11 @@ func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := otel.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := otel.SpanIDFromHex("0102030405060708")
 
-	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
+	linkTraceID, _ := otel.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkSpanID, _ := otel.SpanIDFromHex("0102030405060709")
 
 	messageEventValue := "event-test"
 	keyValue := "value"
@@ -167,7 +167,7 @@ func Test_spanDataToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: otel.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -176,20 +176,20 @@ func Test_spanDataToThrift(t *testing.T) {
 				EndTime:   now,
 				Links: []apitrace.Link{
 					{
-						SpanContext: core.SpanContext{
+						SpanContext: otel.SpanContext{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
 						},
 					},
 				},
-				Attributes: []core.KeyValue{
+				Attributes: []otel.KeyValue{
 					key.String("key", keyValue),
 					key.Float64("double", doubleValue),
 					// Jaeger doesn't handle Uint tags, this should be ignored.
 					key.Uint64("ignored", 123),
 				},
 				MessageEvents: []export.Event{
-					{Message: messageEventValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+					{Message: messageEventValue, Attributes: []otel.KeyValue{key.String("k1", keyValue)}, Time: now},
 				},
 				Status: codes.Unknown,
 			},

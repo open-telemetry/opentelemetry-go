@@ -41,26 +41,26 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := otel.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := otel.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := float64(123.456)
 
 	testSpan := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: otel.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
 		Name:      "/foo",
 		StartTime: now,
 		EndTime:   now,
-		Attributes: []core.KeyValue{
+		Attributes: []otel.KeyValue{
 			key.String("key", keyValue),
 			key.Float64("double", doubleValue),
 		},
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
-			{Message: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
+			{Message: "foo", Attributes: []otel.KeyValue{key.String("key", keyValue)}, Time: now},
+			{Message: "bar", Attributes: []otel.KeyValue{key.Float64("double", doubleValue)}, Time: now},
 		},
 		SpanKind: trace.SpanKindInternal,
 		Status:   codes.Unknown,

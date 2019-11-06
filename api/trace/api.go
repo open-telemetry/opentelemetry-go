@@ -64,10 +64,10 @@ type Span interface {
 	End(options ...EndOption)
 
 	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
+	AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue)
 	// AddEventWithTimestamp adds an event with a custom timestamp
 	// to the span.
-	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue)
+	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue)
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
@@ -77,11 +77,11 @@ type Span interface {
 
 	// Link creates a link between this span and the other span specified by the SpanContext.
 	// It then adds the newly created Link to the span.
-	Link(sc core.SpanContext, attrs ...core.KeyValue)
+	Link(sc otel.SpanContext, attrs ...otel.KeyValue)
 
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
-	SpanContext() core.SpanContext
+	SpanContext() otel.SpanContext
 
 	// SetStatus sets the status of the span. The status of the span can be updated
 	// even after span ends.
@@ -91,8 +91,8 @@ type Span interface {
 	SetName(name string)
 
 	// Set span attributes
-	SetAttribute(core.KeyValue)
-	SetAttributes(...core.KeyValue)
+	SetAttribute(otel.KeyValue)
+	SetAttributes(...otel.KeyValue)
 }
 
 // SpanOption apply changes to SpanOptions.
@@ -101,7 +101,7 @@ type SpanOption func(*SpanOptions)
 // SpanOptions provides options to set properties of span at the time of starting
 // a new span.
 type SpanOptions struct {
-	Attributes []core.KeyValue
+	Attributes []otel.KeyValue
 	StartTime  time.Time
 	Links      []Link
 	Relation   Relation
@@ -113,7 +113,7 @@ type SpanOptions struct {
 // other span. The other span could be related as a parent or linked or any other
 // future relationship type.
 type Relation struct {
-	core.SpanContext
+	otel.SpanContext
 	RelationshipType
 }
 
@@ -136,8 +136,8 @@ const (
 //      on service provider side so two traces (from Client and from Service Provider) can
 //      be correlated.
 type Link struct {
-	core.SpanContext
-	Attributes []core.KeyValue
+	otel.SpanContext
+	Attributes []otel.KeyValue
 }
 
 // SpanKind represents the role of a Span inside a Trace. Often, this defines how a Span
@@ -204,7 +204,7 @@ func WithStartTime(t time.Time) SpanOption {
 
 // WithAttributes sets attributes to span. These attributes provides additional
 // data about the span.
-func WithAttributes(attrs ...core.KeyValue) SpanOption {
+func WithAttributes(attrs ...otel.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
 		o.Attributes = attrs
 	}
@@ -220,7 +220,7 @@ func WithRecord() SpanOption {
 }
 
 // ChildOf. TODO: do we need this?.
-func ChildOf(sc core.SpanContext) SpanOption {
+func ChildOf(sc otel.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
 		o.Relation = Relation{
 			SpanContext:      sc,
@@ -230,7 +230,7 @@ func ChildOf(sc core.SpanContext) SpanOption {
 }
 
 // FollowsFrom. TODO: do we need this?.
-func FollowsFrom(sc core.SpanContext) SpanOption {
+func FollowsFrom(sc otel.SpanContext) SpanOption {
 	return func(o *SpanOptions) {
 		o.Relation = Relation{
 			SpanContext:      sc,
@@ -240,7 +240,7 @@ func FollowsFrom(sc core.SpanContext) SpanOption {
 }
 
 // LinkedTo allows instantiating a Span with initial Links.
-func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) SpanOption {
+func LinkedTo(sc otel.SpanContext, attrs ...otel.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
 		o.Links = append(o.Links, Link{sc, attrs})
 	}

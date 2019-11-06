@@ -35,7 +35,7 @@ func initTracer() func() {
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
-			Tags: []core.KeyValue{
+			Tags: []otel.KeyValue{
 				key.String("exporter", "jaeger"),
 				key.Float64("float", 312.23),
 			},

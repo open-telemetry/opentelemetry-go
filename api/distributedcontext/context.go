@@ -31,7 +31,7 @@ func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxEntriesKey, m)
 }
 
-func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
+func NewContext(ctx context.Context, keyvalues ...otel.KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
 		MultiKV: keyvalues,
 	}))

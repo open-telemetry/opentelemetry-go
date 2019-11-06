@@ -25,18 +25,18 @@ func BenchmarkInject(b *testing.B) {
 func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 	b.Run("SampledSpanContext", func(b *testing.B) {
 		var id uint64
-		spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
-		traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+		spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
+		traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 
 		mockTracer := &mocktrace.MockTracer{
 			Sampled:     false,
 			StartSpanID: &id,
 		}
 		b.ReportAllocs()
-		sc := core.SpanContext{
+		sc := otel.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: otel.TraceFlagsSampled,
 		}
 		ctx := context.Background()
 		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))

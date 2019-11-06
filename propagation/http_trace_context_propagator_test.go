@@ -35,13 +35,13 @@ var (
 	spanID  = mustSpanIDFromHex("00f067aa0ba902b7")
 )
 
-func mustTraceIDFromHex(s string) (t core.TraceID) {
-	t, _ = core.TraceIDFromHex(s)
+func mustTraceIDFromHex(s string) (t otel.TraceID) {
+	t, _ = otel.TraceIDFromHex(s)
 	return
 }
 
-func mustSpanIDFromHex(s string) (t core.SpanID) {
-	t, _ = core.SpanIDFromHex(s)
+func mustSpanIDFromHex(s string) (t otel.SpanID) {
+	t, _ = otel.SpanIDFromHex(s)
 	return
 }
 
@@ -50,12 +50,12 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
-		wantSc core.SpanContext
+		wantSc otel.SpanContext
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -63,34 +63,34 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
 			name:   "future version",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
 			name:   "future options with sampled bit set",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
 			name:   "future options with sampled bit cleared",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -98,28 +98,28 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "future additional data",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
 			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 		{
 			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
-			wantSc: core.SpanContext{
+			wantSc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 		},
 	}
@@ -140,7 +140,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	var propagator propagation.HTTPTraceContextPropagator
-	wantSc := core.EmptySpanContext()
+	wantSc := otel.EmptySpanContext()
 	tests := []struct {
 		name   string
 		header string
@@ -234,21 +234,21 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	var propagator propagation.HTTPTraceContextPropagator
 	tests := []struct {
 		name       string
-		sc         core.SpanContext
+		sc         otel.SpanContext
 		wantHeader string
 	}{
 		{
 			name: "valid spancontext, sampled",
-			sc: core.SpanContext{
+			sc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: core.TraceFlagsSampled,
+				TraceFlags: otel.TraceFlagsSampled,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-01",
 		},
 		{
 			name: "valid spancontext, not sampled",
-			sc: core.SpanContext{
+			sc: otel.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -256,7 +256,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
-			sc: core.SpanContext{
+			sc: otel.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0xff,
@@ -265,7 +265,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name:       "invalid spancontext",
-			sc:         core.EmptySpanContext(),
+			sc:         otel.EmptySpanContext(),
 			wantHeader: "",
 		},
 	}
@@ -291,12 +291,12 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name    string
 		header  string
-		wantKVs []core.KeyValue
+		wantKVs []otel.KeyValue
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -304,7 +304,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -312,7 +312,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2;prop=1"),
 			},
@@ -320,7 +320,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2,val3"),
 			},
@@ -328,7 +328,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -336,7 +336,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
-			wantKVs: []core.KeyValue{
+			wantKVs: []otel.KeyValue{
 				key.New("key1").String(""),
 				key.New("key2").String("val2"),
 			},
@@ -359,9 +359,9 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(kv core.KeyValue) bool {
+			wantCorCtx.Foreach(func(kv otel.KeyValue) bool {
 				val, _ := gotCorCtx.Value(kv.Key)
-				diff := cmp.Diff(kv, core.KeyValue{Key: kv.Key, Value: val}, cmp.AllowUnexported(core.Value{}))
+				diff := cmp.Diff(kv, otel.KeyValue{Key: kv.Key, Value: val}, cmp.AllowUnexported(otel.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -404,13 +404,13 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	propagator := propagation.HTTPTraceContextPropagator{}
 	tests := []struct {
 		name         string
-		kvs          []core.KeyValue
+		kvs          []otel.KeyValue
 		wantInHeader []string
 		wantedLen    int
 	}{
 		{
 			name: "two simple values",
-			kvs: []core.KeyValue{
+			kvs: []otel.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -418,7 +418,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "two values with escaped chars",
-			kvs: []core.KeyValue{
+			kvs: []otel.KeyValue{
 				key.New("key1").String("val1,val2"),
 				key.New("key2").String("val3=4"),
 			},
@@ -426,7 +426,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "values of non-string types",
-			kvs: []core.KeyValue{
+			kvs: []otel.KeyValue{
 				key.New("key1").Bool(true),
 				key.New("key2").Int(123),
 				key.New("key3").Int64(123),

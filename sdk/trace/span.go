@@ -36,7 +36,7 @@ type span struct {
 	// SpanContext, so that the trace ID is propagated.
 	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
-	spanContext core.SpanContext
+	spanContext otel.SpanContext
 
 	// lruAttributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
@@ -58,9 +58,9 @@ type span struct {
 
 var _ apitrace.Span = &span{}
 
-func (s *span) SpanContext() core.SpanContext {
+func (s *span) SpanContext() otel.SpanContext {
 	if s == nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	return s.spanContext
 }
@@ -84,14 +84,14 @@ func (s *span) SetStatus(status codes.Code) {
 	s.mu.Unlock()
 }
 
-func (s *span) SetAttribute(attribute core.KeyValue) {
+func (s *span) SetAttribute(attribute otel.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.copyToCappedAttributes(attribute)
 }
 
-func (s *span) SetAttributes(attributes ...core.KeyValue) {
+func (s *span) SetAttributes(attributes ...otel.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
@@ -134,21 +134,21 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(time.Now(), msg, attrs...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(timestamp, msg, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
@@ -170,9 +170,9 @@ func (s *span) SetName(name string) {
 	s.data.Name = spanName
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
-	var ctx core.SpanContext
+	var ctx otel.SpanContext
 	if noParent {
-		ctx = core.EmptySpanContext()
+		ctx = otel.EmptySpanContext()
 	} else {
 		// FIXME: Where do we get the parent context from?
 		// From SpanStore?
@@ -202,13 +202,13 @@ func (s *span) AddLink(link apitrace.Link) {
 // Link implements Span interface. It is similar to AddLink but it excepts
 // SpanContext and attributes as arguments instead of Link. It first creates
 // a Link object and then adds to the span.
-func (s *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
+func (s *span) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	attrsCopy := attrs
 	if attrs != nil {
-		attrsCopy = make([]core.KeyValue, len(attrs))
+		attrsCopy = make([]otel.KeyValue, len(attrs))
 		copy(attrsCopy, attrs)
 	}
 	link := apitrace.Link{SpanContext: sc, Attributes: attrsCopy}
@@ -259,20 +259,20 @@ func (s *span) interfaceArrayToMessageEventArray() []export.Event {
 	return messageEventArr
 }
 
-func (s *span) lruAttributesToAttributeMap() []core.KeyValue {
-	attributes := make([]core.KeyValue, 0, s.lruAttributes.simpleLruMap.Len())
+func (s *span) lruAttributesToAttributeMap() []otel.KeyValue {
+	attributes := make([]otel.KeyValue, 0, s.lruAttributes.simpleLruMap.Len())
 	for _, key := range s.lruAttributes.simpleLruMap.Keys() {
 		value, ok := s.lruAttributes.simpleLruMap.Get(key)
 		if ok {
-			key := key.(core.Key)
-			value := value.(core.Value)
-			attributes = append(attributes, core.KeyValue{Key: key, Value: value})
+			key := key.(otel.Key)
+			value := value.(otel.Value)
+			attributes = append(attributes, otel.KeyValue{Key: key, Value: value})
 		}
 	}
 	return attributes
 }
 
-func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
+func (s *span) copyToCappedAttributes(attributes ...otel.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
@@ -289,14 +289,14 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
+func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == core.EmptySpanContext() {
+	if parent == otel.EmptySpanContext() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}
@@ -350,7 +350,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 type samplingData struct {
 	noParent     bool
 	remoteParent bool
-	parent       core.SpanContext
+	parent       otel.SpanContext
 	name         string
 	cfg          *Config
 	span         *span
@@ -376,9 +376,9 @@ func makeSamplingDecision(data samplingData) {
 			Name:            data.name,
 			HasRemoteParent: data.remoteParent}).Sample
 		if sampled {
-			spanContext.TraceFlags |= core.TraceFlagsSampled
+			spanContext.TraceFlags |= otel.TraceFlagsSampled
 		} else {
-			spanContext.TraceFlags &^= core.TraceFlagsSampled
+			spanContext.TraceFlags &^= otel.TraceFlagsSampled
 		}
 	}
 }

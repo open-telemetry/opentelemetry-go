@@ -35,7 +35,7 @@ const (
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
 )
 
-// HTTPB3Propagator that facilitates core.SpanContext
+// HTTPB3Propagator that facilitates otel.SpanContext
 // propagation using B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
@@ -59,7 +59,7 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
-			sampled := sc.TraceFlags & core.TraceFlagsSampled
+			sampled := sc.TraceFlags & otel.TraceFlagsSampled
 			supplier.Set(B3SingleHeader,
 				fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
 		} else {
@@ -79,7 +79,7 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) (core.SpanContext, dctx.Map) {
+func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) (otel.SpanContext, dctx.Map) {
 	if b3.SingleHeader {
 		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
 	}
@@ -93,84 +93,84 @@ func (b3 HTTPB3Propagator) GetAllKeys() []string {
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 HTTPB3Propagator) extract(supplier apipropagation.Supplier) core.SpanContext {
-	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
+func (b3 HTTPB3Propagator) extract(supplier apipropagation.Supplier) otel.SpanContext {
+	tid, err := otel.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
-	sid, err := core.SpanIDFromHex(supplier.Get(B3SpanIDHeader))
+	sid, err := otel.SpanIDFromHex(supplier.Get(B3SpanIDHeader))
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	sampled, ok := b3.extractSampledState(supplier.Get(B3SampledHeader))
 	if !ok {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	debug, ok := b3.extracDebugFlag(supplier.Get(B3DebugFlagHeader))
 	if !ok {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
-	if debug == core.TraceFlagsSampled {
-		sampled = core.TraceFlagsSampled
+	if debug == otel.TraceFlagsSampled {
+		sampled = otel.TraceFlagsSampled
 	}
 
-	sc := core.SpanContext{
+	sc := otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: sampled,
 	}
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	return sc
 }
 
-func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) core.SpanContext {
+func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) otel.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
-		core.EmptySpanContext()
+		otel.EmptySpanContext()
 	}
-	sc := core.SpanContext{}
+	sc := otel.SpanContext{}
 	parts := strings.Split(h, "-")
 	l := len(parts)
 	if l > 4 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if l < 2 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	var err error
-	sc.TraceID, err = core.TraceIDFromHex(parts[0])
+	sc.TraceID, err = otel.TraceIDFromHex(parts[0])
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
-	sc.SpanID, err = core.SpanIDFromHex(parts[1])
+	sc.SpanID, err = otel.SpanIDFromHex(parts[1])
 	if err != nil {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	if l > 2 {
 		var ok bool
 		sc.TraceFlags, ok = b3.extractSampledState(parts[2])
 		if !ok {
-			return core.EmptySpanContext()
+			return otel.EmptySpanContext()
 		}
 	}
 	if l == 4 {
-		_, err = core.SpanIDFromHex(parts[3])
+		_, err = otel.SpanIDFromHex(parts[3])
 		if err != nil {
-			return core.EmptySpanContext()
+			return otel.EmptySpanContext()
 		}
 	}
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 
 	return sc
@@ -182,14 +182,14 @@ func (b3 HTTPB3Propagator) extractSampledState(sampled string) (flag byte, ok bo
 	case "", "0":
 		return 0, true
 	case "1":
-		return core.TraceFlagsSampled, true
+		return otel.TraceFlagsSampled, true
 	case "true":
 		if !b3.SingleHeader {
-			return core.TraceFlagsSampled, true
+			return otel.TraceFlagsSampled, true
 		}
 	case "d":
 		if b3.SingleHeader {
-			return core.TraceFlagsSampled, true
+			return otel.TraceFlagsSampled, true
 		}
 	}
 	return 0, false
@@ -201,7 +201,7 @@ func (b3 HTTPB3Propagator) extracDebugFlag(debug string) (flag byte, ok bool) {
 	case "", "0":
 		return 0, true
 	case "1":
-		return core.TraceFlagsSampled, true
+		return otel.TraceFlagsSampled, true
 	}
 	return 0, false
 }

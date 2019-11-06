@@ -49,7 +49,7 @@ type Batcher interface {
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.
-	Update(context.Context, core.Number, Record)
+	Update(context.Context, otel.Number, Record)
 
 	// Collect is called during the SDK Collect() to
 	// finish one period of aggregation.  Collect() is
@@ -69,7 +69,7 @@ type Record interface {
 
 	// Labels() describe the labsels corresponding the
 	// aggregation being performed.
-	Labels() []core.KeyValue
+	Labels() []otel.KeyValue
 }
 
 // Kind describes the kind of instrument.
@@ -85,10 +85,10 @@ const (
 type Descriptor struct {
 	name        string
 	metricKind  Kind
-	keys        []core.Key
+	keys        []otel.Key
 	description string
 	unit        unit.Unit
-	numberKind  core.NumberKind
+	numberKind  otel.NumberKind
 	alternate   bool
 }
 
@@ -97,10 +97,10 @@ type Descriptor struct {
 func NewDescriptor(
 	name string,
 	metricKind Kind,
-	keys []core.Key,
+	keys []otel.Key,
 	description string,
 	unit unit.Unit,
-	numberKind core.NumberKind,
+	numberKind otel.NumberKind,
 	alternate bool,
 ) *Descriptor {
 	return &Descriptor{
@@ -122,7 +122,7 @@ func (d *Descriptor) MetricKind() Kind {
 	return d.metricKind
 }
 
-func (d *Descriptor) Keys() []core.Key {
+func (d *Descriptor) Keys() []otel.Key {
 	return d.keys
 }
 
@@ -134,7 +134,7 @@ func (d *Descriptor) Unit() unit.Unit {
 	return d.unit
 }
 
-func (d *Descriptor) NumberKind() core.NumberKind {
+func (d *Descriptor) NumberKind() otel.NumberKind {
 	return d.numberKind
 }
 

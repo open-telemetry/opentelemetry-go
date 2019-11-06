@@ -44,7 +44,7 @@ type (
 	// a sequence number to determine the winner of a race.
 	gaugeData struct {
 		// value is the int64- or float64-encoded Set() data
-		value core.Number
+		value otel.Number
 
 		// timestamp indicates when this record was submitted.
 		// this can be used to pick a winner when multiple
@@ -69,7 +69,7 @@ func New() *Aggregator {
 }
 
 // AsNumber returns the recorded gauge value as an int64.
-func (g *Aggregator) AsNumber() core.Number {
+func (g *Aggregator) AsNumber() otel.Number {
 	return (*gaugeData)(g.checkpoint).value.AsNumber()
 }
 
@@ -86,7 +86,7 @@ func (g *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 }
 
 // Update modifies the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
+func (g *Aggregator) Update(_ context.Context, number otel.Number, rec export.Record) {
 	desc := rec.Descriptor()
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
@@ -95,7 +95,7 @@ func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.Re
 	}
 }
 
-func (g *Aggregator) updateNonMonotonic(number core.Number) {
+func (g *Aggregator) updateNonMonotonic(number otel.Number) {
 	ngd := &gaugeData{
 		value:     number,
 		timestamp: time.Now(),
@@ -103,7 +103,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
 }
 
-func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
+func (g *Aggregator) updateMonotonic(number otel.Number, desc *export.Descriptor) {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
 		value:     number,

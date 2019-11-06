@@ -30,9 +30,9 @@ func BinaryPropagator() apipropagation.BinaryFormatPropagator {
 }
 
 // ToBytes implements ToBytes method of propagation.BinaryFormatPropagator.
-// It serializes core.SpanContext into a byte array.
-func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
-	if sc == core.EmptySpanContext() {
+// It serializes otel.SpanContext into a byte array.
+func (bp binaryPropagator) ToBytes(sc otel.SpanContext) []byte {
+	if sc == otel.EmptySpanContext() {
 		return nil
 	}
 	var b [29]byte
@@ -45,17 +45,17 @@ func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
 }
 
 // FromBytes implements FromBytes method of propagation.BinaryFormatPropagator.
-// It de-serializes bytes into core.SpanContext.
-func (bp binaryPropagator) FromBytes(b []byte) (sc core.SpanContext) {
+// It de-serializes bytes into otel.SpanContext.
+func (bp binaryPropagator) FromBytes(b []byte) (sc otel.SpanContext) {
 	if len(b) == 0 {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	b = b[1:]
 	if len(b) >= 17 && b[0] == 0 {
 		copy(sc.TraceID[:], b[1:17])
 		b = b[17:]
 	} else {
-		return core.EmptySpanContext()
+		return otel.EmptySpanContext()
 	}
 	if len(b) >= 9 && b[0] == 1 {
 		copy(sc.SpanID[:], b[1:9])
@@ -67,5 +67,5 @@ func (bp binaryPropagator) FromBytes(b []byte) (sc core.SpanContext) {
 	if sc.IsValid() {
 		return sc
 	}
-	return core.EmptySpanContext()
+	return otel.EmptySpanContext()
 }

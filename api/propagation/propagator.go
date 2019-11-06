@@ -36,7 +36,7 @@ type TextFormatPropagator interface {
 	// It decodes the SpanContext and returns it and a dctx of correlated context.
 	// If no SpanContext was retrieved OR if the retrieved SpanContext is invalid then
 	// an empty SpanContext is returned.
-	Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map)
+	Extract(ctx context.Context, supplier Supplier) (otel.SpanContext, dctx.Map)
 
 	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
 	// carrier. The use cases for this are
@@ -58,8 +58,8 @@ type Supplier interface {
 // to/from byte array.
 type BinaryFormatPropagator interface {
 	// ToBytes serializes span context into a byte array and returns the array.
-	ToBytes(sc core.SpanContext) []byte
+	ToBytes(sc otel.SpanContext) []byte
 
 	// FromBytes de-serializes byte array into span context and returns the span context.
-	FromBytes([]byte) core.SpanContext
+	FromBytes([]byte) otel.SpanContext
 }

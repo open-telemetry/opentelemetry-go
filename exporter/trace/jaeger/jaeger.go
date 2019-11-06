@@ -130,7 +130,7 @@ type Process struct {
 	ServiceName string
 
 	// Tags are added to Jaeger Process exports
-	Tags []core.KeyValue
+	Tags []otel.KeyValue
 }
 
 // Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
@@ -210,45 +210,45 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 }
 
-func keyValueToTag(kv core.KeyValue) *gen.Tag {
+func keyValueToTag(kv otel.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch kv.Value.Type() {
-	case core.STRING:
+	case otel.STRING:
 		s := kv.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
 			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
-	case core.BOOL:
+	case otel.BOOL:
 		b := kv.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case core.INT32:
+	case otel.INT32:
 		i := int64(kv.Value.AsInt32())
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case core.INT64:
+	case otel.INT64:
 		i := kv.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(kv.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case core.FLOAT32:
+	case otel.FLOAT32:
 		f := float64(kv.Value.AsFloat32())
 		tag = &gen.Tag{
 			Key:     string(kv.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
 		}
-	case core.FLOAT64:
+	case otel.FLOAT64:
 		f := kv.Value.AsFloat64()
 		tag = &gen.Tag{
 			Key:     string(kv.Key),
