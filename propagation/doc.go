@@ -12,5 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build ignore
+
 // Package propagation contains propagators for different format and carriers.
 package propagation // import "go.opentelemetry.io/otel/propagation"
