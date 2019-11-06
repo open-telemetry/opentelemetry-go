@@ -128,7 +128,7 @@ func BenchmarkLabels_16(b *testing.B) {
 // Note: performance does not depend on label set size for the
 // benchmarks below.
 
-func BenchmarkNewHandle(b *testing.B) {
+func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.sdk.NewInt64Counter("int64.counter")
@@ -145,6 +145,44 @@ func BenchmarkNewHandle(b *testing.B) {
 	}
 }
 
+func BenchmarkAcquireExistingHandle(b *testing.B) {
+	fix := newFixture(b)
+	labelSets := makeLabelSets(b.N)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
+	labels := make([]metric.LabelSet, b.N)
+
+	for i := 0; i < b.N; i++ {
+		labels[i] = fix.sdk.Labels(labelSets[i]...)
+		cnt.AcquireHandle(labels[i]).Release()
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		cnt.AcquireHandle(labels[i])
+	}
+}
+
+func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
+	fix := newFixture(b)
+	labelSets := makeLabelSets(b.N)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
+	labels := make([]metric.LabelSet, b.N)
+
+	for i := 0; i < b.N; i++ {
+		labels[i] = fix.sdk.Labels(labelSets[i]...)
+		cnt.AcquireHandle(labels[i]).Release()
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		cnt.AcquireHandle(labels[i]).Release()
+	}
+}
+
+// Counters
+
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -155,19 +193,6 @@ func BenchmarkInt64CounterAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cnt.Add(ctx, 1, labs)
-	}
-}
-
-func BenchmarkInt64CounterAcquireHandle(b *testing.B) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	cnt := fix.sdk.NewInt64Counter("int64.counter")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := cnt.AcquireHandle(labs)
-		handle.Release()
 	}
 }
 
@@ -195,19 +220,6 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cnt.Add(ctx, 1.1, labs)
-	}
-}
-
-func BenchmarkFloat64CounterAcquireHandle(b *testing.B) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	cnt := fix.sdk.NewFloat64Counter("float64.counter")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := cnt.AcquireHandle(labs)
-		handle.Release()
 	}
 }
 
@@ -240,19 +252,6 @@ func BenchmarkInt64GaugeAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64GaugeAcquireHandle(b *testing.B) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewInt64Gauge("int64.gauge")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := gau.AcquireHandle(labs)
-		handle.Release()
-	}
-}
-
 func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -277,19 +276,6 @@ func BenchmarkFloat64GaugeAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		gau.Set(ctx, float64(i), labs)
-	}
-}
-
-func BenchmarkFloat64GaugeAcquireHandle(b *testing.B) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := gau.AcquireHandle(labs)
-		handle.Release()
 	}
 }
 
@@ -322,19 +308,6 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkInt64MeasureAcquireHandle(b *testing.B, name string) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	mea := fix.sdk.NewInt64Measure(name)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := mea.AcquireHandle(labs)
-		handle.Release()
-	}
-}
-
 func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -362,19 +335,6 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureAcquireHandle(b *testing.B, name string) {
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	mea := fix.sdk.NewFloat64Measure(name)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle := mea.AcquireHandle(labs)
-		handle.Release()
-	}
-}
-
 func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -395,20 +355,12 @@ func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
 	benchmarkInt64MeasureAdd(b, "int64.maxsumcount")
 }
 
-func BenchmarkInt64MaxSumCountAcquireHandle(b *testing.B) {
-	benchmarkInt64MeasureAcquireHandle(b, "int64.maxsumcount")
-}
-
 func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
 	benchmarkInt64MeasureHandleAdd(b, "int64.maxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
 	benchmarkFloat64MeasureAdd(b, "float64.maxsumcount")
-}
-
-func BenchmarkFloat64MaxSumCountAcquireHandle(b *testing.B) {
-	benchmarkFloat64MeasureAcquireHandle(b, "float64.maxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
@@ -421,20 +373,12 @@ func BenchmarkInt64DDSketchAdd(b *testing.B) {
 	benchmarkInt64MeasureAdd(b, "int64.ddsketch")
 }
 
-func BenchmarkInt64DDSketchAcquireHandle(b *testing.B) {
-	benchmarkInt64MeasureAcquireHandle(b, "int64.ddsketch")
-}
-
 func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
 	benchmarkInt64MeasureHandleAdd(b, "int64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchAdd(b *testing.B) {
 	benchmarkFloat64MeasureAdd(b, "float64.ddsketch")
-}
-
-func BenchmarkFloat64DDSketchAcquireHandle(b *testing.B) {
-	benchmarkFloat64MeasureAcquireHandle(b, "float64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
@@ -447,20 +391,12 @@ func BenchmarkInt64ArrayAdd(b *testing.B) {
 	benchmarkInt64MeasureAdd(b, "int64.array")
 }
 
-func BenchmarkInt64ArrayAcquireHandle(b *testing.B) {
-	benchmarkInt64MeasureAcquireHandle(b, "int64.array")
-}
-
 func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
 	benchmarkInt64MeasureHandleAdd(b, "int64.array")
 }
 
 func BenchmarkFloat64ArrayAdd(b *testing.B) {
 	benchmarkFloat64MeasureAdd(b, "float64.array")
-}
-
-func BenchmarkFloat64ArrayAcquireHandle(b *testing.B) {
-	benchmarkFloat64MeasureAcquireHandle(b, "float64.array")
 }
 
 func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
