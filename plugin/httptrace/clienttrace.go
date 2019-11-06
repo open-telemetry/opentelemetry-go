@@ -25,7 +25,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/global"
 )
 
@@ -40,17 +39,17 @@ var (
 type clientTracer struct {
 	context.Context
 
-	tr trace.Tracer
+	tr otel.Tracer
 
-	activeHooks map[string]trace.Span
-	root        trace.Span
+	activeHooks map[string]otel.Span
+	root        otel.Span
 	mtx         sync.Mutex
 }
 
 func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
-		activeHooks: make(map[string]trace.Span),
+		activeHooks: make(map[string]otel.Span),
 	}
 
 	ct.tr = global.TraceProvider().GetTracer("go.opentelemetry.io/otel/plugin/httptrace")
@@ -77,7 +76,7 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...otel.KeyValue) {
-	_, sp := ct.tr.Start(ct.Context, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+	_, sp := ct.tr.Start(ct.Context, spanName, otel.WithAttributes(attrs...), otel.WithSpanKind(otel.SpanKindClient))
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ct.root == nil {
@@ -105,11 +104,11 @@ func (ct *clientTracer) end(hook string, err error, attrs ...otel.KeyValue) {
 		delete(ct.activeHooks, hook)
 	} else {
 		// start is not finished before end is called.
-		ct.activeHooks[hook] = trace.NoopSpan{}
+		ct.activeHooks[hook] = otel.NoopSpan{}
 	}
 }
 
-func (ct *clientTracer) span(hook string) trace.Span {
+func (ct *clientTracer) span(hook string) otel.Span {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	return ct.activeHooks[hook]

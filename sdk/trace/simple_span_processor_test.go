@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -65,7 +64,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	_, span := tr.Start(context.Background(), "OnEnd", apitrace.ChildOf(sc))
+	_, span := tr.Start(context.Background(), "OnEnd", otel.ChildOf(sc))
 	span.End()
 
 	wantTraceID := tid

@@ -20,11 +20,10 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func initTracer() {
@@ -35,10 +34,10 @@ func initTracer() {
 		log.Fatal(err)
 	}
 
-	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
+	// For the demonstration, use trace.AlwaysSample sampler to sample all traces.
+	// In a production application, use trace.ProbabilitySampler with a desired probability.
+	tp, err := trace.NewProvider(trace.WithConfig(trace.Config{DefaultSampler: trace.AlwaysSample()}),
+		trace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,8 +58,8 @@ func main() {
 		ctx, span := tr.Start(
 			req.Context(),
 			"hello",
-			trace.WithAttributes(attrs...),
-			trace.ChildOf(spanCtx),
+			otel.WithAttributes(attrs...),
+			otel.ChildOf(spanCtx),
 		)
 		defer span.End()
 

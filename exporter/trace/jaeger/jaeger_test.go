@@ -23,8 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/global"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
@@ -173,7 +171,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Links: []apitrace.Link{
+				Links: []otel.Link{
 					{
 						SpanContext: otel.SpanContext{
 							TraceID: linkTraceID,

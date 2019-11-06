@@ -18,9 +18,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
-
-	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -49,7 +48,7 @@ type Provider struct {
 	config         atomic.Value // access atomically
 }
 
-var _ apitrace.Provider = &Provider{}
+var _ otel.Provider = &Provider{}
 
 // NewProvider creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
@@ -93,7 +92,7 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 
 // GetTracer with the given name. If a tracer for the given name does not exist,
 // it is created first. If the name is empty, DefaultTracerName is used.
-func (p *Provider) GetTracer(name string) apitrace.Tracer {
+func (p *Provider) GetTracer(name string) otel.Tracer {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {

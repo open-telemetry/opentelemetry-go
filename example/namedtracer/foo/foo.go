@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/global"
 )
 
@@ -37,9 +36,9 @@ func SubOperation(ctx context.Context) error {
 		ctx,
 		"Sub operation...",
 		func(ctx context.Context) error {
-			trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
+			otel.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-			trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
+			otel.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
 			return nil
 		},

@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package otel
 
 import (
 	"context"
 	"time"
 
 	"google.golang.org/grpc/codes"
-
-	"go.opentelemetry.io/otel"
 )
 
 type NoopSpan struct {
@@ -29,8 +27,8 @@ type NoopSpan struct {
 var _ Span = (*NoopSpan)(nil)
 
 // SpancContext returns an invalid span context.
-func (NoopSpan) SpanContext() otel.SpanContext {
-	return otel.EmptySpanContext()
+func (NoopSpan) SpanContext() SpanContext {
+	return EmptySpanContext()
 }
 
 // IsRecording always returns false for NoopSpan.
@@ -47,11 +45,11 @@ func (NoopSpan) SetError(v bool) {
 }
 
 // SetAttribute does nothing.
-func (NoopSpan) SetAttribute(attribute otel.KeyValue) {
+func (NoopSpan) SetAttribute(attribute KeyValue) {
 }
 
 // SetAttributes does nothing.
-func (NoopSpan) SetAttributes(attributes ...otel.KeyValue) {
+func (NoopSpan) SetAttributes(attributes ...KeyValue) {
 }
 
 // End does nothing.
@@ -64,11 +62,11 @@ func (NoopSpan) Tracer() Tracer {
 }
 
 // AddEvent does nothing.
-func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
+func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
+func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...KeyValue) {
 }
 
 // SetName does nothing.
@@ -80,5 +78,5 @@ func (NoopSpan) AddLink(link Link) {
 }
 
 // Link does nothing.
-func (NoopSpan) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
+func (NoopSpan) Link(sc SpanContext, attrs ...KeyValue) {
 }

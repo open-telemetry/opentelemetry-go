@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
@@ -65,9 +64,9 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", otel.Key("bogons").Int(100))
+		otel.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", otel.Key("bogons").Int(100))
 
-		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
+		otel.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
 		return foo.SubOperation(ctx)
 	})

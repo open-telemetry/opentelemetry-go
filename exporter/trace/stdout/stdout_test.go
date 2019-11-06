@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -61,7 +60,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 			{Message: "foo", Attributes: []otel.KeyValue{otel.Key("key").String(keyValue)}, Time: now},
 			{Message: "bar", Attributes: []otel.KeyValue{otel.Key("double").Float64(doubleValue)}, Time: now},
 		},
-		SpanKind: trace.SpanKindInternal,
+		SpanKind: otel.SpanKindInternal,
 		Status:   codes.Unknown,
 	}
 	ex.ExportSpan(context.Background(), testSpan)

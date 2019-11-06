@@ -1,4 +1,4 @@
-package trace_test
+package otel_test
 
 import (
 	"context"
@@ -8,19 +8,18 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
-	originalSpan := trace.NoopSpan{}
+	originalSpan := otel.NoopSpan{}
 	expectedSpan := mockSpan{}
 
 	ctx := context.Background()
 
-	ctx = trace.SetCurrentSpan(ctx, originalSpan)
-	ctx = trace.SetCurrentSpan(ctx, expectedSpan)
+	ctx = otel.SetCurrentSpan(ctx, originalSpan)
+	ctx = otel.SetCurrentSpan(ctx, expectedSpan)
 
-	if span := trace.CurrentSpan(ctx); span != expectedSpan {
+	if span := otel.CurrentSpan(ctx); span != expectedSpan {
 		t.Errorf("Want: %v, but have: %v", expectedSpan, span)
 	}
 }
@@ -29,22 +28,22 @@ func TestCurrentSpan(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		ctx  context.Context
-		want trace.Span
+		want otel.Span
 	}{
 		{
 			name: "CurrentSpan() returns a NoopSpan{} from an empty context",
 			ctx:  context.Background(),
-			want: trace.NoopSpan{},
+			want: otel.NoopSpan{},
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
-			ctx:  trace.SetCurrentSpan(context.Background(), mockSpan{}),
+			ctx:  otel.SetCurrentSpan(context.Background(), mockSpan{}),
 			want: mockSpan{},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			// proto: CurrentSpan(ctx context.Context) trace.Span
-			have := trace.CurrentSpan(testcase.ctx)
+			// proto: CurrentSpan(ctx context.Context) otel.Span
+			have := otel.CurrentSpan(testcase.ctx)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -52,10 +51,10 @@ func TestCurrentSpan(t *testing.T) {
 	}
 }
 
-// a duplicate of trace.NoopSpan for testing
+// a duplicate of otel.NoopSpan for testing
 type mockSpan struct{}
 
-var _ trace.Span = mockSpan{}
+var _ otel.Span = mockSpan{}
 
 // SpanContext returns an invalid span context.
 func (mockSpan) SpanContext() otel.SpanContext {
@@ -88,12 +87,12 @@ func (mockSpan) SetAttributes(attributes ...otel.KeyValue) {
 }
 
 // End does nothing.
-func (mockSpan) End(options ...trace.EndOption) {
+func (mockSpan) End(options ...otel.EndOption) {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (mockSpan) Tracer() trace.Tracer {
-	return trace.NoopTracer{}
+func (mockSpan) Tracer() otel.Tracer {
+	return otel.NoopTracer{}
 }
 
 // Event does nothing.
@@ -105,7 +104,7 @@ func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, 
 }
 
 // AddLink does nothing.
-func (mockSpan) AddLink(link trace.Link) {
+func (mockSpan) AddLink(link otel.Link) {
 }
 
 // Link does nothing.

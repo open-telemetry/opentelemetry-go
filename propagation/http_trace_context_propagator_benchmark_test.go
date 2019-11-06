@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
@@ -39,7 +38,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			TraceFlags: otel.TraceFlagsSampled,
 		}
 		ctx := context.Background()
-		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))
+		ctx, _ = mockTracer.Start(ctx, "inject", otel.ChildOf(sc))
 		fn(ctx, b)
 	})
 

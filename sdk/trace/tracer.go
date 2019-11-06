@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 type tracer struct {
@@ -28,10 +27,10 @@ type tracer struct {
 	resources []otel.KeyValue
 }
 
-var _ apitrace.Tracer = &tracer{}
+var _ otel.Tracer = &tracer{}
 
-func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	var opts apitrace.SpanOptions
+func (tr *tracer) Start(ctx context.Context, name string, o ...otel.SpanOption) (context.Context, otel.Span) {
+	var opts otel.SpanOptions
 	var parent otel.SpanContext
 	var remoteParent bool
 
@@ -42,7 +41,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 	if relation := opts.Relation; relation.SpanContext != otel.EmptySpanContext() {
 		switch relation.RelationshipType {
-		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
+		case otel.ChildOfRelationship, otel.FollowsFromRelationship:
 			parent = relation.SpanContext
 			remoteParent = true
 		default:
@@ -50,7 +49,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 			// e.g., adding a `Link` instead of setting the `parent`
 		}
 	} else {
-		if p := apitrace.CurrentSpan(ctx); p != nil {
+		if p := otel.CurrentSpan(ctx); p != nil {
 			if sdkSpan, ok := p.(*span); ok {
 				sdkSpan.addChild()
 				parent = sdkSpan.spanContext
@@ -76,7 +75,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 	ctx, end := startExecutionTracerTask(ctx, spanName)
 	span.executionTracerTaskEnd = end
-	return apitrace.SetCurrentSpan(ctx, span), span
+	return otel.SetCurrentSpan(ctx, span), span
 }
 
 func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
@@ -90,19 +89,19 @@ func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx conte
 	return nil
 }
 
-func (tr *tracer) WithService(name string) apitrace.Tracer {
+func (tr *tracer) WithService(name string) otel.Tracer {
 	tr.name = name
 	return tr
 }
 
-// WithResources does nothing and returns noop implementation of apitrace.Tracer.
-func (tr *tracer) WithResources(res ...otel.KeyValue) apitrace.Tracer {
+// WithResources does nothing and returns noop implementation of otel.Tracer.
+func (tr *tracer) WithResources(res ...otel.KeyValue) otel.Tracer {
 	tr.resources = res
 	return tr
 }
 
-// WithComponent does nothing and returns noop implementation of apitrace.Tracer.
-func (tr *tracer) WithComponent(component string) apitrace.Tracer {
+// WithComponent does nothing and returns noop implementation of otel.Tracer.
+func (tr *tracer) WithComponent(component string) otel.Tracer {
 	tr.component = component
 	return tr
 }

@@ -12,4 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace // import "go.opentelemetry.io/otel/api/trace"
+package otel
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+func TestShouldSample(t *testing.T) {
+	gotD := AlwaysSampleSampler().ShouldSample(
+		SpanContext{}, false, TraceID{}, 0, "span")
+	wantD := Decision{Sampled: true}
+	if diff := cmp.Diff(wantD, gotD); diff != "" {
+		t.Errorf("Decision: +got, -want%v", diff)
+	}
+}
+
+func TestDescription(t *testing.T) {
+	gotDesc := AlwaysSampleSampler().Description()
+	wantDesc := alwaysSamplerDescription
+	if diff := cmp.Diff(wantDesc, gotDesc); diff != "" {
+		t.Errorf("Description: +got, -want%v", diff)
+	}
+}

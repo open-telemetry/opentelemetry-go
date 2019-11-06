@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -178,7 +177,7 @@ func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	})
 }
 
-func getTracer(b *testing.B, name string) apitrace.Tracer {
+func getTracer(b *testing.B, name string) otel.Tracer {
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)

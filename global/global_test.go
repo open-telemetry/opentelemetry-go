@@ -17,8 +17,8 @@ package global_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/global"
 )
 
@@ -28,12 +28,12 @@ type (
 )
 
 var (
-	_ trace.Provider  = &testTraceProvider{}
+	_ otel.Provider   = &testTraceProvider{}
 	_ metric.Provider = &testMeterProvider{}
 )
 
-func (*testTraceProvider) GetTracer(name string) trace.Tracer {
-	return &trace.NoopTracer{}
+func (*testTraceProvider) GetTracer(name string) otel.Tracer {
+	return &otel.NoopTracer{}
 }
 
 func (*testMeterProvider) GetMeter(name string) metric.Meter {
@@ -43,7 +43,7 @@ func (*testMeterProvider) GetMeter(name string) metric.Meter {
 func TestMulitpleGlobalTracerProvider(t *testing.T) {
 
 	p1 := testTraceProvider{}
-	p2 := trace.NoopProvider{}
+	p2 := otel.NoopProvider{}
 	global.SetTraceProvider(&p1)
 	global.SetTraceProvider(&p2)
 

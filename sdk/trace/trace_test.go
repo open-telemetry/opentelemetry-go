@@ -28,8 +28,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/testharness"
-	"go.opentelemetry.io/otel/api/trace"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -49,7 +47,7 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 		t.Fatalf("failed to create provider, err: %v\n", err)
 	}
 	harness := testharness.NewHarness(t)
-	subjectFactory := func() trace.Tracer {
+	subjectFactory := func() otel.Tracer {
 		return tp.GetTracer("")
 	}
 
@@ -175,7 +173,7 @@ func TestSampling(t *testing.T) {
 			tr := p.GetTracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
-				var opts []apitrace.SpanOption
+				var opts []otel.SpanOption
 				if tc.parent {
 					psc := otel.SpanContext{
 						TraceID: idg.NewTraceID(),
@@ -184,7 +182,7 @@ func TestSampling(t *testing.T) {
 					if tc.sampledParent {
 						psc.TraceFlags = otel.TraceFlagsSampled
 					}
-					opts = append(opts, apitrace.ChildOf(psc))
+					opts = append(opts, otel.ChildOf(psc))
 				}
 				_, span := tr.Start(context.Background(), "test", opts...)
 				if span.SpanContext().IsSampled() {
@@ -209,12 +207,12 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x0,
 	}
-	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", apitrace.ChildOf(sc1))
+	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", otel.ChildOf(sc1))
 	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", apitrace.ChildOf(sc1))
+	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", otel.ChildOf(sc1))
 	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
@@ -225,12 +223,12 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.ChildOf(sc2))
+	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", otel.ChildOf(sc2))
 	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.ChildOf(sc2))
+	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", otel.ChildOf(sc2))
 	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
@@ -251,12 +249,12 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x0,
 	}
-	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", apitrace.FollowsFrom(sc1))
+	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", otel.FollowsFrom(sc1))
 	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", apitrace.FollowsFrom(sc1))
+	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", otel.FollowsFrom(sc1))
 	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
@@ -267,12 +265,12 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.FollowsFrom(sc2))
+	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", otel.FollowsFrom(sc2))
 	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.FollowsFrom(sc2))
+	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", otel.FollowsFrom(sc2))
 	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
@@ -287,7 +285,7 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(otel.Key("key1").String("value1")))
+	span := startSpan(tp, "StartSpanAttribute", otel.WithAttributes(otel.Key("key1").String("value1")))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -303,7 +301,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		Attributes: []otel.KeyValue{
 			otel.Key("key1").String("value1"),
 		},
-		SpanKind:        apitrace.SpanKindInternal,
+		SpanKind:        otel.SpanKindInternal,
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -331,7 +329,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		Attributes: []otel.KeyValue{
 			otel.Key("key1").String("value1"),
 		},
-		SpanKind:        apitrace.SpanKindInternal,
+		SpanKind:        otel.SpanKindInternal,
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -365,7 +363,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			otel.Key("key1").Bool(false),
 			otel.Key("key4").Int64(4),
 		},
-		SpanKind:              apitrace.SpanKindInternal,
+		SpanKind:              otel.SpanKindInternal,
 		HasRemoteParent:       true,
 		DroppedAttributeCount: 1,
 	}
@@ -411,7 +409,7 @@ func TestEvents(t *testing.T) {
 			{Message: "foo", Attributes: []otel.KeyValue{k1v1}},
 			{Message: "bar", Attributes: []otel.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: apitrace.SpanKindInternal,
+		SpanKind: otel.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -462,7 +460,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
-		SpanKind:                 apitrace.SpanKindInternal,
+		SpanKind:                 otel.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -480,8 +478,8 @@ func TestAddLinks(t *testing.T) {
 	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
-	link1 := apitrace.Link{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}}
-	link2 := apitrace.Link{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}}
+	link1 := otel.Link{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}}
+	link2 := otel.Link{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}}
 	span.AddLink(link1)
 	span.AddLink(link2)
 
@@ -498,11 +496,11 @@ func TestAddLinks(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "AddLinks/span0",
 		HasRemoteParent: true,
-		Links: []apitrace.Link{
+		Links: []otel.Link{
 			{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}},
 		},
-		SpanKind: apitrace.SpanKindInternal,
+		SpanKind: otel.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("AddLink: -got +want %s", diff)
@@ -539,11 +537,11 @@ func TestLinks(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "Links/span0",
 		HasRemoteParent: true,
-		Links: []apitrace.Link{
+		Links: []otel.Link{
 			{SpanContext: sc1, Attributes: []otel.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: apitrace.SpanKindInternal,
+		SpanKind: otel.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -580,13 +578,13 @@ func TestLinksOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "LinksOverLimit/span0",
-		Links: []apitrace.Link{
+		Links: []otel.Link{
 			{SpanContext: sc2, Attributes: []otel.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []otel.KeyValue{k3v3}},
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
-		SpanKind:         apitrace.SpanKindInternal,
+		SpanKind:         otel.SpanKindInternal,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -599,7 +597,7 @@ func TestSetSpanName(t *testing.T) {
 
 	want := "SetSpanName/SpanName-1"
 	_, span := tp.GetTracer("SetSpanName").Start(context.Background(), "SpanName-1",
-		apitrace.ChildOf(otel.SpanContext{
+		otel.ChildOf(otel.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
 			TraceFlags: 1,
@@ -633,7 +631,7 @@ func TestSetSpanStatus(t *testing.T) {
 		},
 		ParentSpanID:    sid,
 		Name:            "SpanStatus/span0",
-		SpanKind:        apitrace.SpanKindInternal,
+		SpanKind:        otel.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
 	}
@@ -656,7 +654,7 @@ func remoteSpanContext() otel.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p otel.SpanContext, apiSpan apitrace.Span) error {
+func checkChild(p otel.SpanContext, apiSpan otel.Span) error {
 	s := apiSpan.(*span)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
@@ -679,7 +677,7 @@ func checkChild(p otel.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
+func startSpan(tp *Provider, trName string, args ...otel.SpanOption) otel.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -687,8 +685,8 @@ func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrac
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
-	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
+func startNamedSpan(tp *Provider, trName, name string, args ...otel.SpanOption) otel.Span {
+	args = append(args, otel.ChildOf(remoteSpanContext()), otel.WithRecord())
 	_, span := tp.GetTracer(trName).Start(
 		context.Background(),
 		name,
@@ -706,7 +704,7 @@ func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOpti
 //
 // It also does some basic tests on the span.
 // It also clears spanID in the export.SpanData to make the comparison easier.
-func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
+func endSpan(te *testExporter, span otel.Span) (*export.SpanData, error) {
 
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
@@ -764,7 +762,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
 
 	tr := tp.GetTracer("SpanAfterEnd")
-	ctx, span0 := tr.Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
+	ctx, span0 := tr.Start(context.Background(), "parent", otel.ChildOf(remoteSpanContext()))
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
 	// Start a new span with the context containing span-1
@@ -847,7 +845,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	_, apiSpan = tr.Start(
 		context.Background(),
 		"foo",
-		apitrace.ChildOf(
+		otel.ChildOf(
 			otel.SpanContext{
 				TraceID:    tID,
 				SpanID:     sID,
@@ -882,9 +880,9 @@ func TestCustomStartEndTime(t *testing.T) {
 	_, span := tp.GetTracer("Custom Start and End time").Start(
 		context.Background(),
 		"testspan",
-		apitrace.WithStartTime(startTime),
+		otel.WithStartTime(startTime),
 	)
-	span.End(apitrace.WithEndTime(endTime))
+	span.End(otel.WithEndTime(endTime))
 
 	if len(te.spans) != 1 {
 		t.Fatalf("got exported spans %#v, want one span", te.spans)
@@ -909,22 +907,22 @@ func TestWithSpanKind(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	if spanData.SpanKind != apitrace.SpanKindInternal {
-		t.Errorf("Default value of Spankind should be Internal: got %+v, want %+v\n", spanData.SpanKind, apitrace.SpanKindInternal)
+	if spanData.SpanKind != otel.SpanKindInternal {
+		t.Errorf("Default value of Spankind should be Internal: got %+v, want %+v\n", spanData.SpanKind, otel.SpanKindInternal)
 	}
 
-	sks := []apitrace.SpanKind{
-		apitrace.SpanKindInternal,
-		apitrace.SpanKindServer,
-		apitrace.SpanKindClient,
-		apitrace.SpanKindProducer,
-		apitrace.SpanKindConsumer,
+	sks := []otel.SpanKind{
+		otel.SpanKindInternal,
+		otel.SpanKindServer,
+		otel.SpanKindClient,
+		otel.SpanKindProducer,
+		otel.SpanKindConsumer,
 	}
 
 	for _, sk := range sks {
 		te.spans = nil
 
-		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
+		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), otel.WithSpanKind(sk))
 		spanData, err := endSpan(&te, span)
 		if err != nil {
 			t.Error(err.Error())

@@ -12,41 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
-
-import (
-	"go.opentelemetry.io/otel"
-)
+package otel
 
 const (
-	neverSamplerDescription = "NeverSampleSampler"
+	alwaysSamplerDescription = "AlwaysSampleSampler"
 )
 
-var neverSampledecision = Decision{Sampled: false}
+var alwaysSampleDecision = Decision{Sampled: true}
 
-type neverSampleSampler struct{}
+type alwaysSampleSampler struct{}
 
 // ShouldSample implements Sampler interface.
-// It always returns a Decision with Sampled value set to false
+// It always returns a Decision with Sampled value set to true
 // and with Attributes set to an empty slice.
-func (ns neverSampleSampler) ShouldSample(
-	_ otel.SpanContext,
+func (as alwaysSampleSampler) ShouldSample(
+	_ SpanContext,
 	_ bool,
-	_ otel.TraceID,
+	_ TraceID,
 	_ uint64,
 	_ string,
 ) Decision {
-	return neverSampledecision
+	return alwaysSampleDecision
 }
 
 // Description implements Sampler interface.
 // It returns the description of this sampler.
-func (ns neverSampleSampler) Description() string {
-	return neverSamplerDescription
+func (as alwaysSampleSampler) Description() string {
+	return alwaysSamplerDescription
 }
 
-var _ Sampler = neverSampleSampler{}
+var _ Sampler = alwaysSampleSampler{}
 
-func NeverSampleSampler() Sampler {
-	return neverSampleSampler{}
+func AlwaysSampleSampler() Sampler {
+	return alwaysSampleSampler{}
 }

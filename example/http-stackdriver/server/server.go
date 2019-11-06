@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
@@ -65,8 +64,8 @@ func main() {
 		ctx, span := tr.Start(
 			req.Context(),
 			"hello",
-			trace.WithAttributes(attrs...),
-			trace.ChildOf(spanCtx),
+			otel.WithAttributes(attrs...),
+			otel.ChildOf(spanCtx),
 		)
 		defer span.End()
 

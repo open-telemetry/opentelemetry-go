@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/trace"
-
 	"go.opentelemetry.io/otel"
 )
 
@@ -54,7 +52,7 @@ type HTTPB3Propagator struct {
 var _ otel.TextFormatPropagator = HTTPB3Propagator{}
 
 func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier otel.Supplier) {
-	sc := trace.CurrentSpan(ctx).SpanContext()
+	sc := otel.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
 			sampled := sc.TraceFlags & otel.TraceFlagsSampled

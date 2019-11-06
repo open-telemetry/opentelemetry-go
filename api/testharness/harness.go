@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/matchers"
 )
 
@@ -38,7 +37,7 @@ func NewHarness(t *testing.T) *Harness {
 	}
 }
 
-func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
+func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 	h.t.Run("#Start", func(t *testing.T) {
 		t.Run("propagates the original context", func(t *testing.T) {
 			t.Parallel()
@@ -79,7 +78,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			e.Expect(span).NotToBeNil()
 			e.Expect(span.SpanContext()).NotToEqual(otel.EmptySpanContext())
-			e.Expect(trace.CurrentSpan(ctx)).ToEqual(span)
+			e.Expect(otel.CurrentSpan(ctx)).ToEqual(span)
 		})
 
 		t.Run("starts spans with unique trace and span IDs", func(t *testing.T) {
@@ -104,7 +103,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			_, span := subject.Start(context.Background(), "span", trace.WithRecord())
+			_, span := subject.Start(context.Background(), "span", otel.WithRecord())
 
 			e.Expect(span.IsRecording()).ToBeTrue()
 		})
@@ -132,7 +131,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			subject := subjectFactory()
 
 			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.ChildOf(parent.SpanContext()))
+			_, child := subject.Start(context.Background(), "child", otel.ChildOf(parent.SpanContext()))
 
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
@@ -148,7 +147,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			subject := subjectFactory()
 
 			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.FollowsFrom(parent.SpanContext()))
+			_, child := subject.Start(context.Background(), "child", otel.FollowsFrom(parent.SpanContext()))
 
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
@@ -216,10 +215,10 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			var span trace.Span
+			var span otel.Span
 
 			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				span = trace.CurrentSpan(ctx)
+				span = otel.CurrentSpan(ctx)
 
 				return nil
 			})
@@ -238,11 +237,11 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			var span1 trace.Span
-			var span2 trace.Span
+			var span1 otel.Span
+			var span2 otel.Span
 
 			err := subject.WithSpan(context.Background(), "span1", func(ctx context.Context) error {
-				span1 = trace.CurrentSpan(ctx)
+				span1 = otel.CurrentSpan(ctx)
 
 				return nil
 			})
@@ -250,7 +249,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(err).ToBeNil()
 
 			err = subject.WithSpan(context.Background(), "span2", func(ctx context.Context) error {
-				span2 = trace.CurrentSpan(ctx)
+				span2 = otel.CurrentSpan(ctx)
 
 				return nil
 			})
@@ -272,10 +271,10 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			ctx, parent := subject.Start(context.Background(), "parent")
 
-			var child trace.Span
+			var child otel.Span
 
 			err := subject.WithSpan(ctx, "child", func(ctx context.Context) error {
-				child = trace.CurrentSpan(ctx)
+				child = otel.CurrentSpan(ctx)
 
 				return nil
 			})
@@ -293,44 +292,44 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 	h.testSpan(subjectFactory)
 }
 
-func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
-	var methods = map[string]func(span trace.Span){
-		"#End": func(span trace.Span) {
+func (h *Harness) testSpan(tracerFactory func() otel.Tracer) {
+	var methods = map[string]func(span otel.Span){
+		"#End": func(span otel.Span) {
 			span.End()
 		},
-		"#AddEvent": func(span trace.Span) {
+		"#AddEvent": func(span otel.Span) {
 			span.AddEvent(context.Background(), "test event")
 		},
-		"#AddEventWithTimestamp": func(span trace.Span) {
+		"#AddEventWithTimestamp": func(span otel.Span) {
 			span.AddEventWithTimestamp(context.Background(), time.Now(), "test event")
 		},
-		"#AddLink": func(span trace.Span) {
-			span.AddLink(trace.Link{})
+		"#AddLink": func(span otel.Span) {
+			span.AddLink(otel.Link{})
 		},
-		"#Link": func(span trace.Span) {
+		"#Link": func(span otel.Span) {
 			span.Link(otel.SpanContext{})
 		},
-		"#SetStatus": func(span trace.Span) {
+		"#SetStatus": func(span otel.Span) {
 			span.SetStatus(codes.Internal)
 		},
-		"#SetName": func(span trace.Span) {
+		"#SetName": func(span otel.Span) {
 			span.SetName("new name")
 		},
-		"#SetAttribute": func(span trace.Span) {
+		"#SetAttribute": func(span otel.Span) {
 			span.SetAttribute(otel.Key("key").String("value"))
 		},
-		"#SetAttributes": func(span trace.Span) {
+		"#SetAttributes": func(span otel.Span) {
 			span.SetAttributes(otel.Key("key1").String("value"), otel.Key("key2").Int(123))
 		},
 	}
-	var mechanisms = map[string]func() trace.Span{
-		"Span created via Tracer#Start": func() trace.Span {
+	var mechanisms = map[string]func() otel.Span{
+		"Span created via Tracer#Start": func() otel.Span {
 			tracer := tracerFactory()
 			_, subject := tracer.Start(context.Background(), "test")
 
 			return subject
 		},
-		"Span created via Tracer#WithSpan": func() trace.Span {
+		"Span created via Tracer#WithSpan": func() otel.Span {
 			tracer := tracerFactory()
 
 			var actualCtx context.Context
@@ -341,7 +340,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 				return nil
 			})
 
-			return trace.CurrentSpan(actualCtx)
+			return otel.CurrentSpan(actualCtx)
 		},
 	}
 

@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 type NoopTracer struct{}
@@ -25,7 +23,7 @@ type NoopTracer struct{}
 var _ Tracer = NoopTracer{}
 
 // WithResources does nothing and returns noop implementation of Tracer.
-func (t NoopTracer) WithResources(attributes ...otel.KeyValue) Tracer {
+func (t NoopTracer) WithResources(attributes ...KeyValue) Tracer {
 	return t
 }
 

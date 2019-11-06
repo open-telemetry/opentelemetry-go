@@ -22,12 +22,11 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
 )
 
-// span implements apitrace.Span interface.
+// span implements otel.Span interface.
 type span struct {
 	// data contains information recorded about the span.
 	//
@@ -56,7 +55,7 @@ type span struct {
 	tracer                 *tracer // tracer used to create span.
 }
 
-var _ apitrace.Span = &span{}
+var _ otel.Span = &span{}
 
 func (s *span) SpanContext() otel.SpanContext {
 	if s == nil {
@@ -98,7 +97,7 @@ func (s *span) SetAttributes(attributes ...otel.KeyValue) {
 	s.copyToCappedAttributes(attributes...)
 }
 
-func (s *span) End(options ...apitrace.EndOption) {
+func (s *span) End(options ...otel.EndOption) {
 	if s == nil {
 		return
 	}
@@ -109,7 +108,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 	if !s.IsRecording() {
 		return
 	}
-	opts := apitrace.EndOptions{}
+	opts := otel.EndOptions{}
 	for _, opt := range options {
 		opt(&opts)
 	}
@@ -130,7 +129,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 	})
 }
 
-func (s *span) Tracer() apitrace.Tracer {
+func (s *span) Tracer() otel.Tracer {
 	return s.tracer
 }
 
@@ -192,7 +191,7 @@ func (s *span) SetName(name string) {
 // AddLink implements Span interface. Specified link is added to the span.
 // If the total number of links associated with the span exceeds the limit
 // then the oldest link is removed to create space for the link being added.
-func (s *span) AddLink(link apitrace.Link) {
+func (s *span) AddLink(link otel.Link) {
 	if !s.IsRecording() {
 		return
 	}
@@ -211,11 +210,11 @@ func (s *span) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 		attrsCopy = make([]otel.KeyValue, len(attrs))
 		copy(attrsCopy, attrs)
 	}
-	link := apitrace.Link{SpanContext: sc, Attributes: attrsCopy}
+	link := otel.Link{SpanContext: sc, Attributes: attrsCopy}
 	s.addLink(link)
 }
 
-func (s *span) addLink(link apitrace.Link) {
+func (s *span) addLink(link otel.Link) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.links.add(link)
@@ -243,10 +242,10 @@ func (s *span) makeSpanData() *export.SpanData {
 	return &sd
 }
 
-func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
-	linkArr := make([]apitrace.Link, 0)
+func (s *span) interfaceArrayToLinksArray() []otel.Link {
+	linkArr := make([]otel.Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(apitrace.Link))
+		linkArr = append(linkArr, value.(otel.Link))
 	}
 	return linkArr
 }
@@ -289,7 +288,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
+func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o otel.SpanOptions) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
@@ -324,7 +323,7 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 	span.data = &export.SpanData{
 		SpanContext:     span.spanContext,
 		StartTime:       startTime,
-		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
+		SpanKind:        otel.ValidateSpanKind(o.SpanKind),
 		Name:            name,
 		HasRemoteParent: remoteParent,
 	}

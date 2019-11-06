@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -79,9 +78,9 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", otel.Key("bogons").Int(100))
+		otel.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", otel.Key("bogons").Int(100))
 
-		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
+		otel.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 
 		gauge.Set(ctx, 1)
 
@@ -98,9 +97,9 @@ func main() {
 			ctx,
 			"Sub operation...",
 			func(ctx context.Context) error {
-				trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
+				otel.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
 
-				trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
+				otel.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 
 				measure.Record(ctx, 1.3)
 

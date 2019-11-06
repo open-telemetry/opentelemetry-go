@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // SpanSyncer is a type for functions that receive a single sampled trace span.
@@ -49,7 +48,7 @@ type SpanBatcher interface {
 type SpanData struct {
 	SpanContext  otel.SpanContext
 	ParentSpanID otel.SpanID
-	SpanKind     apitrace.SpanKind
+	SpanKind     otel.SpanKind
 	Name         string
 	StartTime    time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
@@ -57,7 +56,7 @@ type SpanData struct {
 	EndTime                  time.Time
 	Attributes               []otel.KeyValue
 	MessageEvents            []Event
-	Links                    []apitrace.Link
+	Links                    []otel.Link
 	Status                   codes.Code
 	HasRemoteParent          bool
 	DroppedAttributeCount    int

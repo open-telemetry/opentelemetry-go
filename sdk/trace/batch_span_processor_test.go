@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -182,12 +181,12 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	return ssp
 }
 
-func generateSpan(t *testing.T, tr apitrace.Tracer, option testOption) {
+func generateSpan(t *testing.T, tr otel.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
-		_, span := tr.Start(context.Background(), option.name, apitrace.ChildOf(sc))
+		_, span := tr.Start(context.Background(), option.name, otel.ChildOf(sc))
 		span.End()
 	}
 }

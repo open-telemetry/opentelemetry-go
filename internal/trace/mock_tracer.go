@@ -21,7 +21,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // MockTracer is a simple tracer used for testing purpose only.
@@ -36,20 +35,20 @@ type MockTracer struct {
 	StartSpanID *uint64
 }
 
-var _ apitrace.Tracer = (*MockTracer)(nil)
+var _ otel.Tracer = (*MockTracer)(nil)
 
 // WithResources does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithResources(attributes ...otel.KeyValue) apitrace.Tracer {
+func (mt *MockTracer) WithResources(attributes ...otel.KeyValue) otel.Tracer {
 	return mt
 }
 
 // WithComponent does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithComponent(name string) apitrace.Tracer {
+func (mt *MockTracer) WithComponent(name string) otel.Tracer {
 	return mt
 }
 
 // WithService does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithService(name string) apitrace.Tracer {
+func (mt *MockTracer) WithService(name string) otel.Tracer {
 	return mt
 }
 
@@ -62,8 +61,8 @@ func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(conte
 // TracdID is used from Relation Span Context and SpanID is assigned.
 // If Relation SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
-func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	var opts apitrace.SpanOptions
+func (mt *MockTracer) Start(ctx context.Context, name string, o ...otel.SpanOption) (context.Context, otel.Span) {
+	var opts otel.SpanOptions
 	for _, op := range o {
 		op(&opts)
 	}
@@ -85,5 +84,5 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 		tracer: mt,
 	}
 
-	return apitrace.SetCurrentSpan(ctx, span), span
+	return otel.SetCurrentSpan(ctx, span), span
 }

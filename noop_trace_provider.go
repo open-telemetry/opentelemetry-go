@@ -12,25 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package otel
 
-import (
-	"context"
-)
+type NoopProvider struct{}
 
-type currentSpanKeyType struct{}
+var _ Provider = NoopProvider{}
 
-var (
-	currentSpanKey = &currentSpanKeyType{}
-)
-
-func SetCurrentSpan(ctx context.Context, span Span) context.Context {
-	return context.WithValue(ctx, currentSpanKey, span)
-}
-
-func CurrentSpan(ctx context.Context) Span {
-	if span, has := ctx.Value(currentSpanKey).(Span); has {
-		return span
-	}
-	return NoopSpan{}
+// GetTracer returns noop implementation of Tracer.
+func (p NoopProvider) GetTracer(name string) Tracer {
+	return NoopTracer{}
 }

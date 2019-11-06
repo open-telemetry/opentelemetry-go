@@ -26,7 +26,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
@@ -76,7 +75,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			res.Body.Close()
-			trace.CurrentSpan(ctx).SetStatus(codes.OK)
+			otel.CurrentSpan(ctx).SetStatus(codes.OK)
 
 			return err
 		})

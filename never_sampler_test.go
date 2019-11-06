@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package otel
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/otel"
 )
 
 func TestNeverSamperShouldSample(t *testing.T) {
 	gotD := NeverSampleSampler().ShouldSample(
-		otel.SpanContext{}, false, otel.TraceID{}, 0, "span")
+		SpanContext{}, false, TraceID{}, 0, "span")
 	wantD := Decision{Sampled: false}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
 		t.Errorf("Decision: +got, -want%v", diff)

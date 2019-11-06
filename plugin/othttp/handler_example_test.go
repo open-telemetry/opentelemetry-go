@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/othttp"
@@ -65,7 +64,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.CurrentSpan(ctx).SetAttribute(otel.Key("name").String(pp[1]))
+			otel.CurrentSpan(ctx).SetAttribute(otel.Key("name").String(pp[1]))
 		}
 		return pp[1], err
 	}
@@ -77,7 +76,7 @@ func ExampleNewHandler() {
 				ctx := r.Context()
 				var name string
 				// Wrap another function in it's own span
-				if err := trace.CurrentSpan(ctx).Tracer().WithSpan(ctx, "figureOutName",
+				if err := otel.CurrentSpan(ctx).Tracer().WithSpan(ctx, "figureOutName",
 					func(ctx context.Context) error {
 						var err error
 						name, err = figureOutName(ctx, r.URL.Path[1:])

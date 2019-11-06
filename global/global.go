@@ -17,13 +17,13 @@ package global
 import (
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 type (
 	traceProvider struct {
-		tp trace.Provider
+		tp otel.Provider
 	}
 
 	meterProvider struct {
@@ -37,18 +37,18 @@ var (
 )
 
 // TraceProvider returns the registered global trace provider.
-// If none is registered then an instance of trace.NoopProvider is returned.
+// If none is registered then an instance of otel.NoopProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().GetTracer("example.com/foo")
-func TraceProvider() trace.Provider {
+func TraceProvider() otel.Provider {
 	if gp := globalTracer.Load(); gp != nil {
 		return gp.(traceProvider).tp
 	}
-	return trace.NoopProvider{}
+	return otel.NoopProvider{}
 }
 
 // SetTraceProvider registers `tp` as the global trace provider.
-func SetTraceProvider(tp trace.Provider) {
+func SetTraceProvider(tp otel.Provider) {
 	globalTracer.Store(traceProvider{tp: tp})
 }
 

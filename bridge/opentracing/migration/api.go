@@ -20,7 +20,7 @@ package migration // import "go.opentelemetry.io/otel/bridge/opentracing/migrati
 import (
 	"context"
 
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 )
 
 // DeferredContextSetupTracerExtension is an interface an
@@ -41,7 +41,7 @@ type DeferredContextSetupTracerExtension interface {
 	// opentracing.ContextWithSpan happens. When bridge
 	// OpenTracing tracer calls OpenTelemetry tracer's Start()
 	// function, it passes a context that shouldn't be modified.
-	DeferredContextSetupHook(ctx context.Context, span oteltrace.Span) context.Context
+	DeferredContextSetupHook(ctx context.Context, span otel.Span) context.Context
 }
 
 // OverrideTracerSpanExtension is an interface an OpenTelemetry span
@@ -72,5 +72,5 @@ type OverrideTracerSpanExtension interface {
 	// API calls. In such case, there is no need to use the
 	// WrapperTracer and thus no need to override the result of
 	// the Tracer() function.
-	OverrideTracer(oteltrace.Tracer)
+	OverrideTracer(otel.Tracer)
 }
