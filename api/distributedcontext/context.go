@@ -16,33 +16,54 @@ package distributedcontext
 
 import (
 	"context"
-	"runtime/pprof"
-
-	"go.opentelemetry.io/otel/api/core"
 )
 
-type ctxEntriesType struct{}
+type (
+	ctxCorrelationsType struct{}
+	ctxBaggageType      struct{}
+)
 
 var (
-	ctxEntriesKey = &ctxEntriesType{}
+	ctxCorrelationsKey = &ctxCorrelationsType{}
+	ctxBaggageKey      = &ctxBaggageType{}
 )
 
-func WithMap(ctx context.Context, m Map) context.Context {
-	return context.WithValue(ctx, ctxEntriesKey, m)
+func NewCorrelationsContextKV(ctx context.Context, correlations ...Correlation) context.Context {
+	return withCorrelationsMapUpdate(ctx, CorrelationsUpdate{
+		MultiKV: correlations,
+	})
 }
 
-func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
-	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
-		MultiKV: keyvalues,
-	}))
+func NewCorrelationsContextMap(ctx context.Context, correlations Correlations) context.Context {
+	return withCorrelationsMapUpdate(ctx, CorrelationsUpdate{
+		Map: correlations,
+	})
 }
 
-func FromContext(ctx context.Context) Map {
-	if m, ok := ctx.Value(ctxEntriesKey).(Map); ok {
+func CorrelationsFromContext(ctx context.Context) Correlations {
+	if m, ok := ctx.Value(ctxCorrelationsKey).(Correlations); ok {
 		return m
 	}
-	return NewEmptyMap()
+	return NewEmptyCorrelations()
 }
+
+func NewBaggageContext(ctx context.Context, baggage Baggage) context.Context {
+	return context.WithValue(ctx, ctxBaggageKey, baggage)
+}
+
+func BaggageFromContext(ctx context.Context) Baggage {
+	if m, ok := ctx.Value(ctxBaggageKey).(Baggage); ok {
+		return m
+	}
+	return NewEmptyBaggage()
+}
+
+func withCorrelationsMapUpdate(ctx context.Context, update CorrelationsUpdate) context.Context {
+	return context.WithValue(ctx, ctxCorrelationsKey, CorrelationsFromContext(ctx).Apply(update))
+}
+
+/*
+// TODO(krnowak): I don't know what's the point of this function…
 
 // Note: the golang pprof.Do API forces this memory allocation, we
 // should file an issue about that.  (There's a TODO in the source.)
@@ -54,3 +75,4 @@ func Do(ctx context.Context, f func(ctx context.Context)) {
 	}
 	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }
+*/
