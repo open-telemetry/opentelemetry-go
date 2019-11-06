@@ -21,7 +21,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )

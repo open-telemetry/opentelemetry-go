@@ -17,7 +17,7 @@ package maxsumcount // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ma
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 

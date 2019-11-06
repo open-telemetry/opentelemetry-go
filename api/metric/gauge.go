@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 )
 
 // Float64Gauge is a metric that stores the last float64 value.

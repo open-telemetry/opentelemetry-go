@@ -18,7 +18,7 @@ import (
 	"context"
 	"runtime/pprof"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 )
 
 type ctxEntriesType struct{}

@@ -20,7 +20,7 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/key"
 
 	"go.opentelemetry.io/otel/exporter/trace/jaeger"

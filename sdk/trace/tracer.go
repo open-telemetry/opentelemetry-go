@@ -17,7 +17,7 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 

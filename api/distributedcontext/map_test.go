@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/key"
 )
 

@@ -27,7 +27,7 @@ import (
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	opentelemetry "go.opentelemetry.io/otel/sdk"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )

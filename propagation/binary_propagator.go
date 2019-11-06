@@ -15,7 +15,7 @@
 package propagation
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 

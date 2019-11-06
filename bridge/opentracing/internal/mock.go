@@ -22,7 +22,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
+	otelcore "go.opentelemetry.io/otel"
 	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
 	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

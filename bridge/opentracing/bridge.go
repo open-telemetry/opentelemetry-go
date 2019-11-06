@@ -27,7 +27,7 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
+	otelcore "go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"

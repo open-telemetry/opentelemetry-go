@@ -21,7 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/trace"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )

@@ -15,7 +15,7 @@
 package trace
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 )
 
 const (

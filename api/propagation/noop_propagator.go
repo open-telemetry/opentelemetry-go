@@ -17,7 +17,7 @@ package propagation
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 

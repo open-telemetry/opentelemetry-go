@@ -14,7 +14,7 @@
 
 package trace
 
-import "go.opentelemetry.io/otel/api/core"
+import "go.opentelemetry.io/otel"
 
 type Sampler interface {
 	// ShouldSample returns a Decision that contains a decision whether to sample

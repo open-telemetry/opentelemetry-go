@@ -14,4 +14,4 @@
 
 // This package provides basic types used in OpenTelemetry - keys,
 // values, numbers and span contexts.
-package core // import "go.opentelemetry.io/otel/api/core"
+package core // import "go.opentelemetry.io/otel"
