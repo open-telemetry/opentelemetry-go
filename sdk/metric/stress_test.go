@@ -242,9 +242,9 @@ func (f *testFixture) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, _ export.LabelEncoder, agg export.Aggregator) error {
+func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
 	key := testKey{
-		labels:     canonicalizeLabels(labels),
+		labels:     canonicalizeLabels(labels.Ordered()),
 		descriptor: desc,
 	}
 	if f.dupCheck[key] == 0 {

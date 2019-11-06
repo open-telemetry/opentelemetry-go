@@ -17,7 +17,6 @@ package ungrouped // import "go.opentelemetry.io/otel/sdk/metric/batcher/ungroup
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -35,8 +34,7 @@ type (
 
 	batchValue struct {
 		aggregator export.Aggregator
-		labels     []core.KeyValue
-		lencoder   export.LabelEncoder
+		labels     export.Labels
 	}
 
 	batchMap map[batchKey]batchValue
@@ -57,17 +55,16 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, labelEncoder export.LabelEncoder, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
 	key := batchKey{
 		descriptor: desc,
-		encoded:    encodedLabels,
+		encoded:    labels.Encoded(),
 	}
 	value, ok := b.batchMap[key]
 	if !ok {
 		b.batchMap[key] = batchValue{
 			aggregator: agg,
 			labels:     labels,
-			lencoder:   labelEncoder,
 		}
 		return nil
 	}
@@ -84,10 +81,10 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 
 func (c batchMap) Foreach(f func(export.Record)) {
 	for key, value := range c {
-		f(export.NewRecord(value.aggregator,
+		f(export.NewRecord(
 			key.descriptor,
 			value.labels,
-			value.lencoder,
-			key.encoded))
+			value.aggregator,
+		))
 	}
 }

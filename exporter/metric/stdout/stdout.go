@@ -106,9 +106,9 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 
 		sb.WriteString(desc.Name())
 
-		if len(labels) > 0 {
+		if labels.Len() > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(record.EncodedLabels())
+			sb.WriteString(labels.Encoded())
 			sb.WriteRune('}')
 		}
 

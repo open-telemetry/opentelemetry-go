@@ -31,9 +31,9 @@ type (
 	}
 
 	aggEntry struct {
-		aggregator export.Aggregator
 		descriptor *export.Descriptor
-		labels     []core.KeyValue
+		labels     export.Labels
+		aggregator export.Aggregator
 	}
 
 	dkiMap map[*export.Descriptor]map[core.Key]int
@@ -62,7 +62,7 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, _ export.LabelEncoder, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
@@ -88,7 +88,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []c
 	// Note also the possibility to speed this computation of
 	// "encoded" via "canon" in the form of a (Descriptor,
 	// LabelSet)->(Labels, Encoded) cache.
-	for _, kv := range labels {
+	for _, kv := range labels.Ordered() {
 		pos, ok := ki[kv.Key]
 		if !ok {
 			continue
@@ -103,9 +103,9 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []c
 	rag, ok := b.agg[encoded]
 	if !ok {
 		b.agg[encoded] = aggEntry{
-			aggregator: agg,
-			labels:     canon,
 			descriptor: desc,
+			labels:     export.NewLabels(canon, b.lencoder, encoded),
+			aggregator: agg,
 		}
 		return nil
 	}
@@ -124,12 +124,11 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 }
 
 func (p *producer) Foreach(f func(export.Record)) {
-	for encoded, entry := range p.aggMap {
-		f(export.NewRecord(entry.aggregator,
+	for _, entry := range p.aggMap {
+		f(export.NewRecord(
 			entry.descriptor,
 			entry.labels,
-			p.lencoder,
-			encoded,
+			entry.aggregator,
 		))
 	}
 }

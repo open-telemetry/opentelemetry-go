@@ -45,11 +45,11 @@ func (m *monotoneBatcher) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, _ export.LabelEncoder, agg export.Aggregator) error {
+func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
 	require.Equal(m.t, "my.gauge.name", desc.Name())
-	require.Equal(m.t, 1, len(labels))
-	require.Equal(m.t, "a", string(labels[0].Key))
-	require.Equal(m.t, "b", labels[0].Value.Emit())
+	require.Equal(m.t, 1, labels.Len())
+	require.Equal(m.t, "a", string(labels.Ordered()[0].Key))
+	require.Equal(m.t, "b", labels.Ordered()[0].Value.Emit())
 
 	gauge := agg.(*gauge.Aggregator)
 	val := gauge.LastValue()

@@ -39,9 +39,7 @@ type Batcher interface {
 	// by aggregation.
 	Process(ctx context.Context,
 		descriptor *Descriptor,
-		labels []core.KeyValue,
-		encodedLabels string,
-		labelEncoder LabelEncoder,
+		labels Labels,
 		aggregator Aggregator) error
 
 	// ReadCheckpoint is the interface used by exporters to access
@@ -104,25 +102,47 @@ type Producer interface {
 // Record contains the exported data for a single metric instrument
 // and label set.
 type Record struct {
-	aggregator    Aggregator
-	descriptor    *Descriptor
-	labels        []core.KeyValue
-	encoder       LabelEncoder
-	encodedLabels string
+	descriptor *Descriptor
+	labels     Labels
+	aggregator Aggregator
+}
+
+type Labels struct {
+	ordered []core.KeyValue
+	encoder LabelEncoder
+	encoded string
+}
+
+func NewLabels(ordered []core.KeyValue, encoder LabelEncoder, encoded string) Labels {
+	return Labels{
+		ordered: ordered,
+		encoder: encoder,
+		encoded: encoded,
+	}
+}
+
+func (l *Labels) Ordered() []core.KeyValue {
+	return l.ordered
+}
+
+func (l *Labels) Encoder() LabelEncoder {
+	return l.encoder
+}
+
+func (l *Labels) Encoded() string {
+	return l.encoded
+}
+
+func (l *Labels) Len() int {
+	return len(l.ordered)
 }
 
 // NewRecord allows Batcher implementations to construct export records.
-func NewRecord(aggregator Aggregator,
-	descriptor *Descriptor,
-	labels []core.KeyValue,
-	encoder LabelEncoder,
-	encodedLabels string) Record {
+func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
 	return Record{
-		aggregator:    aggregator,
-		descriptor:    descriptor,
-		labels:        labels,
-		encoder:       encoder,
-		encodedLabels: encodedLabels,
+		descriptor: descriptor,
+		labels:     labels,
+		aggregator: aggregator,
 	}
 }
 
@@ -134,16 +154,8 @@ func (r *Record) Descriptor() *Descriptor {
 	return r.descriptor
 }
 
-func (r *Record) Labels() []core.KeyValue {
+func (r *Record) Labels() Labels {
 	return r.labels
-}
-
-func (r *Record) LabelEncoder() LabelEncoder {
-	return r.encoder
-}
-
-func (r *Record) EncodedLabels() string {
-	return r.encodedLabels
 }
 
 // Kind describes the kind of instrument.
