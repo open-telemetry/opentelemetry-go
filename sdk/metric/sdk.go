@@ -159,10 +159,17 @@ func (i *instrument) Meter() api.Meter {
 }
 
 func (i *instrument) acquireHandle(ls *labels) *record {
-	// Create lookup key for sync.Map
+	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: i.descriptor,
 		encoded:    ls.encoded,
+	}
+
+	if actual, ok := i.meter.current.Load(mk); ok {
+		// Existing record case, only one allocation so far.
+		rec := actual.(*record)
+		atomic.AddInt64(&rec.refcount, 1)
+		return rec
 	}
 
 	// There's a memory allocation here.
@@ -174,6 +181,8 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		modifiedEpoch:  0,
 	}
 
+	rec.recorder = i.meter.exporter.AggregatorFor(rec)
+
 	// Load/Store: there's a memory allocation to place `mk` into
 	// an interface here.
 	if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
@@ -182,7 +191,6 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		atomic.AddInt64(&rec.refcount, 1)
 		return rec
 	}
-	rec.recorder = i.meter.exporter.AggregatorFor(rec)
 
 	i.meter.addPrimary(rec)
 	return rec
