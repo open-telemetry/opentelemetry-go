@@ -12,8 +12,8 @@ type noopInstrument struct{}
 
 var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
-var _ InstrumentImpl = noopInstrument{}
-var _ HandleImpl = noopHandle{}
+var _ Instrument = noopInstrument{}
+var _ Handle = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
 func (NoopProvider) GetMeter(name string) Meter {
@@ -26,7 +26,7 @@ func (noopHandle) RecordOne(context.Context, Number) {
 func (noopHandle) Release() {
 }
 
-func (noopInstrument) AcquireHandle(LabelSet) HandleImpl {
+func (noopInstrument) AcquireHandle(LabelSet) Handle {
 	return noopHandle{}
 }
 

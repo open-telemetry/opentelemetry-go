@@ -57,8 +57,8 @@ type (
 )
 
 var (
-	_ otel.InstrumentImpl = &Instrument{}
-	_ otel.HandleImpl     = &Handle{}
+	_ otel.Instrument = &Instrument{}
+	_ otel.Handle     = &Handle{}
 	_ otel.LabelSet       = &LabelSet{}
 	_ otel.Meter          = &Meter{}
 )
@@ -69,7 +69,7 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) AcquireHandle(labels otel.LabelSet) otel.HandleImpl {
+func (i *Instrument) AcquireHandle(labels otel.LabelSet) otel.Handle {
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),
@@ -182,7 +182,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels otel.LabelSet, measureme
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = Measurement{
-			Instrument: m.InstrumentImpl().(*Instrument),
+			Instrument: m.Instrument().(*Instrument),
 			Number:     m.Number(),
 		}
 	}

@@ -141,8 +141,8 @@ type (
 var (
 	_ otel.Meter          = &SDK{}
 	_ otel.LabelSet       = &labels{}
-	_ otel.InstrumentImpl = &instrument{}
-	_ otel.HandleImpl     = &record{}
+	_ otel.Instrument = &instrument{}
+	_ otel.Handle     = &record{}
 	_ export.Record       = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
@@ -194,7 +194,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls otel.LabelSet) otel.HandleImpl {
+func (i *instrument) AcquireHandle(ls otel.LabelSet) otel.Handle {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
@@ -422,13 +422,13 @@ func (m *SDK) collect(ctx context.Context, r *record) {
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls otel.LabelSet, measurements ...otel.Measurement) {
 	for _, meas := range measurements {
-		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
+		meas.Instrument().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
 // GetDescriptor returns the descriptor of an instrument, which is not
 // part of the public metric otel.
-func (m *SDK) GetDescriptor(inst otel.InstrumentImpl) *export.Descriptor {
+func (m *SDK) GetDescriptor(inst otel.Instrument) *export.Descriptor {
 	if ii, ok := inst.(*instrument); ok {
 		return ii.descriptor
 	}

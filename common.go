@@ -19,11 +19,11 @@ import (
 )
 
 type commonMetric struct {
-	instrument InstrumentImpl
+	instrument Instrument
 }
 
 type commonHandle struct {
-	handle HandleImpl
+	handle Handle
 }
 
 func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
@@ -42,7 +42,7 @@ func (m commonMetric) recordOne(ctx context.Context, number Number, labels Label
 	m.instrument.RecordOne(ctx, number, labels)
 }
 
-func (m commonMetric) Impl() InstrumentImpl {
+func (m commonMetric) Impl() Instrument {
 	return m.instrument
 }
 
@@ -54,19 +54,19 @@ func (h commonHandle) Release() {
 	h.handle.Release()
 }
 
-func newCommonMetric(instrument InstrumentImpl) commonMetric {
+func newCommonMetric(instrument Instrument) commonMetric {
 	return commonMetric{
 		instrument: instrument,
 	}
 }
 
-func newCommonHandle(handle HandleImpl) commonHandle {
+func newCommonHandle(handle Handle) commonHandle {
 	return commonHandle{
 		handle: handle,
 	}
 }
 
-func newMeasurement(instrument InstrumentImpl, number Number) Measurement {
+func newMeasurement(instrument Instrument, number Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,

@@ -27,8 +27,7 @@ type Provider interface {
 
 // LabelSet is an implementation-level interface that represents a
 // []KeyValue for use as pre-defined labels in the metrics API.
-type LabelSet interface {
-}
+type LabelSet interface{}
 
 // Options contains some options for metrics of any kind.
 type Options struct {
@@ -82,14 +81,14 @@ type MeasureOptionApplier interface {
 // values. Instances of this type should be created by instruments
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
-	instrument InstrumentImpl
+	instrument Instrument
 	number     Number
 }
 
 // Instrument returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (m Measurement) InstrumentImpl() InstrumentImpl {
+func (m Measurement) Instrument() Instrument {
 	return m.instrument
 }
 

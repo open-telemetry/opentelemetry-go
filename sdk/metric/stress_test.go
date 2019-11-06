@@ -82,7 +82,7 @@ type (
 	}
 
 	withImpl interface {
-		Impl() otel.InstrumentImpl
+		Impl() otel.Instrument
 	}
 
 	// gaugeState supports merging gauge values, for the case
