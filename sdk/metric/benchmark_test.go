@@ -63,7 +63,8 @@ func (bf *benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	return nil
 }
 
-func (bf *benchFixture) Process(context.Context, *export.Descriptor, []core.KeyValue, string, export.Aggregator) {
+func (bf *benchFixture) Process(context.Context, *export.Descriptor, []core.KeyValue, string, export.Aggregator) error {
+	return nil
 }
 
 func (bf *benchFixture) ReadCheckpoint() export.Producer {

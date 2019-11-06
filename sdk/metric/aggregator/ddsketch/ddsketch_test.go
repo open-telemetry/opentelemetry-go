@@ -41,12 +41,12 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, descriptor)
+		test.CheckedUpdate(ctx, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, descriptor)
+			test.CheckedUpdate(ctx, agg, y, descriptor)
 		}
 	}
 
@@ -105,24 +105,24 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg1.Update(ctx, x, descriptor)
+		test.CheckedUpdate(ctx, agg1, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg1.Update(ctx, y, descriptor)
+			test.CheckedUpdate(ctx, agg1, y, descriptor)
 		}
 	}
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg2.Update(ctx, x, descriptor)
+		test.CheckedUpdate(ctx, agg2, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg2.Update(ctx, y, descriptor)
+			test.CheckedUpdate(ctx, agg2, y, descriptor)
 		}
 	}
 

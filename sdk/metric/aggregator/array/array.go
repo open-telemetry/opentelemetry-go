@@ -84,34 +84,22 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	}
 }
 
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
-	kind := desc.NumberKind()
-
-	if kind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		// TODO warn
-		// NOTE: add this to the specification.
-		return
-	}
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	c.current = append(c.current, number)
 	c.lock.Unlock()
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
 	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
+	return nil
 }
 
 func (c *Aggregator) sort(kind core.NumberKind) {

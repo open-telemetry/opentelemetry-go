@@ -56,7 +56,7 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, agg export.Aggregator) {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, agg export.Aggregator) error {
 	key := batchKey{
 		descriptor: desc,
 		encoded:    encodedLabels,
@@ -67,9 +67,9 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []c
 			aggregator: agg,
 			labels:     labels,
 		}
-	} else {
-		value.aggregator.Merge(agg, desc)
+		return nil
 	}
+	return value.aggregator.Merge(agg, desc)
 }
 
 func (b *Batcher) ReadCheckpoint() export.Producer {

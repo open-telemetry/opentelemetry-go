@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -180,7 +181,6 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		atomic.AddInt64(&rec.refcount, 1)
 		return rec
 	}
-	// TODO: Fix the race here
 	rec.recorder = i.meter.batcher.AggregatorFor(rec.descriptor)
 
 	i.meter.addPrimary(rec)
@@ -391,9 +391,14 @@ func (m *SDK) Collect(ctx context.Context) {
 }
 
 func (m *SDK) checkpoint(ctx context.Context, r *record) {
-	if r.recorder != nil {
-		r.recorder.Checkpoint(ctx, r.descriptor)
-		m.batcher.Process(ctx, r.descriptor, r.labels.sorted, r.labels.encoded, r.recorder)
+	if r.recorder == nil {
+		return
+	}
+	r.recorder.Checkpoint(ctx, r.descriptor)
+	err := m.batcher.Process(ctx, r.descriptor, r.labels.sorted, r.labels.encoded, r.recorder)
+
+	if err != nil {
+		// TODO warn
 	}
 }
 
@@ -418,8 +423,17 @@ func (l *labels) Meter() api.Meter {
 }
 
 func (r *record) RecordOne(ctx context.Context, number core.Number) {
-	if r.recorder != nil {
-		r.recorder.Update(ctx, number, r.descriptor)
+	if r.recorder == nil {
+		// The instrument is disabled according to the AggregationSelector.
+		return
+	}
+	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
+		// TODO warn
+		return
+	}
+	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
+		// TODO warn
+		return
 	}
 }
 

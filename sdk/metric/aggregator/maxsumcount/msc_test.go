@@ -39,7 +39,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(ctx, agg, x, record)
 		}
 
 		agg.Checkpoint(ctx, record)
@@ -76,12 +76,12 @@ func TestMaxSumCountMerge(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg1.Update(ctx, x, descriptor)
+			test.CheckedUpdate(ctx, agg1, x, descriptor)
 		}
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg2.Update(ctx, x, descriptor)
+			test.CheckedUpdate(ctx, agg2, x, descriptor)
 		}
 
 		agg1.Checkpoint(ctx, descriptor)

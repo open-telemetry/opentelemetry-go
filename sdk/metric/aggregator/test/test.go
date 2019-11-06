@@ -15,12 +15,14 @@
 package test
 
 import (
+	"context"
 	"math/rand"
 	"sort"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 const Magnitude = 1000
@@ -120,4 +122,11 @@ func (n *Numbers) Median() core.Number {
 	// return the smallest element that is at or above the
 	// specified quantile.
 	return n.numbers[len(n.numbers)/2]
+}
+
+// Performs the same range test the SDK does on behalf of the aggregator.
+func CheckedUpdate(ctx context.Context, agg export.Aggregator, number core.Number, descriptor *export.Descriptor) {
+	if err := aggregator.RangeTest(number, descriptor); err == nil {
+		agg.Update(ctx, number, descriptor)
+	}
 }

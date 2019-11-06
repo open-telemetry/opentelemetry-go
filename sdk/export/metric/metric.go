@@ -41,7 +41,7 @@ type Batcher interface {
 		descriptor *Descriptor,
 		labels []core.KeyValue,
 		encodedLabels string,
-		aggregator Aggregator)
+		aggregator Aggregator) error
 
 	// ReadCheckpoint is the interface used by exporters to access
 	// aggregate checkpoints after collection.
@@ -68,7 +68,7 @@ type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may arrive
 	// concurrently.
-	Update(context.Context, core.Number, *Descriptor)
+	Update(context.Context, core.Number, *Descriptor) error
 
 	// Checkpoint is called during the SDK Collect() to finish one
 	// period of aggregation.  Checkpoint() is called in a
@@ -76,7 +76,7 @@ type Aggregator interface {
 	Checkpoint(context.Context, *Descriptor)
 
 	// Merge combines state from two aggregators into one.
-	Merge(Aggregator, *Descriptor)
+	Merge(Aggregator, *Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate

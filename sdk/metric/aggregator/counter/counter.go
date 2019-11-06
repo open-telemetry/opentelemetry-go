@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates counter events.
@@ -49,21 +50,16 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
-	kind := desc.NumberKind()
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
-	c.current.AddNumberAtomic(kind, number)
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+	c.current.AddNumberAtomic(desc.NumberKind(), number)
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
+	return nil
 }

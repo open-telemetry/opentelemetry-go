@@ -242,7 +242,7 @@ func (f *testFixture) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) {
+func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) error {
 	key := testKey{
 		labels:     canonicalizeLabels(labels),
 		descriptor: desc,
@@ -264,6 +264,7 @@ func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labe
 	default:
 		panic("Not used in this test")
 	}
+	return nil
 }
 
 func stressTest(t *testing.T, impl testImpl) {

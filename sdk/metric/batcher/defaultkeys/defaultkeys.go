@@ -62,7 +62,7 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) error {
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
@@ -107,9 +107,9 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []c
 			labels:     canon,
 			descriptor: desc,
 		}
-	} else {
-		rag.aggregator.Merge(agg, desc)
+		return nil
 	}
+	return rag.aggregator.Merge(agg, desc)
 }
 
 func (b *Batcher) ReadCheckpoint() export.Producer {

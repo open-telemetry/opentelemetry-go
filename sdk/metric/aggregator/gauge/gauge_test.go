@@ -42,7 +42,7 @@ func TestGaugeNonMonotonic(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(rand.Intn(1)*2 - 1)
 			last = x
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(ctx, agg, x, record)
 		}
 
 		agg.Checkpoint(ctx, record)
@@ -64,7 +64,7 @@ func TestGaugeMonotonic(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			last.AddNumber(profile.NumberKind, x)
-			agg.Update(ctx, last, record)
+			test.CheckedUpdate(ctx, agg, last, record)
 		}
 
 		agg.Checkpoint(ctx, record)
@@ -82,11 +82,11 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first := profile.Random(+1)
-		agg.Update(ctx, first, record)
+		test.CheckedUpdate(ctx, agg, first, record)
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(-1)
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(ctx, agg, x, record)
 		}
 
 		agg.Checkpoint(ctx, record)
@@ -108,8 +108,8 @@ func TestGaugeNormalMerge(t *testing.T) {
 		first2 := profile.Random(+1)
 		first1.AddNumber(profile.NumberKind, first2)
 
-		agg1.Update(ctx, first1, descriptor)
-		agg2.Update(ctx, first2, descriptor)
+		test.CheckedUpdate(ctx, agg1, first1, descriptor)
+		test.CheckedUpdate(ctx, agg2, first2, descriptor)
 
 		agg1.Checkpoint(ctx, descriptor)
 		agg2.Checkpoint(ctx, descriptor)
@@ -135,11 +135,11 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first1 := profile.Random(+1)
-		agg1.Update(ctx, first1, descriptor)
+		test.CheckedUpdate(ctx, agg1, first1, descriptor)
 
 		first2 := profile.Random(+1)
 		first2.AddNumber(profile.NumberKind, first1)
-		agg2.Update(ctx, first2, descriptor)
+		test.CheckedUpdate(ctx, agg2, first2, descriptor)
 
 		agg1.Checkpoint(ctx, descriptor)
 		agg2.Checkpoint(ctx, descriptor)

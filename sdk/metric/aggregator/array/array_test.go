@@ -45,12 +45,12 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, descriptor)
+		test.CheckedUpdate(ctx, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, descriptor)
+			test.CheckedUpdate(ctx, agg, y, descriptor)
 		}
 	}
 
@@ -116,20 +116,20 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
-		agg1.Update(ctx, x1, descriptor)
+		test.CheckedUpdate(ctx, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
-		agg2.Update(ctx, x2, descriptor)
+		test.CheckedUpdate(ctx, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
-			agg1.Update(ctx, y1, descriptor)
+			test.CheckedUpdate(ctx, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
-			agg2.Update(ctx, y2, descriptor)
+			test.CheckedUpdate(ctx, agg2, y2, descriptor)
 		}
 	}
 
@@ -200,10 +200,10 @@ func TestArrayErrors(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg.Update(ctx, core.Number(0), descriptor)
+		test.CheckedUpdate(ctx, agg, core.Number(0), descriptor)
 
 		if profile.NumberKind == core.Float64NumberKind {
-			agg.Update(ctx, core.NewFloat64Number(math.NaN()), descriptor)
+			test.CheckedUpdate(ctx, agg, core.NewFloat64Number(math.NaN()), descriptor)
 		}
 		agg.Checkpoint(ctx, descriptor)
 
@@ -263,13 +263,13 @@ func TestArrayFloat64(t *testing.T) {
 
 			for _, f := range fpsf(1) {
 				all.Append(core.NewFloat64Number(f))
-				agg.Update(ctx, core.NewFloat64Number(f), descriptor)
+				test.CheckedUpdate(ctx, agg, core.NewFloat64Number(f), descriptor)
 			}
 
 			if !absolute {
 				for _, f := range fpsf(-1) {
 					all.Append(core.NewFloat64Number(f))
-					agg.Update(ctx, core.NewFloat64Number(f), descriptor)
+					test.CheckedUpdate(ctx, agg, core.NewFloat64Number(f), descriptor)
 				}
 			}
 

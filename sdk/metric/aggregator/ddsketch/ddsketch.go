@@ -102,25 +102,19 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
-	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.current.Add(number.CoerceToFloat64(kind))
+	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.checkpoint.Merge(o.checkpoint)
+	return nil
 }

@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Note: This aggregator enforces the behavior of monotonic gauges to
@@ -84,12 +85,12 @@ func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
+func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
-	} else {
-		g.updateMonotonic(number, desc)
+		return nil
 	}
+	return g.updateMonotonic(number, desc)
 }
 
 func (g *Aggregator) updateNonMonotonic(number core.Number) {
@@ -100,7 +101,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
 }
 
-func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
+func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) error {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
 		value:     number,
@@ -111,21 +112,19 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 		gd := (*gaugeData)(atomic.LoadPointer(&g.current))
 
 		if gd.value.CompareNumber(kind, number) > 0 {
-			// TODO warn
-			return
+			return aggregator.ErrNonMonotoneInput
 		}
 
 		if atomic.CompareAndSwapPointer(&g.current, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
-			return
+			return nil
 		}
 	}
 }
 
-func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))
@@ -136,18 +135,19 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 		cmp := ggd.value.CompareNumber(desc.NumberKind(), ogd.value)
 
 		if cmp > 0 {
-			return
+			return nil
 		}
 
 		if cmp < 0 {
 			g.checkpoint = unsafe.Pointer(ogd)
-			return
+			return nil
 		}
 	}
 	// Non-monotonic gauge or equal values
 	if ggd.timestamp.After(ogd.timestamp) {
-		return
+		return nil
 	}
 
 	g.checkpoint = unsafe.Pointer(ogd)
+	return nil
 }

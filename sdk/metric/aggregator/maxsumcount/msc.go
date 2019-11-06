@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -76,13 +77,8 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
 
 	c.current.count.AddUint64Atomic(1)
 	c.current.sum.AddNumberAtomic(kind, number)
@@ -97,13 +93,13 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 			break
 		}
 	}
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
@@ -112,4 +108,5 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
 		c.checkpoint.max.SetNumber(o.checkpoint.max)
 	}
+	return nil
 }
