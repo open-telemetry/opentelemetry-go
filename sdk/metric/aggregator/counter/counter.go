@@ -26,7 +26,7 @@ type Aggregator struct {
 	// current holds current increments to this counter record
 	current core.Number
 
-	// checkpoint is a temporary used during Collect()
+	// checkpoint is a temporary used during Checkpoint()
 	checkpoint core.Number
 }
 
@@ -40,14 +40,12 @@ func New() *Aggregator {
 
 // Sum returns the accumulated count as a Number.
 func (c *Aggregator) Sum() core.Number {
-	return c.checkpoint.AsNumber()
+	return c.checkpoint
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
-
-	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.

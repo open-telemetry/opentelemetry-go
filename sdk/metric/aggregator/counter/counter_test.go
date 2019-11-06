@@ -33,7 +33,7 @@ func TestCounterMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -42,7 +42,7 @@ func TestCounterMonotonic(t *testing.T) {
 			agg.Update(ctx, x, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -54,7 +54,7 @@ func TestCounterMonotonicNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		for i := 0; i < count; i++ {
 			agg.Update(ctx, profile.Random(-1), record)
@@ -62,7 +62,7 @@ func TestCounterMonotonicNegative(t *testing.T) {
 
 		sum := profile.Random(+1)
 		agg.Update(ctx, sum, record)
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -74,7 +74,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
+		record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -86,7 +86,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 			agg.Update(ctx, y, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -99,7 +99,7 @@ func TestCounterMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -109,8 +109,8 @@ func TestCounterMerge(t *testing.T) {
 			agg2.Update(ctx, x, record)
 		}
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, record)
+		agg2.Checkpoint(ctx, record)
 
 		agg1.Merge(agg2, record.Descriptor())
 

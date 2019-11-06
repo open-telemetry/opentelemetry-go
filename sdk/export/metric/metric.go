@@ -62,14 +62,14 @@ type AggregationSelector interface {
 // a counter, a gauge, a histogram.
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it
-	// into the aggregation.
+	// into the aggregation.  Update() calls may arrive
+	// concurrently.
 	Update(context.Context, core.Number, Record)
 
-	// Collect is called during the SDK Collect() to
-	// finish one period of aggregation.  Collect() is
-	// called in a single-threaded context.  Update()
-	// calls may arrive concurrently.
-	Collect(context.Context, Record, Batcher)
+	// Checkpoint is called during the SDK Collect() to finish one
+	// period of aggregation.  Checkpoint() is called in a
+	// single-threaded context.
+	Checkpoint(context.Context, Record)
 
 	// Merge combines state from two aggregators into one.
 	Merge(Aggregator, *Descriptor)

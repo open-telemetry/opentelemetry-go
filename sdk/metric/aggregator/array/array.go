@@ -68,7 +68,7 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()
@@ -83,8 +83,6 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 	for _, v := range c.checkpoint {
 		c.ckptSum.AddNumber(kind, v)
 	}
-
-	exp.Process(ctx, rec, c)
 }
 
 func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {

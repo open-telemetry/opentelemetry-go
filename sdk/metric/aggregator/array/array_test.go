@@ -36,7 +36,7 @@ type updateTest struct {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 
 	agg := New()
 
@@ -54,7 +54,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg.Collect(ctx, record, batcher)
+	agg.Checkpoint(ctx, record)
 
 	all.Sort()
 
@@ -106,7 +106,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New()
 	agg2 := New()
@@ -133,8 +133,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Collect(ctx, record, batcher)
-	agg2.Collect(ctx, record, batcher)
+	agg1.Checkpoint(ctx, record)
+	agg2.Checkpoint(ctx, record)
 
 	agg1.Merge(agg2, record.Descriptor())
 
@@ -198,14 +198,14 @@ func TestArrayErrors(t *testing.T) {
 
 		ctx := context.Background()
 
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg.Update(ctx, core.Number(0), record)
 
 		if profile.NumberKind == core.Float64NumberKind {
 			agg.Update(ctx, core.NewFloat64Number(math.NaN()), record)
 		}
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		require.Equal(t, int64(1), agg.Count(), "NaN value was not counted")
 
@@ -226,7 +226,7 @@ func TestArrayErrors(t *testing.T) {
 func TestArrayFloat64(t *testing.T) {
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			batcher, record := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
+			record := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating
@@ -273,7 +273,7 @@ func TestArrayFloat64(t *testing.T) {
 				}
 			}
 
-			agg.Collect(ctx, record, batcher)
+			agg.Checkpoint(ctx, record)
 
 			all.Sort()
 

@@ -34,7 +34,7 @@ type updateTest struct {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 	agg := New(NewDefaultConfig(), record.Descriptor())
 
 	all := test.NewNumbers(profile.NumberKind)
@@ -50,7 +50,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg.Collect(ctx, record, batcher)
+	agg.Checkpoint(ctx, record)
 
 	all.Sort()
 
@@ -96,7 +96,7 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New(NewDefaultConfig(), record.Descriptor())
 	agg2 := New(NewDefaultConfig(), record.Descriptor())
@@ -126,8 +126,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Collect(ctx, record, batcher)
-	agg2.Collect(ctx, record, batcher)
+	agg1.Checkpoint(ctx, record)
+	agg2.Checkpoint(ctx, record)
 
 	agg1.Merge(agg2, record.Descriptor())
 

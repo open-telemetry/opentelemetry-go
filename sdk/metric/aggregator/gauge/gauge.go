@@ -36,7 +36,7 @@ type (
 		// current is an atomic pointer to *gaugeData.  It is never nil.
 		current unsafe.Pointer
 
-		// checkpoint is a copy of the current value taken in Collect()
+		// checkpoint is a copy of the current value taken in Checkpoint()
 		checkpoint unsafe.Pointer
 	}
 
@@ -78,11 +78,9 @@ func (g *Aggregator) Timestamp() time.Time {
 	return (*gaugeData)(g.checkpoint).timestamp
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (g *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (g *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
-
-	exp.Process(ctx, rec, g)
 }
 
 // Update modifies the current value (atomically) for later export.

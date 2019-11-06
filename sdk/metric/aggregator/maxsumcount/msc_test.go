@@ -30,7 +30,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg := New()
 
@@ -42,7 +42,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 			agg.Update(ctx, x, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		all.Sort()
 
@@ -66,7 +66,7 @@ func TestMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg1 := New()
 		agg2 := New()
@@ -84,8 +84,8 @@ func TestMaxSumCountMerge(t *testing.T) {
 			agg2.Update(ctx, x, record)
 		}
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, record)
+		agg2.Checkpoint(ctx, record)
 
 		agg1.Merge(agg2, record.Descriptor())
 

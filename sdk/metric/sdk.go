@@ -354,14 +354,14 @@ func (m *SDK) Collect(ctx context.Context) {
 		refcount := atomic.LoadInt64(&inuse.refcount)
 
 		if refcount > 0 {
-			m.collect(ctx, inuse)
+			m.checkpoint(ctx, inuse)
 			m.addPrimary(inuse)
 			continue
 		}
 
 		modified := atomic.LoadInt64(&inuse.modifiedEpoch)
 		collected := atomic.LoadInt64(&inuse.collectedEpoch)
-		m.collect(ctx, inuse)
+		m.checkpoint(ctx, inuse)
 
 		if modified >= collected {
 			atomic.StoreInt64(&inuse.collectedEpoch, m.currentEpoch)
@@ -382,7 +382,7 @@ func (m *SDK) Collect(ctx context.Context) {
 		atomic.StoreInt64(&chances.reclaim, 0)
 
 		if chances.next.primary.load() == hazardRecord {
-			m.collect(ctx, chances)
+			m.checkpoint(ctx, chances)
 			m.addPrimary(chances)
 		}
 	}
@@ -390,9 +390,10 @@ func (m *SDK) Collect(ctx context.Context) {
 	m.currentEpoch++
 }
 
-func (m *SDK) collect(ctx context.Context, r *record) {
+func (m *SDK) checkpoint(ctx context.Context, r *record) {
 	if r.recorder != nil {
-		r.recorder.Collect(ctx, r, m.batcher)
+		r.recorder.Checkpoint(ctx, r)
+		m.batcher.Process(ctx, r, r.recorder)
 	}
 }
 

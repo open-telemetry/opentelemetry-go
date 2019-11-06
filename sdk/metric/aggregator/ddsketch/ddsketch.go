@@ -91,16 +91,14 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 	return core.NewInt64Number(int64(f))
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
 	c.checkpoint = c.current
 	c.current = replace
 	c.lock.Unlock()
-
-	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.

@@ -15,7 +15,6 @@
 package test
 
 import (
-	"context"
 	"math/rand"
 	"sort"
 	"testing"
@@ -24,7 +23,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-var _ export.Batcher = &metricBatcher{}
 var _ export.Record = &metricRecord{}
 
 const Magnitude = 1000
@@ -52,16 +50,13 @@ func newProfiles() []Profile {
 	}
 }
 
-type metricBatcher struct {
-}
-
 type metricRecord struct {
 	descriptor *export.Descriptor
 }
 
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (export.Batcher, export.Record) {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) export.Record {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
-	return &metricBatcher{}, &metricRecord{descriptor: desc}
+	return &metricRecord{descriptor: desc}
 }
 
 func (t *metricRecord) Descriptor() *export.Descriptor {
@@ -74,17 +69,6 @@ func (t *metricRecord) Labels() []core.KeyValue {
 
 func (t *metricRecord) EncodedLabels() string {
 	return ""
-}
-
-func (m *metricBatcher) AggregatorFor(rec export.Record) export.Aggregator {
-	return nil
-}
-
-func (m *metricBatcher) ReadCheckpoint() export.Producer {
-	return nil
-}
-
-func (m *metricBatcher) Process(context.Context, export.Record, export.Aggregator) {
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

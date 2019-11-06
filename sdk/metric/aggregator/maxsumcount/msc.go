@@ -58,8 +58,8 @@ func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.max, nil
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -73,8 +73,6 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
 	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
-
-	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
