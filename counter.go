@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 // Float64Counter is a metric that accumulates float64 values.
@@ -88,7 +86,7 @@ func (c *Int64Counter) Measurement(value int64) Measurement {
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
-	c.recordOne(ctx, otel.NewFloat64Number(value), labels)
+	c.recordOne(ctx, NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
@@ -99,15 +97,15 @@ func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
-	c.recordOne(ctx, otel.NewInt64Number(value), labels)
+	c.recordOne(ctx, NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum.
 func (h *Float64CounterHandle) Add(ctx context.Context, value float64) {
-	h.recordOne(ctx, otel.NewFloat64Number(value))
+	h.recordOne(ctx, NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum.
 func (h *Int64CounterHandle) Add(ctx context.Context, value int64) {
-	h.recordOne(ctx, otel.NewInt64Number(value))
+	h.recordOne(ctx, NewInt64Number(value))
 }

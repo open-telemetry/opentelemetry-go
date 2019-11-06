@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
@@ -131,7 +130,7 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.sdk.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
+	labels := make([]otel.LabelSet, b.N)
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
@@ -148,7 +147,7 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.sdk.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
+	labels := make([]otel.LabelSet, b.N)
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
@@ -166,7 +165,7 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.sdk.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
+	labels := make([]otel.LabelSet, b.N)
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)

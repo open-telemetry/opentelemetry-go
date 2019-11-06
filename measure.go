@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 // Float64Measure is a metric that records float64 values.
@@ -88,7 +86,7 @@ func (c *Int64Measure) Measurement(value int64) Measurement {
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	c.recordOne(ctx, otel.NewFloat64Number(value), labels)
+	c.recordOne(ctx, NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records. The
@@ -99,15 +97,15 @@ func (c *Float64Measure) Record(ctx context.Context, value float64, labels Label
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	c.recordOne(ctx, otel.NewInt64Number(value), labels)
+	c.recordOne(ctx, NewInt64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records.
 func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	h.recordOne(ctx, otel.NewFloat64Number(value))
+	h.recordOne(ctx, NewFloat64Number(value))
 }
 
 // Record adds a new value to the list of measure's records.
 func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	h.recordOne(ctx, otel.NewInt64Number(value))
+	h.recordOne(ctx, NewInt64Number(value))
 }

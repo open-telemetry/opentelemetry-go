@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 // Provider supports named Meter instances.
@@ -28,7 +26,7 @@ type Provider interface {
 }
 
 // LabelSet is an implementation-level interface that represents a
-// []otel.KeyValue for use as pre-defined labels in the metrics API.
+// []KeyValue for use as pre-defined labels in the metrics API.
 type LabelSet interface {
 }
 
@@ -38,10 +36,10 @@ type Options struct {
 	// instrument.
 	Description string
 	// Unit is an optional field describing the metric instrument.
-	Unit otel.Unit
+	Unit Unit
 	// Keys are recommended keys determined in the handles
 	// obtained for the metric.
-	Keys []otel.Key
+	Keys []Key
 	// Alternate defines the property of metric value dependent on
 	// a metric type.
 	//
@@ -85,7 +83,7 @@ type MeasureOptionApplier interface {
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	instrument InstrumentImpl
-	number     otel.Number
+	number     Number
 }
 
 // Instrument returns the instrument that created this measurement.
@@ -96,7 +94,7 @@ func (m Measurement) InstrumentImpl() InstrumentImpl {
 }
 
 // Number returns a number recorded in this measurement.
-func (m Measurement) Number() otel.Number {
+func (m Measurement) Number() Number {
 	return m.number
 }
 
@@ -104,7 +102,7 @@ func (m Measurement) Number() otel.Number {
 type Meter interface {
 	// Labels returns a reference to a set of labels that cannot
 	// be read by the application.
-	Labels(...otel.KeyValue) LabelSet
+	Labels(...KeyValue) LabelSet
 
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
@@ -224,7 +222,7 @@ func WithDescription(desc string) OptionApplier {
 }
 
 // WithUnit applies provided unit.
-func WithUnit(unit otel.Unit) OptionApplier {
+func WithUnit(unit Unit) OptionApplier {
 	return optionWrapper{
 		F: func(opts *Options) {
 			opts.Unit = unit
@@ -234,7 +232,7 @@ func WithUnit(unit otel.Unit) OptionApplier {
 
 // WithKeys applies recommended label keys. Multiple `WithKeys`
 // options accumulate.
-func WithKeys(keys ...otel.Key) OptionApplier {
+func WithKeys(keys ...Key) OptionApplier {
 	return optionWrapper{
 		F: func(opts *Options) {
 			opts.Keys = append(opts.Keys, keys...)

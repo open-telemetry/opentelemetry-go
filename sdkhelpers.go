@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 // InstrumentImpl is the implementation-level interface Set/Add/Record
@@ -28,14 +26,14 @@ type InstrumentImpl interface {
 	AcquireHandle(labels LabelSet) HandleImpl
 
 	// RecordOne allows the SDK to observe a single metric event.
-	RecordOne(ctx context.Context, number otel.Number, labels LabelSet)
+	RecordOne(ctx context.Context, number Number, labels LabelSet)
 }
 
 // HandleImpl is the implementation-level interface to Set/Add/Record
 // individual metrics with precomputed labels.
 type HandleImpl interface {
 	// RecordOne allows the SDK to observe a single metric event.
-	RecordOne(ctx context.Context, number otel.Number)
+	RecordOne(ctx context.Context, number Number)
 
 	// Release frees the resources associated with this handle. It
 	// does not affect the metric this handle was created through.

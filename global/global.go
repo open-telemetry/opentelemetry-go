@@ -18,7 +18,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 )
 
 type (
@@ -27,7 +26,7 @@ type (
 	}
 
 	meterProvider struct {
-		mp metric.Provider
+		mp otel.Provider
 	}
 )
 
@@ -44,7 +43,7 @@ func TraceProvider() otel.TraceProvider {
 	if gp := globalTracer.Load(); gp != nil {
 		return gp.(traceProvider).tp
 	}
-	return otel.NoopProvider{}
+	return otel.NoopTraceProvider{}
 }
 
 // SetTraceProvider registers `tp` as the global trace provider.
@@ -53,17 +52,17 @@ func SetTraceProvider(tp otel.TraceProvider) {
 }
 
 // MeterProvider returns the registered global meter provider.
-// If none is registered then an instance of metric.NoopProvider is returned.
+// If none is registered then an instance of otel.NoopProvider is returned.
 // Use the trace provider to create a named meter. E.g.
 //     meter := global.MeterProvider().GetMeter("example.com/foo")
-func MeterProvider() metric.Provider {
+func MeterProvider() otel.Provider {
 	if gp := globalMeter.Load(); gp != nil {
 		return gp.(meterProvider).mp
 	}
-	return metric.NoopProvider{}
+	return otel.NoopProvider{}
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
-func SetMeterProvider(mp metric.Provider) {
+func SetMeterProvider(mp otel.Provider) {
 	globalMeter.Store(meterProvider{mp: mp})
 }

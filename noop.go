@@ -1,9 +1,7 @@
-package metric
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
 )
 
 type NoopProvider struct{}
@@ -22,7 +20,7 @@ func (NoopProvider) GetMeter(name string) Meter {
 	return NoopMeter{}
 }
 
-func (noopHandle) RecordOne(context.Context, otel.Number) {
+func (noopHandle) RecordOne(context.Context, Number) {
 }
 
 func (noopHandle) Release() {
@@ -32,14 +30,14 @@ func (noopInstrument) AcquireHandle(LabelSet) HandleImpl {
 	return noopHandle{}
 }
 
-func (noopInstrument) RecordOne(context.Context, otel.Number, LabelSet) {
+func (noopInstrument) RecordOne(context.Context, Number, LabelSet) {
 }
 
 func (noopInstrument) Meter() Meter {
 	return NoopMeter{}
 }
 
-func (NoopMeter) Labels(...otel.KeyValue) LabelSet {
+func (NoopMeter) Labels(...KeyValue) LabelSet {
 	return noopLabelSet{}
 }
 

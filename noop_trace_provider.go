@@ -14,11 +14,11 @@
 
 package otel
 
-type NoopProvider struct{}
+type NoopTraceProvider struct{}
 
-var _ TraceProvider = NoopProvider{}
+var _ TraceProvider = NoopTraceProvider{}
 
 // GetTracer returns noop implementation of Tracer.
-func (p NoopProvider) GetTracer(name string) Tracer {
+func (p NoopTraceProvider) GetTracer(name string) Tracer {
 	return NoopTracer{}
 }

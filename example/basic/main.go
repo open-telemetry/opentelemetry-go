@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -55,8 +54,8 @@ func main() {
 	meter := global.MeterProvider().GetMeter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
-		metric.WithKeys(fooKey, barKey, lemonsKey),
-		metric.WithDescription("A gauge set to 1.0"),
+		otel.WithKeys(fooKey, barKey, lemonsKey),
+		otel.WithDescription("A gauge set to 1.0"),
 	)
 
 	measureTwo := meter.NewFloat64Measure("ex.com.two")

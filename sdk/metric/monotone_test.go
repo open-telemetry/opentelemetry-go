@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -62,7 +61,7 @@ func TestMonotoneGauge(t *testing.T) {
 	}
 	sdk := sdk.New(batcher)
 
-	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
+	gauge := sdk.NewInt64Gauge("my.gauge.name", otel.WithMonotonic(true))
 
 	handle := gauge.AcquireHandle(sdk.Labels(otel.Key("a").String("b")))
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric_test
+package otel_test
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 	mock "go.opentelemetry.io/otel/internal/metric"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,7 +28,7 @@ import (
 func TestCounterOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.CounterOptionApplier
+		opts []otel.CounterOptionApplier
 		keys []otel.Key
 		desc string
 		unit otel.Unit
@@ -46,10 +45,10 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []metric.CounterOptionApplier{
-				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
-				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
-				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
+			opts: []otel.CounterOptionApplier{
+				otel.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				otel.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				otel.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
 				otel.Key("foo"), otel.Key("foo2"),
@@ -62,8 +61,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []metric.CounterOptionApplier{
-				metric.WithDescription("stuff"),
+			opts: []otel.CounterOptionApplier{
+				otel.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -72,9 +71,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []metric.CounterOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
+			opts: []otel.CounterOptionApplier{
+				otel.WithDescription("stuff"),
+				otel.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -83,8 +82,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []metric.CounterOptionApplier{
-				metric.WithUnit("s"),
+			opts: []otel.CounterOptionApplier{
+				otel.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -93,9 +92,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []metric.CounterOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
+			opts: []otel.CounterOptionApplier{
+				otel.WithUnit("s"),
+				otel.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -104,8 +103,8 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "nonmonotonic",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
+			opts: []otel.CounterOptionApplier{
+				otel.WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -114,9 +113,9 @@ func TestCounterOptions(t *testing.T) {
 		},
 		{
 			name: "nonmonotonic, but not really",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
-				metric.WithMonotonic(true),
+			opts: []otel.CounterOptionApplier{
+				otel.WithMonotonic(false),
+				otel.WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -126,9 +125,9 @@ func TestCounterOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyCounterOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
+		opts := &otel.Options{}
+		otel.ApplyCounterOptions(opts, tt.opts...)
+		checkOptions(t, opts, &otel.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -140,7 +139,7 @@ func TestCounterOptions(t *testing.T) {
 func TestGaugeOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.GaugeOptionApplier
+		opts []otel.GaugeOptionApplier
 		keys []otel.Key
 		desc string
 		unit otel.Unit
@@ -157,10 +156,10 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
-				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
-				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				otel.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				otel.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
 				otel.Key("foo"), otel.Key("foo2"),
@@ -173,8 +172,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -183,9 +182,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithDescription("stuff"),
+				otel.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -194,8 +193,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -204,9 +203,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithUnit("s"),
+				otel.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -215,8 +214,8 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "monotonic",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithMonotonic(true),
 			},
 			keys: nil,
 			desc: "",
@@ -225,9 +224,9 @@ func TestGaugeOptions(t *testing.T) {
 		},
 		{
 			name: "monotonic, but not really",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
-				metric.WithMonotonic(false),
+			opts: []otel.GaugeOptionApplier{
+				otel.WithMonotonic(true),
+				otel.WithMonotonic(false),
 			},
 			keys: nil,
 			desc: "",
@@ -237,9 +236,9 @@ func TestGaugeOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyGaugeOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
+		opts := &otel.Options{}
+		otel.ApplyGaugeOptions(opts, tt.opts...)
+		checkOptions(t, opts, &otel.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -251,7 +250,7 @@ func TestGaugeOptions(t *testing.T) {
 func TestMeasureOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.MeasureOptionApplier
+		opts []otel.MeasureOptionApplier
 		keys []otel.Key
 		desc string
 		unit otel.Unit
@@ -268,10 +267,10 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "keys keys keys",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
-				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
-				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				otel.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				otel.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
 				otel.Key("foo"), otel.Key("foo2"),
@@ -284,8 +283,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
@@ -294,9 +293,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithDescription("stuff"),
+				otel.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
@@ -305,8 +304,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
@@ -315,9 +314,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithUnit("s"),
+				otel.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
@@ -326,8 +325,8 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "not absolute",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithAbsolute(false),
 			},
 			keys: nil,
 			desc: "",
@@ -336,9 +335,9 @@ func TestMeasureOptions(t *testing.T) {
 		},
 		{
 			name: "not absolute, but not really",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
-				metric.WithAbsolute(true),
+			opts: []otel.MeasureOptionApplier{
+				otel.WithAbsolute(false),
+				otel.WithAbsolute(true),
 			},
 			keys: nil,
 			desc: "",
@@ -348,9 +347,9 @@ func TestMeasureOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyMeasureOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
+		opts := &otel.Options{}
+		otel.ApplyMeasureOptions(opts, tt.opts...)
+		checkOptions(t, opts, &otel.Options{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -359,7 +358,7 @@ func TestMeasureOptions(t *testing.T) {
 	}
 }
 
-func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
+func checkOptions(t *testing.T, got *otel.Options, expected *otel.Options) {
 	if diff := cmp.Diff(got, expected); diff != "" {
 		t.Errorf("Compare options: -got +want %s", diff)
 	}
@@ -446,7 +445,7 @@ func TestMeasure(t *testing.T) {
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, meter *mock.Meter, kind otel.NumberKind, instrument metric.InstrumentImpl) {
+func checkBatches(t *testing.T, ctx context.Context, labels otel.LabelSet, meter *mock.Meter, kind otel.NumberKind, instrument otel.InstrumentImpl) {
 	t.Helper()
 	if len(meter.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.MeasurementBatches))

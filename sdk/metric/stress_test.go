@@ -32,8 +32,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
-	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
@@ -69,9 +67,9 @@ type (
 	}
 
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) withImpl
+		newInstrument  func(meter otel.Meter, name string) withImpl
 		getUpdateValue func() otel.Number
-		operate        func(interface{}, context.Context, otel.Number, api.LabelSet)
+		operate        func(interface{}, context.Context, otel.Number, otel.LabelSet)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
@@ -84,7 +82,7 @@ type (
 	}
 
 	withImpl interface {
-		Impl() metric.InstrumentImpl
+		Impl() otel.InstrumentImpl
 	}
 
 	// gaugeState supports merging gauge values, for the case
@@ -316,8 +314,8 @@ func float64sEqual(a, b otel.Number) bool {
 
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
+		newInstrument: func(meter otel.Meter, name string) withImpl {
+			return meter.NewInt64Counter(name, otel.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() otel.Number {
 			var offset int64
@@ -331,8 +329,8 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
-			counter := inst.(api.Int64Counter)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels otel.LabelSet) {
+			counter := inst.(otel.Int64Counter)
 			counter.Add(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
@@ -362,8 +360,8 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
+		newInstrument: func(meter otel.Meter, name string) withImpl {
+			return meter.NewFloat64Counter(name, otel.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() otel.Number {
 			var offset float64
@@ -377,8 +375,8 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
-			counter := inst.(api.Float64Counter)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels otel.LabelSet) {
+			counter := inst.(otel.Float64Counter)
 			counter.Add(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
@@ -413,8 +411,8 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
+		newInstrument: func(meter otel.Meter, name string) withImpl {
+			return meter.NewInt64Gauge(name, otel.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() otel.Number {
 			if !monotonic {
@@ -423,8 +421,8 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 			}
 			return otel.NewInt64Number(int64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
-			gauge := inst.(api.Int64Gauge)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels otel.LabelSet) {
+			gauge := inst.(otel.Int64Gauge)
 			gauge.Set(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
@@ -465,8 +463,8 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 	startTime := time.Now()
 
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
+		newInstrument: func(meter otel.Meter, name string) withImpl {
+			return meter.NewFloat64Gauge(name, otel.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() otel.Number {
 			if !monotonic {
@@ -474,8 +472,8 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 			}
 			return otel.NewFloat64Number(float64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels api.LabelSet) {
-			gauge := inst.(api.Float64Gauge)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels otel.LabelSet) {
+			gauge := inst.(otel.Float64Gauge)
 			gauge.Set(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {

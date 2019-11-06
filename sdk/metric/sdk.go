@@ -23,8 +23,6 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
-	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -141,11 +139,11 @@ type (
 )
 
 var (
-	_ api.Meter          = &SDK{}
-	_ api.LabelSet       = &labels{}
-	_ api.InstrumentImpl = &instrument{}
-	_ api.HandleImpl     = &record{}
-	_ export.Record      = &record{}
+	_ otel.Meter          = &SDK{}
+	_ otel.LabelSet       = &labels{}
+	_ otel.InstrumentImpl = &instrument{}
+	_ otel.HandleImpl     = &record{}
+	_ export.Record       = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -154,7 +152,7 @@ var (
 	hazardRecord = &record{}
 )
 
-func (i *instrument) Meter() api.Meter {
+func (i *instrument) Meter() otel.Meter {
 	return i.meter
 }
 
@@ -196,12 +194,12 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
+func (i *instrument) AcquireHandle(ls otel.LabelSet) otel.HandleImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number otel.Number, ls api.LabelSet) {
+func (i *instrument) RecordOne(ctx context.Context, number otel.Number, ls otel.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Release()
@@ -232,7 +230,7 @@ func New(exporter export.Batcher) *SDK {
 
 // Labels returns a LabelSet corresponding to the arguments.  Passed
 // labels are de-duplicated, with last-value-wins semantics.
-func (m *SDK) Labels(kvs ...otel.KeyValue) api.LabelSet {
+func (m *SDK) Labels(kvs ...otel.KeyValue) otel.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
 	// statsd for labels, allowing an optimization for statsd
@@ -282,14 +280,14 @@ func (m *SDK) Labels(kvs ...otel.KeyValue) api.LabelSet {
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
 // if it was created by another Meter instance, for example.
-func (m *SDK) labsFor(ls api.LabelSet) *labels {
+func (m *SDK) labsFor(ls otel.LabelSet) *labels {
 	if l, _ := ls.(*labels); l != nil && l.meter == m {
 		return l
 	}
 	return &m.empty
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel.NumberKind, opts *api.Options) *instrument {
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel.NumberKind, opts *otel.Options) *instrument {
 	descriptor := export.NewDescriptor(
 		name,
 		metricKind,
@@ -304,46 +302,46 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel
 	}
 }
 
-func (m *SDK) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...api.CounterOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyCounterOptions(&opts, cos...)
+func (m *SDK) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...otel.CounterOptionApplier) *instrument {
+	opts := otel.Options{}
+	otel.ApplyCounterOptions(&opts, cos...)
 	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
 }
 
-func (m *SDK) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyGaugeOptions(&opts, gos...)
+func (m *SDK) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...otel.GaugeOptionApplier) *instrument {
+	opts := otel.Options{}
+	otel.ApplyGaugeOptions(&opts, gos...)
 	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
 }
 
-func (m *SDK) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyMeasureOptions(&opts, mos...)
+func (m *SDK) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...otel.MeasureOptionApplier) *instrument {
+	opts := otel.Options{}
+	otel.ApplyMeasureOptions(&opts, mos...)
 	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
 }
 
-func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, otel.Int64NumberKind, cos...))
+func (m *SDK) NewInt64Counter(name string, cos ...otel.CounterOptionApplier) otel.Int64Counter {
+	return otel.WrapInt64CounterInstrument(m.newCounterInstrument(name, otel.Int64NumberKind, cos...))
 }
 
-func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) api.Float64Counter {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, otel.Float64NumberKind, cos...))
+func (m *SDK) NewFloat64Counter(name string, cos ...otel.CounterOptionApplier) otel.Float64Counter {
+	return otel.WrapFloat64CounterInstrument(m.newCounterInstrument(name, otel.Float64NumberKind, cos...))
 }
 
-func (m *SDK) NewInt64Gauge(name string, gos ...api.GaugeOptionApplier) api.Int64Gauge {
-	return api.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, otel.Int64NumberKind, gos...))
+func (m *SDK) NewInt64Gauge(name string, gos ...otel.GaugeOptionApplier) otel.Int64Gauge {
+	return otel.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, otel.Int64NumberKind, gos...))
 }
 
-func (m *SDK) NewFloat64Gauge(name string, gos ...api.GaugeOptionApplier) api.Float64Gauge {
-	return api.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, otel.Float64NumberKind, gos...))
+func (m *SDK) NewFloat64Gauge(name string, gos ...otel.GaugeOptionApplier) otel.Float64Gauge {
+	return otel.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, otel.Float64NumberKind, gos...))
 }
 
-func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) api.Int64Measure {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, otel.Int64NumberKind, mos...))
+func (m *SDK) NewInt64Measure(name string, mos ...otel.MeasureOptionApplier) otel.Int64Measure {
+	return otel.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, otel.Int64NumberKind, mos...))
 }
 
-func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) api.Float64Measure {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, otel.Float64NumberKind, mos...))
+func (m *SDK) NewFloat64Measure(name string, mos ...otel.MeasureOptionApplier) otel.Float64Measure {
+	return otel.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, otel.Float64NumberKind, mos...))
 }
 
 // saveFromReclaim puts a record onto the "reclaim" list when it
@@ -422,22 +420,22 @@ func (m *SDK) collect(ctx context.Context, r *record) {
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
+func (m *SDK) RecordBatch(ctx context.Context, ls otel.LabelSet, measurements ...otel.Measurement) {
 	for _, meas := range measurements {
 		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
 // GetDescriptor returns the descriptor of an instrument, which is not
-// part of the public metric API.
-func (m *SDK) GetDescriptor(inst metric.InstrumentImpl) *export.Descriptor {
+// part of the public metric otel.
+func (m *SDK) GetDescriptor(inst otel.InstrumentImpl) *export.Descriptor {
 	if ii, ok := inst.(*instrument); ok {
 		return ii.descriptor
 	}
 	return nil
 }
 
-func (l *labels) Meter() api.Meter {
+func (l *labels) Meter() otel.Meter {
 	return l.meter
 }
 

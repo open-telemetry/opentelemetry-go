@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	apimetric "go.opentelemetry.io/otel/api/metric"
 )
 
 type (
@@ -31,7 +30,7 @@ type (
 		Name       string
 		Kind       Kind
 		NumberKind otel.NumberKind
-		Opts       apimetric.Options
+		Opts       otel.Options
 	}
 
 	LabelSet struct {
@@ -58,10 +57,10 @@ type (
 )
 
 var (
-	_ apimetric.InstrumentImpl = &Instrument{}
-	_ apimetric.HandleImpl     = &Handle{}
-	_ apimetric.LabelSet       = &LabelSet{}
-	_ apimetric.Meter          = &Meter{}
+	_ otel.InstrumentImpl = &Instrument{}
+	_ otel.HandleImpl     = &Handle{}
+	_ otel.LabelSet       = &LabelSet{}
+	_ otel.Meter          = &Meter{}
 )
 
 const (
@@ -70,14 +69,14 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleImpl {
+func (i *Instrument) AcquireHandle(labels otel.LabelSet) otel.HandleImpl {
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),
 	}
 }
 
-func (i *Instrument) RecordOne(ctx context.Context, number otel.Number, labels apimetric.LabelSet) {
+func (i *Instrument) RecordOne(ctx context.Context, number otel.Number, labels otel.LabelSet) {
 	doRecordBatch(ctx, labels.(*LabelSet), i, number)
 }
 
@@ -95,7 +94,7 @@ func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrume
 	})
 }
 
-func (s *LabelSet) Meter() apimetric.Meter {
+func (s *LabelSet) Meter() otel.Meter {
 	return s.TheMeter
 }
 
@@ -103,7 +102,7 @@ func NewMeter() *Meter {
 	return &Meter{}
 }
 
-func (m *Meter) Labels(labels ...otel.KeyValue) apimetric.LabelSet {
+func (m *Meter) Labels(labels ...otel.KeyValue) otel.LabelSet {
 	ul := make(map[otel.Key]otel.Value)
 	for _, kv := range labels {
 		ul[kv.Key] = kv.Value
@@ -114,19 +113,19 @@ func (m *Meter) Labels(labels ...otel.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
+func (m *Meter) NewInt64Counter(name string, cos ...otel.CounterOptionApplier) otel.Int64Counter {
 	instrument := m.newCounterInstrument(name, otel.Int64NumberKind, cos...)
-	return apimetric.WrapInt64CounterInstrument(instrument)
+	return otel.WrapInt64CounterInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Float64Counter {
+func (m *Meter) NewFloat64Counter(name string, cos ...otel.CounterOptionApplier) otel.Float64Counter {
 	instrument := m.newCounterInstrument(name, otel.Float64NumberKind, cos...)
-	return apimetric.WrapFloat64CounterInstrument(instrument)
+	return otel.WrapFloat64CounterInstrument(instrument)
 }
 
-func (m *Meter) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyCounterOptions(&opts, cos...)
+func (m *Meter) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...otel.CounterOptionApplier) *Instrument {
+	opts := otel.Options{}
+	otel.ApplyCounterOptions(&opts, cos...)
 	return &Instrument{
 		Name:       name,
 		Kind:       KindCounter,
@@ -135,19 +134,19 @@ func (m *Meter) newCounterInstrument(name string, numberKind otel.NumberKind, co
 	}
 }
 
-func (m *Meter) NewInt64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Int64Gauge {
+func (m *Meter) NewInt64Gauge(name string, gos ...otel.GaugeOptionApplier) otel.Int64Gauge {
 	instrument := m.newGaugeInstrument(name, otel.Int64NumberKind, gos...)
-	return apimetric.WrapInt64GaugeInstrument(instrument)
+	return otel.WrapInt64GaugeInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Float64Gauge {
+func (m *Meter) NewFloat64Gauge(name string, gos ...otel.GaugeOptionApplier) otel.Float64Gauge {
 	instrument := m.newGaugeInstrument(name, otel.Float64NumberKind, gos...)
-	return apimetric.WrapFloat64GaugeInstrument(instrument)
+	return otel.WrapFloat64GaugeInstrument(instrument)
 }
 
-func (m *Meter) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyGaugeOptions(&opts, gos...)
+func (m *Meter) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...otel.GaugeOptionApplier) *Instrument {
+	opts := otel.Options{}
+	otel.ApplyGaugeOptions(&opts, gos...)
 	return &Instrument{
 		Name:       name,
 		Kind:       KindGauge,
@@ -156,19 +155,19 @@ func (m *Meter) newGaugeInstrument(name string, numberKind otel.NumberKind, gos 
 	}
 }
 
-func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Int64Measure {
+func (m *Meter) NewInt64Measure(name string, mos ...otel.MeasureOptionApplier) otel.Int64Measure {
 	instrument := m.newMeasureInstrument(name, otel.Int64NumberKind, mos...)
-	return apimetric.WrapInt64MeasureInstrument(instrument)
+	return otel.WrapInt64MeasureInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Float64Measure {
+func (m *Meter) NewFloat64Measure(name string, mos ...otel.MeasureOptionApplier) otel.Float64Measure {
 	instrument := m.newMeasureInstrument(name, otel.Float64NumberKind, mos...)
-	return apimetric.WrapFloat64MeasureInstrument(instrument)
+	return otel.WrapFloat64MeasureInstrument(instrument)
 }
 
-func (m *Meter) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyMeasureOptions(&opts, mos...)
+func (m *Meter) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...otel.MeasureOptionApplier) *Instrument {
+	opts := otel.Options{}
+	otel.ApplyMeasureOptions(&opts, mos...)
 	return &Instrument{
 		Name:       name,
 		Kind:       KindMeasure,
@@ -177,7 +176,7 @@ func (m *Meter) newMeasureInstrument(name string, numberKind otel.NumberKind, mo
 	}
 }
 
-func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
+func (m *Meter) RecordBatch(ctx context.Context, labels otel.LabelSet, measurements ...otel.Measurement) {
 	ourLabelSet := labels.(*LabelSet)
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
