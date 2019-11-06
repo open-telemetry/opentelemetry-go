@@ -5,7 +5,8 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opentelemetry.io/sdk/export"
+
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type metricID string
@@ -21,7 +22,7 @@ type Exporter struct {
 	gauges          map[metricID]*prometheus.GaugeVec
 }
 
-var _ export.MetricBatcher = (*Exporter)(nil)
+var _ export.Batcher = (*Exporter)(nil)
 
 // Options is a set of options for the tally reporter.
 type Options struct {
@@ -77,14 +78,14 @@ func NewExporter(opts Options) *Exporter {
 }
 
 // AggregatorFor returns the metric aggregator used for the particular exporter.
-func (e *Exporter) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
+func (e *Exporter) AggregatorFor(record export.Record) export.Aggregator {
 	return nil
 }
 
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(
 	ctx context.Context,
-	record export.MetricRecord,
-	aggregator export.MetricAggregator) {
+	record export.Record,
+	aggregator export.Aggregator) {
 
 }

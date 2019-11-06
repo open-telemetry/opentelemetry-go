@@ -1,10 +1,10 @@
-module go.opentelemetry.io/exporter/metric/prometheus
+module go.opentelemetry.io/otel/exporter/metric/prometheus
 
 go 1.13
 
-replace go.opentelemetry.io => ../../..
+replace go.opentelemetry.io/otel => ../../..
 
 require (
-	go.opentelemetry.io v0.0.0-00010101000000-000000000000
-	google.golang.org/appengine v1.4.0 // indirect
+	github.com/prometheus/client_golang v0.9.3
+	go.opentelemetry.io/otel v0.1.0
 )
