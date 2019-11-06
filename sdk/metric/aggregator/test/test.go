@@ -23,8 +23,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-var _ export.Identifier = &metricRecord{}
-
 const Magnitude = 1000
 
 type Profile struct {
@@ -50,25 +48,9 @@ func newProfiles() []Profile {
 	}
 }
 
-type metricRecord struct {
-	descriptor *export.Descriptor
-}
-
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) export.Identifier {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) *export.Descriptor {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
-	return &metricRecord{descriptor: desc}
-}
-
-func (t *metricRecord) Descriptor() *export.Descriptor {
-	return t.descriptor
-}
-
-func (t *metricRecord) Labels() []core.KeyValue {
-	return nil
-}
-
-func (t *metricRecord) EncodedLabels() string {
-	return ""
+	return desc
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

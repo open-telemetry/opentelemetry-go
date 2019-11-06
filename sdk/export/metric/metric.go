@@ -37,7 +37,11 @@ type Batcher interface {
 	// must access the specific aggregator to receive the
 	// exporter data, since the format of the data varies
 	// by aggregation.
-	Process(context.Context, Identifier, Aggregator)
+	Process(ctx context.Context,
+		descriptor *Descriptor,
+		labels []core.KeyValue,
+		encodedLabels string,
+		aggregator Aggregator)
 
 	// ReadCheckpoint is the interface used by exporters to access
 	// aggregate checkpoints after collection.
@@ -55,7 +59,7 @@ type AggregationSelector interface {
 	//
 	// Note: This is context-free because the handle should not be
 	// bound to the incoming context.  This call should not block.
-	AggregatorFor(Identifier) Aggregator
+	AggregatorFor(*Descriptor) Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g.,
@@ -64,30 +68,15 @@ type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may arrive
 	// concurrently.
-	Update(context.Context, core.Number, Identifier)
+	Update(context.Context, core.Number, *Descriptor)
 
 	// Checkpoint is called during the SDK Collect() to finish one
 	// period of aggregation.  Checkpoint() is called in a
 	// single-threaded context.
-	Checkpoint(context.Context, Identifier)
+	Checkpoint(context.Context, *Descriptor)
 
 	// Merge combines state from two aggregators into one.
 	Merge(Aggregator, *Descriptor)
-}
-
-// Identifier is the unit of export, pairing a metric
-// instrument and set of labels.
-type Identifier interface {
-	// Descriptor() describes the metric instrument.
-	Descriptor() *Descriptor
-
-	// Labels() describe the labsels corresponding the
-	// aggregation being performed.
-	Labels() []core.KeyValue
-
-	// EncodedLabels are a unique string-encoded form of Labels()
-	// suitable for use as a map key.
-	EncodedLabels() string
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -105,18 +94,18 @@ type LabelEncoder interface {
 	EncodeLabels([]core.KeyValue) string
 }
 
+// Producer allows a Exporter to access a checkpoint of
+// aggregated metrics one at a time.
+type Producer interface {
+	Foreach(func(Aggregator, ProducedRecord))
+}
+
 // ProducedRecord
 type ProducedRecord struct {
 	Descriptor    *Descriptor
 	Labels        []core.KeyValue
 	Encoder       LabelEncoder
 	EncodedLabels string
-}
-
-// Producer allows a Exporter to access a checkpoint of
-// aggregated metrics one at a time.
-type Producer interface {
-	Foreach(func(Aggregator, ProducedRecord))
 }
 
 // Kind describes the kind of instrument.

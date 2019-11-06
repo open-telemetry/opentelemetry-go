@@ -34,23 +34,23 @@ type updateTest struct {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
-	agg := New(NewDefaultConfig(), record.Descriptor())
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	agg := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, record)
+		agg.Update(ctx, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, record)
+			agg.Update(ctx, y, descriptor)
 		}
 	}
 
-	agg.Checkpoint(ctx, record)
+	agg.Checkpoint(ctx, descriptor)
 
 	all.Sort()
 
@@ -96,40 +96,40 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
-	agg1 := New(NewDefaultConfig(), record.Descriptor())
-	agg2 := New(NewDefaultConfig(), record.Descriptor())
+	agg1 := New(NewDefaultConfig(), descriptor)
+	agg2 := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg1.Update(ctx, x, record)
+		agg1.Update(ctx, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg1.Update(ctx, y, record)
+			agg1.Update(ctx, y, descriptor)
 		}
 	}
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg2.Update(ctx, x, record)
+		agg2.Update(ctx, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg2.Update(ctx, y, record)
+			agg2.Update(ctx, y, descriptor)
 		}
 	}
 
-	agg1.Checkpoint(ctx, record)
-	agg2.Checkpoint(ctx, record)
+	agg1.Checkpoint(ctx, descriptor)
+	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, record.Descriptor())
+	agg1.Merge(agg2, descriptor)
 
 	all.Sort()
 

@@ -144,7 +144,6 @@ var (
 	_ api.LabelSet       = &labels{}
 	_ api.InstrumentImpl = &instrument{}
 	_ api.HandleImpl     = &record{}
-	_ export.Identifier  = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -181,7 +180,8 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		atomic.AddInt64(&rec.refcount, 1)
 		return rec
 	}
-	rec.recorder = i.meter.batcher.AggregatorFor(rec)
+	// TODO: Fix the race here
+	rec.recorder = i.meter.batcher.AggregatorFor(rec.descriptor)
 
 	i.meter.addPrimary(rec)
 	return rec
@@ -392,8 +392,8 @@ func (m *SDK) Collect(ctx context.Context) {
 
 func (m *SDK) checkpoint(ctx context.Context, r *record) {
 	if r.recorder != nil {
-		r.recorder.Checkpoint(ctx, r)
-		m.batcher.Process(ctx, r, r.recorder)
+		r.recorder.Checkpoint(ctx, r.descriptor)
+		m.batcher.Process(ctx, r.descriptor, r.labels.sorted, r.labels.encoded, r.recorder)
 	}
 }
 
@@ -419,7 +419,7 @@ func (l *labels) Meter() api.Meter {
 
 func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	if r.recorder != nil {
-		r.recorder.Update(ctx, number, r)
+		r.recorder.Update(ctx, number, r.descriptor)
 	}
 }
 
@@ -454,16 +454,4 @@ func (r *record) mapkey() mapkey {
 		descriptor: r.descriptor,
 		encoded:    r.labels.encoded,
 	}
-}
-
-func (r *record) Descriptor() *export.Descriptor {
-	return r.descriptor
-}
-
-func (r *record) Labels() []core.KeyValue {
-	return r.labels.sorted
-}
-
-func (r *record) EncodedLabels() string {
-	return r.labels.encoded
 }

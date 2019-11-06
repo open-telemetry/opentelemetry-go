@@ -37,7 +37,7 @@ type monotoneBatcher struct {
 	currentTime  *time.Time
 }
 
-func (m *monotoneBatcher) AggregatorFor(export.Identifier) export.Aggregator {
+func (m *monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return gauge.New()
 }
 
@@ -45,11 +45,11 @@ func (m *monotoneBatcher) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (m *monotoneBatcher) Process(_ context.Context, ident export.Identifier, agg export.Aggregator) {
-	require.Equal(m.t, "my.gauge.name", ident.Descriptor().Name())
-	require.Equal(m.t, 1, len(ident.Labels()))
-	require.Equal(m.t, "a", string(ident.Labels()[0].Key))
-	require.Equal(m.t, "b", ident.Labels()[0].Value.Emit())
+func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) {
+	require.Equal(m.t, "my.gauge.name", desc.Name())
+	require.Equal(m.t, 1, len(labels))
+	require.Equal(m.t, "a", string(labels[0].Key))
+	require.Equal(m.t, "b", labels[0].Value.Emit())
 
 	gauge := agg.(*gauge.Aggregator)
 	val := gauge.LastValue()

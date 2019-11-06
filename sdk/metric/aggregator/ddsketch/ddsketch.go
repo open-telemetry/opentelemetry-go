@@ -92,7 +92,7 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ export.Identifier) {
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
@@ -102,8 +102,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ export.Identifier) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, ident export.Identifier) {
-	desc := ident.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
 	kind := desc.NumberKind()
 
 	if !desc.Alternate() && number.IsNegative(kind) {

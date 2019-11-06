@@ -52,21 +52,20 @@ func New(selector export.AggregationSelector, stateful bool) *Batcher {
 	}
 }
 
-func (b *Batcher) AggregatorFor(ident export.Identifier) export.Aggregator {
-	return b.selector.AggregatorFor(ident)
+func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, ident export.Identifier, agg export.Aggregator) {
-	desc := ident.Descriptor()
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, agg export.Aggregator) {
 	key := batchKey{
 		descriptor: desc,
-		encoded:    ident.EncodedLabels(),
+		encoded:    encodedLabels,
 	}
 	value, ok := b.batchMap[key]
 	if !ok {
 		b.batchMap[key] = batchValue{
 			aggregator: agg,
-			labels:     ident.Labels(),
+			labels:     labels,
 		}
 	} else {
 		value.aggregator.Merge(agg, desc)

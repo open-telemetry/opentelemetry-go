@@ -45,8 +45,7 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (bf *benchFixture) AggregatorFor(ident export.Identifier) export.Aggregator {
-	descriptor := ident.Descriptor()
+func (bf *benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
@@ -64,7 +63,7 @@ func (bf *benchFixture) AggregatorFor(ident export.Identifier) export.Aggregator
 	return nil
 }
 
-func (bf *benchFixture) Process(context.Context, export.Identifier, export.Aggregator) {
+func (bf *benchFixture) Process(context.Context, *export.Descriptor, []core.KeyValue, string, export.Aggregator) {
 }
 
 func (bf *benchFixture) ReadCheckpoint() export.Producer {

@@ -79,13 +79,12 @@ func (g *Aggregator) Timestamp() time.Time {
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.
-func (g *Aggregator) Checkpoint(ctx context.Context, _ export.Identifier) {
+func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, number core.Number, ident export.Identifier) {
-	desc := ident.Descriptor()
+func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
 	} else {

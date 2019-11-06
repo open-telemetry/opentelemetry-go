@@ -102,23 +102,23 @@ func TestGaugeNormalMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
 		first1.AddNumber(profile.NumberKind, first2)
 
-		agg1.Update(ctx, first1, record)
-		agg2.Update(ctx, first2, record)
+		agg1.Update(ctx, first1, descriptor)
+		agg2.Update(ctx, first2, descriptor)
 
-		agg1.Checkpoint(ctx, record)
-		agg2.Checkpoint(ctx, record)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
 		t1 := agg1.Timestamp()
 		t2 := agg2.Timestamp()
 		require.True(t, t1.Before(t2))
 
-		agg1.Merge(agg2, record.Descriptor())
+		agg1.Merge(agg2, descriptor)
 
 		require.Equal(t, t2, agg1.Timestamp(), "Merged timestamp - non-monotonic")
 		require.Equal(t, first2, agg1.LastValue(), "Merged value - non-monotonic")
@@ -132,19 +132,19 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first1 := profile.Random(+1)
-		agg1.Update(ctx, first1, record)
+		agg1.Update(ctx, first1, descriptor)
 
 		first2 := profile.Random(+1)
 		first2.AddNumber(profile.NumberKind, first1)
-		agg2.Update(ctx, first2, record)
+		agg2.Update(ctx, first2, descriptor)
 
-		agg1.Checkpoint(ctx, record)
-		agg2.Checkpoint(ctx, record)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
-		agg1.Merge(agg2, record.Descriptor())
+		agg1.Merge(agg2, descriptor)
 
 		require.Equal(t, first2, agg1.LastValue(), "Merged value - monotonic")
 		require.Equal(t, agg2.Timestamp(), agg1.Timestamp(), "Merged timestamp - monotonic")

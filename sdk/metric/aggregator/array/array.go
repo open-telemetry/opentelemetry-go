@@ -68,12 +68,11 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (c *Aggregator) Checkpoint(ctx context.Context, ident export.Identifier) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()
 
-	desc := ident.Descriptor()
 	kind := desc.NumberKind()
 
 	c.sort(kind)
@@ -85,8 +84,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, ident export.Identifier) {
 	}
 }
 
-func (c *Aggregator) Update(_ context.Context, number core.Number, ident export.Identifier) {
-	desc := ident.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) {
 	kind := desc.NumberKind()
 
 	if kind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
