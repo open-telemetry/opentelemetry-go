@@ -30,7 +30,7 @@ type (
 		Name       string
 		Kind       Kind
 		NumberKind otel.NumberKind
-		Opts       otel.Options
+		Opts       otel.MetricOptions
 	}
 
 	LabelSet struct {
@@ -59,8 +59,8 @@ type (
 var (
 	_ otel.Instrument = &Instrument{}
 	_ otel.Handle     = &Handle{}
-	_ otel.LabelSet       = &LabelSet{}
-	_ otel.Meter          = &Meter{}
+	_ otel.LabelSet   = &LabelSet{}
+	_ otel.Meter      = &Meter{}
 )
 
 const (
@@ -124,7 +124,7 @@ func (m *Meter) NewFloat64Counter(name string, cos ...otel.CounterOptionApplier)
 }
 
 func (m *Meter) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...otel.CounterOptionApplier) *Instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyCounterOptions(&opts, cos...)
 	return &Instrument{
 		Name:       name,
@@ -145,7 +145,7 @@ func (m *Meter) NewFloat64Gauge(name string, gos ...otel.GaugeOptionApplier) ote
 }
 
 func (m *Meter) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...otel.GaugeOptionApplier) *Instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyGaugeOptions(&opts, gos...)
 	return &Instrument{
 		Name:       name,
@@ -166,7 +166,7 @@ func (m *Meter) NewFloat64Measure(name string, mos ...otel.MeasureOptionApplier)
 }
 
 func (m *Meter) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...otel.MeasureOptionApplier) *Instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyMeasureOptions(&opts, mos...)
 	return &Instrument{
 		Name:       name,

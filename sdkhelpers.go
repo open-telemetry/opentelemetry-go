@@ -90,7 +90,7 @@ func WrapFloat64MeasureInstrument(instrument Instrument) Float64Measure {
 
 // ApplyCounterOptions is a helper that applies all the counter
 // options to passed opts.
-func ApplyCounterOptions(opts *Options, cos ...CounterOptionApplier) {
+func ApplyCounterOptions(opts *MetricOptions, cos ...CounterOptionApplier) {
 	for _, o := range cos {
 		o.ApplyCounterOption(opts)
 	}
@@ -98,7 +98,7 @@ func ApplyCounterOptions(opts *Options, cos ...CounterOptionApplier) {
 
 // ApplyGaugeOptions is a helper that applies all the gauge options to
 // passed opts.
-func ApplyGaugeOptions(opts *Options, gos ...GaugeOptionApplier) {
+func ApplyGaugeOptions(opts *MetricOptions, gos ...GaugeOptionApplier) {
 	for _, o := range gos {
 		o.ApplyGaugeOption(opts)
 	}
@@ -106,7 +106,7 @@ func ApplyGaugeOptions(opts *Options, gos ...GaugeOptionApplier) {
 
 // ApplyMeasureOptions is a helper that applies all the measure
 // options to passed opts.
-func ApplyMeasureOptions(opts *Options, mos ...MeasureOptionApplier) {
+func ApplyMeasureOptions(opts *MetricOptions, mos ...MeasureOptionApplier) {
 	for _, o := range mos {
 		o.ApplyMeasureOption(opts)
 	}

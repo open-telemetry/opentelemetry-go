@@ -29,8 +29,8 @@ type Provider interface {
 // []KeyValue for use as pre-defined labels in the metrics API.
 type LabelSet interface{}
 
-// Options contains some options for metrics of any kind.
-type Options struct {
+// MetricOptions contains some options for metrics of any kind.
+type MetricOptions struct {
 	// Description is an optional field describing the metric
 	// instrument.
 	Description string
@@ -58,7 +58,7 @@ type Options struct {
 type CounterOptionApplier interface {
 	// ApplyCounterOption is used to make some general or
 	// counter-specific changes in the Options.
-	ApplyCounterOption(*Options)
+	ApplyCounterOption(*MetricOptions)
 }
 
 // GaugeOptionApplier is an interface for applying metric options that
@@ -66,7 +66,7 @@ type CounterOptionApplier interface {
 type GaugeOptionApplier interface {
 	// ApplyGaugeOption is used to make some general or
 	// gauge-specific changes in the Options.
-	ApplyGaugeOption(*Options)
+	ApplyGaugeOption(*MetricOptions)
 }
 
 // MeasureOptionApplier is an interface for applying metric options
@@ -74,7 +74,7 @@ type GaugeOptionApplier interface {
 type MeasureOptionApplier interface {
 	// ApplyMeasureOption is used to make some general or
 	// measure-specific changes in the Options.
-	ApplyMeasureOption(*Options)
+	ApplyMeasureOption(*MetricOptions)
 }
 
 // Measurement is used for reporting a batch of metric
@@ -126,8 +126,8 @@ type Meter interface {
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 }
 
-// Option supports specifying the various metric options.
-type Option func(*Options)
+// MetricOption supports specifying the various metric options.
+type MetricOption func(*MetricOptions)
 
 // OptionApplier is an interface for applying metric options that are
 // valid for all the kinds of metrics.
@@ -137,7 +137,7 @@ type OptionApplier interface {
 	MeasureOptionApplier
 	// ApplyOption is used to make some general changes in the
 	// Options.
-	ApplyOption(*Options)
+	ApplyOption(*MetricOptions)
 }
 
 // CounterGaugeOptionApplier is an interface for applying metric
@@ -148,24 +148,24 @@ type CounterGaugeOptionApplier interface {
 }
 
 type optionWrapper struct {
-	F Option
+	F MetricOption
 }
 
 type counterOptionWrapper struct {
-	F Option
+	F MetricOption
 }
 
 type gaugeOptionWrapper struct {
-	F Option
+	F MetricOption
 }
 
 type measureOptionWrapper struct {
-	F Option
+	F MetricOption
 }
 
 type counterGaugeOptionWrapper struct {
-	FC Option
-	FG Option
+	FC MetricOption
+	FG MetricOption
 }
 
 var (
@@ -175,46 +175,46 @@ var (
 	_ MeasureOptionApplier = measureOptionWrapper{}
 )
 
-func (o optionWrapper) ApplyCounterOption(opts *Options) {
+func (o optionWrapper) ApplyCounterOption(opts *MetricOptions) {
 	o.ApplyOption(opts)
 }
 
-func (o optionWrapper) ApplyGaugeOption(opts *Options) {
+func (o optionWrapper) ApplyGaugeOption(opts *MetricOptions) {
 	o.ApplyOption(opts)
 }
 
-func (o optionWrapper) ApplyMeasureOption(opts *Options) {
+func (o optionWrapper) ApplyMeasureOption(opts *MetricOptions) {
 	o.ApplyOption(opts)
 }
 
-func (o optionWrapper) ApplyOption(opts *Options) {
+func (o optionWrapper) ApplyOption(opts *MetricOptions) {
 	o.F(opts)
 }
 
-func (o counterOptionWrapper) ApplyCounterOption(opts *Options) {
+func (o counterOptionWrapper) ApplyCounterOption(opts *MetricOptions) {
 	o.F(opts)
 }
 
-func (o gaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+func (o gaugeOptionWrapper) ApplyGaugeOption(opts *MetricOptions) {
 	o.F(opts)
 }
 
-func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
+func (o measureOptionWrapper) ApplyMeasureOption(opts *MetricOptions) {
 	o.F(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
+func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *MetricOptions) {
 	o.FC(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *MetricOptions) {
 	o.FG(opts)
 }
 
 // WithDescription applies provided description.
 func WithDescription(desc string) OptionApplier {
 	return optionWrapper{
-		F: func(opts *Options) {
+		F: func(opts *MetricOptions) {
 			opts.Description = desc
 		},
 	}
@@ -223,7 +223,7 @@ func WithDescription(desc string) OptionApplier {
 // WithUnit applies provided unit.
 func WithUnit(unit Unit) OptionApplier {
 	return optionWrapper{
-		F: func(opts *Options) {
+		F: func(opts *MetricOptions) {
 			opts.Unit = unit
 		},
 	}
@@ -233,7 +233,7 @@ func WithUnit(unit Unit) OptionApplier {
 // options accumulate.
 func WithKeys(keys ...Key) OptionApplier {
 	return optionWrapper{
-		F: func(opts *Options) {
+		F: func(opts *MetricOptions) {
 			opts.Keys = append(opts.Keys, keys...)
 		},
 	}
@@ -243,10 +243,10 @@ func WithKeys(keys ...Key) OptionApplier {
 // go down.
 func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
 	return counterGaugeOptionWrapper{
-		FC: func(opts *Options) {
+		FC: func(opts *MetricOptions) {
 			opts.Alternate = !monotonic
 		},
-		FG: func(opts *Options) {
+		FG: func(opts *MetricOptions) {
 			opts.Alternate = monotonic
 		},
 	}
@@ -256,7 +256,7 @@ func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
 // negative.
 func WithAbsolute(absolute bool) MeasureOptionApplier {
 	return measureOptionWrapper{
-		F: func(opts *Options) {
+		F: func(opts *MetricOptions) {
 			opts.Alternate = !absolute
 		},
 	}

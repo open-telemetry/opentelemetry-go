@@ -139,11 +139,11 @@ type (
 )
 
 var (
-	_ otel.Meter          = &SDK{}
-	_ otel.LabelSet       = &labels{}
+	_ otel.Meter      = &SDK{}
+	_ otel.LabelSet   = &labels{}
 	_ otel.Instrument = &instrument{}
 	_ otel.Handle     = &record{}
-	_ export.Record       = &record{}
+	_ export.Record   = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -287,7 +287,7 @@ func (m *SDK) labsFor(ls otel.LabelSet) *labels {
 	return &m.empty
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel.NumberKind, opts *otel.Options) *instrument {
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel.NumberKind, opts *otel.MetricOptions) *instrument {
 	descriptor := export.NewDescriptor(
 		name,
 		metricKind,
@@ -303,19 +303,19 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind otel
 }
 
 func (m *SDK) newCounterInstrument(name string, numberKind otel.NumberKind, cos ...otel.CounterOptionApplier) *instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyCounterOptions(&opts, cos...)
 	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
 }
 
 func (m *SDK) newGaugeInstrument(name string, numberKind otel.NumberKind, gos ...otel.GaugeOptionApplier) *instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyGaugeOptions(&opts, gos...)
 	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
 }
 
 func (m *SDK) newMeasureInstrument(name string, numberKind otel.NumberKind, mos ...otel.MeasureOptionApplier) *instrument {
-	opts := otel.Options{}
+	opts := otel.MetricOptions{}
 	otel.ApplyMeasureOptions(&opts, mos...)
 	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
 }

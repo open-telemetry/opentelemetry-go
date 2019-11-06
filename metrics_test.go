@@ -125,9 +125,9 @@ func TestCounterOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		opts := &otel.Options{}
+		opts := &otel.MetricOptions{}
 		otel.ApplyCounterOptions(opts, tt.opts...)
-		checkOptions(t, opts, &otel.Options{
+		checkOptions(t, opts, &otel.MetricOptions{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -236,9 +236,9 @@ func TestGaugeOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		opts := &otel.Options{}
+		opts := &otel.MetricOptions{}
 		otel.ApplyGaugeOptions(opts, tt.opts...)
-		checkOptions(t, opts, &otel.Options{
+		checkOptions(t, opts, &otel.MetricOptions{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -347,9 +347,9 @@ func TestMeasureOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		opts := &otel.Options{}
+		opts := &otel.MetricOptions{}
 		otel.ApplyMeasureOptions(opts, tt.opts...)
-		checkOptions(t, opts, &otel.Options{
+		checkOptions(t, opts, &otel.MetricOptions{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
@@ -358,7 +358,7 @@ func TestMeasureOptions(t *testing.T) {
 	}
 }
 
-func checkOptions(t *testing.T, got *otel.Options, expected *otel.Options) {
+func checkOptions(t *testing.T, got *otel.MetricOptions, expected *otel.MetricOptions) {
 	if diff := cmp.Diff(got, expected); diff != "" {
 		t.Errorf("Compare options: -got +want %s", diff)
 	}
