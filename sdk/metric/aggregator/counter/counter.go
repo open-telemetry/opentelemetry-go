@@ -32,8 +32,8 @@ type Aggregator struct {
 
 var _ export.Aggregator = &Aggregator{}
 
-// New returns a new counter aggregator.  This aggregator computes an
-// atomic sum.
+// New returns a new counter aggregator.  This aggregator computes an atomic
+// sum.
 func New() *Aggregator {
 	return &Aggregator{}
 }
