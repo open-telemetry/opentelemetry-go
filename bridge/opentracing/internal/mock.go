@@ -46,8 +46,8 @@ type MockContextKeyValue struct {
 type MockTracer struct {
 	Resources             oteldctx.Map
 	FinishedSpans         []*MockSpan
-	SpareTraceIDs         []otel..TraceID
-	SpareSpanIDs          []otel..SpanID
+	SpareTraceIDs         []otel.TraceID
+	SpareSpanIDs          []otel.SpanID
 	SpareContextKeyValues []MockContextKeyValue
 
 	randLock sync.Mutex
@@ -84,7 +84,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanContext := otel..SpanContext{
+	spanContext := otel.SpanContext{
 		TraceID:    t.getTraceID(ctx, &spanOpts),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
@@ -123,7 +123,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel..TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel.TraceID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.TraceID
 	}
@@ -138,14 +138,14 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel..SpanID {
+func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel.SpanID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.SpanID
 	}
-	return otel..SpanID{}
+	return otel.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel..SpanContext {
+func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otel.SpanContext {
 	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
 		spanOpts.Relation.SpanContext.IsValid() {
 		return spanOpts.Relation.SpanContext
@@ -153,10 +153,10 @@ func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltra
 	if parentSpanContext := oteltrace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
 		return parentSpanContext
 	}
-	return otel..EmptySpanContext()
+	return otel.EmptySpanContext()
 }
 
-func (t *MockTracer) getSpanID() otel..SpanID {
+func (t *MockTracer) getSpanID() otel.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
@@ -168,21 +168,21 @@ func (t *MockTracer) getSpanID() otel..SpanID {
 	return t.getRandSpanID()
 }
 
-func (t *MockTracer) getRandSpanID() otel..SpanID {
+func (t *MockTracer) getRandSpanID() otel.SpanID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
-	sid := otel..SpanID{}
+	sid := otel.SpanID{}
 	t.rand.Read(sid[:])
 
 	return sid
 }
 
-func (t *MockTracer) getRandTraceID() otel..TraceID {
+func (t *MockTracer) getRandTraceID() otel.TraceID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
-	tid := otel..TraceID{}
+	tid := otel.TraceID{}
 	t.rand.Read(tid[:])
 
 	return tid
@@ -202,21 +202,21 @@ type MockEvent struct {
 type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer oteltrace.Tracer
-	spanContext    otel..SpanContext
+	spanContext    otel.SpanContext
 	SpanKind       oteltrace.SpanKind
 	recording      bool
 
 	Attributes   oteldctx.Map
 	StartTime    time.Time
 	EndTime      time.Time
-	ParentSpanID otel..SpanID
+	ParentSpanID otel.SpanID
 	Events       []MockEvent
 }
 
 var _ oteltrace.Span = &MockSpan{}
 var _ migration.OverrideTracerSpanExtension = &MockSpan{}
 
-func (s *MockSpan) SpanContext() otel..SpanContext {
+func (s *MockSpan) SpanContext() otel.SpanContext {
 	return s.spanContext
 }
 
@@ -236,13 +236,13 @@ func (s *MockSpan) SetError(v bool) {
 	s.SetAttribute(ErrorKey.Bool(v))
 }
 
-func (s *MockSpan) SetAttribute(attribute otel..KeyValue) {
+func (s *MockSpan) SetAttribute(attribute otel.KeyValue) {
 	s.applyUpdate(oteldctx.MapUpdate{
 		SingleKV: attribute,
 	})
 }
 
-func (s *MockSpan) SetAttributes(attributes ...otel..KeyValue) {
+func (s *MockSpan) SetAttributes(attributes ...otel.KeyValue) {
 	s.applyUpdate(oteldctx.MapUpdate{
 		MultiKV: attributes,
 	})
@@ -274,11 +274,11 @@ func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otel..KeyValue) {
+func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyValue) {
 	s.AddEventWithTimestamp(ctx, time.Now(), msg, attrs...)
 }
 
-func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel..KeyValue) {
+func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
 		CtxAttributes: oteldctx.FromContext(ctx),
 		Timestamp:     timestamp,
@@ -293,7 +293,7 @@ func (s *MockSpan) AddLink(link oteltrace.Link) {
 	// TODO
 }
 
-func (s *MockSpan) Link(sc otel..SpanContext, attrs ...otel..KeyValue) {
+func (s *MockSpan) Link(sc otel.SpanContext, attrs ...otel.KeyValue) {
 	// TODO
 }
 

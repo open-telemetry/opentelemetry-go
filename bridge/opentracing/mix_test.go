@@ -129,8 +129,8 @@ func TestMixedAPIs(t *testing.T) {
 // simple test
 
 type simpleTest struct {
-	traceID otel..TraceID
-	spanIDs []otel..SpanID
+	traceID otel.TraceID
+	spanIDs []otel.SpanID
 }
 
 func newSimpleTest() *simpleTest {
@@ -163,11 +163,11 @@ func (st *simpleTest) noop(t *testing.T, ctx context.Context) {
 // current/active span test
 
 type currentActiveSpanTest struct {
-	traceID otel..TraceID
-	spanIDs []otel..SpanID
+	traceID otel.TraceID
+	spanIDs []otel.SpanID
 
-	recordedCurrentOtelSpanIDs []otel..SpanID
-	recordedActiveOTSpanIDs    []otel..SpanID
+	recordedCurrentOtelSpanIDs []otel.SpanID
+	recordedActiveOTSpanIDs    []otel.SpanID
 }
 
 func newCurrentActiveSpanTest() *currentActiveSpanTest {
@@ -218,7 +218,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 	spanID := oteltrace.CurrentSpan(ctx).SpanContext().SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
-	spanID = otel..SpanID{}
+	spanID = otel.SpanID{}
 	if bridgeSpan, ok := ot.SpanFromContext(ctx).(*bridgeSpan); ok {
 		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
 	}
@@ -464,20 +464,20 @@ func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) {
 
 // helpers
 
-func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID otel..TraceID, expectedSpanIDs []otel..SpanID) {
+func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID otel.TraceID, expectedSpanIDs []otel.SpanID) {
 	expectedSpanCount := len(expectedSpanIDs)
 
 	// reverse spanIDs, since first span ID belongs to root, that
 	// finishes last
-	spanIDs := make([]otel..SpanID, len(expectedSpanIDs))
+	spanIDs := make([]otel.SpanID, len(expectedSpanIDs))
 	copy(spanIDs, expectedSpanIDs)
 	reverse(len(spanIDs), func(i, j int) {
 		spanIDs[i], spanIDs[j] = spanIDs[j], spanIDs[i]
 	})
 	// the last finished span has no parent
-	parentSpanIDs := append(spanIDs[1:], otel..SpanID{})
+	parentSpanIDs := append(spanIDs[1:], otel.SpanID{})
 
-	sks := map[otel..SpanID]oteltrace.SpanKind{
+	sks := map[otel.SpanID]oteltrace.SpanKind{
 		{125}: oteltrace.SpanKindProducer,
 		{124}: oteltrace.SpanKindInternal,
 		{123}: oteltrace.SpanKindClient,
@@ -511,12 +511,12 @@ func reverse(length int, swap func(i, j int)) {
 	}
 }
 
-func simpleTraceID() otel..TraceID {
+func simpleTraceID() otel.TraceID {
 	return [16]byte{123, 42}
 }
 
-func simpleSpanIDs(count int) []otel..SpanID {
-	base := []otel..SpanID{
+func simpleSpanIDs(count int) []otel.SpanID {
+	base := []otel.SpanID{
 		{123},
 		{124},
 		{125},

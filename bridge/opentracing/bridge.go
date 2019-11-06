@@ -37,12 +37,12 @@ type bridgeSpanContext struct {
 	// TODO: have a look at the java implementation of the shim to
 	// see what do they do with the baggage items
 	baggageItems    map[string]string
-	otelSpanContext otel..SpanContext
+	otelSpanContext otel.SpanContext
 }
 
 var _ ot.SpanContext = &bridgeSpanContext{}
 
-func newBridgeSpanContext(otelSpanContext otel..SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
+func newBridgeSpanContext(otelSpanContext otel.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
 	bCtx := &bridgeSpanContext{
 		baggageItems:    nil,
 		otelSpanContext: otelSpanContext,
@@ -141,7 +141,7 @@ func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
 }
 
 type bridgeFieldEncoder struct {
-	pairs []otel..KeyValue
+	pairs []otel.KeyValue
 }
 
 var _ otlog.Encoder = &bridgeFieldEncoder{}
@@ -194,7 +194,7 @@ func (e *bridgeFieldEncoder) emitCommon(key string, value interface{}) {
 	e.pairs = append(e.pairs, otTagToOtelCoreKeyValue(key, value))
 }
 
-func otLogFieldsToOtelCoreKeyValues(fields []otlog.Field) []otel..KeyValue {
+func otLogFieldsToOtelCoreKeyValues(fields []otlog.Field) []otel.KeyValue {
 	encoder := &bridgeFieldEncoder{}
 	for _, field := range fields {
 		field.Marshal(encoder)
@@ -378,10 +378,10 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otel..KeyValue, oteltrace.SpanKind, bool) {
+func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otel.KeyValue, oteltrace.SpanKind, bool) {
 	kind := oteltrace.SpanKindInternal
 	error := false
-	var pairs []otel..KeyValue
+	var pairs []otel.KeyValue
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
@@ -408,7 +408,7 @@ func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otel..Ke
 	return pairs, kind, error
 }
 
-func otTagToOtelCoreKeyValue(k string, v interface{}) otel..KeyValue {
+func otTagToOtelCoreKeyValue(k string, v interface{}) otel.KeyValue {
 	key := otTagToOtelCoreKey(k)
 	switch val := v.(type) {
 	case bool:
@@ -436,8 +436,8 @@ func otTagToOtelCoreKeyValue(k string, v interface{}) otel..KeyValue {
 	}
 }
 
-func otTagToOtelCoreKey(k string) otel..Key {
-	return otel..Key(k)
+func otTagToOtelCoreKey(k string) otel.Key {
+	return otel.Key(k)
 }
 
 type bridgeRelation struct {
@@ -530,7 +530,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 
 func traceFlagsToString(opts byte) string {
 	var parts []string
-	if opts&otel..TraceFlagsSampled == otel..TraceFlagsSampled {
+	if opts&otel.TraceFlagsSampled == otel.TraceFlagsSampled {
 		parts = append(parts, "sampled")
 	}
 	return strings.Join(parts, ",")
@@ -553,13 +553,13 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		ck := http.CanonicalHeaderKey(k)
 		switch ck {
 		case traceIDHeader:
-			traceID, err := otel..TraceIDFromHex(v)
+			traceID, err := otel.TraceIDFromHex(v)
 			if err != nil {
 				return err
 			}
 			bridgeSC.otelSpanContext.TraceID = traceID
 		case spanIDHeader:
-			spanID, err := otel..SpanIDFromHex(v)
+			spanID, err := otel.SpanIDFromHex(v)
 			if err != nil {
 				return err
 			}
@@ -588,7 +588,7 @@ func stringToTraceFlags(s string) byte {
 	for _, part := range strings.Split(s, ",") {
 		switch part {
 		case "sampled":
-			opts |= otel..TraceFlagsSampled
+			opts |= otel.TraceFlagsSampled
 		}
 	}
 	return opts
