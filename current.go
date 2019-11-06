@@ -24,10 +24,12 @@ var (
 	currentSpanKey = &currentSpanKeyType{}
 )
 
+// SetCurrentSpan by storing it in the a new Context.
 func SetCurrentSpan(ctx context.Context, span Span) context.Context {
 	return context.WithValue(ctx, currentSpanKey, span)
 }
 
+// CurrentSpan extracted from the provided Context.
 func CurrentSpan(ctx context.Context) Span {
 	if span, has := ctx.Value(currentSpanKey).(Span); has {
 		return span
