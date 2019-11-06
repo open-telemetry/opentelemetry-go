@@ -73,7 +73,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	go serv.Serve(lis)
+	go func() {
+		_ = serv.Serve(lis)
+	}()
 
 	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
 	if err != nil {
