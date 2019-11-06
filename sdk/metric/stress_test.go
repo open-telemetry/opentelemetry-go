@@ -227,8 +227,8 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (f *testFixture) AggregatorFor(record export.Record) export.Aggregator {
-	switch record.Descriptor().MetricKind() {
+func (f *testFixture) AggregatorFor(ident export.Identifier) export.Aggregator {
+	switch ident.Descriptor().MetricKind() {
 	case export.CounterKind:
 		return counter.New()
 	case export.GaugeKind:
@@ -242,10 +242,10 @@ func (f *testFixture) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (f *testFixture) Process(ctx context.Context, record export.Record, agg export.Aggregator) {
-	desc := record.Descriptor()
+func (f *testFixture) Process(ctx context.Context, ident export.Identifier, agg export.Aggregator) {
+	desc := ident.Descriptor()
 	key := testKey{
-		labels:     canonicalizeLabels(record.Labels()),
+		labels:     canonicalizeLabels(ident.Labels()),
 		descriptor: desc,
 	}
 	if f.dupCheck[key] == 0 {

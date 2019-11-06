@@ -45,25 +45,26 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (bf *benchFixture) AggregatorFor(rec export.Record) export.Aggregator {
-	switch rec.Descriptor().MetricKind() {
+func (bf *benchFixture) AggregatorFor(ident export.Identifier) export.Aggregator {
+	descriptor := ident.Descriptor()
+	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		if strings.HasSuffix(rec.Descriptor().Name(), "maxsumcount") {
+		if strings.HasSuffix(descriptor.Name(), "maxsumcount") {
 			return maxsumcount.New()
-		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
-		} else if strings.HasSuffix(rec.Descriptor().Name(), "array") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
+		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
+			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
+		} else if strings.HasSuffix(descriptor.Name(), "array") {
+			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
 		}
 	}
 	return nil
 }
 
-func (bf *benchFixture) Process(ctx context.Context, rec export.Record, agg export.Aggregator) {
+func (bf *benchFixture) Process(context.Context, export.Identifier, export.Aggregator) {
 }
 
 func (bf *benchFixture) ReadCheckpoint() export.Producer {

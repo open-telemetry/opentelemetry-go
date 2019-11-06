@@ -29,8 +29,8 @@ func New() export.AggregationSelector {
 	return selector{}
 }
 
-func (s selector) AggregatorFor(record export.Record) export.Aggregator {
-	switch record.Descriptor().MetricKind() {
+func (s selector) AggregatorFor(ident export.Identifier) export.Aggregator {
+	switch ident.Descriptor().MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:

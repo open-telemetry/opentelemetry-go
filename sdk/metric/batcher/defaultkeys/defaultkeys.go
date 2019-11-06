@@ -58,12 +58,12 @@ func New(selector export.AggregationSelector, lencoder export.LabelEncoder, stat
 	}
 }
 
-func (b *Batcher) AggregatorFor(record export.Record) export.Aggregator {
-	return b.selector.AggregatorFor(record)
+func (b *Batcher) AggregatorFor(ident export.Identifier) export.Aggregator {
+	return b.selector.AggregatorFor(ident)
 }
 
-func (b *Batcher) Process(_ context.Context, record export.Record, agg export.Aggregator) {
-	desc := record.Descriptor()
+func (b *Batcher) Process(_ context.Context, ident export.Identifier, agg export.Aggregator) {
+	desc := ident.Descriptor()
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
@@ -89,7 +89,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record, agg export.Ag
 	// Note also the possibility to speed this computation of
 	// "encoded" via "canon" in the form of a (Descriptor,
 	// LabelSet)->(Labels, Encoded) cache.
-	for _, kv := range record.Labels() {
+	for _, kv := range ident.Labels() {
 		pos, ok := ki[kv.Key]
 		if !ok {
 			continue

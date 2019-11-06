@@ -144,7 +144,7 @@ var (
 	_ api.LabelSet       = &labels{}
 	_ api.InstrumentImpl = &instrument{}
 	_ api.HandleImpl     = &record{}
-	_ export.Record      = &record{}
+	_ export.Identifier  = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be

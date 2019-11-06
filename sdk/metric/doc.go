@@ -92,9 +92,15 @@ Export Pipeline
 While the SDK serves to maintain a current set of records and coordinate
 collection, the behavior of a metrics export pipeline is configured
 through the export types in go.opentelemetry.io/otel/sdk/export/metric.
+
+AggregationSelector
+LabelEncoder
+
 They are briefly summarized here:
 
-Aggregator: a specific algorithm for combining metric events
+Aggregator
+
+
 AggregationSelector: decides which aggregator to use
 Batcher: determine the aggregation dimensions, group (and de-dup) records
 Descriptor: summarizes an instrument and its metadata

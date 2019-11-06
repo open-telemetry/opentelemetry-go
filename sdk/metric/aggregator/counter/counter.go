@@ -44,13 +44,13 @@ func (c *Aggregator) Sum() core.Number {
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
+func (c *Aggregator) Checkpoint(ctx context.Context, _ export.Identifier) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
-	desc := rec.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, ident export.Identifier) {
+	desc := ident.Descriptor()
 	kind := desc.NumberKind()
 	if !desc.Alternate() && number.IsNegative(kind) {
 		// TODO warn

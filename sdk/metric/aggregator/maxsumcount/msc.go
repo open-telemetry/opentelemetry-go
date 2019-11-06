@@ -59,7 +59,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
+func (c *Aggregator) Checkpoint(ctx context.Context, _ export.Identifier) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -76,8 +76,8 @@ func (c *Aggregator) Checkpoint(ctx context.Context, rec export.Record) {
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
-	desc := rec.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, ident export.Identifier) {
+	desc := ident.Descriptor()
 	kind := desc.NumberKind()
 
 	if !desc.Alternate() && number.IsNegative(kind) {

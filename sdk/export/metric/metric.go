@@ -37,7 +37,7 @@ type Batcher interface {
 	// must access the specific aggregator to receive the
 	// exporter data, since the format of the data varies
 	// by aggregation.
-	Process(context.Context, Record, Aggregator)
+	Process(context.Context, Identifier, Aggregator)
 
 	// ReadCheckpoint is the interface used by exporters to access
 	// aggregate checkpoints after collection.
@@ -55,7 +55,7 @@ type AggregationSelector interface {
 	//
 	// Note: This is context-free because the handle should not be
 	// bound to the incoming context.  This call should not block.
-	AggregatorFor(Record) Aggregator
+	AggregatorFor(Identifier) Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g.,
@@ -64,20 +64,20 @@ type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may arrive
 	// concurrently.
-	Update(context.Context, core.Number, Record)
+	Update(context.Context, core.Number, Identifier)
 
 	// Checkpoint is called during the SDK Collect() to finish one
 	// period of aggregation.  Checkpoint() is called in a
 	// single-threaded context.
-	Checkpoint(context.Context, Record)
+	Checkpoint(context.Context, Identifier)
 
 	// Merge combines state from two aggregators into one.
 	Merge(Aggregator, *Descriptor)
 }
 
-// Record is the unit of export, pairing a metric
+// Identifier is the unit of export, pairing a metric
 // instrument and set of labels.
-type Record interface {
+type Identifier interface {
 	// Descriptor() describes the metric instrument.
 	Descriptor() *Descriptor
 

@@ -23,7 +23,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-var _ export.Record = &metricRecord{}
+var _ export.Identifier = &metricRecord{}
 
 const Magnitude = 1000
 
@@ -54,7 +54,7 @@ type metricRecord struct {
 	descriptor *export.Descriptor
 }
 
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) export.Record {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) export.Identifier {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
 	return &metricRecord{descriptor: desc}
 }
