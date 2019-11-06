@@ -25,7 +25,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -224,13 +224,13 @@ func (e *Exporter) sdWithDefaultTraceAttributes(sd *export.SpanData) *export.Spa
 	for k, v := range e.traceExporter.o.DefaultTraceAttributes {
 		switch val := v.(type) {
 		case bool:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Bool(val))
+			newSD.Attributes = append(newSD.Attributes, otel.Key(k).Bool(val))
 		case int64:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Int64(val))
+			newSD.Attributes = append(newSD.Attributes, otel.Key(k).Int64(val))
 		case float64:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).Float64(val))
+			newSD.Attributes = append(newSD.Attributes, otel.Key(k).Float64(val))
 		case string:
-			newSD.Attributes = append(newSD.Attributes, key.New(k).String(val))
+			newSD.Attributes = append(newSD.Attributes, otel.Key(k).String(val))
 		}
 	}
 	newSD.Attributes = append(newSD.Attributes, sd.Attributes...)

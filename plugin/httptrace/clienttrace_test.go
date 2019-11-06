@@ -23,7 +23,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -92,13 +91,13 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	}{
 		{
 			name:       "go.opentelemetry.io/otel/plugin/httptrace/http.connect",
-			attributes: []otel.KeyValue{key.String("http.remote", address.String())},
+			attributes: []otel.KeyValue{otel.Key("http.remote").String(address.String())},
 		},
 		{
 			name: "go.opentelemetry.io/otel/plugin/httptrace/http.getconn",
 			attributes: []otel.KeyValue{
-				key.String("http.remote", address.String()),
-				key.String("http.host", address.String()),
+				otel.Key("http.remote").String(address.String()),
+				otel.Key("http.host").String(address.String()),
 			},
 		},
 		{
@@ -133,7 +132,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		}
 
 		if tl.name == "go.opentelemetry.io/otel/plugin/httptrace/http.getconn" {
-			local := key.New("http.local")
+			local := otel.Key("http.local")
 			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
 			if _, ok := actualAttrs[local]; ok {
 				delete(actualAttrs, local)

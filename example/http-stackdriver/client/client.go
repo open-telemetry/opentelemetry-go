@@ -26,8 +26,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/distributedcontext"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
 	"go.opentelemetry.io/otel/global"
@@ -63,7 +63,7 @@ func main() {
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
-		key.String("username", "donuts"),
+		otel.Key("username").String("donuts"),
 	)
 
 	var body []byte

@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	"go.opentelemetry.io/otel/api/key"
 	apipropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -184,7 +183,7 @@ func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, 
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, otel.Key(trimmedName).String(trimmedValueWithProps.String()))
 	}
 	return dctx.NewMap(dctx.MapUpdate{
 		MultiKV: keyValues,

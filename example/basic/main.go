@@ -18,8 +18,8 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/distributedcontext"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
@@ -28,10 +28,10 @@ import (
 )
 
 var (
-	fooKey     = key.New("ex.com/foo")
-	barKey     = key.New("ex.com/bar")
-	lemonsKey  = key.New("ex.com/lemons")
-	anotherKey = key.New("ex.com/another")
+	fooKey     = otel.Key("ex.com/foo")
+	barKey     = otel.Key("ex.com/bar")
+	lemonsKey  = otel.Key("ex.com/lemons")
+	anotherKey = otel.Key("ex.com/another")
 )
 
 // initTracer creates and registers trace provider instance.
@@ -80,7 +80,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", otel.Key("bogons").Int(100))
 
 		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
 

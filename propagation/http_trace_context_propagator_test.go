@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 	"go.opentelemetry.io/otel/propagation"
@@ -297,48 +296,48 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2;prop=1"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2;prop=1"),
 			},
 		},
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2,val3"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2,val3"),
 			},
 		},
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
 			wantKVs: []otel.KeyValue{
-				key.New("key1").String(""),
-				key.New("key2").String("val2"),
+				otel.Key("key1").String(""),
+				otel.Key("key2").String("val2"),
 			},
 		},
 	}
@@ -411,31 +410,31 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		{
 			name: "two simple values",
 			kvs: []otel.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+				otel.Key("key1").String("val1"),
+				otel.Key("key2").String("val2"),
 			},
 			wantInHeader: []string{"key1=val1", "key2=val2"},
 		},
 		{
 			name: "two values with escaped chars",
 			kvs: []otel.KeyValue{
-				key.New("key1").String("val1,val2"),
-				key.New("key2").String("val3=4"),
+				otel.Key("key1").String("val1,val2"),
+				otel.Key("key2").String("val3=4"),
 			},
 			wantInHeader: []string{"key1=val1%2Cval2", "key2=val3%3D4"},
 		},
 		{
 			name: "values of non-string types",
 			kvs: []otel.KeyValue{
-				key.New("key1").Bool(true),
-				key.New("key2").Int(123),
-				key.New("key3").Int64(123),
-				key.New("key4").Int32(123),
-				key.New("key5").Uint(123),
-				key.New("key6").Uint32(123),
-				key.New("key7").Uint64(123),
-				key.New("key8").Float64(123.567),
-				key.New("key9").Float32(123.567),
+				otel.Key("key1").Bool(true),
+				otel.Key("key2").Int(123),
+				otel.Key("key3").Int64(123),
+				otel.Key("key4").Int32(123),
+				otel.Key("key5").Uint(123),
+				otel.Key("key6").Uint32(123),
+				otel.Key("key7").Uint64(123),
+				otel.Key("key8").Float64(123.567),
+				otel.Key("key9").Float32(123.567),
 			},
 			wantInHeader: []string{
 				"key1=true",

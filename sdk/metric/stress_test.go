@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -139,7 +138,7 @@ func (f *testFixture) someLabels() []otel.KeyValue {
 					break
 				}
 			}
-			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+			l[i] = otel.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
 		lc := canonicalizeLabels(l)
 		f.lock.Lock()

@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -28,8 +27,8 @@ const (
 )
 
 var (
-	HostKey = key.New("http.host")
-	URLKey  = key.New("http.url")
+	HostKey = otel.Key("http.host")
+	URLKey  = otel.Key("http.url")
 
 	propagator = propagation.HTTPTraceContextPropagator{}
 )

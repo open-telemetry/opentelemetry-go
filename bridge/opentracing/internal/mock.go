@@ -24,18 +24,17 @@ import (
 
 	"go.opentelemetry.io/otel"
 	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
-	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 var (
-	ComponentKey = otelkey.New("component")
-	ServiceKey   = otelkey.New("service")
-	StatusKey    = otelkey.New("status")
-	ErrorKey     = otelkey.New("error")
-	NameKey      = otelkey.New("name")
+	ComponentKey = otel.NewKey("component")
+	ServiceKey   = otel.NewKey("service")
+	StatusKey    = otel.NewKey("status")
+	ErrorKey     = otel.NewKey("error")
+	NameKey      = otel.NewKey("name")
 )
 
 type MockContextKeyValue struct {

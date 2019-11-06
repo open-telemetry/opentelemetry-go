@@ -27,7 +27,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -288,7 +287,7 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(key.String("key1", "value1")))
+	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(otel.Key("key1").String("value1")))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -302,7 +301,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "StartSpanAttribute/span0",
 		Attributes: []otel.KeyValue{
-			key.String("key1", "value1"),
+			otel.Key("key1").String("value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
@@ -316,7 +315,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttribute(key.New("key1").String("value1"))
+	span.SetAttribute(otel.Key("key1").String("value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -330,7 +329,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "SpanAttribute/span0",
 		Attributes: []otel.KeyValue{
-			key.String("key1", "value1"),
+			otel.Key("key1").String("value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
@@ -346,10 +345,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttribute(key.Bool("key1", true))
-	span.SetAttribute(key.String("key2", "value2"))
-	span.SetAttribute(key.Bool("key1", false)) // Replace key1.
-	span.SetAttribute(key.Int64("key4", 4))    // Remove key2 and add key4
+	span.SetAttribute(otel.Key("key1").Bool(true))
+	span.SetAttribute(otel.Key("key2").String("value2"))
+	span.SetAttribute(otel.Key("key1").Bool(false)) // Replace key1.
+	span.SetAttribute(otel.Key("key4").Int64(4))    // Remove key2 and add key4
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -363,8 +362,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "SpanAttributesOverLimit/span0",
 		Attributes: []otel.KeyValue{
-			key.Bool("key1", false),
-			key.Int64("key4", 4),
+			otel.Key("key1").Bool(false),
+			otel.Key("key4").Int64(4),
 		},
 		SpanKind:              apitrace.SpanKindInternal,
 		HasRemoteParent:       true,
@@ -380,14 +379,14 @@ func TestEvents(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "Events")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.Bool("key2", true)
-	k3v3 := key.Int64("key3", 3)
+	k1v1 := otel.Key("key1").String("value1")
+	k2v2 := otel.Key("key2").Bool(true)
+	k3v3 := otel.Key("key3").Int64(3)
 
-	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", otel.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.Bool("key2", true),
-		key.Int64("key3", 3),
+		otel.Key("key2").Bool(true),
+		otel.Key("key3").Int64(3),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -425,19 +424,19 @@ func TestEventsOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.Bool("key2", false)
-	k3v3 := key.New("key3").String("value3")
+	k1v1 := otel.Key("key1").String("value1")
+	k2v2 := otel.Key("key2").Bool(false)
+	k3v3 := otel.Key("key3").String("value3")
 
-	span.AddEvent(context.Background(), "fooDrop", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "fooDrop", otel.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "barDrop",
-		key.Bool("key2", true),
-		key.New("key3").String("value3"),
+		otel.Key("key2").Bool(true),
+		otel.Key("key3").String("value3"),
 	)
-	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", otel.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.Bool("key2", false),
-		key.New("key3").String("value3"),
+		otel.Key("key2").Bool(false),
+		otel.Key("key3").String("value3"),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -475,8 +474,8 @@ func TestAddLinks(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "AddLinks")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
+	k1v1 := otel.Key("key1").String("value1")
+	k2v2 := otel.Key("key2").String("value2")
 
 	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
@@ -515,17 +514,17 @@ func TestLinks(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "Links")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
-	k3v3 := key.New("key3").String("value3")
+	k1v1 := otel.Key("key1").String("value1")
+	k2v2 := otel.Key("key2").String("value2")
+	k3v3 := otel.Key("key3").String("value3")
 
 	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
-	span.Link(sc1, key.New("key1").String("value1"))
+	span.Link(sc1, otel.Key("key1").String("value1"))
 	span.Link(sc2,
-		key.New("key2").String("value2"),
-		key.New("key3").String("value3"),
+		otel.Key("key2").String("value2"),
+		otel.Key("key3").String("value3"),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -562,12 +561,12 @@ func TestLinksOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 	span := startSpan(tp, "LinksOverLimit")
 
-	k2v2 := key.New("key2").String("value2")
-	k3v3 := key.New("key3").String("value3")
+	k2v2 := otel.Key("key2").String("value2")
+	k3v3 := otel.Key("key3").String("value3")
 
-	span.Link(sc1, key.New("key1").String("value1"))
-	span.Link(sc2, key.New("key2").String("value2"))
-	span.Link(sc3, key.New("key3").String("value3"))
+	span.Link(sc1, otel.Key("key1").String("value1"))
+	span.Link(sc2, otel.Key("key2").String("value2"))
+	span.Link(sc3, otel.Key("key3").String("value3"))
 
 	got, err := endSpan(te, span)
 	if err != nil {

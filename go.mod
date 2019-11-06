@@ -25,7 +25,7 @@ require (
 	github.com/uudashr/gocognit v1.0.0 // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect
 	golang.org/x/tools v0.0.0-20191025174333-e96d959c4788
-	google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb // indirect
+	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	google.golang.org/grpc v1.24.0
 	mvdan.cc/unparam v0.0.0-20190917161559-b83a221c10a2 // indirect
 	sourcegraph.com/sqs/pbtypes v1.0.0 // indirect

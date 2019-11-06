@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides basic types used in OpenTelemetry - keys,
-// values, numbers and span contexts.
+// Package otel provides basic types used in OpenTelemetry - keys,
+// values, numbers, span contexts, etc.
 package otel // import "go.opentelemetry.io/otel"

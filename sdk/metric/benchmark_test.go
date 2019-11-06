@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -89,7 +88,7 @@ func makeLabels(n int) []otel.KeyValue {
 				break
 			}
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = otel.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }

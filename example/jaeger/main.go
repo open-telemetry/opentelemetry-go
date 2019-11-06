@@ -21,7 +21,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 
 	"go.opentelemetry.io/otel/exporter/trace/jaeger"
 	"go.opentelemetry.io/otel/global"
@@ -36,8 +35,8 @@ func initTracer() func() {
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
 			Tags: []otel.KeyValue{
-				key.String("exporter", "jaeger"),
-				key.Float64("float", 312.23),
+				otel.Key("exporter").String("jaeger"),
+				otel.Key("float").Float64(312.23),
 			},
 		}),
 	)

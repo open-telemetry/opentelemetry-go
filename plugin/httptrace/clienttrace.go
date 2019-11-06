@@ -25,17 +25,16 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/global"
 )
 
 var (
-	HTTPStatus     = key.New("http.status")
-	HTTPHeaderMIME = key.New("http.mime")
-	HTTPRemoteAddr = key.New("http.remote")
-	HTTPLocalAddr  = key.New("http.local")
-	MessageKey     = key.New("message")
+	HTTPStatus     = otel.Key("http.status")
+	HTTPHeaderMIME = otel.Key("http.mime")
+	HTTPRemoteAddr = otel.Key("http.remote")
+	HTTPLocalAddr  = otel.Key("http.local")
+	MessageKey     = otel.Key("message")
 )
 
 type clientTracer struct {
@@ -164,7 +163,7 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttribute(key.String("http."+strings.ToLower(k), sliceToString(v)))
+	ct.root.SetAttribute(otel.Key("http." + strings.ToLower(k)).String(sliceToString(v)))
 }
 
 func (ct *clientTracer) wroteHeaders() {

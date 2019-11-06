@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	mock "go.opentelemetry.io/otel/internal/metric"
@@ -49,14 +48,14 @@ func TestCounterOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []metric.CounterOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
+				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
+				otel.Key("foo"), otel.Key("foo2"),
+				otel.Key("bar"), otel.Key("bar2"),
+				otel.Key("baz"), otel.Key("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -160,14 +159,14 @@ func TestGaugeOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []metric.GaugeOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
+				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
+				otel.Key("foo"), otel.Key("foo2"),
+				otel.Key("bar"), otel.Key("bar2"),
+				otel.Key("baz"), otel.Key("baz2"),
 			},
 			desc: "",
 			unit: "",
@@ -271,14 +270,14 @@ func TestMeasureOptions(t *testing.T) {
 		{
 			name: "keys keys keys",
 			opts: []metric.MeasureOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
+				metric.WithKeys(otel.Key("foo"), otel.Key("foo2")),
+				metric.WithKeys(otel.Key("bar"), otel.Key("bar2")),
+				metric.WithKeys(otel.Key("baz"), otel.Key("baz2")),
 			},
 			keys: []otel.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
+				otel.Key("foo"), otel.Key("foo2"),
+				otel.Key("bar"), otel.Key("bar2"),
+				otel.Key("baz"), otel.Key("baz2"),
 			},
 			desc: "",
 			unit: "",

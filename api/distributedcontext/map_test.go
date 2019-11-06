@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestMap(t *testing.T) {
@@ -32,34 +31,34 @@ func TestMap(t *testing.T) {
 		{
 			name: "NewMap with MultiKV",
 			value: MapUpdate{MultiKV: []otel.KeyValue{
-				key.Int64("key1", 1),
-				key.String("key2", "val2")},
-			},
+				otel.Key("key1").Int64(1),
+				otel.Key("key2").String("val2"),
+			}},
 			init: []int{},
 			wantKVs: []otel.KeyValue{
-				key.Int64("key1", 1),
-				key.String("key2", "val2"),
+				otel.Key("key1").Int64(1),
+				otel.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:  "NewMap with SingleKV",
-			value: MapUpdate{SingleKV: key.String("key1", "val1")},
+			value: MapUpdate{SingleKV: otel.Key("key1").String("val1")},
 			init:  []int{},
 			wantKVs: []otel.KeyValue{
-				key.String("key1", "val1"),
+				otel.Key("key1").String("val1"),
 			},
 		},
 		{
 			name: "NewMap with MapUpdate",
-			value: MapUpdate{SingleKV: key.Int64("key1", 3),
+			value: MapUpdate{SingleKV: otel.Key("key1").Int64(3),
 				MultiKV: []otel.KeyValue{
-					key.String("key1", ""),
-					key.String("key2", "val2")},
-			},
+					otel.Key("key1").String(""),
+					otel.Key("key2").String("val2"),
+				}},
 			init: []int{},
 			wantKVs: []otel.KeyValue{
-				key.String("key1", ""),
-				key.String("key2", "val2"),
+				otel.Key("key1").String(""),
+				otel.Key("key2").String("val2"),
 			},
 		},
 		{
@@ -71,37 +70,37 @@ func TestMap(t *testing.T) {
 		{
 			name: "Map with MultiKV",
 			value: MapUpdate{MultiKV: []otel.KeyValue{
-				key.Int64("key1", 1),
-				key.String("key2", "val2")},
-			},
+				otel.Key("key1").Int64(1),
+				otel.Key("key2").String("val2"),
+			}},
 			init: []int{5},
 			wantKVs: []otel.KeyValue{
-				key.Int64("key1", 1),
-				key.String("key2", "val2"),
-				key.Int("key5", 5),
+				otel.Key("key1").Int64(1),
+				otel.Key("key2").String("val2"),
+				otel.Key("key5").Int(5),
 			},
 		},
 		{
 			name:  "Map with SingleKV",
-			value: MapUpdate{SingleKV: key.String("key1", "val1")},
+			value: MapUpdate{SingleKV: otel.Key("key1").String("val1")},
 			init:  []int{5},
 			wantKVs: []otel.KeyValue{
-				key.String("key1", "val1"),
-				key.Int("key5", 5),
+				otel.Key("key1").String("val1"),
+				otel.Key("key5").Int(5),
 			},
 		},
 		{
 			name: "Map with MapUpdate",
-			value: MapUpdate{SingleKV: key.Int64("key1", 3),
+			value: MapUpdate{SingleKV: otel.Key("key1").Int64(3),
 				MultiKV: []otel.KeyValue{
-					key.String("key1", ""),
-					key.String("key2", "val2")},
-			},
+					otel.Key("key1").String(""),
+					otel.Key("key2").String("val2"),
+				}},
 			init: []int{5},
 			wantKVs: []otel.KeyValue{
-				key.String("key1", ""),
-				key.String("key2", "val2"),
-				key.Int("key5", 5),
+				otel.Key("key1").String(""),
+				otel.Key("key2").String("val2"),
+				otel.Key("key5").Int(5),
 			},
 		},
 		{
@@ -109,7 +108,7 @@ func TestMap(t *testing.T) {
 			value: MapUpdate{MultiKV: []otel.KeyValue{}},
 			init:  []int{5},
 			wantKVs: []otel.KeyValue{
-				key.Int("key5", 5),
+				otel.Key("key5").Int(5),
 			},
 		},
 	} {

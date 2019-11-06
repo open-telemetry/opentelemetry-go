@@ -23,11 +23,11 @@ import (
 	"unsafe"
 )
 
-// Key represents the key part in key-value pairs. It's a string. The
-// allowed character set in the key depends on the use of the key.
+// Key is the name (key) part of key-value pairs. The allowed character set in
+// the key depends on the use of the key.
 type Key string
 
-// KeyValue holds a key and value pair.
+// KeyValue holds a key-value pair.
 type KeyValue struct {
 	Key   Key
 	Value Value
@@ -45,7 +45,7 @@ type Value struct {
 }
 
 const (
-	INVALID ValueType = iota // No value.
+	INVALID ValueType = iota // INVALID : No value.
 	BOOL                     // Boolean value, use AsBool() to get it.
 	INT32                    // 32 bit signed integral value, use AsInt32() to get it.
 	INT64                    // 64 bit signed integral value, use AsInt64() to get it.
@@ -120,8 +120,8 @@ func String(v string) Value {
 	}
 }
 
-// Int creates either an INT32 or an INT64 Value, depending on whether
-// the int type is 32 or 64 bits wide.
+// Int creates either an INT32 or an INT64 Value, depending on whether the int
+// type is 32 or 64 bits wide.
 func Int(v int) Value {
 	if unsafe.Sizeof(v) == 4 {
 		return Int32(int32(v))
@@ -129,8 +129,8 @@ func Int(v int) Value {
 	return Int64(int64(v))
 }
 
-// Uint creates either a UINT32 or a UINT64 Value, depending on
-// whether the uint type is 32 or 64 bits wide.
+// Uint creates either a UINT32 or a UINT64 Value, depending on whether the uint
+// type is 32 or 64 bits wide.
 func Uint(v uint) Value {
 	if unsafe.Sizeof(v) == 4 {
 		return Uint32(uint32(v))
@@ -138,7 +138,7 @@ func Uint(v uint) Value {
 	return Uint64(uint64(v))
 }
 
-// Bool creates a KeyValue instance with a BOOL Value.
+// Bool creates a KeyValue with a BOOL Value.
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -146,7 +146,7 @@ func (k Key) Bool(v bool) KeyValue {
 	}
 }
 
-// Int64 creates a KeyValue instance with an INT64 Value.
+// Int64 creates a KeyValue with an INT64 Value.
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -154,7 +154,7 @@ func (k Key) Int64(v int64) KeyValue {
 	}
 }
 
-// Uint64 creates a KeyValue instance with a UINT64 Value.
+// Uint64 creates a KeyValue with a UINT64 Value.
 func (k Key) Uint64(v uint64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -162,7 +162,7 @@ func (k Key) Uint64(v uint64) KeyValue {
 	}
 }
 
-// Float64 creates a KeyValue instance with a FLOAT64 Value.
+// Float64 creates a KeyValue with a FLOAT64 Value.
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -170,7 +170,7 @@ func (k Key) Float64(v float64) KeyValue {
 	}
 }
 
-// Int32 creates a KeyValue instance with an INT32 Value.
+// Int32 creates a KeyValue with an INT32 Value.
 func (k Key) Int32(v int32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -178,7 +178,7 @@ func (k Key) Int32(v int32) KeyValue {
 	}
 }
 
-// Uint32 creates a KeyValue instance with a UINT32 Value.
+// Uint32 creates a KeyValue with a UINT32 Value.
 func (k Key) Uint32(v uint32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -186,7 +186,7 @@ func (k Key) Uint32(v uint32) KeyValue {
 	}
 }
 
-// Float32 creates a KeyValue instance with a FLOAT32 Value.
+// Float32 creates a KeyValue with a FLOAT32 Value.
 func (k Key) Float32(v float32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -194,7 +194,7 @@ func (k Key) Float32(v float32) KeyValue {
 	}
 }
 
-// String creates a KeyValue instance with a STRING Value.
+// String creates a KeyValue with a STRING Value.
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -202,8 +202,8 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
-// Int creates a KeyValue instance with either an INT32 or an INT64
-// Value, depending on whether the int type is 32 or 64 bits wide.
+// Int creates a KeyValue with either an INT32 or an INT64 Value, depending on
+// whether the int type is 32 or 64 bits wide.
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -211,8 +211,8 @@ func (k Key) Int(v int) KeyValue {
 	}
 }
 
-// Uint creates a KeyValue instance with either an UINT32 or an UINT64
-// Value, depending on whether the uint type is 32 or 64 bits wide.
+// Uint creates a KeyValue with either an UINT32 or an UINT64 Value, depending
+// on whether the uint type is 32 or 64 bits wide.
 func (k Key) Uint(v uint) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -230,50 +230,50 @@ func (v *Value) Type() ValueType {
 	return v.vtype
 }
 
-// Bool returns the bool value. Make sure that the Value's type is
-// BOOL.
+// AsBool returns the bool value. It is up to the caller to make sure that the
+// Value's type is BOOL.
 func (v *Value) AsBool() bool {
 	return rawToBool(v.numeric)
 }
 
-// AsInt32 returns the int32 value. Make sure that the Value's type is
-// INT32.
+// AsInt32 returns the int32 value. It is up to the caller to make sure that the
+// Value's type is INT32.
 func (v *Value) AsInt32() int32 {
 	return rawToInt32(v.numeric)
 }
 
-// AsInt64 returns the int64 value. Make sure that the Value's type is
-// INT64.
+// AsInt64 returns the int64 value. It is up to the caller to make sure that the
+// Value's type is INT64.
 func (v *Value) AsInt64() int64 {
 	return rawToInt64(v.numeric)
 }
 
-// AsUint32 returns the uint32 value. Make sure that the Value's type
-// is UINT32.
+// AsUint32 returns the uint32 value. It is up to the caller to make sure that
+// the Value's type is UINT32.
 func (v *Value) AsUint32() uint32 {
 	return rawToUint32(v.numeric)
 }
 
-// AsUint64 returns the uint64 value. Make sure that the Value's type is
-// UINT64.
+// AsUint64 returns the uint64 value. It is up to the caller to make sure that
+// the Value's type is UINT64.
 func (v *Value) AsUint64() uint64 {
 	return rawToUint64(v.numeric)
 }
 
-// AsFloat32 returns the float32 value. Make sure that the Value's
-// type is FLOAT32.
+// AsFloat32 returns the float32 value. It is up to the caller to make sure that
+// the Value's type is FLOAT32.
 func (v *Value) AsFloat32() float32 {
 	return rawToFloat32(v.numeric)
 }
 
-// AsFloat64 returns the float64 value. Make sure that the Value's
-// type is FLOAT64.
+// AsFloat64 returns the float64 value. It is up to the caller to make sure that
+// the Value's type is FLOAT64.
 func (v *Value) AsFloat64() float64 {
 	return rawToFloat64(v.numeric)
 }
 
-// AsString returns the string value. Make sure that the Value's type
-// is STRING.
+// AsString returns the string Value. It is up to the caller to make sure that
+// the Value's type is STRING.
 func (v *Value) AsString() string {
 	return v.stringly
 }
@@ -336,4 +336,9 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 	jsonVal.Type = v.Type().String()
 	jsonVal.Value = v.AsInterface()
 	return json.Marshal(jsonVal)
+}
+
+// NewKey with name
+func NewKey(name string) Key {
+	return Key(name)
 }

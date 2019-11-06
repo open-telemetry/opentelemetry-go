@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/global"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -50,7 +49,7 @@ func TestNewExporter(t *testing.T) {
 		WithProcess(Process{
 			ServiceName: serviceName,
 			Tags: []otel.KeyValue{
-				key.String(tagKey, tagVal),
+				otel.Key(tagKey).String(tagVal),
 			},
 		}),
 	)
@@ -97,7 +96,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		WithProcess(Process{
 			ServiceName: serviceName,
 			Tags: []otel.KeyValue{
-				key.String(tagKey, tagVal),
+				otel.Key(tagKey).String(tagVal),
 			},
 		}),
 	)
@@ -183,13 +182,13 @@ func Test_spanDataToThrift(t *testing.T) {
 					},
 				},
 				Attributes: []otel.KeyValue{
-					key.String("key", keyValue),
-					key.Float64("double", doubleValue),
+					otel.Key("key").String(keyValue),
+					otel.Key("double").Float64(doubleValue),
 					// Jaeger doesn't handle Uint tags, this should be ignored.
-					key.Uint64("ignored", 123),
+					otel.Key("ignored").Uint64(123),
 				},
 				MessageEvents: []export.Event{
-					{Message: messageEventValue, Attributes: []otel.KeyValue{key.String("k1", keyValue)}, Time: now},
+					{Message: messageEventValue, Attributes: []otel.KeyValue{otel.Key("k1").String(keyValue)}, Time: now},
 				},
 				Status: codes.Unknown,
 			},
