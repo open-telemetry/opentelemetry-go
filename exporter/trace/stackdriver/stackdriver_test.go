@@ -16,30 +16,22 @@ package stackdriver
 
 import (
 	"context"
+	"flag"
+	"log"
+	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/api/option"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
+	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-func TestNewExporter(t *testing.T) {
-	const projectID = "project-id"
-
-	// Create SD Exporter
-	exp, err := NewExporter(
-		WithProjectID(projectID),
-	)
-
-	assert.NoError(t, err)
-	assert.EqualValues(t, projectID, exp.traceExporter.projectID)
-
-	// TODO(clsung): test with env
-}
 
 type testUploader struct {
 	mu            sync.Mutex
@@ -59,11 +51,60 @@ func (c *testUploader) len() int {
 	return len(c.spansUploaded)
 }
 
+type mockTraceServer struct {
+	tracepb.TraceServiceServer
+}
+
+// clientOpt is the option tests should use to connect to the test server.
+// It is initialized by TestMain.
+var clientOpt []option.ClientOption
+
+var (
+	mockTrace mockTraceServer
+)
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+
+	serv := grpc.NewServer()
+	tracepb.RegisterTraceServiceServer(serv, &mockTrace)
+
+	lis, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		log.Fatal(err)
+	}
+	go serv.Serve(lis)
+
+	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	clientOpt = []option.ClientOption{option.WithGRPCConn(conn)}
+
+	os.Exit(m.Run())
+}
+
+func TestNewExporter(t *testing.T) {
+	const projectID = "project-id"
+
+	// Create SD Exporter
+	exp, err := NewExporter(
+		WithProjectID(projectID),
+		WithTraceClientOptions(clientOpt),
+	)
+
+	assert.NoError(t, err)
+	assert.EqualValues(t, projectID, exp.traceExporter.projectID)
+}
+
 func TestExporter_ExportSpans(t *testing.T) {
 	// Create StackDriver Exporter
 	exp, err := NewExporter(
 		WithProjectID("PROJECT_ID_NOT_REAL"),
+		WithTraceClientOptions(clientOpt),
 	)
+	assert.NoError(t, err)
+
 	tu := &testUploader{}
 	exp.traceExporter.uploadFn = tu.testUploadSpans
 
