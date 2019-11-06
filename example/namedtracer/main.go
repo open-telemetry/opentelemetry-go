@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
@@ -59,7 +58,7 @@ func main() {
 	tracer := tp.GetTracer("example/namedtracer/main")
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
+	ctx = otel.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)

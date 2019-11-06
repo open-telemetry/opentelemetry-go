@@ -23,7 +23,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
-	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -43,7 +42,7 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             oteldctx.Map
+	Resources             otel.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []otel.TraceID
 	SpareSpanIDs          []otel.SpanID
@@ -58,7 +57,7 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             oteldctx.NewEmptyMap(),
+		Resources:             otel.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -93,7 +92,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      spanOpts.Record,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+		Attributes: otel.NewMap(otel.MapUpdate{
 			MultiKV: spanOpts.Attributes,
 		}),
 		StartTime:    startTime,
@@ -192,10 +191,10 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 }
 
 type MockEvent struct {
-	CtxAttributes oteldctx.Map
+	CtxAttributes otel.Map
 	Timestamp     time.Time
 	Msg           string
-	Attributes    oteldctx.Map
+	Attributes    otel.Map
 }
 
 type MockSpan struct {
@@ -205,7 +204,7 @@ type MockSpan struct {
 	SpanKind       oteltrace.SpanKind
 	recording      bool
 
-	Attributes   oteldctx.Map
+	Attributes   otel.Map
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID otel.SpanID
@@ -236,18 +235,18 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttribute(attribute otel.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
+	s.applyUpdate(otel.MapUpdate{
 		SingleKV: attribute,
 	})
 }
 
 func (s *MockSpan) SetAttributes(attributes ...otel.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
+	s.applyUpdate(otel.MapUpdate{
 		MultiKV: attributes,
 	})
 }
 
-func (s *MockSpan) applyUpdate(update oteldctx.MapUpdate) {
+func (s *MockSpan) applyUpdate(update otel.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
@@ -279,10 +278,10 @@ func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otel.KeyVa
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otel.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: oteldctx.FromContext(ctx),
+		CtxAttributes: otel.FromContext(ctx),
 		Timestamp:     timestamp,
 		Msg:           msg,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+		Attributes: otel.NewMap(otel.MapUpdate{
 			MultiKV: attrs,
 		}),
 	})

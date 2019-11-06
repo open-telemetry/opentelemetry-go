@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
@@ -65,7 +64,7 @@ func main() {
 
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
+	ctx = otel.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
@@ -88,7 +87,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			otel.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			oneMetric.Measurement(1.0),

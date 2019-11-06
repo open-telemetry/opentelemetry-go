@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
 // NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
@@ -31,8 +28,8 @@ func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier
 }
 
 // Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) (otel.SpanContext, dctx.Map) {
-	return otel.EmptySpanContext(), dctx.NewEmptyMap()
+func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) (SpanContext, Map) {
+	return EmptySpanContext(), NewEmptyMap()
 }
 
 // GetAllKeys returns empty list of strings.

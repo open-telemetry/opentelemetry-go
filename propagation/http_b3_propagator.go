@@ -22,8 +22,6 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 
 const (
@@ -53,9 +51,9 @@ type HTTPB3Propagator struct {
 	SingleHeader bool
 }
 
-var _ apipropagation.TextFormatPropagator = HTTPB3Propagator{}
+var _ otel.TextFormatPropagator = HTTPB3Propagator{}
 
-func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier otel.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
@@ -79,11 +77,11 @@ func (b3 HTTPB3Propagator) Inject(ctx context.Context, supplier apipropagation.S
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) (otel.SpanContext, dctx.Map) {
+func (b3 HTTPB3Propagator) Extract(ctx context.Context, supplier otel.Supplier) (otel.SpanContext, otel.Map) {
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
+		return b3.extractSingleHeader(supplier), otel.NewEmptyMap()
 	}
-	return b3.extract(supplier), dctx.NewEmptyMap()
+	return b3.extract(supplier), otel.NewEmptyMap()
 }
 
 func (b3 HTTPB3Propagator) GetAllKeys() []string {
@@ -93,7 +91,7 @@ func (b3 HTTPB3Propagator) GetAllKeys() []string {
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 HTTPB3Propagator) extract(supplier apipropagation.Supplier) otel.SpanContext {
+func (b3 HTTPB3Propagator) extract(supplier otel.Supplier) otel.SpanContext {
 	tid, err := otel.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return otel.EmptySpanContext()
@@ -128,7 +126,7 @@ func (b3 HTTPB3Propagator) extract(supplier apipropagation.Supplier) otel.SpanCo
 	return sc
 }
 
-func (b3 HTTPB3Propagator) extractSingleHeader(supplier apipropagation.Supplier) otel.SpanContext {
+func (b3 HTTPB3Propagator) extractSingleHeader(supplier otel.Supplier) otel.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
 		otel.EmptySpanContext()

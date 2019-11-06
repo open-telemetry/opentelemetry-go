@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext
+package otel
 
 import (
 	"context"
 	"runtime/pprof"
-
-	"go.opentelemetry.io/otel"
 )
 
 type ctxEntriesType struct{}
@@ -31,7 +29,7 @@ func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, ctxEntriesKey, m)
 }
 
-func NewContext(ctx context.Context, keyvalues ...otel.KeyValue) context.Context {
+func NewContext(ctx context.Context, keyvalues ...KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
 		MultiKV: keyvalues,
 	}))

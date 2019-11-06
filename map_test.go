@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext
+package otel
 
 import (
 	"fmt"
 	"testing"
-
-	"go.opentelemetry.io/otel"
 )
 
 func TestMap(t *testing.T) {
@@ -26,89 +24,89 @@ func TestMap(t *testing.T) {
 		name    string
 		value   MapUpdate
 		init    []int
-		wantKVs []otel.KeyValue
+		wantKVs []KeyValue
 	}{
 		{
 			name: "NewMap with MultiKV",
-			value: MapUpdate{MultiKV: []otel.KeyValue{
-				otel.Key("key1").Int64(1),
-				otel.Key("key2").String("val2"),
+			value: MapUpdate{MultiKV: []KeyValue{
+				Key("key1").Int64(1),
+				Key("key2").String("val2"),
 			}},
 			init: []int{},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").Int64(1),
-				otel.Key("key2").String("val2"),
+			wantKVs: []KeyValue{
+				Key("key1").Int64(1),
+				Key("key2").String("val2"),
 			},
 		},
 		{
 			name:  "NewMap with SingleKV",
-			value: MapUpdate{SingleKV: otel.Key("key1").String("val1")},
+			value: MapUpdate{SingleKV: Key("key1").String("val1")},
 			init:  []int{},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").String("val1"),
+			wantKVs: []KeyValue{
+				Key("key1").String("val1"),
 			},
 		},
 		{
 			name: "NewMap with MapUpdate",
-			value: MapUpdate{SingleKV: otel.Key("key1").Int64(3),
-				MultiKV: []otel.KeyValue{
-					otel.Key("key1").String(""),
-					otel.Key("key2").String("val2"),
+			value: MapUpdate{SingleKV: Key("key1").Int64(3),
+				MultiKV: []KeyValue{
+					Key("key1").String(""),
+					Key("key2").String("val2"),
 				}},
 			init: []int{},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").String(""),
-				otel.Key("key2").String("val2"),
+			wantKVs: []KeyValue{
+				Key("key1").String(""),
+				Key("key2").String("val2"),
 			},
 		},
 		{
 			name:    "NewMap with empty MapUpdate",
-			value:   MapUpdate{MultiKV: []otel.KeyValue{}},
+			value:   MapUpdate{MultiKV: []KeyValue{}},
 			init:    []int{},
-			wantKVs: []otel.KeyValue{},
+			wantKVs: []KeyValue{},
 		},
 		{
 			name: "Map with MultiKV",
-			value: MapUpdate{MultiKV: []otel.KeyValue{
-				otel.Key("key1").Int64(1),
-				otel.Key("key2").String("val2"),
+			value: MapUpdate{MultiKV: []KeyValue{
+				Key("key1").Int64(1),
+				Key("key2").String("val2"),
 			}},
 			init: []int{5},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").Int64(1),
-				otel.Key("key2").String("val2"),
-				otel.Key("key5").Int(5),
+			wantKVs: []KeyValue{
+				Key("key1").Int64(1),
+				Key("key2").String("val2"),
+				Key("key5").Int(5),
 			},
 		},
 		{
 			name:  "Map with SingleKV",
-			value: MapUpdate{SingleKV: otel.Key("key1").String("val1")},
+			value: MapUpdate{SingleKV: Key("key1").String("val1")},
 			init:  []int{5},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").String("val1"),
-				otel.Key("key5").Int(5),
+			wantKVs: []KeyValue{
+				Key("key1").String("val1"),
+				Key("key5").Int(5),
 			},
 		},
 		{
 			name: "Map with MapUpdate",
-			value: MapUpdate{SingleKV: otel.Key("key1").Int64(3),
-				MultiKV: []otel.KeyValue{
-					otel.Key("key1").String(""),
-					otel.Key("key2").String("val2"),
+			value: MapUpdate{SingleKV: Key("key1").Int64(3),
+				MultiKV: []KeyValue{
+					Key("key1").String(""),
+					Key("key2").String("val2"),
 				}},
 			init: []int{5},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key1").String(""),
-				otel.Key("key2").String("val2"),
-				otel.Key("key5").Int(5),
+			wantKVs: []KeyValue{
+				Key("key1").String(""),
+				Key("key2").String("val2"),
+				Key("key5").Int(5),
 			},
 		},
 		{
 			name:  "Map with empty MapUpdate",
-			value: MapUpdate{MultiKV: []otel.KeyValue{}},
+			value: MapUpdate{MultiKV: []KeyValue{}},
 			init:  []int{5},
-			wantKVs: []otel.KeyValue{
-				otel.Key("key5").Int(5),
+			wantKVs: []KeyValue{
+				Key("key5").Int(5),
 			},
 		},
 	} {
@@ -128,7 +126,7 @@ func TestMap(t *testing.T) {
 			}
 		}
 		// test Foreach()
-		got.Foreach(func(kv otel.KeyValue) bool {
+		got.Foreach(func(kv KeyValue) bool {
 			for _, want := range testcase.wantKVs {
 				if kv == want {
 					return false
@@ -146,8 +144,8 @@ func TestMap(t *testing.T) {
 func makeTestMap(ints []int) Map {
 	r := make(rawMap, len(ints))
 	for _, v := range ints {
-		r[otel.Key(fmt.Sprintf("key%d", v))] = entry{
-			value: otel.Int(v),
+		r[Key(fmt.Sprintf("key%d", v))] = entry{
+			value: Int(v),
 		}
 	}
 	return newMap(r)

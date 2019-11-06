@@ -12,25 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext
-
-import (
-	"go.opentelemetry.io/otel"
-)
+package otel
 
 type entry struct {
-	value otel.Value
+	value Value
 }
 
-type rawMap map[otel.Key]entry
+type rawMap map[Key]entry
 
+// TODO[freeformz]: document what this type is for, how to use it, etc.
 type Map struct {
 	m rawMap
 }
 
 type MapUpdate struct {
-	SingleKV otel.KeyValue
-	MultiKV  []otel.KeyValue
+	SingleKV KeyValue
+	MultiKV  []KeyValue
 }
 
 func newMap(raw rawMap) Map {
@@ -68,12 +65,12 @@ func (m Map) Apply(update MapUpdate) Map {
 	return newMap(r)
 }
 
-func (m Map) Value(k otel.Key) (otel.Value, bool) {
+func (m Map) Value(k Key) (Value, bool) {
 	entry, ok := m.m[k]
 	return entry.value, ok
 }
 
-func (m Map) HasValue(k otel.Key) bool {
+func (m Map) HasValue(k Key) bool {
 	_, has := m.Value(k)
 	return has
 }
@@ -82,9 +79,9 @@ func (m Map) Len() int {
 	return len(m.m)
 }
 
-func (m Map) Foreach(f func(kv otel.KeyValue) bool) {
+func (m Map) Foreach(f func(kv KeyValue) bool) {
 	for k, v := range m.m {
-		if !f(otel.KeyValue{
+		if !f(KeyValue{
 			Key:   k,
 			Value: v.value,
 		}) {

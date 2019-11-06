@@ -16,16 +16,15 @@ package propagation
 
 import (
 	"go.opentelemetry.io/otel"
-	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 
 type binaryPropagator struct{}
 
-var _ apipropagation.BinaryFormatPropagator = binaryPropagator{}
+var _ otel.BinaryFormatPropagator = binaryPropagator{}
 
 // BinaryPropagator creates a new propagator. The propagator implements
 // ToBytes and FromBytes method to transform SpanContext to/from byte array.
-func BinaryPropagator() apipropagation.BinaryFormatPropagator {
+func BinaryPropagator() otel.BinaryFormatPropagator {
 	return binaryPropagator{}
 }
 

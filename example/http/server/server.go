@@ -19,7 +19,7 @@ import (
 	"log"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
@@ -52,7 +52,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(distributedcontext.WithMap(req.Context(), distributedcontext.NewMap(distributedcontext.MapUpdate{
+		req = req.WithContext(otel.WithMap(req.Context(), otel.NewMap(otel.MapUpdate{
 			MultiKV: entries,
 		})))
 

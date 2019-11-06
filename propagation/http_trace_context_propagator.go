@@ -23,8 +23,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	apipropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -38,10 +36,10 @@ const (
 // HTTPTraceContextPropagator propagates SpanContext in W3C TraceContext format.
 type HTTPTraceContextPropagator struct{}
 
-var _ apipropagation.TextFormatPropagator = HTTPTraceContextPropagator{}
+var _ otel.TextFormatPropagator = HTTPTraceContextPropagator{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier otel.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
@@ -52,7 +50,7 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 		supplier.Set(TraceparentHeader, h)
 	}
 
-	correlationCtx := dctx.FromContext(ctx)
+	correlationCtx := otel.FromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	correlationCtx.Foreach(func(kv otel.KeyValue) bool {
@@ -72,13 +70,13 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 }
 
 func (hp HTTPTraceContextPropagator) Extract(
-	ctx context.Context, supplier apipropagation.Supplier,
-) (otel.SpanContext, dctx.Map) {
+	ctx context.Context, supplier otel.Supplier,
+) (otel.SpanContext, otel.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
 func (hp HTTPTraceContextPropagator) extractSpanContext(
-	ctx context.Context, supplier apipropagation.Supplier,
+	ctx context.Context, supplier otel.Supplier,
 ) otel.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
@@ -146,10 +144,10 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 	return sc
 }
 
-func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, supplier apipropagation.Supplier) dctx.Map {
+func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, supplier otel.Supplier) otel.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
-		return dctx.NewEmptyMap()
+		return otel.NewEmptyMap()
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
@@ -185,7 +183,7 @@ func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, 
 
 		keyValues = append(keyValues, otel.Key(trimmedName).String(trimmedValueWithProps.String()))
 	}
-	return dctx.NewMap(dctx.MapUpdate{
+	return otel.NewMap(otel.MapUpdate{
 		MultiKV: keyValues,
 	})
 }

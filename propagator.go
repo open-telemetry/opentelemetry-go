@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package otel
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
 // TextFormatPropagator is an interface that specifies methods to inject and extract SpanContext
@@ -36,7 +33,7 @@ type TextFormatPropagator interface {
 	// It decodes the SpanContext and returns it and a dctx of correlated context.
 	// If no SpanContext was retrieved OR if the retrieved SpanContext is invalid then
 	// an empty SpanContext is returned.
-	Extract(ctx context.Context, supplier Supplier) (otel.SpanContext, dctx.Map)
+	Extract(ctx context.Context, supplier Supplier) (SpanContext, Map)
 
 	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
 	// carrier. The use cases for this are
@@ -58,8 +55,8 @@ type Supplier interface {
 // to/from byte array.
 type BinaryFormatPropagator interface {
 	// ToBytes serializes span context into a byte array and returns the array.
-	ToBytes(sc otel.SpanContext) []byte
+	ToBytes(sc SpanContext) []byte
 
 	// FromBytes de-serializes byte array into span context and returns the span context.
-	FromBytes([]byte) otel.SpanContext
+	FromBytes([]byte) SpanContext
 }
