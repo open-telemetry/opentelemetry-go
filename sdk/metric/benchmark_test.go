@@ -128,6 +128,23 @@ func BenchmarkLabels_16(b *testing.B) {
 // Note: performance does not depend on label set size for the
 // benchmarks below.
 
+func BenchmarkNewHandle(b *testing.B) {
+	fix := newFixture(b)
+	labelSets := makeLabelSets(b.N)
+	cnt := fix.sdk.NewInt64Counter("int64.counter")
+	labels := make([]metric.LabelSet, b.N)
+
+	for i := 0; i < b.N; i++ {
+		labels[i] = fix.sdk.Labels(labelSets[i]...)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		cnt.AcquireHandle(labels[i])
+	}
+}
+
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -165,23 +182,6 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		handle.Add(ctx, 1)
-	}
-}
-
-func BenchmarkInt64CounterNewHandle(b *testing.B) {
-	fix := newFixture(b)
-	labelSets := makeLabelSets(b.N)
-	cnt := fix.sdk.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
-
-	for i := 0; i < b.N; i++ {
-		labels[i] = fix.sdk.Labels(labelSets[i]...)
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		cnt.AcquireHandle(labels[i])
 	}
 }
 
