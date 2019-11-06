@@ -14,6 +14,11 @@ require (
 	github.com/gostaticanalysis/analysisutil v0.0.3 // indirect
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/m3db/client_golang v0.8.1 // indirect
+	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
+	github.com/m3db/prometheus_client_model v0.1.0 // indirect
+	github.com/m3db/prometheus_common v0.1.0 // indirect
+	github.com/m3db/prometheus_procfs v0.8.1 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/opentracing/opentracing-go v1.1.1-0.20190913142402-a7454ce5950e
@@ -25,6 +30,7 @@ require (
 	github.com/uudashr/gocognit v1.0.0 // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect
 	golang.org/x/tools v0.0.0-20191025174333-e96d959c4788
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	google.golang.org/grpc v1.24.0
 	mvdan.cc/unparam v0.0.0-20190917161559-b83a221c10a2 // indirect
