@@ -143,12 +143,6 @@ metric.MeterProvider
 
 
 TODO: think about name for Producer/ProducedRecord
-TODO: factor this sort of test out
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
 
 
 */

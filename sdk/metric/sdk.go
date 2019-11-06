@@ -395,7 +395,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) {
 		return
 	}
 	r.recorder.Checkpoint(ctx, r.descriptor)
-	err := m.batcher.Process(ctx, r.descriptor, r.labels.sorted, r.labels.encoded, r.recorder)
+	err := m.batcher.Process(ctx, r.descriptor, r.labels.sorted, r.labels.encoded, m.lencoder, r.recorder)
 
 	if err != nil {
 		// TODO warn

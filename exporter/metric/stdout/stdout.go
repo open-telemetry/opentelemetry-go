@@ -76,9 +76,10 @@ func New(options Options) *Exporter {
 
 func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 	var batch expoBatch
-	producer.Foreach(func(agg export.Aggregator, record export.ProducedRecord) {
-		desc := record.Descriptor
-		labels := record.Labels // HERE TODO
+	producer.Foreach(func(record export.Record) {
+		desc := record.Descriptor()
+		labels := record.Labels()
+		agg := record.Aggregator()
 
 		var expose expoLine
 		if sum, ok := agg.(aggregator.Sum); ok {
@@ -107,7 +108,7 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 
 		if len(labels) > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(record.EncodedLabels)
+			sb.WriteString(record.EncodedLabels())
 			sb.WriteRune('}')
 		}
 

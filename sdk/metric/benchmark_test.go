@@ -63,7 +63,7 @@ func (bf *benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	return nil
 }
 
-func (bf *benchFixture) Process(context.Context, *export.Descriptor, []core.KeyValue, string, export.Aggregator) error {
+func (bf *benchFixture) Process(context.Context, *export.Descriptor, []core.KeyValue, string, export.LabelEncoder, export.Aggregator) error {
 	return nil
 }
 

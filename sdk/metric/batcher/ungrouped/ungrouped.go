@@ -36,6 +36,7 @@ type (
 	batchValue struct {
 		aggregator export.Aggregator
 		labels     []core.KeyValue
+		lencoder   export.LabelEncoder
 	}
 
 	batchMap map[batchKey]batchValue
@@ -56,7 +57,7 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, encodedLabels string, labelEncoder export.LabelEncoder, agg export.Aggregator) error {
 	key := batchKey{
 		descriptor: desc,
 		encoded:    encodedLabels,
@@ -66,6 +67,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []c
 		b.batchMap[key] = batchValue{
 			aggregator: agg,
 			labels:     labels,
+			lencoder:   labelEncoder,
 		}
 		return nil
 	}
@@ -80,12 +82,12 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 	return checkpoint
 }
 
-func (c batchMap) Foreach(f func(export.Aggregator, export.ProducedRecord)) {
+func (c batchMap) Foreach(f func(export.Record)) {
 	for key, value := range c {
-		pr := export.ProducedRecord{
-			Descriptor: key.descriptor,
-			Labels:     value.labels,
-		}
-		f(value.aggregator, pr)
+		f(export.NewRecord(value.aggregator,
+			key.descriptor,
+			value.labels,
+			value.lencoder,
+			key.encoded))
 	}
 }

@@ -41,6 +41,7 @@ type Batcher interface {
 		descriptor *Descriptor,
 		labels []core.KeyValue,
 		encodedLabels string,
+		labelEncoder LabelEncoder,
 		aggregator Aggregator) error
 
 	// ReadCheckpoint is the interface used by exporters to access
@@ -97,15 +98,52 @@ type LabelEncoder interface {
 // Producer allows a Exporter to access a checkpoint of
 // aggregated metrics one at a time.
 type Producer interface {
-	Foreach(func(Aggregator, ProducedRecord))
+	Foreach(func(Record))
 }
 
-// ProducedRecord
-type ProducedRecord struct {
-	Descriptor    *Descriptor
-	Labels        []core.KeyValue
-	Encoder       LabelEncoder
-	EncodedLabels string
+// Record contains the exported data for a single metric instrument
+// and label set.
+type Record struct {
+	aggregator    Aggregator
+	descriptor    *Descriptor
+	labels        []core.KeyValue
+	encoder       LabelEncoder
+	encodedLabels string
+}
+
+// NewRecord allows Batcher implementations to construct export records.
+func NewRecord(aggregator Aggregator,
+	descriptor *Descriptor,
+	labels []core.KeyValue,
+	encoder LabelEncoder,
+	encodedLabels string) Record {
+	return Record{
+		aggregator:    aggregator,
+		descriptor:    descriptor,
+		labels:        labels,
+		encoder:       encoder,
+		encodedLabels: encodedLabels,
+	}
+}
+
+func (r *Record) Aggregator() Aggregator {
+	return r.aggregator
+}
+
+func (r *Record) Descriptor() *Descriptor {
+	return r.descriptor
+}
+
+func (r *Record) Labels() []core.KeyValue {
+	return r.labels
+}
+
+func (r *Record) LabelEncoder() LabelEncoder {
+	return r.encoder
+}
+
+func (r *Record) EncodedLabels() string {
+	return r.encodedLabels
 }
 
 // Kind describes the kind of instrument.

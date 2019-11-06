@@ -62,7 +62,7 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels []core.KeyValue, _ string, _ export.LabelEncoder, agg export.Aggregator) error {
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
@@ -123,14 +123,13 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 	}
 }
 
-func (p *producer) Foreach(f func(export.Aggregator, export.ProducedRecord)) {
+func (p *producer) Foreach(f func(export.Record)) {
 	for encoded, entry := range p.aggMap {
-		pr := export.ProducedRecord{
-			Descriptor:    entry.descriptor,
-			Labels:        entry.labels,
-			Encoder:       p.lencoder,
-			EncodedLabels: encoded,
-		}
-		f(entry.aggregator, pr)
+		f(export.NewRecord(entry.aggregator,
+			entry.descriptor,
+			entry.labels,
+			p.lencoder,
+			encoded,
+		))
 	}
 }
