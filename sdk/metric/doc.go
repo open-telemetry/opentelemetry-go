@@ -89,29 +89,67 @@ aggregator of the same type.
 
 Export Pipeline
 
-While the SDK serves to maintain a current set of records and coordinate
-collection, the behavior of a metrics export pipeline is configured
-through the export types in go.opentelemetry.io/otel/sdk/export/metric.
+While the SDK serves to maintain a current set of records and
+coordinate collection, the behavior of a metrics export pipeline is
+configured through the export types in
+go.opentelemetry.io/otel/sdk/export/metric.  It is important to keep
+in mind the context these interfaces are called from.  There are two
+contexts, instrumentation context, where a user-level goroutine that
+enters the SDK resulting in a new record, and collection context,
+where a system-level thread performs a collection pass through the
+SDK.
 
-AggregationSelector
+Descriptor is a struct that describes the metric instrument to the
+export pipeline, containing the name, recommended aggregation keys,
+units, description, metric kind (counter, gauge, or measure), number
+kind (int64 or float64), and whether the instrument has alternate
+semantics or not (i.e., monotonic=false counter, monotonic=true gauge,
+absolute=false measure).  A Descriptor accompanies metric data as it
+passes through the export pipeline.
+
+The AggregationSelector interface supports choosing the method of
+aggregation to apply to a particular instrument.  Given the
+Descriptor, this AggregatorFor method returns an implementation of
+Aggregator.  If this interface returns nil, the metric will be
+disabled.  The aggregator should be matched to the capabilities of the
+exporter.  Selecting the aggregator for counter and gauge instruments
+is relatively straightforward, but for measure instruments there are
+numerous choices with different cost and quality tradeoffs.
+
+Aggregator is an interface which implements a concrete strategy for
+aggregating metric updates.  Several Aggregator implementations are
+provided by the SDK.  Aggregators may be lock-free or use locking,
+depending on their structure and semantics.  Aggregators implement an
+Update method, called in instrumentation context, to receive a single
+metric event.  Aggregators implement a Checkpoint method, called in
+collection context, to save a checkpoint of the current state.
+Aggregators implement a Merge method, also called in collection
+context, that combines state from two aggregators into one.  Each SDK
+record has an associated aggregator.
+
+Batcher
+
 LabelEncoder
 
-They are briefly summarized here:
+Producer
 
-Aggregator
+ProducedRecord
+
+Exporter
+
+Controller
+
+metric.MeterProvider
 
 
-AggregationSelector: decides which aggregator to use
-Batcher: determine the aggregation dimensions, group (and de-dup) records
-Descriptor: summarizes an instrument and its metadata
-Record: interface to the SDK-internal record
-LabelEncoder: defines a unique mapping from label set to encoded string
-Producer: interface to the batcher's checkpoint
-ProducedRecord: result of the batcher's grouping
-Exporter: output produced records to their final destination
+TODO: think about name for Producer/ProducedRecord
+TODO: factor this sort of test out
 
-One final type, a Controller, implements the metric.MeterProvider
-interface and is responsible for initiating collection.
+	if !desc.Alternate() && number.IsNegative(kind) {
+		// TODO warn
+		return
+	}
+
 
 */
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
