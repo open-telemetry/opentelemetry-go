@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	propagation "go.opentelemetry.io/otel/api/propagation/http"
 )
 
 var _ io.ReadCloser = &bodyWrapper{}

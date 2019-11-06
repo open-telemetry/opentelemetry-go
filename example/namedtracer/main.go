@@ -59,9 +59,15 @@ func main() {
 	tracer := tp.GetTracer("example/namedtracer/main")
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
+	ctx = distributedcontext.NewCorrelationsContextKV(ctx,
+		distributedcontext.Correlation{
+			KeyValue: fooKey.String("foo1"),
+			HopLimit: distributedcontext.UnlimitedPropagation,
+		},
+		distributedcontext.Correlation{
+			KeyValue: barKey.String("bar1"),
+			HopLimit: distributedcontext.UnlimitedPropagation,
+		},
 	)
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {

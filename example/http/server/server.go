@@ -52,9 +52,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(distributedcontext.WithMap(req.Context(), distributedcontext.NewMap(distributedcontext.MapUpdate{
-			MultiKV: entries,
-		})))
+		req = req.WithContext(distributedcontext.NewCorrelationsContextKV(req.Context(), entries...))
 
 		ctx, span := tr.Start(
 			req.Context(),

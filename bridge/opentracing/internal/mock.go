@@ -44,7 +44,6 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             oteldctx.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []otelcore.TraceID
 	SpareSpanIDs          []otelcore.SpanID
@@ -59,7 +58,6 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             oteldctx.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -94,14 +92,12 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      spanOpts.Record,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
-			MultiKV: spanOpts.Attributes,
-		}),
-		StartTime:    startTime,
-		EndTime:      time.Time{},
-		ParentSpanID: t.getParentSpanID(ctx, &spanOpts),
-		Events:       nil,
-		SpanKind:     oteltrace.ValidateSpanKind(spanOpts.SpanKind),
+		Attributes:     spanOpts.Attributes,
+		StartTime:      startTime,
+		EndTime:        time.Time{},
+		ParentSpanID:   t.getParentSpanID(ctx, &spanOpts),
+		Events:         nil,
+		SpanKind:       oteltrace.ValidateSpanKind(spanOpts.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.SetCurrentSpan(ctx, span)
@@ -193,10 +189,10 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 }
 
 type MockEvent struct {
-	CtxAttributes oteldctx.Map
-	Timestamp     time.Time
-	Msg           string
-	Attributes    oteldctx.Map
+	Correlations oteldctx.Correlations
+	Timestamp    time.Time
+	Msg          string
+	Attributes   []otelcore.KeyValue
 }
 
 type MockSpan struct {
@@ -206,7 +202,7 @@ type MockSpan struct {
 	SpanKind       oteltrace.SpanKind
 	recording      bool
 
-	Attributes   oteldctx.Map
+	Attributes   []otelcore.KeyValue
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID otelcore.SpanID
@@ -237,19 +233,25 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttribute(attribute otelcore.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
-		SingleKV: attribute,
-	})
+	s.applyUpdate(attribute)
 }
 
 func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
-		MultiKV: attributes,
-	})
+	s.applyUpdate(attributes...)
 }
 
-func (s *MockSpan) applyUpdate(update oteldctx.MapUpdate) {
-	s.Attributes = s.Attributes.Apply(update)
+func (s *MockSpan) applyUpdate(attributes ...otelcore.KeyValue) {
+	m := make(map[otelcore.Key]int, len(s.Attributes))
+	for idx, kv := range s.Attributes {
+		m[kv.Key] = idx
+	}
+	for _, kv := range attributes {
+		if idx, ok := m[kv.Key]; ok {
+			s.Attributes[idx].Value = kv.Value
+		} else {
+			s.Attributes = append(s.Attributes, kv)
+		}
+	}
 }
 
 func (s *MockSpan) End(options ...oteltrace.EndOption) {
@@ -280,12 +282,10 @@ func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otelcore.K
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: oteldctx.FromContext(ctx),
-		Timestamp:     timestamp,
-		Msg:           msg,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
-			MultiKV: attrs,
-		}),
+		Correlations: oteldctx.CorrelationsFromContext(ctx),
+		Timestamp:    timestamp,
+		Msg:          msg,
+		Attributes:   attrs,
 	})
 }
 

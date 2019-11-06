@@ -15,14 +15,16 @@
 package othttp
 
 import (
+	"context"
 	"io"
 	"net/http"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/propagation"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	propagation "go.opentelemetry.io/otel/api/propagation/http"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/global"
-	prop "go.opentelemetry.io/otel/propagation"
+	prop "go.opentelemetry.io/otel/propagation/http"
 )
 
 var _ http.Handler = &Handler{}
@@ -51,7 +53,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer      trace.Tracer
-	prop        propagation.TextFormatPropagator
+	prop        propagation.Propagator
 	spanOptions []trace.SpanOption
 	public      bool
 	readEvent   bool
@@ -81,7 +83,7 @@ func WithPublicEndpoint() Option {
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
 // go.opentelemetry.io/otel/propagation.HTTPTraceContextPropagator is used.
-func WithPropagator(p propagation.TextFormatPropagator) Option {
+func WithPropagator(p propagation.Propagator) Option {
 	return func(h *Handler) {
 		h.prop = p
 	}
@@ -125,13 +127,37 @@ func WithMessageEvents(events ...event) Option {
 	}
 }
 
+type defaultPropagator struct {
+	propagation.Propagators
+}
+
+func newDefaultPropagator() propagation.Propagator {
+	return defaultPropagator{
+		Propagators: propagation.Propagators{
+			Scp: prop.TraceContextPropagator{},
+			Cp:  prop.CorrelationContextPropagator{},
+			Bp:  propagation.NoopBaggagePropagator{},
+		},
+	}
+}
+
+func (d defaultPropagator) Inject(sc core.SpanContext, c dctx.Correlations, b dctx.Baggage, s propagation.Supplier) {
+	d.Scp.Inject(sc, s)
+	d.Cp.Inject(c, s)
+	d.Bp.Inject(b, s)
+}
+
+func (d defaultPropagator) Extract(s propagation.Supplier) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
+	return d.Scp.Extract(s), d.Cp.Extract(s), d.Bp.Extract(s)
+}
+
 // NewHandler wraps the passed handler, functioning like middleware, in a span
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
-		WithTracer(global.TraceProvider().GetTracer("go.opentelemtry.io/plugin/othttp")),
-		WithPropagator(prop.HTTPTraceContextPropagator{}),
+		WithTracer(global.TraceProvider().GetTracer("go.opentelemetry.io/otel/plugin/othttp")),
+		WithPropagator(newDefaultPropagator()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -141,12 +167,20 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	return &h
 }
 
+type propagatorAsInjector struct {
+	prop propagation.Propagator
+}
+
+func (p propagatorAsInjector) Inject(ctx context.Context, s propagation.Supplier) {
+	p.prop.Inject(trace.CurrentSpan(ctx).SpanContext(), dctx.CorrelationsFromContext(ctx), dctx.BaggageFromContext(ctx), s)
+}
+
 // ServeHTTP serves HTTP requests (http.Handler)
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.SpanOption{}, h.spanOptions...) // start with the configured options
 
 	// TODO: do something with the correlation context
-	sc, _ := h.prop.Extract(r.Context(), r.Header)
+	sc, c, b := h.prop.Extract(r.Header)
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.SpanOption
 		if h.public {
@@ -159,7 +193,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		opts = append(opts, opt)
 	}
 
-	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	ctx := dctx.NewCorrelationsContextMap(r.Context(), c)
+	ctx = dctx.NewBaggageContext(ctx, b)
+	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}
@@ -178,7 +214,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, injector: h.prop}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, injector: propagatorAsInjector{prop: h.prop}}
 
 	// Setup basic span attributes before calling handler.ServeHTTP so that they
 	// are available to be mutated by the handler if needed.

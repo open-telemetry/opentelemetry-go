@@ -65,9 +65,15 @@ func main() {
 
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
+	ctx = distributedcontext.NewCorrelationsContextKV(ctx,
+		distributedcontext.Correlation{
+			KeyValue: fooKey.String("foo1"),
+			HopLimit: distributedcontext.UnlimitedPropagation,
+		},
+		distributedcontext.Correlation{
+			KeyValue: barKey.String("bar1"),
+			HopLimit: distributedcontext.UnlimitedPropagation,
+		},
 	)
 
 	commonLabels := meter.Labels(lemonsKey.Int(10))
@@ -88,7 +94,10 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			distributedcontext.NewCorrelationsContextKV(ctx, distributedcontext.Correlation{
+				KeyValue: anotherKey.String("xyz"),
+				HopLimit: distributedcontext.UnlimitedPropagation,
+			}),
 			commonLabels,
 
 			oneMetric.Measurement(1.0),

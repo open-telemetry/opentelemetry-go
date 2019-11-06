@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/otel/propagation"
+	propagation "go.opentelemetry.io/otel/propagation/http"
 
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )

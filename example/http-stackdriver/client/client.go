@@ -62,8 +62,11 @@ func main() {
 	tr := global.TraceProvider().GetTracer("stackdriver/example/client")
 
 	client := http.DefaultClient
-	ctx := distributedcontext.NewContext(context.Background(),
-		key.String("username", "donuts"),
+	ctx := distributedcontext.NewCorrelationsContextKV(context.Background(),
+		distributedcontext.Correlation{
+			KeyValue: key.String("username", "donuts"),
+			HopLimit: distributedcontext.UnlimitedPropagation,
+		},
 	)
 
 	var body []byte
