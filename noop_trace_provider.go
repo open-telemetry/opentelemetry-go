@@ -16,7 +16,7 @@ package otel
 
 type NoopProvider struct{}
 
-var _ Provider = NoopProvider{}
+var _ TraceProvider = NoopProvider{}
 
 // GetTracer returns noop implementation of Tracer.
 func (p NoopProvider) GetTracer(name string) Tracer {

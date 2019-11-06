@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-type Provider interface {
+type TraceProvider interface {
 	// GetTracer creates a named tracer that implements Tracer interface.
 	// If the name is an empty string then provider uses default name.
 	GetTracer(name string) Tracer

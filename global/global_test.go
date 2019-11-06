@@ -28,8 +28,8 @@ type (
 )
 
 var (
-	_ otel.Provider   = &testTraceProvider{}
-	_ metric.Provider = &testMeterProvider{}
+	_ otel.TraceProvider = &testTraceProvider{}
+	_ metric.Provider    = &testMeterProvider{}
 )
 
 func (*testTraceProvider) GetTracer(name string) otel.Tracer {

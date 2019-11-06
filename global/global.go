@@ -23,7 +23,7 @@ import (
 
 type (
 	traceProvider struct {
-		tp otel.Provider
+		tp otel.TraceProvider
 	}
 
 	meterProvider struct {
@@ -40,7 +40,7 @@ var (
 // If none is registered then an instance of otel.NoopProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().GetTracer("example.com/foo")
-func TraceProvider() otel.Provider {
+func TraceProvider() otel.TraceProvider {
 	if gp := globalTracer.Load(); gp != nil {
 		return gp.(traceProvider).tp
 	}
@@ -48,7 +48,7 @@ func TraceProvider() otel.Provider {
 }
 
 // SetTraceProvider registers `tp` as the global trace provider.
-func SetTraceProvider(tp otel.Provider) {
+func SetTraceProvider(tp otel.TraceProvider) {
 	globalTracer.Store(traceProvider{tp: tp})
 }
 

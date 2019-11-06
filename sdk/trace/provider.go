@@ -48,7 +48,7 @@ type Provider struct {
 	config         atomic.Value // access atomically
 }
 
-var _ otel.Provider = &Provider{}
+var _ otel.TraceProvider = &Provider{}
 
 // NewProvider creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
