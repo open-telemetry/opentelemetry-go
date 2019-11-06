@@ -12,4 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package unit // import "go.opentelemetry.io/otel/api/unit"
+package otel
+
+// Unit ...
+//
+// TODO[freeformz]: Explain what a unit is, when/where it should be used, etc.
+type Unit string
+
+const (
+	// Dimensionless units have no dimensions
+	Dimensionless Unit = "1"
+	// Bytes units
+	// TODO[freeformz]: What is this?
+	Bytes Unit = "By"
+	// Milliseconds units
+	// TODO[freeformz]: What is this?
+	Milliseconds Unit = "ms"
+)

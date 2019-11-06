@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Batcher is responsible for deciding which kind of aggregation
@@ -87,7 +86,7 @@ type Descriptor struct {
 	metricKind  Kind
 	keys        []otel.Key
 	description string
-	unit        unit.Unit
+	unit        otel.Unit
 	numberKind  otel.NumberKind
 	alternate   bool
 }
@@ -99,7 +98,7 @@ func NewDescriptor(
 	metricKind Kind,
 	keys []otel.Key,
 	description string,
-	unit unit.Unit,
+	unit otel.Unit,
 	numberKind otel.NumberKind,
 	alternate bool,
 ) *Descriptor {
@@ -130,7 +129,7 @@ func (d *Descriptor) Description() string {
 	return d.description
 }
 
-func (d *Descriptor) Unit() unit.Unit {
+func (d *Descriptor) Unit() otel.Unit {
 	return d.unit
 }
 

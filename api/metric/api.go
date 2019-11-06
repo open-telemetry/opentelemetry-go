@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Provider supports named Meter instances.
@@ -39,7 +38,7 @@ type Options struct {
 	// instrument.
 	Description string
 	// Unit is an optional field describing the metric instrument.
-	Unit unit.Unit
+	Unit otel.Unit
 	// Keys are recommended keys determined in the handles
 	// obtained for the metric.
 	Keys []otel.Key
@@ -225,7 +224,7 @@ func WithDescription(desc string) OptionApplier {
 }
 
 // WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) OptionApplier {
+func WithUnit(unit otel.Unit) OptionApplier {
 	return optionWrapper{
 		F: func(opts *Options) {
 			opts.Unit = unit

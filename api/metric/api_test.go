@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
 	mock "go.opentelemetry.io/otel/internal/metric"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,7 +32,7 @@ func TestCounterOptions(t *testing.T) {
 		opts []metric.CounterOptionApplier
 		keys []otel.Key
 		desc string
-		unit unit.Unit
+		unit otel.Unit
 		alt  bool
 	}
 	testcases := []testcase{
@@ -144,7 +143,7 @@ func TestGaugeOptions(t *testing.T) {
 		opts []metric.GaugeOptionApplier
 		keys []otel.Key
 		desc string
-		unit unit.Unit
+		unit otel.Unit
 		alt  bool
 	}
 	testcases := []testcase{
@@ -255,7 +254,7 @@ func TestMeasureOptions(t *testing.T) {
 		opts []metric.MeasureOptionApplier
 		keys []otel.Key
 		desc string
-		unit unit.Unit
+		unit otel.Unit
 		alt  bool
 	}
 	testcases := []testcase{
