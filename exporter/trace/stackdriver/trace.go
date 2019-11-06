@@ -68,9 +68,7 @@ func (e *traceExporter) ExportSpans(ctx context.Context, sds []*export.SpanData)
 		pbSpans[i] = protoFromSpanData(sd, e.projectID)
 	}
 	var cancel func()
-	if ctx == nil {
-		ctx, cancel = newContextWithTimeout(e.o.Context, e.o.Timeout)
-	}
+	ctx, cancel = newContextWithTimeout(ctx, e.o.Timeout)
 	defer cancel()
 	e.uploadFn(ctx, pbSpans)
 }
