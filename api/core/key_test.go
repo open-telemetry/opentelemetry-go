@@ -1,4 +1,4 @@
-package core_test
+package otel_test
 
 import (
 	"testing"
