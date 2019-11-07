@@ -39,6 +39,10 @@ type Options struct {
 	// making it print "pretty". Default is false.
 	PrettyPrint bool
 
+	// DoNotPrintTime suppresses timestamp printing.  This is
+	// useful to create testable examples or if the are being
+	DoNotPrintTime bool
+
 	// Quantiles are the desired aggregation quantiles for measure
 	// metric data, used when the configured aggregator supports
 	// quantiles.
@@ -50,7 +54,7 @@ type Options struct {
 }
 
 type expoBatch struct {
-	Timestamp time.Time  `json:"time,omitempty"`
+	Timestamp *time.Time `json:"time,omitempty"`
 	Updates   []expoLine `json:"updates,omitempty"`
 }
 
@@ -60,7 +64,9 @@ type expoLine struct {
 	Sum       interface{} `json:"sum,omitempty"`
 	Count     interface{} `json:"count,omitempty"`
 	LastValue interface{} `json:"last,omitempty"`
-	Timestamp time.Time   `json:"time,omitempty"`
+
+	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
+	Timestamp *time.Time `json:"time,omitempty"`
 }
 
 var _ export.Exporter = &Exporter{}
@@ -76,6 +82,10 @@ func New(options Options) *Exporter {
 
 func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 	var batch expoBatch
+	if !e.options.DoNotPrintTime {
+		ts := time.Now()
+		batch.Timestamp = &ts
+	}
 	producer.Foreach(func(record export.Record) {
 		desc := record.Descriptor()
 		labels := record.Labels()
@@ -86,8 +96,9 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 			expose.Sum = sum.Sum().Emit(desc.NumberKind())
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
+			ts := lv.Timestamp()
 			expose.LastValue = lv.LastValue().Emit(desc.NumberKind())
-			expose.Timestamp = lv.Timestamp()
+			expose.Timestamp = &ts
 
 		} else if msc, ok := agg.(aggregator.MaxSumCount); ok {
 			expose.Max = msc.Max().Emit(desc.NumberKind())
