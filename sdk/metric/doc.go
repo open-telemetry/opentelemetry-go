@@ -127,19 +127,43 @@ Aggregators implement a Merge method, also called in collection
 context, that combines state from two aggregators into one.  Each SDK
 record has an associated aggregator.
 
-Batcher is an interface which implements
+Batcher is an interface which sits between the SDK and an exporter.
+The Batcher embeds an AggregationSelector, used by the SDK to assign
+new Aggregators.  The Batcher supports a Process() API for submitting
+checkpointed aggregators to the batcher, and a ReadCheckpoint() API
+for producing a complete checkpoint for the exporter.  Two default
+Batcher implementations are provided, the "defaultkeys" Batcher groups
+aggregate metrics by their recommended Descriptor.Keys(), the
+"ungrouped" Batcher aggregates metrics at full dimensionality.
 
-LabelEncoder
+LabelEncoder is an optional optimization that allows an exporter to
+provide the serialization logic for labels.  This allows avoiding
+duplicate serialization of labels, once as a unique key in the SDK (or
+Batcher) and once in the exporter.
 
-Producer
+Producer is an interface between the Batcher and the controller.
+After completing a collection pass, the Batcher.ReadCheckpoint()
+method returns a Producer, which the Exporter uses to iterate over all
+the updated metrics.
 
-ProducedRecord
+Record is a struct containing the state of an individual exported
+metric.  This is the result of one collection interface for one
+instrument and one label set.
 
-Exporter
+Labels is a struct containing an ordered set of labels, the
+corresponding unique encoding, and the encoder that produced it.
 
-Controller
+Exporter is the final stage of an export pipeline.  It is called with
+a Producer capable of enumerating all the updated metrics.
 
-metric.MeterProvider
+Controller is not an export interface per se, but it orchestrates the
+export pipeline.  For example, a "push" controller will establish a
+periodic timer to regularly collect and export metrics.  A "pull"
+controller will await a pull request before initiating metric
+collection.  Either way, the job of the controller is to call the SDK
+Collect() method, then read the checkpoint, then invoke the exporter.
+Controllers are expected to implement the public metric.MeterProvider
+API, meaning they can be installed as the global Meter provider.
 
 */
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
