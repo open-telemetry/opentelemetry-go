@@ -168,16 +168,12 @@ type Exporter struct {
 // TODO(yoshifumi): add a metrics exporter one the spec definition
 // process and the sampler implementation are done.
 func NewExporter(opts ...Option) (*Exporter, error) {
-	o := options{}
+	o := options{Context: context.Background()}
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.ProjectID == "" {
-		ctx := o.Context
-		if ctx == nil {
-			ctx = context.Background()
-		}
-		creds, err := google.FindDefaultCredentials(ctx, traceapi.DefaultAuthScopes()...)
+		creds, err := google.FindDefaultCredentials(o.Context, traceapi.DefaultAuthScopes()...)
 		if err != nil {
 			return nil, fmt.Errorf("Stackdriver: %v", err)
 		}
@@ -197,9 +193,6 @@ func NewExporter(opts ...Option) (*Exporter, error) {
 }
 
 func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.Context, func()) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	if timeout <= 0 {
 		timeout = defaultTimeout
 	}
