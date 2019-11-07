@@ -407,6 +407,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) {
 
 	if err != nil {
 		// TODO warn
+		_ = err
 	}
 }
 

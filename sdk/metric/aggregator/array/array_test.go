@@ -34,8 +34,6 @@ type updateTest struct {
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
-
 	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 
 	agg := New()
@@ -45,15 +43,16 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(ctx, agg, x, descriptor)
+		test.CheckedUpdate(t, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(ctx, agg, y, descriptor)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 	}
 
+	ctx := context.Background()
 	agg.Checkpoint(ctx, descriptor)
 
 	all.Sort()
@@ -116,27 +115,27 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
-		test.CheckedUpdate(ctx, agg1, x1, descriptor)
+		test.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
-		test.CheckedUpdate(ctx, agg2, x2, descriptor)
+		test.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
-			test.CheckedUpdate(ctx, agg1, y1, descriptor)
+			test.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
-			test.CheckedUpdate(ctx, agg2, y2, descriptor)
+			test.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
 
 	agg1.Checkpoint(ctx, descriptor)
 	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, descriptor)
+	test.CheckedMerge(t, agg1, agg2, descriptor)
 
 	all.Sort()
 
@@ -200,10 +199,10 @@ func TestArrayErrors(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		test.CheckedUpdate(ctx, agg, core.Number(0), descriptor)
+		test.CheckedUpdate(t, agg, core.Number(0), descriptor)
 
 		if profile.NumberKind == core.Float64NumberKind {
-			test.CheckedUpdate(ctx, agg, core.NewFloat64Number(math.NaN()), descriptor)
+			test.CheckedUpdate(t, agg, core.NewFloat64Number(math.NaN()), descriptor)
 		}
 		agg.Checkpoint(ctx, descriptor)
 
@@ -263,13 +262,13 @@ func TestArrayFloat64(t *testing.T) {
 
 			for _, f := range fpsf(1) {
 				all.Append(core.NewFloat64Number(f))
-				test.CheckedUpdate(ctx, agg, core.NewFloat64Number(f), descriptor)
+				test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 			}
 
 			if !absolute {
 				for _, f := range fpsf(-1) {
 					all.Append(core.NewFloat64Number(f))
-					test.CheckedUpdate(ctx, agg, core.NewFloat64Number(f), descriptor)
+					test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 				}
 			}
 

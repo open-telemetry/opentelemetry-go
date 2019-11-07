@@ -125,8 +125,17 @@ func (n *Numbers) Median() core.Number {
 }
 
 // Performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(ctx context.Context, agg export.Aggregator, number core.Number, descriptor *export.Descriptor) {
+func CheckedUpdate(t *testing.T, agg export.Aggregator, number core.Number, descriptor *export.Descriptor) {
+	ctx := context.Background()
 	if err := aggregator.RangeTest(number, descriptor); err == nil {
-		agg.Update(ctx, number, descriptor)
+		if err := agg.Update(ctx, number, descriptor); err != nil {
+			t.Error("Unexpected Update failure", err)
+		}
+	}
+}
+
+func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *export.Descriptor) {
+	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
+		t.Error("Unexpected Merge failure", err)
 	}
 }

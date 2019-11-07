@@ -233,7 +233,7 @@ func (l *Labels) Len() int {
 
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
-// aggregate metric events recieved over a single collection period.
+// aggregate metric events received over a single collection period.
 func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,

@@ -39,7 +39,7 @@ func TestCounterMonotonic(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			test.CheckedUpdate(ctx, agg, x, descriptor)
+			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
 		agg.Checkpoint(ctx, descriptor)
@@ -57,11 +57,11 @@ func TestCounterMonotonicNegative(t *testing.T) {
 		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		for i := 0; i < count; i++ {
-			test.CheckedUpdate(ctx, agg, profile.Random(-1), descriptor)
+			test.CheckedUpdate(t, agg, profile.Random(-1), descriptor)
 		}
 
 		sum := profile.Random(+1)
-		test.CheckedUpdate(ctx, agg, sum, descriptor)
+		test.CheckedUpdate(t, agg, sum, descriptor)
 		agg.Checkpoint(ctx, descriptor)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
@@ -82,8 +82,8 @@ func TestCounterNonMonotonic(t *testing.T) {
 			y := profile.Random(-1)
 			sum.AddNumber(profile.NumberKind, x)
 			sum.AddNumber(profile.NumberKind, y)
-			test.CheckedUpdate(ctx, agg, x, descriptor)
-			test.CheckedUpdate(ctx, agg, y, descriptor)
+			test.CheckedUpdate(t, agg, x, descriptor)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 
 		agg.Checkpoint(ctx, descriptor)
@@ -105,14 +105,14 @@ func TestCounterMerge(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			test.CheckedUpdate(ctx, agg1, x, descriptor)
-			test.CheckedUpdate(ctx, agg2, x, descriptor)
+			test.CheckedUpdate(t, agg1, x, descriptor)
+			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
 		agg1.Checkpoint(ctx, descriptor)
 		agg2.Checkpoint(ctx, descriptor)
 
-		agg1.Merge(agg2, descriptor)
+		test.CheckedMerge(t, agg1, agg2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
 

@@ -41,12 +41,12 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(ctx, agg, x, descriptor)
+		test.CheckedUpdate(t, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(ctx, agg, y, descriptor)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 	}
 
@@ -105,31 +105,31 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(ctx, agg1, x, descriptor)
+		test.CheckedUpdate(t, agg1, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(ctx, agg1, y, descriptor)
+			test.CheckedUpdate(t, agg1, y, descriptor)
 		}
 	}
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(ctx, agg2, x, descriptor)
+		test.CheckedUpdate(t, agg2, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(ctx, agg2, y, descriptor)
+			test.CheckedUpdate(t, agg2, y, descriptor)
 		}
 	}
 
 	agg1.Checkpoint(ctx, descriptor)
 	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, descriptor)
+	test.CheckedMerge(t, agg1, agg2, descriptor)
 
 	all.Sort()
 
