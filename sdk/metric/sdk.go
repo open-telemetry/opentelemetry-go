@@ -178,9 +178,8 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		refcount:       1,
 		collectedEpoch: -1,
 		modifiedEpoch:  0,
+		recorder:       i.meter.batcher.AggregatorFor(i.descriptor),
 	}
-
-	rec.recorder = i.meter.batcher.AggregatorFor(rec.descriptor)
 
 	// Load/Store: there's a memory allocation to place `mk` into
 	// an interface here.
