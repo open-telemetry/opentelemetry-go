@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-func ExampleSetupMeter() {
+func ExampleNew() {
 	selector := simple.New()
 	exporter := stdout.New(stdout.Options{
 		PrettyPrint:    true,
