@@ -127,7 +127,7 @@ Aggregators implement a Merge method, also called in collection
 context, that combines state from two aggregators into one.  Each SDK
 record has an associated aggregator.
 
-Batcher
+Batcher is an interface which implements
 
 LabelEncoder
 
@@ -140,10 +140,6 @@ Exporter
 Controller
 
 metric.MeterProvider
-
-
-TODO: think about name for Producer/ProducedRecord
-
 
 */
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
