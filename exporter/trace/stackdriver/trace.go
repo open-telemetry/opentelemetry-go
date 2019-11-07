@@ -73,6 +73,7 @@ func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) 
 	var cancel func()
 	ctx, cancel = newContextWithTimeout(ctx, e.o.Timeout)
 	defer cancel()
+
 	// TODO(ymotongpoo): add this part after OTel support NeverSampler
 	// for tracer.Start() initialization.
 	//

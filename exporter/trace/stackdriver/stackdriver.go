@@ -144,6 +144,13 @@ func WithContext(ctx context.Context) func(o *options) {
 	}
 }
 
+// WithTimeout sets the timeout for trace exporter and metric exporter
+func WithTimeout(t time.Duration) func(o *options) {
+	return func(o *options) {
+		o.Timeout = t
+	}
+}
+
 func (o *options) handleError(err error) {
 	if o.OnError != nil {
 		o.OnError(err)
