@@ -56,19 +56,19 @@ func initTracer() {
 	global.SetTraceProvider(tp)
 }
 
-func initMeter() {
+func initMeter() *push.Controller {
 	selector := simple.New()
-	exporter := metricstdout.New(metricstdout.Options{PrettyPrint: true})
+	exporter := metricstdout.New(metricstdout.Options{PrettyPrint: false})
 	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
-	defer pusher.Stop()
 
 	global.SetMeterProvider(pusher)
+	return pusher
 }
 
 func main() {
-	initMeter()
+	defer initMeter().Stop()
 	initTracer()
 
 	// Note: Have to get the meter and tracer after the global is
