@@ -104,7 +104,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	if !ok {
 		b.agg[encoded] = aggEntry{
 			descriptor: desc,
-			labels:     export.NewLabels(canon, b.lencoder, encoded),
+			labels:     export.NewLabels(canon, encoded, b.lencoder),
 			aggregator: agg,
 		}
 		return nil
