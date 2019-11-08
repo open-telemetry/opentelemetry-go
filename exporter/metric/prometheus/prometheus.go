@@ -135,7 +135,7 @@ func (e *Exporter) Export(
 }
 
 func (e *Exporter) exportCounter(record export.Record, aggregator export.Aggregator) {
-	c, err := e.getCounter(record.Descriptor())
+	c, err := e.getCounter(record)
 	if err != nil {
 		// TODO: log a warning here?
 		return
@@ -147,7 +147,7 @@ func (e *Exporter) exportCounter(record export.Record, aggregator export.Aggrega
 }
 
 func (e *Exporter) exportGauge(record export.Record, aggregator export.Aggregator) {
-	g, err := e.getGauge(record.Descriptor())
+	g, err := e.getGauge(record)
 	if err != nil {
 		// TODO: log a warning here?
 		return
@@ -158,10 +158,11 @@ func (e *Exporter) exportGauge(record export.Record, aggregator export.Aggregato
 	}
 }
 
-func (e *Exporter) getCounter(desc *export.Descriptor) (prometheus.Counter, error) {
+func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) {
 	e.Lock()
 	defer e.Unlock()
 
+	desc := record.Descriptor()
 	if c, ok := e.counters[desc]; ok {
 		return c, nil
 	}
@@ -171,17 +172,17 @@ func (e *Exporter) getCounter(desc *export.Descriptor) (prometheus.Counter, erro
 		return nil, err
 	}
 
-	var tags map[string]string
-	counter := counterVec.With(tags)
+	counter := counterVec.With(labelsToTags(record.Labels()))
 
 	e.counters[desc] = counter
 	return counter, nil
 }
 
-func (e *Exporter) getGauge(desc *export.Descriptor) (prometheus.Gauge, error) {
+func (e *Exporter) getGauge(record export.Record) (prometheus.Gauge, error) {
 	e.Lock()
 	defer e.Unlock()
 
+	desc := record.Descriptor()
 	if g, ok := e.gauges[desc]; ok {
 		return g, nil
 	}
@@ -191,8 +192,7 @@ func (e *Exporter) getGauge(desc *export.Descriptor) (prometheus.Gauge, error) {
 		return nil, err
 	}
 
-	var tags map[string]string
-	gauge := gaugeVec.With(tags)
+	gauge := gaugeVec.With(labelsToTags(record.Labels()))
 
 	e.gauges[desc] = gauge
 	return gauge, nil
@@ -262,6 +262,14 @@ func getCanonicalID(desc *export.Descriptor) (string, []string) {
 	tagKeys := getTagKeys(desc.Keys())
 	sort.Strings(tagKeys)
 	return generateKey(desc.Name(), tagKeys), tagKeys
+}
+
+func labelsToTags(labels []core.KeyValue) map[string]string {
+	tags := make(map[string]string, len(labels))
+	for _, label := range labels {
+		tags[string(label.Key)] = label.Value.AsString()
+	}
+	return tags
 }
 
 func generateKey(name string, keys []string) string {
