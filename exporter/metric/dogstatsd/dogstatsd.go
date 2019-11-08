@@ -21,6 +21,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -40,8 +41,9 @@ type (
 
 	Exporter struct {
 		config Config
+		pool   sync.Pool
 
-		buffer bytes.Buffer
+		// buffer bytes.Buffer
 	}
 
 	formatCode string
@@ -53,11 +55,32 @@ var (
 )
 
 func New(config Config) *Exporter {
-
+	// Connect asynchronously
+	return &Exporter{
+		config: config,
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &bytes.Buffer{}
+			},
+		},
+	}
 }
 
 func (e *Exporter) EncodeLabels([]core.KeyValue) string {
-	return ""
+	buf := e.pool.Get().(*bytes.Buffer)
+	defer e.pool.Put(buf)
+	buf.Reset()
+
+	delimiter := "|#"
+
+	for i, kv := range labels {
+		_, _ = buf.WriteString(delimiter)
+		_, _ = buf.WriteString(string(kv.Key))
+		_, _ = buf.WriteRune(':')
+		_, _ = buf.WriteString(kv.Value.Emit())
+		delimiter = ","
+	}
+	return buf.String()
 }
 
 func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
