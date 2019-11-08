@@ -30,13 +30,18 @@ import (
 
 type (
 	Config struct {
+		// URL describes the
+		//
 		// e.g., udp://host:port
 		//       tcp://host:port
 		//       unix:///socket/path
 		URL string
 
-		// For packet-oriented transports, this limits the packet size.
+		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
+
+		// DialTimeout for dialing
+		DialTimeout time.Duration
 	}
 
 	Exporter struct {
@@ -54,9 +59,9 @@ var (
 	_ export.MetricLabelEncoder = &Exporter{}
 )
 
-func New(config Config) *Exporter {
+func New(config Config) (*Exporter, error) {
 	// Connect asynchronously
-	return &Exporter{
+	exp := &Exporter{
 		config: config,
 		pool: sync.Pool{
 			New: func() interface{} {
@@ -64,6 +69,11 @@ func New(config Config) *Exporter {
 			},
 		},
 	}
+	return exp, nil
+}
+
+func (e *Exporter) connect() (*net.Conn, error) {
+
 }
 
 func (e *Exporter) EncodeLabels([]core.KeyValue) string {
