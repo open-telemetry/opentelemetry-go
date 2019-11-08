@@ -33,11 +33,11 @@ type (
 	}
 
 	Max interface {
-		Max() core.Number
+		Max() (core.Number, error)
 	}
 
 	Quantile interface {
-		Quantile() core.Number
+		Quantile(float64) (core.Number, error)
 	}
 
 	LastValue interface {

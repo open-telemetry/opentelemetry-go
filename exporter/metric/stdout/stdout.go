@@ -18,7 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,7 +36,7 @@ type Exporter struct {
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
 	// File is the destination.  If not set, os.Stdout is used.
-	File *os.File
+	File io.Writer
 
 	// PrettyPrint will pretty the json representation of the span,
 	// making it print "pretty". Default is false.
@@ -65,23 +68,40 @@ type expoLine struct {
 	Count     interface{} `json:"count,omitempty"`
 	LastValue interface{} `json:"last,omitempty"`
 
+	Quantiles interface{} `json:"quantiles,omitempty"`
+
 	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
 	Timestamp *time.Time `json:"time,omitempty"`
 }
 
+type expoQuantile struct {
+	Q string `json:"q"`
+	V string `json:"v"`
+}
+
 var _ export.Exporter = &Exporter{}
 
-func New(options Options) *Exporter {
+func New(options Options) (*Exporter, error) {
 	if options.File == nil {
 		options.File = os.Stdout
 	}
+	if options.Quantiles == nil {
+		options.Quantiles = []float64{0.5, 0.9, 0.99}
+	} else {
+		for _, q := range options.Quantiles {
+			if q < 0 || q > 1 {
+				return nil, aggregator.ErrInvalidQuantile
+			}
+		}
+	}
 	return &Exporter{
 		options: options,
-	}
+	}, nil
 }
 
 func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 	var batch expoBatch
+	var errors []error
 	if !e.options.DoNotPrintTime {
 		ts := time.Now()
 		batch.Timestamp = &ts
@@ -90,27 +110,46 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		desc := record.Descriptor()
 		labels := record.Labels()
 		agg := record.Aggregator()
+		kind := desc.NumberKind()
 
 		var expose expoLine
 		if sum, ok := agg.(aggregator.Sum); ok {
-			expose.Sum = sum.Sum().Emit(desc.NumberKind())
+			expose.Sum = sum.Sum().Emit(kind)
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
 			ts := lv.Timestamp()
-			expose.LastValue = lv.LastValue().Emit(desc.NumberKind())
+			expose.LastValue = lv.LastValue().Emit(kind)
 			expose.Timestamp = &ts
 
 		} else if msc, ok := agg.(aggregator.MaxSumCount); ok {
-			expose.Max = msc.Max().Emit(desc.NumberKind())
-			expose.Sum = msc.Sum().Emit(desc.NumberKind())
-			expose.Count = msc.Count().Emit(desc.NumberKind())
+			expose.Sum = msc.Sum().Emit(kind)
+			expose.Count = msc.Count().Emit(kind)
 
-		} else if dist, ok := agg.(aggregator.Distribution); ok {
-			expose.Max = dist.Max().Emit(desc.NumberKind())
-			expose.Sum = dist.Sum().Emit(desc.NumberKind())
-			expose.Count = dist.Count().Emit(desc.NumberKind())
+			if max, err := msc.Max(); err != nil {
+				errors = append(errors, err)
+				expose.Max = math.NaN()
+			} else {
+				expose.Max = max.Emit(kind)
+			}
 
-			// TODO print one configured quantile per line
+			if dist, ok := agg.(aggregator.Distribution); ok && len(e.options.Quantiles) != 0 {
+				summary := make([]expoQuantile, len(e.options.Quantiles))
+				expose.Quantiles = summary
+
+				for i, q := range e.options.Quantiles {
+					var vstr string
+					if value, err := dist.Quantile(q); err != nil {
+						errors = append(errors, err)
+						vstr = fmt.Sprint(math.NaN())
+					} else {
+						vstr = value.Emit(kind)
+					}
+					summary[i] = expoQuantile{
+						Q: strconv.FormatFloat(q, 'f', -1, 64),
+						V: vstr,
+					}
+				}
+			}
 		}
 
 		var sb strings.Builder
@@ -136,10 +175,18 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		data, err = json.Marshal(batch)
 	}
 
-	if err != nil {
-		return err
+	if err == nil {
+		fmt.Fprintln(e.options.File, string(data))
+	} else {
+		errors = append(errors, err)
 	}
 
-	fmt.Fprintln(e.options.File, string(data))
-	return nil
+	switch len(errors) {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("Stdout exporter: %w", errors[0])
+	default:
+		return fmt.Errorf("Stdout exporter: %v", errors)
+	}
 }
