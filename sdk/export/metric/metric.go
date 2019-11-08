@@ -145,7 +145,7 @@ type Exporter interface {
 	//
 	// The Producer interface refers to the Batcher that just
 	// completed collection.
-	Export(context.Context, Producer)
+	Export(context.Context, Producer) error
 }
 
 // LabelEncoder enables an optimization for export pipelines that use

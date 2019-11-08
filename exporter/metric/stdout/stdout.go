@@ -80,7 +80,7 @@ func New(options Options) *Exporter {
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.Producer) {
+func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 	var batch expoBatch
 	if !e.options.DoNotPrintTime {
 		ts := time.Now()
@@ -137,9 +137,9 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) {
 	}
 
 	if err != nil {
-		fmt.Fprintf(e.options.File, "JSON encode error: %v\n", err)
-		return
+		return err
 	}
 
 	fmt.Fprintln(e.options.File, string(data))
+	return nil
 }
