@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
@@ -37,19 +37,19 @@ type monotoneBatcher struct {
 	currentTime  *time.Time
 }
 
-func (m *monotoneBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
+func (m *monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return gauge.New()
 }
 
-func (m *monotoneBatcher) ReadCheckpoint() export.MetricProducer {
+func (m *monotoneBatcher) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (m *monotoneBatcher) Process(_ context.Context, record export.MetricRecord, agg export.MetricAggregator) {
-	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
-	require.Equal(m.t, 1, len(record.Labels()))
-	require.Equal(m.t, "a", string(record.Labels()[0].Key))
-	require.Equal(m.t, "b", record.Labels()[0].Value.Emit())
+func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+	require.Equal(m.t, "my.gauge.name", desc.Name())
+	require.Equal(m.t, 1, labels.Len())
+	require.Equal(m.t, "a", string(labels.Ordered()[0].Key))
+	require.Equal(m.t, "b", labels.Ordered()[0].Value.Emit())
 
 	gauge := agg.(*gauge.Aggregator)
 	val := gauge.LastValue()
@@ -58,6 +58,7 @@ func (m *monotoneBatcher) Process(_ context.Context, record export.MetricRecord,
 	m.currentValue = &val
 	m.currentTime = &ts
 	m.collections++
+	return nil
 }
 
 func TestMonotoneGauge(t *testing.T) {

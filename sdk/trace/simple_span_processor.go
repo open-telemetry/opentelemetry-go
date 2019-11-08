@@ -17,7 +17,7 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // SimpleSpanProcessor implements SpanProcessor interfaces. It is used by

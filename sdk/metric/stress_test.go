@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -227,25 +227,24 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (f *testFixture) AggregatorFor(record export.MetricRecord) export.MetricAggregator {
-	switch record.Descriptor().MetricKind() {
-	case export.CounterMetricKind:
+func (f *testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
+	case export.CounterKind:
 		return counter.New()
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		return gauge.New()
 	default:
 		panic("Not implemented for this test")
 	}
 }
 
-func (f *testFixture) ReadCheckpoint() export.MetricProducer {
+func (f *testFixture) ReadCheckpoint() export.Producer {
 	return nil
 }
 
-func (f *testFixture) Process(ctx context.Context, record export.MetricRecord, agg export.MetricAggregator) {
-	desc := record.Descriptor()
+func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
 	key := testKey{
-		labels:     canonicalizeLabels(record.Labels()),
+		labels:     canonicalizeLabels(labels.Ordered()),
 		descriptor: desc,
 	}
 	if f.dupCheck[key] == 0 {
@@ -257,14 +256,15 @@ func (f *testFixture) Process(ctx context.Context, record export.MetricRecord, a
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
 	switch desc.MetricKind() {
-	case export.CounterMetricKind:
+	case export.CounterKind:
 		f.impl.storeCollect(actual, agg.(*counter.Aggregator).Sum(), time.Time{})
-	case export.GaugeMetricKind:
+	case export.GaugeKind:
 		gauge := agg.(*gauge.Aggregator)
 		f.impl.storeCollect(actual, gauge.LastValue(), gauge.Timestamp())
 	default:
 		panic("Not used in this test")
 	}
+	return nil
 }
 
 func stressTest(t *testing.T, impl testImpl) {

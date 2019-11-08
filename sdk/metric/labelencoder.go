@@ -19,7 +19,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type defaultLabelEncoder struct {
@@ -27,9 +27,9 @@ type defaultLabelEncoder struct {
 	pool sync.Pool // *bytes.Buffer
 }
 
-var _ export.MetricLabelEncoder = &defaultLabelEncoder{}
+var _ export.LabelEncoder = &defaultLabelEncoder{}
 
-func DefaultLabelEncoder() export.MetricLabelEncoder {
+func DefaultLabelEncoder() export.LabelEncoder {
 	return &defaultLabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {

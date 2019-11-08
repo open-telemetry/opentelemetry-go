@@ -21,7 +21,8 @@ import (
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -34,7 +35,7 @@ type Aggregator struct {
 	checkpoint *sdk.DDSketch
 }
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
 func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
@@ -90,39 +91,30 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 	return core.NewInt64Number(int64(f))
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
 	c.checkpoint = c.current
 	c.current = replace
 	c.lock.Unlock()
-
-	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.current.Add(number.CoerceToFloat64(kind))
+	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, d *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.checkpoint.Merge(o.checkpoint)
+	return nil
 }

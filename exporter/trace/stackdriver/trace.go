@@ -21,7 +21,7 @@ import (
 	traceclient "cloud.google.com/go/trace/apiv2"
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // traceExporter is an imeplementation of trace.Exporter and trace.BatchExporter

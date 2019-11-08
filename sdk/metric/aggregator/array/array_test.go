@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -34,9 +34,7 @@ type updateTest struct {
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
-
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !ut.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 
 	agg := New()
 
@@ -45,16 +43,17 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, record)
+		test.CheckedUpdate(t, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 	}
 
-	agg.Collect(ctx, record, batcher)
+	ctx := context.Background()
+	agg.Checkpoint(ctx, descriptor)
 
 	all.Sort()
 
@@ -106,7 +105,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !mt.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New()
 	agg2 := New()
@@ -116,27 +115,27 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
-		agg1.Update(ctx, x1, record)
+		test.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
-		agg2.Update(ctx, x2, record)
+		test.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
-			agg1.Update(ctx, y1, record)
+			test.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
-			agg2.Update(ctx, y2, record)
+			test.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
 
-	agg1.Collect(ctx, record, batcher)
-	agg2.Collect(ctx, record, batcher)
+	agg1.Checkpoint(ctx, descriptor)
+	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, record.Descriptor())
+	test.CheckedMerge(t, agg1, agg2, descriptor)
 
 	all.Sort()
 
@@ -198,14 +197,14 @@ func TestArrayErrors(t *testing.T) {
 
 		ctx := context.Background()
 
-		batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg.Update(ctx, core.Number(0), record)
+		test.CheckedUpdate(t, agg, core.Number(0), descriptor)
 
 		if profile.NumberKind == core.Float64NumberKind {
-			agg.Update(ctx, core.NewFloat64Number(math.NaN()), record)
+			test.CheckedUpdate(t, agg, core.NewFloat64Number(math.NaN()), descriptor)
 		}
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, descriptor)
 
 		require.Equal(t, int64(1), agg.Count(), "NaN value was not counted")
 
@@ -226,7 +225,7 @@ func TestArrayErrors(t *testing.T) {
 func TestArrayFloat64(t *testing.T) {
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, core.Float64NumberKind, !absolute)
+			descriptor := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating
@@ -263,17 +262,17 @@ func TestArrayFloat64(t *testing.T) {
 
 			for _, f := range fpsf(1) {
 				all.Append(core.NewFloat64Number(f))
-				agg.Update(ctx, core.NewFloat64Number(f), record)
+				test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 			}
 
 			if !absolute {
 				for _, f := range fpsf(-1) {
 					all.Append(core.NewFloat64Number(f))
-					agg.Update(ctx, core.NewFloat64Number(f), record)
+					test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 				}
 			}
 
-			agg.Collect(ctx, record, batcher)
+			agg.Checkpoint(ctx, descriptor)
 
 			all.Sort()
 

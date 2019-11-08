@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -33,16 +33,16 @@ func TestCounterMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, descriptor)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -54,15 +54,15 @@ func TestCounterMonotonicNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		for i := 0; i < count; i++ {
-			agg.Update(ctx, profile.Random(-1), record)
+			test.CheckedUpdate(t, agg, profile.Random(-1), descriptor)
 		}
 
 		sum := profile.Random(+1)
-		agg.Update(ctx, sum, record)
-		agg.Collect(ctx, record, batcher)
+		test.CheckedUpdate(t, agg, sum, descriptor)
+		agg.Checkpoint(ctx, descriptor)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -74,7 +74,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -82,11 +82,11 @@ func TestCounterNonMonotonic(t *testing.T) {
 			y := profile.Random(-1)
 			sum.AddNumber(profile.NumberKind, x)
 			sum.AddNumber(profile.NumberKind, y)
-			agg.Update(ctx, x, record)
-			agg.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg, x, descriptor)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, descriptor)
 
 		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
 	})
@@ -99,22 +99,22 @@ func TestCounterMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.CounterMetricKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			agg1.Update(ctx, x, record)
-			agg2.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg1, x, descriptor)
+			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
-		agg1.Merge(agg2, record.Descriptor())
+		test.CheckedMerge(t, agg1, agg2, descriptor)
 
-		sum.AddNumber(record.Descriptor().NumberKind(), sum)
+		sum.AddNumber(descriptor.NumberKind(), sum)
 
 		require.Equal(t, sum, agg1.Sum(), "Same sum - monotonic")
 	})

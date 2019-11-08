@@ -20,15 +20,15 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
 	sdk      *sdk.SDK
-	batcher  export.MetricBatcher
-	exporter export.MetricExporter
+	batcher  export.Batcher
+	exporter export.Exporter
 	ticker   *time.Ticker
 	wg       sync.WaitGroup
 	ch       chan struct{}
@@ -39,8 +39,8 @@ var _ metric.Provider = &Controller{}
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provider batcher, exporter, period.  The batcher itself
 // is configured with aggregation policy selection.
-func New(batcher export.MetricBatcher, exporter export.MetricExporter, period time.Duration) *Controller {
-	lencoder, _ := exporter.(export.MetricLabelEncoder)
+func New(batcher export.Batcher, exporter export.Exporter, period time.Duration) *Controller {
+	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
 		lencoder = sdk.DefaultLabelEncoder()

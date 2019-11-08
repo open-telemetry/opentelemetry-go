@@ -22,7 +22,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -37,7 +37,7 @@ type (
 	Points []core.Number
 )
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 func New() *Aggregator {
 	return &Aggregator{}
@@ -68,12 +68,11 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()
 
-	desc := rec.Descriptor()
 	kind := desc.NumberKind()
 
 	c.sort(kind)
@@ -83,39 +82,24 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	for _, v := range c.checkpoint {
 		c.ckptSum.AddNumber(kind, v)
 	}
-
-	exp.Process(ctx, rec, c)
 }
 
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-
-	if kind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		// TODO warn
-		// NOTE: add this to the specification.
-		return
-	}
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	c.current = append(c.current, number)
 	c.lock.Unlock()
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
 	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
+	return nil
 }
 
 func (c *Aggregator) sort(kind core.NumberKind) {

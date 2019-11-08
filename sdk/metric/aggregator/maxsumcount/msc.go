@@ -18,7 +18,8 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -36,7 +37,7 @@ type (
 	}
 )
 
-var _ export.MetricAggregator = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
 
 // New returns a new measure aggregator for computing max, sum, and count.
 func New() *Aggregator {
@@ -58,8 +59,8 @@ func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.max, nil
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp export.MetricBatcher) {
+// Checkpoint checkpoints the current value (atomically) and exports it.
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -73,19 +74,11 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.MetricRecord, exp e
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
 	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
-
-	exp.Process(ctx, rec, c)
 }
 
 // Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.MetricRecord) {
-	desc := rec.Descriptor()
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
 
 	c.current.count.AddUint64Atomic(1)
 	c.current.sum.AddNumberAtomic(kind, number)
@@ -100,13 +93,13 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Me
 			break
 		}
 	}
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.ErrInconsistentType
 	}
 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
@@ -115,4 +108,5 @@ func (c *Aggregator) Merge(oa export.MetricAggregator, desc *export.Descriptor) 
 	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
 		c.checkpoint.max.SetNumber(o.checkpoint.max)
 	}
+	return nil
 }

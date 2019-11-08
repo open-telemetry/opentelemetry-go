@@ -21,11 +21,9 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
-
-var _ export.MetricBatcher = &metricBatcher{}
-var _ export.MetricRecord = &metricRecord{}
 
 const Magnitude = 1000
 
@@ -52,39 +50,9 @@ func newProfiles() []Profile {
 	}
 }
 
-type metricBatcher struct {
-}
-
-type metricRecord struct {
-	descriptor *export.Descriptor
-}
-
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) (export.MetricBatcher, export.MetricRecord) {
+func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) *export.Descriptor {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
-	return &metricBatcher{}, &metricRecord{descriptor: desc}
-}
-
-func (t *metricRecord) Descriptor() *export.Descriptor {
-	return t.descriptor
-}
-
-func (t *metricRecord) Labels() []core.KeyValue {
-	return nil
-}
-
-func (t *metricRecord) EncodedLabels() string {
-	return ""
-}
-
-func (m *metricBatcher) AggregatorFor(rec export.MetricRecord) export.MetricAggregator {
-	return nil
-}
-
-func (m *metricBatcher) ReadCheckpoint() export.MetricProducer {
-	return nil
-}
-
-func (m *metricBatcher) Process(context.Context, export.MetricRecord, export.MetricAggregator) {
+	return desc
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
@@ -154,4 +122,20 @@ func (n *Numbers) Median() core.Number {
 	// return the smallest element that is at or above the
 	// specified quantile.
 	return n.numbers[len(n.numbers)/2]
+}
+
+// Performs the same range test the SDK does on behalf of the aggregator.
+func CheckedUpdate(t *testing.T, agg export.Aggregator, number core.Number, descriptor *export.Descriptor) {
+	ctx := context.Background()
+	if err := aggregator.RangeTest(number, descriptor); err == nil {
+		if err := agg.Update(ctx, number, descriptor); err != nil {
+			t.Error("Unexpected Update failure", err)
+		}
+	}
+}
+
+func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *export.Descriptor) {
+	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
+		t.Error("Unexpected Merge failure", err)
+	}
 }

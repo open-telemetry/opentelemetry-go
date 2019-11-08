@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/export"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -33,24 +33,24 @@ type updateTest struct {
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !ut.absolute)
 
-	agg := New(NewDefaultConfig(), record.Descriptor())
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	agg := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, record)
+		test.CheckedUpdate(t, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 	}
 
-	agg.Collect(ctx, record, batcher)
+	agg.Checkpoint(ctx, descriptor)
 
 	all.Sort()
 
@@ -96,41 +96,40 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
-	batcher, record := test.NewAggregatorTest(export.MeasureMetricKind, profile.NumberKind, !mt.absolute)
-
-	agg1 := New(NewDefaultConfig(), record.Descriptor())
-	agg2 := New(NewDefaultConfig(), record.Descriptor())
+	agg1 := New(NewDefaultConfig(), descriptor)
+	agg2 := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg1.Update(ctx, x, record)
+		test.CheckedUpdate(t, agg1, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg1.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg1, y, descriptor)
 		}
 	}
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg2.Update(ctx, x, record)
+		test.CheckedUpdate(t, agg2, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg2.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg2, y, descriptor)
 		}
 	}
 
-	agg1.Collect(ctx, record, batcher)
-	agg2.Collect(ctx, record, batcher)
+	agg1.Checkpoint(ctx, descriptor)
+	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, record.Descriptor())
+	test.CheckedMerge(t, agg1, agg2, descriptor)
 
 	all.Sort()
 
