@@ -86,5 +86,10 @@ func (c *Controller) run() {
 func (c *Controller) tick() {
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
-	c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
+	err := c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
+
+	if err != nil {
+		// TODO: report this error
+		_ = err
+	}
 }
