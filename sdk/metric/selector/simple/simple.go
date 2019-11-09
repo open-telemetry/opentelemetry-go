@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simpler"
+package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"

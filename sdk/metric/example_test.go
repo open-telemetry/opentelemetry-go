@@ -57,7 +57,7 @@ func ExampleNew() {
 	// 	"updates": [
 	// 		{
 	// 			"name": "a.counter{key=value}",
-	// 			"sum": "100"
+	// 			"sum": 100
 	// 		}
 	// 	]
 	// }
