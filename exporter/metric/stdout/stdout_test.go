@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
@@ -88,7 +89,9 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	producer.Add(desc, gagg)
 
-	exporter.Export(ctx, producer)
+	if err := exporter.Export(ctx, producer); err != nil {
+		t.Fatal("Unexpected export error: ", err)
+	}
 
 	after := time.Now()
 
@@ -215,4 +218,23 @@ func TestStdoutMeasureFormat(t *testing.T) {
 		}
 	]
 }`, fix.Output())
+}
+
+func TestStdoutAggError(t *testing.T) {
+	fix := newFixture(t, stdout.Options{})
+
+	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+
+	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+	magg := ddsketch.New(ddsketch.NewDefaultConfig(), desc)
+	magg.Checkpoint(fix.ctx, desc)
+
+	producer.Add(desc, magg)
+
+	err := fix.exporter.Export(fix.ctx, producer)
+
+	// An error is returned and NaN values are printed.
+	require.Error(t, err)
+	require.Equal(t, aggregator.ErrEmptyDataSet, err)
+	require.Equal(t, `{"updates":[{"name":"test.name","max":"NaN","sum":0,"count":0,"quantiles":[{"q":0.5,"v":"NaN"},{"q":0.9,"v":"NaN"},{"q":0.99,"v":"NaN"}]}]}`, fix.Output())
 }

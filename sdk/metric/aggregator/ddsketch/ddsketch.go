@@ -79,6 +79,9 @@ func (c *Aggregator) Min() (core.Number, error) {
 
 // Quantile returns the estimated quantile of the checkpoint.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	if c.checkpoint.Count() == 0 {
+		return core.Number(0), aggregator.ErrEmptyDataSet
+	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
 		return core.Number(0), aggregator.ErrInvalidQuantile

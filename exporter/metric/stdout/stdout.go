@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"strings"
 	"time"
@@ -99,8 +98,10 @@ func New(options Options) (*Exporter, error) {
 }
 
 func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
+	// N.B. Only return one aggError, if any occur. They're likely
+	// to be duplicates of the same error.
+	var aggError error
 	var batch expoBatch
-	var errors []error
 	if !e.options.DoNotPrintTime {
 		ts := time.Now()
 		batch.Timestamp = &ts
@@ -117,8 +118,8 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 			expose.Count = msc.Count()
 
 			if max, err := msc.Max(); err != nil {
-				errors = append(errors, err)
-				expose.Max = math.NaN()
+				aggError = err
+				expose.Max = "NaN"
 			} else {
 				expose.Max = max.AsInterface(kind)
 			}
@@ -130,8 +131,8 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 				for i, q := range e.options.Quantiles {
 					var vstr interface{}
 					if value, err := dist.Quantile(q); err != nil {
-						errors = append(errors, err)
-						vstr = math.NaN()
+						aggError = err
+						vstr = "NaN"
 					} else {
 						vstr = value.AsInterface(kind)
 					}
@@ -179,15 +180,8 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 	if err == nil {
 		fmt.Fprintln(e.options.File, string(data))
 	} else {
-		errors = append(errors, err)
+		return err
 	}
 
-	switch len(errors) {
-	case 0:
-		return nil
-	case 1:
-		return fmt.Errorf("Stdout exporter: %w", errors[0])
-	default:
-		return fmt.Errorf("Stdout exporter: %v", errors)
-	}
+	return aggError
 }
