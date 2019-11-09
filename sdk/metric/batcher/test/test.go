@@ -28,27 +28,34 @@ import (
 )
 
 type (
+	// Encoder is an alternate label encoder to validate grouping logic.
 	Encoder struct{}
 
+	// Output collects distinct metric/label set outputs.
 	Output map[string]int64
 )
 
 var (
-	// Gauge groups by "G"
-	// Counter groups by "C"
+	// GaugeDesc groups by "G"
 	GaugeDesc = export.NewDescriptor(
 		"gauge", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+	// CounterDesc groups by "C"
 	CounterDesc = export.NewDescriptor(
 		"counter", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
 
-	// The SDK and the batcher use different encoders in these tests.
-	SdkEncoder   = &Encoder{}
+	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
+	SdkEncoder = &Encoder{}
+	// GroupEncoder uses the SDK default encoder
 	GroupEncoder = sdk.DefaultLabelEncoder()
 
 	// Gauge groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)
+
+	// Labels1 has G=H and C=D
 	Labels1 = makeLabels(SdkEncoder, key.String("G", "H"), key.String("C", "D"))
+	// Labels2 has C=D and E=F
 	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
+	// Labels3 is the empty set
 	Labels3 = makeLabels(SdkEncoder)
 )
 
@@ -70,6 +77,7 @@ func (Encoder) EncodeLabels(labels []core.KeyValue) string {
 	return sb.String()
 }
 
+// GaugeAgg returns a checkpointed gauge aggregator w/ the specified value.
 func GaugeAgg(v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := gauge.New()
@@ -78,6 +86,7 @@ func GaugeAgg(v int64) export.Aggregator {
 	return gagg
 }
 
+// CounterAgg returns a checkpointed counter aggregator w/ the specified value.
 func CounterAgg(v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := counter.New()
@@ -86,6 +95,8 @@ func CounterAgg(v int64) export.Aggregator {
 	return cagg
 }
 
+// AddTo adds a name/label-encoding entry with the gauge or counter
+// value to the output map.
 func (o Output) AddTo(rec export.Record) {
 	labels := rec.Labels()
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
