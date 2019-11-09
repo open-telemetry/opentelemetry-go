@@ -22,7 +22,8 @@ func (NoopProvider) GetMeter(name string) Meter {
 	return NoopMeter{}
 }
 
-func (noopHandle) RecordOne(context.Context, core.Number) {
+func (noopHandle) RecordOne(context.Context, core.Number) error {
+	return nil
 }
 
 func (noopHandle) Release() {
@@ -32,7 +33,8 @@ func (noopInstrument) AcquireHandle(LabelSet) HandleImpl {
 	return noopHandle{}
 }
 
-func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
+func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) error {
+	return nil
 }
 
 func (noopInstrument) Meter() Meter {

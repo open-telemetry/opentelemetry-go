@@ -16,6 +16,8 @@ package metric
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -61,6 +63,9 @@ type (
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
+
+		// errorHandler supports delivering errors to the user.
+		errorHandler ErrorHandler
 	}
 
 	instrument struct {
@@ -127,6 +132,8 @@ type (
 		next doublePtr
 	}
 
+	ErrorHandler func(error)
+
 	// singlePointer wraps an unsafe.Pointer and supports basic
 	// load(), store(), clear(), and swapNil() operations.
 	singlePtr struct {
@@ -155,6 +162,10 @@ var (
 
 func (i *instrument) Meter() api.Meter {
 	return i.meter
+}
+
+func (m *SDK) SetErrorHandler(f ErrorHandler) {
+	m.errorHandler = f
 }
 
 func (i *instrument) acquireHandle(ls *labels) *record {
@@ -199,11 +210,15 @@ func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
 	return i.acquireHandle(labs)
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) error {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Release()
-	h.RecordOne(ctx, number)
+	err := h.RecordOne(ctx, number)
+	if err != nil {
+		i.meter.errorHandler(err)
+	}
+	return err
 }
 
 // New constructs a new SDK for the given batcher.  This SDK supports
@@ -217,11 +232,16 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // own periodic collection.
 func New(batcher export.Batcher, lencoder export.LabelEncoder) *SDK {
 	m := &SDK{
-		batcher:  batcher,
-		lencoder: lencoder,
+		batcher:      batcher,
+		lencoder:     lencoder,
+		errorHandler: stderrError,
 	}
 	m.empty.meter = m
 	return m
+}
+
+func stderrError(err error) {
+	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 
 // Labels returns a LabelSet corresponding to the arguments.  Passed
@@ -350,9 +370,13 @@ func (m *SDK) saveFromReclaim(rec *record) {
 //
 // During the collection pass, the export.Batcher will receive
 // one Export() call per current aggregation.
-func (m *SDK) Collect(ctx context.Context) {
+//
+// Returns the number of records that were checkpointed.
+func (m *SDK) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
+
+	checkpointed := 0
 
 	var next *record
 	for inuse := m.records.primary.swapNil(); inuse != nil; inuse = next {
@@ -361,14 +385,14 @@ func (m *SDK) Collect(ctx context.Context) {
 		refcount := atomic.LoadInt64(&inuse.refcount)
 
 		if refcount > 0 {
-			m.checkpoint(ctx, inuse)
+			checkpointed += m.checkpoint(ctx, inuse)
 			m.addPrimary(inuse)
 			continue
 		}
 
 		modified := atomic.LoadInt64(&inuse.modifiedEpoch)
 		collected := atomic.LoadInt64(&inuse.collectedEpoch)
-		m.checkpoint(ctx, inuse)
+		checkpointed += m.checkpoint(ctx, inuse)
 
 		if modified >= collected {
 			atomic.StoreInt64(&inuse.collectedEpoch, m.currentEpoch)
@@ -389,32 +413,36 @@ func (m *SDK) Collect(ctx context.Context) {
 		atomic.StoreInt64(&chances.reclaim, 0)
 
 		if chances.next.primary.load() == hazardRecord {
-			m.checkpoint(ctx, chances)
+			checkpointed += m.checkpoint(ctx, chances)
 			m.addPrimary(chances)
 		}
 	}
 
 	m.currentEpoch++
+	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, r *record) {
+func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 	if r.recorder == nil {
-		return
+		return 0
 	}
 	r.recorder.Checkpoint(ctx, r.descriptor)
 	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.lencoder)
 	err := m.batcher.Process(ctx, r.descriptor, labels, r.recorder)
 
 	if err != nil {
-		// TODO warn
-		_ = err
+		m.errorHandler(err)
 	}
+	return 1
 }
 
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
+		err := meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
+		if err != nil {
+			m.errorHandler(err)
+		}
 	}
 }
 
@@ -431,19 +459,18 @@ func (l *labels) Meter() api.Meter {
 	return l.meter
 }
 
-func (r *record) RecordOne(ctx context.Context, number core.Number) {
+func (r *record) RecordOne(ctx context.Context, number core.Number) error {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
-		return
+		return nil
 	}
 	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
-		// TODO warn
-		return
+		return err
 	}
 	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
-		// TODO warn
-		return
+		return err
 	}
+	return nil
 }
 
 func (r *record) Release() {
