@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package defaultkeys_test
+package ungrouped_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/test"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 )
 
-func TestGroupingStateless(t *testing.T) {
+// These tests use the original label encoding.
+
+func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := defaultkeys.New(nil, test.GroupEncoder, false)
+	b := ungrouped.New(nil, false)
 
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
@@ -45,10 +46,12 @@ func TestGroupingStateless(t *testing.T) {
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter/C=D": 30, // labels1 + labels2
-		"counter/C=":  40, // labels3
-		"gauge/G=H":   10, // labels1
-		"gauge/G=":    30, // labels3 = last value
+		"counter/G~H&C~D": 10, // labels1
+		"counter/C~D&E~F": 20, // labels2
+		"counter/":        40, // labels3
+		"gauge/G~H&C~D":   10, // labels1
+		"gauge/C~D&E~F":   20, // labels2
+		"gauge/":          30, // labels3
 	}, records)
 
 	// Verify that state was reset
@@ -58,9 +61,9 @@ func TestGroupingStateless(t *testing.T) {
 	})
 }
 
-func TestGroupingStateful(t *testing.T) {
+func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := defaultkeys.New(nil, test.GroupEncoder, true)
+	b := ungrouped.New(nil, true)
 
 	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
 
@@ -70,7 +73,7 @@ func TestGroupingStateful(t *testing.T) {
 	processor.Foreach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"counter/C=D": 10, // labels1
+		"counter/G~H&C~D": 10, // labels1
 	}, records1)
 
 	// Test that state was NOT reset
