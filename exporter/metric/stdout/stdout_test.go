@@ -3,8 +3,10 @@ package stdout_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -17,6 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -62,6 +66,59 @@ func TestStdoutInvalidQuantile(t *testing.T) {
 	require.Equal(t, aggregator.ErrInvalidQuantile, err)
 }
 
+func TestStdoutTimestamp(t *testing.T) {
+	var buf bytes.Buffer
+	exporter, err := stdout.New(stdout.Options{
+		File:           &buf,
+		DoNotPrintTime: false,
+	})
+	if err != nil {
+		t.Fatal("Invalid options: ", err)
+	}
+
+	before := time.Now()
+
+	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+
+	ctx := context.Background()
+	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
+	gagg := gauge.New()
+	aggtest.CheckedUpdate(t, gagg, core.NewInt64Number(321), desc)
+	gagg.Checkpoint(ctx, desc)
+
+	producer.Add(desc, gagg)
+
+	exporter.Export(ctx, producer)
+
+	after := time.Now()
+
+	var printed map[string]interface{}
+
+	if err := json.Unmarshal(buf.Bytes(), &printed); err != nil {
+		t.Fatal("JSON parse error: ", err)
+	}
+
+	updateTS := printed["time"].(string)
+	updateTimestamp, err := time.Parse(time.RFC3339Nano, updateTS)
+	if err != nil {
+		t.Fatal("JSON parse error: ", updateTS, ": ", err)
+	}
+
+	gaugeTS := printed["updates"].([]interface{})[0].(map[string]interface{})["time"].(string)
+	gaugeTimestamp, err := time.Parse(time.RFC3339Nano, gaugeTS)
+	if err != nil {
+		t.Fatal("JSON parse error: ", gaugeTS, ": ", err)
+	}
+
+	require.True(t, updateTimestamp.After(before))
+	require.True(t, updateTimestamp.Before(after))
+
+	require.True(t, gaugeTimestamp.After(before))
+	require.True(t, gaugeTimestamp.Before(after))
+
+	require.True(t, gaugeTimestamp.Before(updateTimestamp))
+}
+
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
@@ -76,7 +133,42 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(producer)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":"123"}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
+}
+
+func TestStdoutGaugeFormat(t *testing.T) {
+	fix := newFixture(t, stdout.Options{})
+
+	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+
+	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	gagg := gauge.New()
+	aggtest.CheckedUpdate(fix.t, gagg, core.NewFloat64Number(123.456), desc)
+	gagg.Checkpoint(fix.ctx, desc)
+
+	producer.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+
+	fix.Export(producer)
+
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
+}
+
+func TestStdoutMaxSumCount(t *testing.T) {
+	fix := newFixture(t, stdout.Options{})
+
+	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+
+	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+	magg := maxsumcount.New()
+	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), desc)
+	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
+	magg.Checkpoint(fix.ctx, desc)
+
+	producer.Add(desc, magg, key.String("A", "B"), key.String("C", "D"))
+
+	fix.Export(producer)
+
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
@@ -90,7 +182,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 	magg := array.New()
 
 	for i := 0; i < 1000; i++ {
-		aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(float64(i)), desc)
+		aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(float64(i)+0.5), desc)
 	}
 
 	magg.Checkpoint(fix.ctx, desc)
@@ -103,21 +195,21 @@ func TestStdoutMeasureFormat(t *testing.T) {
 	"updates": [
 		{
 			"name": "test.name{A=B,C=D}",
-			"max": "999.000000",
-			"sum": "499500.000000",
+			"max": 999.5,
+			"sum": 500000,
 			"count": 1000,
 			"quantiles": [
 				{
-					"q": "0.5",
-					"v": "500.000000"
+					"q": 0.5,
+					"v": 500.5
 				},
 				{
-					"q": "0.9",
-					"v": "900.000000"
+					"q": 0.9,
+					"v": 900.5
 				},
 				{
-					"q": "0.99",
-					"v": "990.000000"
+					"q": 0.99,
+					"v": 990.5
 				}
 			]
 		}

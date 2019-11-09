@@ -21,7 +21,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -75,8 +74,8 @@ type expoLine struct {
 }
 
 type expoQuantile struct {
-	Q string `json:"q"`
-	V string `json:"v"`
+	Q interface{} `json:"q"`
+	V interface{} `json:"v"`
 }
 
 var _ export.Exporter = &Exporter{}
@@ -114,14 +113,14 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 
 		var expose expoLine
 		if msc, ok := agg.(aggregator.MaxSumCount); ok {
-			expose.Sum = msc.Sum().Emit(kind)
+			expose.Sum = msc.Sum().AsInterface(kind)
 			expose.Count = msc.Count()
 
 			if max, err := msc.Max(); err != nil {
 				errors = append(errors, err)
 				expose.Max = math.NaN()
 			} else {
-				expose.Max = max.Emit(kind)
+				expose.Max = max.AsInterface(kind)
 			}
 
 			if dist, ok := agg.(aggregator.Distribution); ok && len(e.options.Quantiles) != 0 {
@@ -129,28 +128,29 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 				expose.Quantiles = summary
 
 				for i, q := range e.options.Quantiles {
-					var vstr string
+					var vstr interface{}
 					if value, err := dist.Quantile(q); err != nil {
 						errors = append(errors, err)
-						vstr = fmt.Sprint(math.NaN())
+						vstr = math.NaN()
 					} else {
-						// TODO: Update core float formatting to use -1
-						// precision.  The trailing zeros here are distracting.
-						vstr = value.Emit(kind)
+						vstr = value.AsInterface(kind)
 					}
 					summary[i] = expoQuantile{
-						Q: strconv.FormatFloat(q, 'f', -1, 64),
+						Q: q,
 						V: vstr,
 					}
 				}
 			}
 		} else if sum, ok := agg.(aggregator.Sum); ok {
-			expose.Sum = sum.Sum().Emit(kind)
+			expose.Sum = sum.Sum().AsInterface(kind)
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
 			ts := lv.Timestamp()
-			expose.LastValue = lv.LastValue().Emit(kind)
-			expose.Timestamp = &ts
+			expose.LastValue = lv.LastValue().AsInterface(kind)
+
+			if !e.options.DoNotPrintTime {
+				expose.Timestamp = &ts
+			}
 		}
 
 		var sb strings.Builder
