@@ -137,34 +137,33 @@ func TestRecordingIsOff(t *testing.T) {
 
 func TestSampling(t *testing.T) {
 	idg := defIDGenerator()
-	total := 10000
+	const total = 10000
 	for name, tc := range map[string]struct {
 		sampler       Sampler
 		expect        float64
-		tolerance     float64
 		parent        bool
 		sampledParent bool
 	}{
 		// Span w/o a parent
-		"NeverSample":            {sampler: NeverSample(), expect: 0, tolerance: 0},
-		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0, tolerance: 0},
-		"ProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0},
-		"ProbabilitySampler_.25": {sampler: ProbabilitySampler(0.25), expect: .25, tolerance: 0.015},
-		"ProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015},
-		"ProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015},
-		"ProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0},
+		"NeverSample":            {sampler: NeverSample(), expect: 0},
+		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0},
+		"ProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0},
+		"ProbabilitySampler_.25": {sampler: ProbabilitySampler(0.25), expect: .25},
+		"ProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5},
+		"ProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75},
+		"ProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1},
 		// Spans with a parent that is *not* sampled act like spans w/o a parent
-		"UnsampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, tolerance: 0, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: .25, tolerance: 0.015, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, tolerance: 0.015, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, tolerance: 0.015, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: .25, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, parent: true},
+		"UnsampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, parent: true},
 		// Spans with a parent that is sampled, will always sample, regardless of the probability
-		"SampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
-		"SampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: 1, tolerance: 0, parent: true, sampledParent: true},
-		"SampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 1, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: 1, parent: true, sampledParent: true},
+		"SampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, parent: true, sampledParent: true},
 		// Spans with a sampled parent, but when using the NeverSample Sampler, aren't sampled
-		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, tolerance: 0, parent: true, sampledParent: true},
+		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, parent: true, sampledParent: true},
 	} {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
@@ -192,10 +191,18 @@ func TestSampling(t *testing.T) {
 					sampled++
 				}
 			}
+			tolerance := 0.0
 			got := float64(sampled) / float64(total)
+
+			if tc.expect > 0 && tc.expect < 1 {
+				// See https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
+				const z = 4.75342 // This should succeed 99.9999% of the time
+				tolerance = z * math.Sqrt(got*(1-got)/total)
+			}
+
 			diff := math.Abs(got - tc.expect)
-			if diff > tc.tolerance {
-				t.Errorf("got %f (diff: %f), expected %f (w/tolerance: %f)", got, diff, tc.expect, tc.tolerance)
+			if diff > tolerance {
+				t.Errorf("got %f (diff: %f), expected %f (w/tolerance: %f)", got, diff, tc.expect, tolerance)
 			}
 		})
 	}
