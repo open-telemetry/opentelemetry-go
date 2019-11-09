@@ -26,10 +26,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
+// Config is an alias for the underlying DDSketch config object.
+type Config = sdk.Config
+
 // Aggregator aggregates measure events.
 type Aggregator struct {
 	lock       sync.Mutex
-	cfg        *sdk.Config
+	cfg        *Config
 	kind       core.NumberKind
 	current    *sdk.DDSketch
 	checkpoint *sdk.DDSketch
@@ -40,7 +43,7 @@ var _ aggregator.MaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
+func New(cfg *Config, desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
 		cfg:     cfg,
 		kind:    desc.NumberKind(),
@@ -53,7 +56,7 @@ func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 // TODO: The Config constructor should probably set minValue to -Inf
 // to aggregate metrics with absolute=false.  This requires providing values
 // for alpha and maxNumBins
-func NewDefaultConfig() *sdk.Config {
+func NewDefaultConfig() *Config {
 	return sdk.NewDefaultConfig()
 }
 
