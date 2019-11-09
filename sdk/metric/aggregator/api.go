@@ -29,7 +29,7 @@ type (
 	}
 
 	Count interface {
-		Count() core.Number
+		Count() int64
 	}
 
 	Max interface {

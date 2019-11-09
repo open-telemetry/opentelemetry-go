@@ -113,17 +113,9 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		kind := desc.NumberKind()
 
 		var expose expoLine
-		if sum, ok := agg.(aggregator.Sum); ok {
-			expose.Sum = sum.Sum().Emit(kind)
-
-		} else if lv, ok := agg.(aggregator.LastValue); ok {
-			ts := lv.Timestamp()
-			expose.LastValue = lv.LastValue().Emit(kind)
-			expose.Timestamp = &ts
-
-		} else if msc, ok := agg.(aggregator.MaxSumCount); ok {
+		if msc, ok := agg.(aggregator.MaxSumCount); ok {
 			expose.Sum = msc.Sum().Emit(kind)
-			expose.Count = msc.Count().Emit(kind)
+			expose.Count = msc.Count()
 
 			if max, err := msc.Max(); err != nil {
 				errors = append(errors, err)
@@ -142,6 +134,8 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 						errors = append(errors, err)
 						vstr = fmt.Sprint(math.NaN())
 					} else {
+						// TODO: Update core float formatting to use -1
+						// precision.  The trailing zeros here are distracting.
 						vstr = value.Emit(kind)
 					}
 					summary[i] = expoQuantile{
@@ -150,6 +144,13 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 					}
 				}
 			}
+		} else if sum, ok := agg.(aggregator.Sum); ok {
+			expose.Sum = sum.Sum().Emit(kind)
+
+		} else if lv, ok := agg.(aggregator.LastValue); ok {
+			ts := lv.Timestamp()
+			expose.LastValue = lv.LastValue().Emit(kind)
+			expose.Timestamp = &ts
 		}
 
 		var sb strings.Builder

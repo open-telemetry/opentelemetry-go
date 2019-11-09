@@ -38,6 +38,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
 
 // New returns a new measure aggregator for computing max, sum, and count.
 func New() *Aggregator {

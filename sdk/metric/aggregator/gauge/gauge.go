@@ -56,6 +56,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.LastValue = &Aggregator{}
 
 // An unset gauge has zero timestamp and zero value.
 var unsetGauge = &gaugeData{}

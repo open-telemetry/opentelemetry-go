@@ -36,6 +36,8 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
 func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {

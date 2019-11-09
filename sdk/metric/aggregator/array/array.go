@@ -38,6 +38,8 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.Distribution = &Aggregator{}
 
 func New() *Aggregator {
 	return &Aggregator{}
