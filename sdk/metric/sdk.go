@@ -230,13 +230,13 @@ func New(batcher export.Batcher, lencoder export.LabelEncoder) *SDK {
 	m := &SDK{
 		batcher:      batcher,
 		lencoder:     lencoder,
-		errorHandler: stderrError,
+		errorHandler: DefaultErrorHandler,
 	}
 	m.empty.meter = m
 	return m
 }
 
-func stderrError(err error) {
+func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 

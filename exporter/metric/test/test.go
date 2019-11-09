@@ -16,6 +16,10 @@ func NewProducer(encoder export.LabelEncoder) *Producer {
 	}
 }
 
+func (p *Producer) Reset() {
+	p.updates = nil
+}
+
 func (p *Producer) Add(desc *export.Descriptor, agg export.Aggregator, labels ...core.KeyValue) {
 	encoded := p.encoder.EncodeLabels(labels)
 	elabels := export.NewLabels(labels, encoded, p.encoder)
