@@ -29,7 +29,7 @@ import (
 )
 
 func ExampleNew() {
-	selector := simple.New()
+	selector := simple.NewWithInexpensiveMeasure()
 	exporter, err := stdout.New(stdout.Options{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic

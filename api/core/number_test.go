@@ -161,7 +161,7 @@ func TestNumberZero(t *testing.T) {
 }
 
 func TestNumberAsInterface(t *testing.T) {
-	require.Equal(t, 10, NewInt64Number(10).AsInterface(Int64NumberKind).(int64))
-	require.Equal(t, 11.11, NewFloat64Number(11.11).AsInterface(Float64NumberKind).(float64))
-	require.Equal(t, 100, NewUint64Number(100).AsInterface(Uint64NumberKind).(uint64))
+	require.Equal(t, int64(10), NewInt64Number(10).AsInterface(Int64NumberKind).(int64))
+	require.Equal(t, float64(11.11), NewFloat64Number(11.11).AsInterface(Float64NumberKind).(float64))
+	require.Equal(t, uint64(100), NewUint64Number(100).AsInterface(Uint64NumberKind).(uint64))
 }

@@ -57,8 +57,11 @@ func initTracer() {
 }
 
 func initMeter() *push.Controller {
-	selector := simple.New()
-	exporter, err := metricstdout.New(metricstdout.Options{PrettyPrint: false})
+	selector := simple.NewWithExactMeasure()
+	exporter, err := metricstdout.New(metricstdout.Options{
+		Quantiles:   []float64{0.5, 0.9, 0.99},
+		PrettyPrint: false,
+	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
