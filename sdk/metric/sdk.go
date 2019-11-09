@@ -210,15 +210,11 @@ func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
 	return i.acquireHandle(labs)
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) error {
+func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Release()
-	err := h.RecordOne(ctx, number)
-	if err != nil {
-		i.meter.errorHandler(err)
-	}
-	return err
+	h.RecordOne(ctx, number)
 }
 
 // New constructs a new SDK for the given batcher.  This SDK supports
@@ -439,10 +435,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		err := meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
-		if err != nil {
-			m.errorHandler(err)
-		}
+		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
@@ -455,22 +448,19 @@ func (m *SDK) GetDescriptor(inst metric.InstrumentImpl) *export.Descriptor {
 	return nil
 }
 
-func (l *labels) Meter() api.Meter {
-	return l.meter
-}
-
-func (r *record) RecordOne(ctx context.Context, number core.Number) error {
+func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
-		return nil
+		return
 	}
 	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
-		return err
+		r.labels.meter.errorHandler(err)
+		return
 	}
 	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
-		return err
+		r.labels.meter.errorHandler(err)
+		return
 	}
-	return nil
 }
 
 func (r *record) Release() {
