@@ -16,11 +16,14 @@ package metric_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -31,9 +34,12 @@ import (
 )
 
 type correctnessBatcher struct {
-	t   *testing.T
-	agg export.Aggregator
+	t       *testing.T
+	agg     export.Aggregator
+	records []export.Record
 }
+
+type testLabelEncoder struct{}
 
 func (cb *correctnessBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return cb.agg
@@ -45,7 +51,12 @@ func (cb *correctnessBatcher) ReadCheckpoint() export.Producer {
 }
 
 func (cb *correctnessBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+	cb.records = append(cb.records, export.NewRecord(desc, labels, agg))
 	return nil
+}
+
+func (testLabelEncoder) EncodeLabels(labels []core.KeyValue) string {
+	return fmt.Sprint(labels)
 }
 
 func TestInputRangeTestCounter(t *testing.T) {
@@ -143,4 +154,30 @@ func TestRecordNaN(t *testing.T) {
 	require.Nil(t, err)
 	g.Set(ctx, math.NaN(), sdk.Labels())
 	require.Error(t, err)
+}
+
+func TestSDKLabelEncoder(t *testing.T) {
+	ctx := context.Background()
+	cagg := counter.New()
+	batcher := &correctnessBatcher{
+		t:   t,
+		agg: cagg,
+	}
+	sdk := sdk.New(batcher, testLabelEncoder{})
+
+	measure := sdk.NewFloat64Measure("measure")
+	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
+
+	sdk.Collect(ctx)
+
+	require.Equal(t, 1, len(batcher.records))
+
+	labels := batcher.records[0].Labels()
+	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
+}
+
+func TestDefaultLabelEncoder(t *testing.T) {
+	encoder := sdk.DefaultLabelEncoder()
+	encoded := encoder.EncodeLabels([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
+	require.Equal(t, `A=B,C=D`, encoded)
 }
