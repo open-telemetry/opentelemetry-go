@@ -21,10 +21,16 @@ import (
 )
 
 type (
+	// This is to test that embedding binary.Propagators helps to
+	// implement the Propagator interface with the implementation
+	// having a value receiver.
 	testValuePropagator struct {
 		binary.Propagators
 	}
 
+	// This is to test that embedding binary.Propagators helps to
+	// implement the Propagator interface with the implementation
+	// having a pointer receiver.
 	testPointerPropagator struct {
 		binary.Propagators
 	}
