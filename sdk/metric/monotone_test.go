@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
@@ -67,6 +68,8 @@ func TestMonotoneGauge(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+
+	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
 	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
@@ -111,7 +114,14 @@ func TestMonotoneGauge(t *testing.T) {
 	require.Equal(t, 4, batcher.collections)
 
 	// Try to lower the value to 1, it will fail.
+	var err error
+	sdk.SetErrorHandler(func(sdkErr error) {
+		err = sdkErr
+	})
 	handle.Set(ctx, 1)
+	require.Equal(t, aggregator.ErrNonMonotoneInput, err)
+	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
+
 	sdk.Collect(ctx)
 
 	// The value and timestamp are both unmodified

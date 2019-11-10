@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"math"
 	"sync/atomic"
 )
 
@@ -566,6 +567,21 @@ func (n Number) Emit(kind NumberKind) string {
 		return fmt.Sprintf("%d", n.AsUint64())
 	default:
 		return ""
+	}
+}
+
+// AsInterface returns the number as an interface{}, typically used
+// for NumberKind-correct JSON conversion.
+func (n Number) AsInterface(kind NumberKind) interface{} {
+	switch kind {
+	case Int64NumberKind:
+		return n.AsInt64()
+	case Float64NumberKind:
+		return n.AsFloat64()
+	case Uint64NumberKind:
+		return n.AsUint64()
+	default:
+		return math.NaN()
 	}
 }
 

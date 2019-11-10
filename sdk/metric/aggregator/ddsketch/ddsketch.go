@@ -26,19 +26,24 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
+// Config is an alias for the underlying DDSketch config object.
+type Config = sdk.Config
+
 // Aggregator aggregates measure events.
 type Aggregator struct {
 	lock       sync.Mutex
-	cfg        *sdk.Config
+	cfg        *Config
 	kind       core.NumberKind
 	current    *sdk.DDSketch
 	checkpoint *sdk.DDSketch
 }
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
+func New(cfg *Config, desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
 		cfg:     cfg,
 		kind:    desc.NumberKind(),
@@ -51,7 +56,7 @@ func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 // TODO: The Config constructor should probably set minValue to -Inf
 // to aggregate metrics with absolute=false.  This requires providing values
 // for alpha and maxNumBins
-func NewDefaultConfig() *sdk.Config {
+func NewDefaultConfig() *Config {
 	return sdk.NewDefaultConfig()
 }
 
@@ -77,6 +82,9 @@ func (c *Aggregator) Min() (core.Number, error) {
 
 // Quantile returns the estimated quantile of the checkpoint.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	if c.checkpoint.Count() == 0 {
+		return core.Number(0), aggregator.ErrEmptyDataSet
+	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
 		return core.Number(0), aggregator.ErrInvalidQuantile

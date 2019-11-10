@@ -45,20 +45,26 @@ func initTracer() {
 	var err error
 	exp, err := tracestdout.NewExporter(tracestdout.Options{PrettyPrint: false})
 	if err != nil {
-		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		log.Panicf("failed to initialize trace stdout exporter %v", err)
 		return
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
-		log.Panicf("failed to initialize trace provider %v\n", err)
+		log.Panicf("failed to initialize trace provider %v", err)
 	}
 	global.SetTraceProvider(tp)
 }
 
 func initMeter() *push.Controller {
-	selector := simple.New()
-	exporter := metricstdout.New(metricstdout.Options{PrettyPrint: false})
+	selector := simple.NewWithExactMeasure()
+	exporter, err := metricstdout.New(metricstdout.Options{
+		Quantiles:   []float64{0.5, 0.9, 0.99},
+		PrettyPrint: false,
+	})
+	if err != nil {
+		log.Panicf("failed to initialize metric stdout exporter %v", err)
+	}
 	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()

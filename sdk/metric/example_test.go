@@ -16,6 +16,7 @@ package metric_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel/api/key"
@@ -28,11 +29,14 @@ import (
 )
 
 func ExampleNew() {
-	selector := simple.New()
-	exporter := stdout.New(stdout.Options{
+	selector := simple.NewWithInexpensiveMeasure()
+	exporter, err := stdout.New(stdout.Options{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
 	})
+	if err != nil {
+		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
+	}
 	batcher := defaultkeys.New(selector, sdk.DefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
@@ -53,7 +57,7 @@ func ExampleNew() {
 	// 	"updates": [
 	// 		{
 	// 			"name": "a.counter{key=value}",
-	// 			"sum": "100"
+	// 			"sum": 100
 	// 		}
 	// 	]
 	// }

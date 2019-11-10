@@ -25,7 +25,7 @@ import (
 var (
 	ErrEmptyDataSet     = fmt.Errorf("The result is not defined on an empty data set")
 	ErrInvalidQuantile  = fmt.Errorf("The requested quantile is out of range")
-	ErrNegativeInput    = fmt.Errorf("Negative value is out of range for this instrumentr")
+	ErrNegativeInput    = fmt.Errorf("Negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrNonMonotoneInput = fmt.Errorf("The new value is not monotone")
 	ErrInconsistentType = fmt.Errorf("Cannot merge different aggregator types")

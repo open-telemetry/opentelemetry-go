@@ -12,29 +12,88 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simpler"
+package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
 )
 
-type selector struct{}
+type (
+	selectorInexpensive struct{}
+	selectorExact       struct{}
+	selectorSketch      struct {
+		config *ddsketch.Config
+	}
+)
 
-// New returns a simple aggregation selector that uses counter, gauge,
-// and maxsumcount behavior for the three kinds of metric.
-func New() export.AggregationSelector {
-	return selector{}
+var (
+	_ export.AggregationSelector = selectorInexpensive{}
+	_ export.AggregationSelector = selectorSketch{}
+	_ export.AggregationSelector = selectorExact{}
+)
+
+// NewWithInexpensiveMeasure returns a simple aggregation selector
+// that uses counter, gauge, and maxsumcount aggregators for the three
+// kinds of metric.  This selector is faster and uses less memory than
+// the others because maxsumcount does not aggregate quantile
+// information.
+func NewWithInexpensiveMeasure() export.AggregationSelector {
+	return selectorInexpensive{}
 }
 
-func (s selector) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+// NewWithSketchMeasure returns a simple aggregation selector that
+// uses counter, gauge, and ddsketch aggregators for the three kinds
+// of metric.  This selector uses more cpu and memory than the
+// NewWithInexpensiveMeasure because it uses one DDSketch per distinct
+// measure and labelset.
+func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
+	return selectorSketch{
+		config: config,
+	}
+}
+
+// NewWithExactMeasure returns a simple aggregation selector that uses
+// counter, gauge, and array behavior for the three kinds of metric.
+// This selector uses more memory than the NewWithSketchMeasure
+// because it aggregates an array of all values, therefore is able to
+// compute exact quantiles.
+func NewWithExactMeasure() export.AggregationSelector {
+	return selectorExact{}
+}
+
+func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
 		return maxsumcount.New()
+	default:
+		return counter.New()
+	}
+}
+
+func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
+	case export.GaugeKind:
+		return gauge.New()
+	case export.MeasureKind:
+		return ddsketch.New(s.config, descriptor)
+	default:
+		return counter.New()
+	}
+}
+
+func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
+	case export.GaugeKind:
+		return gauge.New()
+	case export.MeasureKind:
+		return array.New()
 	default:
 		return counter.New()
 	}

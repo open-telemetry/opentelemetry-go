@@ -32,6 +32,7 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.Sum = &Aggregator{}
 
 // New returns a new counter aggregator.  This aggregator computes an
 // atomic sum.
