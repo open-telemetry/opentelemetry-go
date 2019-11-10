@@ -41,7 +41,7 @@ type Options struct {
 	PrettyPrint bool
 
 	// DoNotPrintTime suppresses timestamp printing.  This is
-	// useful to create testable examples or if the are being
+	// useful to create deterministic test conditions.
 	DoNotPrintTime bool
 
 	// Quantiles are the desired aggregation quantiles for measure

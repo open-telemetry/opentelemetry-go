@@ -23,7 +23,13 @@ import (
 )
 
 type defaultLabelEncoder struct {
-	// pool is a pool of labelset builders.
+	// pool is a pool of labelset builders.  The buffers in this
+	// pool grow to a size that most label encodings will not
+	// allocate new memory.  This pool reduces the number of
+	// allocations per new LabelSet to 3, typically, as seen in
+	// the benchmarks.  (It should be 2--one for the LabelSet
+	// object and one for the buffer.String() here--see the extra
+	// allocation in the call to sort.Stable).
 	pool sync.Pool // *bytes.Buffer
 }
 

@@ -25,7 +25,7 @@ instrument (Counter, Gauge, Measure) crossed with two kinds of number
 
 The API assists the SDK by consolidating the variety of metric instruments
 into a narrower interface, allowing the SDK to avoid repetition of
-boilerplate.  The API and SDK are separated such that an event reacheing
+boilerplate.  The API and SDK are separated such that an event reaching
 the SDK has a uniform structure: an instrument, a label set, and a
 numerical value.
 
@@ -141,7 +141,7 @@ provide the serialization logic for labels.  This allows avoiding
 duplicate serialization of labels, once as a unique key in the SDK (or
 Batcher) and once in the exporter.
 
-Producer is an interface between the Batcher and the controller.
+Producer is an interface between the Batcher and the Exporter.
 After completing a collection pass, the Batcher.ReadCheckpoint()
 method returns a Producer, which the Exporter uses to iterate over all
 the updated metrics.

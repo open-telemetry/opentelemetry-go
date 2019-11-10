@@ -52,9 +52,14 @@ type Batcher interface {
 	// instrument.
 	//
 	// The result from AggregatorSelector.AggregatorFor should be
-	// deterministic given a metric instrument and label set,
-	// since occasionally the SDK will have multiple Aggregators
-	// for the same metric, due to tolerated race conditions.
+	// the same type for a given Descriptor or else nil.  The same
+	// type should be returned for a given descriptor, because
+	// Aggregators only know how to Merge with their own type.  If
+	// the result is nil, the metric instrument will be disabled.
+	//
+	// Note that the SDK only calls AggregatorFor when new records
+	// require an Aggregator. This does not provide a way to
+	// disable metrics with active records.
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
@@ -259,7 +264,7 @@ func (r *Record) Labels() Labels {
 	return r.labels
 }
 
-// Kind describes the kind of instrument.
+// MetricKind describes the kind of instrument.
 type MetricKind int8
 
 const (
@@ -276,7 +281,7 @@ const (
 // Descriptor describes a metric instrument to the exporter.
 //
 // Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identfy the instrument in an
+// descriptor may be used to uniquely identify the instrument in an
 // exporter.
 type Descriptor struct {
 	name        string
@@ -292,7 +297,7 @@ type Descriptor struct {
 // implementations in constructing new metric instruments.
 //
 // Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identfy the instrument in an
+// descriptor may be used to uniquely identify the instrument in an
 // exporter.
 func NewDescriptor(
 	name string,

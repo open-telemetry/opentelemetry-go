@@ -257,6 +257,8 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 
 	// Sort and de-duplicate.
 	sorted := sortedLabels(kvs)
+
+	// TODO: Find a way to avoid the memory allocation here:
 	sort.Stable(&sorted)
 	oi := 1
 	for i := 1; i < len(sorted); i++ {

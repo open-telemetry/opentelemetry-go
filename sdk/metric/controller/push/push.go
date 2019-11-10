@@ -43,8 +43,14 @@ type Controller struct {
 var _ metric.Provider = &Controller{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provider batcher, exporter, period.  The batcher itself
-// is configured with aggregation policy selection.
+// using the provided batcher, exporter, and collection period to
+// configure an SDK with periodic collection.  The batcher itself is
+// configured with the aggregation selector policy.
+//
+// If the Exporter implements the export.LabelEncoder interface, the
+// exporter will be used as the label encoder for the SDK itself,
+// otherwise the SDK will be configured with the default label
+// encoder.
 func New(batcher export.Batcher, exporter export.Exporter, period time.Duration) *Controller {
 	lencoder, _ := exporter.(export.LabelEncoder)
 
@@ -130,6 +136,8 @@ func (c *Controller) run(ch chan struct{}) {
 }
 
 func (c *Controller) tick() {
+	// TODO: either remove the context argument from Export() or
+	// configure a timeout here?
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
 	err := c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
