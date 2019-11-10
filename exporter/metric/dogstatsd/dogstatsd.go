@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package statsd // import "go.opentelemetry.io/otel/exporter/metric/statsd"
+package dogstatsd // import "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/api/unit"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -45,45 +47,70 @@ type (
 	}
 
 	Exporter struct {
-		config Config
-		pool   sync.Pool
+		config     Config
+		labelpool  sync.Pool
+		packetpool sync.Pool
+		conn       net.Conn
 
 		// buffer bytes.Buffer
 	}
+)
 
-	formatCode string
+const (
+	formatCounter   = "c"
+	formatHistogram = "h"
+	formatGauge     = "g"
+	formatTiming    = "ms"
 )
 
 var (
-	_ export.MetricExporter     = &Exporter{}
-	_ export.MetricLabelEncoder = &Exporter{}
+	_ export.Exporter     = &Exporter{}
+	_ export.LabelEncoder = &Exporter{}
+
+	ErrInvalidScheme = fmt.Errorf("Invalid statsd transport")
 )
 
 func New(config Config) (*Exporter, error) {
-	// Connect asynchronously
+	newBuffer := func() interface{} {
+		return &bytes.Buffer{}
+	}
 	exp := &Exporter{
-		config: config,
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &bytes.Buffer{}
-			},
-		},
+		config:     config,
+		labelpool:  sync.Pool{New: newBuffer},
+		packetpool: sync.Pool{New: newBuffer},
+	}
+	var err error
+	if exp.conn, err = exp.connect(); err != nil {
+		return nil, err
 	}
 	return exp, nil
 }
 
-func (e *Exporter) connect() (*net.Conn, error) {
+func (e *Exporter) connect() (net.Conn, error) {
+	dest, err := url.Parse(e.config.URL)
+	if err != nil {
+		return nil, err
+	}
 
+	scheme := dest.Scheme
+	switch scheme {
+	case "udp":
+	case "unix":
+		scheme = "unixgram"
+	default:
+		return nil, ErrInvalidScheme
+	}
+	return net.DialTimeout(scheme, dest.Host, e.config.DialTimeout)
 }
 
-func (e *Exporter) EncodeLabels([]core.KeyValue) string {
-	buf := e.pool.Get().(*bytes.Buffer)
-	defer e.pool.Put(buf)
+func (e *Exporter) EncodeLabels(labels []core.KeyValue) string {
+	buf := e.labelpool.Get().(*bytes.Buffer)
+	defer e.labelpool.Put(buf)
 	buf.Reset()
 
 	delimiter := "|#"
 
-	for i, kv := range labels {
+	for _, kv := range labels {
 		_, _ = buf.WriteString(delimiter)
 		_, _ = buf.WriteString(string(kv.Key))
 		_, _ = buf.WriteRune(':')
@@ -93,187 +120,111 @@ func (e *Exporter) EncodeLabels([]core.KeyValue) string {
 	return buf.String()
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.MetricProducer) {
-	producer.Foreach(e.exportOne)
+func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
+	buf := e.packetpool.Get().(*bytes.Buffer)
+	defer e.packetpool.Put(buf)
+	buf.Reset()
+
+	var retErr error
+
+	producer.Foreach(func(rec export.Record) {
+		before := buf.Len()
+
+		e.exportOne(rec, buf)
+
+		if buf.Len() < e.config.MaxPacketSize {
+			return
+		}
+		if before == 0 {
+			// A single metric >= packet size
+			if err := e.send(buf.Bytes()); err != nil && retErr == nil {
+				retErr = err
+			}
+			buf.Reset()
+			return
+		}
+
+		// Send and copy the leftover
+		if err := e.send(buf.Bytes()[:before]); err != nil && retErr == nil {
+			retErr = err
+		}
+
+		leftover := buf.Len() - before
+
+		copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
+
+		buf.Truncate(leftover)
+	})
+	if err := e.send(buf.Bytes()); err != nil && retErr == nil {
+		retErr = err
+	}
+	return retErr
 }
 
-func (e *Exporter) exportOne(MetricAggregator, ProducedRecord) {
+// For basic statsd, see
+// https://github.com/statsd/statsd/edit/master/docs/metric_types.md
+func (e *Exporter) exportOne(rec export.Record, buf *bytes.Buffer) {
+	desc := rec.Descriptor()
+	kind := desc.NumberKind()
+	agg := rec.Aggregator()
+	labels := rec.Labels()
+
+	if pts, ok := agg.(aggregator.Points); ok {
+		var format string
+		if desc.Unit() == unit.Milliseconds {
+			format = formatHistogram
+		} else {
+			format = formatTiming
+		}
+		for _, pt := range pts.Points() {
+			_, _ = buf.WriteString(desc.Name())
+			_, _ = buf.WriteRune(':')
+			writeNumber(buf, pt, kind)
+			_, _ = buf.WriteRune('|')
+			_, _ = buf.WriteString(format)
+		}
+
+	} else if sum, ok := agg.(aggregator.Sum); ok {
+		_, _ = buf.WriteString(desc.Name())
+		_, _ = buf.WriteRune(':')
+		writeNumber(buf, sum.Sum(), kind)
+		_, _ = buf.WriteRune('|')
+		_, _ = buf.WriteString(formatCounter)
+
+	} else if lv, ok := agg.(aggregator.LastValue); ok {
+		_, _ = buf.WriteString(desc.Name())
+		_, _ = buf.WriteRune(':')
+		writeNumber(buf, lv.LastValue(), kind)
+		_, _ = buf.WriteRune('|')
+		_, _ = buf.WriteString(formatGauge)
+	}
+
+	_, _ = buf.WriteString(labels.Encoded())
+	_, _ = buf.WriteRune('\n')
 }
 
-// @@@ DEAD CODE BELOW
-
-const (
-	formatCounter   formatCode = "c"
-	formatHistogram formatCode = "h"
-	formatGauge     formatCode = "g"
-	formatTiming    formatCode = "ms"
-)
-
-func (sink *statsdSink) sendToFlusher() {
-	buf := sink.statBufferPool.Get()
-	// metric:value|type|#tag1:value1,tag2:value2
-	// we use buf.WriteString instead of Fprintf because it's faster
-	// as per documentation, WriteString never returns an error, so we ignore it here
-	_, _ = buf.WriteString(sink.namespace)
-	_, _ = buf.WriteString(name)
-	_, _ = buf.WriteString(":")
-	writeFloat(buf, value)
-	_, _ = buf.WriteString("|")
-	_, _ = buf.WriteString(string(statsdFormat))
-
-	if len(tags) > 0 && len(tagString) > 0 {
-		log.Warning(ctx, "Tags provided in multiple formats, one set will be dropped")
+func (e *Exporter) send(buf []byte) error {
+	for len(buf) != 0 {
+		n, err := e.conn.Write(buf)
+		if err != nil {
+			return err
+		}
+		buf = buf[n:]
 	}
-
-	if len(tags) > 0 {
-		sink.serializeTagsToBuffer(tags, buf)
-	} else if len(tagString) > 0 {
-		_, _ = buf.WriteString(tagString)
-	}
-
+	return nil
 }
 
-func writeFloat(buf *bytes.Buffer, f float64) {
-	var bs [128]byte
-	fmtd := strconv.AppendFloat(bs[:0], f, 'g', -1, 64)
-	_, _ = buf.Write(fmtd)
-}
+func writeNumber(buf *bytes.Buffer, num core.Number, kind core.NumberKind) {
+	var tmp [128]byte
+	var conv []byte
+	switch kind {
+	case core.Int64NumberKind:
+		conv = strconv.AppendInt(tmp[:0], num.AsInt64(), 10)
+	case core.Float64NumberKind:
+		conv = strconv.AppendFloat(tmp[:0], num.AsFloat64(), 'g', -1, 64)
+	case core.Uint64NumberKind:
+		conv = strconv.AppendUint(tmp[:0], num.AsUint64(), 10)
 
-func (sink *statsdSink) flusher(ctx context.Context) error {
-	defer close(sink.flushes)
-
-	var currentConn net.Conn
-	defer func() {
-		var err error
-		if currentConn != nil {
-			if err = currentConn.Close(); err != nil {
-				log.Errorf(ctx, "error while closing connection to statsd: %v", err)
-			}
-		}
-	}()
-	nextFlush := time.After(sink.flushInterval)
-
-	buffer := &bytes.Buffer{}
-	flushBuffer := func() {
-		ctx := context.Background()
-		var err error
-		if sink.config.AggregateMetrics.VerboseTracing {
-			var finish trace.FinishFunc
-			ctx, finish = trace.Start(ctx, "statsdSink.flusher.flushBuffer")
-			defer finish(&err)
-		}
-
-		// Make sure to reset the buffer before returning early to avoid leaks
-		data := buffer.Next(buffer.Len())
-		buffer.Reset()
-
-		if currentConn == nil {
-			var conn net.Conn
-			conn, err = sink.dialer()
-			if err != nil {
-				log.Errorf(ctx, "error while connecting to statsd: %v", err)
-				return
-			}
-			currentConn = conn
-		}
-
-		_ = currentConn.SetWriteDeadline(time.Now().Add(writeTimeout))
-		var written int
-		for written = 0; written < len(data); {
-			var n int
-			n, err = sink.writeWithTracing(ctx, currentConn, data[written:])
-
-			if err != nil {
-				log.Errorf(ctx, "error while writing to statsd: %v", err)
-				currentConn = nil
-				return
-			}
-			written += n
-		}
-		// This was done to avoid high cardinality tags as the desired information was to distinguish
-		// between batches that require multiple sends vs. batches that only require a single send.
-		if sink.config.AggregateMetrics.VerboseTracing {
-			approxBytes := func(bytes int) string {
-				operator := "<="
-				if bytes > batchSizeBytes {
-					operator = ">"
-				}
-				return fmt.Sprintf("%v %v", operator, batchSizeBytes)
-			}
-			trace.SetTag(ctx, tag.String("metrics_bytes_written", approxBytes(written)))
-		}
 	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case stat, ok := <-sink.toFlusher:
-			if !ok {
-				if buffer.Len() > 0 {
-					flushBuffer()
-				}
-				return ctx.Err()
-			}
-
-			_, _ = stat.WriteTo(buffer)
-			sink.statBufferPool.Put(stat)
-			_, _ = buffer.WriteString("\n")
-
-			if buffer.Len() >= batchSizeBytes {
-				flushBuffer()
-			}
-			// TODO: change this to use a jittered ticker that drops ticks?
-		case <-nextFlush:
-			flushBuffer()
-			nextFlush = time.After(sink.flushInterval)
-		}
-	}
-}
-
-func (sink *statsdSink) serializeTagsToString(tags []instrument.Tags) string {
-	buf := sink.tagBufferPool.Get()
-	defer sink.tagBufferPool.Put(buf)
-	sink.serializeTagsToBuffer(tags, buf)
-	return buf.String()
-}
-
-func (sink *statsdSink) serializeTagsToBuffer(tags []instrument.Tags, buf *bytes.Buffer) {
-	// This function should always return a non-nil value, so get a new buffer from the shared pool if needed
-	if len(tags) == 0 {
-		return
-	}
-
-	excludedTags := sink.LoadExcluded()
-	delimiter := "|#"
-	for _, tags := range tags {
-		for _, t := range tags {
-			if !excludedTags.IsExcluded(t) {
-				_, _ = buf.WriteString(delimiter)
-				t.WriteTo(buf)
-				delimiter = ","
-			}
-		}
-	}
-}
-
-// TODO: dial async so if statsd is down, we don't error
-func NewStatsdSinkUDS(namespace string, cfg DatadogConfig) Sink {
-	addr := cfg.Address()
-	if addr == "" {
-		return &nullSink{}, nil
-	}
-	var dialer func() (net.Conn, error)
-	if strings.HasPrefix(addr, "unix://") {
-		addr = strings.TrimPrefix(addr, "unix://")
-		dialer = func() (net.Conn, error) {
-			return net.Dial("unixgram", addr)
-		}
-	} else {
-		dialer = func() (net.Conn, error) {
-			return net.Dial("udp", addr)
-		}
-	}
-
-	return newStatsdSinkWithDialer(context.Background(), namespace, cfg, clockwork.NewRealClock(), dialer)
+	_, _ = buf.Write(conv)
 }

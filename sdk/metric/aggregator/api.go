@@ -45,6 +45,10 @@ type (
 		Timestamp() time.Time
 	}
 
+	Points interface {
+		Points() []core.Number
+	}
+
 	MaxSumCount interface {
 		Sum
 		Count
