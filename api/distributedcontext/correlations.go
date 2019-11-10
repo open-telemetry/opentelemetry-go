@@ -42,10 +42,8 @@ func (c *Correlation) CorrelationValue() CorrelationValue {
 	}
 }
 
-type rawCorrelationsMap map[core.Key]CorrelationValue
-
 type Correlations struct {
-	m rawCorrelationsMap
+	m map[core.Key]CorrelationValue
 }
 
 type CorrelationsUpdate struct {
@@ -54,22 +52,14 @@ type CorrelationsUpdate struct {
 	Map      Correlations
 }
 
-func newCorrelations(raw rawCorrelationsMap) Correlations {
+func NewCorrelations() Correlations {
 	return Correlations{
-		m: raw,
+		m: nil,
 	}
 }
 
-func NewEmptyCorrelations() Correlations {
-	return newCorrelations(nil)
-}
-
-func NewCorrelations(update CorrelationsUpdate) Correlations {
-	return NewEmptyCorrelations().Apply(update)
-}
-
 func (m Correlations) Apply(update CorrelationsUpdate) Correlations {
-	r := make(rawCorrelationsMap, len(m.m)+len(update.MultiKV)+update.Map.Len())
+	r := make(map[core.Key]CorrelationValue, len(m.m)+len(update.MultiKV)+update.Map.Len())
 	for k, v := range m.m {
 		r[k] = v
 	}
@@ -85,7 +75,9 @@ func (m Correlations) Apply(update CorrelationsUpdate) Correlations {
 	if len(r) == 0 {
 		r = nil
 	}
-	return newCorrelations(r)
+	return Correlations{
+		m: r,
+	}
 }
 
 func (m Correlations) Value(k core.Key) (CorrelationValue, bool) {

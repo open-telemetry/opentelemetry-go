@@ -39,12 +39,12 @@ func (testValuePropagator) Inject(core.SpanContext, dctx.Correlations, dctx.Bagg
 }
 
 func (testValuePropagator) Extract(http.Supplier) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }
 
 func (*testPointerPropagator) Inject(core.SpanContext, dctx.Correlations, dctx.Baggage, http.Supplier) {
 }
 
 func (*testPointerPropagator) Extract(http.Supplier) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }

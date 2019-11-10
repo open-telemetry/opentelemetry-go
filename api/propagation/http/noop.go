@@ -44,21 +44,21 @@ func (NoopCorrelationsPropagator) Inject(dctx.Correlations, Supplier) {
 }
 
 func (NoopCorrelationsPropagator) Extract(Supplier) dctx.Correlations {
-	return dctx.NewEmptyCorrelations()
+	return dctx.NewCorrelations()
 }
 
 func (NoopBaggagePropagator) Inject(dctx.Baggage, Supplier) {
 }
 
 func (NoopBaggagePropagator) Extract(Supplier) dctx.Baggage {
-	return dctx.NewEmptyBaggage()
+	return dctx.NewBaggage()
 }
 
 func (NoopPropagator) Inject(core.SpanContext, dctx.Correlations, dctx.Baggage, Supplier) {
 }
 
 func (NoopPropagator) Extract(Supplier) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }
 
 func (NoopPropagator) SpanContextPropagator() SpanContextPropagator {

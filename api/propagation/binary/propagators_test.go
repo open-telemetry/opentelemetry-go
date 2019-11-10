@@ -40,7 +40,7 @@ func (testValuePropagator) ToBytes(core.SpanContext, dctx.Correlations, dctx.Bag
 }
 
 func (testValuePropagator) FromBytes([]byte) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }
 
 func (*testPointerPropagator) ToBytes(core.SpanContext, dctx.Correlations, dctx.Baggage) []byte {
@@ -48,5 +48,5 @@ func (*testPointerPropagator) ToBytes(core.SpanContext, dctx.Correlations, dctx.
 }
 
 func (*testPointerPropagator) FromBytes([]byte) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }

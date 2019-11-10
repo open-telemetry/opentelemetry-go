@@ -18,10 +18,8 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type rawBaggageMap map[core.Key]core.Value
-
 type Baggage struct {
-	m rawBaggageMap
+	m map[core.Key]core.Value
 }
 
 type BaggageUpdate struct {
@@ -33,22 +31,14 @@ type BaggageUpdate struct {
 	Map      Baggage
 }
 
-func newBaggage(raw rawBaggageMap) Baggage {
+func NewBaggage() Baggage {
 	return Baggage{
-		m: raw,
+		m: nil,
 	}
 }
 
-func NewEmptyBaggage() Baggage {
-	return newBaggage(nil)
-}
-
-func NewBaggage(update BaggageUpdate) Baggage {
-	return NewEmptyBaggage().Apply(update)
-}
-
 func (m Baggage) Apply(update BaggageUpdate) Baggage {
-	r := make(rawBaggageMap, len(m.m)+len(update.MultiKV)+update.Map.Len())
+	r := make(map[core.Key]core.Value, len(m.m)+len(update.MultiKV)+update.Map.Len())
 	for k, v := range m.m {
 		r[k] = v
 	}
@@ -70,7 +60,9 @@ func (m Baggage) Apply(update BaggageUpdate) Baggage {
 	if len(r) == 0 {
 		r = nil
 	}
-	return newBaggage(r)
+	return Baggage{
+		m: r,
+	}
 }
 
 func (m Baggage) Value(k core.Key) (core.Value, bool) {

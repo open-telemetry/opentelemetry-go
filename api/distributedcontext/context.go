@@ -44,7 +44,7 @@ func CorrelationsFromContext(ctx context.Context) Correlations {
 	if m, ok := ctx.Value(ctxCorrelationsKey).(Correlations); ok {
 		return m
 	}
-	return NewEmptyCorrelations()
+	return NewCorrelations()
 }
 
 func NewBaggageContext(ctx context.Context, baggage Baggage) context.Context {
@@ -55,7 +55,7 @@ func BaggageFromContext(ctx context.Context) Baggage {
 	if m, ok := ctx.Value(ctxBaggageKey).(Baggage); ok {
 		return m
 	}
-	return NewEmptyBaggage()
+	return NewBaggage()
 }
 
 func withCorrelationsMapUpdate(ctx context.Context, update CorrelationsUpdate) context.Context {

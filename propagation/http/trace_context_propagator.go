@@ -153,7 +153,7 @@ func (CorrelationContextPropagator) Inject(correlations dctx.Correlations, suppl
 func (CorrelationContextPropagator) Extract(supplier apipropagation.Supplier) dctx.Correlations {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
-		return dctx.NewEmptyCorrelations()
+		return dctx.NewCorrelations()
 	}
 
 	contextValues := strings.Split(correlationContext, ",")

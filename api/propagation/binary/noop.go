@@ -46,7 +46,7 @@ func (NoopCorrelationsPropagator) ToBytes(dctx.Correlations) []byte {
 }
 
 func (NoopCorrelationsPropagator) FromBytes([]byte) dctx.Correlations {
-	return dctx.NewEmptyCorrelations()
+	return dctx.NewCorrelations()
 }
 
 func (NoopBaggagePropagator) ToBytes(dctx.Baggage) []byte {
@@ -54,7 +54,7 @@ func (NoopBaggagePropagator) ToBytes(dctx.Baggage) []byte {
 }
 
 func (NoopBaggagePropagator) FromBytes([]byte) dctx.Baggage {
-	return dctx.NewEmptyBaggage()
+	return dctx.NewBaggage()
 }
 
 func (NoopPropagator) ToBytes(core.SpanContext, dctx.Correlations, dctx.Baggage) []byte {
@@ -62,7 +62,7 @@ func (NoopPropagator) ToBytes(core.SpanContext, dctx.Correlations, dctx.Baggage)
 }
 
 func (NoopPropagator) FromBytes([]byte) (core.SpanContext, dctx.Correlations, dctx.Baggage) {
-	return core.EmptySpanContext(), dctx.NewEmptyCorrelations(), dctx.NewEmptyBaggage()
+	return core.EmptySpanContext(), dctx.NewCorrelations(), dctx.NewBaggage()
 }
 
 func (NoopPropagator) SpanContextPropagator() SpanContextPropagator {

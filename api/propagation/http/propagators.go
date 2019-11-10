@@ -93,7 +93,7 @@ func (c chainCorrelationsPropagator) Extract(supplier Supplier) dctx.Correlation
 		}
 	}
 
-	return dctx.NewEmptyCorrelations()
+	return dctx.NewCorrelations()
 }
 
 type BaggagePropagator interface {
@@ -126,7 +126,7 @@ func (c chainBaggagePropagator) Extract(supplier Supplier) dctx.Baggage {
 		}
 	}
 
-	return dctx.NewEmptyBaggage()
+	return dctx.NewBaggage()
 }
 
 type Propagator interface {
