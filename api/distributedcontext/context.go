@@ -18,14 +18,11 @@ import (
 	"context"
 )
 
-type (
-	ctxCorrelationsType struct{}
-	ctxBaggageType      struct{}
-)
+type ctxKey int
 
-var (
-	ctxCorrelationsKey = &ctxCorrelationsType{}
-	ctxBaggageKey      = &ctxBaggageType{}
+const (
+	ctxCorrelationsKey ctxKey = iota
+	ctxBaggageKey
 )
 
 func NewCorrelationsContextKV(ctx context.Context, correlations ...Correlation) context.Context {
