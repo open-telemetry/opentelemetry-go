@@ -74,6 +74,9 @@ func New(config Config) (*Exporter, error) {
 	newBuffer := func() interface{} {
 		return &bytes.Buffer{}
 	}
+	if config.MaxPacketSize <= 0 {
+		config.MaxPacketSize = 1024
+	}
 	exp := &Exporter{
 		config:     config,
 		labelpool:  sync.Pool{New: newBuffer},
@@ -92,15 +95,36 @@ func (e *Exporter) connect() (net.Conn, error) {
 		return nil, err
 	}
 
+	// TODO: Figure out how to support a timeout
+
 	scheme := dest.Scheme
 	switch scheme {
-	case "udp":
+	case "udp", "udp4", "udp6":
+		udpAddr, err := net.ResolveUDPAddr(scheme, dest.Host)
+		locAddr := &net.UDPAddr{}
+		if err != nil {
+			return nil, err
+		}
+		conn, err := net.DialUDP(scheme, locAddr, udpAddr)
+		if err != nil {
+			return nil, err
+		}
+		return conn, err
 	case "unix":
 		scheme = "unixgram"
-	default:
-		return nil, ErrInvalidScheme
+		locAddr := &net.UnixAddr{}
+
+		sockAddr, err := net.ResolveUnixAddr(scheme, dest.Path)
+		if err != nil {
+			return nil, err
+		}
+		conn, err := net.DialUnix(scheme, locAddr, sockAddr)
+		if err != nil {
+			return nil, err
+		}
+		return conn, err
 	}
-	return net.DialTimeout(scheme, dest.Host, e.config.DialTimeout)
+	return nil, ErrInvalidScheme
 }
 
 func (e *Exporter) EncodeLabels(labels []core.KeyValue) string {

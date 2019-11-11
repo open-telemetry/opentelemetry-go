@@ -3,32 +3,53 @@ package dogstatsd_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/dogstatsd"
+
+	// "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func ExampleNew() {
-	// Create a server
-	const addr = "127.0.0.1:18999"
-
 	var wg sync.WaitGroup
+	finish := make(chan struct{}, 1)
+
+	// Create a server
+	tmpfile, err := ioutil.TempFile("", "examplegram")
+	if err != nil {
+		log.Fatal("Could not create tempfile: ", err)
+	}
+	path := tmpfile.Name()
+	_ = tmpfile.Close()
+	_ = os.Remove(path)
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			log.Fatal("Could not remove tempfile: ", err)
+		}
+	}()
+
+	laddr, err := net.ResolveUnixAddr("unixgram", tmpfile.Name())
+	if err != nil {
+		log.Fatal("Could not resolve address: ", tmpfile, ":", err)
+	}
+
 	wg.Add(1)
-	listener, err := net.ListenPacket("udp", addr)
+	listener, err := net.ListenUnixgram("unixgram", laddr)
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
 	defer listener.Close()
-
-	finish := make(chan struct{}, 1)
 
 	go func() {
 		defer wg.Done()
@@ -41,12 +62,13 @@ func ExampleNew() {
 			}
 
 			var buf [4096]byte
-			if n, _, err := listener.ReadFrom(buf[:]); err != nil {
+			n, _, err := listener.ReadFrom(buf[:])
+			if err != nil {
 				panic(fmt.Sprint("Read err: ", err))
 			} else if n >= len(buf) {
 				panic(fmt.Sprint("Read small buffer: ", n))
 			} else {
-				fmt.Print(buf[0:n])
+				fmt.Print(string(buf[0:n]))
 			}
 		}
 	}()
@@ -54,13 +76,13 @@ func ExampleNew() {
 	// Create a meter
 	selector := simple.NewWithExactMeasure()
 	exporter, err := dogstatsd.New(dogstatsd.Config{
-		URL: "udp://127.0.0.1:18899",
+		URL: fmt.Sprint("unix://", path),
 	})
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize dogstatsd exporter:", err))
 	}
 	batcher := ungrouped.New(selector, false)
-	pusher := push.New(batcher, exporter, time.Second)
+	pusher := push.New(batcher, exporter, time.Hour)
 	pusher.Start()
 
 	ctx := context.Background()
@@ -78,5 +100,5 @@ func ExampleNew() {
 	wg.Wait()
 
 	// Output:
-	// X
+	// a.counter:100|c|#key:value
 }
