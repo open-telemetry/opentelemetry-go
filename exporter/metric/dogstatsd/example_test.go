@@ -13,18 +13,15 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/dogstatsd"
-
-	// "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-func ExampleNew() {
-	var wg sync.WaitGroup
-	finish := make(chan struct{}, 1)
+func newStdoutServer() (string, func(), func()) {
+	wg := &sync.WaitGroup{}
+	finishChan := make(chan struct{}, 1)
 
-	// Create a server
 	tmpfile, err := ioutil.TempFile("", "examplegram")
 	if err != nil {
 		log.Fatal("Could not create tempfile: ", err)
@@ -32,12 +29,6 @@ func ExampleNew() {
 	path := tmpfile.Name()
 	_ = tmpfile.Close()
 	_ = os.Remove(path)
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			log.Fatal("Could not remove tempfile: ", err)
-		}
-	}()
 
 	laddr, err := net.ResolveUnixAddr("unixgram", tmpfile.Name())
 	if err != nil {
@@ -49,14 +40,13 @@ func ExampleNew() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	defer listener.Close()
 
 	go func() {
 		defer wg.Done()
 
 		for {
 			select {
-			case <-finish:
+			case <-finishChan:
 				return
 			default:
 			}
@@ -64,14 +54,31 @@ func ExampleNew() {
 			var buf [4096]byte
 			n, _, err := listener.ReadFrom(buf[:])
 			if err != nil {
-				panic(fmt.Sprint("Read err: ", err))
+				log.Fatal("Read err: ", err)
 			} else if n >= len(buf) {
-				panic(fmt.Sprint("Read small buffer: ", n))
+				log.Fatal("Read small buffer: ", n)
 			} else {
 				fmt.Print(string(buf[0:n]))
 			}
 		}
 	}()
+
+	return path, func() {
+			close(finishChan)
+			wg.Wait()
+		}, func() {
+			_ = listener.Close()
+			err := os.Remove(path)
+			if err != nil {
+				log.Fatal("Could not remove tempfile: ", err)
+			}
+		}
+}
+
+func ExampleNew() {
+	// Create a server
+	path, waitFunc, finishFunc := newStdoutServer()
+	defer finishFunc()
 
 	// Create a meter
 	selector := simple.NewWithExactMeasure()
@@ -79,7 +86,7 @@ func ExampleNew() {
 		URL: fmt.Sprint("unix://", path),
 	})
 	if err != nil {
-		panic(fmt.Sprintln("Could not initialize dogstatsd exporter:", err))
+		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
 	batcher := ungrouped.New(selector, false)
 	pusher := push.New(batcher, exporter, time.Hour)
@@ -96,8 +103,7 @@ func ExampleNew() {
 	counter.Add(ctx, 100, labels)
 	pusher.Stop()
 
-	close(finish)
-	wg.Wait()
+	waitFunc()
 
 	// Output:
 	// a.counter:100|c|#key:value
