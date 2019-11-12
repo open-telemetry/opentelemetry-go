@@ -82,7 +82,7 @@ func GaugeAgg(v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := gauge.New()
 	_ = gagg.Update(ctx, core.NewInt64Number(v), GaugeDesc)
-	gagg.Checkpoint(ctx, CounterDesc)
+	gagg.Checkpoint(ctx, GaugeDesc)
 	return gagg
 }
 

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"strconv"
@@ -29,13 +30,18 @@ import (
 )
 
 type (
+	// Config supports common options that apply to statsd exporters.
 	Config struct {
-		// URL describes the
-		//
+		// URL describes the destination for exporting statsd data.
 		// e.g., udp://host:port
 		//       tcp://host:port
 		//       unix:///socket/path
 		URL string
+
+		// Writer is an alternate to providing a URL.  When Writer is
+		// non-nil, URL will be ignored and the exporter will write to
+		// the configured Writer interface.
+		Writer io.Writer
 
 		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
@@ -43,13 +49,18 @@ type (
 		// TODO support Dial and Write timeouts
 	}
 
+	// Exporter is common type meant to implement concrete statsd
+	// exporters.
 	Exporter struct {
 		adapter Adapter
 		config  Config
 		conn    net.Conn
+		writer  io.Writer
 		buffer  bytes.Buffer
 	}
 
+	// Adapter supports statsd syntax variations, primarily plain
+	// statsd vs. dogstatsd.
 	Adapter interface {
 		AppendName(export.Record, *bytes.Buffer)
 		AppendTags(export.Record, *bytes.Buffer)
@@ -75,12 +86,25 @@ func NewExporter(config Config, adapter Adapter) (*Exporter, error) {
 	if config.MaxPacketSize <= 0 {
 		config.MaxPacketSize = MaxPacketSize
 	}
-
-	conn, err := dial(config.URL)
+	var writer io.Writer
+	var conn net.Conn
+	var err error
+	if config.Writer != nil {
+		writer = config.Writer
+	} else {
+		conn, err = dial(config.URL)
+		if conn != nil {
+			writer = conn
+		}
+	}
+	// TODO: If err != nil, we return it _with_ a valid exporter; the
+	// exporter should attempt to re-dial if it's retryable.  Add a
+	// Start() and Stop() API.
 	return &Exporter{
 		adapter: adapter,
 		config:  config,
 		conn:    conn,
+		writer:  writer,
 	}, err
 }
 
@@ -164,7 +188,7 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 
 func (e *Exporter) send(buf []byte) error {
 	for len(buf) != 0 {
-		n, err := e.conn.Write(buf)
+		n, err := e.writer.Write(buf)
 		if err != nil {
 			return err
 		}
@@ -173,43 +197,37 @@ func (e *Exporter) send(buf []byte) error {
 	return nil
 }
 
-// For basic statsd, see
-// https://github.com/statsd/statsd/edit/master/docs/metric_types.md
 func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) {
 	desc := rec.Descriptor()
-	kind := desc.NumberKind()
 	agg := rec.Aggregator()
 
 	if pts, ok := agg.(aggregator.Points); ok {
 		var format string
 		if desc.Unit() == unit.Milliseconds {
-			format = formatHistogram
-		} else {
 			format = formatTiming
+		} else {
+			format = formatHistogram
 		}
 		for _, pt := range pts.Points() {
-			e.adapter.AppendName(rec, buf)
-			_, _ = buf.WriteRune(':')
-			writeNumber(buf, pt, kind)
-			_, _ = buf.WriteRune('|')
-			_, _ = buf.WriteString(format)
+			e.format1(rec, pt, format, buf)
 		}
 
 	} else if sum, ok := agg.(aggregator.Sum); ok {
-		e.adapter.AppendName(rec, buf)
-		_, _ = buf.WriteRune(':')
-		writeNumber(buf, sum.Sum(), kind)
-		_, _ = buf.WriteRune('|')
-		_, _ = buf.WriteString(formatCounter)
+		e.format1(rec, sum.Sum(), formatCounter, buf)
 
 	} else if lv, ok := agg.(aggregator.LastValue); ok {
-		e.adapter.AppendName(rec, buf)
-		_, _ = buf.WriteRune(':')
-		writeNumber(buf, lv.LastValue(), kind)
-		_, _ = buf.WriteRune('|')
-		_, _ = buf.WriteString(formatGauge)
+		e.format1(rec, lv.LastValue(), formatGauge, buf)
 	}
+}
 
+func (e *Exporter) format1(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {
+	// For basic statsd syntax, see
+	// https://github.com/statsd/statsd/edit/master/docs/metric_types.md
+	e.adapter.AppendName(rec, buf)
+	_, _ = buf.WriteRune(':')
+	writeNumber(buf, val, rec.Descriptor().NumberKind())
+	_, _ = buf.WriteRune('|')
+	_, _ = buf.WriteString(fmtStr)
 	e.adapter.AppendTags(rec, buf)
 	_, _ = buf.WriteRune('\n')
 }
