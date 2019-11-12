@@ -102,6 +102,17 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	// Reduce dimensionality.
 	rag, ok := b.agg[encoded]
 	if !ok {
+		// If this Batcher is stateful, create a copy of the
+		// Aggregator for long-term storage.  Otherwise the
+		// Meter implementation will checkpoint the aggregator
+		// again, overwriting the long-lived state.
+		if b.stateful {
+			tmp := agg
+			agg = b.AggregatorFor(desc)
+			if err := agg.Merge(tmp, desc); err != nil {
+				return err
+			}
+		}
 		b.agg[encoded] = aggEntry{
 			descriptor: desc,
 			labels:     export.NewLabels(canon, encoded, b.lencoder),

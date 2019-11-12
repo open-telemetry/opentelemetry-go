@@ -28,7 +28,6 @@ type InstrumentImpl interface {
 	AcquireHandle(labels LabelSet) HandleImpl
 
 	// RecordOne allows the SDK to observe a single metric event.
-	// The error is returned for the SDK to report to the user.
 	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
 }
 

@@ -217,22 +217,22 @@ func NewLabels(ordered []core.KeyValue, encoded string, encoder LabelEncoder) La
 
 // Ordered returns the labels in a specified order, according to the
 // Batcher.
-func (l *Labels) Ordered() []core.KeyValue {
+func (l Labels) Ordered() []core.KeyValue {
 	return l.ordered
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
-func (l *Labels) Encoded() string {
+func (l Labels) Encoded() string {
 	return l.encoded
 }
 
 // Encoder is the encoder that computed the Encoded() representation.
-func (l *Labels) Encoder() LabelEncoder {
+func (l Labels) Encoder() LabelEncoder {
 	return l.encoder
 }
 
 // Len returns the number of labels.
-func (l *Labels) Len() int {
+func (l Labels) Len() int {
 	return len(l.ordered)
 }
 
@@ -249,18 +249,18 @@ func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Rec
 
 // Aggregator returns the checkpointed aggregator. It is safe to
 // access the checkpointed state without locking.
-func (r *Record) Aggregator() Aggregator {
+func (r Record) Aggregator() Aggregator {
 	return r.aggregator
 }
 
 // Descriptor describes the metric instrument being exported.
-func (r *Record) Descriptor() *Descriptor {
+func (r Record) Descriptor() *Descriptor {
 	return r.descriptor
 }
 
 // Labels describes the labels associated with the instrument and the
 // aggregated data.
-func (r *Record) Labels() Labels {
+func (r Record) Labels() Labels {
 	return r.labels
 }
 
