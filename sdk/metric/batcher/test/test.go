@@ -33,6 +33,11 @@ type (
 
 	// Output collects distinct metric/label set outputs.
 	Output map[string]int64
+
+	// testAggregationSelector returns aggregators consistent with
+	// the test variables below, needed for testing stateful
+	// batchers, which clone Aggregators using AggregatorFor(desc).
+	testAggregationSelector struct{}
 )
 
 var (
@@ -58,6 +63,24 @@ var (
 	// Labels3 is the empty set
 	Labels3 = makeLabels(SdkEncoder)
 )
+
+// NewAggregationSelector returns a policy that is consistent with the
+// test descriptors above.  I.e., it returns counter.New() for counter
+// instruments and gauge.New for gauge instruments.
+func NewAggregationSelector() export.AggregationSelector {
+	return &testAggregationSelector{}
+}
+
+func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Aggregator {
+	switch desc.MetricKind() {
+	case export.CounterKind:
+		return counter.New()
+	case export.GaugeKind:
+		return gauge.New()
+	default:
+		panic("Invalid descriptor MetricKind for this test")
+	}
+}
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
 	encoded := encoder.EncodeLabels(labels)

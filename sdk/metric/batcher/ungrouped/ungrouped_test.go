@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/test"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
@@ -29,7 +30,7 @@ import (
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(nil, false)
+	b := ungrouped.New(test.NewAggregationSelector(), false)
 
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
@@ -64,9 +65,10 @@ func TestUngroupedStateless(t *testing.T) {
 
 func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(nil, true)
+	b := ungrouped.New(test.NewAggregationSelector(), true)
 
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
+	cagg := test.CounterAgg(10)
+	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
 
 	processor := b.ReadCheckpoint()
 
@@ -84,4 +86,29 @@ func TestUngroupedStateful(t *testing.T) {
 	processor.Foreach(records2.AddTo)
 
 	require.EqualValues(t, records1, records2)
+
+	// Update and re-checkpoint the original record.
+	_ = cagg.Update(ctx, core.NewInt64Number(20), test.CounterDesc)
+	cagg.Checkpoint(ctx, test.CounterDesc)
+
+	// As yet cagg has not been passed to Batcher.Process.  Should
+	// not see an update.
+	processor = b.ReadCheckpoint()
+
+	records3 := test.Output{}
+	processor.Foreach(records3.AddTo)
+
+	require.EqualValues(t, records1, records3)
+
+	// Now process the second update
+	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+
+	processor = b.ReadCheckpoint()
+
+	records4 := test.Output{}
+	processor.Foreach(records4.AddTo)
+
+	require.EqualValues(t, map[string]int64{
+		"counter/G~H&C~D": 30,
+	}, records4)
 }
