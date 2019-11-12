@@ -31,4 +31,10 @@ func TestLabelSytnax(t *testing.T) {
 		key.New("C").String("D"),
 		key.New("E").Float64(1.5),
 	}))
+
+	require.Equal(t, `|#A:B`, encoder.EncodeLabels([]core.KeyValue{
+		key.New("A").String("B"),
+	}))
+
+	require.Equal(t, "", encoder.EncodeLabels(nil))
 }
