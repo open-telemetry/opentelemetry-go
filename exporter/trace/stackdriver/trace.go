@@ -35,11 +35,7 @@ type traceExporter struct {
 }
 
 func newTraceExporter(o *options) (*traceExporter, error) {
-	ctx := o.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	client, err := traceclient.NewClient(ctx, o.TraceClientOptions...)
+	client, err := traceclient.NewClient(o.Context, o.TraceClientOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("Stackdriver: couldn't initiate trace client: %v", err)
 	}
@@ -55,9 +51,6 @@ func newTraceExporter(o *options) (*traceExporter, error) {
 // ExportSpan exports a SpanData to Stackdriver Trace.
 func (e *traceExporter) ExportSpan(ctx context.Context, sd *export.SpanData) {
 	protoSpan := protoFromSpanData(sd, e.projectID)
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	e.uploadFn(ctx, []*tracepb.Span{protoSpan})
 }
 
@@ -67,11 +60,6 @@ func (e *traceExporter) ExportSpans(ctx context.Context, sds []*export.SpanData)
 	for i, sd := range sds {
 		pbSpans[i] = protoFromSpanData(sd, e.projectID)
 	}
-	var cancel func()
-	if ctx == nil {
-		ctx, cancel = newContextWithTimeout(e.o.Context, e.o.Timeout)
-	}
-	defer cancel()
 	e.uploadFn(ctx, pbSpans)
 }
 
@@ -81,6 +69,10 @@ func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) 
 		Name:  "projects/" + e.projectID,
 		Spans: spans,
 	}
+
+	var cancel func()
+	ctx, cancel = newContextWithTimeout(ctx, e.o.Timeout)
+	defer cancel()
 
 	// TODO(ymotongpoo): add this part after OTel support NeverSampler
 	// for tracer.Start() initialization.
