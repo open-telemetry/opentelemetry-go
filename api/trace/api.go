@@ -31,15 +31,15 @@ type Provider interface {
 
 type Tracer interface {
 	// Start a span.
-	Start(context.Context, string, ...SpanOption) (context.Context, Span)
+	Start(ctx context.Context, spanName string, startOpts ...SpanOption) (context.Context, Span)
 
-	// WithSpan wraps the execution of the function body with a span.
-	// It starts a new span and sets it as an active span in the context.
-	// It then executes the body. It closes the span before returning the execution result.
+	// WithSpan wraps the execution of the fn function with a span.
+	// It starts a new span, sets it as an active span in the context,
+	// executes the fn function and closes the span before returning the result of fn.
 	WithSpan(
 		ctx context.Context,
-		operation string,
-		body func(ctx context.Context) error,
+		spanName string,
+		fn func(ctx context.Context) error,
 	) error
 }
 
@@ -204,9 +204,10 @@ func WithStartTime(t time.Time) SpanOption {
 
 // WithAttributes sets attributes to span. These attributes provides additional
 // data about the span.
+// Multiple `WithAttributes` options appends the attributes preserving the order.
 func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
-		o.Attributes = attrs
+		o.Attributes = append(o.Attributes, attrs...)
 	}
 }
 

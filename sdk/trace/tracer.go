@@ -22,10 +22,8 @@ import (
 )
 
 type tracer struct {
-	provider  *Provider
-	name      string
-	component string
-	resources []core.KeyValue
+	provider *Provider
+	name     string
 }
 
 var _ apitrace.Tracer = &tracer{}
@@ -88,23 +86,6 @@ func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx conte
 		return err
 	}
 	return nil
-}
-
-func (tr *tracer) WithService(name string) apitrace.Tracer {
-	tr.name = name
-	return tr
-}
-
-// WithResources does nothing and returns noop implementation of apitrace.Tracer.
-func (tr *tracer) WithResources(res ...core.KeyValue) apitrace.Tracer {
-	tr.resources = res
-	return tr
-}
-
-// WithComponent does nothing and returns noop implementation of apitrace.Tracer.
-func (tr *tracer) WithComponent(component string) apitrace.Tracer {
-	tr.component = component
-	return tr
 }
 
 func (tr *tracer) spanNameWithPrefix(name string) string {
