@@ -13,7 +13,7 @@ jobs:
 
       - restore_cache: # restores saved cache if no changes are detected since last run
           keys:
-            - v1-pkg-{{ checksum "go.sum" }}
+            - go-pkg-mod-{{ checksum "go.sum" }}
 
       - run:
           name: "Precommit and Coverage Report"
@@ -22,9 +22,9 @@ jobs:
             mv coverage.html $TEST_RESULTS/
 
       - save_cache:
-          key: v1-pkg-{{ checksum "go.sum" }}
+          key: go-pkg-mod-{{ checksum "go.sum" }}
           paths:
-            - "~/go/pkg/mod"
+            - "/go/pkg/mod"
 
       - store_artifacts:
           path: /tmp/test-results
