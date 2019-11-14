@@ -38,21 +38,6 @@ type MockTracer struct {
 
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
-// WithResources does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithResources(attributes ...core.KeyValue) apitrace.Tracer {
-	return mt
-}
-
-// WithComponent does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithComponent(name string) apitrace.Tracer {
-	return mt
-}
-
-// WithService does nothing and returns MockTracer implementation of Tracer.
-func (mt *MockTracer) WithService(name string) apitrace.Tracer {
-	return mt
-}
-
 // WithSpan does nothing except executing the body.
 func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	return body(ctx)
