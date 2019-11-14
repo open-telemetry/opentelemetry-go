@@ -76,7 +76,7 @@ type (
 	// repeatedly.
 	labels struct {
 		meter   *SDK
-		sorted  []core.KeyValue
+		sorted  sortedLabels
 		encoded string
 	}
 
@@ -245,19 +245,23 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 		return &m.empty
 	}
 
+	ls := &labels{
+		meter:  m,
+		sorted: kvs,
+	}
+
 	// Sort and de-duplicate.
-	sorted := sortedLabels(kvs)
-	sort.Stable(&sorted)
+	sort.Stable(&ls.sorted)
 	oi := 1
-	for i := 1; i < len(sorted); i++ {
-		if sorted[i-1].Key == sorted[i].Key {
-			sorted[oi-1] = sorted[i]
+	for i := 1; i < len(ls.sorted); i++ {
+		if ls.sorted[i-1].Key == ls.sorted[i].Key {
+			ls.sorted[oi-1] = ls.sorted[i]
 			continue
 		}
-		sorted[oi] = sorted[i]
+		ls.sorted[oi] = ls.sorted[i]
 		oi++
 	}
-	sorted = sorted[0:oi]
+	ls.sorted = ls.sorted[0:oi]
 
 	// Serialize.
 	buf := m.pool.Get().(*bytes.Buffer)
@@ -265,7 +269,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	buf.Reset()
 	_, _ = buf.WriteRune('|')
 	delimiter := '#'
-	for _, kv := range sorted {
+	for _, kv := range ls.sorted {
 		_, _ = buf.WriteRune(delimiter)
 		_, _ = buf.WriteString(string(kv.Key))
 		_, _ = buf.WriteRune(':')
@@ -273,11 +277,9 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 		delimiter = ','
 	}
 
-	return &labels{
-		meter:   m,
-		sorted:  sorted,
-		encoded: buf.String(),
-	}
+	ls.encoded = buf.String()
+
+	return ls
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
