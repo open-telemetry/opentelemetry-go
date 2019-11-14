@@ -22,10 +22,8 @@ import (
 )
 
 type tracer struct {
-	provider  *Provider
-	name      string
-	component string
-	resources []core.KeyValue
+	provider *Provider
+	name     string
 }
 
 var _ apitrace.Tracer = &tracer{}
