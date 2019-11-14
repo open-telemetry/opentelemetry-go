@@ -206,7 +206,7 @@ func WithStartTime(t time.Time) SpanOption {
 // data about the span.
 func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
-		o.Attributes = attrs
+		o.Attributes = append(o.Attributes, attrs...)
 	}
 }
 
