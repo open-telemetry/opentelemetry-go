@@ -204,9 +204,10 @@ func WithStartTime(t time.Time) SpanOption {
 
 // WithAttributes sets attributes to span. These attributes provides additional
 // data about the span.
+// Multiple `WithAttributes` options appends the attributes preserving the order.
 func WithAttributes(attrs ...core.KeyValue) SpanOption {
 	return func(o *SpanOptions) {
-		o.Attributes = attrs
+		o.Attributes = append(o.Attributes, attrs...)
 	}
 }
 
