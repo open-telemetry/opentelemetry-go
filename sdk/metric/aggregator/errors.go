@@ -29,6 +29,12 @@ var (
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrNonMonotoneInput = fmt.Errorf("The new value is not monotone")
 	ErrInconsistentType = fmt.Errorf("Cannot merge different aggregator types")
+
+	// ErrNoLastValue is returned by the gauge.Aggregator when
+	// (due to a race with collection) the Aggregator is
+	// checkpointed before the first value is set.  The aggregator
+	// should simply be skipped in this case.
+	ErrNoLastValue = fmt.Errorf("No value has been set")
 )
 
 func RangeTest(number core.Number, descriptor *export.Descriptor) error {

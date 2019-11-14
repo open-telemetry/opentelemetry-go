@@ -106,16 +106,30 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	producer.Foreach(func(record export.Record) {
+	producer.ForEach(func(record export.Record) {
 		desc := record.Descriptor()
 		labels := record.Labels()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()
 
 		var expose expoLine
+
+		if sum, ok := agg.(aggregator.Sum); ok {
+			if value, err := sum.Sum(); err != nil {
+				aggError = err
+				expose.Sum = "NaN"
+			} else {
+				expose.Sum = value.AsInterface(kind)
+			}
+		}
+
 		if msc, ok := agg.(aggregator.MaxSumCount); ok {
-			expose.Sum = msc.Sum().AsInterface(kind)
-			expose.Count = msc.Count()
+			if count, err := msc.Count(); err != nil {
+				aggError = err
+				expose.Count = "NaN"
+			} else {
+				expose.Count = count
+			}
 
 			if max, err := msc.Max(); err != nil {
 				aggError = err
@@ -142,15 +156,17 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 					}
 				}
 			}
-		} else if sum, ok := agg.(aggregator.Sum); ok {
-			expose.Sum = sum.Sum().AsInterface(kind)
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
-			ts := lv.Timestamp()
-			expose.LastValue = lv.LastValue().AsInterface(kind)
+			if value, timestamp, err := lv.LastValue(); err != nil {
+				aggError = err
+				expose.LastValue = "NaN"
+			} else {
+				expose.LastValue = value.AsInterface(kind)
 
-			if !e.options.DoNotPrintTime {
-				expose.Timestamp = &ts
+				if !e.options.DoNotPrintTime {
+					expose.Timestamp = &timestamp
+				}
 			}
 		}
 

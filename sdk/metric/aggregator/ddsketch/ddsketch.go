@@ -61,13 +61,13 @@ func NewDefaultConfig() *Config {
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() core.Number {
-	return c.toNumber(c.checkpoint.Sum())
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.toNumber(c.checkpoint.Sum()), nil
 }
 
 // Count returns the count of the checkpoint.
-func (c *Aggregator) Count() int64 {
-	return c.checkpoint.Count()
+func (c *Aggregator) Count() (int64, error) {
+	return c.checkpoint.Count(), nil
 }
 
 // Max returns the max of the checkpoint.

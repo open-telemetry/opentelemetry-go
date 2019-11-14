@@ -27,7 +27,7 @@ func (p *Producer) Add(desc *export.Descriptor, agg export.Aggregator, labels ..
 	p.updates = append(p.updates, export.NewRecord(desc, elabels, agg))
 }
 
-func (p *Producer) Foreach(f func(export.Record)) {
+func (p *Producer) ForEach(f func(export.Record)) {
 	for _, r := range p.updates {
 		f(r)
 	}

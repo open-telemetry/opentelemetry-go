@@ -46,13 +46,13 @@ func New() *Aggregator {
 }
 
 // Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() core.Number {
-	return c.ckptSum
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.ckptSum, nil
 }
 
 // Count returns the count of the checkpoint.
-func (c *Aggregator) Count() int64 {
-	return int64(len(c.checkpoint))
+func (c *Aggregator) Count() (int64, error) {
+	return int64(len(c.checkpoint)), nil
 }
 
 // Max returns the max of the checkpoint.

@@ -46,13 +46,13 @@ func New() *Aggregator {
 }
 
 // Sum returns the accumulated sum as a Number.
-func (c *Aggregator) Sum() core.Number {
-	return c.checkpoint.sum
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.checkpoint.sum, nil
 }
 
 // Count returns the accumulated count.
-func (c *Aggregator) Count() int64 {
-	return int64(c.checkpoint.count.AsUint64())
+func (c *Aggregator) Count() (int64, error) {
+	return int64(c.checkpoint.count.AsUint64()), nil
 }
 
 // Max returns the accumulated max as a Number.

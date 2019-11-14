@@ -71,13 +71,12 @@ func New() *Aggregator {
 }
 
 // LastValue returns the last-recorded gauge value as a Number.
-func (g *Aggregator) LastValue() core.Number {
-	return (*gaugeData)(g.checkpoint).value.AsNumber()
-}
-
-// Timestamp returns the timestamp of the last recorded gauge value.
-func (g *Aggregator) Timestamp() time.Time {
-	return (*gaugeData)(g.checkpoint).timestamp
+func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
+	gd := (*gaugeData)(g.checkpoint)
+	if gd == unsetGauge {
+		return core.Number(0), time.Time{}, aggregator.ErrNoLastValue
+	}
+	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.

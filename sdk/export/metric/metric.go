@@ -178,12 +178,12 @@ type LabelEncoder interface {
 
 // Producer allows a controller to access a complete checkpoint of
 // aggregated metrics from the Batcher.  This is passed to the
-// Exporter which may then use Foreach to iterate over the collection
+// Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
 type Producer interface {
-	// Foreach iterates over all metrics that were updated during
+	// ForEach iterates over all metrics that were updated during
 	// the last collection period.
-	Foreach(func(Record))
+	ForEach(func(Record))
 }
 
 // Record contains the exported data for a single metric instrument

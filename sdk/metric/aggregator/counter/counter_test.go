@@ -44,7 +44,9 @@ func TestCounterMonotonic(t *testing.T) {
 
 		agg.Checkpoint(ctx, descriptor)
 
-		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
+		asum, err := agg.Sum()
+		require.Equal(t, sum, asum, "Same sum - monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -64,7 +66,9 @@ func TestCounterMonotonicNegative(t *testing.T) {
 		test.CheckedUpdate(t, agg, sum, descriptor)
 		agg.Checkpoint(ctx, descriptor)
 
-		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
+		asum, err := agg.Sum()
+		require.Equal(t, sum, asum, "Same sum - monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -88,7 +92,9 @@ func TestCounterNonMonotonic(t *testing.T) {
 
 		agg.Checkpoint(ctx, descriptor)
 
-		require.Equal(t, sum, agg.Sum(), "Same sum - monotonic")
+		asum, err := agg.Sum()
+		require.Equal(t, sum, asum, "Same sum - monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -116,6 +122,8 @@ func TestCounterMerge(t *testing.T) {
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
 
-		require.Equal(t, sum, agg1.Sum(), "Same sum - monotonic")
+		asum, err := agg1.Sum()
+		require.Equal(t, sum, asum, "Same sum - monotonic")
+		require.Nil(t, err)
 	})
 }

@@ -134,7 +134,7 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 	}
 }
 
-func (p *producer) Foreach(f func(export.Record)) {
+func (p *producer) ForEach(f func(export.Record)) {
 	for _, entry := range p.aggMap {
 		f(export.NewRecord(
 			entry.descriptor,

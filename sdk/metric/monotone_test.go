@@ -53,8 +53,8 @@ func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, la
 	require.Equal(m.t, "b", labels.Ordered()[0].Value.Emit())
 
 	gauge := agg.(*gauge.Aggregator)
-	val := gauge.LastValue()
-	ts := gauge.Timestamp()
+	val, ts, err := gauge.LastValue()
+	require.Nil(m.t, err)
 
 	m.currentValue = &val
 	m.currentTime = &ts

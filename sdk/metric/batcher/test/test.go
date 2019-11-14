@@ -126,9 +126,11 @@ func (o Output) AddTo(rec export.Record) {
 	var value int64
 	switch t := rec.Aggregator().(type) {
 	case *counter.Aggregator:
-		value = t.Sum().AsInt64()
+		sum, _ := t.Sum()
+		value = sum.AsInt64()
 	case *gauge.Aggregator:
-		value = t.LastValue().AsInt64()
+		lv, _, _ := t.LastValue()
+		value = lv.AsInt64()
 	}
 	o[key] = value
 }

@@ -54,12 +54,17 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
+	sum, err := agg.Sum()
 	require.InDelta(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg.Sum().CoerceToFloat64(profile.NumberKind),
+		sum.CoerceToFloat64(profile.NumberKind),
 		1,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+	require.Nil(t, err)
+
+	count, err := agg.Count()
+	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Nil(t, err)
 
 	max, err := agg.Max()
 	require.Nil(t, err)
@@ -133,12 +138,17 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
+	asum, err := agg1.Sum()
 	require.InDelta(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg1.Sum().CoerceToFloat64(profile.NumberKind),
+		asum.CoerceToFloat64(profile.NumberKind),
 		1,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+	require.Nil(t, err)
+
+	count, err := agg1.Count()
+	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Nil(t, err)
 
 	max, err := agg1.Max()
 	require.Nil(t, err)

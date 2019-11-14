@@ -20,16 +20,13 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-// TODO: Add Min() support to maxsumcount?  It's the same as
-// Quantile(0) but cheap to compute like Max().
-
 type (
 	Sum interface {
-		Sum() core.Number
+		Sum() (core.Number, error)
 	}
 
 	Count interface {
-		Count() int64
+		Count() (int64, error)
 	}
 
 	Max interface {
@@ -41,8 +38,7 @@ type (
 	}
 
 	LastValue interface {
-		LastValue() core.Number
-		Timestamp() time.Time
+		LastValue() (core.Number, time.Time, error)
 	}
 
 	MaxSumCount interface {

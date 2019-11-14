@@ -90,7 +90,7 @@ func (b *Batcher) ReadCheckpoint() export.Producer {
 	return checkpoint
 }
 
-func (c batchMap) Foreach(f func(export.Record)) {
+func (c batchMap) ForEach(f func(export.Record)) {
 	for key, value := range c {
 		f(export.NewRecord(
 			key.descriptor,

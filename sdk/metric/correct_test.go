@@ -68,26 +68,30 @@ func TestInputRangeTestCounter(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 
 	counter := sdk.NewInt64Counter("counter.name", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, err)
-	err = nil
+	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	sdkErr = nil
 
 	sdk.Collect(ctx)
-	require.Equal(t, int64(0), cagg.Sum().AsInt64())
+	sum, err := cagg.Sum()
+	require.Equal(t, int64(0), sum.AsInt64())
+	require.Nil(t, err)
 
 	counter.Add(ctx, 1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
 
-	require.Equal(t, int64(1), cagg.Sum().AsInt64())
+	sum, err = cagg.Sum()
+	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
+	require.Nil(t, sdkErr)
 }
 
 func TestInputRangeTestMeasure(t *testing.T) {
@@ -99,26 +103,30 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 
 	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, err)
-	err = nil
+	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	sdkErr = nil
 
 	sdk.Collect(ctx)
-	require.Equal(t, int64(0), magg.Count())
+	count, err := magg.Count()
+	require.Equal(t, int64(0), count)
+	require.Nil(t, err)
 
 	measure.Record(ctx, 1, sdk.Labels())
 	measure.Record(ctx, 2, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
 
-	require.Equal(t, int64(2), magg.Count())
+	count, err = magg.Count()
+	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
+	require.Nil(t, sdkErr)
 	require.Nil(t, err)
 }
 
@@ -145,15 +153,15 @@ func TestRecordNaN(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 	g := sdk.NewFloat64Gauge("gauge.name")
 
-	require.Nil(t, err)
+	require.Nil(t, sdkErr)
 	g.Set(ctx, math.NaN(), sdk.Labels())
-	require.Error(t, err)
+	require.Error(t, sdkErr)
 }
 
 func TestSDKLabelEncoder(t *testing.T) {

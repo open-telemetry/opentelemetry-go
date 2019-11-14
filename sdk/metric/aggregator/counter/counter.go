@@ -41,8 +41,8 @@ func New() *Aggregator {
 }
 
 // Sum returns the accumulated count as a Number.
-func (c *Aggregator) Sum() core.Number {
-	return c.checkpoint
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.checkpoint, nil
 }
 
 // Checkpoint checkpoints the current value (atomically) and exports it.

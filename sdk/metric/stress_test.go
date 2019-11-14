@@ -37,6 +37,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
@@ -257,10 +258,19 @@ func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labe
 
 	switch desc.MetricKind() {
 	case export.CounterKind:
-		f.impl.storeCollect(actual, agg.(*counter.Aggregator).Sum(), time.Time{})
+		counter := agg.(aggregator.Sum)
+		sum, err := counter.Sum()
+		if err != nil {
+			panic("Impossible")
+		}
+		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.GaugeKind:
-		gauge := agg.(*gauge.Aggregator)
-		f.impl.storeCollect(actual, gauge.LastValue(), gauge.Timestamp())
+		gauge := agg.(aggregator.LastValue)
+		lv, ts, err := gauge.LastValue()
+		if err != nil {
+			panic("Impossible")
+		}
+		f.impl.storeCollect(actual, lv, ts)
 	default:
 		panic("Not used in this test")
 	}

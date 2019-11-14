@@ -84,7 +84,7 @@ func (b *testBatcher) Process(_ context.Context, desc *export.Descriptor, labels
 
 func (e *testExporter) Export(_ context.Context, producer export.Producer) error {
 	e.exports++
-	producer.Foreach(func(r export.Record) {
+	producer.ForEach(func(r export.Record) {
 		e.records = append(e.records, r)
 	})
 	return e.retErr
@@ -134,7 +134,10 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, fix.exporter.exports)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
-	require.Equal(t, int64(3), fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum().AsInt64())
+
+	sum, err := fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum()
+	require.Equal(t, int64(3), sum.AsInt64())
+	require.Nil(t, err)
 
 	fix.producer.Reset()
 	fix.exporter.records = nil
@@ -148,7 +151,10 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 2, fix.exporter.exports)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
-	require.Equal(t, int64(7), fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum().AsInt64())
+
+	sum, err = fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum()
+	require.Equal(t, int64(7), sum.AsInt64())
+	require.Nil(t, err)
 
 	p.Stop()
 }

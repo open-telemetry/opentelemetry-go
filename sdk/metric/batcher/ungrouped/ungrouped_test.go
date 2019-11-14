@@ -43,7 +43,7 @@ func TestUngroupedStateless(t *testing.T) {
 	processor := b.ReadCheckpoint()
 
 	records := test.Output{}
-	processor.Foreach(records.AddTo)
+	processor.ForEach(records.AddTo)
 
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -58,7 +58,7 @@ func TestUngroupedStateless(t *testing.T) {
 
 	// Verify that state was reset
 	processor = b.ReadCheckpoint()
-	processor.Foreach(func(rec export.Record) {
+	processor.ForEach(func(rec export.Record) {
 		t.Fatal("Unexpected call")
 	})
 }
@@ -73,7 +73,7 @@ func TestUngroupedStateful(t *testing.T) {
 	processor := b.ReadCheckpoint()
 
 	records1 := test.Output{}
-	processor.Foreach(records1.AddTo)
+	processor.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/G~H&C~D": 10, // labels1
@@ -83,7 +83,7 @@ func TestUngroupedStateful(t *testing.T) {
 	processor = b.ReadCheckpoint()
 
 	records2 := test.Output{}
-	processor.Foreach(records2.AddTo)
+	processor.ForEach(records2.AddTo)
 
 	require.EqualValues(t, records1, records2)
 
@@ -96,7 +96,7 @@ func TestUngroupedStateful(t *testing.T) {
 	processor = b.ReadCheckpoint()
 
 	records3 := test.Output{}
-	processor.Foreach(records3.AddTo)
+	processor.ForEach(records3.AddTo)
 
 	require.EqualValues(t, records1, records3)
 
@@ -106,7 +106,7 @@ func TestUngroupedStateful(t *testing.T) {
 	processor = b.ReadCheckpoint()
 
 	records4 := test.Output{}
-	processor.Foreach(records4.AddTo)
+	processor.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/G~H&C~D": 30,
