@@ -56,7 +56,7 @@ type Options struct {
 
 type expoBatch struct {
 	Timestamp *time.Time `json:"time,omitempty"`
-	Updates   []expoLine `json:"updates,omitempty"`
+	Updates   []expoLine `json:"updates"`
 }
 
 type expoLine struct {
@@ -159,6 +159,12 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
 			if value, timestamp, err := lv.LastValue(); err != nil {
+				if err == aggregator.ErrNoLastValue {
+					// This is a special case, indicates an aggregator that
+					// was checkpointed before its first value was set.
+					return
+				}
+
 				aggError = err
 				expose.LastValue = "NaN"
 			} else {

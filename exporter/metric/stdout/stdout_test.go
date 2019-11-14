@@ -238,3 +238,19 @@ func TestStdoutAggError(t *testing.T) {
 	require.Equal(t, aggregator.ErrEmptyDataSet, err)
 	require.Equal(t, `{"updates":[{"name":"test.name","max":"NaN","sum":0,"count":0,"quantiles":[{"q":0.5,"v":"NaN"},{"q":0.9,"v":"NaN"},{"q":0.99,"v":"NaN"}]}]}`, fix.Output())
 }
+
+func TestStdoutGaugeNotSet(t *testing.T) {
+	fix := newFixture(t, stdout.Options{})
+
+	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+
+	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	gagg := gauge.New()
+	gagg.Checkpoint(fix.ctx, desc)
+
+	producer.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+
+	fix.Export(producer)
+
+	require.Equal(t, `{"updates":null}`, fix.Output())
+}
