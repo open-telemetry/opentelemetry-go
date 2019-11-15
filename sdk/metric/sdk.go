@@ -59,7 +59,7 @@ type (
 		batcher export.Batcher
 
 		// lencoder determines how labels are uniquely encoded.
-		lencoder export.LabelEncoder
+		labelEncoder export.LabelEncoder
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -81,7 +81,7 @@ type (
 	// repeatedly.
 	labels struct {
 		meter   *SDK
-		sorted  []core.KeyValue
+		sorted  sortedLabels
 		encoded string
 	}
 
@@ -226,10 +226,10 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.Batcher, lencoder export.LabelEncoder) *SDK {
+func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
 	m := &SDK{
 		batcher:      batcher,
-		lencoder:     lencoder,
+		labelEncoder: labelEncoder,
 		errorHandler: DefaultErrorHandler,
 	}
 	m.empty.meter = m
@@ -255,28 +255,27 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 		return &m.empty
 	}
 
-	// Sort and de-duplicate.
-	sorted := sortedLabels(kvs)
+	ls := &labels{
+		meter:  m,
+		sorted: kvs,
+	}
 
-	sort.Stable(&sorted)
+	// Sort and de-duplicate.
+	sort.Stable(&ls.sorted)
 	oi := 1
-	for i := 1; i < len(sorted); i++ {
-		if sorted[i-1].Key == sorted[i].Key {
-			sorted[oi-1] = sorted[i]
+	for i := 1; i < len(ls.sorted); i++ {
+		if ls.sorted[i-1].Key == ls.sorted[i].Key {
+			ls.sorted[oi-1] = ls.sorted[i]
 			continue
 		}
-		sorted[oi] = sorted[i]
+		ls.sorted[oi] = ls.sorted[i]
 		oi++
 	}
-	sorted = sorted[0:oi]
+	ls.sorted = ls.sorted[0:oi]
 
-	encoded := m.lencoder.Encode(sorted)
+	ls.encoded = m.labelEncoder.Encode(ls.sorted)
 
-	return &labels{
-		meter:   m,
-		sorted:  sorted,
-		encoded: encoded,
-	}
+	return ls
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -424,7 +423,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 		return 0
 	}
 	r.recorder.Checkpoint(ctx, r.descriptor)
-	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.lencoder)
+	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.labelEncoder)
 	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, labels, r.recorder))
 
 	if err != nil {
