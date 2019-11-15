@@ -52,6 +52,17 @@ type testFixture struct {
 	exporter      *testExporter
 }
 
+type mockClock struct {
+	mock *clock.Mock
+}
+
+type mockTicker struct {
+	ticker *clock.Ticker
+}
+
+var _ push.Clock = mockClock{}
+var _ push.Ticker = mockTicker{}
+
 func newFixture(t *testing.T) testFixture {
 	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
@@ -95,6 +106,26 @@ func (e *testExporter) Export(_ context.Context, checkpointSet export.Checkpoint
 	return e.retErr
 }
 
+func (c mockClock) Now() time.Time {
+	return c.mock.Now()
+}
+
+func (c mockClock) Ticker(period time.Duration) push.Ticker {
+	return mockTicker{c.mock.Ticker(period)}
+}
+
+func (c mockClock) Add(d time.Duration) {
+	c.mock.Add(d)
+}
+
+func (t mockTicker) Stop() {
+	t.ticker.Stop()
+}
+
+func (t mockTicker) C() <-chan time.Time {
+	return t.ticker.C
+}
+
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
 	p := push.New(fix.batcher, fix.exporter, time.Second)
@@ -117,7 +148,7 @@ func TestPushTicker(t *testing.T) {
 	p := push.New(fix.batcher, fix.exporter, time.Second)
 	meter := p.GetMeter("name")
 
-	mock := clock.NewMock()
+	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
 
 	ctx := context.Background()
@@ -178,7 +209,7 @@ func TestPushExportError(t *testing.T) {
 		err = sdkErr
 	})
 
-	mock := clock.NewMock()
+	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
 
 	p.Start()
@@ -196,5 +227,3 @@ func TestPushExportError(t *testing.T) {
 
 	p.Stop()
 }
-
-// TODO remove the clock import from push.go
