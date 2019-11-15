@@ -33,20 +33,20 @@ func TestUngroupedStateless(t *testing.T) {
 	b := ungrouped.New(test.NewAggregationSelector(), false)
 
 	// Set initial gauge values
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels3, test.GaugeAgg(30))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels2, test.GaugeAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels3, test.GaugeAgg(30)))
 
 	// Another gauge Set for Labels1
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(50))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(50)))
 
 	// Set initial counter values
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels2, test.CounterAgg(20))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels3, test.CounterAgg(40))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels2, test.CounterAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels3, test.CounterAgg(40)))
 
 	// Another counter Add for Labels1
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(50))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(50)))
 
 	checkpointSet := b.ReadCheckpoint()
 	b.FinishedCollection()
@@ -78,7 +78,7 @@ func TestUngroupedStateful(t *testing.T) {
 	b := ungrouped.New(test.NewAggregationSelector(), true)
 
 	cagg := test.CounterAgg(10)
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
 	checkpointSet := b.ReadCheckpoint()
 	b.FinishedCollection()
@@ -114,7 +114,7 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1, records3)
 
 	// Now process the second update
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
 	checkpointSet = b.ReadCheckpoint()
 	b.FinishedCollection()

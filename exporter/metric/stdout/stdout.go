@@ -31,6 +31,8 @@ type Exporter struct {
 	options Options
 }
 
+var _ export.Exporter = &Exporter{}
+
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
 	// File is the destination.  If not set, os.Stdout is used.
@@ -77,8 +79,6 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-var _ export.Exporter = &Exporter{}
-
 func New(options Options) (*Exporter, error) {
 	if options.File == nil {
 		options.File = os.Stdout
@@ -108,7 +108,6 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	}
 	checkpointSet.ForEach(func(record export.Record) {
 		desc := record.Descriptor()
-		labels := record.Labels()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()
 
@@ -186,7 +185,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		sb.WriteString(desc.Name())
 
-		if labels.Len() > 0 {
+		if labels := record.Labels(); labels.Len() > 0 {
 			sb.WriteRune('{')
 			sb.WriteString(labels.Encoded())
 			sb.WriteRune('}')

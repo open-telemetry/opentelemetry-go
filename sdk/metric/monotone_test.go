@@ -49,13 +49,13 @@ func (*monotoneBatcher) ReadCheckpoint() export.CheckpointSet {
 func (*monotoneBatcher) FinishedCollection() {
 }
 
-func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	require.Equal(m.t, "my.gauge.name", desc.Name())
-	require.Equal(m.t, 1, labels.Len())
-	require.Equal(m.t, "a", string(labels.Ordered()[0].Key))
-	require.Equal(m.t, "b", labels.Ordered()[0].Value.Emit())
+func (m *monotoneBatcher) Process(_ context.Context, record export.Record) error {
+	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
+	require.Equal(m.t, 1, record.Labels().Len())
+	require.Equal(m.t, "a", string(record.Labels().Ordered()[0].Key))
+	require.Equal(m.t, "b", record.Labels().Ordered()[0].Value.Emit())
 
-	gauge := agg.(*gauge.Aggregator)
+	gauge := record.Aggregator().(*gauge.Aggregator)
 	val, ts, err := gauge.LastValue()
 	require.Nil(m.t, err)
 

@@ -62,7 +62,8 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, record export.Record) error {
+	desc := record.Descriptor()
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
@@ -88,7 +89,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	// Note also the possibility to speed this computation of
 	// "encoded" via "outputLabels" in the form of a (Descriptor,
 	// LabelSet)->(Labels, Encoded) cache.
-	for _, kv := range labels.Ordered() {
+	for _, kv := range record.Labels().Ordered() {
 		pos, ok := ki[kv.Key]
 		if !ok {
 			continue
@@ -101,6 +102,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.
+	agg := record.Aggregator()
 	rag, ok := b.aggCheckpoint[encoded]
 	if ok {
 		return rag.Aggregator().Merge(agg, desc)

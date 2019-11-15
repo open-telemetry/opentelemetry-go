@@ -63,19 +63,17 @@ type Batcher interface {
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
-	// passing the descriptor, the corresponding labels, and the
-	// checkpointed aggregator.  The Batcher should be prepared to
-	// process duplicate (Descriptor, Labels) pairs during this
-	// pass due to race conditions, but this will usually be the
-	// ordinary course of events, as Aggregators are merged to
-	// reduce their dimensionality (i.e., group-by).
+	// passing the export Record (a Descriptor, the corresponding
+	// Labels, and the checkpointed Aggregator).  The Batcher
+	// should be prepared to process duplicate (Descriptor,
+	// Labels) pairs during this pass due to race conditions, but
+	// this will usually be the ordinary course of events, as
+	// Aggregators are typically merged according the output set
+	// of labels.
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
-	Process(ctx context.Context,
-		descriptor *Descriptor,
-		labels Labels,
-		aggregator Aggregator) error
+	Process(ctx context.Context, record Record) error
 
 	// ReadCheckpoint is the interface used by the controller to
 	// access the fully aggregated checkpoint after collection.

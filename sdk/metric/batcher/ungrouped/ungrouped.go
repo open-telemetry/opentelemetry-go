@@ -55,11 +55,13 @@ func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+func (b *Batcher) Process(_ context.Context, record export.Record) error {
+	desc := record.Descriptor()
 	key := batchKey{
 		descriptor: desc,
-		encoded:    labels.Encoded(),
+		encoded:    record.Labels().Encoded(),
 	}
+	agg := record.Aggregator()
 	value, ok := b.batchMap[key]
 	if ok {
 		return value.aggregator.Merge(agg, desc)
@@ -77,7 +79,7 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	}
 	b.batchMap[key] = batchValue{
 		aggregator: agg,
-		labels:     labels,
+		labels:     record.Labels(),
 	}
 	return nil
 }

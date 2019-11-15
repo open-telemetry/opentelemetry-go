@@ -80,8 +80,8 @@ func (b *testBatcher) ReadCheckpoint() export.CheckpointSet {
 func (*testBatcher) FinishedCollection() {
 }
 
-func (b *testBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	b.checkpointSet.Add(desc, agg, labels.Ordered()...)
+func (b *testBatcher) Process(_ context.Context, record export.Record) error {
+	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), record.Labels().Ordered()...)
 	return nil
 }
 

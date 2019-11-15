@@ -30,13 +30,13 @@ func TestGroupingStateless(t *testing.T) {
 	ctx := context.Background()
 	b := defaultkeys.New(test.NewAggregationSelector(), test.GroupEncoder, false)
 
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels3, test.GaugeAgg(30))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels2, test.GaugeAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels3, test.GaugeAgg(30)))
 
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels2, test.CounterAgg(20))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels3, test.CounterAgg(40))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels2, test.CounterAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels3, test.CounterAgg(40)))
 
 	checkpointSet := b.ReadCheckpoint()
 	b.FinishedCollection()
@@ -66,7 +66,7 @@ func TestGroupingStateful(t *testing.T) {
 	b := defaultkeys.New(test.NewAggregationSelector(), test.GroupEncoder, true)
 
 	cagg := test.CounterAgg(10)
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
 	checkpointSet := b.ReadCheckpoint()
 	b.FinishedCollection()
@@ -102,7 +102,7 @@ func TestGroupingStateful(t *testing.T) {
 	require.EqualValues(t, records1, records3)
 
 	// Now process the second update
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
 	checkpointSet = b.ReadCheckpoint()
 	b.FinishedCollection()

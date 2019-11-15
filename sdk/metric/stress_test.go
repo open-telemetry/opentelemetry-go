@@ -246,10 +246,10 @@ func (*testFixture) ReadCheckpoint() export.CheckpointSet {
 func (*testFixture) FinishedCollection() {
 }
 
-func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+func (f *testFixture) Process(_ context.Context, record export.Record) error {
 	key := testKey{
-		labels:     canonicalizeLabels(labels.Ordered()),
-		descriptor: desc,
+		labels:     canonicalizeLabels(record.Labels().Ordered()),
+		descriptor: record.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -259,7 +259,8 @@ func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labe
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	switch desc.MetricKind() {
+	agg := record.Aggregator()
+	switch record.Descriptor().MetricKind() {
 	case export.CounterKind:
 		counter := agg.(aggregator.Sum)
 		sum, err := counter.Sum()

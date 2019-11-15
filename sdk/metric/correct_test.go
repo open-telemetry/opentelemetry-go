@@ -53,8 +53,8 @@ func (cb *correctnessBatcher) ReadCheckpoint() export.CheckpointSet {
 func (*correctnessBatcher) FinishedCollection() {
 }
 
-func (cb *correctnessBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	cb.records = append(cb.records, export.NewRecord(desc, labels, agg))
+func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) error {
+	cb.records = append(cb.records, record)
 	return nil
 }
 

@@ -64,7 +64,7 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	return nil
 }
 
-func (*benchFixture) Process(context.Context, *export.Descriptor, export.Labels, export.Aggregator) error {
+func (*benchFixture) Process(context.Context, export.Record) error {
 	return nil
 }
 
