@@ -374,6 +374,9 @@ func (d *Descriptor) NumberKind() core.NumberKind {
 //   - A counter instrument is non-monotonic
 //   - A gauge instrument is monotonic
 //   - A measure instrument is non-absolute
+//
+// TODO: Consider renaming this method, or expanding to provide
+// kind-specific tests (e.g., Monotonic(), Absolute()).
 func (d *Descriptor) Alternate() bool {
 	return d.alternate
 }

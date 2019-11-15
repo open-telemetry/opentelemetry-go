@@ -23,38 +23,38 @@ import (
 
 type (
 	Batcher struct {
-		selector export.AggregationSelector
-		lencoder export.LabelEncoder
-		stateful bool
-		dki      dkiMap
-		agg      aggMap
+		selector      export.AggregationSelector
+		labelEncoder  export.LabelEncoder
+		stateful      bool
+		descKeyIndex  descKeyIndexMap
+		aggCheckpoint aggCheckpointMap
 	}
 
-	aggEntry struct {
-		descriptor *export.Descriptor
-		labels     export.Labels
-		aggregator export.Aggregator
-	}
+	// descKeyIndexMap is a mapping, for each Descriptor, from the
+	// Key to the position in the descriptor's recommended keys.
+	descKeyIndexMap map[*export.Descriptor]map[core.Key]int
 
-	dkiMap map[*export.Descriptor]map[core.Key]int
-	aggMap map[string]aggEntry
+	// aggCheckpointMap is a mapping from encoded label set to current
+	// export record.  If the batcher is stateful, this map is
+	// never cleared.
+	aggCheckpointMap map[string]export.Record
 
 	producer struct {
-		aggMap   aggMap
-		lencoder export.LabelEncoder
+		aggCheckpointMap aggCheckpointMap
+		labelEncoder     export.LabelEncoder
 	}
 )
 
 var _ export.Batcher = &Batcher{}
 var _ export.Producer = &producer{}
 
-func New(selector export.AggregationSelector, lencoder export.LabelEncoder, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, labelEncoder export.LabelEncoder, stateful bool) *Batcher {
 	return &Batcher{
-		selector: selector,
-		lencoder: lencoder,
-		dki:      dkiMap{},
-		agg:      aggMap{},
-		stateful: stateful,
+		selector:      selector,
+		labelEncoder:  labelEncoder,
+		descKeyIndex:  descKeyIndexMap{},
+		aggCheckpoint: aggCheckpointMap{},
+		stateful:      stateful,
 	}
 }
 
@@ -66,10 +66,10 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	keys := desc.Keys()
 
 	// Cache the mapping from Descriptor->Key->Index
-	ki, ok := b.dki[desc]
+	ki, ok := b.descKeyIndex[desc]
 	if !ok {
 		ki = map[core.Key]int{}
-		b.dki[desc] = ki
+		b.descKeyIndex[desc] = ki
 
 		for i, k := range keys {
 			ki[k] = i
@@ -79,28 +79,29 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	// Compute the value list.  Note: Unspecified values become
 	// empty strings.  TODO: pin this down, we have no appropriate
 	// Value constructor.
-	canon := make([]core.KeyValue, len(keys))
+	outputLabels := make([]core.KeyValue, len(keys))
 
 	for i, key := range keys {
-		canon[i] = key.String("")
+		outputLabels[i] = key.String("")
 	}
 
 	// Note also the possibility to speed this computation of
-	// "encoded" via "canon" in the form of a (Descriptor,
+	// "encoded" via "outputLabels" in the form of a (Descriptor,
 	// LabelSet)->(Labels, Encoded) cache.
 	for _, kv := range labels.Ordered() {
 		pos, ok := ki[kv.Key]
 		if !ok {
 			continue
 		}
-		canon[pos].Value = kv.Value
+		outputLabels[pos].Value = kv.Value
 	}
 
 	// Compute an encoded lookup key.
-	encoded := b.lencoder.EncodeLabels(canon)
+	encoded := b.labelEncoder.EncodeLabels(outputLabels)
 
-	// Reduce dimensionality.
-	rag, ok := b.agg[encoded]
+	// Merge this aggregator with all preceding aggregators that
+	// map to the same set of `outputLabels` labels.
+	rag, ok := b.aggCheckpoint[encoded]
 	if !ok {
 		// If this Batcher is stateful, create a copy of the
 		// Aggregator for long-term storage.  Otherwise the
@@ -113,33 +114,29 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 				return err
 			}
 		}
-		b.agg[encoded] = aggEntry{
-			descriptor: desc,
-			labels:     export.NewLabels(canon, encoded, b.lencoder),
-			aggregator: agg,
-		}
+		b.aggCheckpoint[encoded] = export.NewRecord(
+			desc,
+			export.NewLabels(outputLabels, encoded, b.labelEncoder),
+			agg,
+		)
 		return nil
 	}
-	return rag.aggregator.Merge(agg, desc)
+	return rag.Aggregator().Merge(agg, desc)
 }
 
 func (b *Batcher) ReadCheckpoint() export.Producer {
-	checkpoint := b.agg
+	checkpoint := b.aggCheckpoint
 	if !b.stateful {
-		b.agg = aggMap{}
+		b.aggCheckpoint = aggCheckpointMap{}
 	}
 	return &producer{
-		aggMap:   checkpoint,
-		lencoder: b.lencoder,
+		aggCheckpointMap: checkpoint,
+		labelEncoder:     b.labelEncoder,
 	}
 }
 
 func (p *producer) ForEach(f func(export.Record)) {
-	for _, entry := range p.aggMap {
-		f(export.NewRecord(
-			entry.descriptor,
-			entry.labels,
-			entry.aggregator,
-		))
+	for _, entry := range p.aggCheckpointMap {
+		f(entry)
 	}
 }
