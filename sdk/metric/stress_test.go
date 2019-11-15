@@ -265,14 +265,14 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 		counter := agg.(aggregator.Sum)
 		sum, err := counter.Sum()
 		if err != nil {
-			panic("Impossible")
+			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.GaugeKind:
 		gauge := agg.(aggregator.LastValue)
 		lv, ts, err := gauge.LastValue()
-		if err != nil {
-			panic("Impossible")
+		if err != nil && err != aggregator.ErrNoLastValue {
+			f.T.Fatal("Last value error: ", err)
 		}
 		f.impl.storeCollect(actual, lv, ts)
 	default:
