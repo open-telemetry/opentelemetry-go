@@ -141,6 +141,7 @@ func (c *Controller) tick() {
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
 	err := c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
+	c.batcher.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)

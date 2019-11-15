@@ -46,7 +46,7 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (bf *benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
@@ -64,12 +64,15 @@ func (bf *benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	return nil
 }
 
-func (bf *benchFixture) Process(context.Context, *export.Descriptor, export.Labels, export.Aggregator) error {
+func (*benchFixture) Process(context.Context, *export.Descriptor, export.Labels, export.Aggregator) error {
 	return nil
 }
 
-func (bf *benchFixture) ReadCheckpoint() export.Producer {
+func (*benchFixture) ReadCheckpoint() export.CheckpointSet {
 	return nil
+}
+
+func (*benchFixture) FinishedCollection() {
 }
 
 func makeLabelSets(n int) [][]core.KeyValue {

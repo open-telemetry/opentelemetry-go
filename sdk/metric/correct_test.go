@@ -45,9 +45,12 @@ func (cb *correctnessBatcher) AggregatorFor(*export.Descriptor) export.Aggregato
 	return cb.agg
 }
 
-func (cb *correctnessBatcher) ReadCheckpoint() export.Producer {
+func (cb *correctnessBatcher) ReadCheckpoint() export.CheckpointSet {
 	cb.t.Fatal("Should not be called")
 	return nil
+}
+
+func (*correctnessBatcher) FinishedCollection() {
 }
 
 func (cb *correctnessBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {

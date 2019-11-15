@@ -33,9 +33,9 @@ import (
 )
 
 type testBatcher struct {
-	t           *testing.T
-	producer    *test.Producer
-	checkpoints int
+	t             *testing.T
+	checkpointSet *test.CheckpointSet
+	checkpoints   int
 }
 
 type testExporter struct {
@@ -46,25 +46,25 @@ type testExporter struct {
 }
 
 type testFixture struct {
-	producer *test.Producer
-	batcher  *testBatcher
-	exporter *testExporter
+	checkpointSet *test.CheckpointSet
+	batcher       *testBatcher
+	exporter      *testExporter
 }
 
 func newFixture(t *testing.T) testFixture {
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	batcher := &testBatcher{
-		t:        t,
-		producer: producer,
+		t:             t,
+		checkpointSet: checkpointSet,
 	}
 	exporter := &testExporter{
 		t: t,
 	}
 	return testFixture{
-		producer: producer,
-		batcher:  batcher,
-		exporter: exporter,
+		checkpointSet: checkpointSet,
+		batcher:       batcher,
+		exporter:      exporter,
 	}
 }
 
@@ -72,19 +72,22 @@ func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return counter.New()
 }
 
-func (b *testBatcher) ReadCheckpoint() export.Producer {
+func (b *testBatcher) ReadCheckpoint() export.CheckpointSet {
 	b.checkpoints++
-	return b.producer
+	return b.checkpointSet
+}
+
+func (*testBatcher) FinishedCollection() {
 }
 
 func (b *testBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	b.producer.Add(desc, agg, labels.Ordered()...)
+	b.checkpointSet.Add(desc, agg, labels.Ordered()...)
 	return nil
 }
 
-func (e *testExporter) Export(_ context.Context, producer export.Producer) error {
+func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.exports++
-	producer.ForEach(func(r export.Record) {
+	checkpointSet.ForEach(func(r export.Record) {
 		e.records = append(e.records, r)
 	})
 	return e.retErr
@@ -139,7 +142,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, int64(3), sum.AsInt64())
 	require.Nil(t, err)
 
-	fix.producer.Reset()
+	fix.checkpointSet.Reset()
 	fix.exporter.records = nil
 
 	counter.Add(ctx, 7, meter.Labels())
@@ -188,3 +191,6 @@ func TestPushExportError(t *testing.T) {
 
 	p.Stop()
 }
+
+// TODO add a test that FinishedCollection() is callled
+// TODO remove the clock import from push.go

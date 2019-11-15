@@ -38,12 +38,15 @@ type monotoneBatcher struct {
 	currentTime  *time.Time
 }
 
-func (m *monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
+func (*monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return gauge.New()
 }
 
-func (m *monotoneBatcher) ReadCheckpoint() export.Producer {
+func (*monotoneBatcher) ReadCheckpoint() export.CheckpointSet {
 	return nil
+}
+
+func (*monotoneBatcher) FinishedCollection() {
 }
 
 func (m *monotoneBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {

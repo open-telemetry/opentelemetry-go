@@ -97,7 +97,7 @@ func New(options Options) (*Exporter, error) {
 	}, nil
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	// N.B. Only return one aggError, if any occur. They're likely
 	// to be duplicates of the same error.
 	var aggError error
@@ -106,7 +106,7 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	producer.ForEach(func(record export.Record) {
+	checkpointSet.ForEach(func(record export.Record) {
 		desc := record.Descriptor()
 		labels := record.Labels()
 		agg := record.Aggregator()

@@ -80,8 +80,13 @@ type Batcher interface {
 	// ReadCheckpoint is the interface used by the controller to
 	// access the fully aggregated checkpoint after collection.
 	//
-	// The returned Producer is passed to the Exporter.
-	ReadCheckpoint() Producer
+	// The returned CheckpointSet is passed to the Exporter.
+	ReadCheckpoint() CheckpointSet
+
+	// FinishedCollection informs the Batcher that a complete
+	// collection round was completed.  Stateless batchers might
+	// reset state in this method, for example.
+	FinishedCollection()
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -161,9 +166,9 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The Producer interface refers to the Batcher that just
+	// The CheckpointSet interface refers to the Batcher that just
 	// completed collection.
-	Export(context.Context, Producer) error
+	Export(context.Context, CheckpointSet) error
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
@@ -189,13 +194,14 @@ type LabelEncoder interface {
 	EncodeLabels([]core.KeyValue) string
 }
 
-// Producer allows a controller to access a complete checkpoint of
+// CheckpointSet allows a controller to access a complete checkpoint of
 // aggregated metrics from the Batcher.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
-type Producer interface {
-	// ForEach iterates over all metrics that were updated during
-	// the last collection period.
+type CheckpointSet interface {
+	// ForEach iterates over aggregated checkpoints for all
+	// metrics that were updated during the last collection
+	// period.
 	ForEach(func(Record))
 }
 

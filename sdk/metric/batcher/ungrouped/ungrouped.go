@@ -41,7 +41,7 @@ type (
 )
 
 var _ export.Batcher = &Batcher{}
-var _ export.Producer = batchMap{}
+var _ export.CheckpointSet = batchMap{}
 
 func New(selector export.AggregationSelector, stateful bool) *Batcher {
 	return &Batcher{
@@ -61,33 +61,35 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 		encoded:    labels.Encoded(),
 	}
 	value, ok := b.batchMap[key]
-	if !ok {
-		// If this Batcher is stateful, create a copy of the
-		// Aggregator for long-term storage.  Otherwise the
-		// Meter implementation will checkpoint the aggregator
-		// again, overwriting the long-lived state.
-		if b.stateful {
-			tmp := agg
-			agg = b.AggregatorFor(desc)
-			if err := agg.Merge(tmp, desc); err != nil {
-				return err
-			}
-		}
-		b.batchMap[key] = batchValue{
-			aggregator: agg,
-			labels:     labels,
-		}
-		return nil
+	if ok {
+		return value.aggregator.Merge(agg, desc)
 	}
-	return value.aggregator.Merge(agg, desc)
+	// If this Batcher is stateful, create a copy of the
+	// Aggregator for long-term storage.  Otherwise the
+	// Meter implementation will checkpoint the aggregator
+	// again, overwriting the long-lived state.
+	if b.stateful {
+		tmp := agg
+		agg = b.AggregatorFor(desc)
+		if err := agg.Merge(tmp, desc); err != nil {
+			return err
+		}
+	}
+	b.batchMap[key] = batchValue{
+		aggregator: agg,
+		labels:     labels,
+	}
+	return nil
 }
 
-func (b *Batcher) ReadCheckpoint() export.Producer {
-	checkpoint := b.batchMap
+func (b *Batcher) ReadCheckpoint() export.CheckpointSet {
+	return b.batchMap
+}
+
+func (b *Batcher) FinishedCollection() {
 	if !b.stateful {
 		b.batchMap = batchMap{}
 	}
-	return checkpoint
 }
 
 func (c batchMap) ForEach(f func(export.Record)) {

@@ -39,14 +39,14 @@ type (
 	// never cleared.
 	aggCheckpointMap map[string]export.Record
 
-	producer struct {
+	checkpointSet struct {
 		aggCheckpointMap aggCheckpointMap
 		labelEncoder     export.LabelEncoder
 	}
 )
 
 var _ export.Batcher = &Batcher{}
-var _ export.Producer = &producer{}
+var _ export.CheckpointSet = &checkpointSet{}
 
 func New(selector export.AggregationSelector, labelEncoder export.LabelEncoder, stateful bool) *Batcher {
 	return &Batcher{
@@ -102,40 +102,42 @@ func (b *Batcher) Process(_ context.Context, desc *export.Descriptor, labels exp
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.
 	rag, ok := b.aggCheckpoint[encoded]
-	if !ok {
-		// If this Batcher is stateful, create a copy of the
-		// Aggregator for long-term storage.  Otherwise the
-		// Meter implementation will checkpoint the aggregator
-		// again, overwriting the long-lived state.
-		if b.stateful {
-			tmp := agg
-			agg = b.AggregatorFor(desc)
-			if err := agg.Merge(tmp, desc); err != nil {
-				return err
-			}
-		}
-		b.aggCheckpoint[encoded] = export.NewRecord(
-			desc,
-			export.NewLabels(outputLabels, encoded, b.labelEncoder),
-			agg,
-		)
-		return nil
+	if ok {
+		return rag.Aggregator().Merge(agg, desc)
 	}
-	return rag.Aggregator().Merge(agg, desc)
+	// If this Batcher is stateful, create a copy of the
+	// Aggregator for long-term storage.  Otherwise the
+	// Meter implementation will checkpoint the aggregator
+	// again, overwriting the long-lived state.
+	if b.stateful {
+		tmp := agg
+		agg = b.AggregatorFor(desc)
+		if err := agg.Merge(tmp, desc); err != nil {
+			return err
+		}
+	}
+	b.aggCheckpoint[encoded] = export.NewRecord(
+		desc,
+		export.NewLabels(outputLabels, encoded, b.labelEncoder),
+		agg,
+	)
+	return nil
 }
 
-func (b *Batcher) ReadCheckpoint() export.Producer {
-	checkpoint := b.aggCheckpoint
-	if !b.stateful {
-		b.aggCheckpoint = aggCheckpointMap{}
-	}
-	return &producer{
-		aggCheckpointMap: checkpoint,
+func (b *Batcher) ReadCheckpoint() export.CheckpointSet {
+	return &checkpointSet{
+		aggCheckpointMap: b.aggCheckpoint,
 		labelEncoder:     b.labelEncoder,
 	}
 }
 
-func (p *producer) ForEach(f func(export.Record)) {
+func (b *Batcher) FinishedCollection() {
+	if !b.stateful {
+		b.aggCheckpoint = aggCheckpointMap{}
+	}
+}
+
+func (p *checkpointSet) ForEach(f func(export.Record)) {
 	for _, entry := range p.aggCheckpointMap {
 		f(entry)
 	}
