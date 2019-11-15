@@ -26,19 +26,27 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 )
 
-// These tests use the original label encoding.
+// These tests use the ../test label encoding.
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
 	b := ungrouped.New(test.NewAggregationSelector(), false)
 
+	// Set initial gauge values
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
 	_ = b.Process(ctx, test.GaugeDesc, test.Labels3, test.GaugeAgg(30))
 
+	// Another gauge Set for Labels1
+	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(50))
+
+	// Set initial counter values
 	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
 	_ = b.Process(ctx, test.CounterDesc, test.Labels2, test.CounterAgg(20))
 	_ = b.Process(ctx, test.CounterDesc, test.Labels3, test.CounterAgg(40))
+
+	// Another counter Add for Labels1
+	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(50))
 
 	processor := b.ReadCheckpoint()
 
@@ -48,10 +56,10 @@ func TestUngroupedStateless(t *testing.T) {
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter/G~H&C~D": 10, // labels1
+		"counter/G~H&C~D": 60, // labels1
 		"counter/C~D&E~F": 20, // labels2
 		"counter/":        40, // labels3
-		"gauge/G~H&C~D":   10, // labels1
+		"gauge/G~H&C~D":   50, // labels1
 		"gauge/C~D&E~F":   20, // labels2
 		"gauge/":          30, // labels3
 	}, records)
