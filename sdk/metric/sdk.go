@@ -15,8 +15,9 @@
 package metric
 
 import (
-	"bytes"
 	"context"
+	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -26,23 +27,21 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type (
 	// SDK implements the OpenTelemetry Meter API.  The SDK is
-	// bound to a single export.MetricBatcher in `New()`.
+	// bound to a single export.Batcher in `New()`.
 	//
 	// The SDK supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
-	// the exporter model.  Push-based exporters will setup a
-	// timer to call Collect() periodically.  Pull-based exporters
+	// the batcher model.  Push-based batchers will setup a
+	// timer to call Collect() periodically.  Pull-based batchers
 	// will call Collect() when a pull request arrives.
 	SDK struct {
 		// current maps `mapkey` to *record.
 		current sync.Map
-
-		// pool is a pool of labelset builders.
-		pool sync.Pool // *bytes.Buffer
 
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
@@ -56,11 +55,17 @@ type (
 		// incremented in `Collect()`.
 		currentEpoch int64
 
-		// exporter is the configured exporter+configuration.
-		exporter export.Batcher
+		// batcher is the configured batcher+configuration.
+		batcher export.Batcher
+
+		// lencoder determines how labels are uniquely encoded.
+		labelEncoder export.LabelEncoder
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
+
+		// errorHandler supports delivering errors to the user.
+		errorHandler ErrorHandler
 	}
 
 	instrument struct {
@@ -127,6 +132,8 @@ type (
 		next doublePtr
 	}
 
+	ErrorHandler func(error)
+
 	// singlePointer wraps an unsafe.Pointer and supports basic
 	// load(), store(), clear(), and swapNil() operations.
 	singlePtr struct {
@@ -145,7 +152,6 @@ var (
 	_ api.LabelSet       = &labels{}
 	_ api.InstrumentImpl = &instrument{}
 	_ api.HandleImpl     = &record{}
-	_ export.Record      = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -156,6 +162,10 @@ var (
 
 func (i *instrument) Meter() api.Meter {
 	return i.meter
+}
+
+func (m *SDK) SetErrorHandler(f ErrorHandler) {
+	m.errorHandler = f
 }
 
 func (i *instrument) acquireHandle(ls *labels) *record {
@@ -179,9 +189,8 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		refcount:       1,
 		collectedEpoch: -1,
 		modifiedEpoch:  0,
+		recorder:       i.meter.batcher.AggregatorFor(i.descriptor),
 	}
-
-	rec.recorder = i.meter.exporter.AggregatorFor(rec)
 
 	// Load/Store: there's a memory allocation to place `mk` into
 	// an interface here.
@@ -208,26 +217,27 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new SDK for the given exporter.  This SDK supports
-// only a single exporter.
+// New constructs a new SDK for the given batcher.  This SDK supports
+// only a single batcher.
 //
 // The SDK does not start any background process to collect itself
-// periodically, this responsbility lies with the exporter, typically,
+// periodically, this responsbility lies with the batcher, typically,
 // depending on the type of export.  For example, a pull-based
-// exporter will call Collect() when it receives a request to scrape
-// current metric values.  A push-based exporter should configure its
+// batcher will call Collect() when it receives a request to scrape
+// current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(exporter export.Batcher) *SDK {
+func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
 	m := &SDK{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &bytes.Buffer{}
-			},
-		},
-		exporter: exporter,
+		batcher:      batcher,
+		labelEncoder: labelEncoder,
+		errorHandler: DefaultErrorHandler,
 	}
 	m.empty.meter = m
 	return m
+}
+
+func DefaultErrorHandler(err error) {
+	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 
 // Labels returns a LabelSet corresponding to the arguments.  Passed
@@ -236,9 +246,9 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// Note: This computes a canonical encoding of the labels to
 	// use as a map key.  It happens to use the encoding used by
 	// statsd for labels, allowing an optimization for statsd
-	// exporters.  This could be made configurable in the
+	// batchers.  This could be made configurable in the
 	// constructor, to support the same optimization for different
-	// exporters.
+	// batchers.
 
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -263,21 +273,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	}
 	ls.sorted = ls.sorted[0:oi]
 
-	// Serialize.
-	buf := m.pool.Get().(*bytes.Buffer)
-	defer m.pool.Put(buf)
-	buf.Reset()
-	_, _ = buf.WriteRune('|')
-	delimiter := '#'
-	for _, kv := range ls.sorted {
-		_, _ = buf.WriteRune(delimiter)
-		_, _ = buf.WriteString(string(kv.Key))
-		_, _ = buf.WriteRune(':')
-		_, _ = buf.WriteString(kv.Value.Emit())
-		delimiter = ','
-	}
-
-	ls.encoded = buf.String()
+	ls.encoded = m.labelEncoder.Encode(ls.sorted)
 
 	return ls
 }
@@ -291,7 +287,7 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
+func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
 	descriptor := export.NewDescriptor(
 		name,
 		metricKind,
@@ -370,9 +366,13 @@ func (m *SDK) saveFromReclaim(rec *record) {
 //
 // During the collection pass, the export.Batcher will receive
 // one Export() call per current aggregation.
-func (m *SDK) Collect(ctx context.Context) {
+//
+// Returns the number of records that were checkpointed.
+func (m *SDK) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
+
+	checkpointed := 0
 
 	var next *record
 	for inuse := m.records.primary.swapNil(); inuse != nil; inuse = next {
@@ -381,14 +381,14 @@ func (m *SDK) Collect(ctx context.Context) {
 		refcount := atomic.LoadInt64(&inuse.refcount)
 
 		if refcount > 0 {
-			m.collect(ctx, inuse)
+			checkpointed += m.checkpoint(ctx, inuse)
 			m.addPrimary(inuse)
 			continue
 		}
 
 		modified := atomic.LoadInt64(&inuse.modifiedEpoch)
 		collected := atomic.LoadInt64(&inuse.collectedEpoch)
-		m.collect(ctx, inuse)
+		checkpointed += m.checkpoint(ctx, inuse)
 
 		if modified >= collected {
 			atomic.StoreInt64(&inuse.collectedEpoch, m.currentEpoch)
@@ -409,18 +409,27 @@ func (m *SDK) Collect(ctx context.Context) {
 		atomic.StoreInt64(&chances.reclaim, 0)
 
 		if chances.next.primary.load() == hazardRecord {
-			m.collect(ctx, chances)
+			checkpointed += m.checkpoint(ctx, chances)
 			m.addPrimary(chances)
 		}
 	}
 
 	m.currentEpoch++
+	return checkpointed
 }
 
-func (m *SDK) collect(ctx context.Context, r *record) {
-	if r.recorder != nil {
-		r.recorder.Collect(ctx, r, m.exporter)
+func (m *SDK) checkpoint(ctx context.Context, r *record) int {
+	if r.recorder == nil {
+		return 0
 	}
+	r.recorder.Checkpoint(ctx, r.descriptor)
+	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.labelEncoder)
+	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, labels, r.recorder))
+
+	if err != nil {
+		m.errorHandler(err)
+	}
+	return 1
 }
 
 // RecordBatch enters a batch of metric events.
@@ -439,13 +448,18 @@ func (m *SDK) GetDescriptor(inst metric.InstrumentImpl) *export.Descriptor {
 	return nil
 }
 
-func (l *labels) Meter() api.Meter {
-	return l.meter
-}
-
 func (r *record) RecordOne(ctx context.Context, number core.Number) {
-	if r.recorder != nil {
-		r.recorder.Update(ctx, number, r)
+	if r.recorder == nil {
+		// The instrument is disabled according to the AggregationSelector.
+		return
+	}
+	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
+		r.labels.meter.errorHandler(err)
+		return
+	}
+	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
+		r.labels.meter.errorHandler(err)
+		return
 	}
 }
 
@@ -480,12 +494,4 @@ func (r *record) mapkey() mapkey {
 		descriptor: r.descriptor,
 		encoded:    r.labels.encoded,
 	}
-}
-
-func (r *record) Descriptor() *export.Descriptor {
-	return r.descriptor
-}
-
-func (r *record) Labels() []core.KeyValue {
-	return r.labels.sorted
 }

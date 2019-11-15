@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type (
@@ -36,30 +37,43 @@ type (
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
+// TODO: The SDK specification says this type should support Min
+// values, see #319.
 
-// New returns a new measure aggregator for computing max, sum, and count.
+var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
+
+// New returns a new measure aggregator for computing max, sum, and
+// count.  It does not compute quantile information other than Max.
+//
+// Note that this aggregator maintains each value using independent
+// atomic operations, which introduces the possibility that
+// checkpoints are inconsistent.  For greater consistency and lower
+// performance, consider using Array or DDSketch aggregators.
 func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Sum returns the accumulated sum as a Number.
-func (c *Aggregator) Sum() core.Number {
-	return c.checkpoint.sum
+// Sum returns the sum of values in the checkpoint.
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.checkpoint.sum, nil
 }
 
-// Count returns the accumulated count.
-func (c *Aggregator) Count() int64 {
-	return int64(c.checkpoint.count.AsUint64())
+// Count returns the number of values in the checkpoint.
+func (c *Aggregator) Count() (int64, error) {
+	return int64(c.checkpoint.count.AsUint64()), nil
 }
 
-// Max returns the accumulated max as a Number.
+// Max returns the maximum value in the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.max, nil
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint saves the current state and resets the current state to
+// the empty set.  Since no locks are taken, there is a chance that
+// the independent Max, Sum, and Count are not consistent with each
+// other.
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -73,19 +87,11 @@ func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
 	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
-
-	exp.Export(ctx, rec, c)
 }
 
-// Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
-	desc := rec.Descriptor()
+// Update adds the recorded measurement to the current data set.
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
 
 	c.current.count.AddUint64Atomic(1)
 	c.current.sum.AddNumberAtomic(kind, number)
@@ -100,13 +106,14 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Re
 			break
 		}
 	}
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+// Merge combines two data sets into one.
+func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
@@ -115,4 +122,5 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
 		c.checkpoint.max.SetNumber(o.checkpoint.max)
 	}
+	return nil
 }
