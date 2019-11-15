@@ -37,30 +37,41 @@ type (
 	}
 )
 
+// TODO: The SDK specification says this type should support Min
+// values, see #319.
+
 var _ export.Aggregator = &Aggregator{}
 var _ aggregator.MaxSumCount = &Aggregator{}
 
-// New returns a new measure aggregator for computing max, sum, and count.
+// New returns a new measure aggregator for computing max, sum, and
+// count.  It does not compute quantile information other than Max.
+//
+// Note that this aggregator maintains each value using independent
+// atomic operations, which introduces the possibility that
+// checkpoints are inconsistent.  For greater consistency and lower
+// performance, consider using Array or DDSketch aggregators.
 func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Sum returns the accumulated sum as a Number.
+// Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
 	return c.checkpoint.sum, nil
 }
 
-// Count returns the accumulated count.
+// Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
 	return int64(c.checkpoint.count.AsUint64()), nil
 }
 
-// Max returns the accumulated max as a Number.
+// Max returns the maximum value in the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.max, nil
 }
 
-// Checkpoint checkpoints the current value (atomically) and exports it.
+// Checkpoint saves the current state.  Since no locks are taken,
+// there is a chance that the independent Max, Sum, and Count are not
+// consistent with each other.
 func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
@@ -77,7 +88,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
 }
 
-// Update modifies the current value (atomically) for later export.
+// Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
 
@@ -97,6 +108,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
+// Merge combines two data sets into one.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {

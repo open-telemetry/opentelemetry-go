@@ -131,6 +131,12 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 				expose.Count = count
 			}
 
+			// TODO: Should tolerate ErrEmptyDataSet here,
+			// just like ErrNoLastValue below, since
+			// there's a race condition between creating
+			// the Aggregator and updating the first
+			// value.
+
 			if max, err := msc.Max(); err != nil {
 				aggError = err
 				expose.Max = "NaN"

@@ -41,35 +41,41 @@ var _ export.Aggregator = &Aggregator{}
 var _ aggregator.MaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 
+// New returns a new array aggregator, which aggregates recorded
+// measurements by storing them in an array.  This type uses a mutex
+// for Update() and Checkpoint() concurrency.
 func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Sum returns the sum of the checkpoint.
+// Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
 	return c.ckptSum, nil
 }
 
-// Count returns the count of the checkpoint.
+// Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
 	return int64(len(c.checkpoint)), nil
 }
 
-// Max returns the max of the checkpoint.
+// Max returns the maximum value in the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.Quantile(1)
 }
 
-// Min returns the min of the checkpoint.
+// Min returns the mininum value in the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	return c.checkpoint.Quantile(0)
 }
 
-// Quantile returns the estimated quantile of the checkpoint.
+// Quantile returns the estimated quantile of data in the checkpoint.
+// It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
+// Checkpoint saves the current state, taking a lock to prevent
+// concurrent Update() calls.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
@@ -77,6 +83,10 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 
 	kind := desc.NumberKind()
 
+	// TODO: This sort should be done lazily, only when quantiles
+	// are requested.  The SDK specification says you can use this
+	// aggregator to simply list values in the order they were
+	// received as an alternative to requesting quantile information.
 	c.sort(kind)
 
 	c.ckptSum = core.Number(0)
@@ -86,6 +96,9 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	}
 }
 
+// Update adds the recorded measurement to the current data set.
+// Update takes a lock to prevent concurrent Update() and Checkpoint()
+// calls.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	c.current = append(c.current, number)
@@ -93,6 +106,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
+// Merge combines two data sets into one.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
@@ -152,7 +166,8 @@ func (p *Points) Swap(i, j int) {
 }
 
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
-// element of the data set.
+// element of the data set.  This uses the "Nearest-Rank" definition
+// of a quantile.
 func (p *Points) Quantile(q float64) (core.Number, error) {
 	if len(*p) == 0 {
 		return core.Number(0), aggregator.ErrEmptyDataSet
@@ -168,9 +183,6 @@ func (p *Points) Quantile(q float64) (core.Number, error) {
 		return (*p)[len(*p)-1], nil
 	}
 
-	// Note: There's no interpolation being done here.  There are
-	// many definitions for "quantile", some interpolate, some do
-	// not.  What is expected?
 	position := float64(len(*p)-1) * q
 	ceil := int(math.Ceil(position))
 	return (*p)[ceil], nil

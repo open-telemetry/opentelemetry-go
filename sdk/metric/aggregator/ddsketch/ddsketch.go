@@ -53,34 +53,35 @@ func New(cfg *Config, desc *export.Descriptor) *Aggregator {
 
 // NewDefaultConfig returns a new, default DDSketch config.
 //
-// TODO: The Config constructor should probably set minValue to -Inf
-// to aggregate metrics with absolute=false.  This requires providing values
-// for alpha and maxNumBins
+// TODO: Should the Config constructor set minValue to -Inf to
+// when the descriptor has absolute=false?  This requires providing
+// values for alpha and maxNumBins, apparently.
 func NewDefaultConfig() *Config {
 	return sdk.NewDefaultConfig()
 }
 
-// Sum returns the sum of the checkpoint.
+// Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
 	return c.toNumber(c.checkpoint.Sum()), nil
 }
 
-// Count returns the count of the checkpoint.
+// Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
 	return c.checkpoint.Count(), nil
 }
 
-// Max returns the max of the checkpoint.
+// Max returns the maximum value in the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	return c.Quantile(1)
 }
 
-// Min returns the min of the checkpoint.
+// Min returns the mininum value in the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	return c.Quantile(0)
 }
 
-// Quantile returns the estimated quantile of the checkpoint.
+// Quantile returns the estimated quantile of data in the checkpoint.
+// It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	if c.checkpoint.Count() == 0 {
 		return core.Number(0), aggregator.ErrEmptyDataSet
@@ -99,7 +100,8 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 	return core.NewInt64Number(int64(f))
 }
 
-// Checkpoint checkpoints the current value (atomically) and exports it.
+// Checkpoint saves the current state, taking a lock to prevent
+// concurrent Update() calls.
 func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
@@ -109,7 +111,9 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	c.lock.Unlock()
 }
 
-// Update modifies the current value (atomically) for later export.
+// Update adds the recorded measurement to the current data set.
+// Update takes a lock to prevent concurrent Update() and Checkpoint()
+// calls.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -117,6 +121,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
+// Merge combines two sketches into one.
 func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
