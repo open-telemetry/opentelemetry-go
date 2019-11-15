@@ -23,33 +23,45 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
+// These interfaces describe the various ways to access state from an
+// Aggregator.
+
 type (
+	// Sum returns an aggregated sum.
 	Sum interface {
 		Sum() (core.Number, error)
 	}
 
+	// Sum returns the number of values that were aggregated.
 	Count interface {
 		Count() (int64, error)
 	}
 
+	// Max returns the maximum value over the set of values that were aggregated.
 	Max interface {
 		Max() (core.Number, error)
 	}
 
+	// Quantile returns an exact or estimated quantile over the
+	// set of values that were aggregated.
 	Quantile interface {
 		Quantile(float64) (core.Number, error)
 	}
 
+	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		LastValue() (core.Number, time.Time, error)
 	}
 
+	// MaxSumCount supports the Max, Sum, and Count interfaces.
 	MaxSumCount interface {
 		Sum
 		Count
 		Max
 	}
 
+	// MaxSumCount supports the Max, Sum, Count, and Quantile
+	// interfaces.
 	Distribution interface {
 		MaxSumCount
 		Quantile
@@ -57,20 +69,29 @@ type (
 )
 
 var (
-	ErrEmptyDataSet     = fmt.Errorf("The result is not defined on an empty data set")
 	ErrInvalidQuantile  = fmt.Errorf("The requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("Negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrNonMonotoneInput = fmt.Errorf("The new value is not monotone")
 	ErrInconsistentType = fmt.Errorf("Cannot merge different aggregator types")
 
-	// ErrNoLastValue is returned by the gauge.Aggregator when
+	// ErrNoLastValue is returned by the LastValue interface when
 	// (due to a race with collection) the Aggregator is
 	// checkpointed before the first value is set.  The aggregator
 	// should simply be skipped in this case.
 	ErrNoLastValue = fmt.Errorf("No value has been set")
+
+	// ErrEmptyDataSet is returned by Max and Quantile interfaces
+	// when (due to a race with collection) the Aggregator is
+	// checkpointed before the first value is set.  The aggregator
+	// should simply be skipped in this case.
+	ErrEmptyDataSet = fmt.Errorf("The result is not defined on an empty data set")
 )
 
+// RangeTest is a commmon routine for testing for valid input values.
+// This rejects NaN values.  This rejects negative values when the
+// metric instrument does not support negative values, including
+// monotonic counter metrics and absolute measure metrics).
 func RangeTest(number core.Number, descriptor *export.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
