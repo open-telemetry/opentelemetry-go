@@ -74,8 +74,8 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-// Checkpoint saves the current state, taking a lock to prevent
-// concurrent Update() calls.
+// Checkpoint saves the current state and resets the current state to
+// the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil

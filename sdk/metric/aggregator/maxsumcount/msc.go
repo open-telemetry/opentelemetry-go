@@ -69,9 +69,10 @@ func (c *Aggregator) Max() (core.Number, error) {
 	return c.checkpoint.max, nil
 }
 
-// Checkpoint saves the current state.  Since no locks are taken,
-// there is a chance that the independent Max, Sum, and Count are not
-// consistent with each other.
+// Checkpoint saves the current state and resets the current state to
+// the empty set.  Since no locks are taken, there is a chance that
+// the independent Max, Sum, and Count are not consistent with each
+// other.
 func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
