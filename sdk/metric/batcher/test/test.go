@@ -83,11 +83,11 @@ func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Ag
 }
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	encoded := encoder.EncodeLabels(labels)
+	encoded := encoder.Encode(labels)
 	return export.NewLabels(labels, encoded, encoder)
 }
 
-func (Encoder) EncodeLabels(labels []core.KeyValue) string {
+func (Encoder) Encode(labels []core.KeyValue) string {
 	var sb strings.Builder
 	for i, l := range labels {
 		if i > 0 {

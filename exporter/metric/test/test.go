@@ -21,7 +21,7 @@ func (p *CheckpointSet) Reset() {
 }
 
 func (p *CheckpointSet) Add(desc *export.Descriptor, agg export.Aggregator, labels ...core.KeyValue) {
-	encoded := p.encoder.EncodeLabels(labels)
+	encoded := p.encoder.Encode(labels)
 	elabels := export.NewLabels(labels, encoded, p.encoder)
 
 	p.updates = append(p.updates, export.NewRecord(desc, elabels, agg))

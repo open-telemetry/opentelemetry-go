@@ -58,7 +58,7 @@ func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) e
 	return nil
 }
 
-func (testLabelEncoder) EncodeLabels(labels []core.KeyValue) string {
+func (testLabelEncoder) Encode(labels []core.KeyValue) string {
 	return fmt.Sprint(labels)
 }
 
@@ -189,6 +189,6 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.DefaultLabelEncoder()
-	encoded := encoder.EncodeLabels([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
+	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
 	require.Equal(t, `A=B,C=D`, encoded)
 }

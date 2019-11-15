@@ -178,9 +178,9 @@ type Exporter interface {
 //
 // If none is provided, a default will be used.
 type LabelEncoder interface {
-	// EncodeLabels is called (concurrently) in instrumentation
-	// context.  It should return a unique representation of the
-	// labels suitable for the SDK to use as a map key.
+	// Encode is called (concurrently) in instrumentation context.
+	// It should return a unique representation of the labels
+	// suitable for the SDK to use as a map key.
 	//
 	// The exported Labels object retains a reference to its
 	// LabelEncoder to determine which encoding was used.
@@ -189,7 +189,7 @@ type LabelEncoder interface {
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
-	EncodeLabels([]core.KeyValue) string
+	Encode([]core.KeyValue) string
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of

@@ -270,7 +270,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	}
 	sorted = sorted[0:oi]
 
-	encoded := m.lencoder.EncodeLabels(sorted)
+	encoded := m.lencoder.Encode(sorted)
 
 	return &labels{
 		meter:   m,
