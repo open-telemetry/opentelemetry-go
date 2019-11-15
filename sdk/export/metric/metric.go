@@ -124,17 +124,22 @@ type Aggregator interface {
 	// inspected for distributed or span context.
 	Update(context.Context, core.Number, *Descriptor) error
 
-	// Checkpoint is called in collection context to finish one
-	// period of aggregation.  Checkpoint() is called in a
-	// single-threaded context, no locking is required.
+	// Checkpoint is called during collection to finish one period
+	// of aggregation by atomically saving the current value.
+	// Checkpoint() is called concurrently with Update().
+	//
+	// After the checkpoint is taken, the current value may be
+	// accessed using by converting to one a suitable interface
+	// types in the `aggregator` sub-package.
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
 	Checkpoint(context.Context, *Descriptor)
 
-	// Merge combines state from the argument aggregator into this
-	// one.  Merge() is called in a single-threaded context, no
-	// locking is required.
+	// Merge combines the checkpointed state from the argument
+	// aggregator into this aggregator's checkpointed state.
+	// Merge() is called in a single-threaded context, no locking
+	// is required.
 	Merge(Aggregator, *Descriptor) error
 }
 

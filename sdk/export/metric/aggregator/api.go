@@ -12,14 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator
+package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
 
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+)
+
+type (
+	Sum interface {
+		Sum() (core.Number, error)
+	}
+
+	Count interface {
+		Count() (int64, error)
+	}
+
+	Max interface {
+		Max() (core.Number, error)
+	}
+
+	Quantile interface {
+		Quantile(float64) (core.Number, error)
+	}
+
+	LastValue interface {
+		LastValue() (core.Number, time.Time, error)
+	}
+
+	MaxSumCount interface {
+		Sum
+		Count
+		Max
+	}
+
+	Distribution interface {
+		MaxSumCount
+		Quantile
+	}
 )
 
 var (
