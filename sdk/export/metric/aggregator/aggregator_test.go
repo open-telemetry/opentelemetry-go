@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -65,14 +66,23 @@ func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
 	negErr := aggregator.RangeTest(neg, desc)
 
 	require.Nil(t, posErr)
-	require.Equal(t, negErr == nil, alt)
+
+	if desc.MetricKind() == export.GaugeKind {
+		require.Nil(t, negErr)
+	} else {
+		require.Equal(t, negErr == nil, alt)
+	}
 }
 
 func TestRangeTest(t *testing.T) {
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []export.MetricKind{export.CounterKind, export.MeasureKind} {
-				t.Run(nkind.String(), func(t *testing.T) {
+			for _, mkind := range []export.MetricKind{
+				export.CounterKind,
+				export.GaugeKind,
+				export.MeasureKind,
+			} {
+				t.Run(mkind.String(), func(t *testing.T) {
 					for _, alt := range []bool{true, false} {
 						t.Run(fmt.Sprint(alt), func(t *testing.T) {
 							desc := export.NewDescriptor(

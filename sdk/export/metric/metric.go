@@ -14,6 +14,8 @@
 
 package export
 
+//go:generate stringer -type=MetricKind
+
 import (
 	"context"
 

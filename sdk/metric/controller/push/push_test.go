@@ -36,6 +36,7 @@ type testBatcher struct {
 	t             *testing.T
 	checkpointSet *test.CheckpointSet
 	checkpoints   int
+	finishes      int
 }
 
 type testExporter struct {
@@ -77,7 +78,8 @@ func (b *testBatcher) CheckpointSet() export.CheckpointSet {
 	return b.checkpointSet
 }
 
-func (*testBatcher) FinishedCollection() {
+func (b *testBatcher) FinishedCollection() {
+	b.finishes++
 }
 
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
@@ -127,6 +129,7 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 3, meter.Labels())
 
 	require.Equal(t, 0, fix.batcher.checkpoints)
+	require.Equal(t, 0, fix.batcher.finishes)
 	require.Equal(t, 0, fix.exporter.exports)
 	require.Equal(t, 0, len(fix.exporter.records))
 
@@ -135,6 +138,7 @@ func TestPushTicker(t *testing.T) {
 
 	require.Equal(t, 1, fix.batcher.checkpoints)
 	require.Equal(t, 1, fix.exporter.exports)
+	require.Equal(t, 1, fix.batcher.finishes)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
 
@@ -151,6 +155,7 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	require.Equal(t, 2, fix.batcher.checkpoints)
+	require.Equal(t, 2, fix.batcher.finishes)
 	require.Equal(t, 2, fix.exporter.exports)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
@@ -192,5 +197,4 @@ func TestPushExportError(t *testing.T) {
 	p.Stop()
 }
 
-// TODO add a test that FinishedCollection() is callled
 // TODO remove the clock import from push.go
