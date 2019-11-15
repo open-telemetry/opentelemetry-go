@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 // Note: This aggregator enforces the behavior of monotonic gauges to
@@ -70,22 +70,24 @@ func New() *Aggregator {
 	}
 }
 
-// LastValue returns the last-recorded gauge value as a Number.
-func (g *Aggregator) LastValue() core.Number {
-	return (*gaugeData)(g.checkpoint).value.AsNumber()
+// LastValue returns the last-recorded gauge value and the
+// corresponding timestamp.  The error value aggregator.ErrNoLastValue
+// will be returned if (due to a race condition) the checkpoint was
+// computed before the first value was set.
+func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
+	gd := (*gaugeData)(g.checkpoint)
+	if gd == unsetGauge {
+		return core.Number(0), time.Time{}, aggregator.ErrNoLastValue
+	}
+	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
-// Timestamp returns the timestamp of the last recorded gauge value.
-func (g *Aggregator) Timestamp() time.Time {
-	return (*gaugeData)(g.checkpoint).timestamp
-}
-
-// Checkpoint checkpoints the current value (atomically) and exports it.
+// Checkpoint atomically saves the current value.
 func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 }
 
-// Update modifies the current value (atomically) for later export.
+// Update atomically sets the current "last" value.
 func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
@@ -122,10 +124,14 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 	}
 }
 
+// Merge combines state from two aggregators.  If the gauge is
+// declared as monotonic, the greater value is chosen.  If the gauge
+// is declared as non-monotonic, the most-recently set value is
+// chosen.
 func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.ErrInconsistentType
+		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))

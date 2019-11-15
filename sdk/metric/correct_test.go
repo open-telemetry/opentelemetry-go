@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -45,17 +45,20 @@ func (cb *correctnessBatcher) AggregatorFor(*export.Descriptor) export.Aggregato
 	return cb.agg
 }
 
-func (cb *correctnessBatcher) ReadCheckpoint() export.Producer {
+func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
 	cb.t.Fatal("Should not be called")
 	return nil
 }
 
-func (cb *correctnessBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	cb.records = append(cb.records, export.NewRecord(desc, labels, agg))
+func (*correctnessBatcher) FinishedCollection() {
+}
+
+func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) error {
+	cb.records = append(cb.records, record)
 	return nil
 }
 
-func (testLabelEncoder) EncodeLabels(labels []core.KeyValue) string {
+func (testLabelEncoder) Encode(labels []core.KeyValue) string {
 	return fmt.Sprint(labels)
 }
 
@@ -68,26 +71,30 @@ func TestInputRangeTestCounter(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 
 	counter := sdk.NewInt64Counter("counter.name", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, err)
-	err = nil
+	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	sdkErr = nil
 
 	sdk.Collect(ctx)
-	require.Equal(t, int64(0), cagg.Sum().AsInt64())
+	sum, err := cagg.Sum()
+	require.Equal(t, int64(0), sum.AsInt64())
+	require.Nil(t, err)
 
 	counter.Add(ctx, 1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
 
-	require.Equal(t, int64(1), cagg.Sum().AsInt64())
+	sum, err = cagg.Sum()
+	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
+	require.Nil(t, sdkErr)
 }
 
 func TestInputRangeTestMeasure(t *testing.T) {
@@ -99,26 +106,30 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 
 	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, err)
-	err = nil
+	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	sdkErr = nil
 
 	sdk.Collect(ctx)
-	require.Equal(t, int64(0), magg.Count())
+	count, err := magg.Count()
+	require.Equal(t, int64(0), count)
+	require.Nil(t, err)
 
 	measure.Record(ctx, 1, sdk.Labels())
 	measure.Record(ctx, 2, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
 
-	require.Equal(t, int64(2), magg.Count())
+	count, err = magg.Count()
+	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
+	require.Nil(t, sdkErr)
 	require.Nil(t, err)
 }
 
@@ -145,15 +156,15 @@ func TestRecordNaN(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
 
-	var err error
-	sdk.SetErrorHandler(func(sdkErr error) {
-		err = sdkErr
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
 	})
 	g := sdk.NewFloat64Gauge("gauge.name")
 
-	require.Nil(t, err)
+	require.Nil(t, sdkErr)
 	g.Set(ctx, math.NaN(), sdk.Labels())
-	require.Error(t, err)
+	require.Error(t, sdkErr)
 }
 
 func TestSDKLabelEncoder(t *testing.T) {
@@ -178,6 +189,6 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.DefaultLabelEncoder()
-	encoded := encoder.EncodeLabels([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
+	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
 	require.Equal(t, `A=B,C=D`, encoded)
 }

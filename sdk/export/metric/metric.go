@@ -14,6 +14,8 @@
 
 package export
 
+//go:generate stringer -type=MetricKind
+
 import (
 	"context"
 
@@ -39,7 +41,7 @@ import (
 // checkpointed, allowing the batcher to build the set of metrics
 // currently being exported.
 //
-// The `ReadCheckpoint` method is called during collection in a
+// The `CheckpointSet` method is called during collection in a
 // single-threaded context from the Exporter, giving the exporter
 // access to a producer for iterating over the complete checkpoint.
 type Batcher interface {
@@ -63,25 +65,28 @@ type Batcher interface {
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
-	// passing the descriptor, the corresponding labels, and the
-	// checkpointed aggregator.  The Batcher should be prepared to
-	// process duplicate (Descriptor, Labels) pairs during this
-	// pass due to race conditions, but this will usually be the
-	// ordinary course of events, as Aggregators are merged to
-	// reduce their dimensionality (i.e., group-by).
+	// passing the export Record (a Descriptor, the corresponding
+	// Labels, and the checkpointed Aggregator).  The Batcher
+	// should be prepared to process duplicate (Descriptor,
+	// Labels) pairs during this pass due to race conditions, but
+	// this will usually be the ordinary course of events, as
+	// Aggregators are typically merged according the output set
+	// of labels.
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
-	Process(ctx context.Context,
-		descriptor *Descriptor,
-		labels Labels,
-		aggregator Aggregator) error
+	Process(ctx context.Context, record Record) error
 
-	// ReadCheckpoint is the interface used by the controller to
+	// CheckpointSet is the interface used by the controller to
 	// access the fully aggregated checkpoint after collection.
 	//
-	// The returned Producer is passed to the Exporter.
-	ReadCheckpoint() Producer
+	// The returned CheckpointSet is passed to the Exporter.
+	CheckpointSet() CheckpointSet
+
+	// FinishedCollection informs the Batcher that a complete
+	// collection round was completed.  Stateless batchers might
+	// reset state in this method, for example.
+	FinishedCollection()
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -107,6 +112,11 @@ type AggregationSelector interface {
 // metrics offer a wide range of potential tradeoffs and several
 // implementations are provided.
 //
+// Aggregators are meant to compute the change (i.e., delta) in state
+// from one checkpoint to the next, with the exception of gauge
+// aggregators.  Gauge aggregators are required to maintain the last
+// value across checkpoints to implement montonic gauge support.
+//
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
 // to attach a counter aggregator to a measure instrument (to compute
@@ -124,17 +134,25 @@ type Aggregator interface {
 	// inspected for distributed or span context.
 	Update(context.Context, core.Number, *Descriptor) error
 
-	// Checkpoint is called in collection context to finish one
-	// period of aggregation.  Checkpoint() is called in a
-	// single-threaded context, no locking is required.
+	// Checkpoint is called during collection to finish one period
+	// of aggregation by atomically saving the current value.
+	// Checkpoint() is called concurrently with Update().
+	// Checkpoint should reset the current state to the empty
+	// state, in order to begin computing a new delta for the next
+	// collection period.
+	//
+	// After the checkpoint is taken, the current value may be
+	// accessed using by converting to one a suitable interface
+	// types in the `aggregator` sub-package.
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
 	Checkpoint(context.Context, *Descriptor)
 
-	// Merge combines state from the argument aggregator into this
-	// one.  Merge() is called in a single-threaded context, no
-	// locking is required.
+	// Merge combines the checkpointed state from the argument
+	// aggregator into this aggregator's checkpointed state.
+	// Merge() is called in a single-threaded context, no locking
+	// is required.
 	Merge(Aggregator, *Descriptor) error
 }
 
@@ -148,9 +166,9 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The Producer interface refers to the Batcher that just
+	// The CheckpointSet interface refers to the Batcher that just
 	// completed collection.
-	Export(context.Context, Producer) error
+	Export(context.Context, CheckpointSet) error
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
@@ -162,9 +180,9 @@ type Exporter interface {
 //
 // If none is provided, a default will be used.
 type LabelEncoder interface {
-	// EncodeLabels is called (concurrently) in instrumentation
-	// context.  It should return a unique representation of the
-	// labels suitable for the SDK to use as a map key.
+	// Encode is called (concurrently) in instrumentation context.
+	// It should return a unique representation of the labels
+	// suitable for the SDK to use as a map key.
 	//
 	// The exported Labels object retains a reference to its
 	// LabelEncoder to determine which encoding was used.
@@ -173,17 +191,18 @@ type LabelEncoder interface {
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
-	EncodeLabels([]core.KeyValue) string
+	Encode([]core.KeyValue) string
 }
 
-// Producer allows a controller to access a complete checkpoint of
+// CheckpointSet allows a controller to access a complete checkpoint of
 // aggregated metrics from the Batcher.  This is passed to the
-// Exporter which may then use Foreach to iterate over the collection
+// Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
-type Producer interface {
-	// Foreach iterates over all metrics that were updated during
-	// the last collection period.
-	Foreach(func(Record))
+type CheckpointSet interface {
+	// ForEach iterates over aggregated checkpoints for all
+	// metrics that were updated during the last collection
+	// period.
+	ForEach(func(Record))
 }
 
 // Record contains the exported data for a single metric instrument
@@ -361,6 +380,9 @@ func (d *Descriptor) NumberKind() core.NumberKind {
 //   - A counter instrument is non-monotonic
 //   - A gauge instrument is monotonic
 //   - A measure instrument is non-absolute
+//
+// TODO: Consider renaming this method, or expanding to provide
+// kind-specific tests (e.g., Monotonic(), Absolute()).
 func (d *Descriptor) Alternate() bool {
 	return d.alternate
 }

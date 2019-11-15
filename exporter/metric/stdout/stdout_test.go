@@ -15,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -52,8 +52,8 @@ func (fix testFixture) Output() string {
 	return strings.TrimSpace(fix.output.String())
 }
 
-func (fix testFixture) Export(producer export.Producer) {
-	err := fix.exporter.Export(fix.ctx, producer)
+func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
+	err := fix.exporter.Export(fix.ctx, checkpointSet)
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
@@ -79,7 +79,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	before := time.Now()
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	ctx := context.Background()
 	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
@@ -87,9 +87,9 @@ func TestStdoutTimestamp(t *testing.T) {
 	aggtest.CheckedUpdate(t, gagg, core.NewInt64Number(321), desc)
 	gagg.Checkpoint(ctx, desc)
 
-	producer.Add(desc, gagg)
+	checkpointSet.Add(desc, gagg)
 
-	if err := exporter.Export(ctx, producer); err != nil {
+	if err := exporter.Export(ctx, checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
@@ -125,16 +125,16 @@ func TestStdoutTimestamp(t *testing.T) {
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
 	cagg := counter.New()
 	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(123), desc)
 	cagg.Checkpoint(fix.ctx, desc)
 
-	producer.Add(desc, cagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, cagg, key.String("A", "B"), key.String("C", "D"))
 
-	fix.Export(producer)
+	fix.Export(checkpointSet)
 
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
 }
@@ -142,16 +142,16 @@ func TestStdoutCounterFormat(t *testing.T) {
 func TestStdoutGaugeFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
 	gagg := gauge.New()
 	aggtest.CheckedUpdate(fix.t, gagg, core.NewFloat64Number(123.456), desc)
 	gagg.Checkpoint(fix.ctx, desc)
 
-	producer.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
 
-	fix.Export(producer)
+	fix.Export(checkpointSet)
 
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
 }
@@ -159,7 +159,7 @@ func TestStdoutGaugeFormat(t *testing.T) {
 func TestStdoutMaxSumCount(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := maxsumcount.New()
@@ -167,9 +167,9 @@ func TestStdoutMaxSumCount(t *testing.T) {
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
 	magg.Checkpoint(fix.ctx, desc)
 
-	producer.Add(desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, magg, key.String("A", "B"), key.String("C", "D"))
 
-	fix.Export(producer)
+	fix.Export(checkpointSet)
 
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
@@ -179,7 +179,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 		PrettyPrint: true,
 	})
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := array.New()
@@ -190,9 +190,9 @@ func TestStdoutMeasureFormat(t *testing.T) {
 
 	magg.Checkpoint(fix.ctx, desc)
 
-	producer.Add(desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, magg, key.String("A", "B"), key.String("C", "D"))
 
-	fix.Export(producer)
+	fix.Export(checkpointSet)
 
 	require.Equal(t, `{
 	"updates": [
@@ -223,18 +223,34 @@ func TestStdoutMeasureFormat(t *testing.T) {
 func TestStdoutAggError(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := ddsketch.New(ddsketch.NewDefaultConfig(), desc)
 	magg.Checkpoint(fix.ctx, desc)
 
-	producer.Add(desc, magg)
+	checkpointSet.Add(desc, magg)
 
-	err := fix.exporter.Export(fix.ctx, producer)
+	err := fix.exporter.Export(fix.ctx, checkpointSet)
 
 	// An error is returned and NaN values are printed.
 	require.Error(t, err)
 	require.Equal(t, aggregator.ErrEmptyDataSet, err)
 	require.Equal(t, `{"updates":[{"name":"test.name","max":"NaN","sum":0,"count":0,"quantiles":[{"q":0.5,"v":"NaN"},{"q":0.9,"v":"NaN"},{"q":0.99,"v":"NaN"}]}]}`, fix.Output())
+}
+
+func TestStdoutGaugeNotSet(t *testing.T) {
+	fix := newFixture(t, stdout.Options{})
+
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+
+	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	gagg := gauge.New()
+	gagg.Checkpoint(fix.ctx, desc)
+
+	checkpointSet.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+
+	fix.Export(checkpointSet)
+
+	require.Equal(t, `{"updates":null}`, fix.Output())
 }

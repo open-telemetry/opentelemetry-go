@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 // Aggregator aggregates counter events.
@@ -34,32 +34,36 @@ type Aggregator struct {
 var _ export.Aggregator = &Aggregator{}
 var _ aggregator.Sum = &Aggregator{}
 
-// New returns a new counter aggregator.  This aggregator computes an
-// atomic sum.
+// New returns a new counter aggregator implemented by atomic
+// operations.  This aggregator implements the aggregator.Sum
+// export interface.
 func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Sum returns the accumulated count as a Number.
-func (c *Aggregator) Sum() core.Number {
-	return c.checkpoint
+// Sum returns the last-checkpointed sum.  This will never return an
+// error.
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.checkpoint, nil
 }
 
-// Checkpoint checkpoints the current value (atomically) and exports it.
+// Checkpoint atomically saves the current value and resets the
+// current sum to zero.
 func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
 }
 
-// Update modifies the current value (atomically) for later export.
+// Update atomically adds to the current value.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.current.AddNumberAtomic(desc.NumberKind(), number)
 	return nil
 }
 
+// Merge combines two counters by adding their sums.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.ErrInconsistentType
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil

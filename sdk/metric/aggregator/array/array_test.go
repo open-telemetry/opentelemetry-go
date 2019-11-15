@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -57,12 +57,16 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
+	sum, err := agg.Sum()
 	require.InEpsilon(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg.Sum().CoerceToFloat64(profile.NumberKind),
+		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+	require.Nil(t, err)
+	count, err := agg.Count()
+	require.Nil(t, err)
+	require.Equal(t, all.Count(), count, "Same count - absolute")
 
 	min, err := agg.Min()
 	require.Nil(t, err)
@@ -139,12 +143,16 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
+	sum, err := agg1.Sum()
 	require.InEpsilon(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg1.Sum().CoerceToFloat64(profile.NumberKind),
+		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+	require.Nil(t, err)
+	count, err := agg1.Count()
+	require.Nil(t, err)
+	require.Equal(t, all.Count(), count, "Same count - absolute")
 
 	min, err := agg1.Min()
 	require.Nil(t, err)
@@ -206,7 +214,9 @@ func TestArrayErrors(t *testing.T) {
 		}
 		agg.Checkpoint(ctx, descriptor)
 
-		require.Equal(t, int64(1), agg.Count(), "NaN value was not counted")
+		count, err := agg.Count()
+		require.Equal(t, int64(1), count, "NaN value was not counted")
+		require.Nil(t, err)
 
 		num, err := agg.Quantile(0)
 		require.Nil(t, err)
@@ -276,9 +286,13 @@ func TestArrayFloat64(t *testing.T) {
 
 			all.Sort()
 
-			require.InEpsilon(t, all.Sum().AsFloat64(), agg.Sum().AsFloat64(), 0.0000001, "Same sum")
+			sum, err := agg.Sum()
+			require.InEpsilon(t, all.Sum().AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
+			require.Nil(t, err)
 
-			require.Equal(t, all.Count(), agg.Count(), "Same count")
+			count, err := agg.Count()
+			require.Equal(t, all.Count(), count, "Same count")
+			require.Nil(t, err)
 
 			min, err := agg.Min()
 			require.Nil(t, err)

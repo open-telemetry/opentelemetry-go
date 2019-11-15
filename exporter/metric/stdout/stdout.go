@@ -24,12 +24,14 @@ import (
 	"time"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type Exporter struct {
 	options Options
 }
+
+var _ export.Exporter = &Exporter{}
 
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
@@ -56,7 +58,7 @@ type Options struct {
 
 type expoBatch struct {
 	Timestamp *time.Time `json:"time,omitempty"`
-	Updates   []expoLine `json:"updates,omitempty"`
+	Updates   []expoLine `json:"updates"`
 }
 
 type expoLine struct {
@@ -77,8 +79,6 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-var _ export.Exporter = &Exporter{}
-
 func New(options Options) (*Exporter, error) {
 	if options.File == nil {
 		options.File = os.Stdout
@@ -97,7 +97,7 @@ func New(options Options) (*Exporter, error) {
 	}, nil
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	// N.B. Only return one aggError, if any occur. They're likely
 	// to be duplicates of the same error.
 	var aggError error
@@ -106,16 +106,35 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	producer.Foreach(func(record export.Record) {
+	checkpointSet.ForEach(func(record export.Record) {
 		desc := record.Descriptor()
-		labels := record.Labels()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()
 
 		var expose expoLine
+
+		if sum, ok := agg.(aggregator.Sum); ok {
+			if value, err := sum.Sum(); err != nil {
+				aggError = err
+				expose.Sum = "NaN"
+			} else {
+				expose.Sum = value.AsInterface(kind)
+			}
+		}
+
 		if msc, ok := agg.(aggregator.MaxSumCount); ok {
-			expose.Sum = msc.Sum().AsInterface(kind)
-			expose.Count = msc.Count()
+			if count, err := msc.Count(); err != nil {
+				aggError = err
+				expose.Count = "NaN"
+			} else {
+				expose.Count = count
+			}
+
+			// TODO: Should tolerate ErrEmptyDataSet here,
+			// just like ErrNoLastValue below, since
+			// there's a race condition between creating
+			// the Aggregator and updating the first
+			// value.
 
 			if max, err := msc.Max(); err != nil {
 				aggError = err
@@ -142,15 +161,23 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 					}
 				}
 			}
-		} else if sum, ok := agg.(aggregator.Sum); ok {
-			expose.Sum = sum.Sum().AsInterface(kind)
 
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
-			ts := lv.Timestamp()
-			expose.LastValue = lv.LastValue().AsInterface(kind)
+			if value, timestamp, err := lv.LastValue(); err != nil {
+				if err == aggregator.ErrNoLastValue {
+					// This is a special case, indicates an aggregator that
+					// was checkpointed before its first value was set.
+					return
+				}
 
-			if !e.options.DoNotPrintTime {
-				expose.Timestamp = &ts
+				aggError = err
+				expose.LastValue = "NaN"
+			} else {
+				expose.LastValue = value.AsInterface(kind)
+
+				if !e.options.DoNotPrintTime {
+					expose.Timestamp = &timestamp
+				}
 			}
 		}
 
@@ -158,7 +185,7 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 
 		sb.WriteString(desc.Name())
 
-		if labels.Len() > 0 {
+		if labels := record.Labels(); labels.Len() > 0 {
 			sb.WriteRune('{')
 			sb.WriteString(labels.Encoded())
 			sb.WriteRune('}')

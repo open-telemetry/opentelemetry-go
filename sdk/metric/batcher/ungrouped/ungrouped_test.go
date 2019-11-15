@@ -26,39 +26,49 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 )
 
-// These tests use the original label encoding.
+// These tests use the ../test label encoding.
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
 	b := ungrouped.New(test.NewAggregationSelector(), false)
 
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels3, test.GaugeAgg(30))
+	// Set initial gauge values
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels2, test.GaugeAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels3, test.GaugeAgg(30)))
 
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels2, test.CounterAgg(20))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels3, test.CounterAgg(40))
+	// Another gauge Set for Labels1
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(50)))
 
-	processor := b.ReadCheckpoint()
+	// Set initial counter values
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels2, test.CounterAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels3, test.CounterAgg(40)))
+
+	// Another counter Add for Labels1
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(50)))
+
+	checkpointSet := b.CheckpointSet()
+	b.FinishedCollection()
 
 	records := test.Output{}
-	processor.Foreach(records.AddTo)
+	checkpointSet.ForEach(records.AddTo)
 
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter/G~H&C~D": 10, // labels1
+		"counter/G~H&C~D": 60, // labels1
 		"counter/C~D&E~F": 20, // labels2
 		"counter/":        40, // labels3
-		"gauge/G~H&C~D":   10, // labels1
+		"gauge/G~H&C~D":   50, // labels1
 		"gauge/C~D&E~F":   20, // labels2
 		"gauge/":          30, // labels3
 	}, records)
 
 	// Verify that state was reset
-	processor = b.ReadCheckpoint()
-	processor.Foreach(func(rec export.Record) {
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
+	checkpointSet.ForEach(func(rec export.Record) {
 		t.Fatal("Unexpected call")
 	})
 }
@@ -68,22 +78,24 @@ func TestUngroupedStateful(t *testing.T) {
 	b := ungrouped.New(test.NewAggregationSelector(), true)
 
 	cagg := test.CounterAgg(10)
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	processor := b.ReadCheckpoint()
+	checkpointSet := b.CheckpointSet()
+	b.FinishedCollection()
 
 	records1 := test.Output{}
-	processor.Foreach(records1.AddTo)
+	checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/G~H&C~D": 10, // labels1
 	}, records1)
 
 	// Test that state was NOT reset
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records2 := test.Output{}
-	processor.Foreach(records2.AddTo)
+	checkpointSet.ForEach(records2.AddTo)
 
 	require.EqualValues(t, records1, records2)
 
@@ -93,20 +105,22 @@ func TestUngroupedStateful(t *testing.T) {
 
 	// As yet cagg has not been passed to Batcher.Process.  Should
 	// not see an update.
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records3 := test.Output{}
-	processor.Foreach(records3.AddTo)
+	checkpointSet.ForEach(records3.AddTo)
 
 	require.EqualValues(t, records1, records3)
 
 	// Now process the second update
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records4 := test.Output{}
-	processor.Foreach(records4.AddTo)
+	checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/G~H&C~D": 30,

@@ -26,16 +26,17 @@ import (
 
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
 
 type testBatcher struct {
-	t           *testing.T
-	producer    *test.Producer
-	checkpoints int
+	t             *testing.T
+	checkpointSet *test.CheckpointSet
+	checkpoints   int
+	finishes      int
 }
 
 type testExporter struct {
@@ -46,25 +47,36 @@ type testExporter struct {
 }
 
 type testFixture struct {
-	producer *test.Producer
-	batcher  *testBatcher
-	exporter *testExporter
+	checkpointSet *test.CheckpointSet
+	batcher       *testBatcher
+	exporter      *testExporter
 }
 
+type mockClock struct {
+	mock *clock.Mock
+}
+
+type mockTicker struct {
+	ticker *clock.Ticker
+}
+
+var _ push.Clock = mockClock{}
+var _ push.Ticker = mockTicker{}
+
 func newFixture(t *testing.T) testFixture {
-	producer := test.NewProducer(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	batcher := &testBatcher{
-		t:        t,
-		producer: producer,
+		t:             t,
+		checkpointSet: checkpointSet,
 	}
 	exporter := &testExporter{
 		t: t,
 	}
 	return testFixture{
-		producer: producer,
-		batcher:  batcher,
-		exporter: exporter,
+		checkpointSet: checkpointSet,
+		batcher:       batcher,
+		exporter:      exporter,
 	}
 }
 
@@ -72,22 +84,46 @@ func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return counter.New()
 }
 
-func (b *testBatcher) ReadCheckpoint() export.Producer {
+func (b *testBatcher) CheckpointSet() export.CheckpointSet {
 	b.checkpoints++
-	return b.producer
+	return b.checkpointSet
 }
 
-func (b *testBatcher) Process(_ context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
-	b.producer.Add(desc, agg, labels.Ordered()...)
+func (b *testBatcher) FinishedCollection() {
+	b.finishes++
+}
+
+func (b *testBatcher) Process(_ context.Context, record export.Record) error {
+	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), record.Labels().Ordered()...)
 	return nil
 }
 
-func (e *testExporter) Export(_ context.Context, producer export.Producer) error {
+func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.exports++
-	producer.Foreach(func(r export.Record) {
+	checkpointSet.ForEach(func(r export.Record) {
 		e.records = append(e.records, r)
 	})
 	return e.retErr
+}
+
+func (c mockClock) Now() time.Time {
+	return c.mock.Now()
+}
+
+func (c mockClock) Ticker(period time.Duration) push.Ticker {
+	return mockTicker{c.mock.Ticker(period)}
+}
+
+func (c mockClock) Add(d time.Duration) {
+	c.mock.Add(d)
+}
+
+func (t mockTicker) Stop() {
+	t.ticker.Stop()
+}
+
+func (t mockTicker) C() <-chan time.Time {
+	return t.ticker.C
 }
 
 func TestPushDoubleStop(t *testing.T) {
@@ -112,7 +148,7 @@ func TestPushTicker(t *testing.T) {
 	p := push.New(fix.batcher, fix.exporter, time.Second)
 	meter := p.GetMeter("name")
 
-	mock := clock.NewMock()
+	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
 
 	ctx := context.Background()
@@ -124,6 +160,7 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 3, meter.Labels())
 
 	require.Equal(t, 0, fix.batcher.checkpoints)
+	require.Equal(t, 0, fix.batcher.finishes)
 	require.Equal(t, 0, fix.exporter.exports)
 	require.Equal(t, 0, len(fix.exporter.records))
 
@@ -132,11 +169,15 @@ func TestPushTicker(t *testing.T) {
 
 	require.Equal(t, 1, fix.batcher.checkpoints)
 	require.Equal(t, 1, fix.exporter.exports)
+	require.Equal(t, 1, fix.batcher.finishes)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
-	require.Equal(t, int64(3), fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum().AsInt64())
 
-	fix.producer.Reset()
+	sum, err := fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum()
+	require.Equal(t, int64(3), sum.AsInt64())
+	require.Nil(t, err)
+
+	fix.checkpointSet.Reset()
 	fix.exporter.records = nil
 
 	counter.Add(ctx, 7, meter.Labels())
@@ -145,10 +186,14 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	require.Equal(t, 2, fix.batcher.checkpoints)
+	require.Equal(t, 2, fix.batcher.finishes)
 	require.Equal(t, 2, fix.exporter.exports)
 	require.Equal(t, 1, len(fix.exporter.records))
 	require.Equal(t, "counter", fix.exporter.records[0].Descriptor().Name())
-	require.Equal(t, int64(7), fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum().AsInt64())
+
+	sum, err = fix.exporter.records[0].Aggregator().(aggregator.Sum).Sum()
+	require.Equal(t, int64(7), sum.AsInt64())
+	require.Nil(t, err)
 
 	p.Stop()
 }
@@ -164,7 +209,7 @@ func TestPushExportError(t *testing.T) {
 		err = sdkErr
 	})
 
-	mock := clock.NewMock()
+	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
 
 	p.Start()

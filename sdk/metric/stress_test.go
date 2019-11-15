@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -227,7 +228,7 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (f *testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
@@ -238,14 +239,17 @@ func (f *testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggreg
 	}
 }
 
-func (f *testFixture) ReadCheckpoint() export.Producer {
+func (*testFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 
-func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labels export.Labels, agg export.Aggregator) error {
+func (*testFixture) FinishedCollection() {
+}
+
+func (f *testFixture) Process(_ context.Context, record export.Record) error {
 	key := testKey{
-		labels:     canonicalizeLabels(labels.Ordered()),
-		descriptor: desc,
+		labels:     canonicalizeLabels(record.Labels().Ordered()),
+		descriptor: record.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -255,12 +259,22 @@ func (f *testFixture) Process(ctx context.Context, desc *export.Descriptor, labe
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	switch desc.MetricKind() {
+	agg := record.Aggregator()
+	switch record.Descriptor().MetricKind() {
 	case export.CounterKind:
-		f.impl.storeCollect(actual, agg.(*counter.Aggregator).Sum(), time.Time{})
+		counter := agg.(aggregator.Sum)
+		sum, err := counter.Sum()
+		if err != nil {
+			f.T.Fatal("Sum error: ", err)
+		}
+		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.GaugeKind:
-		gauge := agg.(*gauge.Aggregator)
-		f.impl.storeCollect(actual, gauge.LastValue(), gauge.Timestamp())
+		gauge := agg.(aggregator.LastValue)
+		lv, ts, err := gauge.LastValue()
+		if err != nil && err != aggregator.ErrNoLastValue {
+			f.T.Fatal("Last value error: ", err)
+		}
+		f.impl.storeCollect(actual, lv, ts)
 	default:
 		panic("Not used in this test")
 	}

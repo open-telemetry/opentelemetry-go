@@ -19,8 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benbjohnson/clock"
-
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -36,11 +34,34 @@ type Controller struct {
 	wg           sync.WaitGroup
 	ch           chan struct{}
 	period       time.Duration
-	ticker       *clock.Ticker
-	clock        clock.Clock
+	ticker       Ticker
+	clock        Clock
 }
 
 var _ metric.Provider = &Controller{}
+
+// Several types below are created to match "github.com/benbjohnson/clock"
+// so that it remains a test-only dependency.
+
+type Clock interface {
+	Now() time.Time
+	Ticker(time.Duration) Ticker
+}
+
+type Ticker interface {
+	Stop()
+	C() <-chan time.Time
+}
+
+type realClock struct {
+}
+
+type realTicker struct {
+	ticker *time.Ticker
+}
+
+var _ Clock = realClock{}
+var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provided batcher, exporter, and collection period to
@@ -65,13 +86,13 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration)
 		exporter:     exporter,
 		ch:           make(chan struct{}),
 		period:       period,
-		clock:        clock.New(),
+		clock:        realClock{},
 	}
 }
 
 // SetClock supports setting a mock clock for testing.  This must be
 // called before Start().
-func (c *Controller) SetClock(clock clock.Clock) {
+func (c *Controller) SetClock(clock Clock) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.clock = clock
@@ -129,7 +150,7 @@ func (c *Controller) run(ch chan struct{}) {
 		case <-ch:
 			c.wg.Done()
 			return
-		case <-c.ticker.C:
+		case <-c.ticker.C():
 			c.tick()
 		}
 	}
@@ -140,9 +161,26 @@ func (c *Controller) tick() {
 	// configure a timeout here?
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
-	err := c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
+	err := c.exporter.Export(ctx, c.batcher.CheckpointSet())
+	c.batcher.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)
 	}
+}
+
+func (realClock) Now() time.Time {
+	return time.Now()
+}
+
+func (realClock) Ticker(period time.Duration) Ticker {
+	return realTicker{time.NewTicker(period)}
+}
+
+func (t realTicker) Stop() {
+	t.ticker.Stop()
+}
+
+func (t realTicker) C() <-chan time.Time {
+	return t.ticker.C
 }

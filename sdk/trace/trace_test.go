@@ -295,7 +295,11 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "StartSpanAttribute", apitrace.WithAttributes(key.String("key1", "value1")))
+	span := startSpan(tp,
+		"StartSpanAttribute",
+		apitrace.WithAttributes(key.String("key1", "value1")),
+		apitrace.WithAttributes(key.String("key2", "value2")),
+	)
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -310,6 +314,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		Name:         "StartSpanAttribute/span0",
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
+			key.String("key2", "value2"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,

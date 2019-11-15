@@ -30,18 +30,19 @@ func TestGroupingStateless(t *testing.T) {
 	ctx := context.Background()
 	b := defaultkeys.New(test.NewAggregationSelector(), test.GroupEncoder, false)
 
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels1, test.GaugeAgg(10))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels2, test.GaugeAgg(20))
-	_ = b.Process(ctx, test.GaugeDesc, test.Labels3, test.GaugeAgg(30))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels1, test.GaugeAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels2, test.GaugeAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.GaugeDesc, test.Labels3, test.GaugeAgg(30)))
 
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, test.CounterAgg(10))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels2, test.CounterAgg(20))
-	_ = b.Process(ctx, test.CounterDesc, test.Labels3, test.CounterAgg(40))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, test.CounterAgg(10)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels2, test.CounterAgg(20)))
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels3, test.CounterAgg(40)))
 
-	processor := b.ReadCheckpoint()
+	checkpointSet := b.CheckpointSet()
+	b.FinishedCollection()
 
 	records := test.Output{}
-	processor.Foreach(records.AddTo)
+	checkpointSet.ForEach(records.AddTo)
 
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -52,9 +53,10 @@ func TestGroupingStateless(t *testing.T) {
 		"gauge/G=":    30, // labels3 = last value
 	}, records)
 
-	// Verify that state was reset
-	processor = b.ReadCheckpoint()
-	processor.Foreach(func(rec export.Record) {
+	// Verify that state is reset by FinishedCollection()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
+	checkpointSet.ForEach(func(rec export.Record) {
 		t.Fatal("Unexpected call")
 	})
 }
@@ -64,22 +66,24 @@ func TestGroupingStateful(t *testing.T) {
 	b := defaultkeys.New(test.NewAggregationSelector(), test.GroupEncoder, true)
 
 	cagg := test.CounterAgg(10)
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	processor := b.ReadCheckpoint()
+	checkpointSet := b.CheckpointSet()
+	b.FinishedCollection()
 
 	records1 := test.Output{}
-	processor.Foreach(records1.AddTo)
+	checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/C=D": 10, // labels1
 	}, records1)
 
 	// Test that state was NOT reset
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records2 := test.Output{}
-	processor.Foreach(records2.AddTo)
+	checkpointSet.ForEach(records2.AddTo)
 
 	require.EqualValues(t, records1, records2)
 
@@ -89,20 +93,22 @@ func TestGroupingStateful(t *testing.T) {
 
 	// As yet cagg has not been passed to Batcher.Process.  Should
 	// not see an update.
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records3 := test.Output{}
-	processor.Foreach(records3.AddTo)
+	checkpointSet.ForEach(records3.AddTo)
 
 	require.EqualValues(t, records1, records3)
 
 	// Now process the second update
-	_ = b.Process(ctx, test.CounterDesc, test.Labels1, cagg)
+	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	processor = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
+	b.FinishedCollection()
 
 	records4 := test.Output{}
-	processor.Foreach(records4.AddTo)
+	checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"counter/C=D": 30,
