@@ -39,7 +39,7 @@ import (
 // checkpointed, allowing the batcher to build the set of metrics
 // currently being exported.
 //
-// The `ReadCheckpoint` method is called during collection in a
+// The `CheckpointSet` method is called during collection in a
 // single-threaded context from the Exporter, giving the exporter
 // access to a producer for iterating over the complete checkpoint.
 type Batcher interface {
@@ -75,11 +75,11 @@ type Batcher interface {
 	// orchestrates collection.
 	Process(ctx context.Context, record Record) error
 
-	// ReadCheckpoint is the interface used by the controller to
+	// CheckpointSet is the interface used by the controller to
 	// access the fully aggregated checkpoint after collection.
 	//
 	// The returned CheckpointSet is passed to the Exporter.
-	ReadCheckpoint() CheckpointSet
+	CheckpointSet() CheckpointSet
 
 	// FinishedCollection informs the Batcher that a complete
 	// collection round was completed.  Stateless batchers might

@@ -140,7 +140,7 @@ func (c *Controller) tick() {
 	// configure a timeout here?
 	ctx := context.Background()
 	c.sdk.Collect(ctx)
-	err := c.exporter.Export(ctx, c.batcher.ReadCheckpoint())
+	err := c.exporter.Export(ctx, c.batcher.CheckpointSet())
 	c.batcher.FinishedCollection()
 
 	if err != nil {

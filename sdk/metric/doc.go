@@ -130,7 +130,7 @@ record has an associated aggregator.
 Batcher is an interface which sits between the SDK and an exporter.
 The Batcher embeds an AggregationSelector, used by the SDK to assign
 new Aggregators.  The Batcher supports a Process() API for submitting
-checkpointed aggregators to the batcher, and a ReadCheckpoint() API
+checkpointed aggregators to the batcher, and a CheckpointSet() API
 for producing a complete checkpoint for the exporter.  Two default
 Batcher implementations are provided, the "defaultkeys" Batcher groups
 aggregate metrics by their recommended Descriptor.Keys(), the
@@ -142,8 +142,8 @@ duplicate serialization of labels, once as a unique key in the SDK (or
 Batcher) and once in the exporter.
 
 CheckpointSet is an interface between the Batcher and the Exporter.
-After completing a collection pass, the Batcher.ReadCheckpoint()
-method returns a CheckpointSet, which the Exporter uses to iterate over all
+After completing a collection pass, the Batcher.CheckpointSet() method
+returns a CheckpointSet, which the Exporter uses to iterate over all
 the updated metrics.
 
 Record is a struct containing the state of an individual exported

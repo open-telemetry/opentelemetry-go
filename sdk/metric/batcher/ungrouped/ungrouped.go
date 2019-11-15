@@ -84,7 +84,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	return nil
 }
 
-func (b *Batcher) ReadCheckpoint() export.CheckpointSet {
+func (b *Batcher) CheckpointSet() export.CheckpointSet {
 	return b.batchMap
 }
 

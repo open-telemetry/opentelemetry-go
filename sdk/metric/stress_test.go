@@ -239,7 +239,7 @@ func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregat
 	}
 }
 
-func (*testFixture) ReadCheckpoint() export.CheckpointSet {
+func (*testFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 

@@ -72,7 +72,7 @@ func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return counter.New()
 }
 
-func (b *testBatcher) ReadCheckpoint() export.CheckpointSet {
+func (b *testBatcher) CheckpointSet() export.CheckpointSet {
 	b.checkpoints++
 	return b.checkpointSet
 }

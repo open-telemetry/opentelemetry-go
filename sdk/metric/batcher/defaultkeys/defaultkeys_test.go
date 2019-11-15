@@ -38,7 +38,7 @@ func TestGroupingStateless(t *testing.T) {
 	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels2, test.CounterAgg(20)))
 	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels3, test.CounterAgg(40)))
 
-	checkpointSet := b.ReadCheckpoint()
+	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
 	records := test.Output{}
@@ -54,7 +54,7 @@ func TestGroupingStateless(t *testing.T) {
 	}, records)
 
 	// Verify that state is reset by FinishedCollection()
-	checkpointSet = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 	checkpointSet.ForEach(func(rec export.Record) {
 		t.Fatal("Unexpected call")
@@ -68,7 +68,7 @@ func TestGroupingStateful(t *testing.T) {
 	cagg := test.CounterAgg(10)
 	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	checkpointSet := b.ReadCheckpoint()
+	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
 	records1 := test.Output{}
@@ -79,7 +79,7 @@ func TestGroupingStateful(t *testing.T) {
 	}, records1)
 
 	// Test that state was NOT reset
-	checkpointSet = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
 	records2 := test.Output{}
@@ -93,7 +93,7 @@ func TestGroupingStateful(t *testing.T) {
 
 	// As yet cagg has not been passed to Batcher.Process.  Should
 	// not see an update.
-	checkpointSet = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
 	records3 := test.Output{}
@@ -104,7 +104,7 @@ func TestGroupingStateful(t *testing.T) {
 	// Now process the second update
 	_ = b.Process(ctx, export.NewRecord(test.CounterDesc, test.Labels1, cagg))
 
-	checkpointSet = b.ReadCheckpoint()
+	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
 	records4 := test.Output{}

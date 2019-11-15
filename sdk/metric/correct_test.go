@@ -45,7 +45,7 @@ func (cb *correctnessBatcher) AggregatorFor(*export.Descriptor) export.Aggregato
 	return cb.agg
 }
 
-func (cb *correctnessBatcher) ReadCheckpoint() export.CheckpointSet {
+func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
 	cb.t.Fatal("Should not be called")
 	return nil
 }

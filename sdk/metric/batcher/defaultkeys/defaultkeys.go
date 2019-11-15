@@ -126,7 +126,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	return nil
 }
 
-func (b *Batcher) ReadCheckpoint() export.CheckpointSet {
+func (b *Batcher) CheckpointSet() export.CheckpointSet {
 	return &checkpointSet{
 		aggCheckpointMap: b.aggCheckpoint,
 		labelEncoder:     b.labelEncoder,

@@ -42,7 +42,7 @@ func (*monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
 	return gauge.New()
 }
 
-func (*monotoneBatcher) ReadCheckpoint() export.CheckpointSet {
+func (*monotoneBatcher) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 

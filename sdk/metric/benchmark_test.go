@@ -68,7 +68,7 @@ func (*benchFixture) Process(context.Context, export.Record) error {
 	return nil
 }
 
-func (*benchFixture) ReadCheckpoint() export.CheckpointSet {
+func (*benchFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 
