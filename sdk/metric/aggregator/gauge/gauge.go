@@ -131,7 +131,7 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.ErrInconsistentType
+		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))

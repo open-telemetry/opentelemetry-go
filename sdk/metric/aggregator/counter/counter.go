@@ -63,7 +63,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.ErrInconsistentType
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil

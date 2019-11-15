@@ -73,7 +73,7 @@ var (
 	ErrNegativeInput    = fmt.Errorf("Negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrNonMonotoneInput = fmt.Errorf("The new value is not monotone")
-	ErrInconsistentType = fmt.Errorf("Cannot merge different aggregator types")
+	ErrInconsistentType = fmt.Errorf("Inconsistent aggregator types")
 
 	// ErrNoLastValue is returned by the LastValue interface when
 	// (due to a race with collection) the Aggregator is
@@ -88,15 +88,21 @@ var (
 	ErrEmptyDataSet = fmt.Errorf("The result is not defined on an empty data set")
 )
 
+// NewInconsistentMergeError formats an error describing an attempt to
+// merge different-type aggregators.  The result can be unwrapped as
+// an ErrInconsistentType.
+func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
+	return fmt.Errorf("Cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
+}
+
 // RangeTest is a commmon routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
-// monotonic counter metrics and absolute measure metrics).
+// monotonic counter metrics and absolute measure metrics.
 func RangeTest(number core.Number, descriptor *export.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
 	if numberKind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		// NOTE: add this to the specification.
 		return ErrNaNInput
 	}
 

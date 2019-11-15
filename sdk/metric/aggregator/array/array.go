@@ -110,7 +110,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.ErrInconsistentType
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
 	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
