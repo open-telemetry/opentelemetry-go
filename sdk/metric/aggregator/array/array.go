@@ -75,8 +75,9 @@ func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
-func (c *Aggregator) Points() []core.Number {
-	return c.checkpoint
+// Points returns access to the raw data set.
+func (c *Aggregator) Points() ([]core.Number, error) {
+	return c.checkpoint, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -173,7 +174,7 @@ func (p *points) Swap(i, j int) {
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
 // element of the data set.  This uses the "Nearest-Rank" definition
 // of a quantile.
-func (p *Points) Quantile(q float64) (core.Number, error) {
+func (p *points) Quantile(q float64) (core.Number, error) {
 	if len(*p) == 0 {
 		return core.Number(0), aggregator.ErrEmptyDataSet
 	}

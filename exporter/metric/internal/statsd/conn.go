@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type (
@@ -146,32 +146,36 @@ func dial(endpoint string) (net.Conn, error) {
 	return nil, ErrInvalidScheme
 }
 
-func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	buf := &e.buffer
 	buf.Reset()
 
-	var retErr error
+	var aggErr error
+	var sendErr error
 
-	producer.Foreach(func(rec export.Record) {
+	checkpointSet.ForEach(func(rec export.Record) {
 		before := buf.Len()
 
-		e.format(rec, buf)
+		if err := e.format(rec, buf); err != nil && aggErr == nil {
+			aggErr = err
+			return
+		}
 
 		if buf.Len() < e.config.MaxPacketSize {
 			return
 		}
 		if before == 0 {
 			// A single metric >= packet size
-			if err := e.send(buf.Bytes()); err != nil && retErr == nil {
-				retErr = err
+			if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+				sendErr = err
 			}
 			buf.Reset()
 			return
 		}
 
 		// Send and copy the leftover
-		if err := e.send(buf.Bytes()[:before]); err != nil && retErr == nil {
-			retErr = err
+		if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
+			sendErr = err
 		}
 
 		leftover := buf.Len() - before
@@ -180,10 +184,13 @@ func (e *Exporter) Export(_ context.Context, producer export.Producer) error {
 
 		buf.Truncate(leftover)
 	})
-	if err := e.send(buf.Bytes()); err != nil && retErr == nil {
-		retErr = err
+	if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+		sendErr = err
 	}
-	return retErr
+	if sendErr != nil {
+		return sendErr
+	}
+	return aggErr
 }
 
 func (e *Exporter) send(buf []byte) error {
@@ -197,7 +204,7 @@ func (e *Exporter) send(buf []byte) error {
 	return nil
 }
 
-func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) {
+func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
 	agg := rec.Aggregator()
 
@@ -208,16 +215,31 @@ func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) {
 		} else {
 			format = formatHistogram
 		}
-		for _, pt := range pts.Points() {
+		points, err := pts.Points()
+		if err != nil {
+			return err
+		}
+		for _, pt := range points {
 			e.format1(rec, pt, format, buf)
 		}
 
+		// TODO handle non-Points Distribution/MaxSumCount.
+
 	} else if sum, ok := agg.(aggregator.Sum); ok {
-		e.format1(rec, sum.Sum(), formatCounter, buf)
+		sum, err := sum.Sum()
+		if err != nil {
+			return err
+		}
+		e.format1(rec, sum, formatCounter, buf)
 
 	} else if lv, ok := agg.(aggregator.LastValue); ok {
-		e.format1(rec, lv.LastValue(), formatGauge, buf)
+		lv, _, err := lv.LastValue()
+		if err != nil {
+			return err
+		}
+		e.format1(rec, lv, formatGauge, buf)
 	}
+	return nil
 }
 
 func (e *Exporter) format1(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {

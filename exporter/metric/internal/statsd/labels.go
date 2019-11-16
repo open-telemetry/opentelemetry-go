@@ -23,14 +23,14 @@ import (
 )
 
 type LabelEncoder struct {
-	labelpool sync.Pool
+	pool sync.Pool
 }
 
 var _ export.LabelEncoder = &LabelEncoder{}
 
 func NewLabelEncoder() *LabelEncoder {
 	return &LabelEncoder{
-		labelpool: sync.Pool{
+		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
@@ -38,9 +38,9 @@ func NewLabelEncoder() *LabelEncoder {
 	}
 }
 
-func (e *LabelEncoder) EncodeLabels(labels []core.KeyValue) string {
-	buf := e.labelpool.Get().(*bytes.Buffer)
-	defer e.labelpool.Put(buf)
+func (e *LabelEncoder) Encode(labels []core.KeyValue) string {
+	buf := e.pool.Get().(*bytes.Buffer)
+	defer e.pool.Put(buf)
 	buf.Reset()
 
 	delimiter := "|#"

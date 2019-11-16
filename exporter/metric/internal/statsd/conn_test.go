@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/unit"
@@ -111,7 +112,7 @@ func TestBasicFormat(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			producer := test.NewProducer(adapter.LabelEncoder)
+			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
 			cdesc := export.NewDescriptor(
 				"counter", export.CounterKind, nil, "", "", nkind, false)
 			gdesc := export.NewDescriptor(
@@ -127,12 +128,13 @@ func TestBasicFormat(t *testing.T) {
 			}
 			const value = 123.456
 
-			producer.Add(cdesc, counterAgg(cdesc, value), labels...)
-			producer.Add(gdesc, gaugeAgg(gdesc, value), labels...)
-			producer.Add(mdesc, measureAgg(mdesc, value), labels...)
-			producer.Add(tdesc, measureAgg(tdesc, value), labels...)
+			checkpointSet.Add(cdesc, counterAgg(cdesc, value), labels...)
+			checkpointSet.Add(gdesc, gaugeAgg(gdesc, value), labels...)
+			checkpointSet.Add(mdesc, measureAgg(mdesc, value), labels...)
+			checkpointSet.Add(tdesc, measureAgg(tdesc, value), labels...)
 
-			exp.Export(ctx, producer)
+			err = exp.Export(ctx, checkpointSet)
+			require.Nil(t, err)
 
 			var vfmt string
 			if nkind == core.Int64NumberKind {
@@ -255,7 +257,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			producer := test.NewProducer(adapter.LabelEncoder)
+			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
 			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
 
 			var expected []string
@@ -264,12 +266,13 @@ func TestPacketSplit(t *testing.T) {
 			tcase.setup(func(nkeys int) {
 				labels := makeLabels(offset, nkeys)
 				offset += nkeys
-				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.EncodeLabels(labels), "\n")
+				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
 				expected = append(expected, expect)
-				producer.Add(desc, counterAgg(desc, 100), labels...)
+				checkpointSet.Add(desc, counterAgg(desc, 100), labels...)
 			})
 
-			exp.Export(ctx, producer)
+			err = exp.Export(ctx, checkpointSet)
+			require.Nil(t, err)
 
 			tcase.check(expected, writer.vec, t)
 		})

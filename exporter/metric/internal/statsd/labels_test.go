@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
@@ -26,15 +27,15 @@ import (
 func TestLabelSytnax(t *testing.T) {
 	encoder := statsd.NewLabelEncoder()
 
-	require.Equal(t, `|#A:B,C:D,E:1.5`, encoder.EncodeLabels([]core.KeyValue{
+	require.Equal(t, `|#A:B,C:D,E:1.5`, encoder.Encode([]core.KeyValue{
 		key.New("A").String("B"),
 		key.New("C").String("D"),
 		key.New("E").Float64(1.5),
 	}))
 
-	require.Equal(t, `|#A:B`, encoder.EncodeLabels([]core.KeyValue{
+	require.Equal(t, `|#A:B`, encoder.Encode([]core.KeyValue{
 		key.New("A").String("B"),
 	}))
 
-	require.Equal(t, "", encoder.EncodeLabels(nil))
+	require.Equal(t, "", encoder.Encode(nil))
 }
