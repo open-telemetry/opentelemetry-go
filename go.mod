@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/DataDog/sketches-go v0.0.0-20190923095040-43f19ad77ff7
+	github.com/benbjohnson/clock v1.0.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golangci/gocyclo v0.0.0-20180528144436-0a533e8fa43d // indirect

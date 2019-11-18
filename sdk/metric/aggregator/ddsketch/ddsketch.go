@@ -23,22 +23,27 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
+
+// Config is an alias for the underlying DDSketch config object.
+type Config = sdk.Config
 
 // Aggregator aggregates measure events.
 type Aggregator struct {
 	lock       sync.Mutex
-	cfg        *sdk.Config
+	cfg        *Config
 	kind       core.NumberKind
 	current    *sdk.DDSketch
 	checkpoint *sdk.DDSketch
 }
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
+func New(cfg *Config, desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
 		cfg:     cfg,
 		kind:    desc.NumberKind(),
@@ -48,35 +53,39 @@ func New(cfg *sdk.Config, desc *export.Descriptor) *Aggregator {
 
 // NewDefaultConfig returns a new, default DDSketch config.
 //
-// TODO: The Config constructor should probably set minValue to -Inf
-// to aggregate metrics with absolute=false.  This requires providing values
-// for alpha and maxNumBins
-func NewDefaultConfig() *sdk.Config {
+// TODO: Should the Config constructor set minValue to -Inf to
+// when the descriptor has absolute=false?  This requires providing
+// values for alpha and maxNumBins, apparently.
+func NewDefaultConfig() *Config {
 	return sdk.NewDefaultConfig()
 }
 
-// Sum returns the sum of the checkpoint.
-func (c *Aggregator) Sum() core.Number {
-	return c.toNumber(c.checkpoint.Sum())
+// Sum returns the sum of values in the checkpoint.
+func (c *Aggregator) Sum() (core.Number, error) {
+	return c.toNumber(c.checkpoint.Sum()), nil
 }
 
-// Count returns the count of the checkpoint.
-func (c *Aggregator) Count() int64 {
-	return c.checkpoint.Count()
+// Count returns the number of values in the checkpoint.
+func (c *Aggregator) Count() (int64, error) {
+	return c.checkpoint.Count(), nil
 }
 
-// Max returns the max of the checkpoint.
+// Max returns the maximum value in the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	return c.Quantile(1)
 }
 
-// Min returns the min of the checkpoint.
+// Min returns the mininum value in the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	return c.Quantile(0)
 }
 
-// Quantile returns the estimated quantile of the checkpoint.
+// Quantile returns the estimated quantile of data in the checkpoint.
+// It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+	if c.checkpoint.Count() == 0 {
+		return core.Number(0), aggregator.ErrEmptyDataSet
+	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
 		return core.Number(0), aggregator.ErrInvalidQuantile
@@ -91,41 +100,34 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 	return core.NewInt64Number(int64(f))
 }
 
-// Collect checkpoints the current value (atomically) and exports it.
-func (c *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint saves the current state and resets the current state to
+// the empty set, taking a lock to prevent concurrent Update() calls.
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
 	c.checkpoint = c.current
 	c.current = replace
 	c.lock.Unlock()
-
-	if c.checkpoint.Count() != 0 {
-		exp.Export(ctx, rec, c)
-	}
 }
 
-// Update modifies the current value (atomically) for later export.
-func (c *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
-	desc := rec.Descriptor()
-	kind := desc.NumberKind()
-
-	if !desc.Alternate() && number.IsNegative(kind) {
-		// TODO warn
-		return
-	}
-
+// Update adds the recorded measurement to the current data set.
+// Update takes a lock to prevent concurrent Update() and Checkpoint()
+// calls.
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.current.Add(number.CoerceToFloat64(kind))
+	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
+	return nil
 }
 
-func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) {
+// Merge combines two sketches into one.
+func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
 	c.checkpoint.Merge(o.checkpoint)
+	return nil
 }

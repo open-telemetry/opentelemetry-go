@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
@@ -222,13 +223,13 @@ func (f *testFixture) assertTest(numCollect int) {
 }
 
 func (f *testFixture) preCollect() {
-	// Collect calls Export in a single-threaded context. No need
+	// Collect calls Process in a single-threaded context. No need
 	// to lock this struct.
 	f.dupCheck = map[testKey]int{}
 }
 
-func (f *testFixture) AggregatorFor(record export.Record) export.Aggregator {
-	switch record.Descriptor().MetricKind() {
+func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
 	case export.GaugeKind:
@@ -238,11 +239,17 @@ func (f *testFixture) AggregatorFor(record export.Record) export.Aggregator {
 	}
 }
 
-func (f *testFixture) Export(ctx context.Context, record export.Record, agg export.Aggregator) {
-	desc := record.Descriptor()
+func (*testFixture) CheckpointSet() export.CheckpointSet {
+	return nil
+}
+
+func (*testFixture) FinishedCollection() {
+}
+
+func (f *testFixture) Process(_ context.Context, record export.Record) error {
 	key := testKey{
-		labels:     canonicalizeLabels(record.Labels()),
-		descriptor: desc,
+		labels:     canonicalizeLabels(record.Labels().Ordered()),
+		descriptor: record.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -252,15 +259,26 @@ func (f *testFixture) Export(ctx context.Context, record export.Record, agg expo
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	switch desc.MetricKind() {
+	agg := record.Aggregator()
+	switch record.Descriptor().MetricKind() {
 	case export.CounterKind:
-		f.impl.storeCollect(actual, agg.(*counter.Aggregator).AsNumber(), time.Time{})
+		counter := agg.(aggregator.Sum)
+		sum, err := counter.Sum()
+		if err != nil {
+			f.T.Fatal("Sum error: ", err)
+		}
+		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.GaugeKind:
-		gauge := agg.(*gauge.Aggregator)
-		f.impl.storeCollect(actual, gauge.AsNumber(), gauge.Timestamp())
+		gauge := agg.(aggregator.LastValue)
+		lv, ts, err := gauge.LastValue()
+		if err != nil && err != aggregator.ErrNoLastValue {
+			f.T.Fatal("Last value error: ", err)
+		}
+		f.impl.storeCollect(actual, lv, ts)
 	default:
 		panic("Not used in this test")
 	}
+	return nil
 }
 
 func stressTest(t *testing.T, impl testImpl) {
@@ -272,7 +290,7 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := sdk.New(fixture)
+	sdk := sdk.New(fixture, sdk.DefaultLabelEncoder())
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

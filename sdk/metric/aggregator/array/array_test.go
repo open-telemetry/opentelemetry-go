@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -34,9 +34,7 @@ type updateTest struct {
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
-
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
 
 	agg := New()
 
@@ -45,25 +43,30 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		agg.Update(ctx, x, record)
+		test.CheckedUpdate(t, agg, x, descriptor)
 
 		if !ut.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			agg.Update(ctx, y, record)
+			test.CheckedUpdate(t, agg, y, descriptor)
 		}
 	}
 
-	agg.Collect(ctx, record, batcher)
+	ctx := context.Background()
+	agg.Checkpoint(ctx, descriptor)
 
 	all.Sort()
 
+	sum, err := agg.Sum()
 	require.InEpsilon(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg.Sum().CoerceToFloat64(profile.NumberKind),
+		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+	require.Nil(t, err)
+	count, err := agg.Count()
+	require.Nil(t, err)
+	require.Equal(t, all.Count(), count, "Same count - absolute")
 
 	min, err := agg.Min()
 	require.Nil(t, err)
@@ -106,7 +109,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
 
 	agg1 := New()
 	agg2 := New()
@@ -116,36 +119,40 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
-		agg1.Update(ctx, x1, record)
+		test.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
-		agg2.Update(ctx, x2, record)
+		test.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
-			agg1.Update(ctx, y1, record)
+			test.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
-			agg2.Update(ctx, y2, record)
+			test.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
 
-	agg1.Collect(ctx, record, batcher)
-	agg2.Collect(ctx, record, batcher)
+	agg1.Checkpoint(ctx, descriptor)
+	agg2.Checkpoint(ctx, descriptor)
 
-	agg1.Merge(agg2, record.Descriptor())
+	test.CheckedMerge(t, agg1, agg2, descriptor)
 
 	all.Sort()
 
+	sum, err := agg1.Sum()
 	require.InEpsilon(t,
 		all.Sum().CoerceToFloat64(profile.NumberKind),
-		agg1.Sum().CoerceToFloat64(profile.NumberKind),
+		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+	require.Nil(t, err)
+	count, err := agg1.Count()
+	require.Nil(t, err)
+	require.Equal(t, all.Count(), count, "Same count - absolute")
 
 	min, err := agg1.Min()
 	require.Nil(t, err)
@@ -198,16 +205,18 @@ func TestArrayErrors(t *testing.T) {
 
 		ctx := context.Background()
 
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg.Update(ctx, core.Number(0), record)
+		test.CheckedUpdate(t, agg, core.Number(0), descriptor)
 
 		if profile.NumberKind == core.Float64NumberKind {
-			agg.Update(ctx, core.NewFloat64Number(math.NaN()), record)
+			test.CheckedUpdate(t, agg, core.NewFloat64Number(math.NaN()), descriptor)
 		}
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, descriptor)
 
-		require.Equal(t, int64(1), agg.Count(), "NaN value was not counted")
+		count, err := agg.Count()
+		require.Equal(t, int64(1), count, "NaN value was not counted")
+		require.Nil(t, err)
 
 		num, err := agg.Quantile(0)
 		require.Nil(t, err)
@@ -226,7 +235,7 @@ func TestArrayErrors(t *testing.T) {
 func TestArrayFloat64(t *testing.T) {
 	for _, absolute := range []bool{false, true} {
 		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			batcher, record := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
+			descriptor := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
 
 			fpsf := func(sign int) []float64 {
 				// Check behavior of a bunch of odd floating
@@ -263,23 +272,27 @@ func TestArrayFloat64(t *testing.T) {
 
 			for _, f := range fpsf(1) {
 				all.Append(core.NewFloat64Number(f))
-				agg.Update(ctx, core.NewFloat64Number(f), record)
+				test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 			}
 
 			if !absolute {
 				for _, f := range fpsf(-1) {
 					all.Append(core.NewFloat64Number(f))
-					agg.Update(ctx, core.NewFloat64Number(f), record)
+					test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
 				}
 			}
 
-			agg.Collect(ctx, record, batcher)
+			agg.Checkpoint(ctx, descriptor)
 
 			all.Sort()
 
-			require.InEpsilon(t, all.Sum().AsFloat64(), agg.Sum().AsFloat64(), 0.0000001, "Same sum")
+			sum, err := agg.Sum()
+			require.InEpsilon(t, all.Sum().AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
+			require.Nil(t, err)
 
-			require.Equal(t, all.Count(), agg.Count(), "Same count")
+			count, err := agg.Count()
+			require.Equal(t, all.Count(), count, "Same count")
+			require.Nil(t, err)
 
 			min, err := agg.Min()
 			require.Nil(t, err)

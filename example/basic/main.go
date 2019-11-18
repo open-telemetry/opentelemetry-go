@@ -17,13 +17,19 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	metricstdout "go.opentelemetry.io/otel/exporter/metric/stdout"
+	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -37,23 +43,44 @@ var (
 // initTracer creates and registers trace provider instance.
 func initTracer() {
 	var err error
-	exp, err := stdout.NewExporter(stdout.Options{PrettyPrint: false})
+	exp, err := tracestdout.NewExporter(tracestdout.Options{PrettyPrint: false})
 	if err != nil {
-		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		log.Panicf("failed to initialize trace stdout exporter %v", err)
 		return
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
-		log.Panicf("failed to initialize trace provider %v\n", err)
+		log.Panicf("failed to initialize trace provider %v", err)
 	}
 	global.SetTraceProvider(tp)
 }
 
+func initMeter() *push.Controller {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := metricstdout.New(metricstdout.Options{
+		Quantiles:   []float64{0.5, 0.9, 0.99},
+		PrettyPrint: false,
+	})
+	if err != nil {
+		log.Panicf("failed to initialize metric stdout exporter %v", err)
+	}
+	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), true)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	global.SetMeterProvider(pusher)
+	return pusher
+}
+
 func main() {
+	defer initMeter().Stop()
 	initTracer()
+
+	// Note: Have to get the meter and tracer after the global is
+	// initialized.  See OTEP 0005.
+
 	tracer := global.TraceProvider().GetTracer("ex.com/basic")
-	// TODO: Meter doesn't work yet, check if resources to be shared afterwards.
 	meter := global.MeterProvider().GetMeter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
@@ -70,7 +97,7 @@ func main() {
 		barKey.String("bar1"),
 	)
 
-	commonLabels := meter.Labels(lemonsKey.Int(10))
+	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
 	gauge := oneMetric.AcquireHandle(commonLabels)
 	defer gauge.Release()

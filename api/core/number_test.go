@@ -17,6 +17,8 @@ package core
 import (
 	"testing"
 	"unsafe"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNumber(t *testing.T) {
@@ -156,4 +158,10 @@ func TestNumberZero(t *testing.T) {
 	if zero != zerof || zero != zeroi || zero != zerou {
 		t.Errorf("Invalid zero representations")
 	}
+}
+
+func TestNumberAsInterface(t *testing.T) {
+	require.Equal(t, int64(10), NewInt64Number(10).AsInterface(Int64NumberKind).(int64))
+	require.Equal(t, float64(11.11), NewFloat64Number(11.11).AsInterface(Float64NumberKind).(float64))
+	require.Equal(t, uint64(100), NewUint64Number(100).AsInterface(Uint64NumberKind).(uint64))
 }
