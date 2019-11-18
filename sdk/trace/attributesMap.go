@@ -16,6 +16,7 @@ package trace
 
 import (
 	"container/list"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
