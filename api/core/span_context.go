@@ -135,7 +135,7 @@ func decodeHex(h string, b []byte) error {
 		return err
 	}
 
-	copy(b[:], decoded)
+	copy(b, decoded)
 	return nil
 }
 

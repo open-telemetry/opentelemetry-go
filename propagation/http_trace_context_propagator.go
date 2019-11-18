@@ -126,7 +126,7 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 	if len(sections[2]) != 16 {
 		return core.EmptySpanContext()
 	}
-	sc.SpanID, err = core.SpanIDFromHex(sections[2][:])
+	sc.SpanID, err = core.SpanIDFromHex(sections[2])
 	if err != nil {
 		return core.EmptySpanContext()
 	}
