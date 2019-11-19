@@ -34,10 +34,16 @@ type (
 	// Key to the position in the descriptor's recommended keys.
 	descKeyIndexMap map[*export.Descriptor]map[core.Key]int
 
-	// aggCheckpointMap is a mapping from encoded label set to current
+	// batchKey describes a unique metric descriptor and encoded label set.
+	batchKey struct {
+		descriptor *export.Descriptor
+		encoded    string
+	}
+
+	// aggCheckpointMap is a mapping from batchKey to current
 	// export record.  If the batcher is stateful, this map is
 	// never cleared.
-	aggCheckpointMap map[string]export.Record
+	aggCheckpointMap map[batchKey]export.Record
 
 	checkpointSet struct {
 		aggCheckpointMap aggCheckpointMap
@@ -103,7 +109,11 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.
 	agg := record.Aggregator()
-	rag, ok := b.aggCheckpoint[encoded]
+	key := batchKey{
+		descriptor: record.Descriptor(),
+		encoded:    encoded,
+	}
+	rag, ok := b.aggCheckpoint[key]
 	if ok {
 		return rag.Aggregator().Merge(agg, desc)
 	}
@@ -118,7 +128,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 			return err
 		}
 	}
-	b.aggCheckpoint[encoded] = export.NewRecord(
+	b.aggCheckpoint[key] = export.NewRecord(
 		desc,
 		export.NewLabels(outputLabels, encoded, b.labelEncoder),
 		agg,
