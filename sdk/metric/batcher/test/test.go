@@ -41,12 +41,12 @@ type (
 )
 
 var (
-	// Gauge1Desc and Gauge2Desc group by "G"
+	// GaugeADesc and GaugeBDesc group by "G"
 	GaugeADesc = export.NewDescriptor(
 		"gauge.a", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
 	GaugeBDesc = export.NewDescriptor(
 		"gauge.b", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
-	// Counter1Desc and Counter2Desc group by "C"
+	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = export.NewDescriptor(
 		"counter.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
 	CounterBDesc = export.NewDescriptor(
