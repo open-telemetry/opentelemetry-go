@@ -1,0 +1,110 @@
+// Copyright 2019, OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"context"
+	"go.opentelemetry.io/otel/exporter/metric/prometheus"
+	"log"
+	"time"
+
+	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/global"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+
+	prom "github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	fooKey     = key.New("ex.com/foo")
+	barKey     = key.New("ex.com/bar")
+	lemonsKey  = key.New("ex.com/lemons")
+	anotherKey = key.New("ex.com/another")
+)
+
+func initMeter() *push.Controller {
+	selector := simple.NewWithExactMeasure()
+	reg := prom.NewRegistry()
+	exporter, err := prometheus.NewExporter(prometheus.Options{
+		DefaultHistogramBuckets: []float64{0.5, 0.9, 0.99},
+		Gatherer:                reg,
+		Registerer:              reg,
+	})
+	if err != nil {
+		log.Panicf("failed to initialize metric stdout exporter %v", err)
+	}
+	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), false)
+	// TODO: we should create a `pull` controller.
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	global.SetMeterProvider(pusher)
+	return pusher
+}
+
+func main() {
+	defer initMeter().Stop()
+
+	meter := global.MeterProvider().GetMeter("ex.com/basic")
+
+	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+		metric.WithKeys(fooKey, barKey, lemonsKey),
+		metric.WithDescription("A gauge set to 1.0"),
+	)
+
+	measureTwo := meter.NewFloat64Measure("ex.com.two")
+
+	ctx := context.Background()
+
+	ctx = distributedcontext.NewContext(ctx,
+		fooKey.String("foo1"),
+		barKey.String("bar1"),
+	)
+
+	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
+
+	gauge := oneMetric.AcquireHandle(commonLabels)
+	defer gauge.Release()
+
+	measure := measureTwo.AcquireHandle(commonLabels)
+	defer measure.Release()
+
+	meter.RecordBatch(
+		// Note: call-site variables added as context Entries:
+		distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+		commonLabels,
+
+		oneMetric.Measurement(1.0),
+		measureTwo.Measurement(2.0),
+	)
+
+	time.Sleep(5 * time.Second)
+
+	meter.RecordBatch(
+		// Note: call-site variables added as context Entries:
+		distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+		commonLabels,
+
+		oneMetric.Measurement(13.0),
+		measureTwo.Measurement(12.0),
+	)
+
+	time.Sleep(100 * time.Second)
+}

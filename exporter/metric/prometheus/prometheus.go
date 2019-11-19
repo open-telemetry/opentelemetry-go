@@ -15,22 +15,20 @@
 package prometheus
 
 import (
-	"bytes"
 	"context"
-	"sort"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"net/http"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
 const (
-	prefixSplitter  = '+'
-	keyPairSplitter = ','
+	prefixSplitter = "+"
 )
 
 type metricID *export.Descriptor
@@ -50,7 +48,7 @@ type Exporter struct {
 	gaugeVecs       map[string]*prometheus.GaugeVec
 }
 
-var _ export.Batcher = (*Exporter)(nil)
+var _ export.Exporter = (*Exporter)(nil)
 
 // Options is a set of options for the tally reporter.
 type Options struct {
@@ -77,7 +75,7 @@ type Options struct {
 }
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
-func NewExporter(opts Options) *Exporter {
+func NewExporter(opts Options) (*Exporter, error) {
 	if opts.Registerer == nil {
 		opts.Registerer = prometheus.DefaultRegisterer
 	} else {
@@ -96,6 +94,11 @@ func NewExporter(opts Options) *Exporter {
 		}
 	}
 
+	// TODO: should we make a "PullController" ?
+	go func() {
+		_ = http.ListenAndServe(":22022", promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}))
+	}()
+
 	return &Exporter{
 		registerer:      opts.Registerer,
 		gatherer:        opts.Gatherer,
@@ -106,56 +109,49 @@ func NewExporter(opts Options) *Exporter {
 
 		counterVecs: make(map[string]*prometheus.CounterVec),
 		gaugeVecs:   make(map[string]*prometheus.GaugeVec),
-	}
-}
-
-// AggregatorFor returns the metric aggregator used for the particular exporter.
-func (e *Exporter) AggregatorFor(record export.Record) export.Aggregator {
-	switch record.Descriptor().MetricKind() {
-	case export.CounterKind:
-		return counter.New()
-	case export.GaugeKind:
-		return gauge.New()
-	}
-	return nil
+	}, nil
 }
 
 // Export exports the provide metric record to prometheus.
-func (e *Exporter) Export(
-	ctx context.Context,
-	record export.Record,
-	aggregator export.Aggregator,
-) {
-	switch record.Descriptor().MetricKind() {
-	case export.CounterKind:
-		e.exportCounter(record, aggregator)
-	case export.GaugeKind:
-		e.exportGauge(record, aggregator)
-	}
-}
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+	var aggError error
+	checkpointSet.ForEach(func(record export.Record) {
+		agg := record.Aggregator()
+		if sum, ok := agg.(aggregator.Sum); ok {
+			value, err := sum.Sum()
+			if err != nil {
+				aggError = err
+				// TODO: halp, where are we doing here?
+				return
+			}
 
-func (e *Exporter) exportCounter(record export.Record, aggregator export.Aggregator) {
-	c, err := e.getCounter(record)
-	if err != nil {
-		// TODO: log a warning here?
-		return
-	}
-	// Retrieve the counter value from the aggregator and add it.
-	if agg, ok := aggregator.(*counter.Aggregator); ok {
-		c.Add(float64(agg.AsNumber()))
-	}
-}
+			c, err := e.getCounter(record)
+			if err != nil {
+				// TODO: log a warning here?
+				return
+			}
 
-func (e *Exporter) exportGauge(record export.Record, aggregator export.Aggregator) {
-	g, err := e.getGauge(record)
-	if err != nil {
-		// TODO: log a warning here?
-		return
-	}
-	// Retrieve the gauge value from the aggregator and set it.
-	if agg, ok := aggregator.(*gauge.Aggregator); ok {
-		g.Set(float64(agg.AsNumber()))
-	}
+			c.Add(value.AsFloat64())
+		}
+
+		if gauge, ok := agg.(aggregator.LastValue); ok {
+			lv, _, err := gauge.LastValue()
+			if err != nil {
+				aggError = err
+				// TODO: halp
+				return
+			}
+
+			g, err := e.getGauge(record)
+			if err != nil {
+				// TODO: log a warning here?
+				return
+			}
+			g.Set(lv.AsFloat64())
+		}
+	})
+
+	return aggError
 }
 
 func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) {
@@ -167,7 +163,7 @@ func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) 
 		return c, nil
 	}
 
-	counterVec, err := e.getCounterVec(desc)
+	counterVec, err := e.getCounterVec(desc, record.Labels())
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +183,7 @@ func (e *Exporter) getGauge(record export.Record) (prometheus.Gauge, error) {
 		return g, nil
 	}
 
-	gaugeVec, err := e.getGaugeVec(desc)
+	gaugeVec, err := e.getGaugeVec(desc, record.Labels())
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +194,8 @@ func (e *Exporter) getGauge(record export.Record) (prometheus.Gauge, error) {
 	return gauge, nil
 }
 
-func (e *Exporter) getCounterVec(desc *export.Descriptor) (*prometheus.CounterVec, error) {
-	id, tagKeys := getCanonicalID(desc)
-
-	e.Lock()
-	defer e.Unlock()
+func (e *Exporter) getCounterVec(desc *export.Descriptor, labels export.Labels) (*prometheus.CounterVec, error) {
+	id, tagKeys := getCanonicalID(desc, labels)
 
 	if c, ok := e.counterVecs[id]; ok {
 		return c, nil
@@ -210,7 +203,7 @@ func (e *Exporter) getCounterVec(desc *export.Descriptor) (*prometheus.CounterVe
 
 	c := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: desc.Name(),
+			Name: Sanitize(desc.Name()),
 			Help: desc.Description(),
 		},
 		tagKeys,
@@ -224,11 +217,8 @@ func (e *Exporter) getCounterVec(desc *export.Descriptor) (*prometheus.CounterVe
 	return c, nil
 }
 
-func (e *Exporter) getGaugeVec(desc *export.Descriptor) (*prometheus.GaugeVec, error) {
-	id, tagKeys := getCanonicalID(desc)
-
-	e.Lock()
-	defer e.Unlock()
+func (e *Exporter) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*prometheus.GaugeVec, error) {
+	id, tagKeys := getCanonicalID(desc, labels)
 
 	if g, ok := e.gaugeVecs[id]; ok {
 		return g, nil
@@ -236,7 +226,7 @@ func (e *Exporter) getGaugeVec(desc *export.Descriptor) (*prometheus.GaugeVec, e
 
 	g := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: desc.Name(),
+			Name: Sanitize(desc.Name()),
 			Help: desc.Description(),
 		},
 		tagKeys,
@@ -250,40 +240,23 @@ func (e *Exporter) getGaugeVec(desc *export.Descriptor) (*prometheus.GaugeVec, e
 	return g, nil
 }
 
-func getTagKeys(keys []core.Key) []string {
+func getTagKeys(keys []core.KeyValue) []string {
 	tagKeys := make([]string, 0, len(keys))
-	for _, key := range keys {
-		tagKeys = append(tagKeys, string(key))
+	for _, kv := range keys {
+		tagKeys = append(tagKeys, Sanitize(string(kv.Key)))
 	}
 	return tagKeys
 }
 
-func getCanonicalID(desc *export.Descriptor) (string, []string) {
-	tagKeys := getTagKeys(desc.Keys())
-	sort.Strings(tagKeys)
-	return generateKey(desc.Name(), tagKeys), tagKeys
+func getCanonicalID(desc *export.Descriptor, labels export.Labels) (string, []string) {
+	tagKeys := getTagKeys(labels.Ordered())
+	return Sanitize(desc.Name()) + prefixSplitter + labels.Encoded(), tagKeys
 }
 
-func labelsToTags(labels []core.KeyValue) map[string]string {
-	tags := make(map[string]string, len(labels))
-	for _, label := range labels {
-		tags[string(label.Key)] = label.Value.AsString()
+func labelsToTags(labels export.Labels) map[string]string {
+	tags := make(map[string]string, labels.Len())
+	for _, label := range labels.Ordered() {
+		tags[Sanitize(string(label.Key))] = label.Value.AsString()
 	}
 	return tags
-}
-
-func generateKey(name string, keys []string) string {
-	// TODO: pool these objects.
-	var buf bytes.Buffer
-	buf.WriteString(name)
-	buf.WriteByte(prefixSplitter)
-
-	sortedKeysLen := len(keys)
-	for i := 0; i < sortedKeysLen; i++ {
-		buf.WriteString(keys[i])
-		if i != sortedKeysLen-1 {
-			buf.WriteByte(keyPairSplitter)
-		}
-	}
-	return buf.String()
 }
