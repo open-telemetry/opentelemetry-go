@@ -107,20 +107,23 @@ func NewExporter(opts Options) (*Exporter, error) {
 
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	var aggError error
+	var forEachError error
 	checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
 		if sum, ok := agg.(aggregator.Sum); ok {
 			value, err := sum.Sum()
 			if err != nil {
-				aggError = err
-				// TODO: halp, where are we doing here?
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
 				return
 			}
 
 			c, err := e.getCounter(record)
 			if err != nil {
-				// TODO: log a warning here?
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
 				return
 			}
 
@@ -131,14 +134,17 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		if gauge, ok := agg.(aggregator.LastValue); ok {
 			lv, _, err := gauge.LastValue()
 			if err != nil {
-				aggError = err
-				// TODO: halp
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
 				return
 			}
 
 			g, err := e.getGauge(record)
 			if err != nil {
-				// TODO: log a warning here?
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
 				return
 			}
 
@@ -147,7 +153,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		}
 	})
 
-	return aggError
+	return forEachError
 }
 
 func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) {
