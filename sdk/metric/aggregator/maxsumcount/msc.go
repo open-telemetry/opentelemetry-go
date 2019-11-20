@@ -16,6 +16,7 @@ package maxsumcount // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ma
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -26,6 +27,7 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
+		first      sync.Once
 		current    state
 		checkpoint state
 	}
@@ -73,7 +75,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Max, Sum, and Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -86,7 +88,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(desc.NumberKind().Minimum())
 }
 
 // Update adds the recorded measurement to the current data set.
@@ -96,6 +98,9 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	c.current.count.AddUint64Atomic(1)
 	c.current.sum.AddNumberAtomic(kind, number)
 
+	c.first.Do(func() {
+		c.current.max.SetNumberAtomic(number)
+	})
 	for {
 		current := c.current.max.AsNumberAtomic()
 
