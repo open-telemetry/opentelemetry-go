@@ -260,8 +260,8 @@ func (e *Exporter) formatMetric(rec export.Record, buf *bytes.Buffer) error {
 	return nil
 }
 
-// formatSingleStat encodes a single item statsd of statsd data
-// followed by a newline.
+// formatSingleStat encodes a single item of statsd data followed by a
+// newline.
 func (e *Exporter) formatSingleStat(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {
 	e.adapter.AppendName(rec, buf)
 	_, _ = buf.WriteRune(':')
