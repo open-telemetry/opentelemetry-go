@@ -16,10 +16,12 @@ package prometheus
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"net/http"
 	"sync"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -43,9 +45,8 @@ type Exporter struct {
 	counters map[metricID]prometheus.Counter
 	gauges   map[metricID]prometheus.Gauge
 
-	onRegisterError func(e error)
-	counterVecs     map[string]*prometheus.CounterVec
-	gaugeVecs       map[string]*prometheus.GaugeVec
+	counterVecs map[string]*prometheus.CounterVec
+	gaugeVecs   map[string]*prometheus.GaugeVec
 }
 
 var _ export.Exporter = &Exporter{}
@@ -70,11 +71,6 @@ type Options struct {
 	// DefaultSummaryObjectives is the default summary objectives
 	// to use. Use nil to specify the system-default summary objectives.
 	DefaultSummaryObjectives map[float64]float64
-
-	// OnRegisterError defines a method to call to when registering
-	// a metric with the registerer fails. Use nil to specify
-	// to panic by default when registering fails.
-	OnRegisterError func(err error)
 }
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
@@ -91,11 +87,6 @@ func NewExporter(opts Options) (*Exporter, error) {
 	if opts.Gatherer == nil {
 		opts.Gatherer = prometheus.DefaultGatherer
 	}
-	if opts.OnRegisterError == nil {
-		opts.OnRegisterError = func(err error) {
-			panic(err)
-		}
-	}
 
 	// TODO: should we make a "PullController" ?
 	go func() {
@@ -103,9 +94,8 @@ func NewExporter(opts Options) (*Exporter, error) {
 	}()
 
 	return &Exporter{
-		registerer:      opts.Registerer,
-		gatherer:        opts.Gatherer,
-		onRegisterError: opts.OnRegisterError,
+		registerer: opts.Registerer,
+		gatherer:   opts.Gatherer,
 
 		counters: make(map[metricID]prometheus.Counter),
 		gauges:   make(map[metricID]prometheus.Gauge),

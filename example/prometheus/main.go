@@ -50,7 +50,6 @@ func initMeter() *push.Controller {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
 	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), false)
-	// TODO: we should create a `pull` controller.
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
