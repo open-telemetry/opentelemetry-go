@@ -25,7 +25,7 @@ type (
 	Config = statsd.Config
 
 	// Exporter implements a dogstatsd-format statsd exporter,
-	// which encodes label sets as indepenent fields in the
+	// which encodes label sets as independent fields in the
 	// output.
 	//
 	// TODO: find a link for this syntax.  It's been copied out of
