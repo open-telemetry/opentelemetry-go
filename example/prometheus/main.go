@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"time"
 
 	"go.opentelemetry.io/otel/exporter/metric/prometheus"
@@ -48,6 +49,10 @@ func initMeter() *push.Controller {
 	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), false)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
+
+	go func() {
+		_ = http.ListenAndServe(":2222", exporter)
+	}()
 
 	global.SetMeterProvider(pusher)
 	return pusher

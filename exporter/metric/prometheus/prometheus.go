@@ -16,10 +16,9 @@ package prometheus
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"sync"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 
@@ -39,6 +38,9 @@ type metricID *export.Descriptor
 // Prometheus.
 type Exporter struct {
 	sync.RWMutex
+
+	handler http.Handler
+
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
@@ -50,6 +52,7 @@ type Exporter struct {
 }
 
 var _ export.Exporter = &Exporter{}
+var _ http.Handler = &Exporter{}
 
 // Options is a set of options for the tally reporter.
 type Options struct {
@@ -94,13 +97,10 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	go func() {
-		_ = http.ListenAndServe(":22022", promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}))
-	}()
-
 	return &Exporter{
 		registerer: opts.Registerer,
 		gatherer:   opts.Gatherer,
+		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 
 		counters: make(map[metricID]prometheus.Counter),
 		gauges:   make(map[metricID]prometheus.Gauge),
@@ -159,6 +159,10 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	})
 
 	return forEachError
+}
+
+func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e.handler.ServeHTTP(w, r)
 }
 
 func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) {
