@@ -16,9 +16,10 @@ package main
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/exporter/metric/prometheus"
 	"log"
 	"time"
+
+	"go.opentelemetry.io/otel/exporter/metric/prometheus"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -32,10 +33,9 @@ import (
 )
 
 var (
-	fooKey     = key.New("ex.com/foo")
-	barKey     = key.New("ex.com/bar")
-	lemonsKey  = key.New("ex.com/lemons")
-	anotherKey = key.New("ex.com/another")
+	fooKey    = key.New("ex.com/foo")
+	barKey    = key.New("ex.com/bar")
+	lemonsKey = key.New("ex.com/lemons")
 )
 
 func initMeter() *push.Controller {
