@@ -41,12 +41,16 @@ type (
 )
 
 var (
-	// GaugeDesc groups by "G"
-	GaugeDesc = export.NewDescriptor(
-		"gauge", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
-	// CounterDesc groups by "C"
-	CounterDesc = export.NewDescriptor(
-		"counter", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+	// GaugeADesc and GaugeBDesc group by "G"
+	GaugeADesc = export.NewDescriptor(
+		"gauge.a", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+	GaugeBDesc = export.NewDescriptor(
+		"gauge.b", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+	// CounterADesc and CounterBDesc group by "C"
+	CounterADesc = export.NewDescriptor(
+		"counter.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+	CounterBDesc = export.NewDescriptor(
+		"counter.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
@@ -100,21 +104,31 @@ func (Encoder) Encode(labels []core.KeyValue) string {
 	return sb.String()
 }
 
-// GaugeAgg returns a checkpointed gauge aggregator w/ the specified value.
-func GaugeAgg(v int64) export.Aggregator {
+// GaugeAgg returns a checkpointed gauge aggregator w/ the specified descriptor and value.
+func GaugeAgg(desc *export.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := gauge.New()
-	_ = gagg.Update(ctx, core.NewInt64Number(v), GaugeDesc)
-	gagg.Checkpoint(ctx, CounterDesc)
+	_ = gagg.Update(ctx, core.NewInt64Number(v), desc)
+	gagg.Checkpoint(ctx, desc)
 	return gagg
 }
 
-// CounterAgg returns a checkpointed counter aggregator w/ the specified value.
-func CounterAgg(v int64) export.Aggregator {
+// Convenience method for building a test exported gauge record.
+func NewGaugeRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+	return export.NewRecord(desc, labels, GaugeAgg(desc, value))
+}
+
+// Convenience method for building a test exported counter record.
+func NewCounterRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+	return export.NewRecord(desc, labels, CounterAgg(desc, value))
+}
+
+// CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
+func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := counter.New()
-	_ = cagg.Update(ctx, core.NewInt64Number(v), CounterDesc)
-	cagg.Checkpoint(ctx, CounterDesc)
+	_ = cagg.Update(ctx, core.NewInt64Number(v), desc)
+	cagg.Checkpoint(ctx, desc)
 	return cagg
 }
 
