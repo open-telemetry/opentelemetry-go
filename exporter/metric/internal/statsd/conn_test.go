@@ -195,6 +195,25 @@ var splitTestCases = []splitTestCase{
 			}, got)
 		},
 	},
+	{"FirstBig",
+		func(add func(int)) {
+			add(1000)
+			add(1)
+			add(1)
+			add(1000)
+			add(1)
+			add(1)
+		},
+		func(expected, got []string, t *testing.T) {
+			require.Equal(t, 4, len(got))
+			require.EqualValues(t, []string{
+				expected[0],
+				expected[1] + expected[2],
+				expected[3],
+				expected[4] + expected[5],
+			}, got)
+		},
+	},
 	{"OneBig",
 		func(add func(int)) {
 			add(1000)
