@@ -32,7 +32,10 @@ const (
 	prefixSplitter = "+"
 )
 
-type metricID *export.Descriptor
+type metricKey struct {
+	desc    *export.Descriptor
+	encoded string
+}
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
@@ -44,11 +47,11 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	counters map[metricID]prometheus.Counter
-	gauges   map[metricID]prometheus.Gauge
+	counters map[metricKey]prometheus.Counter
+	gauges   map[metricKey]prometheus.Gauge
 
-	counterVecs map[string]*prometheus.CounterVec
-	gaugeVecs   map[string]*prometheus.GaugeVec
+	counterVecs map[*export.Descriptor]*prometheus.CounterVec
+	gaugeVecs   map[*export.Descriptor]*prometheus.GaugeVec
 }
 
 var _ export.Exporter = &Exporter{}
@@ -102,11 +105,11 @@ func NewExporter(opts Options) (*Exporter, error) {
 		gatherer:   opts.Gatherer,
 		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 
-		counters: make(map[metricID]prometheus.Counter),
-		gauges:   make(map[metricID]prometheus.Gauge),
+		counters: make(map[metricKey]prometheus.Counter),
+		gauges:   make(map[metricKey]prometheus.Gauge),
 
-		counterVecs: make(map[string]*prometheus.CounterVec),
-		gaugeVecs:   make(map[string]*prometheus.GaugeVec),
+		counterVecs: make(map[*export.Descriptor]*prometheus.CounterVec),
+		gaugeVecs:   make(map[*export.Descriptor]*prometheus.GaugeVec),
 	}, nil
 }
 
@@ -115,6 +118,13 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var forEachError error
 	checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
+
+		desc := record.Descriptor()
+		mKey := metricKey{
+			desc:    desc,
+			encoded: record.Labels().Encoded(),
+		}
+
 		if sum, ok := agg.(aggregator.Sum); ok {
 			value, err := sum.Sum()
 			if err != nil {
@@ -124,7 +134,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				return
 			}
 
-			c, err := e.getCounter(record)
+			c, err := e.getCounter(record, mKey)
 			if err != nil {
 				// TODO: handle this better when we have a more
 				//  sophisticated error handler mechanism for this ForEach method.
@@ -145,7 +155,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				return
 			}
 
-			g, err := e.getGauge(record)
+			g, err := e.getGauge(record, mKey)
 			if err != nil {
 				// TODO: handle this better when we have a more
 				//  sophisticated error handler mechanism for this ForEach method.
@@ -165,53 +175,55 @@ func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
 
-func (e *Exporter) getCounter(record export.Record) (prometheus.Counter, error) {
+func (e *Exporter) getCounter(record export.Record, mKey metricKey) (prometheus.Counter, error) {
 	e.Lock()
 	defer e.Unlock()
-
-	desc := record.Descriptor()
-	if c, ok := e.counters[desc]; ok {
+	if c, ok := e.counters[mKey]; ok {
 		return c, nil
 	}
 
+	desc := record.Descriptor()
 	counterVec, err := e.getCounterVec(desc, record.Labels())
 	if err != nil {
 		return nil, err
 	}
 
-	counter := counterVec.With(labelsToTags(record.Labels()))
+	counter, err := counterVec.GetMetricWith(labelsToTags(record.Labels()))
+	if err != nil {
+		return nil, err
+	}
 
-	e.counters[desc] = counter
+	e.counters[mKey] = counter
 	return counter, nil
 }
 
-func (e *Exporter) getGauge(record export.Record) (prometheus.Gauge, error) {
+func (e *Exporter) getGauge(record export.Record, mKey metricKey) (prometheus.Gauge, error) {
 	e.Lock()
 	defer e.Unlock()
-
-	desc := record.Descriptor()
-	if g, ok := e.gauges[desc]; ok {
+	if g, ok := e.gauges[mKey]; ok {
 		return g, nil
 	}
 
+	desc := record.Descriptor()
 	gaugeVec, err := e.getGaugeVec(desc, record.Labels())
 	if err != nil {
 		return nil, err
 	}
 
-	gauge := gaugeVec.With(labelsToTags(record.Labels()))
-
-	e.gauges[desc] = gauge
+	gauge, err := gaugeVec.GetMetricWith(labelsToTags(record.Labels()))
+	if err != nil {
+		return nil, err
+	}
+	e.gauges[mKey] = gauge
 	return gauge, nil
 }
 
 func (e *Exporter) getCounterVec(desc *export.Descriptor, labels export.Labels) (*prometheus.CounterVec, error) {
-	id, tagKeys := getCanonicalID(desc, labels)
-
-	if c, ok := e.counterVecs[id]; ok {
+	if c, ok := e.counterVecs[desc]; ok {
 		return c, nil
 	}
 
+	tagKeys := getTagKeys(labels.Ordered())
 	c := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: Sanitize(desc.Name()),
@@ -224,17 +236,16 @@ func (e *Exporter) getCounterVec(desc *export.Descriptor, labels export.Labels) 
 		return nil, err
 	}
 
-	e.counterVecs[id] = c
+	e.counterVecs[desc] = c
 	return c, nil
 }
 
 func (e *Exporter) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*prometheus.GaugeVec, error) {
-	id, tagKeys := getCanonicalID(desc, labels)
-
-	if g, ok := e.gaugeVecs[id]; ok {
+	if g, ok := e.gaugeVecs[desc]; ok {
 		return g, nil
 	}
 
+	tagKeys := getTagKeys(labels.Ordered())
 	g := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: Sanitize(desc.Name()),
@@ -247,7 +258,7 @@ func (e *Exporter) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*
 		return nil, err
 	}
 
-	e.gaugeVecs[id] = g
+	e.gaugeVecs[desc] = g
 	return g, nil
 }
 
@@ -259,15 +270,10 @@ func getTagKeys(keys []core.KeyValue) []string {
 	return tagKeys
 }
 
-func getCanonicalID(desc *export.Descriptor, labels export.Labels) (string, []string) {
-	tagKeys := getTagKeys(labels.Ordered())
-	return Sanitize(desc.Name()) + prefixSplitter + labels.Encoded(), tagKeys
-}
-
 func labelsToTags(labels export.Labels) map[string]string {
 	tags := make(map[string]string, labels.Len())
 	for _, label := range labels.Ordered() {
-		tags[Sanitize(string(label.Key))] = label.Value.AsString()
+		tags[Sanitize(string(label.Key))] = label.Value.Emit()
 	}
 	return tags
 }

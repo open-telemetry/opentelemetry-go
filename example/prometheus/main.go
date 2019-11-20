@@ -71,6 +71,7 @@ func main() {
 	measureTwo := meter.NewFloat64Measure("ex.com.two")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
+	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))
 
 	gauge := oneMetric.AcquireHandle(commonLabels)
 	defer gauge.Release()
@@ -83,6 +84,13 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
+		oneMetric.Measurement(1.0),
+		measureTwo.Measurement(2.0),
+	)
+
+	meter.RecordBatch(
+		ctx,
+		notSoCommonLabels,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 	)
