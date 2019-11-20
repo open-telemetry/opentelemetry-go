@@ -53,15 +53,22 @@ var _ export.Exporter = &Exporter{}
 
 // Options is a set of options for the tally reporter.
 type Options struct {
-	// Registerer is the prometheus registerer to register
-	// metrics with. Use nil to specify the default registerer.
+	// Registry is the prometheus registry that will be used as the default Registerer and
+	// Gatherer if these are not specified.
 	//
-	// If the specified registerer is a prometheus.Registry and if
-	// no gatherer was set, then the registerer will also be the gatherer.
+	// If not set a new empty Registry is created.
+	Registry *prometheus.Registry
+
+	// Registerer is the prometheus registerer to register
+	// metrics with.
+	//
+	// If not specified the Registry will be used as default.
 	Registerer prometheus.Registerer
 
 	// Gatherer is the prometheus gatherer to gather
-	// metrics with. Use nil to specify the default gatherer.
+	// metrics with.
+	//
+	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
 
 	// DefaultHistogramBuckets is the default histogram buckets
@@ -75,20 +82,18 @@ type Options struct {
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
 func NewExporter(opts Options) (*Exporter, error) {
-	if opts.Registerer == nil {
-		opts.Registerer = prometheus.DefaultRegisterer
-	} else {
-		// A specific registerer was set, check if it's a registry and if
-		// no gatherer was set, then use that as the gatherer
-		if reg, ok := opts.Registerer.(*prometheus.Registry); ok && opts.Gatherer == nil {
-			opts.Gatherer = reg
-		}
-	}
-	if opts.Gatherer == nil {
-		opts.Gatherer = prometheus.DefaultGatherer
+	if opts.Registry == nil {
+		opts.Registry = prometheus.NewRegistry()
 	}
 
-	// TODO: should we make a "PullController" ?
+	if opts.Registerer == nil {
+		opts.Registerer = opts.Registry
+	}
+
+	if opts.Gatherer == nil {
+		opts.Gatherer = opts.Registry
+	}
+
 	go func() {
 		_ = http.ListenAndServe(":22022", promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}))
 	}()

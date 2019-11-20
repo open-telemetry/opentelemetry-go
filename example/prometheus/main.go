@@ -28,8 +28,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-
-	prom "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -40,12 +38,10 @@ var (
 
 func initMeter() *push.Controller {
 	selector := simple.NewWithExactMeasure()
-	reg := prom.NewRegistry()
 	exporter, err := prometheus.NewExporter(prometheus.Options{
 		DefaultHistogramBuckets: []float64{0.5, 0.9, 0.99},
-		Gatherer:                reg,
-		Registerer:              reg,
 	})
+
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
