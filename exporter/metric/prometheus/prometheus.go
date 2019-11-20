@@ -48,12 +48,15 @@ type Exporter struct {
 	gaugeVecs       map[string]*prometheus.GaugeVec
 }
 
-var _ export.Exporter = (*Exporter)(nil)
+var _ export.Exporter = &Exporter{}
 
 // Options is a set of options for the tally reporter.
 type Options struct {
 	// Registerer is the prometheus registerer to register
 	// metrics with. Use nil to specify the default registerer.
+	//
+	// If the specified registerer is a prometheus.Registry and if
+	// no gatherer was set, then the registerer will also be the gatherer.
 	Registerer prometheus.Registerer
 
 	// Gatherer is the prometheus gatherer to gather
@@ -61,11 +64,11 @@ type Options struct {
 	Gatherer prometheus.Gatherer
 
 	// DefaultHistogramBuckets is the default histogram buckets
-	// to use. Use nil to specify the default histogram buckets.
+	// to use. Use nil to specify the system-default histogram buckets.
 	DefaultHistogramBuckets []float64
 
 	// DefaultSummaryObjectives is the default summary objectives
-	// to use. Use nil to specify the default summary objectives.
+	// to use. Use nil to specify the system-default summary objectives.
 	DefaultSummaryObjectives map[float64]float64
 
 	// OnRegisterError defines a method to call to when registering
