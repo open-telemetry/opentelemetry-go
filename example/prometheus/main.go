@@ -20,7 +20,6 @@ import (
 	"log"
 	"time"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/global"
@@ -71,13 +70,6 @@ func main() {
 
 	measureTwo := meter.NewFloat64Measure("ex.com.two")
 
-	ctx := context.Background()
-
-	ctx = distributedcontext.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
-	)
-
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
 	gauge := oneMetric.AcquireHandle(commonLabels)
@@ -86,11 +78,11 @@ func main() {
 	measure := measureTwo.AcquireHandle(commonLabels)
 	defer measure.Release()
 
-	meter.RecordBatch(
-		// Note: call-site variables added as context Entries:
-		distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-		commonLabels,
+	ctx := context.Background()
 
+	meter.RecordBatch(
+		ctx,
+		commonLabels,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 	)
@@ -98,10 +90,8 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	meter.RecordBatch(
-		// Note: call-site variables added as context Entries:
-		distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+		ctx,
 		commonLabels,
-
 		oneMetric.Measurement(13.0),
 		measureTwo.Measurement(12.0),
 	)
