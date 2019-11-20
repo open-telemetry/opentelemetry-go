@@ -38,9 +38,9 @@ type span struct {
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext core.SpanContext
 
-	// lruAttributes are capped at configured limit. When the capacity is reached an oldest entry
+	// attributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
-	lruAttributes *lruMap
+	attributes *attributesMap
 
 	// messageEvents are stored in FIFO queue capped by configured limit.
 	messageEvents *evictedQueue
@@ -228,10 +228,9 @@ func (s *span) makeSpanData() *export.SpanData {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	sd = *s.data
-	if s.lruAttributes.simpleLruMap.Len() > 0 {
-		sd.Attributes = s.lruAttributesToAttributeMap()
-		sd.DroppedAttributeCount = s.lruAttributes.droppedCount
-	}
+
+	s.attributes.toSpanData(&sd)
+
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
 		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
@@ -259,24 +258,11 @@ func (s *span) interfaceArrayToMessageEventArray() []export.Event {
 	return messageEventArr
 }
 
-func (s *span) lruAttributesToAttributeMap() []core.KeyValue {
-	attributes := make([]core.KeyValue, 0, s.lruAttributes.simpleLruMap.Len())
-	for _, key := range s.lruAttributes.simpleLruMap.Keys() {
-		value, ok := s.lruAttributes.simpleLruMap.Get(key)
-		if ok {
-			key := key.(core.Key)
-			value := value.(core.Value)
-			attributes = append(attributes, core.KeyValue{Key: key, Value: value})
-		}
-	}
-	return attributes
-}
-
 func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		s.lruAttributes.add(a.Key, a.Value)
+		s.attributes.add(a)
 	}
 }
 
@@ -328,7 +314,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		Name:            name,
 		HasRemoteParent: remoteParent,
 	}
-	span.lruAttributes = newLruMap(cfg.MaxAttributesPerSpan)
+	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
 	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)
 	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
 

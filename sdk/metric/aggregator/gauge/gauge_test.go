@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -36,18 +37,20 @@ func TestGaugeNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
 		var last core.Number
 		for i := 0; i < count; i++ {
 			x := profile.Random(rand.Intn(1)*2 - 1)
 			last = x
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
-		require.Equal(t, last, agg.AsNumber(), "Same last value - non-monotonic")
+		lv, _, err := agg.LastValue()
+		require.Equal(t, last, lv, "Same last value - non-monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -57,19 +60,21 @@ func TestGaugeMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		small := profile.Random(+1)
 		last := small
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			last.AddNumber(profile.NumberKind, x)
-			agg.Update(ctx, last, record)
+			test.CheckedUpdate(t, agg, last, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
-		require.Equal(t, last, agg.AsNumber(), "Same last value - monotonic")
+		lv, _, err := agg.LastValue()
+		require.Equal(t, last, lv, "Same last value - monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -79,19 +84,25 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first := profile.Random(+1)
-		agg.Update(ctx, first, record)
+		test.CheckedUpdate(t, agg, first, record)
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(-1)
-			agg.Update(ctx, x, record)
+
+			err := agg.Update(ctx, x, record)
+			if err != aggregator.ErrNonMonotoneInput {
+				t.Error("Expected ErrNonMonotoneInput", err)
+			}
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
-		require.Equal(t, first, agg.AsNumber(), "Same last value - monotonic")
+		lv, _, err := agg.LastValue()
+		require.Equal(t, first, lv, "Same last value - monotonic")
+		require.Nil(t, err)
 	})
 }
 
@@ -102,26 +113,30 @@ func TestGaugeNormalMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
 		first1.AddNumber(profile.NumberKind, first2)
 
-		agg1.Update(ctx, first1, record)
-		agg2.Update(ctx, first2, record)
+		test.CheckedUpdate(t, agg1, first1, descriptor)
+		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
-		t1 := agg1.Timestamp()
-		t2 := agg2.Timestamp()
+		_, t1, err := agg1.LastValue()
+		require.Nil(t, err)
+		_, t2, err := agg2.LastValue()
+		require.Nil(t, err)
 		require.True(t, t1.Before(t2))
 
-		agg1.Merge(agg2, record.Descriptor())
+		test.CheckedMerge(t, agg1, agg2, descriptor)
 
-		require.Equal(t, t2, agg1.Timestamp(), "Merged timestamp - non-monotonic")
-		require.Equal(t, first2, agg1.AsNumber(), "Merged value - non-monotonic")
+		lv, ts, err := agg1.LastValue()
+		require.Nil(t, err)
+		require.Equal(t, t2, ts, "Merged timestamp - non-monotonic")
+		require.Equal(t, first2, lv, "Merged value - non-monotonic")
 	})
 }
 
@@ -132,21 +147,38 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		batcher, record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
 
 		first1 := profile.Random(+1)
-		agg1.Update(ctx, first1, record)
+		test.CheckedUpdate(t, agg1, first1, descriptor)
 
 		first2 := profile.Random(+1)
 		first2.AddNumber(profile.NumberKind, first1)
-		agg2.Update(ctx, first2, record)
+		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
-		agg1.Merge(agg2, record.Descriptor())
+		test.CheckedMerge(t, agg1, agg2, descriptor)
 
-		require.Equal(t, first2, agg1.AsNumber(), "Merged value - monotonic")
-		require.Equal(t, agg2.Timestamp(), agg1.Timestamp(), "Merged timestamp - monotonic")
+		_, ts2, err := agg1.LastValue()
+		require.Nil(t, err)
+
+		lv, ts1, err := agg1.LastValue()
+		require.Nil(t, err)
+		require.Equal(t, first2, lv, "Merged value - monotonic")
+		require.Equal(t, ts2, ts1, "Merged timestamp - monotonic")
 	})
+}
+
+func TestGaugeNotSet(t *testing.T) {
+	descriptor := test.NewAggregatorTest(export.GaugeKind, core.Int64NumberKind, true)
+
+	g := New()
+	g.Checkpoint(context.Background(), descriptor)
+
+	value, timestamp, err := g.LastValue()
+	require.Equal(t, aggregator.ErrNoLastValue, err)
+	require.True(t, timestamp.IsZero())
+	require.Equal(t, core.Number(0), value)
 }

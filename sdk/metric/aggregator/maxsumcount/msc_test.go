@@ -30,7 +30,7 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg := New()
 
@@ -39,19 +39,24 @@ func TestMaxSumCountAbsolute(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		agg.Collect(ctx, record, batcher)
+		agg.Checkpoint(ctx, record)
 
 		all.Sort()
 
+		asum, err := agg.Sum()
 		require.InEpsilon(t,
 			all.Sum().CoerceToFloat64(profile.NumberKind),
-			agg.Sum().CoerceToFloat64(profile.NumberKind),
+			asum.CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg.Count(), "Same count - absolute")
+		require.Nil(t, err)
+
+		count, err := agg.Count()
+		require.Equal(t, all.Count(), count, "Same count - absolute")
+		require.Nil(t, err)
 
 		max, err := agg.Max()
 		require.Nil(t, err)
@@ -66,7 +71,7 @@ func TestMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		batcher, record := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg1 := New()
 		agg2 := New()
@@ -76,27 +81,32 @@ func TestMaxSumCountMerge(t *testing.T) {
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg1.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg1, x, descriptor)
 		}
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			agg2.Update(ctx, x, record)
+			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Collect(ctx, record, batcher)
-		agg2.Collect(ctx, record, batcher)
+		agg1.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(ctx, descriptor)
 
-		agg1.Merge(agg2, record.Descriptor())
+		test.CheckedMerge(t, agg1, agg2, descriptor)
 
 		all.Sort()
 
+		asum, err := agg1.Sum()
 		require.InEpsilon(t,
 			all.Sum().CoerceToFloat64(profile.NumberKind),
-			agg1.Sum().CoerceToFloat64(profile.NumberKind),
+			asum.CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Equal(t, all.Count(), agg1.Count(), "Same count - absolute")
+		require.Nil(t, err)
+
+		count, err := agg1.Count()
+		require.Equal(t, all.Count(), count, "Same count - absolute")
+		require.Nil(t, err)
 
 		max, err := agg1.Max()
 		require.Nil(t, err)

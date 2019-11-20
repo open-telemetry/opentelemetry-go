@@ -42,29 +42,37 @@ func newFixture(b *testing.B) *benchFixture {
 	bf := &benchFixture{
 		B: b,
 	}
-	bf.sdk = sdk.New(bf)
+	bf.sdk = sdk.New(bf, sdk.DefaultLabelEncoder())
 	return bf
 }
 
-func (bf *benchFixture) AggregatorFor(rec export.Record) export.Aggregator {
-	switch rec.Descriptor().MetricKind() {
+func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		if strings.HasSuffix(rec.Descriptor().Name(), "maxsumcount") {
+		if strings.HasSuffix(descriptor.Name(), "maxsumcount") {
 			return maxsumcount.New()
-		} else if strings.HasSuffix(rec.Descriptor().Name(), "ddsketch") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
-		} else if strings.HasSuffix(rec.Descriptor().Name(), "array") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), rec.Descriptor())
+		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
+			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
+		} else if strings.HasSuffix(descriptor.Name(), "array") {
+			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
 		}
 	}
 	return nil
 }
 
-func (bf *benchFixture) Export(ctx context.Context, rec export.Record, agg export.Aggregator) {
+func (*benchFixture) Process(context.Context, export.Record) error {
+	return nil
+}
+
+func (*benchFixture) CheckpointSet() export.CheckpointSet {
+	return nil
+}
+
+func (*benchFixture) FinishedCollection() {
 }
 
 func makeLabelSets(n int) [][]core.KeyValue {

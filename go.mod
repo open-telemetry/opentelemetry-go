@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/DataDog/sketches-go v0.0.0-20190923095040-43f19ad77ff7
+	github.com/benbjohnson/clock v1.0.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golangci/gocyclo v0.0.0-20180528144436-0a533e8fa43d // indirect
@@ -12,7 +13,6 @@ require (
 	github.com/google/go-cmp v0.3.1
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.0.3 // indirect
-	github.com/hashicorp/golang-lru v0.5.3
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect

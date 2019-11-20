@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/otel)](https://goreportcard.com/report/go.opentelemetry.io/otel)
 [![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go.svg)](https://gitter.im/open-telemetry/opentelemetry-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-The Go [OpenTelemetry](https://opentelemetry.io/otel/) client.
+The Go [OpenTelemetry](https://opentelemetry.io/) client.
 
 ## Installation
 

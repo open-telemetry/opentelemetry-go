@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 // Note: This aggregator enforces the behavior of monotonic gauges to
@@ -36,7 +37,7 @@ type (
 		// current is an atomic pointer to *gaugeData.  It is never nil.
 		current unsafe.Pointer
 
-		// checkpoint is a copy of the current value taken in Collect()
+		// checkpoint is a copy of the current value taken in Checkpoint()
 		checkpoint unsafe.Pointer
 	}
 
@@ -55,6 +56,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
+var _ aggregator.LastValue = &Aggregator{}
 
 // An unset gauge has zero timestamp and zero value.
 var unsetGauge = &gaugeData{}
@@ -68,31 +70,30 @@ func New() *Aggregator {
 	}
 }
 
-// AsNumber returns the recorded gauge value as an int64.
-func (g *Aggregator) AsNumber() core.Number {
-	return (*gaugeData)(g.checkpoint).value.AsNumber()
+// LastValue returns the last-recorded gauge value and the
+// corresponding timestamp.  The error value aggregator.ErrNoLastValue
+// will be returned if (due to a race condition) the checkpoint was
+// computed before the first value was set.
+func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
+	gd := (*gaugeData)(g.checkpoint)
+	if gd == unsetGauge {
+		return core.Number(0), time.Time{}, aggregator.ErrNoLastValue
+	}
+	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
-// Timestamp returns the timestamp of the alst recorded gauge value.
-func (g *Aggregator) Timestamp() time.Time {
-	return (*gaugeData)(g.checkpoint).timestamp
-}
-
-// Collect checkpoints the current value (atomically) and exports it.
-func (g *Aggregator) Collect(ctx context.Context, rec export.Record, exp export.Batcher) {
+// Checkpoint atomically saves the current value.
+func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
-
-	exp.Export(ctx, rec, g)
 }
 
-// Update modifies the current value (atomically) for later export.
-func (g *Aggregator) Update(_ context.Context, number core.Number, rec export.Record) {
-	desc := rec.Descriptor()
+// Update atomically sets the current "last" value.
+func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	if !desc.Alternate() {
 		g.updateNonMonotonic(number)
-	} else {
-		g.updateMonotonic(number, desc)
+		return nil
 	}
+	return g.updateMonotonic(number, desc)
 }
 
 func (g *Aggregator) updateNonMonotonic(number core.Number) {
@@ -103,7 +104,7 @@ func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
 }
 
-func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) {
+func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) error {
 	ngd := &gaugeData{
 		timestamp: time.Now(),
 		value:     number,
@@ -114,21 +115,23 @@ func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor
 		gd := (*gaugeData)(atomic.LoadPointer(&g.current))
 
 		if gd.value.CompareNumber(kind, number) > 0 {
-			// TODO warn
-			return
+			return aggregator.ErrNonMonotoneInput
 		}
 
 		if atomic.CompareAndSwapPointer(&g.current, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
-			return
+			return nil
 		}
 	}
 }
 
-func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
+// Merge combines state from two aggregators.  If the gauge is
+// declared as monotonic, the greater value is chosen.  If the gauge
+// is declared as non-monotonic, the most-recently set value is
+// chosen.
+func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		// TODO warn
-		return
+		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))
@@ -139,18 +142,19 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) {
 		cmp := ggd.value.CompareNumber(desc.NumberKind(), ogd.value)
 
 		if cmp > 0 {
-			return
+			return nil
 		}
 
 		if cmp < 0 {
 			g.checkpoint = unsafe.Pointer(ogd)
-			return
+			return nil
 		}
 	}
 	// Non-monotonic gauge or equal values
 	if ggd.timestamp.After(ogd.timestamp) {
-		return
+		return nil
 	}
 
 	g.checkpoint = unsafe.Pointer(ogd)
+	return nil
 }
