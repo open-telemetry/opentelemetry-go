@@ -22,12 +22,20 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
+// LabelEncoder encodes metric labels in the dogstatsd syntax.
+//
+// TODO: find a link for this syntax.  It's been copied out of code,
+// not a specification:
+//
+// https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
 type LabelEncoder struct {
 	pool sync.Pool
 }
 
 var _ export.LabelEncoder = &LabelEncoder{}
 
+// NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
+// labels.
 func NewLabelEncoder() *LabelEncoder {
 	return &LabelEncoder{
 		pool: sync.Pool{
@@ -38,6 +46,7 @@ func NewLabelEncoder() *LabelEncoder {
 	}
 }
 
+// Encode emits a string like "|#key1:value1,key2:value2".
 func (e *LabelEncoder) Encode(labels []core.KeyValue) string {
 	buf := e.pool.Get().(*bytes.Buffer)
 	defer e.pool.Put(buf)

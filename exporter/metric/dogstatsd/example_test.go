@@ -3,10 +3,8 @@ package dogstatsd_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
-	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -18,42 +16,22 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-func newStdoutServer() (string, func(), func()) {
+func ExampleNew() {
+	// Create a "server"
 	wg := &sync.WaitGroup{}
-	finishChan := make(chan struct{}, 1)
-
-	tmpfile, err := ioutil.TempFile("", "examplegram")
-	if err != nil {
-		log.Fatal("Could not create tempfile: ", err)
-	}
-	path := tmpfile.Name()
-	_ = tmpfile.Close()
-	_ = os.Remove(path)
-
-	laddr, err := net.ResolveUnixAddr("unixgram", tmpfile.Name())
-	if err != nil {
-		log.Fatal("Could not resolve address: ", tmpfile, ":", err)
-	}
-
 	wg.Add(1)
-	listener, err := net.ListenUnixgram("unixgram", laddr)
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
+
+	reader, writer := io.Pipe()
 
 	go func() {
 		defer wg.Done()
 
 		for {
-			select {
-			case <-finishChan:
-				return
-			default:
-			}
-
 			var buf [4096]byte
-			n, _, err := listener.ReadFrom(buf[:])
-			if err != nil {
+			n, err := reader.Read(buf[:])
+			if err == io.EOF {
+				return
+			} else if err != nil {
 				log.Fatal("Read err: ", err)
 			} else if n >= len(buf) {
 				log.Fatal("Read small buffer: ", n)
@@ -63,47 +41,46 @@ func newStdoutServer() (string, func(), func()) {
 		}
 	}()
 
-	return path, func() {
-			close(finishChan)
-			wg.Wait()
-		}, func() {
-			_ = listener.Close()
-			err := os.Remove(path)
-			if err != nil {
-				log.Fatal("Could not remove tempfile: ", err)
-			}
-		}
-}
-
-func ExampleNew() {
-	// Create a server
-	path, waitFunc, finishFunc := newStdoutServer()
-	defer finishFunc()
-
 	// Create a meter
 	selector := simple.NewWithExactMeasure()
 	exporter, err := dogstatsd.New(dogstatsd.Config{
-		URL: fmt.Sprint("unix://", path),
+		// The Writer field provides test support.
+		Writer: writer,
+
+		// In real code, use the URL field:
+		//
+		// URL: fmt.Sprint("unix://", path),
 	})
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
+	// The ungrouped batcher ensures that the export sees the full
+	// set of labels as dogstatsd tags.
 	batcher := ungrouped.New(selector, false)
+
+	// The pusher automatically recognizes that the exporter
+	// implements the LabelEncoder interface, which ensures the
+	// export encoding for labels is encoded in the LabelSet.
 	pusher := push.New(batcher, exporter, time.Hour)
 	pusher.Start()
 
 	ctx := context.Background()
 
 	key := key.New("key")
+
+	// pusher implements the metric.MeterProvider interface:
 	meter := pusher.GetMeter("example")
 
+	// Create and update a single counter:
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
 	labels := meter.Labels(key.String("value"))
 
 	counter.Add(ctx, 100, labels)
-	pusher.Stop()
 
-	waitFunc()
+	// Flush the exporter, close the pipe, and wait for the reader.
+	pusher.Stop()
+	writer.Close()
+	wg.Wait()
 
 	// Output:
 	// a.counter:100|c|#key:value

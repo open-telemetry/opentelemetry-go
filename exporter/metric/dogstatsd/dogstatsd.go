@@ -24,6 +24,14 @@ import (
 type (
 	Config = statsd.Config
 
+	// Exporter implements a dogstatsd-format statsd exporter,
+	// which encodes label sets as indepenent fields in the
+	// output.
+	//
+	// TODO: find a link for this syntax.  It's been copied out of
+	// code, not a specification:
+	//
+	// https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
 	Exporter struct {
 		*statsd.Exporter
 		*statsd.LabelEncoder
@@ -35,6 +43,10 @@ var (
 	_ export.LabelEncoder = &Exporter{}
 )
 
+// New returns a new Dogstatsd-syntax exporter.  This type implements
+// the metric.LabelEncoder interface, allowing the SDK's unique label
+// encoding to be pre-computed for the exporter and stored in the
+// LabelSet.
 func New(config Config) (*Exporter, error) {
 	exp := &Exporter{
 		LabelEncoder: statsd.NewLabelEncoder(),
@@ -45,10 +57,12 @@ func New(config Config) (*Exporter, error) {
 	return exp, err
 }
 
+// AppendName is part of the stats-internal adapter interface.
 func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	_, _ = buf.WriteString(rec.Descriptor().Name())
 }
 
+// AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
 	labels := rec.Labels()
 

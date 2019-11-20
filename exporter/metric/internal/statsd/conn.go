@@ -14,6 +14,10 @@
 
 package statsd
 
+// See https://github.com/b/statsd_spec for the best-available statsd
+// syntax specification.  See also
+// https://github.com/statsd/statsd/edit/master/docs/metric_types.md
+
 import (
 	"bytes"
 	"context"
@@ -82,6 +86,8 @@ var (
 	ErrInvalidScheme = fmt.Errorf("Invalid statsd transport")
 )
 
+// NewExport returns a common implementation for exporters that Export
+// statsd syntax.
 func NewExporter(config Config, adapter Adapter) (*Exporter, error) {
 	if config.MaxPacketSize <= 0 {
 		config.MaxPacketSize = MaxPacketSize
@@ -108,6 +114,9 @@ func NewExporter(config Config, adapter Adapter) (*Exporter, error) {
 	}, err
 }
 
+// dial connects to a statsd service using several common network
+// types.  Presently "udp" and "unix" datagram socket connections are
+// supported.
 func dial(endpoint string) (net.Conn, error) {
 	dest, err := url.Parse(endpoint)
 	if err != nil {
@@ -146,6 +155,7 @@ func dial(endpoint string) (net.Conn, error) {
 	return nil, ErrInvalidScheme
 }
 
+// Export is common code for any statsd-based metric.Exporter implementation.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	buf := &e.buffer
 	buf.Reset()
@@ -156,7 +166,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	checkpointSet.ForEach(func(rec export.Record) {
 		before := buf.Len()
 
-		if err := e.format(rec, buf); err != nil && aggErr == nil {
+		if err := e.formatMetric(rec, buf); err != nil && aggErr == nil {
 			aggErr = err
 			return
 		}
@@ -193,6 +203,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	return aggErr
 }
 
+// send writes a complete buffer to the writer as a blocking call.
 func (e *Exporter) send(buf []byte) error {
 	for len(buf) != 0 {
 		n, err := e.writer.Write(buf)
@@ -204,9 +215,18 @@ func (e *Exporter) send(buf []byte) error {
 	return nil
 }
 
-func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) error {
+// formatMetric formats an individual export record.  For some records
+// this will emit a single statistic, for some it will emit more than
+// one.
+func (e *Exporter) formatMetric(rec export.Record, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
 	agg := rec.Aggregator()
+
+	// TODO handle non-Points Distribution/MaxSumCount by
+	// formatting individual quantiles, the sum, and the count as
+	// single statistics.  For the dogstatsd variation, assuming
+	// open-source systems like Veneur add support, figure out the
+	// proper encoding for "d"-type distribution data.
 
 	if pts, ok := agg.(aggregator.Points); ok {
 		var format string
@@ -220,31 +240,29 @@ func (e *Exporter) format(rec export.Record, buf *bytes.Buffer) error {
 			return err
 		}
 		for _, pt := range points {
-			e.format1(rec, pt, format, buf)
+			e.formatSingleStat(rec, pt, format, buf)
 		}
-
-		// TODO handle non-Points Distribution/MaxSumCount.
 
 	} else if sum, ok := agg.(aggregator.Sum); ok {
 		sum, err := sum.Sum()
 		if err != nil {
 			return err
 		}
-		e.format1(rec, sum, formatCounter, buf)
+		e.formatSingleStat(rec, sum, formatCounter, buf)
 
 	} else if lv, ok := agg.(aggregator.LastValue); ok {
 		lv, _, err := lv.LastValue()
 		if err != nil {
 			return err
 		}
-		e.format1(rec, lv, formatGauge, buf)
+		e.formatSingleStat(rec, lv, formatGauge, buf)
 	}
 	return nil
 }
 
-func (e *Exporter) format1(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {
-	// For basic statsd syntax, see
-	// https://github.com/statsd/statsd/edit/master/docs/metric_types.md
+// formatSingleStat encodes a single item statsd of statsd data
+// followed by a newline.
+func (e *Exporter) formatSingleStat(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {
 	e.adapter.AppendName(rec, buf)
 	_, _ = buf.WriteRune(':')
 	writeNumber(buf, val, rec.Descriptor().NumberKind())
