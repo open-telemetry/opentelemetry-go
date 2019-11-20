@@ -124,7 +124,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				return
 			}
 
-			c.Add(value.AsFloat64())
+			desc := record.Descriptor()
+			c.Add(value.CoerceToFloat64(desc.NumberKind()))
 		}
 
 		if gauge, ok := agg.(aggregator.LastValue); ok {
@@ -140,7 +141,9 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				// TODO: log a warning here?
 				return
 			}
-			g.Set(lv.AsFloat64())
+
+			desc := record.Descriptor()
+			g.Set(lv.CoerceToFloat64(desc.NumberKind()))
 		}
 	})
 
