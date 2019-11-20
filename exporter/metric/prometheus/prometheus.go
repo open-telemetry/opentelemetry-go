@@ -28,10 +28,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-const (
-	prefixSplitter = "+"
-)
-
 type metricKey struct {
 	desc    *export.Descriptor
 	encoded string
