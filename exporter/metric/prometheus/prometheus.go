@@ -16,6 +16,7 @@ package prometheus
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"net/http"
 	"sync"
 
@@ -39,6 +40,8 @@ type metricKey struct {
 type Exporter struct {
 	sync.RWMutex
 
+	labelEncoder export.LabelEncoder
+
 	handler http.Handler
 
 	registerer prometheus.Registerer
@@ -57,6 +60,7 @@ type Exporter struct {
 
 var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
+var _ export.LabelEncoder = &Exporter{}
 
 // Options is a set of options for the tally reporter.
 type Options struct {
@@ -81,6 +85,10 @@ type Options struct {
 	// DefaultHistogramBuckets is the default histogram buckets
 	// to use. Use nil to specify the system-default histogram buckets.
 	DefaultHistogramBuckets []float64
+
+	// LabelEncoder is the label encoder that will be used to group
+	// and export metrics to Prometheus.
+	LabelEncoder export.LabelEncoder
 }
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
@@ -97,17 +105,24 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
+	if opts.LabelEncoder == nil {
+		opts.LabelEncoder = metric.DefaultLabelEncoder()
+	}
+
 	return &Exporter{
+		labelEncoder: opts.LabelEncoder,
+
 		registerer: opts.Registerer,
 		gatherer:   opts.Gatherer,
 		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 
-		counters:   make(map[metricKey]prometheus.Counter),
-		gauges:     make(map[metricKey]prometheus.Gauge),
-		histograms: make(map[metricKey]prometheus.Observer),
+		counters:    make(map[metricKey]prometheus.Counter),
+		counterVecs: make(map[*export.Descriptor]*prometheus.CounterVec),
 
-		counterVecs:   make(map[*export.Descriptor]*prometheus.CounterVec),
-		gaugeVecs:     make(map[*export.Descriptor]*prometheus.GaugeVec),
+		gauges:    make(map[metricKey]prometheus.Gauge),
+		gaugeVecs: make(map[*export.Descriptor]*prometheus.GaugeVec),
+
+		histograms:    make(map[metricKey]prometheus.Observer),
 		histogramVecs: make(map[*export.Descriptor]*prometheus.HistogramVec),
 
 		defaultHistogramBuckets: opts.DefaultHistogramBuckets,
@@ -121,8 +136,19 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		agg := record.Aggregator()
 
 		desc := record.Descriptor()
+
+		labels := record.Labels()
+		if labels.Encoder() != e {
+			// TODO: This case could be handled by directly
+			// encoding the labels at this point, but presently it
+			// should not occur.
+			//
+			// copy from datadog exporter.
+			panic("Should have self-encoded labels")
+		}
 		mKey := metricKey{
-			desc:    desc,
+			desc: desc,
+			// TODO: check if encoder is the exporter.
 			encoded: record.Labels().Encoded(),
 		}
 
@@ -204,6 +230,10 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
+}
+
+func (e *Exporter) Encode(kvs []core.KeyValue) string {
+	return e.labelEncoder.Encode(kvs)
 }
 
 func (e *Exporter) getCounter(record export.Record, mKey metricKey) (prometheus.Counter, error) {

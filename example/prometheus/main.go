@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/global"
-	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -46,7 +45,7 @@ func initMeter() *push.Controller {
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), false)
+	batcher := defaultkeys.New(selector, exporter, false)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
