@@ -57,7 +57,7 @@ func New(desc *export.Descriptor) *Aggregator {
 }
 
 func unsetMaxSumCount(kind core.NumberKind) state {
-	return state{ max: kind.Minimum() }
+	return state{max: kind.Minimum()}
 }
 
 // Sum returns the sum of values in the checkpoint.
