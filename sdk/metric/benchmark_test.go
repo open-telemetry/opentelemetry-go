@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
 type benchFixture struct {
@@ -53,8 +53,8 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		if strings.HasSuffix(descriptor.Name(), "maxsumcount") {
-			return maxsumcount.New(descriptor)
+		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
+			return minmaxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
 			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "array") {
@@ -360,19 +360,19 @@ func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 // MaxSumCount
 
 func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.maxsumcount")
+	benchmarkInt64MeasureAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.maxsumcount")
+	benchmarkInt64MeasureHandleAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.maxsumcount")
+	benchmarkFloat64MeasureAdd(b, "float64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.maxsumcount")
+	benchmarkFloat64MeasureHandleAdd(b, "float64.minmaxsumcount")
 }
 
 // DDSketch

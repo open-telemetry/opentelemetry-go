@@ -38,7 +38,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.MinMaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 var _ aggregator.Points = &Aggregator{}
 

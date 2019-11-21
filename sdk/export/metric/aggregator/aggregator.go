@@ -37,6 +37,11 @@ type (
 		Count() (int64, error)
 	}
 
+	// Min returns the minimum value over the set of values that were aggregated.
+	Min interface {
+		Min() (core.Number, error)
+	}
+
 	// Max returns the maximum value over the set of values that were aggregated.
 	Max interface {
 		Max() (core.Number, error)
@@ -58,17 +63,18 @@ type (
 		Points() ([]core.Number, error)
 	}
 
-	// MaxSumCount supports the Max, Sum, and Count interfaces.
-	MaxSumCount interface {
+	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
+	MinMaxSumCount interface {
+		Min
+		Max
 		Sum
 		Count
-		Max
 	}
 
-	// MaxSumCount supports the Max, Sum, Count, and Quantile
+	// Distribution supports the Min, Max, Sum, Count, and Quantile
 	// interfaces.
 	Distribution interface {
-		MaxSumCount
+		MinMaxSumCount
 		Quantile
 	}
 )

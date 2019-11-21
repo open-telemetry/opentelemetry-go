@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
 type (
@@ -38,9 +38,9 @@ var (
 )
 
 // NewWithInexpensiveMeasure returns a simple aggregation selector
-// that uses counter, gauge, and maxsumcount aggregators for the three
+// that uses counter, gauge, and minmaxsumcount aggregators for the three
 // kinds of metric.  This selector is faster and uses less memory than
-// the others because maxsumcount does not aggregate quantile
+// the others because minmaxsumcount does not aggregate quantile
 // information.
 func NewWithInexpensiveMeasure() export.AggregationSelector {
 	return selectorInexpensive{}
@@ -71,7 +71,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		return maxsumcount.New(descriptor)
+		return minmaxsumcount.New(descriptor)
 	default:
 		return counter.New()
 	}

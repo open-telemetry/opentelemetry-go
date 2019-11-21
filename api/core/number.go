@@ -49,6 +49,21 @@ func (k NumberKind) Minimum() Number {
 	}
 }
 
+// Maximum returns the maximum representable value
+// for a given NumberKind
+func (k NumberKind) Maximum() Number {
+	switch k {
+	case Int64NumberKind:
+		return NewInt64Number(math.MaxInt64)
+	case Float64NumberKind:
+		return NewFloat64Number(math.MaxFloat64)
+	case Uint64NumberKind:
+		return NewUint64Number(math.MaxUint64)
+	default:
+		return Number(0)
+	}
+}
+
 // Number represents either an integral or a floating point value. It
 // needs to be accompanied with a source of NumberKind that describes
 // the actual type of the value stored within Number.
