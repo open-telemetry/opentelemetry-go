@@ -16,7 +16,6 @@ package maxsumcount // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ma
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -27,7 +26,6 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		first      sync.Once
 		current    state
 		checkpoint state
 	}
@@ -52,8 +50,12 @@ var _ aggregator.MaxSumCount = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.  For greater consistency and lower
 // performance, consider using Array or DDSketch aggregators.
-func New() *Aggregator {
-	return &Aggregator{}
+func New(kind core.NumberKind) *Aggregator {
+	return &Aggregator{
+		current: state{
+			max: kind.Minimum(),
+		},
+	}
 }
 
 // Sum returns the sum of values in the checkpoint.
@@ -98,9 +100,6 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	c.current.count.AddUint64Atomic(1)
 	c.current.sum.AddNumberAtomic(kind, number)
 
-	c.first.Do(func() {
-		c.current.max.SetNumberAtomic(number)
-	})
 	for {
 		current := c.current.max.AsNumberAtomic()
 
