@@ -26,6 +26,7 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
+		kind       core.NumberKind
 		current    state
 		checkpoint state
 	}
@@ -52,6 +53,7 @@ var _ aggregator.MaxSumCount = &Aggregator{}
 // performance, consider using Array or DDSketch aggregators.
 func New(desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
+		kind:    desc.NumberKind(),
 		current: unsetMaxSumCount(desc.NumberKind()),
 	}
 }
@@ -71,7 +73,13 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
+// The error value aggregator.ErrEmptyDataSet
+// will be returned if (due to a race condition) the checkpoint was
+// computed before the first value was set.
 func (c *Aggregator) Max() (core.Number, error) {
+	if c.checkpoint == unsetMaxSumCount(c.kind) {
+		return core.Number(0), aggregator.ErrEmptyDataSet
+	}
 	return c.checkpoint.max, nil
 }
 

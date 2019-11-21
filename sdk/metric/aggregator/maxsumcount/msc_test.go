@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -165,14 +166,13 @@ func TestMaxSumCountMerge(t *testing.T) {
 	})
 }
 
-func TestMaxSumCountEmptyCheckpoint(t *testing.T) {
+func TestMaxSumCountNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
 		agg := New(descriptor)
-
 		agg.Checkpoint(ctx, descriptor)
 
 		asum, err := agg.Sum()
@@ -184,10 +184,7 @@ func TestMaxSumCountEmptyCheckpoint(t *testing.T) {
 		require.Nil(t, err)
 
 		max, err := agg.Max()
-		require.Nil(t, err)
-		require.Equal(t,
-			profile.NumberKind.Minimum(),
-			max,
-			"Empty checkpoint max - Minimum")
+		require.Equal(t, aggregator.ErrEmptyDataSet, err)
+		require.Equal(t, core.Number(0), max)
 	})
 }
