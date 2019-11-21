@@ -219,7 +219,7 @@ func (e *Exporter) getCounter(record export.Record, mKey metricKey) (prometheus.
 		return nil, err
 	}
 
-	counter, err := counterVec.GetMetricWith(labelsToTags(record.Labels()))
+	counter, err := counterVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (e *Exporter) getGauge(record export.Record, mKey metricKey) (prometheus.Ga
 		return nil, err
 	}
 
-	gauge, err := gaugeVec.GetMetricWith(labelsToTags(record.Labels()))
+	gauge, err := gaugeVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (e *Exporter) getHistogram(record export.Record, mKey metricKey) (prometheu
 		return nil, err
 	}
 
-	histogram, err := histogramVec.GetMetricWith(labelsToTags(record.Labels()))
+	histogram, err := histogramVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
 	if err != nil {
 		return nil, err
 	}
@@ -345,10 +345,10 @@ func getTagKeys(keys []core.KeyValue) []string {
 	return tagKeys
 }
 
-func labelsToTags(labels export.Labels) map[string]string {
-	tags := make(map[string]string, labels.Len())
+func labelsToTags(labels export.Labels) []string {
+	tags := make([]string, 0, labels.Len())
 	for _, label := range labels.Ordered() {
-		tags[Sanitize(string(label.Key))] = label.Value.Emit()
+		tags = append(tags, label.Value.Emit())
 	}
 	return tags
 }

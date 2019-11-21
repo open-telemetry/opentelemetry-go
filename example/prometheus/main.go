@@ -68,7 +68,7 @@ func main() {
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two")
+	measureTwo := meter.NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
 	measureThree := meter.NewFloat64Counter("ex.com.three")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
