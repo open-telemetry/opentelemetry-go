@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -161,5 +162,32 @@ func TestMaxSumCountMerge(t *testing.T) {
 			all.Max(),
 			max,
 			"Same max - absolute")
+	})
+}
+
+func TestMaxSumCountEmptyCheckpoint(t *testing.T) {
+	ctx := context.Background()
+
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+
+		agg := New(descriptor)
+
+		agg.Checkpoint(ctx, descriptor)
+
+		asum, err := agg.Sum()
+		require.Equal(t, core.Number(0), asum, "Empty checkpoint sum = 0")
+		require.Nil(t, err)
+
+		count, err := agg.Count()
+		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
+		require.Nil(t, err)
+
+		max, err := agg.Max()
+		require.Nil(t, err)
+		require.Equal(t,
+			profile.NumberKind.Minimum(),
+			max,
+			"Empty checkpoint max - Minimum")
 	})
 }
