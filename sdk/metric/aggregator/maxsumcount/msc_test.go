@@ -80,7 +80,7 @@ func maxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !policy.absolute)
 
-	agg := New(descriptor.NumberKind())
+	agg := New(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -120,8 +120,8 @@ func TestMaxSumCountMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg1 := New(descriptor.NumberKind())
-		agg2 := New(descriptor.NumberKind())
+		agg1 := New(descriptor)
+		agg2 := New(descriptor)
 
 		all := test.NewNumbers(profile.NumberKind)
 

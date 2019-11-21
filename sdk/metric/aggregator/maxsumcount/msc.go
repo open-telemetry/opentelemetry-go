@@ -50,12 +50,14 @@ var _ aggregator.MaxSumCount = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.  For greater consistency and lower
 // performance, consider using Array or DDSketch aggregators.
-func New(kind core.NumberKind) *Aggregator {
+func New(desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
-		current: state{
-			max: kind.Minimum(),
-		},
+		current: unsetMaxSumCount(desc.NumberKind()),
 	}
+}
+
+func unsetMaxSumCount(kind core.NumberKind) state {
+	return state{ max: kind.Minimum() }
 }
 
 // Sum returns the sum of values in the checkpoint.

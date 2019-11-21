@@ -162,7 +162,7 @@ func TestStdoutMaxSumCount(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
-	magg := maxsumcount.New(desc.NumberKind())
+	magg := maxsumcount.New(desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
 	magg.Checkpoint(fix.ctx, desc)
