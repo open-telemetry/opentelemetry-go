@@ -40,7 +40,7 @@ var (
 func initMeter() *push.Controller {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := prometheus.NewExporter(prometheus.Options{
-		DefaultHistogramBuckets: []float64{0.5, 0.9, 0.99},
+		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
 	})
 
 	if err != nil {
@@ -69,15 +69,10 @@ func main() {
 	)
 
 	measureTwo := meter.NewFloat64Measure("ex.com.two")
+	measureThree := meter.NewFloat64Counter("ex.com.three")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))
-
-	gauge := oneMetric.AcquireHandle(commonLabels)
-	defer gauge.Release()
-
-	measure := measureTwo.AcquireHandle(commonLabels)
-	defer measure.Release()
 
 	ctx := context.Background()
 
@@ -86,6 +81,7 @@ func main() {
 		commonLabels,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
+		measureThree.Measurement(12.0),
 	)
 
 	meter.RecordBatch(
@@ -93,6 +89,7 @@ func main() {
 		notSoCommonLabels,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
+		measureThree.Measurement(22.0),
 	)
 
 	time.Sleep(5 * time.Second)
@@ -102,6 +99,7 @@ func main() {
 		commonLabels,
 		oneMetric.Measurement(13.0),
 		measureTwo.Measurement(12.0),
+		measureThree.Measurement(13.0),
 	)
 
 	time.Sleep(100 * time.Second)

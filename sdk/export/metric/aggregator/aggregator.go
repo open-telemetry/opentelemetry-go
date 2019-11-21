@@ -48,6 +48,11 @@ type (
 		Quantile(float64) (core.Number, error)
 	}
 
+	// AllValues returns the latest values that were aggregated.
+	AllValues interface {
+		AllValues() ([]core.Number, error)
+	}
+
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		LastValue() (core.Number, time.Time, error)

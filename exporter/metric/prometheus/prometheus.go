@@ -44,11 +44,15 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	counters map[metricKey]prometheus.Counter
-	gauges   map[metricKey]prometheus.Gauge
-
+	counters    map[metricKey]prometheus.Counter
 	counterVecs map[*export.Descriptor]*prometheus.CounterVec
-	gaugeVecs   map[*export.Descriptor]*prometheus.GaugeVec
+
+	gauges    map[metricKey]prometheus.Gauge
+	gaugeVecs map[*export.Descriptor]*prometheus.GaugeVec
+
+	histograms              map[metricKey]prometheus.Observer
+	histogramVecs           map[*export.Descriptor]*prometheus.HistogramVec
+	defaultHistogramBuckets []float64
 }
 
 var _ export.Exporter = &Exporter{}
@@ -77,10 +81,6 @@ type Options struct {
 	// DefaultHistogramBuckets is the default histogram buckets
 	// to use. Use nil to specify the system-default histogram buckets.
 	DefaultHistogramBuckets []float64
-
-	// DefaultSummaryObjectives is the default summary objectives
-	// to use. Use nil to specify the system-default summary objectives.
-	DefaultSummaryObjectives map[float64]float64
 }
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
@@ -102,11 +102,15 @@ func NewExporter(opts Options) (*Exporter, error) {
 		gatherer:   opts.Gatherer,
 		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 
-		counters: make(map[metricKey]prometheus.Counter),
-		gauges:   make(map[metricKey]prometheus.Gauge),
+		counters:   make(map[metricKey]prometheus.Counter),
+		gauges:     make(map[metricKey]prometheus.Gauge),
+		histograms: make(map[metricKey]prometheus.Observer),
 
-		counterVecs: make(map[*export.Descriptor]*prometheus.CounterVec),
-		gaugeVecs:   make(map[*export.Descriptor]*prometheus.GaugeVec),
+		counterVecs:   make(map[*export.Descriptor]*prometheus.CounterVec),
+		gaugeVecs:     make(map[*export.Descriptor]*prometheus.GaugeVec),
+		histogramVecs: make(map[*export.Descriptor]*prometheus.HistogramVec),
+
+		defaultHistogramBuckets: opts.DefaultHistogramBuckets,
 	}, nil
 }
 
@@ -120,6 +124,32 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		mKey := metricKey{
 			desc:    desc,
 			encoded: record.Labels().Encoded(),
+		}
+
+		// TODO(paivagustavo): how to choose between Histogram and Summary?
+		if all, ok := agg.(aggregator.AllValues); ok {
+			values, err := all.AllValues()
+			if err != nil {
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
+				return
+			}
+
+			o, err := e.getHistogram(record, mKey)
+			if err != nil {
+				// TODO: handle this better when we have a more
+				//  sophisticated error handler mechanism for this ForEach method.
+				forEachError = err
+				return
+			}
+
+			desc := record.Descriptor()
+			for _, v := range values {
+				o.Observe(v.CoerceToFloat64(desc.NumberKind()))
+			}
+
+			return
 		}
 
 		if sum, ok := agg.(aggregator.Sum); ok {
@@ -141,6 +171,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 			desc := record.Descriptor()
 			c.Add(value.CoerceToFloat64(desc.NumberKind()))
+
+			return
 		}
 
 		if gauge, ok := agg.(aggregator.LastValue); ok {
@@ -162,6 +194,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 			desc := record.Descriptor()
 			g.Set(lv.CoerceToFloat64(desc.NumberKind()))
+
+			return
 		}
 	})
 
@@ -215,6 +249,27 @@ func (e *Exporter) getGauge(record export.Record, mKey metricKey) (prometheus.Ga
 	return gauge, nil
 }
 
+func (e *Exporter) getHistogram(record export.Record, mKey metricKey) (prometheus.Observer, error) {
+	e.Lock()
+	defer e.Unlock()
+	if g, ok := e.histograms[mKey]; ok {
+		return g, nil
+	}
+
+	desc := record.Descriptor()
+	histogramVec, err := e.getHistogramVec(desc, record.Labels())
+	if err != nil {
+		return nil, err
+	}
+
+	histogram, err := histogramVec.GetMetricWith(labelsToTags(record.Labels()))
+	if err != nil {
+		return nil, err
+	}
+	e.histograms[mKey] = histogram
+	return histogram, nil
+}
+
 func (e *Exporter) getCounterVec(desc *export.Descriptor, labels export.Labels) (*prometheus.CounterVec, error) {
 	if c, ok := e.counterVecs[desc]; ok {
 		return c, nil
@@ -256,6 +311,29 @@ func (e *Exporter) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*
 	}
 
 	e.gaugeVecs[desc] = g
+	return g, nil
+}
+
+func (e *Exporter) getHistogramVec(desc *export.Descriptor, labels export.Labels) (*prometheus.HistogramVec, error) {
+	if g, ok := e.histogramVecs[desc]; ok {
+		return g, nil
+	}
+
+	tagKeys := getTagKeys(labels.Ordered())
+	g := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    Sanitize(desc.Name()),
+			Help:    desc.Description(),
+			Buckets: e.defaultHistogramBuckets,
+		},
+		tagKeys,
+	)
+
+	if err := e.registerer.Register(g); err != nil {
+		return nil, err
+	}
+
+	e.histogramVecs[desc] = g
 	return g, nil
 }
 
