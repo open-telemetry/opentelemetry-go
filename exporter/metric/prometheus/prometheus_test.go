@@ -21,21 +21,19 @@ func TestPrometheusExporter(t *testing.T) {
 	exporter, err := prometheus.NewExporter(prometheus.Options{
 		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
 	})
-
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
 
 	ctx := context.Background()
-
 	var expected []string
-
 	checkpointSet := test.NewCheckpointSet(exporter)
-	cdesc := export.NewDescriptor(
+
+	counter := export.NewDescriptor(
 		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
-	gdesc := export.NewDescriptor(
+	gauge := export.NewDescriptor(
 		"gauge", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
-	mdesc := export.NewDescriptor(
+	measure := export.NewDescriptor(
 		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 
 	labels := []core.KeyValue{
@@ -43,15 +41,15 @@ func TestPrometheusExporter(t *testing.T) {
 		key.New("C").String("D"),
 	}
 
-	checkpointSet.AddCounter(cdesc, 15.3, labels...)
+	checkpointSet.AddCounter(counter, 15.3, labels...)
 	expected = append(expected, `counter{A="B",C="D"} 15.3`)
 
-	checkpointSet.AddGauge(gdesc, 13.2, labels...)
+	checkpointSet.AddGauge(gauge, 13.2, labels...)
 	expected = append(expected, `gauge{A="B",C="D"} 13.2`)
 
-	checkpointSet.AddMeasure(mdesc, 13, labels...)
-	checkpointSet.AddMeasure(mdesc, 15, labels...)
-	checkpointSet.AddMeasure(mdesc, 17, labels...)
+	checkpointSet.AddMeasure(measure, 13, labels...)
+	checkpointSet.AddMeasure(measure, 15, labels...)
+	checkpointSet.AddMeasure(measure, 17, labels...)
 	expected = append(expected, `measure_bucket{A="B",C="D",le="0"} 0`)
 	expected = append(expected, `measure_bucket{A="B",C="D",le="10"} 0`)
 	expected = append(expected, `measure_bucket{A="B",C="D",le="15"} 2`)
@@ -65,13 +63,13 @@ func TestPrometheusExporter(t *testing.T) {
 		key.New("C").String(""),
 	}
 
-	checkpointSet.AddCounter(cdesc, 12, missingLabels...)
+	checkpointSet.AddCounter(counter, 12, missingLabels...)
 	expected = append(expected, `counter{A="E",C=""} 12`)
 
-	checkpointSet.AddGauge(gdesc, 32, missingLabels...)
+	checkpointSet.AddGauge(gauge, 32, missingLabels...)
 	expected = append(expected, `gauge{A="E",C=""} 32`)
 
-	checkpointSet.AddMeasure(mdesc, 19, missingLabels...)
+	checkpointSet.AddMeasure(measure, 19, missingLabels...)
 	expected = append(expected, `measure_bucket{A="E",C="",le="+Inf"} 1`)
 	expected = append(expected, `measure_bucket{A="E",C="",le="0"} 0`)
 	expected = append(expected, `measure_bucket{A="E",C="",le="10"} 0`)
