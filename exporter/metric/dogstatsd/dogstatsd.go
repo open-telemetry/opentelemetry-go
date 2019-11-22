@@ -35,6 +35,8 @@ type (
 	Exporter struct {
 		*statsd.Exporter
 		*statsd.LabelEncoder
+
+		ReencodedLabelsCount int
 	}
 )
 
@@ -64,14 +66,10 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	labels := rec.Labels()
+	encoded, inefficient := e.LabelEncoder.ForceEncode(rec.Labels())
+	_, _ = buf.WriteString(encoded)
 
-	if labels.Encoder() != e {
-		// TODO: This case could be handled by directly
-		// encoding the labels at this point, but presently it
-		// should not occur.
-		panic("Should have self-encoded labels")
+	if inefficient {
+		e.ReencodedLabelsCount++
 	}
-
-	_, _ = buf.WriteString(labels.Encoded())
 }

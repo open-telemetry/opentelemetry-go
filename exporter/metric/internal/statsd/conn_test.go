@@ -30,28 +30,51 @@ import (
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
-type testAdapter struct {
+// withTagsAdapter tests a dogstatsd-style statsd exporter.
+type withTagsAdapter struct {
 	*statsd.LabelEncoder
 }
 
-func (*testAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
+func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	_, _ = buf.WriteString(rec.Descriptor().Name())
 }
 
-func (*testAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	labels := rec.Labels()
-	_, _ = buf.WriteString(labels.Encoded())
+func (ta *withTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
+	encoded, _ := ta.LabelEncoder.ForceEncode(rec.Labels())
+	_, _ = buf.WriteString(encoded)
 }
 
-func newAdapter() *testAdapter {
-	return &testAdapter{
+func newWithTagsAdapter() *withTagsAdapter {
+	return &withTagsAdapter{
 		statsd.NewLabelEncoder(),
 	}
+}
+
+// noTagsAdapter simulates a plain-statsd exporter that appends tag
+// values to the metric name.
+type noTagsAdapter struct {
+}
+
+func (*noTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
+	_, _ = buf.WriteString(rec.Descriptor().Name())
+
+	for _, tag := range rec.Labels().Ordered() {
+		_, _ = buf.WriteString(".")
+		_, _ = buf.WriteString(tag.Value.Emit())
+	}
+}
+
+func (*noTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
+}
+
+func newNoTagsAdapter() *noTagsAdapter {
+	return &noTagsAdapter{}
 }
 
 type testWriter struct {
@@ -95,61 +118,80 @@ func measureAgg(desc *export.Descriptor, v float64) export.Aggregator {
 }
 
 func TestBasicFormat(t *testing.T) {
-	for _, nkind := range []core.NumberKind{
-		core.Float64NumberKind,
-		core.Int64NumberKind,
-	} {
-		t.Run(nkind.String(), func(t *testing.T) {
-			ctx := context.Background()
-			writer := &testWriter{}
-			config := statsd.Config{
-				Writer:        writer,
-				MaxPacketSize: 1024,
-			}
-			adapter := newAdapter()
-			exp, err := statsd.NewExporter(config, adapter)
-			if err != nil {
-				t.Fatal("New error: ", err)
-			}
+	type adapterOutput struct {
+		adapter  statsd.Adapter
+		expected string
+	}
 
-			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			cdesc := export.NewDescriptor(
-				"counter", export.CounterKind, nil, "", "", nkind, false)
-			gdesc := export.NewDescriptor(
-				"gauge", export.GaugeKind, nil, "", "", nkind, false)
-			mdesc := export.NewDescriptor(
-				"measure", export.MeasureKind, nil, "", "", nkind, false)
-			tdesc := export.NewDescriptor(
-				"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind, false)
-
-			labels := []core.KeyValue{
-				key.New("A").String("B"),
-				key.New("C").String("D"),
-			}
-			const value = 123.456
-
-			checkpointSet.Add(cdesc, counterAgg(cdesc, value), labels...)
-			checkpointSet.Add(gdesc, gaugeAgg(gdesc, value), labels...)
-			checkpointSet.Add(mdesc, measureAgg(mdesc, value), labels...)
-			checkpointSet.Add(tdesc, measureAgg(tdesc, value), labels...)
-
-			err = exp.Export(ctx, checkpointSet)
-			require.Nil(t, err)
-
-			var vfmt string
-			if nkind == core.Int64NumberKind {
-				fv := float64(value)
-				vfmt = strconv.FormatInt(int64(fv), 10)
-			} else {
-				vfmt = strconv.FormatFloat(value, 'g', -1, 64)
-			}
-
-			require.Equal(t, 1, len(writer.vec))
-			require.Equal(t, fmt.Sprintf(`counter:%s|c|#A:B,C:D
+	for _, ao := range []adapterOutput{{
+		adapter: newWithTagsAdapter(),
+		expected: `counter:%s|c|#A:B,C:D
 gauge:%s|g|#A:B,C:D
 measure:%s|h|#A:B,C:D
 timer:%s|ms|#A:B,C:D
-`, vfmt, vfmt, vfmt, vfmt), writer.vec[0])
+`}, {
+		adapter: newNoTagsAdapter(),
+		expected: `counter.B.D:%s|c
+gauge.B.D:%s|g
+measure.B.D:%s|h
+timer.B.D:%s|ms
+`},
+	} {
+		adapter := ao.adapter
+		expected := ao.expected
+		t.Run(fmt.Sprintf("%T", adapter), func(t *testing.T) {
+			for _, nkind := range []core.NumberKind{
+				core.Float64NumberKind,
+				core.Int64NumberKind,
+			} {
+				t.Run(nkind.String(), func(t *testing.T) {
+					ctx := context.Background()
+					writer := &testWriter{}
+					config := statsd.Config{
+						Writer:        writer,
+						MaxPacketSize: 1024,
+					}
+					exp, err := statsd.NewExporter(config, adapter)
+					if err != nil {
+						t.Fatal("New error: ", err)
+					}
+
+					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+					cdesc := export.NewDescriptor(
+						"counter", export.CounterKind, nil, "", "", nkind, false)
+					gdesc := export.NewDescriptor(
+						"gauge", export.GaugeKind, nil, "", "", nkind, false)
+					mdesc := export.NewDescriptor(
+						"measure", export.MeasureKind, nil, "", "", nkind, false)
+					tdesc := export.NewDescriptor(
+						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind, false)
+
+					labels := []core.KeyValue{
+						key.New("A").String("B"),
+						key.New("C").String("D"),
+					}
+					const value = 123.456
+
+					checkpointSet.Add(cdesc, counterAgg(cdesc, value), labels...)
+					checkpointSet.Add(gdesc, gaugeAgg(gdesc, value), labels...)
+					checkpointSet.Add(mdesc, measureAgg(mdesc, value), labels...)
+					checkpointSet.Add(tdesc, measureAgg(tdesc, value), labels...)
+
+					err = exp.Export(ctx, checkpointSet)
+					require.Nil(t, err)
+
+					var vfmt string
+					if nkind == core.Int64NumberKind {
+						fv := float64(value)
+						vfmt = strconv.FormatInt(int64(fv), 10)
+					} else {
+						vfmt = strconv.FormatFloat(value, 'g', -1, 64)
+					}
+
+					require.Equal(t, 1, len(writer.vec))
+					require.Equal(t, fmt.Sprintf(expected, vfmt, vfmt, vfmt, vfmt), writer.vec[0])
+				})
+			}
 		})
 	}
 }
@@ -270,7 +312,7 @@ func TestPacketSplit(t *testing.T) {
 				Writer:        writer,
 				MaxPacketSize: 1024,
 			}
-			adapter := newAdapter()
+			adapter := newWithTagsAdapter()
 			exp, err := statsd.NewExporter(config, adapter)
 			if err != nil {
 				t.Fatal("New error: ", err)
