@@ -31,9 +31,6 @@ import (
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
@@ -84,37 +81,6 @@ type testWriter struct {
 func (w *testWriter) Write(b []byte) (int, error) {
 	w.vec = append(w.vec, string(b))
 	return len(b), nil
-}
-
-func testNumber(desc *export.Descriptor, v float64) core.Number {
-	if desc.NumberKind() == core.Float64NumberKind {
-		return core.NewFloat64Number(v)
-	}
-	return core.NewInt64Number(int64(v))
-}
-
-func gaugeAgg(desc *export.Descriptor, v float64) export.Aggregator {
-	ctx := context.Background()
-	gagg := gauge.New()
-	_ = gagg.Update(ctx, testNumber(desc, v), desc)
-	gagg.Checkpoint(ctx, desc)
-	return gagg
-}
-
-func counterAgg(desc *export.Descriptor, v float64) export.Aggregator {
-	ctx := context.Background()
-	cagg := counter.New()
-	_ = cagg.Update(ctx, testNumber(desc, v), desc)
-	cagg.Checkpoint(ctx, desc)
-	return cagg
-}
-
-func measureAgg(desc *export.Descriptor, v float64) export.Aggregator {
-	ctx := context.Background()
-	magg := array.New()
-	_ = magg.Update(ctx, testNumber(desc, v), desc)
-	magg.Checkpoint(ctx, desc)
-	return magg
 }
 
 func TestBasicFormat(t *testing.T) {
@@ -172,10 +138,10 @@ timer.B.D:%s|ms
 					}
 					const value = 123.456
 
-					checkpointSet.Add(cdesc, counterAgg(cdesc, value), labels...)
-					checkpointSet.Add(gdesc, gaugeAgg(gdesc, value), labels...)
-					checkpointSet.Add(mdesc, measureAgg(mdesc, value), labels...)
-					checkpointSet.Add(tdesc, measureAgg(tdesc, value), labels...)
+					checkpointSet.AddCounter(cdesc, value, labels...)
+					checkpointSet.AddGauge(gdesc, value, labels...)
+					checkpointSet.AddMeasure(mdesc, value, labels...)
+					checkpointSet.AddMeasure(tdesc, value, labels...)
 
 					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
@@ -329,7 +295,7 @@ func TestPacketSplit(t *testing.T) {
 				offset += nkeys
 				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
 				expected = append(expected, expect)
-				checkpointSet.Add(desc, counterAgg(desc, 100), labels...)
+				checkpointSet.AddCounter(desc, 100, labels...)
 			})
 
 			err = exp.Export(ctx, checkpointSet)
