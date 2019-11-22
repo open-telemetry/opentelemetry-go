@@ -62,7 +62,7 @@ func main() {
 
 	var body []byte
 
-	tr := global.TraceProvider().GetTracer("example/client")
+	tr := global.TraceProvider().NewTracer("example/client")
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)

@@ -59,7 +59,7 @@ func initTracer() {
 
 func main() {
 	initTracer()
-	tr := global.TraceProvider().GetTracer("stackdriver/example/client")
+	tr := global.TraceProvider().NewTracer("stackdriver/example/client")
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
