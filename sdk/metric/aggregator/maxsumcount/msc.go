@@ -73,11 +73,14 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
-// The error value aggregator.ErrEmptyDataSet
-// will be returned if (due to a race condition) the checkpoint was
-// computed before the first value was set.
+// The error value aggregator.ErrEmptyDataSet will be returned if
+// (due to a race condition) the checkpoint was set prior to the
+// current.max being computed in Update().
+//
+// Note: If a measure's recorded values for a given checkpoint are
+// all equal to NumberKind.Minimum(), Max() will return ErrEmptyDataSet
 func (c *Aggregator) Max() (core.Number, error) {
-	if c.checkpoint == unsetMaxSumCount(c.kind) {
+	if c.checkpoint.max == c.kind.Minimum() {
 		return core.Number(0), aggregator.ErrEmptyDataSet
 	}
 	return c.checkpoint.max, nil
@@ -100,7 +103,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(desc.NumberKind().Minimum())
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(c.kind.Minimum())
 }
 
 // Update adds the recorded measurement to the current data set.
