@@ -26,9 +26,9 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		kind       core.NumberKind
 		current    state
 		checkpoint state
+		kind       core.NumberKind
 	}
 
 	state struct {
