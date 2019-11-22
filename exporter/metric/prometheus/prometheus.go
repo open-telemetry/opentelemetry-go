@@ -178,7 +178,7 @@ func labelsKeys(kvs []core.KeyValue) []string {
 }
 
 func labelValues(labels export.Labels) []string {
-	// TODO: parse the labels.Encoded() instead of calling `Emit()` directly
+	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
 	//  this would avoid unnecessary allocations.
 	values := make([]string, 0, labels.Len())
 	for _, label := range labels.Ordered() {
