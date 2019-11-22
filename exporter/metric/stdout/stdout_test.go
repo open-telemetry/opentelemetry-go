@@ -232,7 +232,7 @@ func TestStdoutEmptyDataSet(t *testing.T) {
 
 			fix := newFixture(t, stdout.Options{})
 
-			checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+			checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 			magg := tc
 			magg.Checkpoint(fix.ctx, desc)
