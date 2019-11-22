@@ -16,18 +16,15 @@ package prometheus
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"net/http"
 	"sync"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-
 	"github.com/prometheus/client_golang/prometheus"
-
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 type metricKey struct {
@@ -41,21 +38,14 @@ type Exporter struct {
 	sync.RWMutex
 
 	labelEncoder export.LabelEncoder
-
-	handler http.Handler
+	handler      http.Handler
 
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	counters    map[metricKey]prometheus.Counter
-	counterVecs map[*export.Descriptor]*prometheus.CounterVec
-
-	gauges    map[metricKey]prometheus.Gauge
-	gaugeVecs map[*export.Descriptor]*prometheus.GaugeVec
-
-	histograms              map[metricKey]prometheus.Observer
-	histogramVecs           map[*export.Descriptor]*prometheus.HistogramVec
-	defaultHistogramBuckets []float64
+	counters   counters
+	gauges     gauges
+	histograms histograms
 }
 
 var _ export.Exporter = &Exporter{}
@@ -116,16 +106,9 @@ func NewExporter(opts Options) (*Exporter, error) {
 		gatherer:   opts.Gatherer,
 		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 
-		counters:    make(map[metricKey]prometheus.Counter),
-		counterVecs: make(map[*export.Descriptor]*prometheus.CounterVec),
-
-		gauges:    make(map[metricKey]prometheus.Gauge),
-		gaugeVecs: make(map[*export.Descriptor]*prometheus.GaugeVec),
-
-		histograms:    make(map[metricKey]prometheus.Observer),
-		histogramVecs: make(map[*export.Descriptor]*prometheus.HistogramVec),
-
-		defaultHistogramBuckets: opts.DefaultHistogramBuckets,
+		counters:   newCounters(opts.Registerer),
+		gauges:     newGauges(opts.Registerer),
+		histograms: newHistograms(opts.Registerer, opts.DefaultHistogramBuckets),
 	}, nil
 }
 
@@ -134,89 +117,44 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var forEachError error
 	checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
-		desc := record.Descriptor()
-
 		labels := record.Labels()
+
 		var encoded string
 		if labels.Encoder() == e {
 			encoded = labels.Encoded()
 		} else {
+			// The encoder is not the prometheus label encoder,
+			// encode it again with the correct encoder.
 			encoded = e.Encode(labels.Ordered())
 		}
+
 		mKey := metricKey{
-			desc:    desc,
+			desc:    record.Descriptor(),
 			encoded: encoded,
 		}
 
 		// TODO(paivagustavo): how to choose between Histogram and Summary?
 		if all, ok := agg.(aggregator.AllValues); ok {
-			values, err := all.AllValues()
+			err := e.histograms.export(all, record, mKey)
 			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
 				forEachError = err
-				return
 			}
-
-			o, err := e.getHistogram(record, mKey)
-			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
-				forEachError = err
-				return
-			}
-
-			desc := record.Descriptor()
-			for _, v := range values {
-				o.Observe(v.CoerceToFloat64(desc.NumberKind()))
-			}
-
 			return
 		}
 
 		if sum, ok := agg.(aggregator.Sum); ok {
-			value, err := sum.Sum()
+			err := e.counters.export(sum, record, mKey)
 			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
 				forEachError = err
-				return
 			}
-
-			c, err := e.getCounter(record, mKey)
-			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
-				forEachError = err
-				return
-			}
-
-			desc := record.Descriptor()
-			c.Add(value.CoerceToFloat64(desc.NumberKind()))
-
 			return
 		}
 
 		if gauge, ok := agg.(aggregator.LastValue); ok {
-			lv, _, err := gauge.LastValue()
+			err := e.gauges.export(gauge, record, mKey)
 			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
 				forEachError = err
-				return
 			}
-
-			g, err := e.getGauge(record, mKey)
-			if err != nil {
-				// TODO: handle this better when we have a more
-				//  sophisticated error handler mechanism for this ForEach method.
-				forEachError = err
-				return
-			}
-
-			desc := record.Descriptor()
-			g.Set(lv.CoerceToFloat64(desc.NumberKind()))
-
 			return
 		}
 	})
@@ -232,149 +170,18 @@ func (e *Exporter) Encode(kvs []core.KeyValue) string {
 	return e.labelEncoder.Encode(kvs)
 }
 
-func (e *Exporter) getCounter(record export.Record, mKey metricKey) (prometheus.Counter, error) {
-	e.Lock()
-	defer e.Unlock()
-	if c, ok := e.counters[mKey]; ok {
-		return c, nil
+func labelsKeys(kvs []core.KeyValue) []string {
+	keys := make([]string, 0, len(kvs))
+	for _, kv := range kvs {
+		keys = append(keys, Sanitize(string(kv.Key)))
 	}
-
-	desc := record.Descriptor()
-	counterVec, err := e.getCounterVec(desc, record.Labels())
-	if err != nil {
-		return nil, err
-	}
-
-	counter, err := counterVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
-	if err != nil {
-		return nil, err
-	}
-
-	e.counters[mKey] = counter
-	return counter, nil
+	return keys
 }
 
-func (e *Exporter) getGauge(record export.Record, mKey metricKey) (prometheus.Gauge, error) {
-	e.Lock()
-	defer e.Unlock()
-	if g, ok := e.gauges[mKey]; ok {
-		return g, nil
-	}
-
-	desc := record.Descriptor()
-	gaugeVec, err := e.getGaugeVec(desc, record.Labels())
-	if err != nil {
-		return nil, err
-	}
-
-	gauge, err := gaugeVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
-	if err != nil {
-		return nil, err
-	}
-	e.gauges[mKey] = gauge
-	return gauge, nil
-}
-
-func (e *Exporter) getHistogram(record export.Record, mKey metricKey) (prometheus.Observer, error) {
-	e.Lock()
-	defer e.Unlock()
-	if g, ok := e.histograms[mKey]; ok {
-		return g, nil
-	}
-
-	desc := record.Descriptor()
-	histogramVec, err := e.getHistogramVec(desc, record.Labels())
-	if err != nil {
-		return nil, err
-	}
-
-	histogram, err := histogramVec.GetMetricWithLabelValues(labelsToTags(record.Labels())...)
-	if err != nil {
-		return nil, err
-	}
-	e.histograms[mKey] = histogram
-	return histogram, nil
-}
-
-func (e *Exporter) getCounterVec(desc *export.Descriptor, labels export.Labels) (*prometheus.CounterVec, error) {
-	if c, ok := e.counterVecs[desc]; ok {
-		return c, nil
-	}
-
-	tagKeys := getTagKeys(labels.Ordered())
-	c := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: Sanitize(desc.Name()),
-			Help: desc.Description(),
-		},
-		tagKeys,
-	)
-
-	if err := e.registerer.Register(c); err != nil {
-		return nil, err
-	}
-
-	e.counterVecs[desc] = c
-	return c, nil
-}
-
-func (e *Exporter) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*prometheus.GaugeVec, error) {
-	if g, ok := e.gaugeVecs[desc]; ok {
-		return g, nil
-	}
-
-	tagKeys := getTagKeys(labels.Ordered())
-	g := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: Sanitize(desc.Name()),
-			Help: desc.Description(),
-		},
-		tagKeys,
-	)
-
-	if err := e.registerer.Register(g); err != nil {
-		return nil, err
-	}
-
-	e.gaugeVecs[desc] = g
-	return g, nil
-}
-
-func (e *Exporter) getHistogramVec(desc *export.Descriptor, labels export.Labels) (*prometheus.HistogramVec, error) {
-	if g, ok := e.histogramVecs[desc]; ok {
-		return g, nil
-	}
-
-	tagKeys := getTagKeys(labels.Ordered())
-	g := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    Sanitize(desc.Name()),
-			Help:    desc.Description(),
-			Buckets: e.defaultHistogramBuckets,
-		},
-		tagKeys,
-	)
-
-	if err := e.registerer.Register(g); err != nil {
-		return nil, err
-	}
-
-	e.histogramVecs[desc] = g
-	return g, nil
-}
-
-func getTagKeys(keys []core.KeyValue) []string {
-	tagKeys := make([]string, 0, len(keys))
-	for _, kv := range keys {
-		tagKeys = append(tagKeys, Sanitize(string(kv.Key)))
-	}
-	return tagKeys
-}
-
-func labelsToTags(labels export.Labels) []string {
-	tags := make([]string, 0, labels.Len())
+func labelValues(labels export.Labels) []string {
+	values := make([]string, 0, labels.Len())
 	for _, label := range labels.Ordered() {
-		tags = append(tags, label.Value.Emit())
+		values = append(values, label.Value.Emit())
 	}
-	return tags
+	return values
 }
