@@ -70,7 +70,7 @@ func TestMonotoneGauge(t *testing.T) {
 	batcher := &monotoneBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
