@@ -58,7 +58,7 @@ test-with-coverage:
 	done
 
 .PHONY: circle-ci
-circle-ci: precommit test-clean-work-tree test-with-coverage test-386 examples
+circle-ci: precommit test-clean-work-tree test-with-coverage test-race test-386 examples
 
 .PHONY: test-clean-work-tree
 test-clean-work-tree:
@@ -76,6 +76,14 @@ test: examples
 	  echo "go test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST) $(GOTEST_OPT) ./... && \
+	    $(GOTEST) $(GOTEST_OPT_WITH_RACE) ./...); \
+	done
+
+.PHONY: test-race
+test-race:
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go test -race ./... in $${dir}"; \
+	  (cd "$${dir}" && \
 	    $(GOTEST) $(GOTEST_OPT_WITH_RACE) ./...); \
 	done
 
