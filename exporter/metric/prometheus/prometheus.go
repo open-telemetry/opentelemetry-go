@@ -134,22 +134,18 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var forEachError error
 	checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
-
 		desc := record.Descriptor()
 
 		labels := record.Labels()
-		if labels.Encoder() != e {
-			// TODO: This case could be handled by directly
-			// encoding the labels at this point, but presently it
-			// should not occur.
-			//
-			// copy from datadog exporter.
-			panic("Should have self-encoded labels")
+		var encoded string
+		if labels.Encoder() == e {
+			encoded = labels.Encoded()
+		} else {
+			encoded = e.Encode(labels.Ordered())
 		}
 		mKey := metricKey{
-			desc: desc,
-			// TODO: check if encoder is the exporter.
-			encoded: record.Labels().Encoded(),
+			desc:    desc,
+			encoded: encoded,
 		}
 
 		// TODO(paivagustavo): how to choose between Histogram and Summary?
