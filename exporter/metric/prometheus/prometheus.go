@@ -97,7 +97,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 	}
 
 	if opts.LabelEncoder == nil {
-		opts.LabelEncoder = metric.DefaultLabelEncoder()
+		opts.LabelEncoder = metric.NewDefaultLabelEncoder()
 	}
 
 	return &Exporter{
@@ -135,8 +135,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		}
 
 		// TODO(paivagustavo): how to choose between Histogram and Summary?
-		if all, ok := agg.(aggregator.AllValues); ok {
-			err := e.histograms.export(all, record, mKey)
+		if points, ok := agg.(aggregator.Points); ok {
+			err := e.histograms.export(points, record, mKey)
 			if err != nil {
 				forEachError = err
 			}

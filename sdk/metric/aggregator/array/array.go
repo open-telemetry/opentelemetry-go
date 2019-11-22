@@ -69,10 +69,6 @@ func (c *Aggregator) Min() (core.Number, error) {
 	return c.checkpoint.Quantile(0)
 }
 
-func (c *Aggregator) AllValues() ([]core.Number, error) {
-	return c.checkpoint, nil
-}
-
 // Quantile returns the estimated quantile of data in the checkpoint.
 // It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {

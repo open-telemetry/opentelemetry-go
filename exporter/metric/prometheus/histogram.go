@@ -37,8 +37,8 @@ func newHistograms(registerer prometheus.Registerer, defaultHistogramBuckets []f
 	}
 }
 
-func (hi *histograms) export(points aggregator.AllValues, record export.Record, mKey metricKey) error {
-	values, err := points.AllValues()
+func (hi *histograms) export(points aggregator.Points, record export.Record, mKey metricKey) error {
+	values, err := points.Points()
 	if err != nil {
 		return err
 	}

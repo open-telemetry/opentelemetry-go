@@ -124,7 +124,7 @@ func (n *Numbers) Median() core.Number {
 	return n.numbers[len(n.numbers)/2]
 }
 
-func (n *Numbers) AllValues() []core.Number {
+func (n *Numbers) Points() []core.Number {
 	return n.numbers
 }
 
