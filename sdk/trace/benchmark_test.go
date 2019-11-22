@@ -25,9 +25,7 @@ import (
 )
 
 func BenchmarkStartEndSpan(b *testing.B) {
-	t := getTracer(b, "Benchmark StartEndSpan")
-
-	traceBenchmark(b, func(b *testing.B) {
+	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -38,9 +36,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
-	t := getTracer(b, "Benchmark Start With 4 Attributes")
-
-	traceBenchmark(b, func(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -57,10 +53,41 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	})
 }
 
-func BenchmarkSpanWithAttributes_8(b *testing.B) {
-	t := getTracer(b, "Benchmark Start With 8 Attributes")
+func BenchmarkSpan_SetAttributes(b *testing.B) {
+	b.Run("SetAttribute", func(b *testing.B) {
+		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
+			ctx := context.Background()
+			b.ResetTimer()
 
-	traceBenchmark(b, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, span := t.Start(ctx, "/foo")
+				span.SetAttribute(key.New("key1").Bool(false))
+				span.SetAttribute(key.New("key2").String("hello"))
+				span.SetAttribute(key.New("key3").Uint64(123))
+				span.SetAttribute(key.New("key4").Float64(123.456))
+				span.End()
+			}
+		})
+	})
+
+	b.Run("SetAttributes", func(b *testing.B) {
+		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
+			ctx := context.Background()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, span := t.Start(ctx, "/foo")
+				span.SetAttributes(key.New("key1").Bool(false))
+				span.SetAttributes(key.New("key2").String("hello"))
+				span.SetAttributes(key.New("key3").Uint64(123))
+				span.SetAttributes(key.New("key4").Float64(123.456))
+				span.End()
+			}
+		})
+	})
+}
+
+func BenchmarkSpanWithAttributes_8(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -82,9 +109,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
-	t := getTracer(b, "Benchmark Start With all Attribute types")
-
-	traceBenchmark(b, func(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With all Attribute types", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -108,8 +133,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
-	t := getTracer(b, "Benchmark Start With all Attributes types twice")
-	traceBenchmark(b, func(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With all Attributes types twice", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -143,44 +167,40 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
-	traceBenchmark(b, func(b *testing.B) {
-		t, _ := core.TraceIDFromHex("0000000000000001000000000000002a")
-		sc := core.SpanContext{TraceID: t}
+	t, _ := core.TraceIDFromHex("0000000000000001000000000000002a")
+	sc := core.SpanContext{TraceID: t}
 
-		want := "0000000000000001000000000000002a"
-		for i := 0; i < b.N; i++ {
-			if got := sc.TraceIDString(); got != want {
-				b.Fatalf("got = %q want = %q", got, want)
-			}
+	want := "0000000000000001000000000000002a"
+	for i := 0; i < b.N; i++ {
+		if got := sc.TraceIDString(); got != want {
+			b.Fatalf("got = %q want = %q", got, want)
 		}
-	})
+	}
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	traceBenchmark(b, func(b *testing.B) {
-		sc := core.SpanContext{SpanID: core.SpanID{1}}
-		want := "1000000000000000"
-		for i := 0; i < b.N; i++ {
-			if got := sc.SpanIDString(); got != want {
-				b.Fatalf("got = %q want = %q", got, want)
-			}
+	sc := core.SpanContext{SpanID: core.SpanID{1}}
+	want := "0100000000000000"
+	for i := 0; i < b.N; i++ {
+		if got := sc.SpanIDString(); got != want {
+			b.Fatalf("got = %q want = %q", got, want)
 		}
-	})
+	}
 }
 
-func traceBenchmark(b *testing.B, fn func(*testing.B)) {
+func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b)
+		fn(b, getTracer(b, name, sdktrace.AlwaysSample()))
 	})
 	b.Run("NeverSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b)
+		fn(b, getTracer(b, name, sdktrace.NeverSample()))
 	})
 }
 
-func getTracer(b *testing.B, name string) apitrace.Tracer {
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
+func getTracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)
 	}

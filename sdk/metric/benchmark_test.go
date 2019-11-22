@@ -42,7 +42,7 @@ func newFixture(b *testing.B) *benchFixture {
 	bf := &benchFixture{
 		B: b,
 	}
-	bf.sdk = sdk.New(bf, sdk.DefaultLabelEncoder())
+	bf.sdk = sdk.New(bf, sdk.NewDefaultLabelEncoder())
 	return bf
 }
 

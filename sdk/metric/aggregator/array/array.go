@@ -29,17 +29,18 @@ import (
 type (
 	Aggregator struct {
 		lock       sync.Mutex
-		current    Points
-		checkpoint Points
+		current    points
+		checkpoint points
 		ckptSum    core.Number
 	}
 
-	Points []core.Number
+	points []core.Number
 )
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregator.MaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
+var _ aggregator.Points = &Aggregator{}
 
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
@@ -72,6 +73,11 @@ func (c *Aggregator) Min() (core.Number, error) {
 // It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	return c.checkpoint.Quantile(q)
+}
+
+// Points returns access to the raw data set.
+func (c *Aggregator) Points() ([]core.Number, error) {
+	return c.checkpoint, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -133,8 +139,8 @@ func (c *Aggregator) sort(kind core.NumberKind) {
 	}
 }
 
-func combine(a, b Points, kind core.NumberKind) Points {
-	result := make(Points, 0, len(a)+len(b))
+func combine(a, b points, kind core.NumberKind) points {
+	result := make(points, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
 		if a[0].CompareNumber(kind, b[0]) < 0 {
@@ -150,25 +156,25 @@ func combine(a, b Points, kind core.NumberKind) Points {
 	return result
 }
 
-func (p *Points) Len() int {
+func (p *points) Len() int {
 	return len(*p)
 }
 
-func (p *Points) Less(i, j int) bool {
+func (p *points) Less(i, j int) bool {
 	// Note this is specialized for int64, because float64 is
 	// handled by `sort.Float64s` and uint64 numbers never appear
 	// in this data.
 	return int64((*p)[i]) < int64((*p)[j])
 }
 
-func (p *Points) Swap(i, j int) {
+func (p *points) Swap(i, j int) {
 	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
 }
 
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
 // element of the data set.  This uses the "Nearest-Rank" definition
 // of a quantile.
-func (p *Points) Quantile(q float64) (core.Number, error) {
+func (p *points) Quantile(q float64) (core.Number, error) {
 	if len(*p) == 0 {
 		return core.Number(0), aggregator.ErrEmptyDataSet
 	}

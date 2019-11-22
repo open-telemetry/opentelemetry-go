@@ -53,6 +53,11 @@ type (
 		LastValue() (core.Number, time.Time, error)
 	}
 
+	// Points returns the raw set of values that were aggregated.
+	Points interface {
+		Points() ([]core.Number, error)
+	}
+
 	// MaxSumCount supports the Max, Sum, and Count interfaces.
 	MaxSumCount interface {
 		Sum
