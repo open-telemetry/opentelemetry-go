@@ -35,7 +35,7 @@ type defaultLabelEncoder struct {
 
 var _ export.LabelEncoder = &defaultLabelEncoder{}
 
-func DefaultLabelEncoder() export.LabelEncoder {
+func NewDefaultLabelEncoder() export.LabelEncoder {
 	return &defaultLabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {

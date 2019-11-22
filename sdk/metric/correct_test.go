@@ -69,7 +69,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		t:   t,
 		agg: cagg,
 	}
-	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -104,7 +104,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		t:   t,
 		agg: magg,
 	}
-	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -139,7 +139,7 @@ func TestDisabledInstrument(t *testing.T) {
 		t:   t,
 		agg: nil,
 	}
-	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
@@ -154,7 +154,7 @@ func TestRecordNaN(t *testing.T) {
 		t:   t,
 		agg: gauge.New(),
 	}
-	sdk := sdk.New(batcher, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -188,7 +188,7 @@ func TestSDKLabelEncoder(t *testing.T) {
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := sdk.DefaultLabelEncoder()
+	encoder := sdk.NewDefaultLabelEncoder()
 	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
 	require.Equal(t, `A=B,C=D`, encoded)
 }
