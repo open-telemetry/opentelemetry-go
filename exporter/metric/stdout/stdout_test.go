@@ -79,7 +79,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	before := time.Now()
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	ctx := context.Background()
 	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
@@ -125,7 +125,7 @@ func TestStdoutTimestamp(t *testing.T) {
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
 	cagg := counter.New()
@@ -142,7 +142,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 func TestStdoutGaugeFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
 	gagg := gauge.New()
@@ -159,7 +159,7 @@ func TestStdoutGaugeFormat(t *testing.T) {
 func TestStdoutMaxSumCount(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := maxsumcount.New()
@@ -179,7 +179,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 		PrettyPrint: true,
 	})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := array.New()
@@ -223,7 +223,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 func TestStdoutAggError(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	magg := ddsketch.New(ddsketch.NewDefaultConfig(), desc)
@@ -242,7 +242,7 @@ func TestStdoutAggError(t *testing.T) {
 func TestStdoutGaugeNotSet(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.DefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
 	gagg := gauge.New()
