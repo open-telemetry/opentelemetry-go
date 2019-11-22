@@ -174,7 +174,7 @@ func (e *Exporter) Encode(kvs []core.KeyValue) string {
 func labelsKeys(kvs []core.KeyValue) []string {
 	keys := make([]string, 0, len(kvs))
 	for _, kv := range kvs {
-		keys = append(keys, Sanitize(string(kv.Key)))
+		keys = append(keys, sanitize(string(kv.Key)))
 	}
 	return keys
 }

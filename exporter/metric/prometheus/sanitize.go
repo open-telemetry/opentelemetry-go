@@ -23,9 +23,9 @@ import (
 
 const labelKeySizeLimit = 100
 
-// Sanitize returns a string that is trunacated to 100 characters if it's too
+// sanitize returns a string that is trunacated to 100 characters if it's too
 // long, and replaces non-alphanumeric characters to underscores.
-func Sanitize(s string) string {
+func sanitize(s string) string {
 	if len(s) == 0 {
 		return s
 	}

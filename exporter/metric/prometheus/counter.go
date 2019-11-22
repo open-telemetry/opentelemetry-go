@@ -79,7 +79,7 @@ func (co *counters) getCounterVec(desc *export.Descriptor, labels export.Labels)
 
 	c := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: Sanitize(desc.Name()),
+			Name: sanitize(desc.Name()),
 			Help: desc.Description(),
 		},
 		labelsKeys(labels.Ordered()),

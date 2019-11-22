@@ -59,7 +59,7 @@ func TestSanitize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, want := Sanitize(tt.input), tt.want; got != want {
+			if got, want := sanitize(tt.input), tt.want; got != want {
 				t.Errorf("sanitize() = %q; want %q", got, want)
 			}
 		})

@@ -79,7 +79,7 @@ func (ga *gauges) getGaugeVec(desc *export.Descriptor, labels export.Labels) (*p
 
 	g := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: Sanitize(desc.Name()),
+			Name: sanitize(desc.Name()),
 			Help: desc.Description(),
 		},
 		labelsKeys(labels.Ordered()),

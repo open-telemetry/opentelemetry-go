@@ -82,7 +82,7 @@ func (hi *histograms) getHistogramVec(desc *export.Descriptor, labels export.Lab
 
 	g := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    Sanitize(desc.Name()),
+			Name:    sanitize(desc.Name()),
 			Help:    desc.Description(),
 			Buckets: hi.defaultHistogramBuckets,
 		},
