@@ -16,6 +16,7 @@ package prometheus
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
