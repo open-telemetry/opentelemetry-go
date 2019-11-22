@@ -306,11 +306,11 @@ func TestArrayFloat64(t *testing.T) {
 			require.Nil(t, err)
 			require.Equal(t, all.Median(), qx, "Same median")
 
-			av, err := agg.Points()
+			po, err := agg.Points()
 			require.Nil(t, err)
-			require.Equal(t, all.Len(), len(av), "All values must have same length of updates")
-			for i := 0; i < len(av); i++ {
-				require.Equal(t, all.Points()[i], av[i], "Wrong value at position %d", i)
+			require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
+			for i := 0; i < len(po); i++ {
+				require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
 			}
 		})
 	}
