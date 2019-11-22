@@ -40,13 +40,11 @@ type Exporter struct {
 
 	labelEncoder export.LabelEncoder
 	handler      http.Handler
-
-	registerer prometheus.Registerer
-	gatherer   prometheus.Gatherer
-
-	counters   counters
-	gauges     gauges
-	histograms histograms
+	registerer   prometheus.Registerer
+	gatherer     prometheus.Gatherer
+	counters     counters
+	gauges       gauges
+	histograms   histograms
 }
 
 var _ export.Exporter = &Exporter{}
