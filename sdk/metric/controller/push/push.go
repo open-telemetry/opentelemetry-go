@@ -76,7 +76,7 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration)
 	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
-		lencoder = sdk.DefaultLabelEncoder()
+		lencoder = sdk.NewDefaultLabelEncoder()
 	}
 
 	return &Controller{
