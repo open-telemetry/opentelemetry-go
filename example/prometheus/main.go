@@ -20,10 +20,9 @@ import (
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/otel/exporter/metric/prometheus"
-
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/exporter/metric/prometheus"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
