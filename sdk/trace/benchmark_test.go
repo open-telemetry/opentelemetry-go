@@ -191,18 +191,18 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b, newTracer(b, name, sdktrace.AlwaysSample()))
+		fn(b, tracer(b, name, sdktrace.AlwaysSample()))
 	})
 	b.Run("NeverSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b, newTracer(b, name, sdktrace.NeverSample()))
+		fn(b, tracer(b, name, sdktrace.NeverSample()))
 	})
 }
 
-func newTracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
+func tracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)
 	}
-	return tp.NewTracer(name)
+	return tp.Tracer(name)
 }

@@ -32,7 +32,7 @@ var (
 	_ metric.Provider = &testMeterProvider{}
 )
 
-func (*testTraceProvider) NewTracer(_ string) trace.Tracer {
+func (*testTraceProvider) Tracer(_ string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
