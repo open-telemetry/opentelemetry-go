@@ -15,7 +15,6 @@
 package prometheus
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -25,11 +24,6 @@ func TestSanitize(t *testing.T) {
 		input string
 		want  string
 	}{
-		{
-			name:  "trunacate long string",
-			input: strings.Repeat("a", 101),
-			want:  strings.Repeat("a", 100),
-		},
 		{
 			name:  "replace character",
 			input: "test/key-1",

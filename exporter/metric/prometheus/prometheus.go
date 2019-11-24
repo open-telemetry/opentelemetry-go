@@ -17,7 +17,6 @@ package prometheus
 import (
 	"context"
 	"net/http"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -25,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 type metricKey struct {
@@ -36,20 +34,20 @@ type metricKey struct {
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
 type Exporter struct {
-	sync.RWMutex
+	handler http.Handler
 
-	labelEncoder export.LabelEncoder
-	handler      http.Handler
-	registerer   prometheus.Registerer
-	gatherer     prometheus.Gatherer
-	counters     counters
-	gauges       gauges
-	histograms   histograms
+	registerer prometheus.Registerer
+	gatherer   prometheus.Gatherer
+
+	counters           counters
+	gauges             gauges
+	histograms         histograms
+	summaries          summaries
+	measureAggregation MeasureAggregation
 }
 
 var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
-var _ export.LabelEncoder = &Exporter{}
 
 // Options is a set of options for the tally reporter.
 type Options struct {
@@ -75,10 +73,22 @@ type Options struct {
 	// to use. Use nil to specify the system-default histogram buckets.
 	DefaultHistogramBuckets []float64
 
-	// LabelEncoder is the label encoder that will be used to group
-	// and export metrics to Prometheus.
-	LabelEncoder export.LabelEncoder
+	// DefaultSummaryObjectives is the default summary objectives
+	// to use. Use nil to specify the system-default summary objectives.
+	DefaultSummaryObjectives map[float64]float64
+
+	// MeasureAggregation defines how metric.Measure are exported.
+	// Possible values are 'Histogram' or 'Summary'.
+	// The default export representation for measures is Histograms.
+	MeasureAggregation MeasureAggregation
 }
+
+type MeasureAggregation int
+
+const (
+	Histogram MeasureAggregation = iota
+	Summary
+)
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
 func NewExporter(opts Options) (*Exporter, error) {
@@ -94,20 +104,16 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	if opts.LabelEncoder == nil {
-		opts.LabelEncoder = metric.NewDefaultLabelEncoder()
-	}
-
 	return &Exporter{
-		labelEncoder: opts.LabelEncoder,
-
-		registerer: opts.Registerer,
-		gatherer:   opts.Gatherer,
-		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		registerer:         opts.Registerer,
+		gatherer:           opts.Gatherer,
+		handler:            promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		measureAggregation: opts.MeasureAggregation,
 
 		counters:   newCounters(opts.Registerer),
 		gauges:     newGauges(opts.Registerer),
 		histograms: newHistograms(opts.Registerer, opts.DefaultHistogramBuckets),
+		summaries:  newSummaries(opts.Registerer, opts.DefaultSummaryObjectives),
 	}, nil
 }
 
@@ -116,25 +122,19 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var forEachError error
 	checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
-		labels := record.Labels()
-
-		var encoded string
-		if labels.Encoder() == e {
-			encoded = labels.Encoded()
-		} else {
-			// The encoder is not the prometheus label encoder,
-			// encode it again with the correct encoder.
-			encoded = e.Encode(labels.Ordered())
-		}
 
 		mKey := metricKey{
 			desc:    record.Descriptor(),
-			encoded: encoded,
+			encoded: record.Labels().Encoded(),
 		}
 
-		// TODO(paivagustavo): how to choose between Histogram and Summary?
 		if points, ok := agg.(aggregator.Points); ok {
-			err := e.histograms.export(points, record, mKey)
+			observerExporter := e.histograms.export
+			if e.measureAggregation == Summary {
+				observerExporter = e.summaries.export
+			}
+
+			err := observerExporter(points, record, mKey)
 			if err != nil {
 				forEachError = err
 			}
@@ -163,10 +163,6 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
-}
-
-func (e *Exporter) Encode(kvs []core.KeyValue) string {
-	return e.labelEncoder.Encode(kvs)
 }
 
 func labelsKeys(kvs []core.KeyValue) []string {

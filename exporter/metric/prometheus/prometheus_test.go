@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/sdk/metric"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/prometheus"
@@ -25,9 +27,8 @@ func TestPrometheusExporter(t *testing.T) {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
 
-	ctx := context.Background()
 	var expected []string
-	checkpointSet := test.NewCheckpointSet(exporter)
+	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
 
 	counter := export.NewDescriptor(
 		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
@@ -78,7 +79,54 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `measure_count{A="E",C=""} 1`)
 	expected = append(expected, `measure_sum{A="E",C=""} 19`)
 
-	err = exporter.Export(ctx, checkpointSet)
+	compareExport(t, exporter, checkpointSet, expected)
+}
+
+func TestPrometheusExporter_Summaries(t *testing.T) {
+	exporter, err := prometheus.NewExporter(prometheus.Options{
+		MeasureAggregation: prometheus.Summary,
+	})
+	if err != nil {
+		log.Panicf("failed to initialize metric stdout exporter %v", err)
+	}
+
+	var expected []string
+	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
+
+	measure := export.NewDescriptor(
+		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+
+	labels := []core.KeyValue{
+		key.New("A").String("B"),
+		key.New("C").String("D"),
+	}
+
+	checkpointSet.AddMeasure(measure, 13, labels...)
+	checkpointSet.AddMeasure(measure, 15, labels...)
+	checkpointSet.AddMeasure(measure, 17, labels...)
+	expected = append(expected, `measure_count{A="B",C="D"} 3`)
+	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
+
+	missingLabels := []core.KeyValue{
+		key.New("A").String("E"),
+		key.New("C").String(""),
+	}
+
+	checkpointSet.AddMeasure(measure, 19, missingLabels...)
+	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)
+	expected = append(expected, `measure{A="E",C="",quantile="0.9"} 19`)
+	expected = append(expected, `measure{A="E",C="",quantile="0.99"} 19`)
+	expected = append(expected, `measure_count{A="E",C=""} 1`)
+	expected = append(expected, `measure_sum{A="E",C=""} 19`)
+
+	compareExport(t, exporter, checkpointSet, expected)
+}
+
+func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *test.CheckpointSet, expected []string) {
+	err := exporter.Export(context.Background(), checkpointSet)
 	require.Nil(t, err)
 
 	rec := httptest.NewRecorder()
