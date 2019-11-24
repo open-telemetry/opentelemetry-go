@@ -304,12 +304,6 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 		"#AddEventWithTimestamp": func(span trace.Span) {
 			span.AddEventWithTimestamp(context.Background(), time.Now(), "test event")
 		},
-		"#AddLink": func(span trace.Span) {
-			span.AddLink(trace.Link{})
-		},
-		"#Link": func(span trace.Span) {
-			span.Link(core.SpanContext{})
-		},
 		"#SetStatus": func(span trace.Span) {
 			span.SetStatus(codes.Internal)
 		},
