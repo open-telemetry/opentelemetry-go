@@ -9,14 +9,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/sdk/metric"
-
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/prometheus"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 func TestPrometheusExporter(t *testing.T) {
