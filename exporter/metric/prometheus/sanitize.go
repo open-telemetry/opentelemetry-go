@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: why is there a "internal/sanitize.go"? check if we can delete that.
-
 package prometheus
 
 import (
@@ -21,17 +19,17 @@ import (
 	"unicode"
 )
 
-const labelKeySizeLimit = 100
+// TODO(paivagustavo): we should provide a more uniform and controlled way of sanitizing.
+//  Letting users define wether we should try or not to sanitize metric names.
+//  This is a copy of sdk/internal/sanitize.go
 
-// sanitize returns a string that is trunacated to 100 characters if it's too
+// sanitize returns a string that is truncated to 100 characters if it's too
 // long, and replaces non-alphanumeric characters to underscores.
 func sanitize(s string) string {
 	if len(s) == 0 {
 		return s
 	}
-	if len(s) > labelKeySizeLimit {
-		s = s[:labelKeySizeLimit]
-	}
+	// TODO(paivagustavo): change this to use a bytes buffer to avoid a large number of string allocations.
 	s = strings.Map(sanitizeRune, s)
 	if unicode.IsDigit(rune(s[0])) {
 		s = "key_" + s
