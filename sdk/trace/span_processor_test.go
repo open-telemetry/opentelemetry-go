@@ -45,7 +45,7 @@ func TestRegisterSpanProcessort(t *testing.T) {
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
-	tr := tp.GetTracer("SpanProcessor")
+	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
 	wantCount := 1
@@ -65,7 +65,7 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
-	tr := tp.GetTracer("SpanProcessor")
+	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
 	tp.UnregisterSpanProcessor(sp)
@@ -92,7 +92,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
-	tr := tp.GetTracer("SpanProcessor")
+	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	tp.UnregisterSpanProcessor(sp)
 

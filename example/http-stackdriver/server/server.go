@@ -53,7 +53,7 @@ func initTracer() {
 func main() {
 	initTracer()
 
-	tr := global.TraceProvider().GetTracer("stackdriver/example/server")
+	tr := global.TraceProvider().Tracer("stackdriver/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)

@@ -56,7 +56,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := tp.GetTracer("example/namedtracer/main")
+	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,

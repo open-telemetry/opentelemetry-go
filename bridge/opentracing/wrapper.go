@@ -28,12 +28,12 @@ type WrapperProvider struct {
 
 var _ oteltrace.Provider = (*WrapperProvider)(nil)
 
-// GetTracer returns the WrapperTracer associated with the WrapperProvider.
-func (p *WrapperProvider) GetTracer(name string) oteltrace.Tracer {
+// Tracer returns the WrapperTracer associated with the WrapperProvider.
+func (p *WrapperProvider) Tracer(name string) oteltrace.Tracer {
 	return p.wTracer
 }
 
-// WrapperProvider creates a new trace provider that creates a single
+// NewWrappedProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer.
 func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperProvider {
 	return &WrapperProvider{
