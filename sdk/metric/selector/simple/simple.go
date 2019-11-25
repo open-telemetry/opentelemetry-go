@@ -71,7 +71,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		return maxsumcount.New()
+		return maxsumcount.New(descriptor)
 	default:
 		return counter.New()
 	}

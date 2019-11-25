@@ -28,6 +28,7 @@ type (
 	Aggregator struct {
 		current    state
 		checkpoint state
+		kind       core.NumberKind
 	}
 
 	state struct {
@@ -50,8 +51,15 @@ var _ aggregator.MaxSumCount = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.  For greater consistency and lower
 // performance, consider using Array or DDSketch aggregators.
-func New() *Aggregator {
-	return &Aggregator{}
+func New(desc *export.Descriptor) *Aggregator {
+	return &Aggregator{
+		kind:    desc.NumberKind(),
+		current: unsetMaxSumCount(desc.NumberKind()),
+	}
+}
+
+func unsetMaxSumCount(kind core.NumberKind) state {
+	return state{max: kind.Minimum()}
 }
 
 // Sum returns the sum of values in the checkpoint.
@@ -65,7 +73,16 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
+// The error value aggregator.ErrEmptyDataSet will be returned if
+// (due to a race condition) the checkpoint was set prior to the
+// current.max being computed in Update().
+//
+// Note: If a measure's recorded values for a given checkpoint are
+// all equal to NumberKind.Minimum(), Max() will return ErrEmptyDataSet
 func (c *Aggregator) Max() (core.Number, error) {
+	if c.checkpoint.max == c.kind.Minimum() {
+		return core.Number(0), aggregator.ErrEmptyDataSet
+	}
 	return c.checkpoint.max, nil
 }
 
@@ -73,7 +90,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Max, Sum, and Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
 	// values at once without a memory allocation.
 	//
@@ -86,7 +103,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 
 	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
 	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(core.Number(0))
+	c.checkpoint.max = c.current.max.SwapNumberAtomic(c.kind.Minimum())
 }
 
 // Update adds the recorded measurement to the current data set.

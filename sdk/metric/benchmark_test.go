@@ -54,7 +54,7 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 		return gauge.New()
 	case export.MeasureKind:
 		if strings.HasSuffix(descriptor.Name(), "maxsumcount") {
-			return maxsumcount.New()
+			return maxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
 			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "array") {
