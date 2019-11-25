@@ -18,7 +18,7 @@ type NoopProvider struct{}
 
 var _ Provider = NoopProvider{}
 
-// GetTracer returns noop implementation of Tracer.
-func (p NoopProvider) GetTracer(name string) Tracer {
+// Tracer returns noop implementation of Tracer.
+func (p NoopProvider) Tracer(name string) Tracer {
 	return NoopTracer{}
 }

@@ -113,7 +113,7 @@ func TestExporter_ExportSpans(t *testing.T) {
 	assert.NoError(t, err)
 
 	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
+	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
@@ -145,7 +145,7 @@ func TestExporter_Timeout(t *testing.T) {
 	assert.NoError(t, err)
 
 	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().GetTracer("test-tracer").Start(context.Background(), "test-span")
+	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 

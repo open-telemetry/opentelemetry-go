@@ -39,7 +39,7 @@ var (
 // TraceProvider returns the registered global trace provider.
 // If none is registered then an instance of trace.NoopProvider is returned.
 // Use the trace provider to create a named tracer. E.g.
-//     tracer := global.TraceProvider().GetTracer("example.com/foo")
+//     tracer := global.TraceProvider().Tracer("example.com/foo")
 func TraceProvider() trace.Provider {
 	if gp := globalTracer.Load(); gp != nil {
 		return gp.(traceProvider).tp

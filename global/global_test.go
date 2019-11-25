@@ -32,11 +32,11 @@ var (
 	_ metric.Provider = &testMeterProvider{}
 )
 
-func (*testTraceProvider) GetTracer(name string) trace.Tracer {
+func (*testTraceProvider) Tracer(_ string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
-func (*testMeterProvider) GetMeter(name string) metric.Meter {
+func (*testMeterProvider) GetMeter(_ string) metric.Meter {
 	return &metric.NoopMeter{}
 }
 

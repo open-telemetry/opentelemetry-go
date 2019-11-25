@@ -66,14 +66,14 @@ func main() {
 
 	ctx := context.Background()
 
-	tr := global.TraceProvider().GetTracer("component-main")
+	tr := global.TraceProvider().Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
 	bar(ctx)
 	span.End()
 }
 
 func bar(ctx context.Context) {
-	tr := global.TraceProvider().GetTracer("component-bar")
+	tr := global.TraceProvider().Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
 	defer span.End()
 

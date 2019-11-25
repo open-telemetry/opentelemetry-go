@@ -58,7 +58,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	global.SetTraceProvider(tp)
 
-	tr := tp.GetTracer("httptrace/client")
+	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
 	ts := httptest.NewServer(
