@@ -23,8 +23,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -58,7 +58,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	global.SetTraceProvider(tp)
 
-	tr := tp.GetTracer("httptrace/client")
+	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
 	ts := httptest.NewServer(

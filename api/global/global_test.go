@@ -17,9 +17,9 @@ package global_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/global"
 )
 
 type (
@@ -32,11 +32,11 @@ var (
 	_ metric.Provider = &testMeterProvider{}
 )
 
-func (*testTraceProvider) GetTracer(name string) trace.Tracer {
+func (*testTraceProvider) Tracer(_ string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
-func (*testMeterProvider) GetMeter(name string) metric.Meter {
+func (*testMeterProvider) Meter(_ string) metric.Meter {
 	return &metric.NoopMeter{}
 }
 

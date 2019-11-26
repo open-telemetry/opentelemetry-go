@@ -26,10 +26,10 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -62,7 +62,7 @@ func main() {
 
 	var body []byte
 
-	tr := global.TraceProvider().GetTracer("example/client")
+	tr := global.TraceProvider().Tracer("example/client")
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)

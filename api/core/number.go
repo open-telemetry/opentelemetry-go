@@ -34,6 +34,21 @@ const (
 	Uint64NumberKind
 )
 
+// Minimum returns the minimum representable value
+// for a given NumberKind
+func (k NumberKind) Minimum() Number {
+	switch k {
+	case Int64NumberKind:
+		return NewInt64Number(math.MinInt64)
+	case Float64NumberKind:
+		return NewFloat64Number(-1. * math.MaxFloat64)
+	case Uint64NumberKind:
+		return NewUint64Number(0)
+	default:
+		return Number(0)
+	}
+}
+
 // Number represents either an integral or a floating point value. It
 // needs to be accompanied with a source of NumberKind that describes
 // the actual type of the value stored within Number.

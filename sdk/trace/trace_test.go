@@ -51,7 +51,7 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	}
 	harness := testharness.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
-		return tp.GetTracer("")
+		return tp.Tracer("")
 	}
 
 	harness.TestTracer(subjectFactory)
@@ -128,7 +128,7 @@ func TestSetName(t *testing.T) {
 
 func TestRecordingIsOff(t *testing.T) {
 	tp, _ := NewProvider()
-	_, span := tp.GetTracer("Recording off").Start(context.Background(), "StartSpan")
+	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
 	defer span.End()
 	if span.IsRecording() == true {
 		t.Error("new span is recording events")
@@ -172,7 +172,7 @@ func TestSampling(t *testing.T) {
 			if err != nil {
 				t.Fatal("unexpected error:", err)
 			}
-			tr := p.GetTracer("test")
+			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
 				var opts []apitrace.SpanOption
@@ -210,7 +210,7 @@ func TestSampling(t *testing.T) {
 
 func TestStartSpanWithChildOf(t *testing.T) {
 	tp, _ := NewProvider()
-	tr := tp.GetTracer("SpanWith ChildOf")
+	tr := tp.Tracer("SpanWith ChildOf")
 
 	sc1 := core.SpanContext{
 		TraceID:    tid,
@@ -252,7 +252,7 @@ func TestStartSpanWithChildOf(t *testing.T) {
 
 func TestStartSpanWithFollowsFrom(t *testing.T) {
 	tp, _ := NewProvider()
-	tr := tp.GetTracer("SpanWith FollowsFrom")
+	tr := tp.Tracer("SpanWith FollowsFrom")
 
 	sc1 := core.SpanContext{
 		TraceID:    tid,
@@ -611,7 +611,7 @@ func TestSetSpanName(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	want := "SetSpanName/SpanName-1"
-	_, span := tp.GetTracer("SetSpanName").Start(context.Background(), "SpanName-1",
+	_, span := tp.Tracer("SetSpanName").Start(context.Background(), "SpanName-1",
 		apitrace.ChildOf(core.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
@@ -702,7 +702,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrac
 // automatically sampled.
 func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
 	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
-	_, span := tp.GetTracer(trName).Start(
+	_, span := tp.Tracer(trName).Start(
 		context.Background(),
 		name,
 		args...,
@@ -776,7 +776,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	spans := make(fakeExporter)
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
 
-	tr := tp.GetTracer("SpanAfterEnd")
+	tr := tp.Tracer("SpanAfterEnd")
 	ctx, span0 := tr.Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
@@ -806,7 +806,7 @@ func TestChildSpanCount(t *testing.T) {
 	spans := make(fakeExporter)
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
 
-	tr := tp.GetTracer("ChidSpanCount")
+	tr := tp.Tracer("ChidSpanCount")
 	ctx, span0 := tr.Start(context.Background(), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	_, span2 := tr.Start(ctx1, "span-2")
@@ -841,7 +841,7 @@ func TestNilSpanEnd(t *testing.T) {
 func TestExecutionTracerTaskEnd(t *testing.T) {
 	var n uint64
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
-	tr := tp.GetTracer("Execution Tracer Task End")
+	tr := tp.Tracer("Execution Tracer Task End")
 
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
@@ -892,7 +892,7 @@ func TestCustomStartEndTime(t *testing.T) {
 
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
-	_, span := tp.GetTracer("Custom Start and End time").Start(
+	_, span := tp.Tracer("Custom Start and End time").Start(
 		context.Background(),
 		"testspan",
 		apitrace.WithStartTime(startTime),
@@ -914,7 +914,7 @@ func TestCustomStartEndTime(t *testing.T) {
 func TestWithSpanKind(t *testing.T) {
 	var te testExporter
 	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
-	tr := tp.GetTracer("withSpanKind")
+	tr := tp.Tracer("withSpanKind")
 
 	_, span := tr.Start(context.Background(), "WithoutSpanKind")
 	spanData, err := endSpan(&te, span)

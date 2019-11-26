@@ -75,7 +75,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 	return c.Quantile(1)
 }
 
-// Min returns the mininum value in the checkpoint.
+// Min returns the minimum value in the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	return c.Quantile(0)
 }
