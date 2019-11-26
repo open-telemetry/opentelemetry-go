@@ -16,6 +16,7 @@ package testtrace_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -264,5 +265,32 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e.Expect(len(spans)).ToEqual(2)
 		e.Expect(spans[1]).ToEqual(span)
+	})
+
+	t.Run("can be run concurrently with another call", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		subject := testtrace.NewTracer()
+
+		numSpans := 2
+
+		var wg sync.WaitGroup
+
+		wg.Add(numSpans)
+
+		for i := 0; i < numSpans; i++ {
+			go func() {
+				_, err := fn(subject, "test")
+				e.Expect(err).ToBeNil()
+
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+
+		e.Expect(len(subject.Spans())).ToEqual(numSpans)
 	})
 }

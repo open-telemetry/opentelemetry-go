@@ -16,6 +16,7 @@ package testtrace
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 )
@@ -28,6 +29,7 @@ type Generator interface {
 var _ Generator = (*CountGenerator)(nil)
 
 type CountGenerator struct {
+	lock        sync.Mutex
 	traceIDHigh uint64
 	traceIDLow  uint64
 	spanID      uint64
@@ -38,6 +40,9 @@ func NewCountGenerator() *CountGenerator {
 }
 
 func (g *CountGenerator) TraceID() core.TraceID {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
 	if g.traceIDHigh == g.traceIDLow {
 		g.traceIDHigh++
 	} else {
@@ -53,6 +58,9 @@ func (g *CountGenerator) TraceID() core.TraceID {
 }
 
 func (g *CountGenerator) SpanID() core.SpanID {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
 	g.spanID++
 
 	var spanID core.SpanID
