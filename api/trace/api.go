@@ -24,9 +24,9 @@ import (
 )
 
 type Provider interface {
-	// GetTracer creates a named tracer that implements Tracer interface.
+	// Tracer creates a named tracer that implements Tracer interface.
 	// If the name is an empty string then provider uses default name.
-	GetTracer(name string) Tracer
+	Tracer(name string) Tracer
 }
 
 type Tracer interface {

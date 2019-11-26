@@ -80,7 +80,7 @@ func main() {
 	// Note: Have to get the meter and tracer after the global is
 	// initialized.  See OTEP 0005.
 
-	tracer := global.TraceProvider().GetTracer("ex.com/basic")
+	tracer := global.TraceProvider().Tracer("ex.com/basic")
 	meter := global.MeterProvider().GetMeter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",

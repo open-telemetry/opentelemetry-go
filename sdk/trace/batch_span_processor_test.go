@@ -145,7 +145,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 		}
 		tp.RegisterSpanProcessor(ssp)
-		tr := tp.GetTracer("BatchSpanProcessorWithOptions")
+		tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
 		generateSpan(t, tr, option)
 

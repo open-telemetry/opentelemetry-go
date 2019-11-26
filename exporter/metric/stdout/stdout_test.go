@@ -162,7 +162,7 @@ func TestStdoutMaxSumCount(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
-	magg := maxsumcount.New()
+	magg := maxsumcount.New(desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
 	magg.Checkpoint(fix.ctx, desc)
@@ -220,23 +220,30 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }`, fix.Output())
 }
 
-func TestStdoutAggError(t *testing.T) {
-	fix := newFixture(t, stdout.Options{})
-
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
-
+func TestStdoutEmptyDataSet(t *testing.T) {
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
-	magg := ddsketch.New(ddsketch.NewDefaultConfig(), desc)
-	magg.Checkpoint(fix.ctx, desc)
+	for name, tc := range map[string]export.Aggregator{
+		"ddsketch":    ddsketch.New(ddsketch.NewDefaultConfig(), desc),
+		"maxsumcount": maxsumcount.New(desc),
+	} {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	checkpointSet.Add(desc, magg)
+			fix := newFixture(t, stdout.Options{})
 
-	err := fix.exporter.Export(fix.ctx, checkpointSet)
+			checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	// An error is returned and NaN values are printed.
-	require.Error(t, err)
-	require.Equal(t, aggregator.ErrEmptyDataSet, err)
-	require.Equal(t, `{"updates":[{"name":"test.name","max":"NaN","sum":0,"count":0,"quantiles":[{"q":0.5,"v":"NaN"},{"q":0.9,"v":"NaN"},{"q":0.99,"v":"NaN"}]}]}`, fix.Output())
+			magg := tc
+			magg.Checkpoint(fix.ctx, desc)
+
+			checkpointSet.Add(desc, magg)
+
+			fix.Export(checkpointSet)
+
+			require.Equal(t, `{"updates":null}`, fix.Output())
+		})
+	}
 }
 
 func TestStdoutGaugeNotSet(t *testing.T) {
