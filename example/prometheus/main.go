@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/prometheus"
-	"go.opentelemetry.io/otel/global"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
@@ -60,7 +60,7 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.MeterProvider().GetMeter("ex.com/basic")
+	meter := global.MeterProvider().Meter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
