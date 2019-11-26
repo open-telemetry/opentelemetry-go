@@ -46,7 +46,7 @@ func mustSpanIDFromHex(s string) (t core.SpanID) {
 }
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagation.HTTPTraceContextPropagator
+	var propagator propagation.TraceContextPropagator
 	tests := []struct {
 		name   string
 		header string
@@ -139,7 +139,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagation.HTTPTraceContextPropagator
+	var propagator propagation.TraceContextPropagator
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
 		name   string
@@ -231,7 +231,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	var propagator propagation.HTTPTraceContextPropagator
+	var propagator propagation.TraceContextPropagator
 	tests := []struct {
 		name       string
 		sc         core.SpanContext
@@ -287,7 +287,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagation.HTTPTraceContextPropagator{}
+	propagator := propagation.TraceContextPropagator{}
 	tests := []struct {
 		name    string
 		header  string
@@ -375,7 +375,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagation.HTTPTraceContextPropagator{}
+	propagator := propagation.TraceContextPropagator{}
 	tests := []struct {
 		name   string
 		header string
@@ -401,7 +401,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
-	propagator := propagation.HTTPTraceContextPropagator{}
+	propagator := propagation.TraceContextPropagator{}
 	tests := []struct {
 		name         string
 		kvs          []core.KeyValue
@@ -474,8 +474,8 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	}
 }
 
-func TestHTTPTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator propagation.HTTPTraceContextPropagator
+func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
+	var propagator propagation.TraceContextPropagator
 	want := []string{"Traceparent", "Correlation-Context"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
