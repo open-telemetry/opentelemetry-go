@@ -50,21 +50,23 @@ func (s *Span) End(opts ...trace.EndOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		var c trace.EndOptions
-
-		for _, opt := range opts {
-			opt(&c)
-		}
-
-		s.endTime = time.Now()
-
-		if endTime := c.EndTime; !endTime.IsZero() {
-			s.endTime = endTime
-		}
-
-		s.ended = true
+	if s.ended {
+		return
 	}
+
+	var c trace.EndOptions
+
+	for _, opt := range opts {
+		opt(&c)
+	}
+
+	s.endTime = time.Now()
+
+	if endTime := c.EndTime; !endTime.IsZero() {
+		s.endTime = endTime
+	}
+
+	s.ended = true
 }
 
 func (s *Span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
@@ -75,19 +77,21 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		attributes := make(map[core.Key]core.Value)
-
-		for _, attr := range attrs {
-			attributes[attr.Key] = attr.Value
-		}
-
-		s.events = append(s.events, Event{
-			Timestamp:  timestamp,
-			Message:    msg,
-			Attributes: attributes,
-		})
+	if s.ended {
+		return
 	}
+
+	attributes := make(map[core.Key]core.Value)
+
+	for _, attr := range attrs {
+		attributes[attr.Key] = attr.Value
+	}
+
+	s.events = append(s.events, Event{
+		Timestamp:  timestamp,
+		Message:    msg,
+		Attributes: attributes,
+	})
 }
 
 func (s *Span) IsRecording() bool {
@@ -102,9 +106,11 @@ func (s *Span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		s.links[sc] = attrs
+	if s.ended {
+		return
 	}
+
+	s.links[sc] = attrs
 }
 
 func (s *Span) SpanContext() core.SpanContext {
@@ -115,18 +121,22 @@ func (s *Span) SetStatus(status codes.Code) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		s.status = status
+	if s.ended {
+		return
 	}
+
+	s.status = status
 }
 
 func (s *Span) SetName(name string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		s.name = name
+	if s.ended {
+		return
 	}
+
+	s.name = name
 }
 
 func (s *Span) SetAttribute(attr core.KeyValue) {
@@ -137,10 +147,12 @@ func (s *Span) SetAttributes(attrs ...core.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if !s.ended {
-		for _, attr := range attrs {
-			s.attributes[attr.Key] = attr.Value
-		}
+	if s.ended {
+		return
+	}
+
+	for _, attr := range attrs {
+		s.attributes[attr.Key] = attr.Value
 	}
 }
 
