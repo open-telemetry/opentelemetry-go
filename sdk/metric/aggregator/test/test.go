@@ -124,6 +124,10 @@ func (n *Numbers) Median() core.Number {
 	return n.numbers[len(n.numbers)/2]
 }
 
+func (n *Numbers) Points() []core.Number {
+	return n.numbers
+}
+
 // Performs the same range test the SDK does on behalf of the aggregator.
 func CheckedUpdate(t *testing.T, agg export.Aggregator, number core.Number, descriptor *export.Descriptor) {
 	ctx := context.Background()
