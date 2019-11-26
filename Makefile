@@ -32,7 +32,7 @@ test-with-coverage:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOTEST) $(GOTEST_WITH_COVERAGE) ./... && \
+	    $(GOTEST_WITH_COVERAGE) ./... && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	done
 
