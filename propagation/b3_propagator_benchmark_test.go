@@ -19,14 +19,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 	"go.opentelemetry.io/otel/propagation"
 )
 
-func TestExtractB3(t *testing.T) {
+func BenchmarkExtractB3(b *testing.B) {
 	testGroup := []struct {
 		singleHeader bool
 		name         string
@@ -55,25 +53,25 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
+		propagator := propagation.B3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
-			t.Run(tt.name, func(t *testing.T) {
+			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
+				ctx := context.Background()
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				for h, v := range tt.headers {
 					req.Header.Set(h, v)
 				}
-
-				ctx := context.Background()
-				gotSc, _ := propagator.Extract(ctx, req.Header)
-				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
-					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
+				b.ReportAllocs()
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					_, _ = propagator.Extract(ctx, req.Header)
 				}
 			})
 		}
 	}
 }
 
-func TestInjectB3(t *testing.T) {
+func BenchmarkInjectB3(b *testing.B) {
 	var id uint64
 	testGroup := []struct {
 		singleHeader bool
@@ -99,9 +97,9 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagation.HTTPB3Propagator{tg.singleHeader}
+		propagator := propagation.B3Propagator{tg.singleHeader}
 		for _, tt := range tg.tests {
-			t.Run(tt.name, func(t *testing.T) {
+			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
@@ -109,47 +107,23 @@ func TestInjectB3(t *testing.T) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-				propagator.Inject(ctx, req.Header)
-
-				for h, v := range tt.wantHeaders {
-					got, want := req.Header.Get(h), v
-					if diff := cmp.Diff(got, want); diff != "" {
-						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tt.name, h, diff)
-					}
-				}
-				wantOk := false
-				for _, h := range tt.doNotWantHeaders {
-					v, gotOk := req.Header[h]
-					if diff := cmp.Diff(gotOk, wantOk); diff != "" {
-						t.Errorf("%s: %s, header=%s: -got +want %s, value=%s", tg.name, tt.name, h, diff, v)
-					}
-
+				b.ReportAllocs()
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					propagator.Inject(ctx, req.Header)
 				}
 			})
 		}
 	}
 }
 
-func TestHTTPB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := propagation.HTTPB3Propagator{false}
-	want := []string{
-		propagation.B3TraceIDHeader,
-		propagation.B3SpanIDHeader,
-		propagation.B3SampledHeader,
-	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
-	}
-}
-
-func TestHTTPB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := propagation.HTTPB3Propagator{true}
-	want := []string{
-		propagation.B3SingleHeader,
-	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
-	}
+func traceBenchmark(name string, b *testing.B, fn func(*testing.B)) {
+	b.Run(name, func(b *testing.B) {
+		b.ReportAllocs()
+		fn(b)
+	})
+	b.Run(name, func(b *testing.B) {
+		b.ReportAllocs()
+		fn(b)
+	})
 }
