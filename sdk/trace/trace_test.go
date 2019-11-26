@@ -500,11 +500,6 @@ func TestLinks(t *testing.T) {
 			key.New("key3").String("value3"),
 		),
 	)
-	apitrace.LinkedTo(sc1, key.New("key1").String("value1"))
-	apitrace.LinkedTo(sc2,
-		key.New("key2").String("value2"),
-		key.New("key3").String("value3"),
-	)
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -548,10 +543,6 @@ func TestLinksOverLimit(t *testing.T) {
 
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
-
-	apitrace.LinkedTo(sc1, key.New("key1").String("value1"))
-	apitrace.LinkedTo(sc2, key.New("key2").String("value2"))
-	apitrace.LinkedTo(sc3, key.New("key3").String("value3"))
 
 	got, err := endSpan(te, span)
 	if err != nil {
