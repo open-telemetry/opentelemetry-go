@@ -87,7 +87,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	span.SetAttributes(c.Attributes...)
 
 	for _, link := range c.Links {
-		span.AddLink(link)
+		span.links[link.SpanContext] = link.Attributes
 	}
 
 	t.lock.Lock()

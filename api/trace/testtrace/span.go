@@ -98,21 +98,6 @@ func (s *Span) IsRecording() bool {
 	return true
 }
 
-func (s *Span) AddLink(link trace.Link) {
-	s.Link(link.SpanContext, link.Attributes...)
-}
-
-func (s *Span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.ended {
-		return
-	}
-
-	s.links[sc] = attrs
-}
-
 func (s *Span) SpanContext() core.SpanContext {
 	return s.spanContext
 }
