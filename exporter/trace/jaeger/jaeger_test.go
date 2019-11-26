@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/global"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 

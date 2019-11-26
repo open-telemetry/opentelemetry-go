@@ -20,12 +20,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	metricstdout "go.opentelemetry.io/otel/exporter/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
