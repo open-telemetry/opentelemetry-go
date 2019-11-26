@@ -18,7 +18,7 @@ var _ InstrumentImpl = noopInstrument{}
 var _ HandleImpl = noopHandle{}
 var _ LabelSet = noopLabelSet{}
 
-func (NoopProvider) GetMeter(name string) Meter {
+func (NoopProvider) Meter(name string) Meter {
 	return NoopMeter{}
 }
 

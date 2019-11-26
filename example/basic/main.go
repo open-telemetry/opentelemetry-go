@@ -81,7 +81,7 @@ func main() {
 	// initialized.  See OTEP 0005.
 
 	tracer := global.TraceProvider().Tracer("ex.com/basic")
-	meter := global.MeterProvider().GetMeter("ex.com/basic")
+	meter := global.MeterProvider().Meter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),

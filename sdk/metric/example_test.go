@@ -45,7 +45,7 @@ func ExampleNew() {
 	ctx := context.Background()
 
 	key := key.New("key")
-	meter := pusher.GetMeter("example")
+	meter := pusher.Meter("example")
 
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
 	labels := meter.Labels(key.String("value"))
