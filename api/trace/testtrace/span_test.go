@@ -428,41 +428,6 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			_, linkedSpan := tracer.Start(context.Background(), "linked")
-			expectedLink := trace.Link{
-				SpanContext: linkedSpan.SpanContext(),
-				Attributes: []core.KeyValue{
-					core.Key("key").String("value"),
-				},
-			}
-
-			subject.AddLink(expectedLink)
-			subject.End()
-
-			_, unlinkedSpan := tracer.Start(context.Background(), "not linked")
-			unexpectedLink := trace.Link{
-				SpanContext: unlinkedSpan.SpanContext(),
-			}
-
-			subject.AddLink(unexpectedLink)
-
-			links := subject.Links()
-
-			e.Expect(len(links)).ToEqual(1)
-			e.Expect(links[expectedLink.SpanContext]).ToEqual(expectedLink.Attributes)
-		})
-
-		t.Run("cannot be changed after the span has been ended", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			tracer := testtrace.NewTracer()
-			_, span := tracer.Start(context.Background(), "test")
-
-			subject, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
 			subject.AddEvent(context.Background(), "test")
 
 			e.Expect(len(subject.Events())).ToEqual(1)
