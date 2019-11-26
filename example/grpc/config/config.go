@@ -17,8 +17,8 @@ package config
 import (
 	"log"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

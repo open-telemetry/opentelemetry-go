@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	propagator = propagation.HTTPTraceContextPropagator{}
+	propagator = propagation.TraceContextPropagator{}
 )
 
 type metadataSupplier struct {
