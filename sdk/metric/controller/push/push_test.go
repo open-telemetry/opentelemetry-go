@@ -171,7 +171,7 @@ func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(fix.batcher, fix.exporter, time.Second)
-	meter := p.GetMeter("name")
+	meter := p.Meter("name")
 
 	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)

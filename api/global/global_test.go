@@ -36,7 +36,7 @@ func (*testTraceProvider) Tracer(_ string) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
-func (*testMeterProvider) GetMeter(_ string) metric.Meter {
+func (*testMeterProvider) Meter(_ string) metric.Meter {
 	return &metric.NoopMeter{}
 }
 

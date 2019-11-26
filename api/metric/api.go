@@ -23,9 +23,9 @@ import (
 
 // Provider supports named Meter instances.
 type Provider interface {
-	// GetMeter gets a named Meter interface.  If the name is an
+	// Meter gets a named Meter interface.  If the name is an
 	// empty string, the provider uses a default name.
-	GetMeter(name string) Meter
+	Meter(name string) Meter
 }
 
 // LabelSet is an implementation-level interface that represents a
