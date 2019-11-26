@@ -28,6 +28,8 @@ type Generator interface {
 
 var _ Generator = (*CountGenerator)(nil)
 
+// CountGenerator is a simple Generator that can be used to create unique, albeit deterministic,
+// trace and span IDs.
 type CountGenerator struct {
 	lock        sync.Mutex
 	traceIDHigh uint64

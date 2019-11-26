@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
+// Event encapsulates the properties of calls to AddEvent or AddEventWithTimestamp.
 type Event struct {
 	Timestamp  time.Time
 	Message    string

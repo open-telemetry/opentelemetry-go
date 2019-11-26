@@ -25,6 +25,8 @@ import (
 
 var _ trace.Tracer = (*Tracer)(nil)
 
+// Tracer is a type of OpenTelemetry Tracer that tracks both active and ended spans,
+// and which creates Spans that may be inspected to see what data has been set on them.
 type Tracer struct {
 	lock      *sync.RWMutex
 	generator Generator
@@ -103,6 +105,7 @@ func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx contex
 	return body(ctx)
 }
 
+// Spans returns the list of current and ended Spans started via the Tracer.
 func (t *Tracer) Spans() []*Span {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
@@ -110,8 +113,12 @@ func (t *Tracer) Spans() []*Span {
 	return append([]*Span{}, t.spans...)
 }
 
+// TracerOption enables configuration of a new Tracer.
 type TracerOption func(*tracerConfig)
 
+// TracerWithGenerator enables customization of the Generator that the Tracer will use
+// to create new trace and span IDs.
+// By default, new Tracers will use the CountGenerator.
 func TracerWithGenerator(generator Generator) TracerOption {
 	return func(c *tracerConfig) {
 		c.generator = generator
