@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/example/grpc/api"
+	"go.opentelemetry.io/otel/example/grpc/config"
 
 	"google.golang.org/grpc"
 
@@ -42,6 +43,8 @@ func (s *server) SayHello(ctx context.Context, in *api.HelloRequest) (*api.Hello
 }
 
 func main() {
+	config.Init()
+
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

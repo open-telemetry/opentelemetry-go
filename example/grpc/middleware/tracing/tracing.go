@@ -18,7 +18,6 @@ package tracing
 // https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/data-rpc.md
 import (
 	"context"
-	"log"
 
 	"go.opentelemetry.io/otel/plugin/grpctrace"
 
@@ -31,29 +30,8 @@ import (
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/global"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-func init() {
-	initOtelTracer()
-}
-
-func initOtelTracer() {
-	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-	tp, err := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	global.SetTraceProvider(tp)
-}
 
 // UnaryServerInterceptor intercepts and extracts incoming trace data
 func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
