@@ -189,33 +189,10 @@ func (s *span) SetName(name string) {
 	makeSamplingDecision(data)
 }
 
-// AddLink implements Span interface. Specified link is added to the span.
-// If the total number of links associated with the span exceeds the limit
-// then the oldest link is removed to create space for the link being added.
-func (s *span) AddLink(link apitrace.Link) {
-	if !s.IsRecording() {
-		return
-	}
-	s.addLink(link)
-}
-
-// Link implements Span interface. It is similar to AddLink but it excepts
-// SpanContext and attributes as arguments instead of Link. It first creates
-// a Link object and then adds to the span.
-func (s *span) Link(sc core.SpanContext, attrs ...core.KeyValue) {
-	if !s.IsRecording() {
-		return
-	}
-	attrsCopy := attrs
-	if attrs != nil {
-		attrsCopy = make([]core.KeyValue, len(attrs))
-		copy(attrsCopy, attrs)
-	}
-	link := apitrace.Link{SpanContext: sc, Attributes: attrsCopy}
-	s.addLink(link)
-}
-
 func (s *span) addLink(link apitrace.Link) {
+	if !s.IsRecording() {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.links.add(link)

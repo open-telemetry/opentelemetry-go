@@ -55,7 +55,7 @@ func SetTraceProvider(tp trace.Provider) {
 // MeterProvider returns the registered global meter provider.
 // If none is registered then an instance of metric.NoopProvider is returned.
 // Use the trace provider to create a named meter. E.g.
-//     meter := global.MeterProvider().GetMeter("example.com/foo")
+//     meter := global.MeterProvider().Meter("example.com/foo")
 func MeterProvider() metric.Provider {
 	if gp := globalMeter.Load(); gp != nil {
 		return gp.(meterProvider).mp
