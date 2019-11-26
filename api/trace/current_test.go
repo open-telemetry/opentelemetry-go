@@ -103,11 +103,3 @@ func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 // AddEventWithTimestamp does nothing.
 func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
 }
-
-// AddLink does nothing.
-func (mockSpan) AddLink(link trace.Link) {
-}
-
-// Link does nothing.
-func (mockSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
-}

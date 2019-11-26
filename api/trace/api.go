@@ -72,13 +72,6 @@ type Span interface {
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
 
-	// AddLink adds a link to the span.
-	AddLink(link Link)
-
-	// Link creates a link between this span and the other span specified by the SpanContext.
-	// It then adds the newly created Link to the span.
-	Link(sc core.SpanContext, attrs ...core.KeyValue)
-
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
 	SpanContext() core.SpanContext

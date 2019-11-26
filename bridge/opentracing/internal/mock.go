@@ -289,14 +289,6 @@ func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Tim
 	})
 }
 
-func (s *MockSpan) AddLink(link oteltrace.Link) {
-	// TODO
-}
-
-func (s *MockSpan) Link(sc otelcore.SpanContext, attrs ...otelcore.KeyValue) {
-	// TODO
-}
-
 func (s *MockSpan) OverrideTracer(tracer oteltrace.Tracer) {
 	s.officialTracer = tracer
 }

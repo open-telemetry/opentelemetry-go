@@ -482,51 +482,10 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 }
 
-func TestAddLinks(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
-
-	span := startSpan(tp, "AddLinks")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
-
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-
-	link1 := apitrace.Link{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}}
-	link2 := apitrace.Link{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}}
-	span.AddLink(link1)
-	span.AddLink(link2)
-
-	got, err := endSpan(te, span)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := &export.SpanData{
-		SpanContext: core.SpanContext{
-			TraceID:    tid,
-			TraceFlags: 0x1,
-		},
-		ParentSpanID:    sid,
-		Name:            "AddLinks/span0",
-		HasRemoteParent: true,
-		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
-		},
-		SpanKind: apitrace.SpanKindInternal,
-	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("AddLink: -got +want %s", diff)
-	}
-}
-
 func TestLinks(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 
-	span := startSpan(tp, "Links")
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
@@ -534,11 +493,14 @@ func TestLinks(t *testing.T) {
 	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
-	span.Link(sc1, key.New("key1").String("value1"))
-	span.Link(sc2,
-		key.New("key2").String("value2"),
-		key.New("key3").String("value3"),
+	span := startSpan(tp, "Links",
+		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
+		apitrace.LinkedTo(sc2,
+			key.New("key2").String("value2"),
+			key.New("key3").String("value3"),
+		),
 	)
+
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -572,14 +534,15 @@ func TestLinksOverLimit(t *testing.T) {
 	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
-	span := startSpan(tp, "LinksOverLimit")
+
+	span := startSpan(tp, "LinksOverLimit",
+		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
+		apitrace.LinkedTo(sc2, key.New("key2").String("value2")),
+		apitrace.LinkedTo(sc3, key.New("key3").String("value3")),
+	)
 
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
-
-	span.Link(sc1, key.New("key1").String("value1"))
-	span.Link(sc2, key.New("key2").String("value2"))
-	span.Link(sc3, key.New("key3").String("value3"))
 
 	got, err := endSpan(te, span)
 	if err != nil {

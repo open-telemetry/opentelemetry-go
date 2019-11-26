@@ -12,3 +12,4 @@ coverage.*
 /example/http-stackdriver/server/server
 /example/jaeger/jaeger
 /example/namedtracer/namedtracer
+/example/prometheus/prometheus

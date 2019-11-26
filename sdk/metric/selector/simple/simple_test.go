@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -39,7 +39,7 @@ func TestInexpensiveMeasure(t *testing.T) {
 	inex := simple.NewWithInexpensiveMeasure()
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(testGaugeDesc).(*gauge.Aggregator) })
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(testCounterDesc).(*counter.Aggregator) })
-	require.NotPanics(t, func() { _ = inex.AggregatorFor(testMeasureDesc).(*maxsumcount.Aggregator) })
+	require.NotPanics(t, func() { _ = inex.AggregatorFor(testMeasureDesc).(*minmaxsumcount.Aggregator) })
 }
 
 func TestSketchMeasure(t *testing.T) {
