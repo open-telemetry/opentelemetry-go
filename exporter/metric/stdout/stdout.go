@@ -123,15 +123,15 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 		}
 
-		if msc, ok := agg.(aggregator.MinMaxSumCount); ok {
-			if count, err := msc.Count(); err != nil {
+		if mmsc, ok := agg.(aggregator.MinMaxSumCount); ok {
+			if count, err := mmsc.Count(); err != nil {
 				aggError = err
 				expose.Count = "NaN"
 			} else {
 				expose.Count = count
 			}
 
-			if max, err := msc.Max(); err != nil {
+			if max, err := mmsc.Max(); err != nil {
 				if err == aggregator.ErrEmptyDataSet {
 					// This is a special case, indicates an aggregator that
 					// was checkpointed before its first value was set.
@@ -144,7 +144,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				expose.Max = max.AsInterface(kind)
 			}
 
-			if min, err := msc.Min(); err != nil {
+			if min, err := mmsc.Min(); err != nil {
 				if err == aggregator.ErrEmptyDataSet {
 					// This is a special case, indicates an aggregator that
 					// was checkpointed before its first value was set.
