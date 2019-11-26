@@ -19,9 +19,9 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/global"
 	prop "go.opentelemetry.io/otel/propagation"
 )
 

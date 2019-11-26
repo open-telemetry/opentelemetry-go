@@ -30,8 +30,8 @@ import (
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
-	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
