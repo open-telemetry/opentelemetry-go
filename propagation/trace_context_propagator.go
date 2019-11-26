@@ -36,13 +36,13 @@ const (
 	CorrelationContextHeader = "Correlation-Context"
 )
 
-// HTTPTraceContextPropagator propagates SpanContext in W3C TraceContext format.
-type HTTPTraceContextPropagator struct{}
+// TraceContextPropagator propagates SpanContext in W3C TraceContext format.
+type TraceContextPropagator struct{}
 
-var _ apipropagation.TextFormatPropagator = HTTPTraceContextPropagator{}
+var _ apipropagation.TextFormatPropagator = TraceContextPropagator{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+func (hp TraceContextPropagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
@@ -72,13 +72,13 @@ func (hp HTTPTraceContextPropagator) Inject(ctx context.Context, supplier apipro
 	}
 }
 
-func (hp HTTPTraceContextPropagator) Extract(
+func (hp TraceContextPropagator) Extract(
 	ctx context.Context, supplier apipropagation.Supplier,
 ) (core.SpanContext, dctx.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
-func (hp HTTPTraceContextPropagator) extractSpanContext(
+func (hp TraceContextPropagator) extractSpanContext(
 	ctx context.Context, supplier apipropagation.Supplier,
 ) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
@@ -147,7 +147,7 @@ func (hp HTTPTraceContextPropagator) extractSpanContext(
 	return sc
 }
 
-func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, supplier apipropagation.Supplier) dctx.Map {
+func (hp TraceContextPropagator) extractCorrelationCtx(ctx context.Context, supplier apipropagation.Supplier) dctx.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
 		return dctx.NewEmptyMap()
@@ -191,6 +191,6 @@ func (hp HTTPTraceContextPropagator) extractCorrelationCtx(ctx context.Context, 
 	})
 }
 
-func (hp HTTPTraceContextPropagator) GetAllKeys() []string {
+func (hp TraceContextPropagator) GetAllKeys() []string {
 	return []string{TraceparentHeader, CorrelationContextHeader}
 }
