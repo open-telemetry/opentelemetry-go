@@ -7,7 +7,8 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 # All directories with go.mod files. Used in go mod tidy.
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 
-GOTEST=go test -v -timeout 30s -race
+GOTEST_MIN = go test -v -timeout 30s
+GOTEST = $(GOTEST_MIN) -race
 GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic
 
 .DEFAULT_GOAL := precommit
@@ -72,7 +73,7 @@ test-386:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... GOARCH 386 in $${dir}"; \
 	  (cd "$${dir}" && \
-	    GOARCH=386 $(GOTEST) ./...); \
+	    GOARCH=386 $(GOTEST_MIN) ./...); \
 	done
 
 .PHONY: examples
