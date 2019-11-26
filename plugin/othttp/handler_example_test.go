@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/plugin/othttp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )

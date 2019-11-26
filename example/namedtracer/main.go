@@ -19,11 +19,11 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

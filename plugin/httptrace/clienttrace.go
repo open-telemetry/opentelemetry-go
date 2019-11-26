@@ -25,9 +25,9 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/global"
 )
 
 var (
