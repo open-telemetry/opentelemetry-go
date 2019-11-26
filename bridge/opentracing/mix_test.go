@@ -22,8 +22,8 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/global"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 )
