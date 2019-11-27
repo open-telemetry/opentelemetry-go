@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package maxsumcount
+package minmaxsumcount
 
 import (
 	"context"
@@ -59,26 +59,26 @@ var (
 	}
 )
 
-func TestMaxSumCountAbsolute(t *testing.T) {
+func TestMinMaxSumCountAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		maxSumCount(t, profile, positiveOnly)
+		minMaxSumCount(t, profile, positiveOnly)
 	})
 }
 
-func TestMaxSumCountNegativeOnly(t *testing.T) {
+func TestMinMaxSumCountNegativeOnly(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		maxSumCount(t, profile, negativeOnly)
+		minMaxSumCount(t, profile, negativeOnly)
 	})
 }
 
-func TestMaxSumCountPositiveAndNegative(t *testing.T) {
+func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		maxSumCount(t, profile, positiveAndNegative)
+		minMaxSumCount(t, profile, positiveAndNegative)
 	})
 }
 
-// Validates max, sum and count for a given profile and policy
-func maxSumCount(t *testing.T, profile test.Profile, policy policy) {
+// Validates min, max, sum and count for a given profile and policy
+func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !policy.absolute)
 
@@ -108,6 +108,13 @@ func maxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
+	min, err := agg.Min()
+	require.Nil(t, err)
+	require.Equal(t,
+		all.Min(),
+		min,
+		"Same min -"+policy.name)
+
 	max, err := agg.Max()
 	require.Nil(t, err)
 	require.Equal(t,
@@ -116,7 +123,7 @@ func maxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		"Same max -"+policy.name)
 }
 
-func TestMaxSumCountMerge(t *testing.T) {
+func TestMinMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
@@ -156,6 +163,13 @@ func TestMaxSumCountMerge(t *testing.T) {
 		count, err := agg1.Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
+
+		min, err := agg1.Min()
+		require.Nil(t, err)
+		require.Equal(t,
+			all.Min(),
+			min,
+			"Same min - absolute")
 
 		max, err := agg1.Max()
 		require.Nil(t, err)

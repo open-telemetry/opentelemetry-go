@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/maxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -156,13 +156,13 @@ func TestStdoutGaugeFormat(t *testing.T) {
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
 }
 
-func TestStdoutMaxSumCount(t *testing.T) {
+func TestStdoutMinMaxSumCount(t *testing.T) {
 	fix := newFixture(t, stdout.Options{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
-	magg := maxsumcount.New(desc)
+	magg := minmaxsumcount.New(desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
 	magg.Checkpoint(fix.ctx, desc)
@@ -171,7 +171,7 @@ func TestStdoutMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
@@ -198,6 +198,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 	"updates": [
 		{
 			"name": "test.name{A=B,C=D}",
+			"min": 0.5,
 			"max": 999.5,
 			"sum": 500000,
 			"count": 1000,
@@ -223,8 +224,8 @@ func TestStdoutMeasureFormat(t *testing.T) {
 func TestStdoutEmptyDataSet(t *testing.T) {
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 	for name, tc := range map[string]export.Aggregator{
-		"ddsketch":    ddsketch.New(ddsketch.NewDefaultConfig(), desc),
-		"maxsumcount": maxsumcount.New(desc),
+		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), desc),
+		"minmaxsumcount": minmaxsumcount.New(desc),
 	} {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
