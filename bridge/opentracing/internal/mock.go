@@ -225,21 +225,15 @@ func (s *MockSpan) IsRecording() bool {
 }
 
 func (s *MockSpan) SetStatus(status codes.Code) {
-	s.SetAttribute(NameKey.Uint32(uint32(status)))
+	s.SetAttributes(NameKey.Uint32(uint32(status)))
 }
 
 func (s *MockSpan) SetName(name string) {
-	s.SetAttribute(NameKey.String(name))
+	s.SetAttributes(NameKey.String(name))
 }
 
 func (s *MockSpan) SetError(v bool) {
-	s.SetAttribute(ErrorKey.Bool(v))
-}
-
-func (s *MockSpan) SetAttribute(attribute otelcore.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
-		SingleKV: attribute,
-	})
+	s.SetAttributes(ErrorKey.Bool(v))
 }
 
 func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {

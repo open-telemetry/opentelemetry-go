@@ -84,13 +84,6 @@ func (s *span) SetStatus(status codes.Code) {
 	s.mu.Unlock()
 }
 
-func (s *span) SetAttribute(attribute core.KeyValue) {
-	if !s.IsRecording() {
-		return
-	}
-	s.copyToCappedAttributes(attribute)
-}
-
 func (s *span) SetAttributes(attributes ...core.KeyValue) {
 	if !s.IsRecording() {
 		return

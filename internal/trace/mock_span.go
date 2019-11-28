@@ -54,10 +54,6 @@ func (ms *MockSpan) SetStatus(status codes.Code) {
 func (ms *MockSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (ms *MockSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 }

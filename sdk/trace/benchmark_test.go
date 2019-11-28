@@ -53,39 +53,6 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	})
 }
 
-func BenchmarkSpan_SetAttributes(b *testing.B) {
-	b.Run("SetAttribute", func(b *testing.B) {
-		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
-			ctx := context.Background()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				_, span := t.Start(ctx, "/foo")
-				span.SetAttribute(key.New("key1").Bool(false))
-				span.SetAttribute(key.New("key2").String("hello"))
-				span.SetAttribute(key.New("key3").Uint64(123))
-				span.SetAttribute(key.New("key4").Float64(123.456))
-				span.End()
-			}
-		})
-	})
-
-	b.Run("SetAttributes", func(b *testing.B) {
-		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
-			ctx := context.Background()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				_, span := t.Start(ctx, "/foo")
-				span.SetAttributes(key.New("key1").Bool(false))
-				span.SetAttributes(key.New("key2").String("hello"))
-				span.SetAttributes(key.New("key3").Uint64(123))
-				span.SetAttributes(key.New("key4").Float64(123.456))
-				span.End()
-			}
-		})
-	})
-}
-
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()

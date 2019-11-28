@@ -310,9 +310,6 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 		"#SetName": func(span trace.Span) {
 			span.SetName("new name")
 		},
-		"#SetAttribute": func(span trace.Span) {
-			span.SetAttribute(core.Key("key").String("value"))
-		},
 		"#SetAttributes": func(span trace.Span) {
 			span.SetAttributes(core.Key("key1").String("value"), core.Key("key2").Int(123))
 		},

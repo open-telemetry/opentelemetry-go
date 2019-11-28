@@ -79,10 +79,6 @@ func (mockSpan) SetName(name string) {
 func (mockSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (mockSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
