@@ -87,7 +87,8 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(abspath $(TOOLS_DIR))/golangci-lint run --fix); \
+	    $(abspath $(TOOLS_DIR))/golangci-lint run --fix && \
+	    $(abspath $(TOOLS_DIR))/golangci-lint run); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
