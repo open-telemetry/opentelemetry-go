@@ -1,5 +1,3 @@
-export GO111MODULE=on
-
 EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
 
 # All source code and documents. Used in spell check.
