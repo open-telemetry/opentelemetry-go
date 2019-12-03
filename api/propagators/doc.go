@@ -14,5 +14,5 @@
 
 // Package propagators contains interface definition for BinaryFormat and
 // TextFormat propagators and implementation of propagators for different
-// format and carriers.
+// format and suppliers.
 package propagators // import "go.opentelemetry.io/otel/api/propagators"
