@@ -4,6 +4,7 @@ EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 # All directories with go.mod files. Used in go mod tidy.
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example' | sort)
 
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
@@ -28,7 +29,7 @@ precommit: lint generate build examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST_WITH_COVERAGE) ./... && \
