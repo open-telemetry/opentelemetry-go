@@ -33,8 +33,7 @@ const (
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
 )
 
-// B3 that facilitates core.SpanContext
-// propagation using B3 Headers.
+// B3 propagator serializes core.SpanContext to/from B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
 //    X-B3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
