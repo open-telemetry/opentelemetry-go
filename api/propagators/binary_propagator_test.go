@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation_test
+package propagators_test
 
 import (
 	"testing"
@@ -20,14 +20,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/api/propagators"
 )
 
 func TestExtractSpanContextFromBytes(t *testing.T) {
 	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
 
-	propagator := propagation.BinaryPropagator()
+	propagator := propagators.Binary()
 	tests := []struct {
 		name   string
 		bytes  []byte
@@ -123,7 +123,7 @@ func TestConvertSpanContextToBytes(t *testing.T) {
 	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
 
-	propagator := propagation.BinaryPropagator()
+	propagator := propagators.Binary()
 	tests := []struct {
 		name  string
 		sc    core.SpanContext

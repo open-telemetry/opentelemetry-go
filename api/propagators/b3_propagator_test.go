@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation_test
+package propagators_test
 
 import (
 	"context"
@@ -21,9 +21,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
-	"go.opentelemetry.io/otel/propagation"
 )
 
 func TestExtractB3(t *testing.T) {
@@ -55,7 +55,7 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := propagation.B3Propagator{tg.singleHeader}
+		propagator := propagators.B3{tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -99,7 +99,7 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagation.B3Propagator{tg.singleHeader}
+		propagator := propagators.B3{tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -131,11 +131,11 @@ func TestInjectB3(t *testing.T) {
 }
 
 func TestB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := propagation.B3Propagator{false}
+	propagator := propagators.B3{false}
 	want := []string{
-		propagation.B3TraceIDHeader,
-		propagation.B3SpanIDHeader,
-		propagation.B3SampledHeader,
+		propagators.B3TraceIDHeader,
+		propagators.B3SpanIDHeader,
+		propagators.B3SampledHeader,
 	}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -144,9 +144,9 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 }
 
 func TestB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := propagation.B3Propagator{true}
+	propagator := propagators.B3{true}
 	want := []string{
-		propagation.B3SingleHeader,
+		propagators.B3SingleHeader,
 	}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {

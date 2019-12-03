@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package propagators
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/trace"
-
 	"go.opentelemetry.io/otel/api/core"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	apipropagation "go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -35,8 +33,7 @@ const (
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
 )
 
-// B3Propagator that facilitates core.SpanContext
-// propagation using B3 Headers.
+// B3 propagator serializes core.SpanContext to/from B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
 //    X-B3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
@@ -49,13 +46,13 @@ const (
 //
 // If SingleHeader is set to true then X-B3 header is used to inject and extract. Otherwise,
 // separate headers are used to inject and extract.
-type B3Propagator struct {
+type B3 struct {
 	SingleHeader bool
 }
 
-var _ apipropagation.TextFormatPropagator = B3Propagator{}
+var _ TextFormat = B3{}
 
-func (b3 B3Propagator) Inject(ctx context.Context, supplier apipropagation.Supplier) {
+func (b3 B3) Inject(ctx context.Context, supplier Supplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
@@ -79,21 +76,21 @@ func (b3 B3Propagator) Inject(ctx context.Context, supplier apipropagation.Suppl
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3Propagator) Extract(ctx context.Context, supplier apipropagation.Supplier) (core.SpanContext, dctx.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
 	if b3.SingleHeader {
 		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
 	}
 	return b3.extract(supplier), dctx.NewEmptyMap()
 }
 
-func (b3 B3Propagator) GetAllKeys() []string {
+func (b3 B3) GetAllKeys() []string {
 	if b3.SingleHeader {
 		return []string{B3SingleHeader}
 	}
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 B3Propagator) extract(supplier apipropagation.Supplier) core.SpanContext {
+func (b3 B3) extract(supplier Supplier) core.SpanContext {
 	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return core.EmptySpanContext()
@@ -128,7 +125,7 @@ func (b3 B3Propagator) extract(supplier apipropagation.Supplier) core.SpanContex
 	return sc
 }
 
-func (b3 B3Propagator) extractSingleHeader(supplier apipropagation.Supplier) core.SpanContext {
+func (b3 B3) extractSingleHeader(supplier Supplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
 		core.EmptySpanContext()
@@ -177,7 +174,7 @@ func (b3 B3Propagator) extractSingleHeader(supplier apipropagation.Supplier) cor
 }
 
 // extractSampledState parses the value of the X-B3-Sampled b3Header.
-func (b3 B3Propagator) extractSampledState(sampled string) (flag byte, ok bool) {
+func (b3 B3) extractSampledState(sampled string) (flag byte, ok bool) {
 	switch sampled {
 	case "", "0":
 		return 0, true
@@ -196,7 +193,7 @@ func (b3 B3Propagator) extractSampledState(sampled string) (flag byte, ok bool) 
 }
 
 // extracDebugFlag parses the value of the X-B3-Sampled b3Header.
-func (b3 B3Propagator) extracDebugFlag(debug string) (flag byte, ok bool) {
+func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
 	switch debug {
 	case "", "0":
 		return 0, true
