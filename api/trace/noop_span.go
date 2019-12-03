@@ -46,10 +46,6 @@ func (NoopSpan) SetStatus(status codes.Code) {
 func (NoopSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (NoopSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 }

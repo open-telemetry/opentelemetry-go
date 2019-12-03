@@ -328,7 +328,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttribute(key.New("key1").String("value1"))
+	span.SetAttributes(key.New("key1").String("value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -358,10 +358,12 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttribute(key.Bool("key1", true))
-	span.SetAttribute(key.String("key2", "value2"))
-	span.SetAttribute(key.Bool("key1", false)) // Replace key1.
-	span.SetAttribute(key.Int64("key4", 4))    // Remove key2 and add key4
+	span.SetAttributes(
+		key.Bool("key1", true),
+		key.String("key2", "value2"),
+		key.Bool("key1", false), // Replace key1.
+		key.Int64("key4", 4),    // Remove key2 and add key4
+	)
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)

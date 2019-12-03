@@ -131,7 +131,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			s.otelSpan.SetStatus(status)
 		}
 	default:
-		s.otelSpan.SetAttribute(otTagToOtelCoreKeyValue(key, value))
+		s.otelSpan.SetAttributes(otTagToOtelCoreKeyValue(key, value))
 	}
 	return s
 }

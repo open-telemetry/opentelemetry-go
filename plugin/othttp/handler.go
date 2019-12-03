@@ -223,7 +223,7 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.CurrentSpan(r.Context())
 		//TODO: Why doesn't tag.Upsert work?
-		span.SetAttribute(RouteKey.String(route))
+		span.SetAttributes(RouteKey.String(route))
 		h.ServeHTTP(w, r.WithContext(trace.SetCurrentSpan(r.Context(), span)))
 	})
 }

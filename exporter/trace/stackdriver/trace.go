@@ -83,7 +83,7 @@ func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) 
 	// 	"go.opentelemetry.io/otel/exporter/stackdriver.uploadSpans",
 	// )
 	// defer span.End()
-	// span.SetAttribute(key.New("num_spans").Int64(int64(len(spans))))
+	// span.SetAttributes(key.New("num_spans").Int64(int64(len(spans))))
 
 	err := e.client.BatchWriteSpans(ctx, &req)
 	if err != nil {

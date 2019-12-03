@@ -84,7 +84,6 @@ type Span interface {
 	SetName(name string)
 
 	// Set span attributes
-	SetAttribute(core.KeyValue)
 	SetAttributes(...core.KeyValue)
 }
 
