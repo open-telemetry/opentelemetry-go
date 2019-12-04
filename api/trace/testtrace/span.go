@@ -54,7 +54,7 @@ func (s *Span) End(opts ...trace.EndOption) {
 		return
 	}
 
-	var c trace.EndOptions
+	var c trace.EndConfig
 
 	for _, opt := range opts {
 		opt(&c)

@@ -42,8 +42,8 @@ func NewTracer(opts ...TracerOption) *Tracer {
 	}
 }
 
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	var c trace.SpanOptions
+func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
+	var c trace.StartConfig
 
 	for _, opt := range opts {
 		opt(&c)
