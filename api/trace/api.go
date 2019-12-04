@@ -43,15 +43,19 @@ type Tracer interface {
 	) error
 }
 
+// EndConfig provides options to set properties of span at the time of ending
+// the span.
 type EndConfig struct {
 	EndTime time.Time
 }
 
+// EndOption applies changes to EndConfig that sets options at span end time.
 type EndOption func(*EndConfig)
 
-func WithEndTime(endTime time.Time) EndOption {
+// WithEndTime sets the end time of the span to provided time t, when it is ended.
+func WithEndTime(t time.Time) EndOption {
 	return func(c *EndConfig) {
-		c.EndTime = endTime
+		c.EndTime = t
 	}
 }
 
@@ -87,7 +91,7 @@ type Span interface {
 	SetAttributes(...core.KeyValue)
 }
 
-// StartOption apply changes to StartConfig that sets options at span start time.
+// StartOption applies changes to StartConfig that sets options at span start time.
 type StartOption func(*StartConfig)
 
 // StartConfig provides options to set properties of span at the time of starting
