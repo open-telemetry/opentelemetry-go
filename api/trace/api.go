@@ -49,7 +49,7 @@ type EndConfig struct {
 	EndTime time.Time
 }
 
-// EndOption applies changes to EndConfig that sets options at span end time.
+// EndOption applies changes to EndConfig that sets options when the span is ended.
 type EndOption func(*EndConfig)
 
 // WithEndTime sets the end time of the span to provided time t, when it is ended.
