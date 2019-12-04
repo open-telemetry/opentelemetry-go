@@ -124,10 +124,6 @@ func (s *Span) SetName(name string) {
 	s.name = name
 }
 
-func (s *Span) SetAttribute(attr core.KeyValue) {
-	s.SetAttributes(attr)
-}
-
 func (s *Span) SetAttributes(attrs ...core.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

@@ -253,15 +253,12 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			expectedAttr := core.Key("key").String("value")
+			unexpectedAttr := expectedAttr.Key.String("unexpected")
 
-			subject.SetAttribute(expectedAttr)
+			subject.SetAttributes(expectedAttr, unexpectedAttr)
 			subject.End()
 
-			unexpectedAttr := expectedAttr.Key.String("unexpected")
-			subject.SetAttribute(unexpectedAttr)
-
 			attributes := subject.Attributes()
-
 			e.Expect(attributes[expectedAttr.Key]).ToEqual(expectedAttr.Value)
 		})
 
