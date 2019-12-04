@@ -68,13 +68,13 @@ func New() *Aggregator {
 }
 
 // LastValue returns the last-recorded lastValue value and the
-// corresponding timestamp.  The error value aggregator.ErrNoLastValue
+// corresponding timestamp.  The error value aggregator.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
 func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
 	gd := (*lastValueData)(g.checkpoint)
 	if gd == unsetLastValue {
-		return core.Number(0), time.Time{}, aggregator.ErrNoLastValue
+		return core.Number(0), time.Time{}, aggregator.ErrNoData
 	}
 	return gd.value.AsNumber(), gd.timestamp, nil
 }

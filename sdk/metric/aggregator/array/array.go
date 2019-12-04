@@ -177,7 +177,7 @@ func (p *points) Swap(i, j int) {
 // of a quantile.
 func (p *points) Quantile(q float64) (core.Number, error) {
 	if len(*p) == 0 {
-		return core.Number(0), aggregator.ErrEmptyDataSet
+		return core.Number(0), aggregator.ErrNoData
 	}
 
 	if q < 0 || q > 1 {

@@ -204,15 +204,15 @@ func TestArrayErrors(t *testing.T) {
 
 		_, err := agg.Max()
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrNoData)
 
 		_, err = agg.Min()
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrNoData)
 
 		_, err = agg.Quantile(0.1)
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrEmptyDataSet)
+		require.Equal(t, err, aggregator.ErrNoData)
 
 		ctx := context.Background()
 

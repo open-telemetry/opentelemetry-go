@@ -113,7 +113,7 @@ func TestLastValueNotSet(t *testing.T) {
 	g.Checkpoint(context.Background(), descriptor)
 
 	value, timestamp, err := g.LastValue()
-	require.Equal(t, aggregator.ErrNoLastValue, err)
+	require.Equal(t, aggregator.ErrNoData, err)
 	require.True(t, timestamp.IsZero())
 	require.Equal(t, core.Number(0), value)
 }
