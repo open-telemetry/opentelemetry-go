@@ -31,7 +31,7 @@ type Provider interface {
 
 type Tracer interface {
 	// Start a span.
-	Start(ctx context.Context, spanName string, startOpts ...SpanOption) (context.Context, Span)
+	Start(ctx context.Context, spanName string, opts ...StartOption) (context.Context, Span)
 
 	// WithSpan wraps the execution of the fn function with a span.
 	// It starts a new span, sets it as an active span in the context,
@@ -43,15 +43,19 @@ type Tracer interface {
 	) error
 }
 
-type EndOptions struct {
+// EndConfig provides options to set properties of span at the time of ending
+// the span.
+type EndConfig struct {
 	EndTime time.Time
 }
 
-type EndOption func(*EndOptions)
+// EndOption applies changes to EndConfig that sets options when the span is ended.
+type EndOption func(*EndConfig)
 
-func WithEndTime(endTime time.Time) EndOption {
-	return func(opts *EndOptions) {
-		opts.EndTime = endTime
+// WithEndTime sets the end time of the span to provided time t, when it is ended.
+func WithEndTime(t time.Time) EndOption {
+	return func(c *EndConfig) {
+		c.EndTime = t
 	}
 }
 
@@ -87,12 +91,12 @@ type Span interface {
 	SetAttributes(...core.KeyValue)
 }
 
-// SpanOption apply changes to SpanOptions.
-type SpanOption func(*SpanOptions)
+// StartOption applies changes to StartConfig that sets options at span start time.
+type StartOption func(*StartConfig)
 
-// SpanOptions provides options to set properties of span at the time of starting
+// StartConfig provides options to set properties of span at the time of starting
 // a new span.
-type SpanOptions struct {
+type StartConfig struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
 	Links      []Link
@@ -188,34 +192,34 @@ func (sk SpanKind) String() string {
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absence of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.
-func WithStartTime(t time.Time) SpanOption {
-	return func(o *SpanOptions) {
-		o.StartTime = t
+func WithStartTime(t time.Time) StartOption {
+	return func(c *StartConfig) {
+		c.StartTime = t
 	}
 }
 
 // WithAttributes sets attributes to span. These attributes provides additional
 // data about the span.
 // Multiple `WithAttributes` options appends the attributes preserving the order.
-func WithAttributes(attrs ...core.KeyValue) SpanOption {
-	return func(o *SpanOptions) {
-		o.Attributes = append(o.Attributes, attrs...)
+func WithAttributes(attrs ...core.KeyValue) StartOption {
+	return func(c *StartConfig) {
+		c.Attributes = append(c.Attributes, attrs...)
 	}
 }
 
 // WithRecord specifies that the span should be recorded.
 // Note that the implementation may still override this preference,
 // e.g., if the span is a child in an unsampled trace.
-func WithRecord() SpanOption {
-	return func(o *SpanOptions) {
-		o.Record = true
+func WithRecord() StartOption {
+	return func(c *StartConfig) {
+		c.Record = true
 	}
 }
 
 // ChildOf. TODO: do we need this?.
-func ChildOf(sc core.SpanContext) SpanOption {
-	return func(o *SpanOptions) {
-		o.Relation = Relation{
+func ChildOf(sc core.SpanContext) StartOption {
+	return func(c *StartConfig) {
+		c.Relation = Relation{
 			SpanContext:      sc,
 			RelationshipType: ChildOfRelationship,
 		}
@@ -223,9 +227,9 @@ func ChildOf(sc core.SpanContext) SpanOption {
 }
 
 // FollowsFrom. TODO: do we need this?.
-func FollowsFrom(sc core.SpanContext) SpanOption {
-	return func(o *SpanOptions) {
-		o.Relation = Relation{
+func FollowsFrom(sc core.SpanContext) StartOption {
+	return func(c *StartConfig) {
+		c.Relation = Relation{
 			SpanContext:      sc,
 			RelationshipType: FollowsFromRelationship,
 		}
@@ -233,15 +237,15 @@ func FollowsFrom(sc core.SpanContext) SpanOption {
 }
 
 // LinkedTo allows instantiating a Span with initial Links.
-func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) SpanOption {
-	return func(o *SpanOptions) {
-		o.Links = append(o.Links, Link{sc, attrs})
+func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) StartOption {
+	return func(c *StartConfig) {
+		c.Links = append(c.Links, Link{sc, attrs})
 	}
 }
 
 // WithSpanKind specifies the role a Span on a Trace.
-func WithSpanKind(sk SpanKind) SpanOption {
-	return func(o *SpanOptions) {
-		o.SpanKind = sk
+func WithSpanKind(sk SpanKind) StartOption {
+	return func(c *StartConfig) {
+		c.SpanKind = sk
 	}
 }

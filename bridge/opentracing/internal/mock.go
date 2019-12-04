@@ -75,8 +75,8 @@ func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(contex
 	return body(ctx)
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
-	spanOpts := oteltrace.SpanOptions{}
+func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
+	spanOpts := oteltrace.StartConfig{}
 	for _, opt := range opts {
 		opt(&spanOpts)
 	}
@@ -123,7 +123,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.TraceID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.TraceID
 	}
@@ -138,14 +138,14 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanID {
+func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.SpanID
 	}
 	return otelcore.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanContext {
+func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanContext {
 	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
 		spanOpts.Relation.SpanContext.IsValid() {
 		return spanOpts.Relation.SpanContext
@@ -250,7 +250,7 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	endOpts := oteltrace.EndOptions{}
+	endOpts := oteltrace.EndConfig{}
 
 	for _, opt := range options {
 		opt(&endOpts)

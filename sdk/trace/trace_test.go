@@ -175,7 +175,7 @@ func TestSampling(t *testing.T) {
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
-				var opts []apitrace.SpanOption
+				var opts []apitrace.StartOption
 				if tc.parent {
 					psc := core.SpanContext{
 						TraceID: idg.NewTraceID(),
@@ -657,7 +657,7 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
+func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitrace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -665,7 +665,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrac
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
 	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
 	_, span := tp.Tracer(trName).Start(
 		context.Background(),

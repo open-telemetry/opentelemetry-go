@@ -28,8 +28,8 @@ type tracer struct {
 
 var _ apitrace.Tracer = &tracer{}
 
-func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	var opts apitrace.SpanOptions
+func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
+	var opts apitrace.StartConfig
 	var parent core.SpanContext
 	var remoteParent bool
 

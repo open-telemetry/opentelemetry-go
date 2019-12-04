@@ -49,12 +49,12 @@ type Handler struct {
 	operation string
 	handler   http.Handler
 
-	tracer      trace.Tracer
-	prop        propagators.TextFormat
-	spanOptions []trace.SpanOption
-	public      bool
-	readEvent   bool
-	writeEvent  bool
+	tracer           trace.Tracer
+	prop             propagators.TextFormat
+	spanStartOptions []trace.StartOption
+	public           bool
+	readEvent        bool
+	writeEvent       bool
 }
 
 // Option function used for setting *optional* Handler properties
@@ -87,10 +87,10 @@ func WithPropagator(p propagators.TextFormat) Option {
 }
 
 // WithSpanOptions configures the Handler with an additional set of
-// trace.SpanOptions, which are applied to each new span.
-func WithSpanOptions(opts ...trace.SpanOption) Option {
+// trace.StartOptions, which are applied to each new span.
+func WithSpanOptions(opts ...trace.StartOption) Option {
 	return func(h *Handler) {
-		h.spanOptions = opts
+		h.spanStartOptions = opts
 	}
 }
 
@@ -142,12 +142,12 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 
 // ServeHTTP serves HTTP requests (http.Handler)
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	opts := append([]trace.SpanOption{}, h.spanOptions...) // start with the configured options
+	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	// TODO: do something with the correlation context
 	sc, _ := h.prop.Extract(r.Context(), r.Header)
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
-		var opt trace.SpanOption
+		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace
 			// and incoming remote sctx should be added as a link.
