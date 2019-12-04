@@ -71,7 +71,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	}
 
 	span := &Span{
-		lock:      &sync.Mutex{},
+		lock:      &sync.RWMutex{},
 		tracer:    t,
 		startTime: startTime,
 		spanContext: core.SpanContext{

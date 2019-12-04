@@ -28,7 +28,7 @@ import (
 var _ trace.Span = (*Span)(nil)
 
 type Span struct {
-	lock         *sync.Mutex
+	lock         *sync.RWMutex
 	tracer       *Tracer
 	spanContext  core.SpanContext
 	parentSpanID core.SpanID
@@ -158,6 +158,9 @@ func (s *Span) ParentSpanID() core.SpanID {
 // If the same attribute key was set multiple times, the last call will be used.
 // Attributes cannot be changed after End has been called on the Span.
 func (s *Span) Attributes() map[core.Key]core.Value {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	attributes := make(map[core.Key]core.Value)
 
 	for k, v := range s.attributes {

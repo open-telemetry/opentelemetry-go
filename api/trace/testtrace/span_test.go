@@ -16,6 +16,7 @@ package testtrace_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -262,6 +263,36 @@ func TestSpan(t *testing.T) {
 			attributes := subject.Attributes()
 
 			e.Expect(attributes[expectedAttr.Key]).ToEqual(expectedAttr.Value)
+		})
+
+		t.Run("can be used concurrently with setter", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			_, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			var wg sync.WaitGroup
+
+			wg.Add(2)
+
+			go func() {
+				defer wg.Done()
+
+				subject.SetAttributes(core.Key("key").String("value"))
+			}()
+
+			go func() {
+				defer wg.Done()
+
+				subject.Attributes()
+			}()
+
+			wg.Wait()
 		})
 	})
 
