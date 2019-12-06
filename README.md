@@ -35,7 +35,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/global"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -55,12 +54,13 @@ func initTracer() {
 
 func main() {
 	initTracer()
+	tracer := global.TraceProvider().Tracer("ex.com/basic")
 
-	apitrace.GlobalTracer().WithSpan(context.Background(), "foo",
+	tracer.WithSpan(context.Background(), "foo",
 		func(ctx context.Context) error {
-			apitrace.GlobalTracer().WithSpan(ctx, "bar",
+			tracer.WithSpan(ctx, "bar",
 				func(ctx context.Context) error {
-					apitrace.GlobalTracer().WithSpan(ctx, "baz",
+					tracer.WithSpan(ctx, "baz",
 						func(ctx context.Context) error {
 							return nil
 						},
