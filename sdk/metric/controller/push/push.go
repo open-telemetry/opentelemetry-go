@@ -76,7 +76,7 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration)
 	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
-		lencoder = sdk.DefaultLabelEncoder()
+		lencoder = sdk.NewDefaultLabelEncoder()
 	}
 
 	return &Controller{
@@ -105,9 +105,9 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.sdk.SetErrorHandler(errorHandler)
 }
 
-// GetMeter returns a named Meter, satisifying the metric.Provider
+// Meter returns a named Meter, satisifying the metric.Provider
 // interface.
-func (c *Controller) GetMeter(name string) metric.Meter {
+func (c *Controller) Meter(name string) metric.Meter {
 	return c.sdk
 }
 

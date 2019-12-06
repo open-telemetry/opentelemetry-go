@@ -39,7 +39,7 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.MaxSumCount = &Aggregator{}
+var _ aggregator.MinMaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
@@ -75,7 +75,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 	return c.Quantile(1)
 }
 
-// Min returns the mininum value in the checkpoint.
+// Min returns the minimum value in the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	return c.Quantile(0)
 }

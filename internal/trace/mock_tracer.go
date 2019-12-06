@@ -47,8 +47,8 @@ func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(conte
 // TracdID is used from Relation Span Context and SpanID is assigned.
 // If Relation SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
-func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	var opts apitrace.SpanOptions
+func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
+	var opts apitrace.StartConfig
 	for _, op := range o {
 		op(&opts)
 	}

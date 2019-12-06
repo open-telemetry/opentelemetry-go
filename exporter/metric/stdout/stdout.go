@@ -63,6 +63,7 @@ type expoBatch struct {
 
 type expoLine struct {
 	Name      string      `json:"name"`
+	Min       interface{} `json:"min,omitempty"`
 	Max       interface{} `json:"max,omitempty"`
 	Sum       interface{} `json:"sum,omitempty"`
 	Count     interface{} `json:"count,omitempty"`
@@ -122,25 +123,38 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 		}
 
-		if msc, ok := agg.(aggregator.MaxSumCount); ok {
-			if count, err := msc.Count(); err != nil {
+		if mmsc, ok := agg.(aggregator.MinMaxSumCount); ok {
+			if count, err := mmsc.Count(); err != nil {
 				aggError = err
 				expose.Count = "NaN"
 			} else {
 				expose.Count = count
 			}
 
-			// TODO: Should tolerate ErrEmptyDataSet here,
-			// just like ErrNoLastValue below, since
-			// there's a race condition between creating
-			// the Aggregator and updating the first
-			// value.
+			if max, err := mmsc.Max(); err != nil {
+				if err == aggregator.ErrEmptyDataSet {
+					// This is a special case, indicates an aggregator that
+					// was checkpointed before its first value was set.
+					return
+				}
 
-			if max, err := msc.Max(); err != nil {
 				aggError = err
 				expose.Max = "NaN"
 			} else {
 				expose.Max = max.AsInterface(kind)
+			}
+
+			if min, err := mmsc.Min(); err != nil {
+				if err == aggregator.ErrEmptyDataSet {
+					// This is a special case, indicates an aggregator that
+					// was checkpointed before its first value was set.
+					return
+				}
+
+				aggError = err
+				expose.Min = "NaN"
+			} else {
+				expose.Min = min.AsInterface(kind)
 			}
 
 			if dist, ok := agg.(aggregator.Distribution); ok && len(e.options.Quantiles) != 0 {

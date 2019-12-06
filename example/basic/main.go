@@ -20,12 +20,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	metricstdout "go.opentelemetry.io/otel/exporter/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
@@ -65,7 +65,7 @@ func initMeter() *push.Controller {
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, metricsdk.DefaultLabelEncoder(), true)
+	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
@@ -80,8 +80,8 @@ func main() {
 	// Note: Have to get the meter and tracer after the global is
 	// initialized.  See OTEP 0005.
 
-	tracer := global.TraceProvider().GetTracer("ex.com/basic")
-	meter := global.MeterProvider().GetMeter("ex.com/basic")
+	tracer := global.TraceProvider().Tracer("ex.com/basic")
+	meter := global.MeterProvider().Meter("ex.com/basic")
 
 	oneMetric := meter.NewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
@@ -126,7 +126,7 @@ func main() {
 			ctx,
 			"Sub operation...",
 			func(ctx context.Context) error {
-				trace.CurrentSpan(ctx).SetAttribute(lemonsKey.String("five"))
+				trace.CurrentSpan(ctx).SetAttributes(lemonsKey.String("five"))
 
 				trace.CurrentSpan(ctx).AddEvent(ctx, "Sub span event")
 

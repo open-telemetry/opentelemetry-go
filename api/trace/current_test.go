@@ -79,10 +79,6 @@ func (mockSpan) SetName(name string) {
 func (mockSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (mockSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
@@ -102,12 +98,4 @@ func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue
 
 // AddEventWithTimestamp does nothing.
 func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
-}
-
-// AddLink does nothing.
-func (mockSpan) AddLink(link trace.Link) {
-}
-
-// Link does nothing.
-func (mockSpan) Link(sc core.SpanContext, attrs ...core.KeyValue) {
 }

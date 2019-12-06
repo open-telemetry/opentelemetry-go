@@ -28,12 +28,12 @@ type WrapperProvider struct {
 
 var _ oteltrace.Provider = (*WrapperProvider)(nil)
 
-// GetTracer returns the WrapperTracer associated with the WrapperProvider.
-func (p *WrapperProvider) GetTracer(name string) oteltrace.Tracer {
+// Tracer returns the WrapperTracer associated with the WrapperProvider.
+func (p *WrapperProvider) Tracer(name string) oteltrace.Tracer {
 	return p.wTracer
 }
 
-// WrapperProvider creates a new trace provider that creates a single
+// NewWrappedProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer.
 func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperProvider {
 	return &WrapperProvider{
@@ -88,7 +88,7 @@ func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(con
 // Start forwards the call to the wrapped tracer. It also tries to
 // override the tracer of the returned span if the span implements the
 // OverrideTracerSpanExtension interface.
-func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
+func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
 	ctx, span := t.otelTracer().Start(ctx, name, opts...)
 	if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
 		spanWithExtension.OverrideTracer(t)

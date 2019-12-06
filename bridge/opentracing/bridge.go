@@ -131,7 +131,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			s.otelSpan.SetStatus(status)
 		}
 	default:
-		s.otelSpan.SetAttribute(otTagToOtelCoreKeyValue(key, value))
+		s.otelSpan.SetAttributes(otTagToOtelCoreKeyValue(key, value))
 	}
 	return s
 }
@@ -313,7 +313,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
 	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
-	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.SpanOptions) {
+	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
 		opts.Relation = bRelation.ToOtelRelation()

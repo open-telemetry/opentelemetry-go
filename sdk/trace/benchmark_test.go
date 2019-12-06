@@ -53,39 +53,6 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	})
 }
 
-func BenchmarkSpan_SetAttributes(b *testing.B) {
-	b.Run("SetAttribute", func(b *testing.B) {
-		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
-			ctx := context.Background()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				_, span := t.Start(ctx, "/foo")
-				span.SetAttribute(key.New("key1").Bool(false))
-				span.SetAttribute(key.New("key2").String("hello"))
-				span.SetAttribute(key.New("key3").Uint64(123))
-				span.SetAttribute(key.New("key4").Float64(123.456))
-				span.End()
-			}
-		})
-	})
-
-	b.Run("SetAttributes", func(b *testing.B) {
-		traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
-			ctx := context.Background()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				_, span := t.Start(ctx, "/foo")
-				span.SetAttributes(key.New("key1").Bool(false))
-				span.SetAttributes(key.New("key2").String("hello"))
-				span.SetAttributes(key.New("key3").Uint64(123))
-				span.SetAttributes(key.New("key4").Float64(123.456))
-				span.End()
-			}
-		})
-	})
-}
-
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t apitrace.Tracer) {
 		ctx := context.Background()
@@ -191,18 +158,18 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b, getTracer(b, name, sdktrace.AlwaysSample()))
+		fn(b, tracer(b, name, sdktrace.AlwaysSample()))
 	})
 	b.Run("NeverSample", func(b *testing.B) {
 		b.ReportAllocs()
-		fn(b, getTracer(b, name, sdktrace.NeverSample()))
+		fn(b, tracer(b, name, sdktrace.NeverSample()))
 	})
 }
 
-func getTracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
+func tracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)
 	}
-	return tp.GetTracer(name)
+	return tp.Tracer(name)
 }

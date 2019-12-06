@@ -37,7 +37,7 @@ func ExampleNew() {
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
-	batcher := defaultkeys.New(selector, sdk.DefaultLabelEncoder(), true)
+	batcher := defaultkeys.New(selector, sdk.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 	defer pusher.Stop()
@@ -45,7 +45,7 @@ func ExampleNew() {
 	ctx := context.Background()
 
 	key := key.New("key")
-	meter := pusher.GetMeter("example")
+	meter := pusher.Meter("example")
 
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
 	labels := meter.Labels(key.String("value"))

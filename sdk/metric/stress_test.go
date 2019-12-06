@@ -290,7 +290,7 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := sdk.New(fixture, sdk.DefaultLabelEncoder())
+	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

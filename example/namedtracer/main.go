@@ -19,11 +19,11 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -56,7 +56,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := tp.GetTracer("example/namedtracer/main")
+	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,
