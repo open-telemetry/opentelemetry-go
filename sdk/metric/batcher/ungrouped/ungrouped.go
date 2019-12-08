@@ -64,6 +64,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	agg := record.Aggregator()
 	value, ok := b.batchMap[key]
 	if ok {
+		// Comment that this is for race conditions when stateless.
 		return value.aggregator.Merge(agg, desc)
 	}
 	// If this Batcher is stateful, create a copy of the
@@ -72,6 +73,8 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	// again, overwriting the long-lived state.
 	if b.stateful {
 		tmp := agg
+		// Comment that this is effectively a Clone(), but
+		// there's no such API.
 		agg = b.AggregatorFor(desc)
 		if err := agg.Merge(tmp, desc); err != nil {
 			return err
