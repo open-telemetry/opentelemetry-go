@@ -94,31 +94,31 @@ func NewUint64Number(u uint64) Number {
 // - as x
 
 // AsNumber gets the Number.
-func (n Number) AsNumber() Number {
-	return n
+func (n *Number) AsNumber() Number {
+	return *n
 }
 
 // AsRaw gets the uninterpreted raw value. Might be useful for some
 // atomic operations.
-func (n Number) AsRaw() uint64 {
-	return uint64(n)
+func (n *Number) AsRaw() uint64 {
+	return uint64(*n)
 }
 
 // AsInt64 assumes that the value contains an int64 and returns it as
 // such.
-func (n Number) AsInt64() int64 {
+func (n *Number) AsInt64() int64 {
 	return rawToInt64(n.AsRaw())
 }
 
 // AsFloat64 assumes that the measurement value contains a float64 and
 // returns it as such.
-func (n Number) AsFloat64() float64 {
+func (n *Number) AsFloat64() float64 {
 	return rawToFloat64(n.AsRaw())
 }
 
 // AsUint64 assumes that the value contains an uint64 and returns it
 // as such.
-func (n Number) AsUint64() uint64 {
+func (n *Number) AsUint64() uint64 {
 	return rawToUint64(n.AsRaw())
 }
 
@@ -183,7 +183,7 @@ func (n *Number) AsUint64Ptr() *uint64 {
 
 // CoerceToInt64 casts the number to int64. May result in
 // data/precision loss.
-func (n Number) CoerceToInt64(kind NumberKind) int64 {
+func (n *Number) CoerceToInt64(kind NumberKind) int64 {
 	switch kind {
 	case Int64NumberKind:
 		return n.AsInt64()
@@ -199,7 +199,7 @@ func (n Number) CoerceToInt64(kind NumberKind) int64 {
 
 // CoerceToFloat64 casts the number to float64. May result in
 // data/precision loss.
-func (n Number) CoerceToFloat64(kind NumberKind) float64 {
+func (n *Number) CoerceToFloat64(kind NumberKind) float64 {
 	switch kind {
 	case Int64NumberKind:
 		return float64(n.AsInt64())
@@ -215,7 +215,7 @@ func (n Number) CoerceToFloat64(kind NumberKind) float64 {
 
 // CoerceToUint64 casts the number to uint64. May result in
 // data/precision loss.
-func (n Number) CoerceToUint64(kind NumberKind) uint64 {
+func (n *Number) CoerceToUint64(kind NumberKind) uint64 {
 	switch kind {
 	case Int64NumberKind:
 		return uint64(n.AsInt64())
@@ -498,7 +498,7 @@ func (n *Number) CompareAndSwapUint64(ou, nu uint64) bool {
 //    0 if the numbers are equal
 //    -1 if the subject `n` is less than the argument `nn`
 //    +1 if the subject `n` is greater than the argument `nn`
-func (n Number) CompareNumber(kind NumberKind, nn Number) int {
+func (n *Number) CompareNumber(kind NumberKind, nn Number) int {
 	switch kind {
 	case Int64NumberKind:
 		return n.CompareInt64(nn.AsInt64())
@@ -514,7 +514,7 @@ func (n Number) CompareNumber(kind NumberKind, nn Number) int {
 
 // CompareRaw compares two numbers, where one is input as a raw
 // uint64, interpreting both values as a `kind` of number.
-func (n Number) CompareRaw(kind NumberKind, r uint64) int {
+func (n *Number) CompareRaw(kind NumberKind, r uint64) int {
 	return n.CompareNumber(kind, NewNumberFromRaw(r))
 }
 
@@ -523,7 +523,7 @@ func (n Number) CompareRaw(kind NumberKind, r uint64) int {
 // typical result of the compare function: -1 if the value is less
 // than the other, 0 if both are equal, 1 if the value is greater than
 // the other.
-func (n Number) CompareInt64(i int64) int {
+func (n *Number) CompareInt64(i int64) int {
 	this := n.AsInt64()
 	if this < i {
 		return -1
@@ -540,7 +540,7 @@ func (n Number) CompareInt64(i int64) int {
 // greater than the other.
 //
 // Do not compare NaN values.
-func (n Number) CompareFloat64(f float64) int {
+func (n *Number) CompareFloat64(f float64) int {
 	this := n.AsFloat64()
 	if this < f {
 		return -1
@@ -555,7 +555,7 @@ func (n Number) CompareFloat64(f float64) int {
 // typical result of the compare function: -1 if the value is less
 // than the other, 0 if both are equal, 1 if the value is greater than
 // the other.
-func (n Number) CompareUint64(u uint64) int {
+func (n *Number) CompareUint64(u uint64) int {
 	this := n.AsUint64()
 	if this < u {
 		return -1
@@ -568,17 +568,17 @@ func (n Number) CompareUint64(u uint64) int {
 // - relations to zero
 
 // IsPositive returns true if the actual value is greater than zero.
-func (n Number) IsPositive(kind NumberKind) bool {
+func (n *Number) IsPositive(kind NumberKind) bool {
 	return n.compareWithZero(kind) > 0
 }
 
 // IsNegative returns true if the actual value is less than zero.
-func (n Number) IsNegative(kind NumberKind) bool {
+func (n *Number) IsNegative(kind NumberKind) bool {
 	return n.compareWithZero(kind) < 0
 }
 
 // IsZero returns true if the actual value is equal to zero.
-func (n Number) IsZero(kind NumberKind) bool {
+func (n *Number) IsZero(kind NumberKind) bool {
 	return n.compareWithZero(kind) == 0
 }
 
@@ -587,7 +587,7 @@ func (n Number) IsZero(kind NumberKind) bool {
 // Emit returns a string representation of the raw value of the
 // Number. A %d is used for integral values, %f for floating point
 // values.
-func (n Number) Emit(kind NumberKind) string {
+func (n *Number) Emit(kind NumberKind) string {
 	switch kind {
 	case Int64NumberKind:
 		return fmt.Sprintf("%d", n.AsInt64())
@@ -602,7 +602,7 @@ func (n Number) Emit(kind NumberKind) string {
 
 // AsInterface returns the number as an interface{}, typically used
 // for NumberKind-correct JSON conversion.
-func (n Number) AsInterface(kind NumberKind) interface{} {
+func (n *Number) AsInterface(kind NumberKind) interface{} {
 	switch kind {
 	case Int64NumberKind:
 		return n.AsInt64()
@@ -617,7 +617,7 @@ func (n Number) AsInterface(kind NumberKind) interface{} {
 
 // - private stuff
 
-func (n Number) compareWithZero(kind NumberKind) int {
+func (n *Number) compareWithZero(kind NumberKind) int {
 	switch kind {
 	case Int64NumberKind:
 		return n.CompareInt64(0)

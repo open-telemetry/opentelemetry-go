@@ -138,8 +138,8 @@ func TestMap(t *testing.T) {
 			t.Errorf("Expected kv %v, but not found", kv)
 			return true
 		})
-		if len, exp := got.Len(), len(testcase.wantKVs); len != exp {
-			t.Errorf("+got: %d, -want: %d", len, exp)
+		if l, exp := got.Len(), len(testcase.wantKVs); l != exp {
+			t.Errorf("+got: %d, -want: %d", l, exp)
 		}
 	}
 }

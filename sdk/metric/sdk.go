@@ -348,7 +348,6 @@ func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) ap
 // detects an attempt to delete the record while it is still in use.
 func (m *SDK) saveFromReclaim(rec *record) {
 	for {
-
 		reclaimed := atomic.LoadInt64(&rec.reclaim)
 		if reclaimed != 0 {
 			return

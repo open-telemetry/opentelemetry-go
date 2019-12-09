@@ -80,30 +80,30 @@ type (
 )
 
 var (
-	ErrInvalidQuantile  = fmt.Errorf("The requested quantile is out of range")
-	ErrNegativeInput    = fmt.Errorf("Negative value is out of range for this instrument")
+	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
+	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
-	ErrNonMonotoneInput = fmt.Errorf("The new value is not monotone")
-	ErrInconsistentType = fmt.Errorf("Inconsistent aggregator types")
+	ErrNonMonotoneInput = fmt.Errorf("the new value is not monotone")
+	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
 
 	// ErrNoLastValue is returned by the LastValue interface when
 	// (due to a race with collection) the Aggregator is
 	// checkpointed before the first value is set.  The aggregator
 	// should simply be skipped in this case.
-	ErrNoLastValue = fmt.Errorf("No value has been set")
+	ErrNoLastValue = fmt.Errorf("no value has been set")
 
 	// ErrEmptyDataSet is returned by Max and Quantile interfaces
 	// when (due to a race with collection) the Aggregator is
 	// checkpointed before the first value is set.  The aggregator
 	// should simply be skipped in this case.
-	ErrEmptyDataSet = fmt.Errorf("The result is not defined on an empty data set")
+	ErrEmptyDataSet = fmt.Errorf("the result is not defined on an empty data set")
 )
 
 // NewInconsistentMergeError formats an error describing an attempt to
 // merge different-type aggregators.  The result can be unwrapped as
 // an ErrInconsistentType.
 func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("Cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
+	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
 }
 
 // RangeTest is a commmon routine for testing for valid input values.

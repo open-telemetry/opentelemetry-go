@@ -148,7 +148,7 @@ timer.B.D:%s|ms
 
 					var vfmt string
 					if nkind == core.Int64NumberKind {
-						fv := float64(value)
+						fv := value
 						vfmt = strconv.FormatInt(int64(fv), 10)
 					} else {
 						vfmt = strconv.FormatFloat(value, 'g', -1, 64)

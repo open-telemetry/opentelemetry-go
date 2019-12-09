@@ -40,7 +40,7 @@ func TestValue(t *testing.T) {
 			name:      "Key.Float64() correctly returns keys's internal float64 value",
 			value:     k.Float64(42.1).Value,
 			wantType:  core.FLOAT64,
-			wantValue: float64(42.1),
+			wantValue: 42.1,
 		},
 		{
 			name:      "Key.Int32() correctly returns keys's internal int32 value",

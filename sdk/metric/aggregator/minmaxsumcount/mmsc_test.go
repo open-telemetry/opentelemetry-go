@@ -96,13 +96,14 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 
 	all.Sort()
 
-	asum, err := agg.Sum()
+	aggSum, err := agg.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
 	require.InEpsilon(t,
-		all.Sum().CoerceToFloat64(profile.NumberKind),
-		asum.CoerceToFloat64(profile.NumberKind),
+		(&allSum).CoerceToFloat64(profile.NumberKind),
+		aggSum.CoerceToFloat64(profile.NumberKind),
 		0.000000001,
 		"Same sum - "+policy.name)
-	require.Nil(t, err)
 
 	count, err := agg.Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
@@ -152,13 +153,14 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 
 		all.Sort()
 
-		asum, err := agg1.Sum()
+		aggSum, err := agg1.Sum()
+		require.Nil(t, err)
+		allSum := all.Sum()
 		require.InEpsilon(t,
-			all.Sum().CoerceToFloat64(profile.NumberKind),
-			asum.CoerceToFloat64(profile.NumberKind),
+			(&allSum).CoerceToFloat64(profile.NumberKind),
+			aggSum.CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Nil(t, err)
 
 		count, err := agg1.Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")

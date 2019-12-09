@@ -55,7 +55,7 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := propagators.B3{tg.singleHeader}
+		propagator := propagators.B3{SingleHeader: tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -99,7 +99,7 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagators.B3{tg.singleHeader}
+		propagator := propagators.B3{SingleHeader: tg.singleHeader}
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -117,13 +117,11 @@ func TestInjectB3(t *testing.T) {
 						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tt.name, h, diff)
 					}
 				}
-				wantOk := false
 				for _, h := range tt.doNotWantHeaders {
 					v, gotOk := req.Header[h]
-					if diff := cmp.Diff(gotOk, wantOk); diff != "" {
+					if diff := cmp.Diff(gotOk, false); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s, value=%s", tg.name, tt.name, h, diff, v)
 					}
-
 				}
 			})
 		}
@@ -131,7 +129,7 @@ func TestInjectB3(t *testing.T) {
 }
 
 func TestB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := propagators.B3{false}
+	propagator := propagators.B3{SingleHeader: false}
 	want := []string{
 		propagators.B3TraceIDHeader,
 		propagators.B3SpanIDHeader,
@@ -144,7 +142,7 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 }
 
 func TestB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := propagators.B3{true}
+	propagator := propagators.B3{SingleHeader: true}
 	want := []string{
 		propagators.B3SingleHeader,
 	}

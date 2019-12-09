@@ -380,7 +380,7 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 
 func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, oteltrace.SpanKind, bool) {
 	kind := oteltrace.SpanKindInternal
-	error := false
+	err := false
 	var pairs []otelcore.KeyValue
 	for k, v := range tags {
 		switch k {
@@ -399,13 +399,13 @@ func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore
 			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {
-				error = true
+				err = true
 			}
 		default:
 			pairs = append(pairs, otTagToOtelCoreKeyValue(k, v))
 		}
 	}
-	return pairs, kind, error
+	return pairs, kind, err
 }
 
 func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {

@@ -685,7 +685,6 @@ func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOpt
 // It also does some basic tests on the span.
 // It also clears spanID in the export.SpanData to make the comparison easier.
 func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
-
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}

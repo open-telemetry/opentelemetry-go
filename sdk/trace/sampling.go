@@ -52,13 +52,13 @@ func ProbabilitySampler(fraction float64) Sampler {
 		fraction = 0
 	}
 	traceIDUpperBound := uint64(fraction * (1 << 63))
-	return Sampler(func(p SamplingParameters) SamplingDecision {
+	return func(p SamplingParameters) SamplingDecision {
 		if p.ParentContext.IsSampled() {
 			return SamplingDecision{Sample: true}
 		}
 		x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 		return SamplingDecision{Sample: x < traceIDUpperBound}
-	})
+	}
 }
 
 // AlwaysSample returns a Sampler that samples every trace.

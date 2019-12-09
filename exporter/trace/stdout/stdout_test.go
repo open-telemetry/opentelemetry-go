@@ -44,7 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := core.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
-	doubleValue := float64(123.456)
+	doubleValue := 123.456
 
 	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{

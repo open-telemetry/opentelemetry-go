@@ -37,7 +37,7 @@ type traceExporter struct {
 func newTraceExporter(o *options) (*traceExporter, error) {
 	client, err := traceclient.NewClient(o.Context, o.TraceClientOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Stackdriver: couldn't initiate trace client: %v", err)
+		return nil, fmt.Errorf("stackdriver: couldn't initiate trace client: %v", err)
 	}
 	e := &traceExporter{
 		projectID: o.ProjectID,
