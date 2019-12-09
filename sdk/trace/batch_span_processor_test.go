@@ -80,15 +80,15 @@ type testOption struct {
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
-	schDelay := time.Duration(200 * time.Millisecond)
-	waitTime := schDelay + time.Duration(100*time.Millisecond)
+	schDelay := 200 * time.Millisecond
+	waitTime := schDelay + 100*time.Millisecond
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2048,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
-			waitTime:       time.Duration(5100 * time.Millisecond),
+			waitTime:       5100 * time.Millisecond,
 		},
 		{
 			name: "non-default ScheduledDelayMillis",

@@ -83,7 +83,7 @@ const (
 var (
 	_ export.Exporter = &Exporter{}
 
-	ErrInvalidScheme = fmt.Errorf("Invalid statsd transport")
+	ErrInvalidScheme = fmt.Errorf("invalid statsd transport")
 )
 
 // NewExport returns a common implementation for exporters that Export

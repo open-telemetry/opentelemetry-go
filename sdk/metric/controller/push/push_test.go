@@ -230,7 +230,7 @@ func TestPushTicker(t *testing.T) {
 
 func TestPushExportError(t *testing.T) {
 	fix := newFixture(t)
-	fix.exporter.retErr = fmt.Errorf("Test export error")
+	fix.exporter.retErr = fmt.Errorf("test export error")
 
 	p := push.New(fix.batcher, fix.exporter, time.Second)
 

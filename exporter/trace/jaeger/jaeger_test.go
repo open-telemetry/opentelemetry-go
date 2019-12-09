@@ -155,7 +155,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	messageEventValue := "event-test"
 	keyValue := "value"
 	statusCodeValue := int64(2)
-	doubleValue := float64(123.456)
+	doubleValue := 123.456
 	boolTrue := true
 	statusMessage := "Unknown"
 

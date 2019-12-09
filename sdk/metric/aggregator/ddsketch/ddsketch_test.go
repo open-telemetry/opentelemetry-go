@@ -55,12 +55,13 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	all.Sort()
 
 	sum, err := agg.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
 	require.InDelta(t,
-		all.Sum().CoerceToFloat64(profile.NumberKind),
+		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		1,
 		"Same sum - absolute")
-	require.Nil(t, err)
 
 	count, err := agg.Count()
 	require.Equal(t, all.Count(), count, "Same count - absolute")
@@ -75,8 +76,9 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 	median, err := agg.Quantile(0.5)
 	require.Nil(t, err)
+	allMedian := all.Median()
 	require.InDelta(t,
-		all.Median().CoerceToFloat64(profile.NumberKind),
+		(&allMedian).CoerceToFloat64(profile.NumberKind),
 		median.CoerceToFloat64(profile.NumberKind),
 		10,
 		"Same median - absolute")
@@ -138,13 +140,14 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
-	asum, err := agg1.Sum()
+	aggSum, err := agg1.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
 	require.InDelta(t,
-		all.Sum().CoerceToFloat64(profile.NumberKind),
-		asum.CoerceToFloat64(profile.NumberKind),
+		(&allSum).CoerceToFloat64(profile.NumberKind),
+		aggSum.CoerceToFloat64(profile.NumberKind),
 		1,
 		"Same sum - absolute")
-	require.Nil(t, err)
 
 	count, err := agg1.Count()
 	require.Equal(t, all.Count(), count, "Same count - absolute")
@@ -159,8 +162,9 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	median, err := agg1.Quantile(0.5)
 	require.Nil(t, err)
+	allMedian := all.Median()
 	require.InDelta(t,
-		all.Median().CoerceToFloat64(profile.NumberKind),
+		(&allMedian).CoerceToFloat64(profile.NumberKind),
 		median.CoerceToFloat64(profile.NumberKind),
 		10,
 		"Same median - absolute")

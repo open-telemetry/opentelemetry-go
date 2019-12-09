@@ -182,10 +182,10 @@ func NewExporter(opts ...Option) (*Exporter, error) {
 	if o.ProjectID == "" {
 		creds, err := google.FindDefaultCredentials(o.Context, traceapi.DefaultAuthScopes()...)
 		if err != nil {
-			return nil, fmt.Errorf("Stackdriver: %v", err)
+			return nil, fmt.Errorf("stackdriver: %v", err)
 		}
 		if creds.ProjectID == "" {
-			return nil, errors.New("Stackdriver: no project found with application default credentials")
+			return nil, errors.New("stackdriver: no project found with application default credentials")
 		}
 		o.ProjectID = creds.ProjectID
 	}

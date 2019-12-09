@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("did not connect: %s", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	c := api.NewHelloServiceClient(conn)
 
@@ -45,8 +45,8 @@ func main() {
 		"client-id", "web-api-client-us-east-1",
 		"user-id", "some-test-user-id",
 	)
-	context := metadata.NewOutgoingContext(context.Background(), md)
-	response, err := c.SayHello(context, &api.HelloRequest{Greeting: "World"})
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	response, err := c.SayHello(ctx, &api.HelloRequest{Greeting: "World"})
 	if err != nil {
 		log.Fatalf("Error when calling SayHello: %s", err)
 	}
