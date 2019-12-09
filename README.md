@@ -92,15 +92,17 @@ for the Go library. The first version of the release isn't guaranteed to conform
 to a specific version of the specification, and future releases will not
 attempt to maintain backward compatibility with the alpha release.
 
-| Component                   | Version      | Target Date     | Release Date     |
-| --------------------------- | ------------ | --------------- | ---------------- |
-| Tracing API                 | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
-| Tracing SDK                 | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
-| Metrics API                 | Alpha        | October 28 2019 | -                |
-| Metrics SDK                 | Alpha        | October 28 2019 | -                |
-| Zipkin Trace Exporter       | Alpha        | Unknown         | -                |
-| Jaeger Trace Exporter       | Alpha v0.1.0 | October 28 2019 | November 05 2019 |
-| Prometheus Metrics Exporter | Alpha        | October 28 2019 | -                |
-| Trace Context Propagation   | Alpha v0.1.0 | Unknown         | November 05 2019 |
-| OpenTracing Bridge          | Alpha v0.1.0 | October         | November 05 2019 |
-| OpenCensus Bridge           | Alpha        | Unknown         | -                |
+| Component                        | Version      | Target Date      | Release Date     |
+| -------------------------------- | ------------ | ---------------- | ---------------- |
+| Tracing API                      | Alpha v0.1.0 | October 28 2019  | November 05 2019 |
+| Tracing SDK                      | Alpha v0.1.0 | October 28 2019  | November 05 2019 |
+| Jaeger Trace Exporter            | Alpha v0.1.0 | October 28 2019  | November 05 2019 |
+| Trace Context Propagation        | Alpha v0.1.0 | Unknown          | November 05 2019 |
+| OpenTracing Bridge               | Alpha v0.1.0 | October          | November 05 2019 |
+| Metrics API                      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
+| Metrics SDK                      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
+| Prometheus Metrics Exporter      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
+| Context Prop. rename/Baggage     | Alpha v0.3.0 | December 23 2019 | -                |
+| OpenTelemetry Collector Exporter | Alpha v0.4.0 | January 15 2020  | -                |
+| Zipkin Trace Exporter            | Alpha        | Unknown          | -                |
+| OpenCensus Bridge                | Alpha        | Unknown          | -                |
