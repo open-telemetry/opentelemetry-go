@@ -82,7 +82,7 @@ func main() {
 			}
 			body, err = ioutil.ReadAll(res.Body)
 			_ = res.Body.Close()
-			trace.CurrentSpan(ctx).SetStatus(codes.OK)
+			trace.SpanFromContext(ctx).SetStatus(codes.OK)
 
 			return err
 		})

@@ -42,7 +42,7 @@ var _ TextFormat = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
 func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
-	sc := trace.CurrentSpan(ctx).SpanContext()
+	sc := trace.SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
 			supportedVersion,
