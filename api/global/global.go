@@ -17,6 +17,7 @@ package global
 import (
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -29,11 +30,16 @@ type (
 	meterProvider struct {
 		mp metric.Provider
 	}
+
+	propagators struct {
+		pr propagation.Propagators
+	}
 )
 
 var (
-	globalTracer atomic.Value
-	globalMeter  atomic.Value
+	globalTracer      atomic.Value
+	globalMeter       atomic.Value
+	globalPropagators atomic.Value
 )
 
 // TraceProvider returns the registered global trace provider.
@@ -66,4 +72,19 @@ func MeterProvider() metric.Provider {
 // SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.Provider) {
 	globalMeter.Store(meterProvider{mp: mp})
+}
+
+// Propagators returns the registered global propagators instance.  If
+// none is registered then an instance of propagators.NoopPropagators
+// is returned.
+func Propagators() propagation.Propagators {
+	if gp := globalPropagators.Load(); gp != nil {
+		return gp.(propagators).prop
+	}
+	return propagation.NoopPropagators{}
+}
+
+// SetPropagators registers `p` as the global propagators instance.
+func SetPropagators(p Propagators) {
+	globalPropagators.Store(propatators{prop: p})
 }
