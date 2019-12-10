@@ -24,11 +24,6 @@ import (
 	"go.opentelemetry.io/otel/api/propagators"
 )
 
-const (
-	// Vendor is the integration provider
-	Vendor = "ot"
-)
-
 var (
 	propagator = propagators.TraceContext{}
 )
