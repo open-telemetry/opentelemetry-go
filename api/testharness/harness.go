@@ -79,7 +79,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			e.Expect(span).NotToBeNil()
 			e.Expect(span.SpanContext()).NotToEqual(core.EmptySpanContext())
-			e.Expect(trace.CurrentSpan(ctx)).ToEqual(span)
+			e.Expect(trace.SpanFromContext(ctx)).ToEqual(span)
 		})
 
 		t.Run("starts spans with unique trace and span IDs", func(t *testing.T) {
@@ -219,7 +219,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			var span trace.Span
 
 			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				span = trace.CurrentSpan(ctx)
+				span = trace.SpanFromContext(ctx)
 
 				return nil
 			})
@@ -242,7 +242,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			var span2 trace.Span
 
 			err := subject.WithSpan(context.Background(), "span1", func(ctx context.Context) error {
-				span1 = trace.CurrentSpan(ctx)
+				span1 = trace.SpanFromContext(ctx)
 
 				return nil
 			})
@@ -250,7 +250,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(err).ToBeNil()
 
 			err = subject.WithSpan(context.Background(), "span2", func(ctx context.Context) error {
-				span2 = trace.CurrentSpan(ctx)
+				span2 = trace.SpanFromContext(ctx)
 
 				return nil
 			})
@@ -275,7 +275,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			var child trace.Span
 
 			err := subject.WithSpan(ctx, "child", func(ctx context.Context) error {
-				child = trace.CurrentSpan(ctx)
+				child = trace.SpanFromContext(ctx)
 
 				return nil
 			})
@@ -332,7 +332,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 				return nil
 			})
 
-			return trace.CurrentSpan(actualCtx)
+			return trace.SpanFromContext(actualCtx)
 		},
 	}
 
