@@ -79,12 +79,12 @@ func SetMeterProvider(mp metric.Provider) {
 // is returned.
 func Propagators() propagation.Propagators {
 	if gp := globalPropagators.Load(); gp != nil {
-		return gp.(propagators).prop
+		return gp.(propagators).pr
 	}
 	return propagation.NoopPropagators{}
 }
 
 // SetPropagators registers `p` as the global propagators instance.
-func SetPropagators(p Propagators) {
-	globalPropagators.Store(propatators{prop: p})
+func SetPropagators(p propagation.Propagators) {
+	globalPropagators.Store(propagators{pr: p})
 }

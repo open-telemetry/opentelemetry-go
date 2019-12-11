@@ -16,9 +16,9 @@ package propagation
 
 import (
 	"context"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
+	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
 // HTTPSupplier is implemented by http.Headers.
@@ -46,58 +46,53 @@ type HTTPInjector interface {
 	Inject(context.Context, HTTPSupplier) context.Context
 }
 
+type Config struct {
+	httpEx []HTTPExtractor
+	httpIn []HTTPInjector
+}
+
 type Propagators interface {
-	// HTTP propagation
-	SetHTTPExtractors(...HTTPExtractor)
-	SetHTTPInjectors(...HTTPInjector)
 	HTTPExtractors() []HTTPExtractor
 	HTTPInjectors() []HTTPInjector
-
-	// Binary propagation
-	// TODO
 }
+
+type Option func(*Config)
 
 type propagators struct {
-	// TODO Nah.  Use an options pattern to avoid mutation.
-
-	httpEx atomic.Value // []HTTPExtractor
-	httpIn atomic.Value // []HTTPInjector
+	config Config
 }
 
-func New() Propagators {
-	p := &propagators{}
-
-	p.httpIn.Store([]HTTPInjector{})
-	p.httpEs.Store([]HTTPExtractor{})
-
-	return p
-}
-
-func (p *Propagators) SetHTTPExtractors(ex ...HTTPExtractor) {
-	if ex == nil {
-		ex = []HTTPExtractor{}
+func New(options ...Option) Propagators {
+	config := Config{}
+	for _, opt := range options {
+		opt(&config)
 	}
-	p.httpEx.Store(ex)
-}
-
-func (p *Propagators) SetHTTPInjectors(in ...HTTPInjector) {
-	if in == nil {
-		in = []HTTPInjector{}
+	return &propagators{
+		config: config,
 	}
-	p.httpIn.Store(in)
 }
 
-func (p *Propagators) HTTPExtractors() []HTTPExtractor {
-	return p.httpEx.Load().([]HTTPExtractor)
+func WithInjectors(inj ...HTTPInjector) Option {
+	return func(config *Config) {
+		config.httpIn = append(config.httpIn, inj...)
+	}
 }
 
-func (p *Propagators) HTTPInjectors() []HTTPInjector {
-	return p.httpIn.Load().([]HTTPInjector)
+func WithExtractors(ext ...HTTPExtractor) Option {
+	return func(config *Config) {
+		config.httpEx = append(config.httpEx, ext...)
+	}
+}
+
+func (p *propagators) HTTPExtractors() []HTTPExtractor {
+	return p.config.httpEx
+}
+
+func (p *propagators) HTTPInjectors() []HTTPInjector {
+	return p.config.httpIn
 }
 
 type NoopPropagators struct{}
 
-func (NoopPropagators) SetHTTPExtractors(ex ...HTTPExtractor) {}
-func (NoopPropagators) SetHTTPInjectors(in ...HTTPInjector)   {}
-func (NoopPropagators) HTTPExtractors() []HTTPExtractor       { return nil }
-func (NoopPropagators) HTTPInjectors() []HTTPInjector         { return nil }
+func (NoopPropagators) HTTPExtractors() []HTTPExtractor { return nil }
+func (NoopPropagators) HTTPInjectors() []HTTPInjector   { return nil }
