@@ -45,7 +45,7 @@ func initMeter() *push.Controller {
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
