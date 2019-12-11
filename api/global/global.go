@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
+	tracePropagation "go.opentelemetry.io/otel/api/trace/propagation"
 )
 
 type (
@@ -40,6 +41,8 @@ var (
 	globalTracer      atomic.Value
 	globalMeter       atomic.Value
 	globalPropagators atomic.Value
+
+	defaultPropagators = getDefaultPropagators()
 )
 
 // TraceProvider returns the registered global trace provider.
@@ -81,10 +84,20 @@ func Propagators() propagation.Propagators {
 	if gp := globalPropagators.Load(); gp != nil {
 		return gp.(propagators).pr
 	}
-	return propagation.NoopPropagators{}
+	return defaultPropagators
 }
 
 // SetPropagators registers `p` as the global propagators instance.
 func SetPropagators(p propagation.Propagators) {
 	globalPropagators.Store(propagators{pr: p})
+}
+
+// getDefaultPropagators returns a default Propagators, configured
+// with W3C trace context propagation.
+func getDefaultPropagators() propagation.Propagators {
+	inex := tracePropagation.TraceContext{}
+	return propagation.New(
+		propagation.WithExtractors(inex),
+		propagation.WithInjectors(inex),
+	)
 }
