@@ -18,9 +18,12 @@ import (
 	"context"
 	"net/http"
 
+	bpropagation "go.opentelemetry.io/otel/api/context/baggage/propagation"
+	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/trace/propagation"
+	tpropagation "go.opentelemetry.io/otel/api/trace/propagation"
 )
 
 const (
@@ -30,13 +33,11 @@ const (
 var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
-
-	propagator = propagation.TraceContext{}
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
-	sc, correlationCtx := propagator.Extract(ctx, req.Header)
+	ctx = propagation.Extract(ctx, global.Propagators(), req.Header)
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
@@ -44,14 +45,14 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 	}
 
 	var correlationCtxKVs []core.KeyValue
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	bpropagation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})
 
-	return attrs, correlationCtxKVs, sc
+	return attrs, correlationCtxKVs, tpropagation.FromContext(ctx)
 }
 
 func Inject(ctx context.Context, req *http.Request) {
-	propagator.Inject(ctx, req.Header)
+	propagation.Inject(ctx, global.Propagators(), req.Header)
 }

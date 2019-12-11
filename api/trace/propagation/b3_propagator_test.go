@@ -64,7 +64,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				gotSc, _ := propagator.Extract(ctx, req.Header)
+				gotSc := propagator.Extract(ctx, req.Header)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}

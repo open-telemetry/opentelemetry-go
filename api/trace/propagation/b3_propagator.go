@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -77,21 +76,17 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) (core.SpanContext, dctx.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	var sc core.SpanContext
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
+		sc = b3.extractSingleHeader(ctx, supplier)
+	} else {
+		sc = b3.extract(ctx, supplier)
 	}
-	return b3.extract(supplier), dctx.NewEmptyMap()
+	return WithSpanContext(ctx, sc)
 }
 
-func (b3 B3) GetAllKeys() []string {
-	if b3.SingleHeader {
-		return []string{B3SingleHeader}
-	}
-	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
-}
-
-func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
+func (b3 B3) extract(ctx context.Context, supplier propagation.HTTPSupplier) core.SpanContext {
 	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return core.EmptySpanContext()
@@ -126,10 +121,10 @@ func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
 	return sc
 }
 
-func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) core.SpanContext {
+func (b3 B3) extractSingleHeader(ctx context.Context, supplier propagation.HTTPSupplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
-		core.EmptySpanContext()
+		return core.EmptySpanContext()
 	}
 	sc := core.SpanContext{}
 	parts := strings.Split(h, "-")
@@ -202,4 +197,11 @@ func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
 		return core.TraceFlagsSampled, true
 	}
 	return 0, false
+}
+
+func (b3 B3) GetAllKeys() []string {
+	if b3.SingleHeader {
+		return []string{B3SingleHeader}
+	}
+	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }

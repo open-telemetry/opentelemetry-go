@@ -56,6 +56,9 @@ type Propagators interface {
 type HTTPPropagator interface {
 	HTTPInjector
 	HTTPExtractor
+
+	// GetAllKeys returns the HTTP header names used.
+	GetAllKeys() []string
 }
 
 type Option func(*Config)
@@ -98,3 +101,16 @@ type NoopPropagators struct{}
 
 func (NoopPropagators) HTTPExtractors() []HTTPExtractor { return nil }
 func (NoopPropagators) HTTPInjectors() []HTTPInjector   { return nil }
+
+func Extract(ctx context.Context, props Propagators, supplier HTTPSupplier) context.Context {
+	for _, ex := range props.HTTPExtractors() {
+		ctx = ex.Extract(ctx, supplier)
+	}
+	return ctx
+}
+
+func Inject(ctx context.Context, props Propagators, supplier HTTPSupplier) {
+	for _, in := range props.HTTPInjectors() {
+		in.Inject(ctx, supplier)
+	}
+}
