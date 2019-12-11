@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/http"
 
+	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagators"
@@ -50,7 +51,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
-	prop             propagators.TextFormat
+	prop             propagation.HTTPPropagator
 	spanStartOptions []trace.StartOption
 	public           bool
 	readEvent        bool
@@ -80,7 +81,7 @@ func WithPublicEndpoint() Option {
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
 // go.opentelemetry.io/otel/api/propagators.TraceContext is used.
-func WithPropagator(p propagators.TextFormat) Option {
+func WithPropagator(p propagation.HTTPPropagator) Option {
 	return func(h *Handler) {
 		h.prop = p
 	}

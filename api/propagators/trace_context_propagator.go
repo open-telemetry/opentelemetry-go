@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strings"
 
+	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/core"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
@@ -38,10 +39,10 @@ const (
 // TraceContext propagates SpanContext in W3C TraceContext format.
 type TraceContext struct{}
 
-var _ TextFormat = TraceContext{}
+var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
+func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := trace.CurrentSpan(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
@@ -72,13 +73,13 @@ func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
 }
 
 func (hp TraceContext) Extract(
-	ctx context.Context, supplier Supplier,
+	ctx context.Context, supplier propagation.HTTPSupplier,
 ) (core.SpanContext, dctx.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
 func (hp TraceContext) extractSpanContext(
-	ctx context.Context, supplier Supplier,
+	ctx context.Context, supplier propagation.HTTPSupplier,
 ) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
@@ -146,7 +147,7 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Supplier) dctx.Map {
+func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.HTTPSupplier) dctx.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
 		return dctx.NewEmptyMap()

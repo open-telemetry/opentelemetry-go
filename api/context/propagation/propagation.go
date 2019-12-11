@@ -43,7 +43,7 @@ type HTTPInjector interface {
 	// associated with the supplier. It also takes a
 	// correlationCtx whose values will be injected into a carrier
 	// using the supplier.
-	Inject(context.Context, HTTPSupplier) context.Context
+	Inject(context.Context, HTTPSupplier)
 }
 
 type Config struct {
@@ -54,6 +54,11 @@ type Config struct {
 type Propagators interface {
 	HTTPExtractors() []HTTPExtractor
 	HTTPInjectors() []HTTPInjector
+}
+
+type HTTPPropagator interface {
+	HTTPInjector
+	HTTPExtractor
 }
 
 type Option func(*Config)
