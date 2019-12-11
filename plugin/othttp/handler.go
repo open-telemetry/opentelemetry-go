@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
+	sdkpropagation "go.opentelemetry.io/otel/sdk/trace/propagation"
 )
 
 var _ http.Handler = &Handler{}
@@ -80,7 +80,7 @@ func WithPublicEndpoint() Option {
 
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
-// go.opentelemetry.io/otel/api/propagators.TraceContext is used.
+// go.opentelemetry.io/otel/sdk/trace/propagation.TraceContext is used.
 func WithPropagator(p propagation.HTTPPropagator) Option {
 	return func(h *Handler) {
 		h.prop = p
@@ -131,7 +131,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagator(propagators.TraceContext{}),
+		WithPropagator(sdkpropagation.TraceContext{}),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 

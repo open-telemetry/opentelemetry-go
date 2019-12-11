@@ -21,11 +21,11 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/propagators"
+	"go.opentelemetry.io/otel/sdk/trace/propagation"
 )
 
 var (
-	propagator = propagators.TraceContext{}
+	propagator = propagation.TraceContext{}
 )
 
 type metadataSupplier struct {

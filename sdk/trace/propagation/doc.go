@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package propagators contains interface definition for BinaryFormat and
-// TextFormat propagators and implementation of propagators for different
+// Package propagation contains interface definition for BinaryFormat and
+// TextFormat propagation and implementation of propagation for different
 // format and suppliers.
-package propagators // import "go.opentelemetry.io/otel/api/propagators"
+package propagation // import "go.opentelemetry.io/otel/sdk/trace/propagation"

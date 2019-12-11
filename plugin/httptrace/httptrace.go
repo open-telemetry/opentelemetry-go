@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/propagators"
+	"go.opentelemetry.io/otel/sdk/trace/propagation"
 )
 
 const (
@@ -31,7 +31,7 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	propagator = propagators.TraceContext{}
+	propagator = propagation.TraceContext{}
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
