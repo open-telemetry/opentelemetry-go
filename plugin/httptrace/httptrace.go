@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/sdk/trace/propagation"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 )
 
 const (

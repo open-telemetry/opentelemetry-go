@@ -26,8 +26,8 @@ import (
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
-	"go.opentelemetry.io/otel/sdk/trace/propagation"
 )
 
 var (

@@ -15,4 +15,4 @@
 // Package propagation contains interface definition for BinaryFormat and
 // TextFormat propagation and implementation of propagation for different
 // format and suppliers.
-package propagation // import "go.opentelemetry.io/otel/sdk/trace/propagation"
+package propagation // import "go.opentelemetry.io/otel/api/trace/propagation"

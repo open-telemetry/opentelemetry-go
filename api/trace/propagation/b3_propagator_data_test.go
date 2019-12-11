@@ -16,7 +16,7 @@ package propagation_test
 
 import (
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/trace/propagation"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 )
 
 type extractTest struct {

@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/trace/propagation"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 )
 
 var (
