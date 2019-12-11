@@ -16,9 +16,6 @@ package propagation
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
 // HTTPSupplier is implemented by http.Headers.
@@ -33,7 +30,7 @@ type HTTPExtractor interface {
 	// and returns it and a dctx of correlated context.  If no
 	// SpanContext was retrieved OR if the retrieved SpanContext
 	// is invalid then an empty SpanContext is returned.
-	Extract(context.Context, HTTPSupplier) (core.SpanContext, dctx.Map)
+	Extract(context.Context, HTTPSupplier) context.Context
 }
 
 type HTTPInjector interface {
