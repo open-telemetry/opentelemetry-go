@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/context/baggage"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 )
@@ -26,7 +25,7 @@ import (
 func TestMap(t *testing.T) {
 	for _, testcase := range []struct {
 		name    string
-		value   baggage.MapUpdate
+		value   MapUpdate
 		init    []int
 		wantKVs []core.KeyValue
 	}{

@@ -21,8 +21,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/context/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/propagation"
+	tpropagation "go.opentelemetry.io/otel/api/trace/propagation"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
@@ -55,7 +56,9 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := propagation.B3{SingleHeader: tg.singleHeader}
+		propagator := tpropagation.B3{SingleHeader: tg.singleHeader}
+		props := propagation.New(propagation.WithExtractors(propagator))
+
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -64,7 +67,8 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				gotSc := propagator.Extract(ctx, req.Header)
+				ctx = propagation.Extract(ctx, props, req.Header)
+				gotSc := tpropagation.FromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
@@ -99,7 +103,8 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := propagation.B3{SingleHeader: tg.singleHeader}
+		propagator := tpropagation.B3{SingleHeader: tg.singleHeader}
+		props := propagation.New(propagation.WithInjectors(propagator))
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -109,7 +114,7 @@ func TestInjectB3(t *testing.T) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-				propagator.Inject(ctx, req.Header)
+				propagation.Inject(ctx, props, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v
@@ -129,11 +134,11 @@ func TestInjectB3(t *testing.T) {
 }
 
 func TestB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := propagation.B3{SingleHeader: false}
+	propagator := tpropagation.B3{SingleHeader: false}
 	want := []string{
-		propagation.B3TraceIDHeader,
-		propagation.B3SpanIDHeader,
-		propagation.B3SampledHeader,
+		tpropagation.B3TraceIDHeader,
+		tpropagation.B3SpanIDHeader,
+		tpropagation.B3SampledHeader,
 	}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -142,9 +147,9 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 }
 
 func TestB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := propagation.B3{SingleHeader: true}
+	propagator := tpropagation.B3{SingleHeader: true}
 	want := []string{
-		propagation.B3SingleHeader,
+		tpropagation.B3SingleHeader,
 	}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
