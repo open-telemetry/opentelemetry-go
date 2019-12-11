@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
+// TODO Comments needed! This was formerly known as distributedcontext.Map
+
 type entry struct {
 	value core.Value
 }
