@@ -128,7 +128,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.Extract(ctx, props, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotSc := tpropagation.FromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -216,7 +216,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.Extract(ctx, props, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotSc := tpropagation.FromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -276,7 +276,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			if tt.sc.IsValid() {
 				ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
 			}
-			propagation.Inject(ctx, props, req.Header)
+			propagation.InjectHTTP(ctx, props, req.Header)
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {

@@ -42,14 +42,14 @@ func (s *metadataSupplier) Set(key string, value string) {
 
 // Inject injects the gRPC call metadata into the Span
 func Inject(ctx context.Context, metadata *metadata.MD) {
-	propagation.Inject(ctx, global.Propagators(), &metadataSupplier{
+	propagation.InjectHTTP(ctx, global.Propagators(), &metadataSupplier{
 		metadata: metadata,
 	})
 }
 
 // Extract returns the Context Entries and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.SpanContext) {
-	ctx = propagation.Extract(ctx, global.Propagators(), &metadataSupplier{
+	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), &metadataSupplier{
 		metadata: metadata,
 	})
 

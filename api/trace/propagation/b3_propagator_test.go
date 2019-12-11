@@ -67,7 +67,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagation.Extract(ctx, props, req.Header)
+				ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 				gotSc := tpropagation.FromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
@@ -114,7 +114,7 @@ func TestInjectB3(t *testing.T) {
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}
-				propagation.Inject(ctx, props, req.Header)
+				propagation.InjectHTTP(ctx, props, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v

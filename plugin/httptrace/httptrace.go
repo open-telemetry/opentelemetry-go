@@ -37,7 +37,7 @@ var (
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
-	ctx = propagation.Extract(ctx, global.Propagators(), req.Header)
+	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), req.Header)
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
@@ -54,5 +54,5 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 }
 
 func Inject(ctx context.Context, req *http.Request) {
-	propagation.Inject(ctx, global.Propagators(), req.Header)
+	propagation.InjectHTTP(ctx, global.Propagators(), req.Header)
 }

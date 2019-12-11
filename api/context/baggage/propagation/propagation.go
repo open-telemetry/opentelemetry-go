@@ -14,6 +14,7 @@ import (
 type ctxEntriesType struct{}
 
 var (
+	// CorrelationContextHeader is specified by W3C.
 	CorrelationContextHeader = "Correlation-Context"
 
 	ctxEntriesKey = &ctxEntriesType{}
@@ -24,16 +25,19 @@ type CorrelationContext struct{}
 
 var _ propagation.HTTPPropagator = CorrelationContext{}
 
+// WithMap enters a baggage.Map into a new Context.
 func WithMap(ctx context.Context, m baggage.Map) context.Context {
 	return context.WithValue(ctx, ctxEntriesKey, m)
 }
 
+// WithMap enters a key:value set into a new Context.
 func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(baggage.MapUpdate{
 		MultiKV: keyvalues,
 	}))
 }
 
+// FromContext gets the current baggage.Map from a Context.
 func FromContext(ctx context.Context) baggage.Map {
 	if m, ok := ctx.Value(ctxEntriesKey).(baggage.Map); ok {
 		return m
@@ -41,6 +45,7 @@ func FromContext(ctx context.Context) baggage.Map {
 	return baggage.NewEmptyMap()
 }
 
+// Inject implements HTTPInjector.
 func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	correlationCtx := FromContext(ctx)
 	firstIter := true
@@ -61,6 +66,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	}
 }
 
+// Inject implements HTTPExtractor.
 func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
@@ -105,6 +111,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 	}))
 }
 
+// GetAllKeys implements HTTPPropagator.
 func (CorrelationContext) GetAllKeys() []string {
 	return []string{CorrelationContextHeader}
 }

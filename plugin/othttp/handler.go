@@ -146,7 +146,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	// TODO: do something with the correlation context
-	ctx := propagation.Extract(r.Context(), h.props, r.Header)
+	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
 	sc := tpropagation.FromContext(ctx)
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.StartOption
