@@ -40,7 +40,7 @@ var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
 func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
-	sc := trace.CurrentSpan(ctx).SpanContext()
+	sc := trace.SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
 		return
 	}

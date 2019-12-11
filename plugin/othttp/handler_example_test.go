@@ -65,7 +65,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.CurrentSpan(ctx).SetAttributes(core.Key("name").String(pp[1]))
+			trace.SpanFromContext(ctx).SetAttributes(core.Key("name").String(pp[1]))
 		}
 		return pp[1], err
 	}
@@ -77,7 +77,7 @@ func ExampleNewHandler() {
 				ctx := r.Context()
 				var name string
 				// Wrap another function in it's own span
-				if err := trace.CurrentSpan(ctx).Tracer().WithSpan(ctx, "figureOutName",
+				if err := trace.SpanFromContext(ctx).Tracer().WithSpan(ctx, "figureOutName",
 					func(ctx context.Context) error {
 						var err error
 						name, err = figureOutName(ctx, r.URL.Path[1:])

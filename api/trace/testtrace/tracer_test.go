@@ -199,7 +199,7 @@ func TestTracer(t *testing.T) {
 			var span trace.Span
 
 			err := tracer.WithSpan(context.Background(), name, func(ctx context.Context) error {
-				span = trace.CurrentSpan(ctx)
+				span = trace.SpanFromContext(ctx)
 
 				return nil
 			})

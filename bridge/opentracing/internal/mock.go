@@ -105,7 +105,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		SpanKind:     oteltrace.ValidateSpanKind(spanOpts.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
-		ctx = oteltrace.SetCurrentSpan(ctx, span)
+		ctx = oteltrace.ContextWithSpan(ctx, span)
 		ctx = t.addSpareContextValue(ctx)
 	}
 	return ctx, span
@@ -151,7 +151,7 @@ func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltra
 		spanOpts.Relation.SpanContext.IsValid() {
 		return spanOpts.Relation.SpanContext
 	}
-	if parentSpanContext := oteltrace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
+	if parentSpanContext := oteltrace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
 		return parentSpanContext
 	}
 	return otelcore.EmptySpanContext()

@@ -55,7 +55,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	if parentSpanContext := c.Relation.SpanContext; parentSpanContext.IsValid() {
 		traceID = parentSpanContext.TraceID
 		parentSpanID = parentSpanContext.SpanID
-	} else if parentSpanContext := trace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
+	} else if parentSpanContext := trace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
 		traceID = parentSpanContext.TraceID
 		parentSpanID = parentSpanContext.SpanID
 	} else {
@@ -96,7 +96,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 
 	t.lock.Unlock()
 
-	return trace.SetCurrentSpan(ctx, span), span
+	return trace.ContextWithSpan(ctx, span), span
 }
 
 func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {

@@ -76,7 +76,7 @@ func (t *WrapperTracer) otelTracer() oteltrace.Tracer {
 // calling the original callback.
 func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	return t.otelTracer().WithSpan(ctx, name, func(ctx context.Context) error {
-		span := oteltrace.CurrentSpan(ctx)
+		span := oteltrace.SpanFromContext(ctx)
 		if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
 			spanWithExtension.OverrideTracer(t)
 		}
@@ -107,6 +107,6 @@ func (t *WrapperTracer) DeferredContextSetupHook(ctx context.Context, span otelt
 	if tracerWithExtension, ok := t.otelTracer().(migration.DeferredContextSetupTracerExtension); ok {
 		ctx = tracerWithExtension.DeferredContextSetupHook(ctx, span)
 	}
-	ctx = oteltrace.SetCurrentSpan(ctx, span)
+	ctx = oteltrace.ContextWithSpan(ctx, span)
 	return ctx
 }

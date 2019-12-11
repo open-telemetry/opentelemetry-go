@@ -56,7 +56,7 @@ type DeferredContextSetupTracerExtension interface {
 // OpenTelemetry Span object and have WrapperTracer to alter the
 // current OpenTelemetry span in the context so it points to the
 // wrapped object, so the code in the tracer like
-// `trace.CurrentSpan().(*realSpan)` would still work. Another
+// `trace.SpanFromContent().(*realSpan)` would still work. Another
 // argument for getting rid of this interface is that is only called
 // by the WrapperTracer - WrapperTracer likely shouldn't require any
 // changes in the underlying OpenTelemetry tracer to have things
