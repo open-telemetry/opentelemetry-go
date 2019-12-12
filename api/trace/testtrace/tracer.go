@@ -16,7 +16,6 @@ package testtrace
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -55,11 +54,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	var traceID core.TraceID
 	var parentSpanID core.SpanID
 
-	fmt.Println("WTF", c.Parent)
-
 	ctx, parentSpanContext, _ := parent.GetContext(ctx, c.Parent)
-
-	fmt.Println("CTX", ctx, "PSX", parentSpanContext)
 
 	if parentSpanContext.IsValid() {
 		traceID = parentSpanContext.TraceID
@@ -101,7 +96,6 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	t.spans = append(t.spans, span)
 
 	t.lock.Unlock()
-	fmt.Println("HERE SpanCTX", span.SpanContext())
 
 	return trace.ContextWithSpan(ctx, span), span
 }
