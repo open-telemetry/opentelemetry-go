@@ -35,7 +35,7 @@ To create a new PR, fork the project in GitHub and clone the upstream
 repo:
 
 ```sh
-$ go get -d go.opentelemetry.io/otel
+$ GO111MODULE=off go get -d go.opentelemetry.io/otel
 ```
 
 (This may print some warning about "build constraints exclude all Go
