@@ -18,19 +18,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
-
-type metricKey struct {
-	desc    *export.Descriptor
-	encoded string
-}
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
@@ -116,9 +111,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 // collector implements prometheus.Collector
 type collector struct {
 	opts Options
-	mu   sync.Mutex // mu guards all the fields.
-
-	exp *Exporter
+	exp  *Exporter
 }
 
 func newCollector(opts Options, exporter *Exporter) *collector {
@@ -171,7 +164,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			buckets := make(map[float64]float64)
-			for bucket, _ := range c.opts.DefaultSummaryObjectives {
+			for bucket := range c.opts.DefaultSummaryObjectives {
 				q, _ := dist.Quantile(bucket)
 				buckets[bucket] = q.CoerceToFloat64(nk)
 			}
@@ -187,12 +180,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			m, err = prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(nk), labels...)
 		} else if gauge, ok := agg.(aggregator.LastValue); ok {
-			v, _, err := gauge.LastValue()
+			value, _, err = gauge.LastValue()
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
-			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(nk), labels...)
+			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, value.CoerceToFloat64(nk), labels...)
 		}
 
 		if err != nil {
