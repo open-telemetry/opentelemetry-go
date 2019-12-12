@@ -11,13 +11,13 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 )
 
-type ctxEntriesType struct{}
+type correlationsType struct{}
 
 var (
 	// CorrelationContextHeader is specified by W3C.
 	CorrelationContextHeader = "Correlation-Context"
 
-	ctxEntriesKey = &ctxEntriesType{}
+	correlationsKey = &correlationsType{}
 )
 
 // CorrelationContext propagates Key:Values in W3C TraceContext format.
@@ -27,7 +27,7 @@ var _ propagation.HTTPPropagator = CorrelationContext{}
 
 // WithMap enters a baggage.Map into a new Context.
 func WithMap(ctx context.Context, m baggage.Map) context.Context {
-	return context.WithValue(ctx, ctxEntriesKey, m)
+	return context.WithValue(ctx, correlationsKey, m)
 }
 
 // WithMap enters a key:value set into a new Context.
@@ -39,7 +39,7 @@ func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context
 
 // FromContext gets the current baggage.Map from a Context.
 func FromContext(ctx context.Context) baggage.Map {
-	if m, ok := ctx.Value(ctxEntriesKey).(baggage.Map); ok {
+	if m, ok := ctx.Value(correlationsKey).(baggage.Map); ok {
 		return m
 	}
 	return baggage.NewEmptyMap()
