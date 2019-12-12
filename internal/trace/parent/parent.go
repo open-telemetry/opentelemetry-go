@@ -8,29 +8,27 @@ import (
 	"go.opentelemetry.io/otel/api/trace/propagation"
 )
 
-func getEffective(ctx context.Context) core.SpanContext {
+func getEffective(ctx context.Context) (core.SpanContext, bool) {
 	if ctx == nil {
-		return core.EmptySpanContext()
+		return core.EmptySpanContext(), false
 	}
 	rctx := propagation.RemoteContext(ctx)
 	sctx := trace.SpanFromContext(ctx).SpanContext()
 
 	if rctx.IsValid() && sctx.IsValid() && rctx.TraceID == sctx.TraceID {
-		return sctx
+		return sctx, false
 	}
 	if rctx.IsValid() {
-		return rctx
+		return rctx, true
 	}
-	return sctx
+	return sctx, false
 }
 
 func GetContext(ctx, parent context.Context) (context.Context, core.SpanContext, bool) {
-	pctx := getEffective(parent)
-	sctx := getEffective(ctx)
-
-	if pctx.IsValid() {
-		return parent, pctx, true
+	if pctx, remote := getEffective(parent); pctx.IsValid() {
+		return parent, pctx, remote
 	}
 
-	return ctx, sctx, false
+	sctx, remote := getEffective(ctx)
+	return ctx, sctx, remote
 }
