@@ -1,4 +1,4 @@
-package propagation
+package propagation_test
 
 import (
 	"context"
@@ -7,11 +7,13 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/propagation"
+	tpropagation "go.opentelemetry.io/otel/api/trace/propagation"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func BenchmarkInject(b *testing.B) {
-	var t TraceContext
+	var t propagation.TraceContext
 
 	injectSubBenchmarks(b, func(ctx context.Context, b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -39,7 +41,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			TraceFlags: core.TraceFlagsSampled,
 		}
 		ctx := context.Background()
-		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))
+		ctx, _ = mockTracer.Start(ctx, "inject", trace.WithParent(tpropagation.WithUpstreamContext(ctx, sc)))
 		fn(ctx, b)
 	})
 
@@ -52,7 +54,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 
 func BenchmarkExtract(b *testing.B) {
 	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
-		var propagator TraceContext
+		var propagator tpropagation.TraceContext
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

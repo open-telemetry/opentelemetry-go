@@ -53,7 +53,7 @@ func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.
 		metadata: metadata,
 	})
 
-	spanContext := tpropagation.FromContext(ctx)
+	spanContext := tpropagation.UpstreamContext(ctx)
 	var correlationCtxKVs []core.KeyValue
 	bpropagation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)

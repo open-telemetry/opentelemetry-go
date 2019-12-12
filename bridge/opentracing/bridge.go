@@ -27,16 +27,18 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
+	"go.opentelemetry.io/otel/api/context/baggage"
+	"go.opentelemetry.io/otel/api/core"
 	otelcore "go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
-	// TODO: have a look at the java implementation of the shim to
-	// see what do they do with the baggage items
-	baggageItems    map[string]string
+	baggageItems    baggage.Map
 	otelSpanContext otelcore.SpanContext
 }
 
@@ -44,7 +46,7 @@ var _ ot.SpanContext = &bridgeSpanContext{}
 
 func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
 	bCtx := &bridgeSpanContext{
-		baggageItems:    nil,
+		baggageItems:    baggage.NewEmptyMap(),
 		otelSpanContext: otelSpanContext,
 	}
 	if parentOtSpanContext != nil {
@@ -57,24 +59,20 @@ func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanCont
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for k, v := range c.baggageItems {
-		if !handler(k, v) {
-			break
-		}
-	}
+	c.baggageItems.Foreach(func(kv core.KeyValue) bool {
+		return handler(string(kv.Key), kv.Value.Emit())
+	})
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
-	if c.baggageItems == nil {
-		c.baggageItems = make(map[string]string)
-	}
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems[crk] = value
+	c.baggageItems.Apply(baggage.MapUpdate{SingleKV: key.New(crk).String(value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	return c.baggageItems[crk]
+	val, _ := c.baggageItems.Value(key.New(crk))
+	return val.Emit()
 }
 
 type bridgeSpan struct {
@@ -309,15 +307,16 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	for _, opt := range opts {
 		opt.Apply(&sso)
 	}
-	// TODO: handle links, needs SpanData to be in the API first?
+	// TODO: handle links
 	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
 	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
-		opts.Relation = bRelation.ToOtelRelation()
+		opts.Parent = bRelation.ToOtelParent()
 		opts.Record = true
+		opts.Links = nil // TODO: handle links
 		opts.SpanKind = kind
 	})
 	if checkCtx != checkCtx2 {
@@ -442,17 +441,21 @@ func otTagToOtelCoreKey(k string) otelcore.Key {
 
 type bridgeRelation struct {
 	spanContext      *bridgeSpanContext
-	relationshipType oteltrace.RelationshipType
+	relationshipType ot.SpanReferenceType
 }
 
-func (r bridgeRelation) ToOtelRelation() oteltrace.Relation {
+func (r bridgeRelation) ToOtelParent() context.Context {
+	ctx := context.Background()
 	if r.spanContext == nil {
-		return oteltrace.Relation{}
+		return ctx
 	}
-	return oteltrace.Relation{
-		SpanContext:      r.spanContext.otelSpanContext,
-		RelationshipType: r.relationshipType,
-	}
+	ctx = propagation.WithUpstreamContext(ctx, core.SpanContext{
+		TraceID: r.spanContext.otelSpanContext.TraceID,
+		SpanID:  r.spanContext.otelSpanContext.SpanID,
+		// TODO: Flags
+	})
+	// TODO: relationshipType
+	return ctx
 }
 
 func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (bridgeRelation, []*bridgeSpanContext) {
@@ -462,7 +465,7 @@ func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (br
 	first := references[0]
 	relation := bridgeRelation{
 		spanContext:      mustGetBridgeSpanContext(first.ReferencedContext),
-		relationshipType: otSpanReferenceTypeToOtelRelationshipType(first.Type),
+		relationshipType: first.Type,
 	}
 	var links []*bridgeSpanContext
 	for _, reference := range references[1:] {
@@ -479,12 +482,13 @@ func mustGetBridgeSpanContext(ctx ot.SpanContext) *bridgeSpanContext {
 	return ourCtx
 }
 
-func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltrace.RelationshipType {
+func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltrace.SpanKind {
+	// TODO: Check out this logic
 	switch srt {
 	case ot.ChildOfRef:
-		return oteltrace.ChildOfRelationship
+		return oteltrace.SpanKindServer
 	case ot.FollowsFromRef:
-		return oteltrace.FollowsFromRelationship
+		return oteltrace.SpanKindProducer
 	default:
 		panic("fix yer code, it uses bogus opentracing reference type")
 	}

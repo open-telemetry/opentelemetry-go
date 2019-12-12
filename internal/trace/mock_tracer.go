@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 // MockTracer is a simple tracer used for testing purpose only.
@@ -54,14 +55,17 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 	}
 	var span *MockSpan
 	var sc core.SpanContext
-	if !opts.Relation.SpanContext.IsValid() {
+
+	ctx, parentSpanContext, _ := parent.GetContext(ctx, opts.Parent)
+
+	if !parentSpanContext.IsValid() {
 		sc = core.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
 			sc.TraceFlags = core.TraceFlagsSampled
 		}
 	} else {
-		sc = opts.Relation.SpanContext
+		sc = parentSpanContext
 	}
 
 	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))

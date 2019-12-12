@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/propagation"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -65,7 +66,8 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	_, span := tr.Start(context.Background(), "OnEnd", apitrace.ChildOf(sc))
+	ctx := context.Background()
+	_, span := tr.Start(ctx, "OnEnd", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc)))
 	span.End()
 
 	wantTraceID := tid

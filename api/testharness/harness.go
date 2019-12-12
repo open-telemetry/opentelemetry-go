@@ -21,11 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/matchers"
+	"google.golang.org/grpc/codes"
 )
 
 type Harness struct {
@@ -125,30 +124,14 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
 		})
 
-		t.Run("propagates a parent's trace ID through `ChildOf`", func(t *testing.T) {
+		t.Run("propagates a parent's trace ID through `WithParent`", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.ChildOf(parent.SpanContext()))
-
-			psc := parent.SpanContext()
-			csc := child.SpanContext()
-
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
-		})
-
-		t.Run("propagates a parent's trace ID through `FollowsFrom`", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.FollowsFrom(parent.SpanContext()))
+			parentCtx, parent := subject.Start(context.Background(), "parent")
+			_, child := subject.Start(context.Background(), "child", trace.WithParent(parentCtx))
 
 			psc := parent.SpanContext()
 			csc := child.SpanContext()

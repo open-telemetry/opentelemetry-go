@@ -68,7 +68,7 @@ func TestExtractB3(t *testing.T) {
 
 				ctx := context.Background()
 				ctx = propagation.ExtractHTTP(ctx, props, req.Header)
-				gotSc := tpropagation.FromContext(ctx)
+				gotSc := tpropagation.UpstreamContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
@@ -110,7 +110,7 @@ func TestInjectB3(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
+					ctx, _ = mockTracer.Start(ctx, "inject", trace.WithParent(tpropagation.WithUpstreamContext(ctx, tt.parentSc)))
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}

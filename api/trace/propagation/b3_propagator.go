@@ -84,7 +84,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	} else {
 		sc = b3.extract(ctx, supplier)
 	}
-	return WithSpanContext(ctx, sc)
+	return WithUpstreamContext(ctx, sc)
 }
 
 func (b3 B3) extract(ctx context.Context, supplier propagation.HTTPSupplier) core.SpanContext {

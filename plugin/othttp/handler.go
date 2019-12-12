@@ -145,17 +145,17 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	// TODO: do something with the correlation context
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
-	sc := tpropagation.FromContext(ctx)
-	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
+
+	// not a valid span context, so no link / parent relationship to establish
+	if sc := tpropagation.UpstreamContext(ctx); sc.IsValid() {
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace
 			// and incoming remote sctx should be added as a link.
 			opt = trace.LinkedTo(sc)
 		} else { // not a private endpoint, so assume child relationship
-			opt = trace.ChildOf(sc)
+			opt = trace.WithParent(ctx)
 		}
 		opts = append(opts, opt)
 	}
@@ -223,8 +223,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
-		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttributes(RouteKey.String(route))
-		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
+		h.ServeHTTP(w, r)
 	})
 }

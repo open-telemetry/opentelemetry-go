@@ -55,7 +55,7 @@ func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupp
 func (tc TraceContext) Extract(
 	ctx context.Context, supplier propagation.HTTPSupplier,
 ) context.Context {
-	return WithSpanContext(ctx, tc.extract(supplier))
+	return WithUpstreamContext(ctx, tc.extract(supplier))
 }
 
 func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
