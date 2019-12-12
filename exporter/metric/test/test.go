@@ -12,24 +12,35 @@ import (
 
 type CheckpointSet struct {
 	encoder export.LabelEncoder
+	records map[string]export.Record
 	updates []export.Record
 }
 
 func NewCheckpointSet(encoder export.LabelEncoder) *CheckpointSet {
 	return &CheckpointSet{
 		encoder: encoder,
+		records: make(map[string]export.Record),
 	}
 }
 
 func (p *CheckpointSet) Reset() {
+	p.records = make(map[string]export.Record)
 	p.updates = nil
 }
 
-func (p *CheckpointSet) Add(desc *export.Descriptor, agg export.Aggregator, labels ...core.KeyValue) {
+func (p *CheckpointSet) Add(desc *export.Descriptor, agg export.Aggregator, labels ...core.KeyValue) export.Aggregator {
 	encoded := p.encoder.Encode(labels)
 	elabels := export.NewLabels(labels, encoded, p.encoder)
 
-	p.updates = append(p.updates, export.NewRecord(desc, elabels, agg))
+	key := desc.Name() + "_" + elabels.Encoded()
+	if record, ok := p.records[key]; ok {
+		return record.Aggregator()
+	}
+
+	rec := export.NewRecord(desc, elabels, agg)
+	p.updates = append(p.updates, rec)
+	p.records[key] = rec
+	return agg
 }
 
 func createNumber(desc *export.Descriptor, v float64) core.Number {
@@ -42,25 +53,34 @@ func createNumber(desc *export.Descriptor, v float64) core.Number {
 func (p *CheckpointSet) AddGauge(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
 	ctx := context.Background()
 	gagg := gauge.New()
+	agg := p.Add(desc, gagg, labels...)
 	_ = gagg.Update(ctx, createNumber(desc, v), desc)
 	gagg.Checkpoint(ctx, desc)
-	p.Add(desc, gagg, labels...)
+	if agg != gagg {
+		_ = agg.Merge(gagg, desc)
+	}
 }
 
 func (p *CheckpointSet) AddCounter(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
 	ctx := context.Background()
 	cagg := counter.New()
+	agg := p.Add(desc, cagg, labels...)
 	_ = cagg.Update(ctx, createNumber(desc, v), desc)
 	cagg.Checkpoint(ctx, desc)
-	p.Add(desc, cagg, labels...)
+	if agg != cagg {
+		_ = agg.Merge(cagg, desc)
+	}
 }
 
 func (p *CheckpointSet) AddMeasure(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
 	ctx := context.Background()
 	magg := array.New()
+	agg := p.Add(desc, magg, labels...)
 	_ = magg.Update(ctx, createNumber(desc, v), desc)
 	magg.Checkpoint(ctx, desc)
-	p.Add(desc, magg, labels...)
+	if agg != magg {
+		_ = agg.Merge(magg, desc)
+	}
 }
 
 func (p *CheckpointSet) ForEach(f func(export.Record)) {

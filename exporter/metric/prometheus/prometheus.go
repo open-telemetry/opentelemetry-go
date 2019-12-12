@@ -22,7 +22,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -40,12 +39,6 @@ type Exporter struct {
 
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
-
-	counters           counters
-	gauges             gauges
-	histograms         histograms
-	summaries          summaries
-	measureAggregation MeasureAggregation
 
 	checkpointSet export.CheckpointSet
 }
@@ -80,19 +73,7 @@ type Options struct {
 	// DefaultSummaryObjectives is the default summary objectives
 	// to use. Use nil to specify the system-default summary objectives.
 	DefaultSummaryObjectives map[float64]float64
-
-	// MeasureAggregation defines how metric.Measure are exported.
-	// Possible values are 'Histogram' or 'Summary'.
-	// The default export representation for measures is Histograms.
-	MeasureAggregation MeasureAggregation
 }
-
-type MeasureAggregation int
-
-const (
-	Histogram MeasureAggregation = iota
-	Summary
-)
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
 func NewExporter(opts Options) (*Exporter, error) {
@@ -108,20 +89,20 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	e := &Exporter{
-		registerer:         opts.Registerer,
-		gatherer:           opts.Gatherer,
-		handler:            promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
-		measureAggregation: opts.MeasureAggregation,
-
-		counters:   newCounters(opts.Registerer),
-		gauges:     newGauges(opts.Registerer),
-		histograms: newHistograms(opts.Registerer, opts.DefaultHistogramBuckets),
-		summaries:  newSummaries(opts.Registerer, opts.DefaultSummaryObjectives),
+	if opts.DefaultSummaryObjectives == nil {
+		opts.DefaultSummaryObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
 	}
 
-	c := newCollector(opts, opts.Registerer, e)
-	c.ensureRegisteredOnce()
+	e := &Exporter{
+		registerer: opts.Registerer,
+		gatherer:   opts.Gatherer,
+		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+	}
+
+	c := newCollector(opts, e)
+	if err := opts.Registerer.Register(c); err != nil {
+		fmt.Println(fmt.Errorf("cannot register the collector: %v", err))
+	}
 
 	return e, nil
 }
@@ -137,34 +118,14 @@ type collector struct {
 	opts Options
 	mu   sync.Mutex // mu guards all the fields.
 
-	registerOnce sync.Once
-
-	// reg helps collector register views dynamically.
-	reg prometheus.Registerer
 	exp *Exporter
 }
 
-func newCollector(opts Options, registrar prometheus.Registerer, exporter *Exporter) *collector {
+func newCollector(opts Options, exporter *Exporter) *collector {
 	return &collector{
-		reg:  registrar,
 		opts: opts,
 		exp:  exporter,
 	}
-}
-
-// ensureRegisteredOnce invokes reg.Register on the collector itself
-// exactly once to ensure that we don't get errors such as
-//  cannot register the collector: descriptor Desc{fqName: *}
-//  already exists with the same fully-qualified name and const label values
-// which is documented by Prometheus at
-//  https://github.com/prometheus/client_golang/blob/fcc130e101e76c5d303513d0e28f4b6d732845c7/prometheus/registry.go#L89-L101
-func (c *collector) ensureRegisteredOnce() {
-	c.registerOnce.Do(func() {
-		if err := c.reg.Register(c); err != nil {
-			fmt.Println(fmt.Errorf("cannot register the collector: %v", err))
-		}
-	})
-
 }
 
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
@@ -177,8 +138,8 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	})
 }
 
-// Collect fetches the statistics from OpenTelemetry
-// and delivers them as Prometheus Metrics.
+// Collect exports the last calculated CheckpointSet.
+//
 // Collect is invoked every time a prometheus.Gatherer is run
 // for example when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
@@ -188,76 +149,74 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	c.exp.checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
-		//mKey := metricKey{
-		//	desc:    record.Descriptor(),
-		//	encoded: record.Labels().Encoded(),
-		//}
-
+		nk := record.Descriptor().NumberKind()
+		labels := labelValues(record.Labels())
 		desc := c.toDesc(&record)
 
-		//if points, ok := agg.(aggregator.Points); ok {
-		//	observerExporter := e.histograms.export
-		//	if e.measureAggregation == Summary {
-		//		observerExporter = e.summaries.export
-		//	}
-		//
-		//	err := observerExporter(points, record, mKey)
-		//	if err != nil {
-		//		forEachError = err
-		//	}
-		//	return
-		//}
+		var value core.Number
+		var m prometheus.Metric
+		var err error
 
-		if sum, ok := agg.(aggregator.Sum); ok {
-			//err := e.counters.export(sum, record, mKey)
-			//if err != nil {
-			//	forEachError = err
-			//}
-
-			v, err := sum.Sum()
+		if dist, ok := agg.(aggregator.Distribution); ok {
+			var count int64
+			count, err = dist.Count()
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
-			m, err := prometheus.NewConstMetric(desc,
-				prometheus.CounterValue,
-				v.CoerceToFloat64(record.Descriptor().NumberKind()),
-				labelValues(record.Labels())...)
+			value, err = dist.Sum()
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
 
-			ch <- m
+			buckets := make(map[float64]float64)
+			for bucket, _ := range c.opts.DefaultSummaryObjectives {
+				q, _ := dist.Quantile(bucket)
+				buckets[bucket] = q.CoerceToFloat64(nk)
+			}
+
+			m, err = prometheus.NewConstSummary(desc, uint64(count), value.CoerceToFloat64(nk), buckets, labels...)
+		} else if sum, ok := agg.(aggregator.Sum); ok {
+			var v core.Number
+			v, err = sum.Sum()
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			m, err = prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(nk), labels...)
+		} else if gauge, ok := agg.(aggregator.LastValue); ok {
+			v, _, err := gauge.LastValue()
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(nk), labels...)
+		}
+
+		if err != nil {
+			fmt.Println(err.Error())
 			return
 		}
 
-		//if gauge, ok := agg.(aggregator.LastValue); ok {
-		//	err := e.gauges.export(gauge, record, mKey)
-		//	if err != nil {
-		//		forEachError = err
-		//	}
-		//	return
-		//}
-
+		ch <- m
 	})
 }
 
 func (c *collector) toDesc(metric *export.Record) *prometheus.Desc {
-	return prometheus.NewDesc(
-		sanitize(metric.Descriptor().Name()),
-		metric.Descriptor().Description(),
-		labelsKeys(metric.Labels().Ordered()),
-		nil)
+	desc := metric.Descriptor()
+	labels := labelsKeys(metric.Labels())
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
 
-func labelsKeys(kvs []core.KeyValue) []string {
-	keys := make([]string, 0, len(kvs))
-	for _, kv := range kvs {
+func labelsKeys(labels export.Labels) []string {
+	keys := make([]string, 0, labels.Len())
+	for _, kv := range labels.Ordered() {
 		keys = append(keys, sanitize(string(kv.Key)))
 	}
 	return keys
