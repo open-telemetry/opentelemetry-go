@@ -449,7 +449,7 @@ func (r bridgeRelation) ToOtelParent() context.Context {
 	if r.spanContext == nil {
 		return ctx
 	}
-	ctx = propagation.WithUpstreamContext(ctx, core.SpanContext{
+	ctx = propagation.WithRemoteContext(ctx, core.SpanContext{
 		TraceID: r.spanContext.otelSpanContext.TraceID,
 		SpanID:  r.spanContext.otelSpanContext.SpanID,
 		// TODO: Flags

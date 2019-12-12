@@ -50,7 +50,7 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 		return true
 	})
 
-	return attrs, correlationCtxKVs, tpropagation.UpstreamContext(ctx)
+	return attrs, correlationCtxKVs, tpropagation.RemoteContext(ctx)
 }
 
 func Inject(ctx context.Context, req *http.Request) {

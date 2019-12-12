@@ -6,18 +6,18 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type spanContextType struct{}
+type remoteContextType struct{}
 
-var spanContextKey = &spanContextType{}
+var remoteContextKey = &remoteContextType{}
 
-// WithUpstreamContext enters a core.SpanContext into a new Context.
-func WithUpstreamContext(ctx context.Context, sc core.SpanContext) context.Context {
-	return context.WithValue(ctx, spanContextKey, sc)
+// WithRemoteContext enters a core.SpanContext into a new Context.
+func WithRemoteContext(ctx context.Context, sc core.SpanContext) context.Context {
+	return context.WithValue(ctx, remoteContextKey, sc)
 }
 
-// FromContext gets the current core.SpanContext from a Context.
-func UpstreamContext(ctx context.Context) core.SpanContext {
-	if sc, ok := ctx.Value(spanContextKey).(core.SpanContext); ok {
+// RemoteContext gets the current core.SpanContext from a Context.
+func RemoteContext(ctx context.Context) core.SpanContext {
+	if sc, ok := ctx.Value(remoteContextKey).(core.SpanContext); ok {
 		return sc
 	}
 	return core.EmptySpanContext()

@@ -148,7 +148,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
 
 	// not a valid span context, so no link / parent relationship to establish
-	if sc := tpropagation.UpstreamContext(ctx); sc.IsValid() {
+	if sc := tpropagation.RemoteContext(ctx); sc.IsValid() {
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace

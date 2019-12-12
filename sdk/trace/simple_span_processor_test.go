@@ -67,7 +67,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 		TraceFlags: 0x1,
 	}
 	ctx := context.Background()
-	_, span := tr.Start(ctx, "OnEnd", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc)))
+	_, span := tr.Start(ctx, "OnEnd", apitrace.WithParent(propagation.WithRemoteContext(ctx, sc)))
 	span.End()
 
 	wantTraceID := tid

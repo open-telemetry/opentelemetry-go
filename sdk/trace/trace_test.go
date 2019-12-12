@@ -186,7 +186,7 @@ func TestSampling(t *testing.T) {
 					if tc.sampledParent {
 						psc.TraceFlags = core.TraceFlagsSampled
 					}
-					opts = append(opts, apitrace.WithParent(propagation.WithUpstreamContext(ctx, psc)))
+					opts = append(opts, apitrace.WithParent(propagation.WithRemoteContext(ctx, psc)))
 				}
 				_, span := tr.Start(ctx, "test", opts...)
 				if span.SpanContext().IsSampled() {
@@ -220,12 +220,12 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		SpanID:     sid,
 		TraceFlags: 0x0,
 	}
-	_, s1 := tr.Start(ctx, "span1-unsampled-parent1", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc1)))
+	_, s1 := tr.Start(ctx, "span1-unsampled-parent1", apitrace.WithParent(propagation.WithRemoteContext(ctx, sc1)))
 	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(ctx, "span2-unsampled-parent1", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc1)))
+	_, s2 := tr.Start(ctx, "span2-unsampled-parent1", apitrace.WithParent(propagation.WithRemoteContext(ctx, sc1)))
 	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
@@ -236,12 +236,12 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc2)))
+	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.WithParent(propagation.WithRemoteContext(ctx, sc2)))
 	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc2)))
+	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.WithParent(propagation.WithRemoteContext(ctx, sc2)))
 	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
@@ -539,7 +539,7 @@ func TestSetSpanName(t *testing.T) {
 
 	want := "SetSpanName/SpanName-1"
 	_, span := tp.Tracer("SetSpanName").Start(ctx, "SpanName-1",
-		apitrace.WithParent(propagation.WithUpstreamContext(ctx, core.SpanContext{
+		apitrace.WithParent(propagation.WithRemoteContext(ctx, core.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
 			TraceFlags: 1,
@@ -629,7 +629,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitra
 // automatically sampled.
 func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
 	ctx := context.Background()
-	args = append(args, apitrace.WithParent(propagation.WithUpstreamContext(ctx, remoteSpanContext())), apitrace.WithRecord())
+	args = append(args, apitrace.WithParent(propagation.WithRemoteContext(ctx, remoteSpanContext())), apitrace.WithRecord())
 	_, span := tp.Tracer(trName).Start(
 		context.Background(),
 		name,
@@ -705,7 +705,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
-	ctx, span0 := tr.Start(ctx, "parent", apitrace.WithParent(propagation.WithUpstreamContext(ctx, remoteSpanContext())))
+	ctx, span0 := tr.Start(ctx, "parent", apitrace.WithParent(propagation.WithRemoteContext(ctx, remoteSpanContext())))
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
 	// Start a new span with the context containing span-1
@@ -790,7 +790,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 		ctx,
 		"foo",
 		apitrace.WithParent(
-			propagation.WithUpstreamContext(ctx,
+			propagation.WithRemoteContext(ctx,
 				core.SpanContext{
 					TraceID:    tID,
 					SpanID:     sID,

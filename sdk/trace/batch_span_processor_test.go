@@ -189,7 +189,7 @@ func generateSpan(t *testing.T, tr apitrace.Tracer, option testOption) {
 
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
-		_, span := tr.Start(ctx, option.name, apitrace.WithParent(propagation.WithUpstreamContext(ctx, sc)))
+		_, span := tr.Start(ctx, option.name, apitrace.WithParent(propagation.WithRemoteContext(ctx, sc)))
 		span.End()
 	}
 }

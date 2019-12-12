@@ -103,7 +103,7 @@ func BenchmarkInjectB3(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.WithParent(propagation.WithUpstreamContext(ctx, tt.parentSc)))
+					ctx, _ = mockTracer.Start(ctx, "inject", trace.WithParent(propagation.WithRemoteContext(ctx, tt.parentSc)))
 				} else {
 					ctx, _ = mockTracer.Start(ctx, "inject")
 				}

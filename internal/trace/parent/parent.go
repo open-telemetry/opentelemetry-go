@@ -12,7 +12,7 @@ func getEffective(ctx context.Context) core.SpanContext {
 	if ctx == nil {
 		return core.EmptySpanContext()
 	}
-	rctx := propagation.UpstreamContext(ctx)
+	rctx := propagation.RemoteContext(ctx)
 	sctx := trace.SpanFromContext(ctx).SpanContext()
 
 	if rctx.IsValid() && sctx.IsValid() && rctx.TraceID == sctx.TraceID {
