@@ -37,6 +37,9 @@ type Exporter struct {
 
 	checkpointSet export.CheckpointSet
 	OnError       func(error)
+
+	DefaultHistogramBuckets  []float64
+	DefaultSummaryObjectives map[float64]float64
 }
 
 var _ export.Exporter = &Exporter{}
@@ -100,12 +103,14 @@ func NewExporter(opts Options) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		registerer: opts.Registerer,
-		gatherer:   opts.Gatherer,
-		handler:    promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		handler:                  promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		registerer:               opts.Registerer,
+		gatherer:                 opts.Gatherer,
+		DefaultHistogramBuckets:  opts.DefaultHistogramBuckets,
+		DefaultSummaryObjectives: opts.DefaultSummaryObjectives,
 	}
 
-	c := newCollector(opts, e)
+	c := newCollector(e)
 	if err := opts.Registerer.Register(c); err != nil {
 		opts.OnError(fmt.Errorf("cannot register the collector: %w", err))
 	}
@@ -121,14 +126,12 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 // collector implements prometheus.Collector
 type collector struct {
-	opts Options
-	exp  *Exporter
+	exp *Exporter
 }
 
-func newCollector(opts Options, exporter *Exporter) *collector {
+func newCollector(exporter *Exporter) *collector {
 	return &collector{
-		opts: opts,
-		exp:  exporter,
+		exp: exporter,
 	}
 }
 
@@ -153,11 +156,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	c.exp.checkpointSet.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
-		nk := record.Descriptor().NumberKind()
+		numberKind := record.Descriptor().NumberKind()
 		labels := labelValues(record.Labels())
 		desc := c.toDesc(&record)
 
-		var value core.Number
 		var m prometheus.Metric
 		var err error
 
@@ -171,19 +173,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				c.exp.OnError(err)
 				return
 			}
-			value, err = dist.Sum()
+
+			var sum core.Number
+			sum, err = dist.Sum()
 			if err != nil {
 				c.exp.OnError(err)
 				return
 			}
 
 			buckets := make(map[float64]float64)
-			for bucket := range c.opts.DefaultSummaryObjectives {
+			for bucket := range c.exp.DefaultSummaryObjectives {
 				q, _ := dist.Quantile(bucket)
-				buckets[bucket] = q.CoerceToFloat64(nk)
+				buckets[bucket] = q.CoerceToFloat64(numberKind)
 			}
 
-			m, err = prometheus.NewConstSummary(desc, uint64(count), value.CoerceToFloat64(nk), buckets, labels...)
+			m, err = prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(numberKind), buckets, labels...)
 		} else if sum, ok := agg.(aggregator.Sum); ok {
 			var v core.Number
 			v, err = sum.Sum()
@@ -192,14 +196,16 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				return
 			}
 
-			m, err = prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(nk), labels...)
+			m, err = prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(numberKind), labels...)
 		} else if gauge, ok := agg.(aggregator.LastValue); ok {
-			value, _, err = gauge.LastValue()
+			var lastValue core.Number
+			lastValue, _, err = gauge.LastValue()
 			if err != nil {
 				c.exp.OnError(err)
 				return
 			}
-			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, value.CoerceToFloat64(nk), labels...)
+
+			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(numberKind), labels...)
 		}
 
 		if err != nil {
