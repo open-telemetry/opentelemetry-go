@@ -149,8 +149,8 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect exports the last calculated CheckpointSet.
 //
-// Collect is invoked every time a prometheus.Gatherer is run
-// for example when the HTTP endpoint is invoked by Prometheus.
+// Collect is invoked whenever prometheus.Gatherer is also invoked.
+// For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	if c.exp.checkpointSet == nil {
 		return
