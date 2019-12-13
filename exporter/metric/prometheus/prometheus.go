@@ -124,10 +124,12 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	return nil
 }
 
-// collector implements prometheus.Collector
+// collector implements prometheus.Collector interface.
 type collector struct {
 	exp *Exporter
 }
+
+var _ prometheus.Collector = (*collector)(nil)
 
 func newCollector(exporter *Exporter) *collector {
 	return &collector{
@@ -160,61 +162,78 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		labels := labelValues(record.Labels())
 		desc := c.toDesc(&record)
 
-		var m prometheus.Metric
-		var err error
-
 		// TODO: implement histogram export when the histogram aggregation is done.
 		//  https://github.com/open-telemetry/opentelemetry-go/issues/317
 
 		if dist, ok := agg.(aggregator.Distribution); ok {
-			var count int64
-			count, err = dist.Count()
-			if err != nil {
-				c.exp.OnError(err)
-				return
-			}
-
-			var sum core.Number
-			sum, err = dist.Sum()
-			if err != nil {
-				c.exp.OnError(err)
-				return
-			}
-
-			buckets := make(map[float64]float64)
-			for bucket := range c.exp.DefaultSummaryObjectives {
-				q, _ := dist.Quantile(bucket)
-				buckets[bucket] = q.CoerceToFloat64(numberKind)
-			}
-
-			m, err = prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(numberKind), buckets, labels...)
+			c.exportSummary(ch, dist, numberKind, desc, labels)
 		} else if sum, ok := agg.(aggregator.Sum); ok {
-			var v core.Number
-			v, err = sum.Sum()
-			if err != nil {
-				c.exp.OnError(err)
-				return
-			}
-
-			m, err = prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(numberKind), labels...)
+			c.exportCounter(ch, sum, numberKind, desc, labels)
 		} else if gauge, ok := agg.(aggregator.LastValue); ok {
-			var lastValue core.Number
-			lastValue, _, err = gauge.LastValue()
-			if err != nil {
-				c.exp.OnError(err)
-				return
-			}
-
-			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(numberKind), labels...)
+			c.exportGauge(ch, gauge, numberKind, desc, labels)
 		}
-
-		if err != nil {
-			c.exp.OnError(err)
-			return
-		}
-
-		ch <- m
 	})
+}
+
+func (c *collector) exportGauge(ch chan<- prometheus.Metric, gauge aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	lastValue, _, err := gauge.LastValue()
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	ch <- m
+}
+
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	v, err := sum.Sum()
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	ch <- m
+}
+
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	count, err := dist.Count()
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	var sum core.Number
+	sum, err = dist.Sum()
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	buckets := make(map[float64]float64)
+	for bucket := range c.exp.DefaultSummaryObjectives {
+		q, _ := dist.Quantile(bucket)
+		buckets[bucket] = q.CoerceToFloat64(kind)
+	}
+
+	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), buckets, labels...)
+	if err != nil {
+		c.exp.OnError(err)
+		return
+	}
+
+	ch <- m
 }
 
 func (c *collector) toDesc(metric *export.Record) *prometheus.Desc {
