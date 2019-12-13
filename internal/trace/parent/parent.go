@@ -9,23 +9,15 @@ import (
 )
 
 func getEffective(ctx context.Context) (core.SpanContext, bool) {
-	if ctx == nil {
-		return core.EmptySpanContext(), false
-	}
-	rctx := propagation.RemoteContext(ctx)
-	sctx := trace.SpanFromContext(ctx).SpanContext()
-
-	if rctx.IsValid() && sctx.IsValid() && rctx.TraceID == sctx.TraceID {
+	if sctx := trace.SpanFromContext(ctx).SpanContext(); sctx.IsValid() {
 		return sctx, false
 	}
-	if rctx.IsValid() {
-		return rctx, true
-	}
-	return sctx, false
+	return propagation.RemoteContext(ctx), true
 }
 
 func GetContext(ctx, parent context.Context) (context.Context, core.SpanContext, bool) {
-	if pctx, remote := getEffective(parent); pctx.IsValid() {
+	if parent != nil {
+		pctx, remote := getEffective(parent)
 		return parent, pctx, remote
 	}
 
