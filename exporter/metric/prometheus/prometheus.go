@@ -35,8 +35,8 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	checkpointSet export.CheckpointSet
-	OnError       func(error)
+	snapshot export.CheckpointSet
+	OnError  func(error)
 
 	DefaultHistogramBuckets  []float64
 	DefaultSummaryObjectives map[float64]float64
@@ -120,7 +120,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	e.checkpointSet = checkpointSet
+	e.snapshot = checkpointSet
 	return nil
 }
 
@@ -138,11 +138,11 @@ func newCollector(exporter *Exporter) *collector {
 }
 
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	if c.exp.checkpointSet == nil {
+	if c.exp.snapshot == nil {
 		return
 	}
 
-	c.exp.checkpointSet.ForEach(func(record export.Record) {
+	c.exp.snapshot.ForEach(func(record export.Record) {
 		ch <- c.toDesc(&record)
 	})
 }
@@ -152,11 +152,11 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	if c.exp.checkpointSet == nil {
+	if c.exp.snapshot == nil {
 		return
 	}
 
-	c.exp.checkpointSet.ForEach(func(record export.Record) {
+	c.exp.snapshot.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
 		labels := labelValues(record.Labels())
