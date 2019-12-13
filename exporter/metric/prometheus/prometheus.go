@@ -36,6 +36,7 @@ type Exporter struct {
 	gatherer   prometheus.Gatherer
 
 	checkpointSet export.CheckpointSet
+	OnError       func(error)
 }
 
 var _ export.Exporter = &Exporter{}
@@ -68,6 +69,10 @@ type Options struct {
 	// DefaultSummaryObjectives is the default summary objectives
 	// to use. Use nil to specify the system-default summary objectives.
 	DefaultSummaryObjectives map[float64]float64
+
+	// OnError is a function that handle errors that may occur while exporting metrics.
+	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
+	OnError func(error)
 }
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
@@ -88,6 +93,12 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.DefaultSummaryObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
 	}
 
+	if opts.OnError == nil {
+		opts.OnError = func(err error) {
+			fmt.Println(err.Error())
+		}
+	}
+
 	e := &Exporter{
 		registerer: opts.Registerer,
 		gatherer:   opts.Gatherer,
@@ -96,7 +107,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 
 	c := newCollector(opts, e)
 	if err := opts.Registerer.Register(c); err != nil {
-		fmt.Println(fmt.Errorf("cannot register the collector: %v", err))
+		opts.OnError(fmt.Errorf("cannot register the collector: %w", err))
 	}
 
 	return e, nil
@@ -150,16 +161,19 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		var m prometheus.Metric
 		var err error
 
+		// TODO: implement histogram export when the histogram aggregation is done.
+		//  https://github.com/open-telemetry/opentelemetry-go/issues/317
+
 		if dist, ok := agg.(aggregator.Distribution); ok {
 			var count int64
 			count, err = dist.Count()
 			if err != nil {
-				fmt.Println(err.Error())
+				c.exp.OnError(err)
 				return
 			}
 			value, err = dist.Sum()
 			if err != nil {
-				fmt.Println(err.Error())
+				c.exp.OnError(err)
 				return
 			}
 
@@ -174,7 +188,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			var v core.Number
 			v, err = sum.Sum()
 			if err != nil {
-				fmt.Println(err.Error())
+				c.exp.OnError(err)
 				return
 			}
 
@@ -182,14 +196,14 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		} else if gauge, ok := agg.(aggregator.LastValue); ok {
 			value, _, err = gauge.LastValue()
 			if err != nil {
-				fmt.Println(err.Error())
+				c.exp.OnError(err)
 				return
 			}
 			m, err = prometheus.NewConstMetric(desc, prometheus.GaugeValue, value.CoerceToFloat64(nk), labels...)
 		}
 
 		if err != nil {
-			fmt.Println(err.Error())
+			c.exp.OnError(err)
 			return
 		}
 
