@@ -25,7 +25,7 @@ import (
 
 const (
 	defaultMaxQueueSize       = 2048
-	defaultScheduledDelay     = time.Duration(5000 * time.Millisecond)
+	defaultScheduledDelay     = 5000 * time.Millisecond
 	defaultMaxExportBatchSize = 512
 )
 

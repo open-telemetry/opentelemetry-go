@@ -33,7 +33,7 @@ func TestInconsistentMergeErr(t *testing.T) {
 	err := aggregator.NewInconsistentMergeError(counter.New(), gauge.New())
 	require.Equal(
 		t,
-		"Cannot merge *counter.Aggregator with *gauge.Aggregator: Inconsistent aggregator types",
+		"cannot merge *counter.Aggregator with *gauge.Aggregator: inconsistent aggregator types",
 		err.Error(),
 	)
 	require.True(t, errors.Is(err, aggregator.ErrInconsistentType))

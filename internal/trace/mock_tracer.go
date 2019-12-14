@@ -70,5 +70,5 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 		tracer: mt,
 	}
 
-	return apitrace.SetCurrentSpan(ctx, span), span
+	return apitrace.ContextWithSpan(ctx, span), span
 }

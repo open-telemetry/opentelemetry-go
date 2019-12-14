@@ -55,7 +55,6 @@ var _ apitrace.Provider = &Provider{}
 // parameter configures the provider with common options applicable
 // to all tracer instances that will be created by this provider.
 func NewProvider(opts ...ProviderOption) (*Provider, error) {
-
 	o := &ProviderOptions{}
 
 	for _, opt := range opts {

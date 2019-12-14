@@ -220,9 +220,9 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 // RouteKey Tag.
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := trace.CurrentSpan(r.Context())
+		span := trace.SpanFromContext(r.Context())
 		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttributes(RouteKey.String(route))
-		h.ServeHTTP(w, r.WithContext(trace.SetCurrentSpan(r.Context(), span)))
+		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
 	})
 }

@@ -30,5 +30,5 @@ func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context
 // Start starts a noop span.
 func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (context.Context, Span) {
 	span := NoopSpan{}
-	return SetCurrentSpan(ctx, span), span
+	return ContextWithSpan(ctx, span), span
 }

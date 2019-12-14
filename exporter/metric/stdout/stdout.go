@@ -175,7 +175,6 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 					}
 				}
 			}
-
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
 			if value, timestamp, err := lv.LastValue(); err != nil {
 				if err == aggregator.ErrNoLastValue {

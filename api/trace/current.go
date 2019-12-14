@@ -24,11 +24,11 @@ var (
 	currentSpanKey = &currentSpanKeyType{}
 )
 
-func SetCurrentSpan(ctx context.Context, span Span) context.Context {
+func ContextWithSpan(ctx context.Context, span Span) context.Context {
 	return context.WithValue(ctx, currentSpanKey, span)
 }
 
-func CurrentSpan(ctx context.Context) Span {
+func SpanFromContext(ctx context.Context) Span {
 	if span, has := ctx.Value(currentSpanKey).(Span); has {
 		return span
 	}

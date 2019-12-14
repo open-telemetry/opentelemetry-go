@@ -81,9 +81,9 @@ func UnaryClientInterceptor(ctx context.Context, method string, req, reply inter
 
 func setTraceStatus(ctx context.Context, err error) {
 	if err != nil {
-		status, _ := status.FromError(err)
-		trace.CurrentSpan(ctx).SetStatus(status.Code())
+		s, _ := status.FromError(err)
+		trace.SpanFromContext(ctx).SetStatus(s.Code())
 	} else {
-		trace.CurrentSpan(ctx).SetStatus(codes.OK)
+		trace.SpanFromContext(ctx).SetStatus(codes.OK)
 	}
 }

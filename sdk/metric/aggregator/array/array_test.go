@@ -58,12 +58,13 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	all.Sort()
 
 	sum, err := agg.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
 	require.InEpsilon(t,
-		all.Sum().CoerceToFloat64(profile.NumberKind),
+		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Nil(t, err)
 	count, err := agg.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
@@ -144,12 +145,13 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	all.Sort()
 
 	sum, err := agg1.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
 	require.InEpsilon(t,
-		all.Sum().CoerceToFloat64(profile.NumberKind),
+		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	require.Nil(t, err)
 	count, err := agg1.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
@@ -287,8 +289,9 @@ func TestArrayFloat64(t *testing.T) {
 			all.Sort()
 
 			sum, err := agg.Sum()
-			require.InEpsilon(t, all.Sum().AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 			require.Nil(t, err)
+			allSum := all.Sum()
+			require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
 			count, err := agg.Count()
 			require.Equal(t, all.Count(), count, "Same count")

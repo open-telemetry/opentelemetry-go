@@ -53,7 +53,7 @@ type B3 struct {
 var _ TextFormat = B3{}
 
 func (b3 B3) Inject(ctx context.Context, supplier Supplier) {
-	sc := trace.CurrentSpan(ctx).SpanContext()
+	sc := trace.SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
 			sampled := sc.TraceFlags & core.TraceFlagsSampled
