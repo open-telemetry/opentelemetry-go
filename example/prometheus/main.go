@@ -48,7 +48,7 @@ func initMeter() *push.Controller {
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
 	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
-	// it could try again on the next scrape and no data would be lost, only the resolution.
+	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
 	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
