@@ -19,12 +19,12 @@ import (
 	"log"
 	"time"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/context/baggage/propagation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	metricstdout "go.opentelemetry.io/otel/exporter/metric/stdout"
+	dogstatsd "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
@@ -58,9 +58,8 @@ func initTracer() {
 
 func initMeter() *push.Controller {
 	selector := simple.NewWithExactMeasure()
-	exporter, err := metricstdout.New(metricstdout.Options{
-		Quantiles:   []float64{0.5, 0.9, 0.99},
-		PrettyPrint: false,
+	exporter, err := dogstatsd.New(dogstatsd.Config{
+		URL: "udp://127.0.0.1:8200",
 	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
@@ -92,7 +91,7 @@ func main() {
 
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
+	ctx = propagation.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
@@ -115,7 +114,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
+			propagation.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			oneMetric.Measurement(1.0),

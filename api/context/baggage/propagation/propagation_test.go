@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"go.opentelemetry.io/otel/api/context/baggage"
 	bpropagation "go.opentelemetry.io/otel/api/context/baggage/propagation"
 	"go.opentelemetry.io/otel/api/context/propagation"

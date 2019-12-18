@@ -21,10 +21,11 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/matchers"
-	"google.golang.org/grpc/codes"
 )
 
 type Harness struct {

@@ -482,18 +482,6 @@ func mustGetBridgeSpanContext(ctx ot.SpanContext) *bridgeSpanContext {
 	return ourCtx
 }
 
-func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltrace.SpanKind {
-	// TODO: Check out this logic
-	switch srt {
-	case ot.ChildOfRef:
-		return oteltrace.SpanKindServer
-	case ot.FollowsFromRef:
-		return oteltrace.SpanKindProducer
-	default:
-		panic("fix yer code, it uses bogus opentracing reference type")
-	}
-}
-
 // TODO: these headers are most likely bogus
 var (
 	traceIDHeader       = http.CanonicalHeaderKey("x-otelbridge-trace-id")
