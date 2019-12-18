@@ -160,6 +160,14 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		//  https://github.com/open-telemetry/opentelemetry-go/issues/317
 
 		if dist, ok := agg.(aggregator.Distribution); ok {
+			// TODO: summaries values are never being resetted.
+			//  As measures are recorded, new records starts to have less impact on these summaries.
+			//  We should implement an solution that is similar to the Prometheus Clients
+			//  using a rolling window for summaries could be a solution.
+			//
+			//  References:
+			// 	https://www.robustperception.io/how-does-a-prometheus-summary-work
+			//  https://github.com/prometheus/client_golang/blob/fa4aa9000d2863904891d193dea354d23f3d712a/prometheus/summary.go#L135
 			c.exportSummary(ch, dist, numberKind, desc, labels)
 		} else if sum, ok := agg.(aggregator.Sum); ok {
 			c.exportCounter(ch, sum, numberKind, desc, labels)
