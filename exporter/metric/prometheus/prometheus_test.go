@@ -19,7 +19,9 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewExporter(prometheus.Options{})
+	exporter, err := prometheus.NewExporter(prometheus.Options{
+		DefaultSummaryQuantiles: []float64{0.5, 0.9, 0.99},
+	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
