@@ -162,7 +162,7 @@ func (c *Controller) tick() {
 	// configure a timeout here?
 	ctx := context.Background()
 	c.collect(ctx)
-	checkpointSet := lockedCheckpoint{
+	checkpointSet := syncCheckpointSet{
 		mtx:      &c.collectLock,
 		delegate: c.batcher.CheckpointSet(),
 	}
@@ -181,16 +181,16 @@ func (c *Controller) collect(ctx context.Context) {
 	c.sdk.Collect(ctx)
 }
 
-// lockedCheckpoint is a wrapper for a checkpoint to lock collection while an exporter is reading
-// the checkpoint set.
-type lockedCheckpoint struct {
+// syncCheckpointSet is a wrapper for a CheckpointSet to synchronize
+// SDK's collection and reads of a CheckpointSet by an exporter.
+type syncCheckpointSet struct {
 	mtx      *sync.Mutex
 	delegate export.CheckpointSet
 }
 
-var _ export.CheckpointSet = (*lockedCheckpoint)(nil)
+var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
 
-func (c lockedCheckpoint) ForEach(fn func(export.Record)) {
+func (c syncCheckpointSet) ForEach(fn func(export.Record)) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	c.delegate.ForEach(fn)
