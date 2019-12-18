@@ -87,10 +87,6 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	if opts.DefaultSummaryQuantiles == nil {
-		opts.DefaultSummaryQuantiles = []float64{0.5, 0.9, 0.99}
-	}
-
 	if opts.OnError == nil {
 		opts.OnError = func(err error) {
 			fmt.Println(err.Error())
