@@ -59,8 +59,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 			key.Float64("double", doubleValue),
 		},
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
-			{Message: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
+			{Name: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
 		},
 		SpanKind: trace.SpanKindInternal,
 		Status:   codes.Unknown,
@@ -90,7 +90,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`],` +
 		`"MessageEvents":[` +
 		`{` +
-		`"Message":"foo",` +
+		`"Name":"foo",` +
 		`"Attributes":[` +
 		`{` +
 		`"Key":"key",` +
@@ -100,7 +100,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Time":` + string(expectedSerializedNow) +
 		`},` +
 		`{` +
-		`"Message":"bar",` +
+		`"Name":"bar",` +
 		`"Attributes":[` +
 		`{` +
 		`"Key":"double",` +
