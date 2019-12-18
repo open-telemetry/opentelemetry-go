@@ -423,8 +423,8 @@ func TestEvents(t *testing.T) {
 		Name:            "Events/span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -472,8 +472,8 @@ func TestEventsOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "EventsOverLimit/span0",
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,

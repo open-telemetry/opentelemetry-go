@@ -176,7 +176,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, getStringTag("message", a.Message))
+		fields = append(fields, getStringTag("name", a.Name))
 		logs = append(logs, &gen.Log{
 			Timestamp: a.Time.UnixNano() / 1000,
 			Fields:    fields,

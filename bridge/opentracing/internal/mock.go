@@ -195,7 +195,7 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 type MockEvent struct {
 	CtxAttributes oteldctx.Map
 	Timestamp     time.Time
-	Msg           string
+	Name          string
 	Attributes    oteldctx.Map
 }
 
@@ -268,15 +268,15 @@ func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otelcore.KeyValue) {
-	s.AddEventWithTimestamp(ctx, time.Now(), msg, attrs...)
+func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.KeyValue) {
+	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otelcore.KeyValue) {
+func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
 		CtxAttributes: oteldctx.FromContext(ctx),
 		Timestamp:     timestamp,
-		Msg:           msg,
+		Name:          name,
 		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
 			MultiKV: attrs,
 		}),
