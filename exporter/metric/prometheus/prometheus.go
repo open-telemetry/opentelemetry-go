@@ -38,7 +38,7 @@ type Exporter struct {
 	snapshot export.CheckpointSet
 	onError  func(error)
 
-	defaultSummaryObjectives map[float64]float64
+	defaultSummaryQuantiles []float64
 }
 
 var _ export.Exporter = &Exporter{}
@@ -64,9 +64,9 @@ type Options struct {
 	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
 
-	// DefaultSummaryObjectives is the default summary objectives
-	// to use. Use nil to specify the system-default summary objectives.
-	DefaultSummaryObjectives map[float64]float64
+	// DefaultSummaryQuantiles is the default summary quantiles
+	// to use. Use nil to specify the system-default summary quantiles.
+	DefaultSummaryQuantiles []float64
 
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
@@ -87,8 +87,8 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	if opts.DefaultSummaryObjectives == nil {
-		opts.DefaultSummaryObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
+	if opts.DefaultSummaryQuantiles == nil {
+		opts.DefaultSummaryQuantiles = []float64{0.5, 0.9, 0.99}
 	}
 
 	if opts.OnError == nil {
@@ -98,10 +98,10 @@ func NewExporter(opts Options) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		handler:                  promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
-		registerer:               opts.Registerer,
-		gatherer:                 opts.Gatherer,
-		defaultSummaryObjectives: opts.DefaultSummaryObjectives,
+		handler:                 promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		registerer:              opts.Registerer,
+		gatherer:                opts.Gatherer,
+		defaultSummaryQuantiles: opts.DefaultSummaryQuantiles,
 	}
 
 	c := newCollector(e)
@@ -223,13 +223,13 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 		return
 	}
 
-	buckets := make(map[float64]float64)
-	for bucket := range c.exp.defaultSummaryObjectives {
-		q, _ := dist.Quantile(bucket)
-		buckets[bucket] = q.CoerceToFloat64(kind)
+	quantiles := make(map[float64]float64)
+	for _, quantile := range c.exp.defaultSummaryQuantiles {
+		q, _ := dist.Quantile(quantile)
+		quantiles[quantile] = q.CoerceToFloat64(kind)
 	}
 
-	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), buckets, labels...)
+	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), quantiles, labels...)
 	if err != nil {
 		c.exp.onError(err)
 		return
