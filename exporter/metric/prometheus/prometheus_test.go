@@ -19,9 +19,7 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewExporter(prometheus.Options{
-		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
-	})
+	exporter, err := prometheus.NewExporter(prometheus.Options{})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
