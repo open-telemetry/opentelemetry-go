@@ -36,10 +36,9 @@ type Exporter struct {
 	gatherer   prometheus.Gatherer
 
 	snapshot export.CheckpointSet
-	OnError  func(error)
+	onError  func(error)
 
-	DefaultHistogramBuckets  []float64
-	DefaultSummaryObjectives map[float64]float64
+	defaultSummaryObjectives map[float64]float64
 }
 
 var _ export.Exporter = &Exporter{}
@@ -64,10 +63,6 @@ type Options struct {
 	//
 	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
-
-	// DefaultHistogramBuckets is the default histogram buckets
-	// to use. Use nil to specify the system-default histogram buckets.
-	DefaultHistogramBuckets []float64
 
 	// DefaultSummaryObjectives is the default summary objectives
 	// to use. Use nil to specify the system-default summary objectives.
@@ -106,8 +101,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 		handler:                  promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
 		registerer:               opts.Registerer,
 		gatherer:                 opts.Gatherer,
-		DefaultHistogramBuckets:  opts.DefaultHistogramBuckets,
-		DefaultSummaryObjectives: opts.DefaultSummaryObjectives,
+		defaultSummaryObjectives: opts.DefaultSummaryObjectives,
 	}
 
 	c := newCollector(e)
@@ -178,13 +172,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 func (c *collector) exportGauge(ch chan<- prometheus.Metric, gauge aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
 	lastValue, _, err := gauge.LastValue()
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
@@ -194,13 +188,13 @@ func (c *collector) exportGauge(ch chan<- prometheus.Metric, gauge aggregator.La
 func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
 	v, err := sum.Sum()
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
@@ -210,26 +204,26 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
 	count, err := dist.Count()
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
 	var sum core.Number
 	sum, err = dist.Sum()
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
 	buckets := make(map[float64]float64)
-	for bucket := range c.exp.DefaultSummaryObjectives {
+	for bucket := range c.exp.defaultSummaryObjectives {
 		q, _ := dist.Quantile(bucket)
 		buckets[bucket] = q.CoerceToFloat64(kind)
 	}
 
 	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), buckets, labels...)
 	if err != nil {
-		c.exp.OnError(err)
+		c.exp.onError(err)
 		return
 	}
 
