@@ -33,10 +33,6 @@ type Provider interface {
 type LabelSet interface {
 }
 
-type LabelSetDelegate interface {
-	Delegate() LabelSet
-}
-
 // Options contains some options for metrics of any kind.
 type Options struct {
 	// Description is an optional field describing the metric
