@@ -17,9 +17,9 @@ func TestDirect(t *testing.T) {
 
 	ctx := context.Background()
 	glob := global.MeterProvider().Meter("test")
-	lvals1 := key.New("A").String("B")
+	lvals1 := key.String("A", "B")
 	labels1 := glob.Labels(lvals1)
-	lvals2 := key.New("C").String("D")
+	lvals2 := key.String("C", "D")
 	labels2 := glob.Labels(lvals2)
 
 	counter := glob.NewInt64Counter("test.counter")
@@ -75,11 +75,13 @@ func TestDirect(t *testing.T) {
 func TestBound(t *testing.T) {
 	internal.ResetForTest()
 
+	// Note: this test uses oppsite Float64/Int64 number kinds
+	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.MeterProvider().Meter("test")
-	lvals1 := key.New("A").String("B")
+	lvals1 := key.String("A", "B")
 	labels1 := glob.Labels(lvals1)
-	lvals2 := key.New("C").String("D")
+	lvals2 := key.String("C", "D")
 	labels2 := glob.Labels(lvals2)
 
 	counter := glob.NewFloat64Counter("test.counter")
@@ -133,4 +135,32 @@ func TestBound(t *testing.T) {
 		mock.MeasurementBatches[2].Measurements[0].Number)
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
+
+	boundC.Release()
+	boundG.Release()
+	boundM.Release()
+}
+
+func TestRelease(t *testing.T) {
+	// Tests Release with SDK never installed.
+	internal.ResetForTest()
+
+	glob := global.MeterProvider().Meter("test")
+	lvals1 := key.New("A").String("B")
+	labels1 := glob.Labels(lvals1)
+	lvals2 := key.New("C").String("D")
+	labels2 := glob.Labels(lvals2)
+
+	counter := glob.NewFloat64Counter("test.counter")
+	boundC := counter.AcquireHandle(labels1)
+
+	gauge := glob.NewFloat64Gauge("test.gauge")
+	boundG := gauge.AcquireHandle(labels2)
+
+	measure := glob.NewInt64Measure("test.measure")
+	boundM := measure.AcquireHandle(labels1)
+
+	boundC.Release()
+	boundG.Release()
+	boundM.Release()
 }
