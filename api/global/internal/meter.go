@@ -167,7 +167,6 @@ func (inst *instImpl) AcquireHandle(labels metric.LabelSet) metric.HandleImpl {
 	if implPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).AcquireHandle(labels)
 	}
-
 	return &instHandle{
 		inst:   inst,
 		labels: labels,
@@ -209,6 +208,7 @@ func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
 	}
 	var implPtr *metric.HandleImpl
 	bound.initialize.Do(func() {
+
 		implPtr = new(metric.HandleImpl)
 		*implPtr = (*instPtr).AcquireHandle(bound.labels)
 		atomic.StorePointer(&bound.delegate, unsafe.Pointer(implPtr))
@@ -233,9 +233,8 @@ func (labels *labelSet) Delegate() metric.LabelSet {
 	if meterPtr == nil {
 		// This is technically impossible, provided the global
 		// Meter is updated after the meters and instruments
-		// have been delegated.  TODO Remove this panic before
-		// merge.
-		panic("Temporary panic")
+		// have been delegated.
+		return labels
 	}
 	var implPtr *metric.LabelSet
 	labels.initialize.Do(func() {

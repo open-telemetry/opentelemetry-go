@@ -63,3 +63,9 @@ func defaultMeterValue() *atomic.Value {
 	v.Store(meterProviderHolder{mp: &meterProvider{}})
 	return v
 }
+
+func ResetForTest() {
+	globalTracer = defaultTracerValue()
+	globalMeter = defaultMeterValue()
+	delegateMeterOnce = sync.Once{}
+}
