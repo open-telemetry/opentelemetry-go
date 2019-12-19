@@ -178,12 +178,16 @@ func (bound *instHandle) Release() {
 
 // Metric updates
 
-func (*meter) RecordBatch(ctx context.Context, labels metric.LabelSet, measurements ...metric.Measurement) {
-	// TODO make m.delegate an unsafe.Pointer
+func (m *meter) RecordBatch(ctx context.Context, labels metric.LabelSet, measurements ...metric.Measurement) {
+	if delegatePtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
+		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
+	}
 }
 
-func (*instImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
-	// TODO
+func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+	if instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
+		(*instPtr).RecordOne(ctx, number, labels)
+	}
 }
 
 func (*instHandle) RecordOne(ctx context.Context, number core.Number) {
