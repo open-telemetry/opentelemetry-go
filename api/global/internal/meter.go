@@ -30,18 +30,11 @@ type meter struct {
 
 	lock        sync.Mutex
 	instruments []*instImpl
-	delegate    unsafe.Pointer // (*metric.Meter)
-}
 
-type labelSet struct {
-	meter  *meter
-	labels []core.KeyValue
-
-	delegate metric.LabelSet
+	delegate unsafe.Pointer // (*metric.Meter)
 }
 
 type instImpl struct {
-	meter *meter
 	name  string
 	mkind metricKind
 	nkind core.NumberKind
@@ -50,16 +43,26 @@ type instImpl struct {
 	delegate unsafe.Pointer // (*metric.InstrumentImpl)
 }
 
+type labelSet struct {
+	meter *meter
+	value []core.KeyValue
+
+	initialize sync.Once
+	delegate   unsafe.Pointer // (* metric.LabelSet)
+}
+
 type instHandle struct {
 	inst   *instImpl
 	labels metric.LabelSet
 
-	delegate unsafe.Pointer // (*metric.HandleImpl)
+	initialize sync.Once
+	delegate   unsafe.Pointer // (*metric.HandleImpl)
 }
 
 var _ metric.Provider = &meterProvider{}
 var _ metric.Meter = &meter{}
 var _ metric.LabelSet = &labelSet{}
+var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.HandleImpl = &instHandle{}
 
@@ -117,7 +120,6 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 	}
 
 	inst := &instImpl{
-		meter: m,
 		name:  name,
 		mkind: mkind,
 		nkind: nkind,
@@ -154,11 +156,11 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 // Instrument delegation
 
 func (inst *instImpl) setDelegate(d metric.Meter) {
-	impl := new(metric.InstrumentImpl)
+	implPtr := new(metric.InstrumentImpl)
 
-	*impl = newInstDelegate(d, inst.name, inst.mkind, inst.nkind, inst.opts)
+	*implPtr = newInstDelegate(d, inst.name, inst.mkind, inst.nkind, inst.opts)
 
-	atomic.StorePointer(&inst.delegate, unsafe.Pointer(impl))
+	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
 func (inst *instImpl) AcquireHandle(labels metric.LabelSet) metric.HandleImpl {
@@ -173,7 +175,15 @@ func (inst *instImpl) AcquireHandle(labels metric.LabelSet) metric.HandleImpl {
 }
 
 func (bound *instHandle) Release() {
-	// TODO
+	bound.initialize.Do(func() {})
+
+	implPtr := (*metric.HandleImpl)(atomic.LoadPointer(&bound.delegate))
+
+	if implPtr == nil {
+		return
+	}
+
+	(*implPtr).Release()
 }
 
 // Metric updates
@@ -190,8 +200,53 @@ func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels 
 	}
 }
 
-func (*instHandle) RecordOne(ctx context.Context, number core.Number) {
-	// TODO
+// Bound instrument initialization
+
+func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
+	instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&bound.inst.delegate))
+	if instPtr == nil {
+		return
+	}
+	var implPtr *metric.HandleImpl
+	bound.initialize.Do(func() {
+		implPtr = new(metric.HandleImpl)
+		*implPtr = (*instPtr).AcquireHandle(bound.labels)
+		atomic.StorePointer(&bound.delegate, unsafe.Pointer(implPtr))
+	})
+	if implPtr == nil {
+		implPtr = (*metric.HandleImpl)(atomic.LoadPointer(&bound.delegate))
+	}
+	(*implPtr).RecordOne(ctx, number)
+}
+
+// LabelSet initialization
+
+func (m *meter) Labels(labels ...core.KeyValue) metric.LabelSet {
+	return &labelSet{
+		meter: m,
+		value: labels,
+	}
+}
+
+func (labels *labelSet) Delegate() metric.LabelSet {
+	meterPtr := (*metric.Meter)(atomic.LoadPointer(&labels.meter.delegate))
+	if meterPtr == nil {
+		// This is technically impossible, provided the global
+		// Meter is updated after the meters and instruments
+		// have been delegated.  TODO Remove this panic before
+		// merge.
+		panic("Temporary panic")
+	}
+	var implPtr *metric.LabelSet
+	labels.initialize.Do(func() {
+		implPtr = new(metric.LabelSet)
+		*implPtr = (*meterPtr).Labels(labels.value...)
+		atomic.StorePointer(&labels.delegate, unsafe.Pointer(implPtr))
+	})
+	if implPtr == nil {
+		implPtr = (*metric.LabelSet)(atomic.LoadPointer(&labels.delegate))
+	}
+	return (*implPtr)
 }
 
 // Constructors
@@ -218,13 +273,4 @@ func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier
 
 func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
-}
-
-// TODO
-
-func (m *meter) Labels(labels ...core.KeyValue) metric.LabelSet {
-	return &labelSet{
-		meter:  m,
-		labels: labels,
-	}
 }
