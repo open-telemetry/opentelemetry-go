@@ -40,8 +40,13 @@ func MeterProvider() metric.Provider {
 func SetMeterProvider(mp metric.Provider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
-		if def, ok := current.(*meterProvider); ok {
-			def.delegateTo(mp)
+
+		if current == mp {
+			// Setting the provider to the prior default
+			// is nonsense, set it to a noop.
+			mp = metric.NoopProvider{}
+		} else if def, ok := current.(*meterProvider); ok {
+			def.setDelegate(mp)
 		}
 	})
 	globalMeter.Store(meterProviderHolder{mp: mp})
