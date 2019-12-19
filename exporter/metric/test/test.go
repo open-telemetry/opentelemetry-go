@@ -78,7 +78,7 @@ func (p *CheckpointSet) updateAggregator(desc *export.Descriptor, newAgg export.
 	agg, added := p.Add(desc, newAgg, labels...)
 	if !added {
 		// An aggregator already exist for this descriptor and label set, we should merge them.
-		_ = newAgg.Merge(agg, desc)
+		_ = agg.Merge(newAgg, desc)
 	}
 }
 
