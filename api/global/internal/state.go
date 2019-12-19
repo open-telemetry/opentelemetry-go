@@ -25,18 +25,22 @@ var (
 	delegateMeterOnce sync.Once
 )
 
+// TraceProvider is the internal implementation for global.TraceProvider.
 func TraceProvider() trace.Provider {
 	return globalTracer.Load().(traceProviderHolder).tp
 }
 
+// SetTraceProvider is the internal implementation for global.SetTraceProvider.
 func SetTraceProvider(tp trace.Provider) {
 	globalTracer.Store(traceProviderHolder{tp: tp})
 }
 
+// MeterProvider is the internal implementation for global.MeterProvider.
 func MeterProvider() metric.Provider {
 	return globalMeter.Load().(meterProviderHolder).mp
 }
 
+// SetMeterProvider is the internal implementation for global.SetMeterProvider.
 func SetMeterProvider(mp metric.Provider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
@@ -64,6 +68,7 @@ func defaultMeterValue() *atomic.Value {
 	return v
 }
 
+// ResetForTest restores the initial global state, for testing purposes.
 func ResetForTest() {
 	globalTracer = defaultTracerValue()
 	globalMeter = defaultMeterValue()

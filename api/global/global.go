@@ -22,6 +22,7 @@ import (
 
 // TraceProvider returns the registered global trace provider.
 // If none is registered then an instance of trace.NoopProvider is returned.
+//
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().Tracer("example.com/foo")
 func TraceProvider() trace.Provider {
@@ -33,9 +34,11 @@ func SetTraceProvider(tp trace.Provider) {
 	internal.SetTraceProvider(tp)
 }
 
-// MeterProvider returns the registered global meter provider.
-// If none is registered then an instance of metric.NoopProvider is returned.
-// Use the trace provider to create a named meter. E.g.
+// MeterProvider returns the registered global meter provider.  If
+// none is registered then a dewfault meter provider is returned that
+// forwards the Meter interface to the first registered Meter.
+//
+// Use the meter provider to create a named meter. E.g.
 //     meter := global.MeterProvider().Meter("example.com/foo")
 func MeterProvider() metric.Provider {
 	return internal.MeterProvider()

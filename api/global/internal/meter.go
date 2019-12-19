@@ -10,6 +10,27 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
+// This file contains the forwarding implementation of metric.Provider
+// used as the default global instance.  Metric events using instruments
+// provided by this implementation are no-ops until the first Meter
+// implementation is set as the global provider.
+//
+// The implementation here uses Mutexes to maintain a list of active
+// Meters in the Provider and Instruments in each Meter, under the
+// assumption that these interfaces are not performance-critical.
+//
+// We have the invariant that setDelegate() will be called before a
+// new metric.Provider implementation is registered as the global
+// provider.  Mutexes in the Provider and Meters ensure that each
+// instrument has a delegate before the global provider is set.
+//
+// LabelSets are implemented using the by delegating to the Meter
+// instance using the metric.LabelSetDelegator interface.
+//
+// Bound instrument operations are implementing by delegating to the
+// instrument after it is registered, with a sync.Once initializer to
+// protect against races with Release().
+
 type metricKind int8
 
 const (
@@ -134,21 +155,18 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 	case counterKind:
 		if nkind == core.Int64NumberKind {
 			return m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
-		} else {
-			return m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
 		}
+		return m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
 	case gaugeKind:
 		if nkind == core.Int64NumberKind {
 			return m.NewInt64Gauge(name, opts.([]metric.GaugeOptionApplier)...).Impl()
-		} else {
-			return m.NewFloat64Gauge(name, opts.([]metric.GaugeOptionApplier)...).Impl()
 		}
+		return m.NewFloat64Gauge(name, opts.([]metric.GaugeOptionApplier)...).Impl()
 	case measureKind:
 		if nkind == core.Int64NumberKind {
 			return m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
-		} else {
-			return m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
 		}
+		return m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
 	}
 	return nil
 }
