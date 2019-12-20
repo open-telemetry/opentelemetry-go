@@ -30,21 +30,21 @@ type Int64Gauge struct {
 	commonMetric
 }
 
-// Float64GaugeHandle is a handle for Float64Gauge.
+// Float64GaugeHandle is a boundInstrument for Float64Gauge.
 //
-// It inherits the Release function from commonHandle.
+// It inherits the Release function from commonBoundInstrument.
 type Float64GaugeHandle struct {
-	commonHandle
+	commonBoundInstrument
 }
 
-// Int64GaugeHandle is a handle for Int64Gauge.
+// Int64GaugeHandle is a boundInstrument for Int64Gauge.
 //
-// It inherits the Release function from commonHandle.
+// It inherits the Release function from commonBoundInstrument.
 type Int64GaugeHandle struct {
-	commonHandle
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this gauge. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
@@ -52,11 +52,11 @@ type Int64GaugeHandle struct {
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
-	h.commonHandle = g.acquireCommonHandle(labels)
+	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this gauge. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
@@ -64,7 +64,7 @@ func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Int64Gauge) AcquireHandle(labels LabelSet) (h Int64GaugeHandle) {
-	h.commonHandle = g.acquireCommonHandle(labels)
+	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
 	return
 }
 

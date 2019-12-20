@@ -58,10 +58,10 @@ type (
 )
 
 var (
-	_ apimetric.InstrumentImpl = &Instrument{}
-	_ apimetric.HandleImpl     = &Handle{}
-	_ apimetric.LabelSet       = &LabelSet{}
-	_ apimetric.Meter          = &Meter{}
+	_ apimetric.InstrumentImpl      = &Instrument{}
+	_ apimetric.BoundInstrumentImpl = &Handle{}
+	_ apimetric.LabelSet            = &LabelSet{}
+	_ apimetric.Meter               = &Meter{}
 )
 
 const (
@@ -70,7 +70,7 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleImpl {
+func (i *Instrument) AcquireBoundInstrument(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),

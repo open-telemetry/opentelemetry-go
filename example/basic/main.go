@@ -102,7 +102,7 @@ func main() {
 	gauge := oneMetric.AcquireHandle(commonLabels)
 	defer gauge.Release()
 
-	measure := measureTwo.AcquireHandle(commonLabels)
+	measure := measureTwo.AcquireBoundInstrument(commonLabels)
 	defer measure.Release()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {

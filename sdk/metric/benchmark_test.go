@@ -321,7 +321,7 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	mea := fix.sdk.NewInt64Measure(name)
-	handle := mea.AcquireHandle(labs)
+	handle := mea.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 
@@ -348,7 +348,7 @@ func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	mea := fix.sdk.NewFloat64Measure(name)
-	handle := mea.AcquireHandle(labs)
+	handle := mea.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 

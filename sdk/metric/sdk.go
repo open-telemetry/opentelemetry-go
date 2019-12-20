@@ -148,10 +148,10 @@ type (
 )
 
 var (
-	_ api.Meter          = &SDK{}
-	_ api.LabelSet       = &labels{}
-	_ api.InstrumentImpl = &instrument{}
-	_ api.HandleImpl     = &record{}
+	_ api.Meter               = &SDK{}
+	_ api.LabelSet            = &labels{}
+	_ api.InstrumentImpl      = &instrument{}
+	_ api.BoundInstrumentImpl = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -205,7 +205,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
+func (i *instrument) AcquireBoundInstrument(ls api.LabelSet) api.BoundInstrumentImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }

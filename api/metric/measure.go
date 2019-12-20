@@ -30,41 +30,41 @@ type Int64Measure struct {
 	commonMetric
 }
 
-// Float64MeasureHandle is a handle for Float64Measure.
+// Float64MeasureBoundInstrument is a bound instrument for Float64Measure.
 //
-// It inherits the Release function from commonHandle.
-type Float64MeasureHandle struct {
-	commonHandle
+// It inherits the Release function from commonBoundInstrument.
+type Float64MeasureBoundInstrument struct {
+	commonBoundInstrument
 }
 
-// Int64MeasureHandle is a handle for Int64Measure.
+// Int64MeasureBoundInstrument is a bound instrument for Int64Measure.
 //
-// It inherits the Release function from commonHandle.
-type Int64MeasureHandle struct {
-	commonHandle
+// It inherits the Release function from commonBoundInstrument.
+type Int64MeasureBoundInstrument struct {
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this measure. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Measure) AcquireHandle(labels LabelSet) (h Float64MeasureHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Float64Measure) AcquireBoundInstrument(labels LabelSet) (h Float64MeasureBoundInstrument) {
+	h.commonBoundInstrument = c.acquireCommonBoundInstrument(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this measure. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Measure) AcquireHandle(labels LabelSet) (h Int64MeasureHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Int64Measure) AcquireBoundInstrument(labels LabelSet) (h Int64MeasureBoundInstrument) {
+	h.commonBoundInstrument = c.acquireCommonBoundInstrument(labels)
 	return
 }
 
@@ -103,11 +103,11 @@ func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet)
 }
 
 // Record adds a new value to the list of measure's records.
-func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
+func (h *Float64MeasureBoundInstrument) Record(ctx context.Context, value float64) {
 	h.recordOne(ctx, core.NewFloat64Number(value))
 }
 
 // Record adds a new value to the list of measure's records.
-func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
+func (h *Int64MeasureBoundInstrument) Record(ctx context.Context, value int64) {
 	h.recordOne(ctx, core.NewInt64Number(value))
 }

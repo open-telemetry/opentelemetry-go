@@ -30,21 +30,21 @@ type Int64Counter struct {
 	commonMetric
 }
 
-// Float64CounterHandle is a handle for Float64Counter.
+// Float64CounterHandle is a boundInstrument for Float64Counter.
 //
-// It inherits the Release function from commonHandle.
+// It inherits the Release function from commonBoundInstrument.
 type Float64CounterHandle struct {
-	commonHandle
+	commonBoundInstrument
 }
 
-// Int64CounterHandle is a handle for Int64Counter.
+// Int64CounterHandle is a boundInstrument for Int64Counter.
 //
-// It inherits the Release function from commonHandle.
+// It inherits the Release function from commonBoundInstrument.
 type Int64CounterHandle struct {
-	commonHandle
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this counter. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this counter. The labels should
 // contain the keys and values for each key specified in the counter
 // with the WithKeys option.
 //
@@ -52,11 +52,11 @@ type Int64CounterHandle struct {
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Counter) AcquireHandle(labels LabelSet) (h Float64CounterHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+	h.commonBoundInstrument = c.acquireCommonBoundInstrument(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this counter. The labels should
+// AcquireBoundInstrument creates a boundInstrument for this counter. The labels should
 // contain the keys and values for each key specified in the counter
 // with the WithKeys option.
 //
@@ -64,7 +64,7 @@ func (c *Float64Counter) AcquireHandle(labels LabelSet) (h Float64CounterHandle)
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Counter) AcquireHandle(labels LabelSet) (h Int64CounterHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+	h.commonBoundInstrument = c.acquireCommonBoundInstrument(labels)
 	return
 }
 
