@@ -99,7 +99,7 @@ func main() {
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
-	gauge := oneMetric.AcquireHandle(commonLabels)
+	gauge := oneMetric.AcquireBoundInstrument(commonLabels)
 	defer gauge.Release()
 
 	measure := measureTwo.AcquireBoundInstrument(commonLabels)

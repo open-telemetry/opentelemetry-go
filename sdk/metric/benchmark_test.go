@@ -149,7 +149,7 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.AcquireHandle(labels[i])
+		cnt.AcquireBoundInstrument(labels[i])
 	}
 }
 
@@ -161,13 +161,13 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.AcquireHandle(labels[i]).Release()
+		cnt.AcquireBoundInstrument(labels[i]).Release()
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.AcquireHandle(labels[i])
+		cnt.AcquireBoundInstrument(labels[i])
 	}
 }
 
@@ -179,13 +179,13 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.AcquireHandle(labels[i]).Release()
+		cnt.AcquireBoundInstrument(labels[i]).Release()
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.AcquireHandle(labels[i]).Release()
+		cnt.AcquireBoundInstrument(labels[i]).Release()
 	}
 }
 
@@ -209,7 +209,7 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	cnt := fix.sdk.NewInt64Counter("int64.counter")
-	handle := cnt.AcquireHandle(labs)
+	handle := cnt.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 
@@ -236,7 +236,7 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	cnt := fix.sdk.NewFloat64Counter("float64.counter")
-	handle := cnt.AcquireHandle(labs)
+	handle := cnt.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 
@@ -265,7 +265,7 @@ func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	gau := fix.sdk.NewInt64Gauge("int64.gauge")
-	handle := gau.AcquireHandle(labs)
+	handle := gau.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 
@@ -292,7 +292,7 @@ func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
 	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
-	handle := gau.AcquireHandle(labs)
+	handle := gau.AcquireBoundInstrument(labs)
 
 	b.ResetTimer()
 

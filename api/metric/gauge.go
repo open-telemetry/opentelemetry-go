@@ -30,17 +30,17 @@ type Int64Gauge struct {
 	commonMetric
 }
 
-// Float64GaugeHandle is a boundInstrument for Float64Gauge.
+// Float64GaugeBoundInstrument is a boundInstrument for Float64Gauge.
 //
 // It inherits the Release function from commonBoundInstrument.
-type Float64GaugeHandle struct {
+type Float64GaugeBoundInstrument struct {
 	commonBoundInstrument
 }
 
-// Int64GaugeHandle is a boundInstrument for Int64Gauge.
+// Int64GaugeBoundInstrument is a boundInstrument for Int64Gauge.
 //
 // It inherits the Release function from commonBoundInstrument.
-type Int64GaugeHandle struct {
+type Int64GaugeBoundInstrument struct {
 	commonBoundInstrument
 }
 
@@ -51,7 +51,7 @@ type Int64GaugeHandle struct {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
+func (g *Float64Gauge) AcquireBoundInstrument(labels LabelSet) (h Float64GaugeBoundInstrument) {
 	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
 	return
 }
@@ -63,7 +63,7 @@ func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) AcquireHandle(labels LabelSet) (h Int64GaugeHandle) {
+func (g *Int64Gauge) AcquireBoundInstrument(labels LabelSet) (h Int64GaugeBoundInstrument) {
 	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
 	return
 }
@@ -103,11 +103,11 @@ func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
+func (h *Float64GaugeBoundInstrument) Set(ctx context.Context, value float64) {
 	h.recordOne(ctx, core.NewFloat64Number(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
+func (h *Int64GaugeBoundInstrument) Set(ctx context.Context, value int64) {
 	h.recordOne(ctx, core.NewInt64Number(value))
 }
