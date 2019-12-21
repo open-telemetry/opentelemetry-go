@@ -25,6 +25,9 @@ import (
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 type Exporter struct {
@@ -96,6 +99,20 @@ func New(options Options) (*Exporter, error) {
 	return &Exporter{
 		options: options,
 	}, nil
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup
+func NewExportPipeline(options Options) (*push.Controller, error) {
+	selector := simple.NewWithInexpensiveMeasure()
+	exporter, err := New(options)
+	if err != nil {
+		return nil, err
+	}
+	batcher := ungrouped.New(selector, true)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	return pusher, nil
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
