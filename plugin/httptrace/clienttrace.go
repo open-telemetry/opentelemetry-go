@@ -55,7 +55,6 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	}
 
 	ct.tr = global.TraceProvider().Tracer("go.opentelemetry.io/otel/plugin/httptrace")
-	ct.start("http.request", "http.request")
 
 	return &httptrace.ClientTrace{
 		GetConn:              ct.getConn,
