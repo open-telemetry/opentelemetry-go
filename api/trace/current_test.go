@@ -93,9 +93,9 @@ func (mockSpan) Tracer() trace.Tracer {
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 }
