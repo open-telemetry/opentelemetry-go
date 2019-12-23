@@ -20,7 +20,7 @@ import (
 
 func TestPrometheusExporter(t *testing.T) {
 	exporter, err := prometheus.NewExporter(prometheus.Options{
-		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
+		DefaultSummaryQuantiles: []float64{0.5, 0.9, 0.99},
 	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
@@ -50,11 +50,9 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet.AddMeasure(measure, 13, labels...)
 	checkpointSet.AddMeasure(measure, 15, labels...)
 	checkpointSet.AddMeasure(measure, 17, labels...)
-	expected = append(expected, `measure_bucket{A="B",C="D",le="0"} 0`)
-	expected = append(expected, `measure_bucket{A="B",C="D",le="10"} 0`)
-	expected = append(expected, `measure_bucket{A="B",C="D",le="15"} 2`)
-	expected = append(expected, `measure_bucket{A="B",C="D",le="20"} 3`)
-	expected = append(expected, `measure_bucket{A="B",C="D",le="+Inf"} 3`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
+	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
 	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
 	expected = append(expected, `measure_count{A="B",C="D"} 3`)
 
@@ -68,51 +66,6 @@ func TestPrometheusExporter(t *testing.T) {
 
 	checkpointSet.AddGauge(gauge, 32, missingLabels...)
 	expected = append(expected, `gauge{A="E",C=""} 32`)
-
-	checkpointSet.AddMeasure(measure, 19, missingLabels...)
-	expected = append(expected, `measure_bucket{A="E",C="",le="+Inf"} 1`)
-	expected = append(expected, `measure_bucket{A="E",C="",le="0"} 0`)
-	expected = append(expected, `measure_bucket{A="E",C="",le="10"} 0`)
-	expected = append(expected, `measure_bucket{A="E",C="",le="15"} 0`)
-	expected = append(expected, `measure_bucket{A="E",C="",le="20"} 1`)
-	expected = append(expected, `measure_count{A="E",C=""} 1`)
-	expected = append(expected, `measure_sum{A="E",C=""} 19`)
-
-	compareExport(t, exporter, checkpointSet, expected)
-}
-
-func TestPrometheusExporter_Summaries(t *testing.T) {
-	exporter, err := prometheus.NewExporter(prometheus.Options{
-		MeasureAggregation: prometheus.Summary,
-	})
-	if err != nil {
-		log.Panicf("failed to initialize metric stdout exporter %v", err)
-	}
-
-	var expected []string
-	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
-
-	measure := export.NewDescriptor(
-		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
-
-	labels := []core.KeyValue{
-		key.New("A").String("B"),
-		key.New("C").String("D"),
-	}
-
-	checkpointSet.AddMeasure(measure, 13, labels...)
-	checkpointSet.AddMeasure(measure, 15, labels...)
-	checkpointSet.AddMeasure(measure, 17, labels...)
-	expected = append(expected, `measure_count{A="B",C="D"} 3`)
-	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
-
-	missingLabels := []core.KeyValue{
-		key.New("A").String("E"),
-		key.New("C").String(""),
-	}
 
 	checkpointSet.AddMeasure(measure, 19, missingLabels...)
 	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)
