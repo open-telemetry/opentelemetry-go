@@ -35,7 +35,7 @@ func SetTraceProvider(tp trace.Provider) {
 }
 
 // MeterProvider returns the registered global meter provider.  If
-// none is registered then a dewfault meter provider is returned that
+// none is registered then a default meter provider is returned that
 // forwards the Meter interface to the first registered Meter.
 //
 // Use the meter provider to create a named meter. E.g.

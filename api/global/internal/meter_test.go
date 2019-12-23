@@ -17,23 +17,30 @@ func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	glob := global.MeterProvider().Meter("test")
+	meter1 := global.MeterProvider().Meter("test1")
+	meter2 := global.MeterProvider().Meter("test2")
 	lvals1 := key.String("A", "B")
-	labels1 := glob.Labels(lvals1)
+	labels1 := meter1.Labels(lvals1)
 	lvals2 := key.String("C", "D")
-	labels2 := glob.Labels(lvals2)
+	labels2 := meter1.Labels(lvals2)
+	lvals3 := key.String("E", "F")
+	labels3 := meter2.Labels(lvals3)
 
-	counter := glob.NewInt64Counter("test.counter")
+	counter := meter1.NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1)
 	counter.Add(ctx, 1, labels1)
 
-	gauge := glob.NewInt64Gauge("test.gauge")
+	gauge := meter1.NewInt64Gauge("test.gauge")
 	gauge.Set(ctx, 1, labels2)
 	gauge.Set(ctx, 2, labels2)
 
-	measure := glob.NewFloat64Measure("test.measure")
+	measure := meter1.NewFloat64Measure("test.measure")
 	measure.Record(ctx, 1, labels1)
 	measure.Record(ctx, 2, labels1)
+
+	second := meter2.NewFloat64Measure("test.second")
+	second.Record(ctx, 1, labels3)
+	second.Record(ctx, 2, labels3)
 
 	sdk := metrictest.NewProvider()
 	global.SetMeterProvider(sdk)
@@ -41,8 +48,9 @@ func TestDirect(t *testing.T) {
 	counter.Add(ctx, 1, labels1)
 	gauge.Set(ctx, 3, labels2)
 	measure.Record(ctx, 3, labels1)
+	second.Record(ctx, 3, labels3)
 
-	mock := sdk.Meter("test").(*metrictest.Meter)
+	mock := sdk.Meter("test1").(*metrictest.Meter)
 	require.Equal(t, 3, len(mock.MeasurementBatches))
 
 	require.Equal(t, map[core.Key]core.Value{
@@ -71,6 +79,19 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[2].Measurements[0].Number)
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
+
+	// This tests the second Meter instance
+	mock = sdk.Meter("test2").(*metrictest.Meter)
+	require.Equal(t, 1, len(mock.MeasurementBatches))
+
+	require.Equal(t, map[core.Key]core.Value{
+		lvals3.Key: lvals3.Value,
+	}, mock.MeasurementBatches[0].LabelSet.Labels)
+	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
+	require.Equal(t, core.NewFloat64Number(3),
+		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.Equal(t, "test.second",
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 }
 
 func TestBound(t *testing.T) {
