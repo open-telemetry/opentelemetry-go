@@ -76,8 +76,8 @@ func main() {
 				panic(err)
 			}
 			body, err = ioutil.ReadAll(res.Body)
-			res.Body.Close()
-			trace.CurrentSpan(ctx).SetStatus(codes.OK)
+			_ = res.Body.Close()
+			trace.SpanFromContext(ctx).SetStatus(codes.OK)
 
 			return err
 		})

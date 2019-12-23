@@ -99,7 +99,7 @@ func protoFromSpanData(s *export.SpanData, projectID string) *tracepb.Span {
 			droppedAnnotationsCount = len(es) - i
 			break
 		}
-		annotation := &tracepb.Span_TimeEvent_Annotation{Description: trunc(e.Message, maxAttributeStringValue)}
+		annotation := &tracepb.Span_TimeEvent_Annotation{Description: trunc(e.Name, maxAttributeStringValue)}
 		copyAttributes(&annotation.Attributes, e.Attributes)
 		event := &tracepb.Span_TimeEvent{
 			Time:  timestampProto(e.Time),

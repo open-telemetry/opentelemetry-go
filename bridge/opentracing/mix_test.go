@@ -215,7 +215,7 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 }
 
 func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) {
-	spanID := oteltrace.CurrentSpan(ctx).SpanContext().SpanID
+	spanID := oteltrace.SpanFromContext(ctx).SpanContext().SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
 	spanID = otelcore.SpanID{}
@@ -458,7 +458,7 @@ func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) {
 		tm.recordedOTSpanTracers = append(tm.recordedOTSpanTracers, otSpan.Tracer())
 	}
 
-	otelSpan := oteltrace.CurrentSpan(ctx)
+	otelSpan := oteltrace.SpanFromContext(ctx)
 	tm.recordedOtelSpanTracers = append(tm.recordedOtelSpanTracers, otelSpan.Tracer())
 }
 

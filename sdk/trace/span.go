@@ -84,13 +84,6 @@ func (s *span) SetStatus(status codes.Code) {
 	s.mu.Unlock()
 }
 
-func (s *span) SetAttribute(attribute core.KeyValue) {
-	if !s.IsRecording() {
-		return
-	}
-	s.copyToCappedAttributes(attribute)
-}
-
 func (s *span) SetAttributes(attributes ...core.KeyValue) {
 	if !s.IsRecording() {
 		return
@@ -109,7 +102,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 	if !s.IsRecording() {
 		return
 	}
-	opts := apitrace.EndOptions{}
+	opts := apitrace.EndConfig{}
 	for _, opt := range options {
 		opt(&opts)
 	}
@@ -134,25 +127,25 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.addEventWithTimestamp(time.Now(), msg, attrs...)
+	s.addEventWithTimestamp(time.Now(), name, attrs...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.addEventWithTimestamp(timestamp, msg, attrs...)
+	s.addEventWithTimestamp(timestamp, name, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
-		Message:    msg,
+		Name:       name,
 		Attributes: attrs,
 		Time:       timestamp,
 	})
@@ -252,7 +245,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.SpanOptions) *span {
+func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent

@@ -12,26 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package propagators
 
 import (
 	"go.opentelemetry.io/otel/api/core"
-	apipropagation "go.opentelemetry.io/otel/api/propagation"
 )
 
-type binaryPropagator struct{}
+// BinaryFormat is an interface that specifies methods to convert SpanContext
+// to/from byte array.
+type BinaryFormat interface {
+	// ToBytes serializes span context into a byte array and returns the array.
+	ToBytes(sc core.SpanContext) []byte
 
-var _ apipropagation.BinaryFormatPropagator = binaryPropagator{}
-
-// BinaryPropagator creates a new propagator. The propagator implements
-// ToBytes and FromBytes method to transform SpanContext to/from byte array.
-func BinaryPropagator() apipropagation.BinaryFormatPropagator {
-	return binaryPropagator{}
+	// FromBytes de-serializes byte array into span context and returns the span context.
+	FromBytes([]byte) core.SpanContext
 }
 
-// ToBytes implements ToBytes method of propagation.BinaryFormatPropagator.
+var _ BinaryFormat = binary{}
+
+type binary struct{}
+
+// Binary creates a new propagator. The propagator implements
+// ToBytes and FromBytes method to transform SpanContext to/from byte array.
+func Binary() BinaryFormat {
+	return binary{}
+}
+
+// ToBytes implements ToBytes method of propagators.BinaryFormat.
 // It serializes core.SpanContext into a byte array.
-func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
+func (bp binary) ToBytes(sc core.SpanContext) []byte {
 	if sc == core.EmptySpanContext() {
 		return nil
 	}
@@ -44,9 +53,9 @@ func (bp binaryPropagator) ToBytes(sc core.SpanContext) []byte {
 	return b[:]
 }
 
-// FromBytes implements FromBytes method of propagation.BinaryFormatPropagator.
+// FromBytes implements FromBytes method of propagators.BinaryFormat.
 // It de-serializes bytes into core.SpanContext.
-func (bp binaryPropagator) FromBytes(b []byte) (sc core.SpanContext) {
+func (bp binary) FromBytes(b []byte) (sc core.SpanContext) {
 	if len(b) == 0 {
 		return core.EmptySpanContext()
 	}

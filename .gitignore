@@ -1,3 +1,6 @@
+.DS_Store
+Thumbs.db
+
 .tools/
 .idea/
 .vscode/
@@ -6,6 +9,8 @@
 coverage.*
 
 /example/basic/basic
+example/grpc/client/client
+example/grpc/server/server
 /example/http/client/client
 /example/http/server/server
 /example/http-stackdriver/client/client

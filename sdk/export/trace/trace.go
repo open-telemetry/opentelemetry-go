@@ -71,8 +71,8 @@ type SpanData struct {
 // Event is used to describe an Event with a message string and set of
 // Attributes.
 type Event struct {
-	// Message describes the Event.
-	Message string
+	// Name is the name of this event
+	Name string
 
 	// Attributes contains a list of keyvalue pairs.
 	Attributes []core.KeyValue

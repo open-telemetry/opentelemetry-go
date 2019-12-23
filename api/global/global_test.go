@@ -41,7 +41,6 @@ func (*testMeterProvider) Meter(_ string) metric.Meter {
 }
 
 func TestMulitpleGlobalTracerProvider(t *testing.T) {
-
 	p1 := testTraceProvider{}
 	p2 := trace.NoopProvider{}
 	global.SetTraceProvider(&p1)

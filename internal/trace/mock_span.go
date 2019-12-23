@@ -54,10 +54,6 @@ func (ms *MockSpan) SetStatus(status codes.Code) {
 func (ms *MockSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (ms *MockSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
@@ -76,9 +72,9 @@ func (ms *MockSpan) Tracer() apitrace.Tracer {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (ms *MockSpan) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 }

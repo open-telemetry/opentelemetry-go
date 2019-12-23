@@ -18,7 +18,7 @@ jobs:
       - run:
           name: "Precommit and Coverage Report"
           command: |
-            make circle-ci
+            make ci
             mv coverage.html $TEST_RESULTS/
 
       - save_cache:

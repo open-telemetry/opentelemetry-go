@@ -17,10 +17,10 @@ func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
 
 	ctx := context.Background()
 
-	ctx = trace.SetCurrentSpan(ctx, originalSpan)
-	ctx = trace.SetCurrentSpan(ctx, expectedSpan)
+	ctx = trace.ContextWithSpan(ctx, originalSpan)
+	ctx = trace.ContextWithSpan(ctx, expectedSpan)
 
-	if span := trace.CurrentSpan(ctx); span != expectedSpan {
+	if span := trace.SpanFromContext(ctx); span != expectedSpan {
 		t.Errorf("Want: %v, but have: %v", expectedSpan, span)
 	}
 }
@@ -38,13 +38,13 @@ func TestCurrentSpan(t *testing.T) {
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
-			ctx:  trace.SetCurrentSpan(context.Background(), mockSpan{}),
+			ctx:  trace.ContextWithSpan(context.Background(), mockSpan{}),
 			want: mockSpan{},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: CurrentSpan(ctx context.Context) trace.Span
-			have := trace.CurrentSpan(testcase.ctx)
+			have := trace.SpanFromContext(testcase.ctx)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -79,10 +79,6 @@ func (mockSpan) SetName(name string) {
 func (mockSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (mockSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
@@ -97,9 +93,9 @@ func (mockSpan) Tracer() trace.Tracer {
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 }

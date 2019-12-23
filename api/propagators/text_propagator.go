@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package propagators
 
 import (
 	"context"
@@ -21,11 +21,11 @@ import (
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
-// TextFormatPropagator is an interface that specifies methods to inject and extract SpanContext
+// TextFormat is an interface that specifies methods to inject and extract SpanContext
 // and distributed context into/from a carrier using Supplier interface.
 // For example, HTTP Trace Context propagator would encode SpanContext into W3C Trace
 // Context Header and set the header into HttpRequest.
-type TextFormatPropagator interface {
+type TextFormat interface {
 	// Inject method retrieves current SpanContext from the ctx, encodes it into propagator
 	// specific format and then injects the encoded SpanContext using supplier into a carrier
 	// associated with the supplier. It also takes a correlationCtx whose values will be
@@ -52,14 +52,4 @@ type TextFormatPropagator interface {
 type Supplier interface {
 	Get(key string) string
 	Set(key string, value string)
-}
-
-// BinaryFormatPropagator is an interface that specifies methods to convert SpanContext
-// to/from byte array.
-type BinaryFormatPropagator interface {
-	// ToBytes serializes span context into a byte array and returns the array.
-	ToBytes(sc core.SpanContext) []byte
-
-	// FromBytes de-serializes byte array into span context and returns the span context.
-	FromBytes([]byte) core.SpanContext
 }

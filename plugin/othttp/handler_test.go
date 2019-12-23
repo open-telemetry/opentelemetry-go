@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/api/propagators"
 
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -47,7 +47,7 @@ func TestBasics(t *testing.T) {
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
-	if got := rr.Header().Get(propagation.TraceparentHeader); got == "" {
+	if got := rr.Header().Get(propagators.TraceparentHeader); got == "" {
 		t.Fatal("expected non empty trace header")
 	}
 	if got, expected := id, uint64(1); got != expected {

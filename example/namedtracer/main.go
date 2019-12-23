@@ -66,9 +66,9 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.CurrentSpan(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
 
-		trace.CurrentSpan(ctx).SetAttributes(anotherKey.String("yes"))
+		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
 
 		return foo.SubOperation(ctx)
 	})

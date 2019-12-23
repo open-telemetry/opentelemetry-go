@@ -75,8 +75,8 @@ func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(contex
 	return body(ctx)
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
-	spanOpts := oteltrace.SpanOptions{}
+func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
+	spanOpts := oteltrace.StartConfig{}
 	for _, opt := range opts {
 		opt(&spanOpts)
 	}
@@ -104,7 +104,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		SpanKind:     oteltrace.ValidateSpanKind(spanOpts.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
-		ctx = oteltrace.SetCurrentSpan(ctx, span)
+		ctx = oteltrace.ContextWithSpan(ctx, span)
 		ctx = t.addSpareContextValue(ctx)
 	}
 	return ctx, span
@@ -123,7 +123,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.TraceID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.TraceID
 	}
@@ -138,19 +138,19 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.SpanOpt
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanID {
+func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.SpanID
 	}
 	return otelcore.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.SpanOptions) otelcore.SpanContext {
+func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanContext {
 	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
 		spanOpts.Relation.SpanContext.IsValid() {
 		return spanOpts.Relation.SpanContext
 	}
-	if parentSpanContext := oteltrace.CurrentSpan(ctx).SpanContext(); parentSpanContext.IsValid() {
+	if parentSpanContext := oteltrace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
 		return parentSpanContext
 	}
 	return otelcore.EmptySpanContext()
@@ -195,7 +195,7 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 type MockEvent struct {
 	CtxAttributes oteldctx.Map
 	Timestamp     time.Time
-	Msg           string
+	Name          string
 	Attributes    oteldctx.Map
 }
 
@@ -225,21 +225,15 @@ func (s *MockSpan) IsRecording() bool {
 }
 
 func (s *MockSpan) SetStatus(status codes.Code) {
-	s.SetAttribute(NameKey.Uint32(uint32(status)))
+	s.SetAttributes(NameKey.Uint32(uint32(status)))
 }
 
 func (s *MockSpan) SetName(name string) {
-	s.SetAttribute(NameKey.String(name))
+	s.SetAttributes(NameKey.String(name))
 }
 
 func (s *MockSpan) SetError(v bool) {
-	s.SetAttribute(ErrorKey.Bool(v))
-}
-
-func (s *MockSpan) SetAttribute(attribute otelcore.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
-		SingleKV: attribute,
-	})
+	s.SetAttributes(ErrorKey.Bool(v))
 }
 
 func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
@@ -256,7 +250,7 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	endOpts := oteltrace.EndOptions{}
+	endOpts := oteltrace.EndConfig{}
 
 	for _, opt := range options {
 		opt(&endOpts)
@@ -274,15 +268,15 @@ func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(ctx context.Context, msg string, attrs ...otelcore.KeyValue) {
-	s.AddEventWithTimestamp(ctx, time.Now(), msg, attrs...)
+func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.KeyValue) {
+	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...otelcore.KeyValue) {
+func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
 		CtxAttributes: oteldctx.FromContext(ctx),
 		Timestamp:     timestamp,
-		Msg:           msg,
+		Name:          name,
 		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
 			MultiKV: attrs,
 		}),

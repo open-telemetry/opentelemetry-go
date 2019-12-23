@@ -175,7 +175,7 @@ func TestSampling(t *testing.T) {
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
-				var opts []apitrace.SpanOption
+				var opts []apitrace.StartOption
 				if tc.parent {
 					psc := core.SpanContext{
 						TraceID: idg.NewTraceID(),
@@ -328,7 +328,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttribute(key.New("key1").String("value1"))
+	span.SetAttributes(key.New("key1").String("value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -358,10 +358,12 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttribute(key.Bool("key1", true))
-	span.SetAttribute(key.String("key2", "value2"))
-	span.SetAttribute(key.Bool("key1", false)) // Replace key1.
-	span.SetAttribute(key.Int64("key4", 4))    // Remove key2 and add key4
+	span.SetAttributes(
+		key.Bool("key1", true),
+		key.String("key2", "value2"),
+		key.Bool("key1", false), // Replace key1.
+		key.Int64("key4", 4),    // Remove key2 and add key4
+	)
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -421,8 +423,8 @@ func TestEvents(t *testing.T) {
 		Name:            "Events/span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -470,8 +472,8 @@ func TestEventsOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "EventsOverLimit/span0",
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Message: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
@@ -655,7 +657,7 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
+func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitrace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -663,7 +665,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrac
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
 	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
 	_, span := tp.Tracer(trName).Start(
 		context.Background(),
@@ -683,7 +685,6 @@ func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOpti
 // It also does some basic tests on the span.
 // It also clears spanID in the export.SpanData to make the comparison easier.
 func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
-
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}

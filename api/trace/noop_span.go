@@ -46,10 +46,6 @@ func (NoopSpan) SetStatus(status codes.Code) {
 func (NoopSpan) SetError(v bool) {
 }
 
-// SetAttribute does nothing.
-func (NoopSpan) SetAttribute(attribute core.KeyValue) {
-}
-
 // SetAttributes does nothing.
 func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
@@ -64,11 +60,11 @@ func (NoopSpan) Tracer() Tracer {
 }
 
 // AddEvent does nothing.
-func (NoopSpan) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (NoopSpan) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 }
 
 // SetName does nothing.

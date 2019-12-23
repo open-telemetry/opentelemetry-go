@@ -28,8 +28,8 @@ type tracer struct {
 
 var _ apitrace.Tracer = &tracer{}
 
-func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	var opts apitrace.SpanOptions
+func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
+	var opts apitrace.StartConfig
 	var parent core.SpanContext
 	var remoteParent bool
 
@@ -48,7 +48,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 			// e.g., adding a `Link` instead of setting the `parent`
 		}
 	} else {
-		if p := apitrace.CurrentSpan(ctx); p != nil {
+		if p := apitrace.SpanFromContext(ctx); p != nil {
 			if sdkSpan, ok := p.(*span); ok {
 				sdkSpan.addChild()
 				parent = sdkSpan.spanContext
@@ -74,7 +74,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOpti
 
 	ctx, end := startExecutionTracerTask(ctx, spanName)
 	span.executionTracerTaskEnd = end
-	return apitrace.SetCurrentSpan(ctx, span), span
+	return apitrace.ContextWithSpan(ctx, span), span
 }
 
 func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {

@@ -19,7 +19,7 @@ import (
 
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
-	migration "go.opentelemetry.io/otel/bridge/opentracing/migration"
+	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 type WrapperProvider struct {
@@ -76,7 +76,7 @@ func (t *WrapperTracer) otelTracer() oteltrace.Tracer {
 // calling the original callback.
 func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
 	return t.otelTracer().WithSpan(ctx, name, func(ctx context.Context) error {
-		span := oteltrace.CurrentSpan(ctx)
+		span := oteltrace.SpanFromContext(ctx)
 		if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
 			spanWithExtension.OverrideTracer(t)
 		}
@@ -88,7 +88,7 @@ func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(con
 // Start forwards the call to the wrapped tracer. It also tries to
 // override the tracer of the returned span if the span implements the
 // OverrideTracerSpanExtension interface.
-func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
+func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
 	ctx, span := t.otelTracer().Start(ctx, name, opts...)
 	if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
 		spanWithExtension.OverrideTracer(t)
@@ -107,6 +107,6 @@ func (t *WrapperTracer) DeferredContextSetupHook(ctx context.Context, span otelt
 	if tracerWithExtension, ok := t.otelTracer().(migration.DeferredContextSetupTracerExtension); ok {
 		ctx = tracerWithExtension.DeferredContextSetupHook(ctx, span)
 	}
-	ctx = oteltrace.SetCurrentSpan(ctx, span)
+	ctx = oteltrace.ContextWithSpan(ctx, span)
 	return ctx
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package propagators
 
 import (
 	"context"
@@ -21,21 +21,21 @@ import (
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 )
 
-// NoopTextFormatPropagator implements TextFormatPropagator that does nothing.
-type NoopTextFormatPropagator struct{}
+// NoopTextFormat implements TextFormat that does nothing.
+type NoopTextFormat struct{}
 
-var _ TextFormatPropagator = NoopTextFormatPropagator{}
+var _ TextFormat = NoopTextFormat{}
 
 // Inject does nothing.
-func (np NoopTextFormatPropagator) Inject(ctx context.Context, supplier Supplier) {
+func (np NoopTextFormat) Inject(ctx context.Context, supplier Supplier) {
 }
 
 // Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormatPropagator) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
+func (np NoopTextFormat) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
 	return core.EmptySpanContext(), dctx.NewEmptyMap()
 }
 
 // GetAllKeys returns empty list of strings.
-func (np NoopTextFormatPropagator) GetAllKeys() []string {
+func (np NoopTextFormat) GetAllKeys() []string {
 	return []string{}
 }

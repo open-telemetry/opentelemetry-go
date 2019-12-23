@@ -37,7 +37,7 @@ type traceExporter struct {
 func newTraceExporter(o *options) (*traceExporter, error) {
 	client, err := traceclient.NewClient(o.Context, o.TraceClientOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Stackdriver: couldn't initiate trace client: %v", err)
+		return nil, fmt.Errorf("stackdriver: couldn't initiate trace client: %v", err)
 	}
 	e := &traceExporter{
 		projectID: o.ProjectID,
@@ -83,7 +83,7 @@ func (e *traceExporter) uploadSpans(ctx context.Context, spans []*tracepb.Span) 
 	// 	"go.opentelemetry.io/otel/exporter/stackdriver.uploadSpans",
 	// )
 	// defer span.End()
-	// span.SetAttribute(key.New("num_spans").Int64(int64(len(spans))))
+	// span.SetAttributes(key.New("num_spans").Int64(int64(len(spans))))
 
 	err := e.client.BatchWriteSpans(ctx, &req)
 	if err != nil {

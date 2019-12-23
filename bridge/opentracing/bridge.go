@@ -131,7 +131,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			s.otelSpan.SetStatus(status)
 		}
 	default:
-		s.otelSpan.SetAttribute(otTagToOtelCoreKeyValue(key, value))
+		s.otelSpan.SetAttributes(otTagToOtelCoreKeyValue(key, value))
 	}
 	return s
 }
@@ -313,7 +313,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
 	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
-	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.SpanOptions) {
+	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
 		opts.Relation = bRelation.ToOtelRelation()
@@ -380,7 +380,7 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 
 func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, oteltrace.SpanKind, bool) {
 	kind := oteltrace.SpanKindInternal
-	error := false
+	err := false
 	var pairs []otelcore.KeyValue
 	for k, v := range tags {
 		switch k {
@@ -399,13 +399,13 @@ func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore
 			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {
-				error = true
+				err = true
 			}
 		default:
 			pairs = append(pairs, otTagToOtelCoreKeyValue(k, v))
 		}
 	}
-	return pairs, kind, error
+	return pairs, kind, err
 }
 
 func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {

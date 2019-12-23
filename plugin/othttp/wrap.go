@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/propagators"
 )
 
 var _ io.ReadCloser = &bodyWrapper{}
@@ -50,7 +50,7 @@ func (w *bodyWrapper) Close() error {
 var _ http.ResponseWriter = &respWriterWrapper{}
 
 type injector interface {
-	Inject(context.Context, propagation.Supplier)
+	Inject(context.Context, propagators.Supplier)
 }
 
 // respWriterWrapper wraps a http.ResponseWriter in order to track the number of
