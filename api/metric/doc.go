@@ -66,5 +66,5 @@
 // has Add, gauge boundInstrument has Set and measure boundInstrument has Record).
 // Bound Instruments can be created with the Bind function of the
 // respective instrument. When done with the boundInstrument,
-// call Release on it.
+// call Unbind on it.
 package metric // import "go.opentelemetry.io/otel/api/metric"

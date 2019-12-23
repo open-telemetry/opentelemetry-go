@@ -32,14 +32,14 @@ type Int64Measure struct {
 
 // BoundFloat64Measure is a bound instrument for Float64Measure.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundFloat64Measure struct {
 	commonBoundInstrument
 }
 
 // BoundInt64Measure is a bound instrument for Int64Measure.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundInt64Measure struct {
 	commonBoundInstrument
 }

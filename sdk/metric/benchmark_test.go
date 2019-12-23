@@ -161,7 +161,7 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.Bind(labels[i]).Release()
+		cnt.Bind(labels[i]).Unbind()
 	}
 
 	b.ResetTimer()
@@ -179,13 +179,13 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.Bind(labels[i]).Release()
+		cnt.Bind(labels[i]).Unbind()
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Bind(labels[i]).Release()
+		cnt.Bind(labels[i]).Unbind()
 	}
 }
 

@@ -37,9 +37,9 @@ type BoundInstrumentImpl interface {
 	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, number core.Number)
 
-	// Release frees the resources associated with this bound instrument. It
+	// Unbind frees the resources associated with this bound instrument. It
 	// does not affect the metric this bound instrument was created through.
-	Release()
+	Unbind()
 }
 
 // WrapInt64CounterInstrument wraps the instrument in the type-safe

@@ -32,14 +32,14 @@ type Int64Counter struct {
 
 // BoundFloat64Counter is a bound instrument for Float64Counter.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundFloat64Counter struct {
 	commonBoundInstrument
 }
 
 // BoundInt64Counter is a boundInstrument for Int64Counter.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundInt64Counter struct {
 	commonBoundInstrument
 }

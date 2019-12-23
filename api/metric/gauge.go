@@ -32,14 +32,14 @@ type Int64Gauge struct {
 
 // BoundFloat64Gauge is a bound instrument for Float64Gauge.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundFloat64Gauge struct {
 	commonBoundInstrument
 }
 
 // BoundInt64Gauge is a bound instrument for Int64Gauge.
 //
-// It inherits the Release function from commonBoundInstrument.
+// It inherits the Unbind function from commonBoundInstrument.
 type BoundInt64Gauge struct {
 	commonBoundInstrument
 }

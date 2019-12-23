@@ -213,7 +213,7 @@ func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
 func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
-	defer h.Release()
+	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
 
@@ -462,7 +462,7 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	}
 }
 
-func (r *record) Release() {
+func (r *record) Unbind() {
 	for {
 		collected := atomic.LoadInt64(&r.collectedEpoch)
 		modified := atomic.LoadInt64(&r.modifiedEpoch)

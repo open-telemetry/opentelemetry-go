@@ -85,7 +85,7 @@ func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
 	doRecordBatch(ctx, h.LabelSet, h.Instrument, number)
 }
 
-func (h *Handle) Release() {
+func (h *Handle) Unbind() {
 }
 
 func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number core.Number) {

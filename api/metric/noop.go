@@ -25,7 +25,7 @@ func (NoopProvider) Meter(name string) Meter {
 func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 }
 
-func (noopBoundInstrument) Release() {
+func (noopBoundInstrument) Unbind() {
 }
 
 func (noopInstrument) Bind(LabelSet) BoundInstrumentImpl {

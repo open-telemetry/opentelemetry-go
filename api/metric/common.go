@@ -52,8 +52,8 @@ func (h commonBoundInstrument) recordOne(ctx context.Context, number core.Number
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
-func (h commonBoundInstrument) Release() {
-	h.boundInstrument.Release()
+func (h commonBoundInstrument) Unbind() {
+	h.boundInstrument.Unbind()
 }
 
 func newCommonMetric(instrument InstrumentImpl) commonMetric {
