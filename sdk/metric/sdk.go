@@ -281,6 +281,9 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 // labsFor sanitizes the input LabelSet.  The input will be rejected
 // if it was created by another Meter instance, for example.
 func (m *SDK) labsFor(ls api.LabelSet) *labels {
+	if del, ok := ls.(api.LabelSetDelegate); ok {
+		ls = del.Delegate()
+	}
 	if l, _ := ls.(*labels); l != nil && l.meter == m {
 		return l
 	}
