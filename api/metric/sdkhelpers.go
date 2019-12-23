@@ -23,9 +23,9 @@ import (
 // InstrumentImpl is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type InstrumentImpl interface {
-	// AcquireBoundInstrument creates a Bound Instrument to record metrics with
+	// Bind creates a Bound Instrument to record metrics with
 	// precomputed labels.
-	AcquireBoundInstrument(labels LabelSet) BoundInstrumentImpl
+	Bind(labels LabelSet) BoundInstrumentImpl
 
 	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, number core.Number, labels LabelSet)

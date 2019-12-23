@@ -70,7 +70,7 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) AcquireBoundInstrument(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
+func (i *Instrument) Bind(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),

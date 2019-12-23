@@ -64,7 +64,7 @@
 // instruments for a potentially more efficient reporting. The bound instruments
 // have the same function names as the instruments (so counter boundInstrument
 // has Add, gauge boundInstrument has Set and measure boundInstrument has Record).
-// Bound Instruments can be created with the AcquireBoundInstrument function of the
+// Bound Instruments can be created with the Bind function of the
 // respective instrument. When done with the boundInstrument,
 // call Release on it.
 package metric // import "go.opentelemetry.io/otel/api/metric"

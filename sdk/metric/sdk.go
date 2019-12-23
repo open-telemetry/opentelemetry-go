@@ -205,7 +205,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireBoundInstrument(ls api.LabelSet) api.BoundInstrumentImpl {
+func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }

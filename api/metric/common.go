@@ -28,8 +28,8 @@ type commonBoundInstrument struct {
 	boundInstrument BoundInstrumentImpl
 }
 
-func (m commonMetric) acquireCommonBoundInstrument(labels LabelSet) commonBoundInstrument {
-	return newCommonBoundInstrument(m.instrument.AcquireBoundInstrument(labels))
+func (m commonMetric) bind(labels LabelSet) commonBoundInstrument {
+	return newCommonBoundInstrument(m.instrument.Bind(labels))
 }
 
 func (m commonMetric) float64Measurement(value float64) Measurement {

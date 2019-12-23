@@ -30,41 +30,41 @@ type Int64Gauge struct {
 	commonMetric
 }
 
-// Float64GaugeBoundInstrument is a boundInstrument for Float64Gauge.
+// BoundFloat64Gauge is a bound instrument for Float64Gauge.
 //
 // It inherits the Release function from commonBoundInstrument.
-type Float64GaugeBoundInstrument struct {
+type BoundFloat64Gauge struct {
 	commonBoundInstrument
 }
 
-// Int64GaugeBoundInstrument is a boundInstrument for Int64Gauge.
+// BoundInt64Gauge is a bound instrument for Int64Gauge.
 //
 // It inherits the Release function from commonBoundInstrument.
-type Int64GaugeBoundInstrument struct {
+type BoundInt64Gauge struct {
 	commonBoundInstrument
 }
 
-// AcquireBoundInstrument creates a boundInstrument for this gauge. The labels should
+// Bind creates a bound instrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) AcquireBoundInstrument(labels LabelSet) (h Float64GaugeBoundInstrument) {
-	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
+func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
+	h.commonBoundInstrument = g.bind(labels)
 	return
 }
 
-// AcquireBoundInstrument creates a boundInstrument for this gauge. The labels should
+// Bind creates a bound instrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) AcquireBoundInstrument(labels LabelSet) (h Int64GaugeBoundInstrument) {
-	h.commonBoundInstrument = g.acquireCommonBoundInstrument(labels)
+func (g *Int64Gauge) Bind(labels LabelSet) (h BoundInt64Gauge) {
+	h.commonBoundInstrument = g.bind(labels)
 	return
 }
 
@@ -103,11 +103,11 @@ func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Float64GaugeBoundInstrument) Set(ctx context.Context, value float64) {
-	h.recordOne(ctx, core.NewFloat64Number(value))
+func (b *BoundFloat64Gauge) Set(ctx context.Context, value float64) {
+	b.recordOne(ctx, core.NewFloat64Number(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Int64GaugeBoundInstrument) Set(ctx context.Context, value int64) {
-	h.recordOne(ctx, core.NewInt64Number(value))
+func (b *BoundInt64Gauge) Set(ctx context.Context, value int64) {
+	b.recordOne(ctx, core.NewInt64Number(value))
 }

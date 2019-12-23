@@ -28,7 +28,7 @@ func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 func (noopBoundInstrument) Release() {
 }
 
-func (noopInstrument) AcquireBoundInstrument(LabelSet) BoundInstrumentImpl {
+func (noopInstrument) Bind(LabelSet) BoundInstrumentImpl {
 	return noopBoundInstrument{}
 }
 
