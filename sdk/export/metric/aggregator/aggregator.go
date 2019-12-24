@@ -63,6 +63,18 @@ type (
 		Points() ([]core.Number, error)
 	}
 
+	// Quantile returns an exact or estimated quantile over the
+	// set of values that were aggregated.
+	Histogram interface {
+		Buckets() (HistogramValue, error)
+	}
+
+	HistogramValue struct {
+		Buckets []core.Number
+		Count   core.Number
+		Sum     core.Number
+	}
+
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
 	MinMaxSumCount interface {
 		Min
