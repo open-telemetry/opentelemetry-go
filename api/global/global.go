@@ -15,89 +15,49 @@
 package global
 
 import (
-	"sync/atomic"
-
 	"go.opentelemetry.io/otel/api/context/propagation"
+	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	tracePropagation "go.opentelemetry.io/otel/api/trace/propagation"
-)
-
-type (
-	traceProvider struct {
-		tp trace.Provider
-	}
-
-	meterProvider struct {
-		mp metric.Provider
-	}
-
-	propagators struct {
-		pr propagation.Propagators
-	}
-)
-
-var (
-	globalTracer      atomic.Value
-	globalMeter       atomic.Value
-	globalPropagators atomic.Value
-
-	defaultPropagators = getDefaultPropagators()
 )
 
 // TraceProvider returns the registered global trace provider.
 // If none is registered then an instance of trace.NoopProvider is returned.
+//
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().Tracer("example.com/foo")
 func TraceProvider() trace.Provider {
-	if gp := globalTracer.Load(); gp != nil {
-		return gp.(traceProvider).tp
-	}
-	return trace.NoopProvider{}
+	return internal.TraceProvider()
 }
 
 // SetTraceProvider registers `tp` as the global trace provider.
 func SetTraceProvider(tp trace.Provider) {
-	globalTracer.Store(traceProvider{tp: tp})
+	internal.SetTraceProvider(tp)
 }
 
-// MeterProvider returns the registered global meter provider.
-// If none is registered then an instance of metric.NoopProvider is returned.
-// Use the trace provider to create a named meter. E.g.
+// MeterProvider returns the registered global meter provider.  If
+// none is registered then a default meter provider is returned that
+// forwards the Meter interface to the first registered Meter.
+//
+// Use the meter provider to create a named meter. E.g.
 //     meter := global.MeterProvider().Meter("example.com/foo")
 func MeterProvider() metric.Provider {
-	if gp := globalMeter.Load(); gp != nil {
-		return gp.(meterProvider).mp
-	}
-	return metric.NoopProvider{}
+	return internal.MeterProvider()
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.Provider) {
-	globalMeter.Store(meterProvider{mp: mp})
+	internal.SetMeterProvider(mp)
 }
 
 // Propagators returns the registered global propagators instance.  If
 // none is registered then an instance of propagators.NoopPropagators
 // is returned.
 func Propagators() propagation.Propagators {
-	if gp := globalPropagators.Load(); gp != nil {
-		return gp.(propagators).pr
-	}
-	return defaultPropagators
+	return internal.Propagators()
 }
 
 // SetPropagators registers `p` as the global propagators instance.
 func SetPropagators(p propagation.Propagators) {
-	globalPropagators.Store(propagators{pr: p})
-}
-
-// getDefaultPropagators returns a default Propagators, configured
-// with W3C trace context propagation.
-func getDefaultPropagators() propagation.Propagators {
-	inex := tracePropagation.TraceContext{}
-	return propagation.New(
-		propagation.WithExtractors(inex),
-		propagation.WithInjectors(inex),
-	)
+	internal.SetPropagators(p)
 }

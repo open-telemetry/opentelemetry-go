@@ -38,14 +38,20 @@ var (
 
 func initMeter() *push.Controller {
 	selector := simple.NewWithExactMeasure()
-	exporter, err := prometheus.NewExporter(prometheus.Options{
-		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
-	})
+	exporter, err := prometheus.NewExporter(prometheus.Options{})
 
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
+	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	//
+	// Prometheus uses this approach to be resilient to scrape failures.
+	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
+	// it could try again on the next scrape and no data would be lost, only resolution.
+	//
+	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 

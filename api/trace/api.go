@@ -68,10 +68,10 @@ type Span interface {
 	End(options ...EndOption)
 
 	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue)
+	AddEvent(ctx context.Context, name string, attrs ...core.KeyValue)
 	// AddEventWithTimestamp adds an event with a custom timestamp
 	// to the span.
-	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue)
+	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue)
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool

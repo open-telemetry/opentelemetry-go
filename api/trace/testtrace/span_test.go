@@ -337,23 +337,23 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			event1Msg := "event1"
+			event1Name := "event1"
 			event1Attributes := []core.KeyValue{
 				core.Key("event1Attr1").String("foo"),
 				core.Key("event1Attr2").String("bar"),
 			}
 
 			event1Start := time.Now()
-			subject.AddEvent(context.Background(), event1Msg, event1Attributes...)
+			subject.AddEvent(context.Background(), event1Name, event1Attributes...)
 			event1End := time.Now()
 
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
-			event2Msg := "event1"
+			event2Name := "event1"
 			event2Attributes := []core.KeyValue{
 				core.Key("event2Attr").String("abc"),
 			}
 
-			subject.AddEventWithTimestamp(context.Background(), event2Timestamp, event2Msg, event2Attributes...)
+			subject.AddEventWithTimestamp(context.Background(), event2Timestamp, event2Name, event2Attributes...)
 
 			events := subject.Events()
 
@@ -363,7 +363,7 @@ func TestSpan(t *testing.T) {
 
 			e.Expect(event1.Timestamp).ToBeTemporally(matchers.AfterOrSameTime, event1Start)
 			e.Expect(event1.Timestamp).ToBeTemporally(matchers.BeforeOrSameTime, event1End)
-			e.Expect(event1.Message).ToEqual(event1Msg)
+			e.Expect(event1.Name).ToEqual(event1Name)
 
 			for _, attr := range event1Attributes {
 				e.Expect(event1.Attributes[attr.Key]).ToEqual(attr.Value)
@@ -372,7 +372,7 @@ func TestSpan(t *testing.T) {
 			event2 := events[1]
 
 			e.Expect(event2.Timestamp).ToEqual(event2Timestamp)
-			e.Expect(event2.Message).ToEqual(event2Msg)
+			e.Expect(event2.Name).ToEqual(event2Name)
 
 			for _, attr := range event2Attributes {
 				e.Expect(event2.Attributes[attr.Key]).ToEqual(attr.Value)
