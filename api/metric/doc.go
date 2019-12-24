@@ -27,7 +27,7 @@
 // The primary object that handles metrics is Meter. The
 // implementation of the Meter is provided by SDK. Normally, the Meter
 // is used directly only for the LabelSet generation, batch recording
-// and the boundInstrument destruction.
+// and the bound instrument destruction.
 //
 // LabelSet is a set of keys and values that are in a suitable,
 // optimized form to be used by Meter.
@@ -61,10 +61,10 @@
 // too. To report a new value, use the Record function.
 //
 // All the basic kinds of instruments also support creating bound
-// instruments for a potentially more efficient reporting. The bound instruments
-// have the same function names as the instruments (so counter boundInstrument
-// has Add, gauge boundInstrument has Set and measure boundInstrument has Record).
-// Bound Instruments can be created with the Bind function of the
-// respective instrument. When done with the boundInstrument,
-// call Unbind on it.
+// instruments for a potentially more efficient reporting. The bound
+// instruments have the same function names as the instruments (so a
+// Counter bound instrument has Add, a Gauge bound instrument has Set,
+// and a Measure bound instrument has Record).  Bound Instruments can
+// be created with the Bind function of the respective
+// instrument. When done with the bound instrument, call Unbind on it.
 package metric // import "go.opentelemetry.io/otel/api/metric"
