@@ -24,10 +24,10 @@ import (
 // provider.  Mutexes in the Provider and Meters ensure that each
 // instrument has a delegate before the global provider is set.
 //
-// LabelSets are implemented using the by delegating to the Meter
-// instance using the metric.LabelSetDelegator interface.
+// LabelSets are implemented by delegating to the Meter instance using
+// the metric.LabelSetDelegator interface.
 //
-// Bound instrument operations are implementing by delegating to the
+// Bound instrument operations are implemented by delegating to the
 // instrument after it is registered, with a sync.Once initializer to
 // protect against races with Release().
 
