@@ -88,7 +88,7 @@ func (c *Int64Measure) Measurement(value int64) Measurement {
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	c.recordOne(ctx, core.NewFloat64Number(value), labels)
+	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records. The
@@ -99,15 +99,15 @@ func (c *Float64Measure) Record(ctx context.Context, value float64, labels Label
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	c.recordOne(ctx, core.NewInt64Number(value), labels)
+	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records.
 func (b *BoundFloat64Measure) Record(ctx context.Context, value float64) {
-	b.recordOne(ctx, core.NewFloat64Number(value))
+	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Record adds a new value to the list of measure's records.
 func (b *BoundInt64Measure) Record(ctx context.Context, value int64) {
-	b.recordOne(ctx, core.NewInt64Number(value))
+	b.directRecord(ctx, core.NewInt64Number(value))
 }

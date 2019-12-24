@@ -88,7 +88,7 @@ func (g *Int64Gauge) Measurement(value int64) Measurement {
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
-	g.recordOne(ctx, core.NewFloat64Number(value), labels)
+	g.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Set assigns the passed value to the value of the gauge. The labels
@@ -99,15 +99,15 @@ func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) 
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
-	g.recordOne(ctx, core.NewInt64Number(value), labels)
+	g.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Set assigns the passed value to the value of the gauge.
 func (b *BoundFloat64Gauge) Set(ctx context.Context, value float64) {
-	b.recordOne(ctx, core.NewFloat64Number(value))
+	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
 func (b *BoundInt64Gauge) Set(ctx context.Context, value int64) {
-	b.recordOne(ctx, core.NewInt64Number(value))
+	b.directRecord(ctx, core.NewInt64Number(value))
 }

@@ -40,7 +40,7 @@ func (m commonMetric) int64Measurement(value int64) Measurement {
 	return newMeasurement(m.instrument, core.NewInt64Number(value))
 }
 
-func (m commonMetric) recordOne(ctx context.Context, number core.Number, labels LabelSet) {
+func (m commonMetric) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
 	m.instrument.RecordOne(ctx, number, labels)
 }
 
@@ -48,7 +48,7 @@ func (m commonMetric) Impl() InstrumentImpl {
 	return m.instrument
 }
 
-func (h commonBoundInstrument) recordOne(ctx context.Context, number core.Number) {
+func (h commonBoundInstrument) directRecord(ctx context.Context, number core.Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
