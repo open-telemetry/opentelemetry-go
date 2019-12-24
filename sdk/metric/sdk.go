@@ -148,10 +148,10 @@ type (
 )
 
 var (
-	_ api.Meter          = &SDK{}
-	_ api.LabelSet       = &labels{}
-	_ api.InstrumentImpl = &instrument{}
-	_ api.HandleImpl     = &record{}
+	_ api.Meter               = &SDK{}
+	_ api.LabelSet            = &labels{}
+	_ api.InstrumentImpl      = &instrument{}
+	_ api.BoundInstrumentImpl = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -205,7 +205,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
+func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
@@ -213,7 +213,7 @@ func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
 func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
-	defer h.Release()
+	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
 
@@ -465,7 +465,7 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	}
 }
 
-func (r *record) Release() {
+func (r *record) Unbind() {
 	for {
 		collected := atomic.LoadInt64(&r.collectedEpoch)
 		modified := atomic.LoadInt64(&r.modifiedEpoch)
