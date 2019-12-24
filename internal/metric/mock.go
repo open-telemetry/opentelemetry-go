@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 	apimetric "go.opentelemetry.io/otel/api/metric"
@@ -45,6 +46,11 @@ type (
 		Measurements []Measurement
 	}
 
+	MeterProvider struct {
+		lock       sync.Mutex
+		registered map[string]*Meter
+	}
+
 	Meter struct {
 		MeasurementBatches []Batch
 	}
@@ -71,6 +77,9 @@ const (
 )
 
 func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleImpl {
+	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
+		labels = ld.Delegate()
+	}
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),
@@ -78,6 +87,9 @@ func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleIm
 }
 
 func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
+		labels = ld.Delegate()
+	}
 	doRecordBatch(ctx, labels.(*LabelSet), i, number)
 }
 
@@ -97,6 +109,24 @@ func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrume
 
 func (s *LabelSet) Meter() apimetric.Meter {
 	return s.TheMeter
+}
+
+func NewProvider() *MeterProvider {
+	return &MeterProvider{
+		registered: map[string]*Meter{},
+	}
+}
+
+func (p *MeterProvider) Meter(name string) apimetric.Meter {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if lookup, ok := p.registered[name]; ok {
+		return lookup
+	}
+	m := NewMeter()
+	p.registered[name] = m
+	return m
 }
 
 func NewMeter() *Meter {
