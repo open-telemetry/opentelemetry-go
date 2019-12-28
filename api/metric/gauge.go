@@ -30,41 +30,41 @@ type Int64Gauge struct {
 	commonMetric
 }
 
-// Float64GaugeHandle is a handle for Float64Gauge.
+// BoundFloat64Gauge is a bound instrument for Float64Gauge.
 //
-// It inherits the Release function from commonHandle.
-type Float64GaugeHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundFloat64Gauge struct {
+	commonBoundInstrument
 }
 
-// Int64GaugeHandle is a handle for Int64Gauge.
+// BoundInt64Gauge is a bound instrument for Int64Gauge.
 //
-// It inherits the Release function from commonHandle.
-type Int64GaugeHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundInt64Gauge struct {
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this gauge. The labels should
+// Bind creates a bound instrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) AcquireHandle(labels LabelSet) (h Float64GaugeHandle) {
-	h.commonHandle = g.acquireCommonHandle(labels)
+func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
+	h.commonBoundInstrument = g.bind(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this gauge. The labels should
+// Bind creates a bound instrument for this gauge. The labels should
 // contain the keys and values for each key specified in the gauge
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) AcquireHandle(labels LabelSet) (h Int64GaugeHandle) {
-	h.commonHandle = g.acquireCommonHandle(labels)
+func (g *Int64Gauge) Bind(labels LabelSet) (h BoundInt64Gauge) {
+	h.commonBoundInstrument = g.bind(labels)
 	return
 }
 
@@ -88,7 +88,7 @@ func (g *Int64Gauge) Measurement(value int64) Measurement {
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
-	g.recordOne(ctx, core.NewFloat64Number(value), labels)
+	g.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Set assigns the passed value to the value of the gauge. The labels
@@ -99,15 +99,15 @@ func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) 
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
-	g.recordOne(ctx, core.NewInt64Number(value), labels)
+	g.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Float64GaugeHandle) Set(ctx context.Context, value float64) {
-	h.recordOne(ctx, core.NewFloat64Number(value))
+func (b *BoundFloat64Gauge) Set(ctx context.Context, value float64) {
+	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (h *Int64GaugeHandle) Set(ctx context.Context, value int64) {
-	h.recordOne(ctx, core.NewInt64Number(value))
+func (b *BoundInt64Gauge) Set(ctx context.Context, value int64) {
+	b.directRecord(ctx, core.NewInt64Number(value))
 }

@@ -114,17 +114,17 @@ func TestBound(t *testing.T) {
 	labels2 := glob.Labels(lvals2)
 
 	counter := glob.NewFloat64Counter("test.counter")
-	boundC := counter.AcquireHandle(labels1)
+	boundC := counter.Bind(labels1)
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
 	gauge := glob.NewFloat64Gauge("test.gauge")
-	boundG := gauge.AcquireHandle(labels2)
+	boundG := gauge.Bind(labels2)
 	boundG.Set(ctx, 1)
 	boundG.Set(ctx, 2)
 
 	measure := glob.NewInt64Measure("test.measure")
-	boundM := measure.AcquireHandle(labels1)
+	boundM := measure.Bind(labels1)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
@@ -165,13 +165,13 @@ func TestBound(t *testing.T) {
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
 
-	boundC.Release()
-	boundG.Release()
-	boundM.Release()
+	boundC.Unbind()
+	boundG.Unbind()
+	boundM.Unbind()
 }
 
-func TestRelease(t *testing.T) {
-	// Tests Release with SDK never installed.
+func TestUnbind(t *testing.T) {
+	// Tests Unbind with SDK never installed.
 	internal.ResetForTest()
 
 	glob := global.MeterProvider().Meter("test")
@@ -181,17 +181,17 @@ func TestRelease(t *testing.T) {
 	labels2 := glob.Labels(lvals2)
 
 	counter := glob.NewFloat64Counter("test.counter")
-	boundC := counter.AcquireHandle(labels1)
+	boundC := counter.Bind(labels1)
 
 	gauge := glob.NewFloat64Gauge("test.gauge")
-	boundG := gauge.AcquireHandle(labels2)
+	boundG := gauge.Bind(labels2)
 
 	measure := glob.NewInt64Measure("test.measure")
-	boundM := measure.AcquireHandle(labels1)
+	boundM := measure.Bind(labels1)
 
-	boundC.Release()
-	boundG.Release()
-	boundM.Release()
+	boundC.Unbind()
+	boundG.Unbind()
+	boundM.Unbind()
 }
 
 func TestDefaultSDK(t *testing.T) {

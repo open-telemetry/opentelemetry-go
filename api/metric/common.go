@@ -24,12 +24,12 @@ type commonMetric struct {
 	instrument InstrumentImpl
 }
 
-type commonHandle struct {
-	handle HandleImpl
+type commonBoundInstrument struct {
+	boundInstrument BoundInstrumentImpl
 }
 
-func (m commonMetric) acquireCommonHandle(labels LabelSet) commonHandle {
-	return newCommonHandle(m.instrument.AcquireHandle(labels))
+func (m commonMetric) bind(labels LabelSet) commonBoundInstrument {
+	return newCommonBoundInstrument(m.instrument.Bind(labels))
 }
 
 func (m commonMetric) float64Measurement(value float64) Measurement {
@@ -40,7 +40,7 @@ func (m commonMetric) int64Measurement(value int64) Measurement {
 	return newMeasurement(m.instrument, core.NewInt64Number(value))
 }
 
-func (m commonMetric) recordOne(ctx context.Context, number core.Number, labels LabelSet) {
+func (m commonMetric) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
 	m.instrument.RecordOne(ctx, number, labels)
 }
 
@@ -48,12 +48,12 @@ func (m commonMetric) Impl() InstrumentImpl {
 	return m.instrument
 }
 
-func (h commonHandle) recordOne(ctx context.Context, number core.Number) {
-	h.handle.RecordOne(ctx, number)
+func (h commonBoundInstrument) directRecord(ctx context.Context, number core.Number) {
+	h.boundInstrument.RecordOne(ctx, number)
 }
 
-func (h commonHandle) Release() {
-	h.handle.Release()
+func (h commonBoundInstrument) Unbind() {
+	h.boundInstrument.Unbind()
 }
 
 func newCommonMetric(instrument InstrumentImpl) commonMetric {
@@ -62,9 +62,9 @@ func newCommonMetric(instrument InstrumentImpl) commonMetric {
 	}
 }
 
-func newCommonHandle(handle HandleImpl) commonHandle {
-	return commonHandle{
-		handle: handle,
+func newCommonBoundInstrument(boundInstrument BoundInstrumentImpl) commonBoundInstrument {
+	return commonBoundInstrument{
+		boundInstrument: boundInstrument,
 	}
 }
 

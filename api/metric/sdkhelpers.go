@@ -32,23 +32,23 @@ type LabelSetDelegate interface {
 // InstrumentImpl is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type InstrumentImpl interface {
-	// AcquireHandle creates a Handle to record metrics with
+	// Bind creates a Bound Instrument to record metrics with
 	// precomputed labels.
-	AcquireHandle(labels LabelSet) HandleImpl
+	Bind(labels LabelSet) BoundInstrumentImpl
 
 	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
 }
 
-// HandleImpl is the implementation-level interface to Set/Add/Record
+// BoundInstrumentImpl is the implementation-level interface to Set/Add/Record
 // individual metrics with precomputed labels.
-type HandleImpl interface {
+type BoundInstrumentImpl interface {
 	// RecordOne allows the SDK to observe a single metric event.
 	RecordOne(ctx context.Context, number core.Number)
 
-	// Release frees the resources associated with this handle. It
-	// does not affect the metric this handle was created through.
-	Release()
+	// Unbind frees the resources associated with this bound instrument. It
+	// does not affect the metric this bound instrument was created through.
+	Unbind()
 }
 
 // WrapInt64CounterInstrument wraps the instrument in the type-safe
