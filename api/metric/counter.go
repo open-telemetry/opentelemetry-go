@@ -30,41 +30,41 @@ type Int64Counter struct {
 	commonMetric
 }
 
-// Float64CounterHandle is a handle for Float64Counter.
+// BoundFloat64Counter is a bound instrument for Float64Counter.
 //
-// It inherits the Release function from commonHandle.
-type Float64CounterHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundFloat64Counter struct {
+	commonBoundInstrument
 }
 
-// Int64CounterHandle is a handle for Int64Counter.
+// BoundInt64Counter is a boundInstrument for Int64Counter.
 //
-// It inherits the Release function from commonHandle.
-type Int64CounterHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundInt64Counter struct {
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this counter. The labels should
+// Bind creates a bound instrument for this counter. The labels should
 // contain the keys and values for each key specified in the counter
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Counter) AcquireHandle(labels LabelSet) (h Float64CounterHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
+	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this counter. The labels should
+// Bind creates a bound instrument for this counter. The labels should
 // contain the keys and values for each key specified in the counter
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Counter) AcquireHandle(labels LabelSet) (h Int64CounterHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Int64Counter) Bind(labels LabelSet) (h BoundInt64Counter) {
+	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
@@ -88,7 +88,7 @@ func (c *Int64Counter) Measurement(value int64) Measurement {
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
-	c.recordOne(ctx, core.NewFloat64Number(value), labels)
+	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
@@ -99,15 +99,15 @@ func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
-	c.recordOne(ctx, core.NewInt64Number(value), labels)
+	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum.
-func (h *Float64CounterHandle) Add(ctx context.Context, value float64) {
-	h.recordOne(ctx, core.NewFloat64Number(value))
+func (b *BoundFloat64Counter) Add(ctx context.Context, value float64) {
+	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum.
-func (h *Int64CounterHandle) Add(ctx context.Context, value int64) {
-	h.recordOne(ctx, core.NewInt64Number(value))
+func (b *BoundInt64Counter) Add(ctx context.Context, value int64) {
+	b.directRecord(ctx, core.NewInt64Number(value))
 }
