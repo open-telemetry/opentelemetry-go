@@ -16,6 +16,7 @@ package prometheus
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,11 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
-type metricKey struct {
-	desc    *export.Descriptor
-	encoded string
-}
-
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
 type Exporter struct {
@@ -39,11 +35,10 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	counters           counters
-	gauges             gauges
-	histograms         histograms
-	summaries          summaries
-	measureAggregation MeasureAggregation
+	snapshot export.CheckpointSet
+	onError  func(error)
+
+	defaultSummaryQuantiles []float64
 }
 
 var _ export.Exporter = &Exporter{}
@@ -69,26 +64,14 @@ type Options struct {
 	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
 
-	// DefaultHistogramBuckets is the default histogram buckets
-	// to use. Use nil to specify the system-default histogram buckets.
-	DefaultHistogramBuckets []float64
+	// DefaultSummaryQuantiles is the default summary quantiles
+	// to use. Use nil to specify the system-default summary quantiles.
+	DefaultSummaryQuantiles []float64
 
-	// DefaultSummaryObjectives is the default summary objectives
-	// to use. Use nil to specify the system-default summary objectives.
-	DefaultSummaryObjectives map[float64]float64
-
-	// MeasureAggregation defines how metric.Measure are exported.
-	// Possible values are 'Histogram' or 'Summary'.
-	// The default export representation for measures is Histograms.
-	MeasureAggregation MeasureAggregation
+	// OnError is a function that handle errors that may occur while exporting metrics.
+	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
+	OnError func(error)
 }
-
-type MeasureAggregation int
-
-const (
-	Histogram MeasureAggregation = iota
-	Summary
-)
 
 // NewExporter returns a new prometheus exporter for prometheus metrics.
 func NewExporter(opts Options) (*Exporter, error) {
@@ -104,70 +87,166 @@ func NewExporter(opts Options) (*Exporter, error) {
 		opts.Gatherer = opts.Registry
 	}
 
-	return &Exporter{
-		registerer:         opts.Registerer,
-		gatherer:           opts.Gatherer,
-		handler:            promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
-		measureAggregation: opts.MeasureAggregation,
+	if opts.OnError == nil {
+		opts.OnError = func(err error) {
+			fmt.Println(err.Error())
+		}
+	}
 
-		counters:   newCounters(opts.Registerer),
-		gauges:     newGauges(opts.Registerer),
-		histograms: newHistograms(opts.Registerer, opts.DefaultHistogramBuckets),
-		summaries:  newSummaries(opts.Registerer, opts.DefaultSummaryObjectives),
-	}, nil
+	e := &Exporter{
+		handler:                 promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
+		registerer:              opts.Registerer,
+		gatherer:                opts.Gatherer,
+		defaultSummaryQuantiles: opts.DefaultSummaryQuantiles,
+	}
+
+	c := newCollector(e)
+	if err := opts.Registerer.Register(c); err != nil {
+		opts.OnError(fmt.Errorf("cannot register the collector: %w", err))
+	}
+
+	return e, nil
 }
 
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	var forEachError error
-	checkpointSet.ForEach(func(record export.Record) {
+	e.snapshot = checkpointSet
+	return nil
+}
+
+// collector implements prometheus.Collector interface.
+type collector struct {
+	exp *Exporter
+}
+
+var _ prometheus.Collector = (*collector)(nil)
+
+func newCollector(exporter *Exporter) *collector {
+	return &collector{
+		exp: exporter,
+	}
+}
+
+func (c *collector) Describe(ch chan<- *prometheus.Desc) {
+	if c.exp.snapshot == nil {
+		return
+	}
+
+	c.exp.snapshot.ForEach(func(record export.Record) {
+		ch <- c.toDesc(&record)
+	})
+}
+
+// Collect exports the last calculated CheckpointSet.
+//
+// Collect is invoked whenever prometheus.Gatherer is also invoked.
+// For example, when the HTTP endpoint is invoked by Prometheus.
+func (c *collector) Collect(ch chan<- prometheus.Metric) {
+	if c.exp.snapshot == nil {
+		return
+	}
+
+	c.exp.snapshot.ForEach(func(record export.Record) {
 		agg := record.Aggregator()
+		numberKind := record.Descriptor().NumberKind()
+		labels := labelValues(record.Labels())
+		desc := c.toDesc(&record)
 
-		mKey := metricKey{
-			desc:    record.Descriptor(),
-			encoded: record.Labels().Encoded(),
-		}
+		// TODO: implement histogram export when the histogram aggregation is done.
+		//  https://github.com/open-telemetry/opentelemetry-go/issues/317
 
-		if points, ok := agg.(aggregator.Points); ok {
-			observerExporter := e.histograms.export
-			if e.measureAggregation == Summary {
-				observerExporter = e.summaries.export
-			}
-
-			err := observerExporter(points, record, mKey)
-			if err != nil {
-				forEachError = err
-			}
-			return
-		}
-
-		if sum, ok := agg.(aggregator.Sum); ok {
-			err := e.counters.export(sum, record, mKey)
-			if err != nil {
-				forEachError = err
-			}
-			return
-		}
-
-		if gauge, ok := agg.(aggregator.LastValue); ok {
-			err := e.gauges.export(gauge, record, mKey)
-			if err != nil {
-				forEachError = err
-			}
-			return
+		if dist, ok := agg.(aggregator.Distribution); ok {
+			// TODO: summaries values are never being resetted.
+			//  As measures are recorded, new records starts to have less impact on these summaries.
+			//  We should implement an solution that is similar to the Prometheus Clients
+			//  using a rolling window for summaries could be a solution.
+			//
+			//  References:
+			// 	https://www.robustperception.io/how-does-a-prometheus-summary-work
+			//  https://github.com/prometheus/client_golang/blob/fa4aa9000d2863904891d193dea354d23f3d712a/prometheus/summary.go#L135
+			c.exportSummary(ch, dist, numberKind, desc, labels)
+		} else if sum, ok := agg.(aggregator.Sum); ok {
+			c.exportCounter(ch, sum, numberKind, desc, labels)
+		} else if gauge, ok := agg.(aggregator.LastValue); ok {
+			c.exportGauge(ch, gauge, numberKind, desc, labels)
 		}
 	})
+}
 
-	return forEachError
+func (c *collector) exportGauge(ch chan<- prometheus.Metric, gauge aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	lastValue, _, err := gauge.LastValue()
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	ch <- m
+}
+
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	v, err := sum.Sum()
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	ch <- m
+}
+
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	count, err := dist.Count()
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	var sum core.Number
+	sum, err = dist.Sum()
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	quantiles := make(map[float64]float64)
+	for _, quantile := range c.exp.defaultSummaryQuantiles {
+		q, _ := dist.Quantile(quantile)
+		quantiles[quantile] = q.CoerceToFloat64(kind)
+	}
+
+	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), quantiles, labels...)
+	if err != nil {
+		c.exp.onError(err)
+		return
+	}
+
+	ch <- m
+}
+
+func (c *collector) toDesc(metric *export.Record) *prometheus.Desc {
+	desc := metric.Descriptor()
+	labels := labelsKeys(metric.Labels())
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
 
-func labelsKeys(kvs []core.KeyValue) []string {
-	keys := make([]string, 0, len(kvs))
-	for _, kv := range kvs {
+func labelsKeys(labels export.Labels) []string {
+	keys := make([]string, 0, labels.Len())
+	for _, kv := range labels.Ordered() {
 		keys = append(keys, sanitize(string(kv.Key)))
 	}
 	return keys

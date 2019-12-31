@@ -30,41 +30,41 @@ type Int64Measure struct {
 	commonMetric
 }
 
-// Float64MeasureHandle is a handle for Float64Measure.
+// BoundFloat64Measure is a bound instrument for Float64Measure.
 //
-// It inherits the Release function from commonHandle.
-type Float64MeasureHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundFloat64Measure struct {
+	commonBoundInstrument
 }
 
-// Int64MeasureHandle is a handle for Int64Measure.
+// BoundInt64Measure is a bound instrument for Int64Measure.
 //
-// It inherits the Release function from commonHandle.
-type Int64MeasureHandle struct {
-	commonHandle
+// It inherits the Unbind function from commonBoundInstrument.
+type BoundInt64Measure struct {
+	commonBoundInstrument
 }
 
-// AcquireHandle creates a handle for this measure. The labels should
+// Bind creates a bound instrument for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Measure) AcquireHandle(labels LabelSet) (h Float64MeasureHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Float64Measure) Bind(labels LabelSet) (h BoundFloat64Measure) {
+	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
-// AcquireHandle creates a handle for this measure. The labels should
+// Bind creates a bound instrument for this measure. The labels should
 // contain the keys and values for each key specified in the measure
 // with the WithKeys option.
 //
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Measure) AcquireHandle(labels LabelSet) (h Int64MeasureHandle) {
-	h.commonHandle = c.acquireCommonHandle(labels)
+func (c *Int64Measure) Bind(labels LabelSet) (h BoundInt64Measure) {
+	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
@@ -88,7 +88,7 @@ func (c *Int64Measure) Measurement(value int64) Measurement {
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
-	c.recordOne(ctx, core.NewFloat64Number(value), labels)
+	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records. The
@@ -99,15 +99,15 @@ func (c *Float64Measure) Record(ctx context.Context, value float64, labels Label
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
-	c.recordOne(ctx, core.NewInt64Number(value), labels)
+	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records.
-func (h *Float64MeasureHandle) Record(ctx context.Context, value float64) {
-	h.recordOne(ctx, core.NewFloat64Number(value))
+func (b *BoundFloat64Measure) Record(ctx context.Context, value float64) {
+	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Record adds a new value to the list of measure's records.
-func (h *Int64MeasureHandle) Record(ctx context.Context, value int64) {
-	h.recordOne(ctx, core.NewInt64Number(value))
+func (b *BoundInt64Measure) Record(ctx context.Context, value int64) {
+	b.directRecord(ctx, core.NewInt64Number(value))
 }

@@ -99,11 +99,11 @@ func main() {
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
-	gauge := oneMetric.AcquireHandle(commonLabels)
-	defer gauge.Release()
+	gauge := oneMetric.Bind(commonLabels)
+	defer gauge.Unbind()
 
-	measure := measureTwo.AcquireHandle(commonLabels)
-	defer measure.Release()
+	measure := measureTwo.Bind(commonLabels)
+	defer measure.Unbind()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 

@@ -115,6 +115,8 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 	rag, ok := b.aggCheckpoint[key]
 	if ok {
+		// Combine the input aggregator with the current
+		// checkpoint state.
 		return rag.Aggregator().Merge(agg, desc)
 	}
 	// If this Batcher is stateful, create a copy of the
@@ -123,6 +125,8 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	// again, overwriting the long-lived state.
 	if b.stateful {
 		tmp := agg
+		// Note: the call to AggregatorFor() followed by Merge
+		// is effectively a Clone() operation.
 		agg = b.AggregatorFor(desc)
 		if err := agg.Merge(tmp, desc); err != nil {
 			return err

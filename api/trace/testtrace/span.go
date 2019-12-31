@@ -69,11 +69,11 @@ func (s *Span) End(opts ...trace.EndOption) {
 	s.ended = true
 }
 
-func (s *Span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
-	s.AddEventWithTimestamp(ctx, time.Now(), msg, attrs...)
+func (s *Span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
+	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -89,7 +89,7 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, m
 
 	s.events = append(s.events, Event{
 		Timestamp:  timestamp,
-		Message:    msg,
+		Name:       name,
 		Attributes: attributes,
 	})
 }

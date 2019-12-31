@@ -1,4 +1,4 @@
-module go.opentelmetry.io/otel/example/http-stackdriver
+module go.opentelemetry.io/otel/example/http-stackdriver
 
 go 1.13
 
