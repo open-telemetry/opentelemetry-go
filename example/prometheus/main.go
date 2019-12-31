@@ -34,9 +34,7 @@ var (
 )
 
 func initMeter() *push.Controller {
-	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Options{
-		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
-	})
+	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Options{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}

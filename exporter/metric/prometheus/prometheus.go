@@ -79,13 +79,6 @@ type Options struct {
 	OnError func(error)
 }
 
-type MeasureAggregation int
-
-const (
-	Histogram MeasureAggregation = iota
-	Summary
-)
-
 // NewRawExporter returns a new prometheus exporter for prometheus metrics
 // for use in a pipeline.
 func NewRawExporter(opts Options) (*Exporter, error) {
@@ -148,6 +141,15 @@ func NewExportPipeline(options Options) (*push.Controller, http.HandlerFunc, err
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
+	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	//
+	// Prometheus uses this approach to be resilient to scrape failures.
+	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
+	// it could try again on the next scrape and no data would be lost, only resolution.
+	//
+	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
 	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
