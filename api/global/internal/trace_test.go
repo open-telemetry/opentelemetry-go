@@ -37,6 +37,11 @@ func TestTraceDefaultSDK(t *testing.T) {
 	tracer1 := gtp.Tracer("pre")
 	_, span1 := tracer1.Start(ctx, "span1")
 
+	// This should be dropped.
+	if err := tracer1.WithSpan(ctx, "withSpan1", func(context.Context) error { return nil }); err != nil {
+		t.Errorf("failed to wrap function with span prior to initialization: %v", err)
+	}
+
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
 		t.Fatal(err)
@@ -52,13 +57,19 @@ func TestTraceDefaultSDK(t *testing.T) {
 	// The existing Tracer should have been configured to now use the configured SDK.
 	_, span2 := tracer1.Start(ctx, "span2")
 	span2.End()
+	if err := tracer1.WithSpan(ctx, "withSpan2", func(context.Context) error { return nil }); err != nil {
+		t.Errorf("failed to wrap function with span post initialization: %v", err)
+	}
 
 	// The global trace Provider should now create Tracers that also use the newly configured SDK.
 	tracer2 := gtp.Tracer("post")
 	_, span3 := tracer2.Start(ctx, "span3")
 	span3.End()
+	if err := tracer2.WithSpan(ctx, "withSpan3", func(context.Context) error { return nil }); err != nil {
+		t.Errorf("failed to wrap function with span post initialization with new tracer: %v", err)
+	}
 
-	expected := []string{"pre/span2", "post/span3"}
+	expected := []string{"pre/span2", "pre/withSpan2", "post/span3", "post/withSpan3"}
 	require.Equal(t, tsp.spansStarted, expected)
 	require.Equal(t, tsp.spansEnded, expected)
 }
