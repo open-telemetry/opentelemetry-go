@@ -32,7 +32,7 @@ import (
 func TestExporter_ExportSpan(t *testing.T) {
 	// write to buffer for testing
 	var b bytes.Buffer
-	ex, err := NewExporter(Options{File: &b})
+	ex, err := NewExporter(Options{Writer: &b})
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}
