@@ -23,9 +23,12 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
+
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -83,7 +86,8 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-func New(options Options) (*Exporter, error) {
+// NewRawExporter creates a stdout Exporter for use in a pipeline.
+func NewRawExporter(options Options) (*Exporter, error) {
 	if options.File == nil {
 		options.File = os.Stdout
 	}
@@ -101,14 +105,32 @@ func New(options Options) (*Exporter, error) {
 	}, nil
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, err := stdout.InstallNewPipeline(stdout.Options{...})
+// if err != nil {
+// 	...
+// }
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(options Options) (*push.Controller, error) {
+	controller, err := NewExportPipeline(options)
+	if err != nil {
+		return controller, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
 func NewExportPipeline(options Options) (*push.Controller, error) {
-	selector := simple.NewWithInexpensiveMeasure()
-	exporter, err := New(options)
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(options)
 	if err != nil {
 		return nil, err
 	}
-	batcher := ungrouped.New(selector, true)
+	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 

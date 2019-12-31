@@ -17,13 +17,19 @@ package prometheus
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 type metricKey struct {
@@ -90,8 +96,9 @@ const (
 	Summary
 )
 
-// NewExporter returns a new prometheus exporter for prometheus metrics.
-func NewExporter(opts Options) (*Exporter, error) {
+// NewRawExporter returns a new prometheus exporter for prometheus metrics
+// for use in a pipeline.
+func NewRawExporter(opts Options) (*Exporter, error) {
 	if opts.Registry == nil {
 		opts.Registry = prometheus.NewRegistry()
 	}
@@ -115,6 +122,39 @@ func NewExporter(opts Options) (*Exporter, error) {
 		histograms: newHistograms(opts.Registerer, opts.DefaultHistogramBuckets),
 		summaries:  newSummaries(opts.Registerer, opts.DefaultSummaryObjectives),
 	}, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Options{...})
+// if err != nil {
+// 	...
+// }
+// http.HandleFunc("/metrics", hf)
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
+	controller, hf, err := NewExportPipeline(options)
+	if err != nil {
+		return controller, hf, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, hf, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
+func NewExportPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(options)
+	if err != nil {
+		return nil, nil, err
+	}
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	return pusher, exporter.ServeHTTP, nil
 }
 
 // Export exports the provide metric record to prometheus.

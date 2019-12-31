@@ -19,11 +19,11 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewExporter(prometheus.Options{
+	exporter, err := prometheus.NewRawExporter(prometheus.Options{
 		DefaultHistogramBuckets: []float64{0., 10., 15., 20.},
 	})
 	if err != nil {
-		log.Panicf("failed to initialize metric stdout exporter %v", err)
+		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 
 	var expected []string
@@ -82,11 +82,11 @@ func TestPrometheusExporter(t *testing.T) {
 }
 
 func TestPrometheusExporter_Summaries(t *testing.T) {
-	exporter, err := prometheus.NewExporter(prometheus.Options{
+	exporter, err := prometheus.NewRawExporter(prometheus.Options{
 		MeasureAggregation: prometheus.Summary,
 	})
 	if err != nil {
-		log.Panicf("failed to initialize metric stdout exporter %v", err)
+		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 
 	var expected []string
