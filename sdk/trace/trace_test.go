@@ -218,15 +218,33 @@ func TestStartSpanWithExplicitSpanContext(t *testing.T) {
 		TraceFlags: 0x0,
 	}
 
+	// providing an explicit span context
 	_, s := tr.Start(context.Background(), "span1", apitrace.WithSpanContext(sc1))
 	if s.SpanContext() != sc1 {
 		t.Errorf("got %+v, want %+v", s.SpanContext(), sc1)
 	}
 
+	// providing an explicit empty span context
 	sc2 := core.EmptySpanContext()
 	_, s = tr.Start(context.Background(), "span2", apitrace.WithSpanContext(sc2))
 	if s.SpanContext() == sc2 {
 		t.Errorf("got %+v, wanted a non-EmptySpanContext", s.SpanContext())
+	}
+
+	// providing an explicit, but invalid, span context
+	sc3 := core.SpanContext{
+		TraceID: [16]byte{},
+		SpanID:  [8]byte{},
+	}
+	if sc3.IsValid() {
+		t.Errorf("got %v, wanted an invalid SpanContext", sc3)
+	}
+	_, s = tr.Start(context.Background(), "span3", apitrace.WithSpanContext(sc3))
+	if s.SpanContext() == sc3 {
+		t.Errorf("got %+v, wanted a SpanContext different to the invalid original", s.SpanContext())
+	}
+	if !s.SpanContext().IsValid() {
+		t.Errorf("got %+v, wanted a valid SpanContext", s.SpanContext())
 	}
 }
 
