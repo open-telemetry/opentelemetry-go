@@ -34,9 +34,9 @@ type testFixture struct {
 
 func newFixture(t *testing.T, options stdout.Options) testFixture {
 	buf := &bytes.Buffer{}
-	options.File = buf
+	options.Writer = buf
 	options.DoNotPrintTime = true
-	exp, err := stdout.New(options)
+	exp, err := stdout.NewRawExporter(options)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -60,7 +60,7 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 }
 
 func TestStdoutInvalidQuantile(t *testing.T) {
-	_, err := stdout.New(stdout.Options{
+	_, err := stdout.NewRawExporter(stdout.Options{
 		Quantiles: []float64{1.1, 0.9},
 	})
 	require.Error(t, err, "Invalid quantile error expected")
@@ -69,8 +69,8 @@ func TestStdoutInvalidQuantile(t *testing.T) {
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.New(stdout.Options{
-		File:           &buf,
+	exporter, err := stdout.NewRawExporter(stdout.Options{
+		Writer:         &buf,
 		DoNotPrintTime: false,
 	})
 	if err != nil {

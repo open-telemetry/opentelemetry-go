@@ -18,13 +18,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
@@ -73,8 +79,9 @@ type Options struct {
 	OnError func(error)
 }
 
-// NewExporter returns a new prometheus exporter for prometheus metrics.
-func NewExporter(opts Options) (*Exporter, error) {
+// NewRawExporter returns a new prometheus exporter for prometheus metrics
+// for use in a pipeline.
+func NewRawExporter(opts Options) (*Exporter, error) {
 	if opts.Registry == nil {
 		opts.Registry = prometheus.NewRegistry()
 	}
@@ -106,6 +113,48 @@ func NewExporter(opts Options) (*Exporter, error) {
 	}
 
 	return e, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Options{...})
+// if err != nil {
+// 	...
+// }
+// http.HandleFunc("/metrics", hf)
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
+	controller, hf, err := NewExportPipeline(options)
+	if err != nil {
+		return controller, hf, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, hf, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
+func NewExportPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
+	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	//
+	// Prometheus uses this approach to be resilient to scrape failures.
+	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
+	// it could try again on the next scrape and no data would be lost, only resolution.
+	//
+	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	return pusher, exporter.ServeHTTP, nil
 }
 
 // Export exports the provide metric record to prometheus.

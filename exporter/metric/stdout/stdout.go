@@ -23,8 +23,14 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
+
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 type Exporter struct {
@@ -35,8 +41,8 @@ var _ export.Exporter = &Exporter{}
 
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
-	// File is the destination.  If not set, os.Stdout is used.
-	File io.Writer
+	// Writer is the destination.  If not set, os.Stdout is used.
+	Writer io.Writer
 
 	// PrettyPrint will pretty the json representation of the span,
 	// making it print "pretty". Default is false.
@@ -80,9 +86,10 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-func New(options Options) (*Exporter, error) {
-	if options.File == nil {
-		options.File = os.Stdout
+// NewRawExporter creates a stdout Exporter for use in a pipeline.
+func NewRawExporter(options Options) (*Exporter, error) {
+	if options.Writer == nil {
+		options.Writer = os.Stdout
 	}
 	if options.Quantiles == nil {
 		options.Quantiles = []float64{0.5, 0.9, 0.99}
@@ -96,6 +103,38 @@ func New(options Options) (*Exporter, error) {
 	return &Exporter{
 		options: options,
 	}, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, err := stdout.InstallNewPipeline(stdout.Options{...})
+// if err != nil {
+// 	...
+// }
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(options Options) (*push.Controller, error) {
+	controller, err := NewExportPipeline(options)
+	if err != nil {
+		return controller, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
+func NewExportPipeline(options Options) (*push.Controller, error) {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(options)
+	if err != nil {
+		return nil, err
+	}
+	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	return pusher, nil
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
@@ -218,7 +257,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	}
 
 	if err == nil {
-		fmt.Fprintln(e.options.File, string(data))
+		fmt.Fprintln(e.options.Writer, string(data))
 	} else {
 		return err
 	}
