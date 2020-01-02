@@ -204,7 +204,7 @@ func TestDefaultSDK(t *testing.T) {
 
 	in, out := io.Pipe()
 	pusher, err := stdout.InstallNewPipeline(stdout.Options{
-		File:           out,
+		Writer:         out,
 		DoNotPrintTime: true,
 	})
 	if err != nil {

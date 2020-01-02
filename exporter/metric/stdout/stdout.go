@@ -41,8 +41,8 @@ var _ export.Exporter = &Exporter{}
 
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
-	// File is the destination.  If not set, os.Stdout is used.
-	File io.Writer
+	// Writer is the destination.  If not set, os.Stdout is used.
+	Writer io.Writer
 
 	// PrettyPrint will pretty the json representation of the span,
 	// making it print "pretty". Default is false.
@@ -88,8 +88,8 @@ type expoQuantile struct {
 
 // NewRawExporter creates a stdout Exporter for use in a pipeline.
 func NewRawExporter(options Options) (*Exporter, error) {
-	if options.File == nil {
-		options.File = os.Stdout
+	if options.Writer == nil {
+		options.Writer = os.Stdout
 	}
 	if options.Quantiles == nil {
 		options.Quantiles = []float64{0.5, 0.9, 0.99}
@@ -257,7 +257,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	}
 
 	if err == nil {
-		fmt.Fprintln(e.options.File, string(data))
+		fmt.Fprintln(e.options.Writer, string(data))
 	} else {
 		return err
 	}
