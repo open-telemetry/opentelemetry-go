@@ -49,8 +49,6 @@ func (p *traceProvider) Tracer(name string) trace.Tracer {
 }
 
 type tracer struct {
-	trace.NoopTracer
-
 	once sync.Once
 	name string
 
@@ -68,7 +66,7 @@ func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Co
 	if t.delegate != nil {
 		return t.delegate.WithSpan(ctx, name, body)
 	}
-	return t.NoopTracer.WithSpan(ctx, name, body)
+	return trace.NoopTracer{}.WithSpan(ctx, name, body)
 }
 
 // Start starts a span from the delegated tracer.
@@ -76,5 +74,5 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	if t.delegate != nil {
 		return t.delegate.Start(ctx, name, opts...)
 	}
-	return t.NoopTracer.Start(ctx, name, opts...)
+	return trace.NoopTracer{}.Start(ctx, name, opts...)
 }
