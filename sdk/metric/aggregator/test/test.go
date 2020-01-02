@@ -64,8 +64,9 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 }
 
 type Numbers struct {
-	kind    core.NumberKind
+	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []core.Number
+	kind    core.NumberKind
 }
 
 func NewNumbers(kind core.NumberKind) Numbers {
