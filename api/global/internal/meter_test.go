@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -15,9 +14,6 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func TestDirect(t *testing.T) {
@@ -207,26 +203,13 @@ func TestDefaultSDK(t *testing.T) {
 	counter.Add(ctx, 1, labels1)
 
 	in, out := io.Pipe()
-	// TODO this should equal a stdout.NewPipeline(), use it.
-	// Consider also moving the io.Pipe() and go func() call
-	// below into a test helper somewhere.
-	sdk := func(options stdout.Options) *push.Controller {
-		selector := simple.NewWithInexpensiveMeasure()
-		exporter, err := stdout.New(options)
-		if err != nil {
-			panic(err)
-		}
-		batcher := ungrouped.New(selector, true)
-		pusher := push.New(batcher, exporter, time.Second)
-		pusher.Start()
-
-		return pusher
-	}(stdout.Options{
+	pusher, err := stdout.InstallNewPipeline(stdout.Options{
 		Writer:         out,
 		DoNotPrintTime: true,
 	})
-
-	global.SetMeterProvider(sdk)
+	if err != nil {
+		panic(err)
+	}
 
 	counter.Add(ctx, 1, labels1)
 
@@ -236,9 +219,9 @@ func TestDefaultSDK(t *testing.T) {
 		ch <- string(data)
 	}()
 
-	sdk.Stop()
+	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"test.builtin{A=B}","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"test.builtin","sum":1}]}
 `, <-ch)
 }

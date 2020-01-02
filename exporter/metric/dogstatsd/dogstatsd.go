@@ -16,13 +16,19 @@ package dogstatsd // import "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 
 import (
 	"bytes"
+	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
+
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 type (
-	Config = statsd.Config
+	Options = statsd.Options
 
 	// Exporter implements a dogstatsd-format statsd exporter,
 	// which encodes label sets as independent fields in the
@@ -45,18 +51,57 @@ var (
 	_ export.LabelEncoder = &Exporter{}
 )
 
-// New returns a new Dogstatsd-syntax exporter.  This type implements
-// the metric.LabelEncoder interface, allowing the SDK's unique label
-// encoding to be pre-computed for the exporter and stored in the
-// LabelSet.
-func New(config Config) (*Exporter, error) {
+// NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
+// This type implements the metric.LabelEncoder interface,
+// allowing the SDK's unique label encoding to be pre-computed
+// for the exporter and stored in the LabelSet.
+func NewRawExporter(options Options) (*Exporter, error) {
 	exp := &Exporter{
 		LabelEncoder: statsd.NewLabelEncoder(),
 	}
 
 	var err error
-	exp.Exporter, err = statsd.NewExporter(config, exp)
+	exp.Exporter, err = statsd.NewExporter(options, exp)
 	return exp, err
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Options{...})
+// if err != nil {
+// 	...
+// }
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(options Options) (*push.Controller, error) {
+	controller, err := NewExportPipeline(options)
+	if err != nil {
+		return controller, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
+func NewExportPipeline(options Options) (*push.Controller, error) {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(options)
+	if err != nil {
+		return nil, err
+	}
+
+	// The ungrouped batcher ensures that the export sees the full
+	// set of labels as dogstatsd tags.
+	batcher := ungrouped.New(selector, false)
+
+	// The pusher automatically recognizes that the exporter
+	// implements the LabelEncoder interface, which ensures the
+	// export encoding for labels is encoded in the LabelSet.
+	pusher := push.New(batcher, exporter, time.Hour)
+	pusher.Start()
+
+	return pusher, nil
 }
 
 // AppendName is part of the stats-internal adapter interface.
