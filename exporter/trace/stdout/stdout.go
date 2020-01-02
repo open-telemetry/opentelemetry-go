@@ -25,6 +25,9 @@ import (
 
 // Options are the options to be used when initializing a stdout export.
 type Options struct {
+	// Writer is the destination.  If not set, os.Stdout is used.
+	Writer io.Writer
+
 	// PrettyPrint will pretty the json representation of the span,
 	// making it print "pretty". Default is false.
 	PrettyPrint bool
@@ -37,9 +40,12 @@ type Exporter struct {
 }
 
 func NewExporter(o Options) (*Exporter, error) {
+	if o.Writer == nil {
+		o.Writer = os.Stdout
+	}
 	return &Exporter{
 		pretty:       o.PrettyPrint,
-		outputWriter: os.Stdout,
+		outputWriter: o.Writer,
 	}, nil
 }
 

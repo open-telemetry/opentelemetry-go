@@ -30,14 +30,12 @@ import (
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
-	ex, err := NewExporter(Options{})
+	// write to buffer for testing
+	var b bytes.Buffer
+	ex, err := NewExporter(Options{Writer: &b})
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}
-
-	// override output writer for testing
-	var b bytes.Buffer
-	ex.outputWriter = &b
 
 	// setup test span
 	now := time.Now()

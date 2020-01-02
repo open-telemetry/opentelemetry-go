@@ -222,7 +222,7 @@ func TestDefaultSDK(t *testing.T) {
 
 		return pusher
 	}(stdout.Options{
-		File:           out,
+		Writer:         out,
 		DoNotPrintTime: true,
 	})
 
