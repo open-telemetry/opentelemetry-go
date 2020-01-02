@@ -17,29 +17,20 @@ package metric_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func ExampleNew() {
-	selector := simple.NewWithInexpensiveMeasure()
-	exporter, err := stdout.New(stdout.Options{
+	pusher, err := stdout.NewExportPipeline(stdout.Options{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
 	})
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
-	batcher := defaultkeys.New(selector, sdk.NewDefaultLabelEncoder(), true)
-	pusher := push.New(batcher, exporter, time.Second)
-	pusher.Start()
 	defer pusher.Stop()
 
 	ctx := context.Background()
