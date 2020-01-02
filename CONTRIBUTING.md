@@ -130,7 +130,21 @@ https://github.com/open-telemetry/opentelemetry-specification/issues/165
 * Make sure to run `make precommit` - this will find and fix the code
   formatting.
 
-## Become an Approver or a Maintainer
+## Approvers and Maintainers
+
+Approvers:
+
+- [Isobel Redelmeier](https://github.com/iredelmeier), LightStep
+- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), Universidade Federal de Ouro Preto
+- [Ted Young](https://github.com/tedsuo), LightStep
+
+Maintainers:
+
+- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Rahul Patel](https://github.com/rghetia), Google
+
+### Become an Approver or a Maintainer
 
 See the [community membership document in OpenTelemetry community
 repo](https://github.com/open-telemetry/community/blob/master/community-membership.md).
