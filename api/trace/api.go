@@ -97,12 +97,13 @@ type StartOption func(*StartConfig)
 // StartConfig provides options to set properties of span at the time of starting
 // a new span.
 type StartConfig struct {
-	Attributes []core.KeyValue
-	StartTime  time.Time
-	Links      []Link
-	Relation   Relation
-	Record     bool
-	SpanKind   SpanKind
+	Attributes  []core.KeyValue
+	StartTime   time.Time
+	Links       []Link
+	Relation    Relation
+	Record      bool
+	SpanKind    SpanKind
+	SpanContext core.SpanContext
 }
 
 // Relation is used to establish relationship between newly created span and the
@@ -247,5 +248,12 @@ func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) StartOption {
 func WithSpanKind(sk SpanKind) StartOption {
 	return func(c *StartConfig) {
 		c.SpanKind = sk
+	}
+}
+
+// WithSpanContext specifies the SpanContext to use for a Trace.
+func WithSpanContext(ctx core.SpanContext) StartOption {
+	return func(c *StartConfig) {
+		c.SpanContext = ctx
 	}
 }

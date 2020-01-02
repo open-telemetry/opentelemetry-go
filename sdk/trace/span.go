@@ -248,15 +248,25 @@ func (s *span) addChild() {
 func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
 	var noParent bool
 	span := &span{}
-	span.spanContext = parent
-
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == core.EmptySpanContext() {
-		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
-		noParent = true
+	if o.SpanContext.IsValid() {
+		// if an explicit span context was provided, use it ...
+		span.spanContext = o.SpanContext
+	} else {
+		// ... otherwise, use the parent ...
+		span.spanContext = parent
+
+		// ... unless there was no parent, in which case generate a new TraceID ...
+		if parent == core.EmptySpanContext() {
+			noParent = true
+			span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
+		}
+
+		// ... always generate a new SpanID
+		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
 	}
-	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
+
 	data := samplingData{
 		noParent:     noParent,
 		remoteParent: remoteParent,

@@ -208,6 +208,28 @@ func TestSampling(t *testing.T) {
 	}
 }
 
+func TestStartSpanWithExplicitSpanContext(t *testing.T) {
+	tp, _ := NewProvider()
+	tr := tp.Tracer("WithSpanContext")
+
+	sc1 := core.SpanContext{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x0,
+	}
+
+	_, s := tr.Start(context.Background(), "span1", apitrace.WithSpanContext(sc1))
+	if s.SpanContext() != sc1 {
+		t.Errorf("got %+v, want %+v", s.SpanContext(), sc1)
+	}
+
+	sc2 := core.EmptySpanContext()
+	_, s = tr.Start(context.Background(), "span2", apitrace.WithSpanContext(sc2))
+	if s.SpanContext() == sc2 {
+		t.Errorf("got %+v, wanted a non-EmptySpanContext", s.SpanContext())
+	}
+}
+
 func TestStartSpanWithChildOf(t *testing.T) {
 	tp, _ := NewProvider()
 	tr := tp.Tracer("SpanWith ChildOf")
