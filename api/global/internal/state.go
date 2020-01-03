@@ -30,6 +30,7 @@ var (
 	globalPropagators = defaultPropagatorsValue()
 
 	delegateMeterOnce sync.Once
+	delegateTraceOnce sync.Once
 )
 
 // TraceProvider is the internal implementation for global.TraceProvider.
@@ -39,6 +40,18 @@ func TraceProvider() trace.Provider {
 
 // SetTraceProvider is the internal implementation for global.SetTraceProvider.
 func SetTraceProvider(tp trace.Provider) {
+	delegateTraceOnce.Do(func() {
+		current := TraceProvider()
+		if current == tp {
+			// Setting the provider to the prior default is nonsense, panic.
+			// Panic is acceptable because we are likely still early in the
+			// process lifetime.
+			panic("invalid Provider, the global instance cannot be reinstalled")
+		} else if def, ok := current.(*traceProvider); ok {
+			def.setDelegate(tp)
+		}
+
+	})
 	globalTracer.Store(traceProviderHolder{tp: tp})
 }
 
@@ -76,7 +89,7 @@ func SetPropagators(pr propagation.Propagators) {
 
 func defaultTracerValue() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(traceProviderHolder{tp: trace.NoopProvider{}})
+	v.Store(traceProviderHolder{tp: &traceProvider{}})
 	return v
 }
 
@@ -107,4 +120,5 @@ func ResetForTest() {
 	globalTracer = defaultTracerValue()
 	globalMeter = defaultMeterValue()
 	delegateMeterOnce = sync.Once{}
+	delegateTraceOnce = sync.Once{}
 }

@@ -18,13 +18,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
@@ -44,8 +50,8 @@ type Exporter struct {
 var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
 
-// Options is a set of options for the tally reporter.
-type Options struct {
+// Config is a set of configs for the tally reporter.
+type Config struct {
 	// Registry is the prometheus registry that will be used as the default Registerer and
 	// Gatherer if these are not specified.
 	//
@@ -73,39 +79,82 @@ type Options struct {
 	OnError func(error)
 }
 
-// NewExporter returns a new prometheus exporter for prometheus metrics.
-func NewExporter(opts Options) (*Exporter, error) {
-	if opts.Registry == nil {
-		opts.Registry = prometheus.NewRegistry()
+// NewRawExporter returns a new prometheus exporter for prometheus metrics
+// for use in a pipeline.
+func NewRawExporter(config Config) (*Exporter, error) {
+	if config.Registry == nil {
+		config.Registry = prometheus.NewRegistry()
 	}
 
-	if opts.Registerer == nil {
-		opts.Registerer = opts.Registry
+	if config.Registerer == nil {
+		config.Registerer = config.Registry
 	}
 
-	if opts.Gatherer == nil {
-		opts.Gatherer = opts.Registry
+	if config.Gatherer == nil {
+		config.Gatherer = config.Registry
 	}
 
-	if opts.OnError == nil {
-		opts.OnError = func(err error) {
+	if config.OnError == nil {
+		config.OnError = func(err error) {
 			fmt.Println(err.Error())
 		}
 	}
 
 	e := &Exporter{
-		handler:                 promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
-		registerer:              opts.Registerer,
-		gatherer:                opts.Gatherer,
-		defaultSummaryQuantiles: opts.DefaultSummaryQuantiles,
+		handler:                 promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
+		registerer:              config.Registerer,
+		gatherer:                config.Gatherer,
+		defaultSummaryQuantiles: config.DefaultSummaryQuantiles,
 	}
 
 	c := newCollector(e)
-	if err := opts.Registerer.Register(c); err != nil {
-		opts.OnError(fmt.Errorf("cannot register the collector: %w", err))
+	if err := config.Registerer.Register(c); err != nil {
+		config.OnError(fmt.Errorf("cannot register the collector: %w", err))
 	}
 
 	return e, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
+// if err != nil {
+// 	...
+// }
+// http.HandleFunc("/metrics", hf)
+// defer pipeline.Stop()
+// ... Done
+func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
+	controller, hf, err := NewExportPipeline(config)
+	if err != nil {
+		return controller, hf, err
+	}
+	global.SetMeterProvider(controller)
+	return controller, hf, err
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selectors and batchers.
+func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
+	selector := simple.NewWithExactMeasure()
+	exporter, err := NewRawExporter(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
+	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	//
+	// Prometheus uses this approach to be resilient to scrape failures.
+	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
+	// it could try again on the next scrape and no data would be lost, only resolution.
+	//
+	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	pusher := push.New(batcher, exporter, time.Second)
+	pusher.Start()
+
+	return pusher, exporter.ServeHTTP, nil
 }
 
 // Export exports the provide metric record to prometheus.

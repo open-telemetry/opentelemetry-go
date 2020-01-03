@@ -81,6 +81,13 @@ detail, and the
 [opentelemetry-example-app](./example/README.md)
 for a complete example.
 
+## Compatible Exporters
+
+See the Go packages depending upon
+[sdk/export/trace](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/trace?tab=importedby)
+and [sdk/export/metric](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/metric?tab=importedby)
+for a list of all exporters compatible with OpenTelemetry's Go SDK.
+
 ## Contributing
 
 See the [contributing file](CONTRIBUTING.md).

@@ -17,19 +17,14 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"go.opentelemetry.io/otel/api/context/baggage/propagation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	dogstatsd "go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
-	metricsdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -57,18 +52,13 @@ func initTracer() {
 }
 
 func initMeter() *push.Controller {
-	selector := simple.NewWithExactMeasure()
-	exporter, err := dogstatsd.New(dogstatsd.Config{
-		URL: "udp://127.0.0.1:8200",
+	pusher, err := metricstdout.InstallNewPipeline(metricstdout.Config{
+		Quantiles:   []float64{0.5, 0.9, 0.99},
+		PrettyPrint: false,
 	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
-	pusher := push.New(batcher, exporter, time.Second)
-	pusher.Start()
-
-	global.SetMeterProvider(pusher)
 	return pusher
 }
 
