@@ -62,6 +62,7 @@ func main() {
 			trace.WithAttributes(attrs...),
 			trace.ChildOf(spanCtx),
 		)
+		span.SetAttributes(entries...)
 		defer span.End()
 
 		span.AddEvent(ctx, "handling this...")
