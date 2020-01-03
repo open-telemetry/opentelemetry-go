@@ -32,11 +32,11 @@ type testFixture struct {
 	output   *bytes.Buffer
 }
 
-func newFixture(t *testing.T, options stdout.Options) testFixture {
+func newFixture(t *testing.T, config stdout.Config) testFixture {
 	buf := &bytes.Buffer{}
-	options.Writer = buf
-	options.DoNotPrintTime = true
-	exp, err := stdout.NewRawExporter(options)
+	config.Writer = buf
+	config.DoNotPrintTime = true
+	exp, err := stdout.NewRawExporter(config)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -60,7 +60,7 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 }
 
 func TestStdoutInvalidQuantile(t *testing.T) {
-	_, err := stdout.NewRawExporter(stdout.Options{
+	_, err := stdout.NewRawExporter(stdout.Config{
 		Quantiles: []float64{1.1, 0.9},
 	})
 	require.Error(t, err, "Invalid quantile error expected")
@@ -69,12 +69,12 @@ func TestStdoutInvalidQuantile(t *testing.T) {
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.NewRawExporter(stdout.Options{
+	exporter, err := stdout.NewRawExporter(stdout.Config{
 		Writer:         &buf,
 		DoNotPrintTime: false,
 	})
 	if err != nil {
-		t.Fatal("Invalid options: ", err)
+		t.Fatal("Invalid config: ", err)
 	}
 
 	before := time.Now()
@@ -123,7 +123,7 @@ func TestStdoutTimestamp(t *testing.T) {
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Options{})
+	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
@@ -140,7 +140,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 }
 
 func TestStdoutGaugeFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Options{})
+	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
@@ -157,7 +157,7 @@ func TestStdoutGaugeFormat(t *testing.T) {
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t, stdout.Options{})
+	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
@@ -175,7 +175,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Options{
+	fix := newFixture(t, stdout.Config{
 		PrettyPrint: true,
 	})
 
@@ -231,7 +231,7 @@ func TestStdoutEmptyDataSet(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fix := newFixture(t, stdout.Options{})
+			fix := newFixture(t, stdout.Config{})
 
 			checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
@@ -248,7 +248,7 @@ func TestStdoutEmptyDataSet(t *testing.T) {
 }
 
 func TestStdoutGaugeNotSet(t *testing.T) {
-	fix := newFixture(t, stdout.Options{})
+	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 

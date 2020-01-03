@@ -19,7 +19,7 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewRawExporter(prometheus.Options{
+	exporter, err := prometheus.NewRawExporter(prometheus.Config{
 		DefaultSummaryQuantiles: []float64{0.5, 0.9, 0.99},
 	})
 	if err != nil {
