@@ -136,7 +136,7 @@ Approvers:
 
 - [Isobel Redelmeier](https://github.com/iredelmeier), LightStep
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), Universidade Federal de Ouro Preto
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Ted Young](https://github.com/tedsuo), LightStep
 
 Maintainers:
