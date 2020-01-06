@@ -25,9 +25,11 @@ import (
 // Aggregator aggregates counter events.
 type Aggregator struct {
 	// current holds current increments to this counter record
+	// current needs to be aligned for 64-bit atomic operations.
 	current core.Number
 
 	// checkpoint is a temporary used during Checkpoint()
+	// checkpoint needs to be aligned for 64-bit atomic operations.
 	checkpoint core.Number
 }
 

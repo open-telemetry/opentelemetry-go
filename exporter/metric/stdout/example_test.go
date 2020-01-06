@@ -11,7 +11,7 @@ import (
 
 func ExampleNewExportPipeline() {
 	// Create a meter
-	pusher, err := stdout.NewExportPipeline(stdout.Options{
+	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true,
 	})

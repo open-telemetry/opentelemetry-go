@@ -34,7 +34,7 @@ var (
 )
 
 func initMeter() *push.Controller {
-	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Options{})
+	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}

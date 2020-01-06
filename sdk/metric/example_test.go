@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleNew() {
-	pusher, err := stdout.NewExportPipeline(stdout.Options{
+	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
 	})

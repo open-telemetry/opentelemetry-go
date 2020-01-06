@@ -34,8 +34,8 @@ import (
 )
 
 type (
-	// Options supports common options that apply to statsd exporters.
-	Options struct {
+	// Config supports common configuration that applies to statsd exporters.
+	Config struct {
 		// URL describes the destination for exporting statsd data.
 		// e.g., udp://host:port
 		//       tcp://host:port
@@ -57,7 +57,7 @@ type (
 	// exporters.
 	Exporter struct {
 		adapter Adapter
-		options Options
+		config  Config
 		conn    net.Conn
 		writer  io.Writer
 		buffer  bytes.Buffer
@@ -88,17 +88,17 @@ var (
 
 // NewExport returns a common implementation for exporters that Export
 // statsd syntax.
-func NewExporter(options Options, adapter Adapter) (*Exporter, error) {
-	if options.MaxPacketSize <= 0 {
-		options.MaxPacketSize = MaxPacketSize
+func NewExporter(config Config, adapter Adapter) (*Exporter, error) {
+	if config.MaxPacketSize <= 0 {
+		config.MaxPacketSize = MaxPacketSize
 	}
 	var writer io.Writer
 	var conn net.Conn
 	var err error
-	if options.Writer != nil {
-		writer = options.Writer
+	if config.Writer != nil {
+		writer = config.Writer
 	} else {
-		conn, err = dial(options.URL)
+		conn, err = dial(config.URL)
 		if conn != nil {
 			writer = conn
 		}
@@ -108,7 +108,7 @@ func NewExporter(options Options, adapter Adapter) (*Exporter, error) {
 	// Start() and Stop() API.
 	return &Exporter{
 		adapter: adapter,
-		options: options,
+		config:  config,
 		conn:    conn,
 		writer:  writer,
 	}, err
@@ -171,7 +171,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			return
 		}
 
-		if buf.Len() < e.options.MaxPacketSize {
+		if buf.Len() < e.config.MaxPacketSize {
 			return
 		}
 		if before == 0 {

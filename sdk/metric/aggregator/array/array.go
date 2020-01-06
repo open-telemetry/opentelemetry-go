@@ -28,10 +28,11 @@ import (
 
 type (
 	Aggregator struct {
+		// ckptSum needs to be aligned for 64-bit atomic operations.
+		ckptSum    core.Number
 		lock       sync.Mutex
 		current    points
 		checkpoint points
-		ckptSum    core.Number
 	}
 
 	points []core.Number

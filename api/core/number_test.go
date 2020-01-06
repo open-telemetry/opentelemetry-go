@@ -67,12 +67,14 @@ func TestNumber(t *testing.T) {
 	cmpsForPos := [3]int{1, 1, 0}
 
 	type testcase struct {
-		n    Number
+		// n needs to be aligned for 64-bit atomic operations.
+		n Number
+		// nums needs to be aligned for 64-bit atomic operations.
+		nums [3]Number
 		kind NumberKind
 		pos  bool
 		zero bool
 		neg  bool
-		nums [3]Number
 		cmps [3]int
 	}
 	testcases := []testcase{

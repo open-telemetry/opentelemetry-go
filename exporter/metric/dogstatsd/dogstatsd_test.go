@@ -52,7 +52,7 @@ func TestDogstatsLabels(t *testing.T) {
 			checkpointSet.Add(desc, cagg, key.New("A").String("B"))
 
 			var buf bytes.Buffer
-			exp, err := dogstatsd.NewRawExporter(dogstatsd.Options{
+			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{
 				Writer: &buf,
 			})
 			require.Nil(t, err)
