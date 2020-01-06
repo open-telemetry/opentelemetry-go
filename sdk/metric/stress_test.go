@@ -51,6 +51,7 @@ const (
 
 type (
 	testFixture struct {
+		// stop has to be aligned for 64-bit atomic operations.
 		stop     int64
 		expected sync.Map
 		received sync.Map // Note: doesn't require synchronization
@@ -93,6 +94,7 @@ type (
 	// where a race condition causes duplicate records.  We always
 	// take the later timestamp.
 	gaugeState struct {
+		// raw has to be aligned for 64-bit atomic operations.
 		raw core.Number
 		ts  time.Time
 	}

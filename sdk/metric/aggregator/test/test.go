@@ -17,10 +17,13 @@ package test
 import (
 	"context"
 	"math/rand"
+	"os"
 	"sort"
 	"testing"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -63,9 +66,25 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 	}
 }
 
+// Ensure local struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "Numbers.numbers",
+			Offset: unsafe.Offsetof(Numbers{}.numbers),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
+
 type Numbers struct {
-	kind    core.NumberKind
+	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []core.Number
+	kind    core.NumberKind
 }
 
 func NewNumbers(kind core.NumberKind) Numbers {
