@@ -45,6 +45,8 @@ type (
 	// a sequence number to determine the winner of a race.
 	gaugeData struct {
 		// value is the int64- or float64-encoded Set() data
+		//
+		// value needs to be aligned for 64-bit atomic operations.
 		value core.Number
 
 		// timestamp indicates when this record was submitted.

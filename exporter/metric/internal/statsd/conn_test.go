@@ -113,11 +113,11 @@ timer.B.D:%s|ms
 				t.Run(nkind.String(), func(t *testing.T) {
 					ctx := context.Background()
 					writer := &testWriter{}
-					options := statsd.Options{
+					config := statsd.Config{
 						Writer:        writer,
 						MaxPacketSize: 1024,
 					}
-					exp, err := statsd.NewExporter(options, adapter)
+					exp, err := statsd.NewExporter(config, adapter)
 					if err != nil {
 						t.Fatal("New error: ", err)
 					}
@@ -274,12 +274,12 @@ func TestPacketSplit(t *testing.T) {
 		t.Run(tcase.name, func(t *testing.T) {
 			ctx := context.Background()
 			writer := &testWriter{}
-			options := statsd.Options{
+			config := statsd.Config{
 				Writer:        writer,
 				MaxPacketSize: 1024,
 			}
 			adapter := newWithTagsAdapter()
-			exp, err := statsd.NewExporter(options, adapter)
+			exp, err := statsd.NewExporter(config, adapter)
 			if err != nil {
 				t.Fatal("New error: ", err)
 			}

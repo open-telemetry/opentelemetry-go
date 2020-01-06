@@ -50,8 +50,8 @@ type Exporter struct {
 var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
 
-// Options is a set of options for the tally reporter.
-type Options struct {
+// Config is a set of configs for the tally reporter.
+type Config struct {
 	// Registry is the prometheus registry that will be used as the default Registerer and
 	// Gatherer if these are not specified.
 	//
@@ -81,35 +81,35 @@ type Options struct {
 
 // NewRawExporter returns a new prometheus exporter for prometheus metrics
 // for use in a pipeline.
-func NewRawExporter(opts Options) (*Exporter, error) {
-	if opts.Registry == nil {
-		opts.Registry = prometheus.NewRegistry()
+func NewRawExporter(config Config) (*Exporter, error) {
+	if config.Registry == nil {
+		config.Registry = prometheus.NewRegistry()
 	}
 
-	if opts.Registerer == nil {
-		opts.Registerer = opts.Registry
+	if config.Registerer == nil {
+		config.Registerer = config.Registry
 	}
 
-	if opts.Gatherer == nil {
-		opts.Gatherer = opts.Registry
+	if config.Gatherer == nil {
+		config.Gatherer = config.Registry
 	}
 
-	if opts.OnError == nil {
-		opts.OnError = func(err error) {
+	if config.OnError == nil {
+		config.OnError = func(err error) {
 			fmt.Println(err.Error())
 		}
 	}
 
 	e := &Exporter{
-		handler:                 promhttp.HandlerFor(opts.Gatherer, promhttp.HandlerOpts{}),
-		registerer:              opts.Registerer,
-		gatherer:                opts.Gatherer,
-		defaultSummaryQuantiles: opts.DefaultSummaryQuantiles,
+		handler:                 promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
+		registerer:              config.Registerer,
+		gatherer:                config.Gatherer,
+		defaultSummaryQuantiles: config.DefaultSummaryQuantiles,
 	}
 
 	c := newCollector(e)
-	if err := opts.Registerer.Register(c); err != nil {
-		opts.OnError(fmt.Errorf("cannot register the collector: %w", err))
+	if err := config.Registerer.Register(c); err != nil {
+		config.OnError(fmt.Errorf("cannot register the collector: %w", err))
 	}
 
 	return e, nil
@@ -117,15 +117,15 @@ func NewRawExporter(opts Options) (*Exporter, error) {
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
-// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Options{...})
+// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
 // if err != nil {
 // 	...
 // }
 // http.HandleFunc("/metrics", hf)
 // defer pipeline.Stop()
 // ... Done
-func InstallNewPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(options)
+func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
+	controller, hf, err := NewExportPipeline(config)
 	if err != nil {
 		return controller, hf, err
 	}
@@ -135,9 +135,9 @@ func InstallNewPipeline(options Options) (*push.Controller, http.HandlerFunc, er
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(options Options) (*push.Controller, http.HandlerFunc, error) {
+func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
 	selector := simple.NewWithExactMeasure()
-	exporter, err := NewRawExporter(options)
+	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
 	}

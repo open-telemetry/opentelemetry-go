@@ -28,12 +28,14 @@ import (
 // It only supports ChildOf option. SpanId is atomically increased every time a
 // new span is created.
 type MockTracer struct {
-	// Sampled specifies if the new span should be sampled or not.
-	Sampled bool
-
 	// StartSpanID is used to initialize spanId. It is incremented by one
 	// every time a new span is created.
+	//
+	// StartSpanID has to be aligned for 64-bit atomic operations.
 	StartSpanID *uint64
+
+	// Sampled specifies if the new span should be sampled or not.
+	Sampled bool
 }
 
 var _ apitrace.Tracer = (*MockTracer)(nil)
