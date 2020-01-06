@@ -152,7 +152,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
 
-	messageEventValue := "event-test"
+	eventNameValue := "event-test"
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := 123.456
@@ -189,7 +189,7 @@ func Test_spanDataToThrift(t *testing.T) {
 					key.Uint64("ignored", 123),
 				},
 				MessageEvents: []export.Event{
-					{Message: messageEventValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
 				},
 				Status: codes.Unknown,
 			},
@@ -225,8 +225,8 @@ func Test_spanDataToThrift(t *testing.T) {
 								VType: gen.TagType_STRING,
 							},
 							{
-								Key:   "message",
-								VStr:  &messageEventValue,
+								Key:   "name",
+								VStr:  &eventNameValue,
 								VType: gen.TagType_STRING,
 							},
 						},

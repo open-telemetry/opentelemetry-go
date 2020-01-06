@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 	apimetric "go.opentelemetry.io/otel/api/metric"
@@ -40,9 +41,15 @@ type (
 	}
 
 	Batch struct {
+		// Measurement needs to be aligned for 64-bit atomic operations.
+		Measurements []Measurement
 		Ctx          context.Context
 		LabelSet     *LabelSet
-		Measurements []Measurement
+	}
+
+	MeterProvider struct {
+		lock       sync.Mutex
+		registered map[string]*Meter
 	}
 
 	Meter struct {
@@ -52,16 +59,17 @@ type (
 	Kind int8
 
 	Measurement struct {
-		Instrument *Instrument
+		// Number needs to be aligned for 64-bit atomic operations.
 		Number     core.Number
+		Instrument *Instrument
 	}
 )
 
 var (
-	_ apimetric.InstrumentImpl = &Instrument{}
-	_ apimetric.HandleImpl     = &Handle{}
-	_ apimetric.LabelSet       = &LabelSet{}
-	_ apimetric.Meter          = &Meter{}
+	_ apimetric.InstrumentImpl      = &Instrument{}
+	_ apimetric.BoundInstrumentImpl = &Handle{}
+	_ apimetric.LabelSet            = &LabelSet{}
+	_ apimetric.Meter               = &Meter{}
 )
 
 const (
@@ -70,7 +78,10 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleImpl {
+func (i *Instrument) Bind(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
+	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
+		labels = ld.Delegate()
+	}
 	return &Handle{
 		Instrument: i,
 		LabelSet:   labels.(*LabelSet),
@@ -78,6 +89,9 @@ func (i *Instrument) AcquireHandle(labels apimetric.LabelSet) apimetric.HandleIm
 }
 
 func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
+		labels = ld.Delegate()
+	}
 	doRecordBatch(ctx, labels.(*LabelSet), i, number)
 }
 
@@ -85,7 +99,7 @@ func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
 	doRecordBatch(ctx, h.LabelSet, h.Instrument, number)
 }
 
-func (h *Handle) Release() {
+func (h *Handle) Unbind() {
 }
 
 func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number core.Number) {
@@ -97,6 +111,24 @@ func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrume
 
 func (s *LabelSet) Meter() apimetric.Meter {
 	return s.TheMeter
+}
+
+func NewProvider() *MeterProvider {
+	return &MeterProvider{
+		registered: map[string]*Meter{},
+	}
+}
+
+func (p *MeterProvider) Meter(name string) apimetric.Meter {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if lookup, ok := p.registered[name]; ok {
+		return lookup
+	}
+	m := NewMeter()
+	p.registered[name] = m
+	return m
 }
 
 func NewMeter() *Meter {

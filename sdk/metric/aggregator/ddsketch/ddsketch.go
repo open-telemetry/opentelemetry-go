@@ -45,9 +45,10 @@ var _ aggregator.Distribution = &Aggregator{}
 // New returns a new DDSketch aggregator.
 func New(cfg *Config, desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
-		cfg:     cfg,
-		kind:    desc.NumberKind(),
-		current: sdk.NewDDSketch(cfg),
+		cfg:        cfg,
+		kind:       desc.NumberKind(),
+		current:    sdk.NewDDSketch(cfg),
+		checkpoint: sdk.NewDDSketch(cfg),
 	}
 }
 

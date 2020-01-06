@@ -97,30 +97,38 @@ type (
 	// `record` in existence at a time, although at most one can
 	// be referenced from the `SDK.current` map.
 	record struct {
-		// labels is the LabelSet passed by the user.
-		labels *labels
-
-		// descriptor describes the metric instrument.
-		descriptor *export.Descriptor
-
 		// refcount counts the number of active handles on
 		// referring to this record.  active handles prevent
 		// removing the record from the current map.
+		//
+		// refcount has to be aligned for 64-bit atomic operations.
 		refcount int64
 
 		// collectedEpoch is the epoch number for which this
 		// record has been exported.  This is modified by the
 		// `Collect()` method.
+		//
+		// collectedEpoch has to be aligned for 64-bit atomic operations.
 		collectedEpoch int64
 
 		// modifiedEpoch is the latest epoch number for which
 		// this record was updated.  Generally, if
 		// modifiedEpoch is less than collectedEpoch, this
 		// record is due for reclaimation.
+		//
+		// modifiedEpoch has to be aligned for 64-bit atomic operations.
 		modifiedEpoch int64
 
 		// reclaim is an atomic to control the start of reclaiming.
+		//
+		// reclaim has to be aligned for 64-bit atomic operations.
 		reclaim int64
+
+		// labels is the LabelSet passed by the user.
+		labels *labels
+
+		// descriptor describes the metric instrument.
+		descriptor *export.Descriptor
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
@@ -148,10 +156,10 @@ type (
 )
 
 var (
-	_ api.Meter          = &SDK{}
-	_ api.LabelSet       = &labels{}
-	_ api.InstrumentImpl = &instrument{}
-	_ api.HandleImpl     = &record{}
+	_ api.Meter               = &SDK{}
+	_ api.LabelSet            = &labels{}
+	_ api.InstrumentImpl      = &instrument{}
+	_ api.BoundInstrumentImpl = &record{}
 
 	// hazardRecord is used as a pointer value that indicates the
 	// value is not included in any list.  (`nil` would be
@@ -205,7 +213,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
+func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
@@ -213,7 +221,7 @@ func (i *instrument) AcquireHandle(ls api.LabelSet) api.HandleImpl {
 func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
-	defer h.Release()
+	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
 
@@ -281,6 +289,9 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 // labsFor sanitizes the input LabelSet.  The input will be rejected
 // if it was created by another Meter instance, for example.
 func (m *SDK) labsFor(ls api.LabelSet) *labels {
+	if del, ok := ls.(api.LabelSetDelegate); ok {
+		ls = del.Delegate()
+	}
 	if l, _ := ls.(*labels); l != nil && l.meter == m {
 		return l
 	}
@@ -462,7 +473,7 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	}
 }
 
-func (r *record) Release() {
+func (r *record) Unbind() {
 	for {
 		collected := atomic.LoadInt64(&r.collectedEpoch)
 		modified := atomic.LoadInt64(&r.modifiedEpoch)

@@ -30,14 +30,12 @@ import (
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
-	ex, err := NewExporter(Options{})
+	// write to buffer for testing
+	var b bytes.Buffer
+	ex, err := NewExporter(Options{Writer: &b})
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}
-
-	// override output writer for testing
-	var b bytes.Buffer
-	ex.outputWriter = &b
 
 	// setup test span
 	now := time.Now()
@@ -59,8 +57,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 			key.Float64("double", doubleValue),
 		},
 		MessageEvents: []export.Event{
-			{Message: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
-			{Message: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
+			{Name: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
 		},
 		SpanKind: trace.SpanKindInternal,
 		Status:   codes.Unknown,
@@ -90,7 +88,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`],` +
 		`"MessageEvents":[` +
 		`{` +
-		`"Message":"foo",` +
+		`"Name":"foo",` +
 		`"Attributes":[` +
 		`{` +
 		`"Key":"key",` +
@@ -100,7 +98,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Time":` + string(expectedSerializedNow) +
 		`},` +
 		`{` +
-		`"Message":"bar",` +
+		`"Name":"bar",` +
 		`"Attributes":[` +
 		`{` +
 		`"Key":"double",` +

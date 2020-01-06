@@ -127,25 +127,25 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.addEventWithTimestamp(time.Now(), msg, attrs...)
+	s.addEventWithTimestamp(time.Now(), name, attrs...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.addEventWithTimestamp(timestamp, msg, attrs...)
+	s.addEventWithTimestamp(timestamp, name, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, msg string, attrs ...core.KeyValue) {
+func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...core.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
-		Message:    msg,
+		Name:       name,
 		Attributes: attrs,
 		Time:       timestamp,
 	})

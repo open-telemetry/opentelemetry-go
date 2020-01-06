@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
@@ -26,10 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	metricstdout "go.opentelemetry.io/otel/exporter/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporter/trace/stdout"
-	metricsdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -57,19 +53,13 @@ func initTracer() {
 }
 
 func initMeter() *push.Controller {
-	selector := simple.NewWithExactMeasure()
-	exporter, err := metricstdout.New(metricstdout.Options{
+	pusher, err := metricstdout.InstallNewPipeline(metricstdout.Config{
 		Quantiles:   []float64{0.5, 0.9, 0.99},
 		PrettyPrint: false,
 	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
-	pusher := push.New(batcher, exporter, time.Second)
-	pusher.Start()
-
-	global.SetMeterProvider(pusher)
 	return pusher
 }
 
@@ -99,11 +89,11 @@ func main() {
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
-	gauge := oneMetric.AcquireHandle(commonLabels)
-	defer gauge.Release()
+	gauge := oneMetric.Bind(commonLabels)
+	defer gauge.Unbind()
 
-	measure := measureTwo.AcquireHandle(commonLabels)
-	defer measure.Release()
+	measure := measureTwo.Bind(commonLabels)
+	defer measure.Unbind()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 

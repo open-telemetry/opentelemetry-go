@@ -17,11 +17,14 @@ package gauge
 import (
 	"context"
 	"math/rand"
+	"os"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
@@ -30,6 +33,21 @@ import (
 const count = 100
 
 var _ export.Aggregator = &Aggregator{}
+
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "gaugeData.value",
+			Offset: unsafe.Offsetof(gaugeData{}.value),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestGaugeNonMonotonic(t *testing.T) {
 	ctx := context.Background()

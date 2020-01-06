@@ -27,6 +27,7 @@ import (
 // Controller organizes a periodic push of metric data.
 type Controller struct {
 	lock         sync.Mutex
+	collectLock  sync.Mutex
 	sdk          *sdk.SDK
 	errorHandler sdk.ErrorHandler
 	batcher      export.Batcher
@@ -107,7 +108,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
-func (c *Controller) Meter(name string) metric.Meter {
+func (c *Controller) Meter(_ string) metric.Meter {
 	return c.sdk
 }
 
@@ -160,13 +161,39 @@ func (c *Controller) tick() {
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()
-	c.sdk.Collect(ctx)
-	err := c.exporter.Export(ctx, c.batcher.CheckpointSet())
+	c.collect(ctx)
+	checkpointSet := syncCheckpointSet{
+		mtx:      &c.collectLock,
+		delegate: c.batcher.CheckpointSet(),
+	}
+	err := c.exporter.Export(ctx, checkpointSet)
 	c.batcher.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)
 	}
+}
+
+func (c *Controller) collect(ctx context.Context) {
+	c.collectLock.Lock()
+	defer c.collectLock.Unlock()
+
+	c.sdk.Collect(ctx)
+}
+
+// syncCheckpointSet is a wrapper for a CheckpointSet to synchronize
+// SDK's collection and reads of a CheckpointSet by an exporter.
+type syncCheckpointSet struct {
+	mtx      *sync.Mutex
+	delegate export.CheckpointSet
+}
+
+var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
+
+func (c syncCheckpointSet) ForEach(fn func(export.Record)) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	c.delegate.ForEach(fn)
 }
 
 func (realClock) Now() time.Time {

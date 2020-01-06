@@ -34,7 +34,7 @@ import (
 )
 
 type (
-	// Config supports common options that apply to statsd exporters.
+	// Config supports common configuration that applies to statsd exporters.
 	Config struct {
 		// URL describes the destination for exporting statsd data.
 		// e.g., udp://host:port

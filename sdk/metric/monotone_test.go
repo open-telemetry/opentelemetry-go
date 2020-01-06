@@ -31,11 +31,12 @@ import (
 )
 
 type monotoneBatcher struct {
-	t *testing.T
-
-	collections  int
+	// currentValue needs to be aligned for 64-bit atomic operations.
 	currentValue *core.Number
+	collections  int
 	currentTime  *time.Time
+
+	t *testing.T
 }
 
 func (*monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
@@ -76,7 +77,7 @@ func TestMonotoneGauge(t *testing.T) {
 
 	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
-	handle := gauge.AcquireHandle(sdk.Labels(key.String("a", "b")))
+	handle := gauge.Bind(sdk.Labels(key.String("a", "b")))
 
 	require.Nil(t, batcher.currentTime)
 	require.Nil(t, batcher.currentValue)
