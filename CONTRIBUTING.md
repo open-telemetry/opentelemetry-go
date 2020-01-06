@@ -68,7 +68,6 @@ push the branch to your fork:
 $ git checkout -b <YOUR_BRANCH_NAME>
 # edit files
 $ make precommit
-$ make test
 $ git add -p
 $ git commit
 $ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
