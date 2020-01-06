@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.2.0
-	go.opentelemetry.io/otel/exporter/trace/stackdriver v0.2.0
+	go.opentelemetry.io/otel v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/exporter/trace/stackdriver v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.24.0
 )

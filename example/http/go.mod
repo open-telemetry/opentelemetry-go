@@ -5,6 +5,6 @@ go 1.13
 replace go.opentelemetry.io/otel => ../..
 
 require (
-	go.opentelemetry.io/otel v0.2.0
+	go.opentelemetry.io/otel v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.24.0
 )
