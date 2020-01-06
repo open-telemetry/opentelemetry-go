@@ -41,9 +41,10 @@ type (
 	}
 
 	Batch struct {
+		// Measurement needs to be aligned for 64-bit atomic operations.
+		Measurements []Measurement
 		Ctx          context.Context
 		LabelSet     *LabelSet
-		Measurements []Measurement
 	}
 
 	MeterProvider struct {
@@ -58,8 +59,9 @@ type (
 	Kind int8
 
 	Measurement struct {
-		Instrument *Instrument
+		// Number needs to be aligned for 64-bit atomic operations.
 		Number     core.Number
+		Instrument *Instrument
 	}
 )
 

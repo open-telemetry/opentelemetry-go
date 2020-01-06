@@ -26,12 +26,15 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		current    state
+		// current has to be aligned for 64-bit atomic operations.
+		current state
+		// checkpoint has to be aligned for 64-bit atomic operations.
 		checkpoint state
 		kind       core.NumberKind
 	}
 
 	state struct {
+		// all fields have to be aligned for 64-bit atomic operations.
 		count core.Number
 		sum   core.Number
 		min   core.Number

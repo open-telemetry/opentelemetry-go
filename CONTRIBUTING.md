@@ -68,7 +68,6 @@ push the branch to your fork:
 $ git checkout -b <YOUR_BRANCH_NAME>
 # edit files
 $ make precommit
-$ make test
 $ git add -p
 $ git commit
 $ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
@@ -136,7 +135,7 @@ Approvers:
 
 - [Isobel Redelmeier](https://github.com/iredelmeier), LightStep
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), Universidade Federal de Ouro Preto
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Ted Young](https://github.com/tedsuo), LightStep
 
 Maintainers:

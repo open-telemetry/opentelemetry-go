@@ -31,11 +31,12 @@ import (
 )
 
 type monotoneBatcher struct {
-	t *testing.T
-
-	collections  int
+	// currentValue needs to be aligned for 64-bit atomic operations.
 	currentValue *core.Number
+	collections  int
 	currentTime  *time.Time
+
+	t *testing.T
 }
 
 func (*monotoneBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
