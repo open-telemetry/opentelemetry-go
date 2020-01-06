@@ -47,13 +47,9 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 			// Future relationship types may have different behavior,
 			// e.g., adding a `Link` instead of setting the `parent`
 		}
-	} else {
-		if p := apitrace.SpanFromContext(ctx); p != nil {
-			if sdkSpan, ok := p.(*span); ok {
-				sdkSpan.addChild()
-				parent = sdkSpan.spanContext
-			}
-		}
+	} else if p, ok := apitrace.SpanFromContext(ctx).(*span); ok {
+		p.addChild()
+		parent = p.spanContext
 	}
 
 	spanName := tr.spanNameWithPrefix(name)
