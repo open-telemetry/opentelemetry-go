@@ -28,7 +28,7 @@ import (
 )
 
 type (
-	Options = statsd.Options
+	Config = statsd.Config
 
 	// Exporter implements a dogstatsd-format statsd exporter,
 	// which encodes label sets as independent fields in the
@@ -55,26 +55,26 @@ var (
 // This type implements the metric.LabelEncoder interface,
 // allowing the SDK's unique label encoding to be pre-computed
 // for the exporter and stored in the LabelSet.
-func NewRawExporter(options Options) (*Exporter, error) {
+func NewRawExporter(config Config) (*Exporter, error) {
 	exp := &Exporter{
 		LabelEncoder: statsd.NewLabelEncoder(),
 	}
 
 	var err error
-	exp.Exporter, err = statsd.NewExporter(options, exp)
+	exp.Exporter, err = statsd.NewExporter(config, exp)
 	return exp, err
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
-// pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Options{...})
+// pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Config{...})
 // if err != nil {
 // 	...
 // }
 // defer pipeline.Stop()
 // ... Done
-func InstallNewPipeline(options Options) (*push.Controller, error) {
-	controller, err := NewExportPipeline(options)
+func InstallNewPipeline(config Config) (*push.Controller, error) {
+	controller, err := NewExportPipeline(config)
 	if err != nil {
 		return controller, err
 	}
@@ -84,9 +84,9 @@ func InstallNewPipeline(options Options) (*push.Controller, error) {
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(options Options) (*push.Controller, error) {
+func NewExportPipeline(config Config) (*push.Controller, error) {
 	selector := simple.NewWithExactMeasure()
-	exporter, err := NewRawExporter(options)
+	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}

@@ -85,8 +85,9 @@ type MeasureOptionApplier interface {
 // values. Instances of this type should be created by instruments
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
-	instrument InstrumentImpl
+	// number needs to be aligned for 64-bit atomic operations.
 	number     core.Number
+	instrument InstrumentImpl
 }
 
 // Instrument returns the instrument that created this measurement.

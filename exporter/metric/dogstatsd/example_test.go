@@ -38,7 +38,7 @@ func ExampleNew() {
 	}()
 
 	// Create a meter
-	pusher, err := dogstatsd.NewExportPipeline(dogstatsd.Options{
+	pusher, err := dogstatsd.NewExportPipeline(dogstatsd.Config{
 		// The Writer field provides test support.
 		Writer: writer,
 

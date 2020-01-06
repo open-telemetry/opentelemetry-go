@@ -16,16 +16,38 @@ package counter
 
 import (
 	"context"
+	"os"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
 const count = 100
+
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "Aggregator.current",
+			Offset: unsafe.Offsetof(Aggregator{}.current),
+		},
+		{
+			Name:   "Aggregator.checkpoint",
+			Offset: unsafe.Offsetof(Aggregator{}.checkpoint),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestCounterMonotonic(t *testing.T) {
 	ctx := context.Background()

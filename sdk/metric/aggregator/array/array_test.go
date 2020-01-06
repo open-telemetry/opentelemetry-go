@@ -18,15 +18,33 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
+
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "Aggregator.ckptSum",
+			Offset: unsafe.Offsetof(Aggregator{}.ckptSum),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
 
 type updateTest struct {
 	count    int
