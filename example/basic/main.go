@@ -53,7 +53,7 @@ func initTracer() {
 }
 
 func initMeter() *push.Controller {
-	pusher, err := metricstdout.InstallNewPipeline(metricstdout.Options{
+	pusher, err := metricstdout.InstallNewPipeline(metricstdout.Config{
 		Quantiles:   []float64{0.5, 0.9, 0.99},
 		PrettyPrint: false,
 	})

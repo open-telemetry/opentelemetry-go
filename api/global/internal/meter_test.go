@@ -203,7 +203,7 @@ func TestDefaultSDK(t *testing.T) {
 	counter.Add(ctx, 1, labels1)
 
 	in, out := io.Pipe()
-	pusher, err := stdout.InstallNewPipeline(stdout.Options{
+	pusher, err := stdout.InstallNewPipeline(stdout.Config{
 		Writer:         out,
 		DoNotPrintTime: true,
 	})

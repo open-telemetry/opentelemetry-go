@@ -28,7 +28,7 @@ type NoopSpan struct {
 
 var _ Span = (*NoopSpan)(nil)
 
-// SpancContext returns an invalid span context.
+// SpanContext returns an invalid span context.
 func (NoopSpan) SpanContext() core.SpanContext {
 	return core.EmptySpanContext()
 }
