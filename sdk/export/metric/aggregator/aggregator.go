@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
+package aggregator // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 
 import (
 	"fmt"
