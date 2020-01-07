@@ -22,7 +22,7 @@ depend on `sdk` or another package that implements the API.
 To install the API and SDK packages,
 
 ```
-$ go get -u go.opentelemetry.io/otel
+$ go get -u go.opentelemetry.io/otel/...
 ```
 
 ## Quick Start
