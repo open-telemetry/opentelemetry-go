@@ -6,8 +6,10 @@ import (
 	"sync/atomic"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 // This file contains the forwarding implementation of metric.Provider
@@ -39,23 +41,29 @@ const (
 	measureKind
 )
 
-type meterProvider struct {
+type deferred struct {
 	lock     sync.Mutex
-	meters   []*meter
-	delegate metric.Provider
+	meter    meter
+	tracer   tracer
+	delegate unsafe.Pointer // (*scope.Scope)
 }
 
 type meter struct {
-	provider *meterProvider
-	name     string
+	deferred *deferred
 
-	lock        sync.Mutex
 	instruments []*instImpl
+}
 
-	delegate unsafe.Pointer // (*metric.Meter)
+type tracer struct {
+	deferred *deferred
+
+	trace.NoopTracer
 }
 
 type instImpl struct {
+	meter *meter
+
+	ctx   context.Context
 	name  string
 	mkind metricKind
 	nkind core.NumberKind
@@ -64,83 +72,72 @@ type instImpl struct {
 	delegate unsafe.Pointer // (*metric.InstrumentImpl)
 }
 
-type labelSet struct {
-	meter *meter
-	value []core.KeyValue
-
-	initialize sync.Once
-	delegate   unsafe.Pointer // (* metric.LabelSet)
-}
-
-type instHandle struct {
+type instBound struct {
+	ctx    context.Context
 	inst   *instImpl
-	labels metric.LabelSet
+	labels []core.KeyValue
 
 	initialize sync.Once
-	delegate   unsafe.Pointer // (*metric.HandleImpl)
+	delegate   unsafe.Pointer // (*metric.BoundImpl)
 }
 
-var _ metric.Provider = &meterProvider{}
 var _ metric.Meter = &meter{}
-var _ metric.LabelSet = &labelSet{}
-var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &instImpl{}
-var _ metric.BoundInstrumentImpl = &instHandle{}
+var _ metric.BoundInstrumentImpl = &instBound{}
 
 // Provider interface and delegation
 
-func (p *meterProvider) setDelegate(provider metric.Provider) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.delegate = provider
-	for _, m := range p.meters {
-		m.setDelegate(provider)
-	}
-	p.meters = nil
+func newDeferred() *deferred {
+	d := &deferred{}
+	d.meter.deferred = d
+	d.tracer.deferred = d
+	return d
 }
 
-func (p *meterProvider) Meter(name string) metric.Meter {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+func (d *deferred) setDelegate(sc scope.Scope) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	if p.delegate != nil {
-		return p.delegate.Meter(name)
-	}
+	ptr := unsafe.Pointer(&sc)
+	atomic.StorePointer(&d.delegate, ptr)
 
-	m := &meter{
-		provider: p,
-		name:     name,
-	}
-	p.meters = append(p.meters, m)
-	return m
+	d.meter.setDelegate(sc)
 }
 
-// Meter interface and delegation
+func (d *deferred) Tracer() trace.Tracer {
+	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
+		return (*implPtr).Tracer()
+	}
+	return &d.tracer
+}
 
-func (m *meter) setDelegate(provider metric.Provider) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (d *deferred) Meter() metric.Meter {
+	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
+		return (*implPtr).Meter()
+	}
+	return &d.meter
+}
 
-	d := new(metric.Meter)
-	*d = provider.Meter(m.name)
-	m.delegate = unsafe.Pointer(d)
+// Meter interface
 
-	for _, inst := range m.instruments {
-		inst.setDelegate(*d)
+func (m *meter) setDelegate(sc scope.Scope) {
+	for _, i := range m.instruments {
+		i.setDelegate(sc)
 	}
 	m.instruments = nil
 }
 
-func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (m *meter) newInst(ctx context.Context, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+	m.deferred.lock.Lock()
+	defer m.deferred.lock.Unlock()
 
-	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return newInstDelegate(*meterPtr, name, mkind, nkind, opts)
+	if implPtr := (*scope.Scope)(atomic.LoadPointer(&m.deferred.delegate)); implPtr != nil {
+		return newInstDelegate(ctx, (*implPtr).Meter(), name, mkind, nkind, opts)
 	}
 
 	inst := &instImpl{
+		ctx:   ctx,
+		meter: m,
 		name:  name,
 		mkind: mkind,
 		nkind: nkind,
@@ -150,48 +147,48 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 	return inst
 }
 
-func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func newInstDelegate(ctx context.Context, m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {
-			return m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
+			return m.NewInt64Counter(ctx, name, opts.([]metric.CounterOptionApplier)...).Impl()
 		}
-		return m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
+		return m.NewFloat64Counter(ctx, name, opts.([]metric.CounterOptionApplier)...).Impl()
 	case gaugeKind:
 		if nkind == core.Int64NumberKind {
-			return m.NewInt64Gauge(name, opts.([]metric.GaugeOptionApplier)...).Impl()
+			return m.NewInt64Gauge(ctx, name, opts.([]metric.GaugeOptionApplier)...).Impl()
 		}
-		return m.NewFloat64Gauge(name, opts.([]metric.GaugeOptionApplier)...).Impl()
+		return m.NewFloat64Gauge(ctx, name, opts.([]metric.GaugeOptionApplier)...).Impl()
 	case measureKind:
 		if nkind == core.Int64NumberKind {
-			return m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
+			return m.NewInt64Measure(ctx, name, opts.([]metric.MeasureOptionApplier)...).Impl()
 		}
-		return m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
+		return m.NewFloat64Measure(ctx, name, opts.([]metric.MeasureOptionApplier)...).Impl()
 	}
 	return nil
 }
 
 // Instrument delegation
 
-func (inst *instImpl) setDelegate(d metric.Meter) {
+func (inst *instImpl) setDelegate(sc scope.Scope) {
 	implPtr := new(metric.InstrumentImpl)
 
-	*implPtr = newInstDelegate(d, inst.name, inst.mkind, inst.nkind, inst.opts)
+	*implPtr = newInstDelegate(inst.ctx, sc.Meter(), inst.name, inst.mkind, inst.nkind, inst.opts)
 
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
-func (inst *instImpl) Bind(labels metric.LabelSet) metric.BoundInstrumentImpl {
+func (inst *instImpl) Bind(ctx context.Context, labels []core.KeyValue) metric.BoundInstrumentImpl {
 	if implPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
-		return (*implPtr).Bind(labels)
+		return (*implPtr).Bind(ctx, labels)
 	}
-	return &instHandle{
+	return &instBound{
 		inst:   inst,
 		labels: labels,
 	}
 }
 
-func (bound *instHandle) Unbind() {
+func (bound *instBound) Unbind() {
 	bound.initialize.Do(func() {})
 
 	implPtr := (*metric.BoundInstrumentImpl)(atomic.LoadPointer(&bound.delegate))
@@ -205,13 +202,13 @@ func (bound *instHandle) Unbind() {
 
 // Metric updates
 
-func (m *meter) RecordBatch(ctx context.Context, labels metric.LabelSet, measurements ...metric.Measurement) {
-	if delegatePtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
-		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
+func (m *meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
+	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&m.deferred.delegate)); delegatePtr != nil {
+		(*delegatePtr).Meter().RecordBatch(ctx, labels, measurements...)
 	}
 }
 
-func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
 	if instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
@@ -219,7 +216,7 @@ func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels 
 
 // Bound instrument initialization
 
-func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
+func (bound *instBound) RecordOne(ctx context.Context, number core.Number) {
 	instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&bound.inst.delegate))
 	if instPtr == nil {
 		return
@@ -227,7 +224,7 @@ func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
 	var implPtr *metric.BoundInstrumentImpl
 	bound.initialize.Do(func() {
 		implPtr = new(metric.BoundInstrumentImpl)
-		*implPtr = (*instPtr).Bind(bound.labels)
+		*implPtr = (*instPtr).Bind(bound.ctx, bound.labels)
 		atomic.StorePointer(&bound.delegate, unsafe.Pointer(implPtr))
 	})
 	if implPtr == nil {
@@ -236,57 +233,28 @@ func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
 	(*implPtr).RecordOne(ctx, number)
 }
 
-// LabelSet initialization
-
-func (m *meter) Labels(labels ...core.KeyValue) metric.LabelSet {
-	return &labelSet{
-		meter: m,
-		value: labels,
-	}
-}
-
-func (labels *labelSet) Delegate() metric.LabelSet {
-	meterPtr := (*metric.Meter)(atomic.LoadPointer(&labels.meter.delegate))
-	if meterPtr == nil {
-		// This is technically impossible, provided the global
-		// Meter is updated after the meters and instruments
-		// have been delegated.
-		return labels
-	}
-	var implPtr *metric.LabelSet
-	labels.initialize.Do(func() {
-		implPtr = new(metric.LabelSet)
-		*implPtr = (*meterPtr).Labels(labels.value...)
-		atomic.StorePointer(&labels.delegate, unsafe.Pointer(implPtr))
-	})
-	if implPtr == nil {
-		implPtr = (*metric.LabelSet)(atomic.LoadPointer(&labels.delegate))
-	}
-	return (*implPtr)
-}
-
 // Constructors
 
-func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier) metric.Int64Counter {
-	return metric.WrapInt64CounterInstrument(m.newInst(name, counterKind, core.Int64NumberKind, opts))
+func (m *meter) NewInt64Counter(ctx context.Context, name string, opts ...metric.CounterOptionApplier) metric.Int64Counter {
+	return metric.WrapInt64CounterInstrument(m.newInst(ctx, name, counterKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) metric.Float64Counter {
-	return metric.WrapFloat64CounterInstrument(m.newInst(name, counterKind, core.Float64NumberKind, opts))
+func (m *meter) NewFloat64Counter(ctx context.Context, name string, opts ...metric.CounterOptionApplier) metric.Float64Counter {
+	return metric.WrapFloat64CounterInstrument(m.newInst(ctx, name, counterKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Gauge(name string, opts ...metric.GaugeOptionApplier) metric.Int64Gauge {
-	return metric.WrapInt64GaugeInstrument(m.newInst(name, gaugeKind, core.Int64NumberKind, opts))
+func (m *meter) NewInt64Gauge(ctx context.Context, name string, opts ...metric.GaugeOptionApplier) metric.Int64Gauge {
+	return metric.WrapInt64GaugeInstrument(m.newInst(ctx, name, gaugeKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Gauge(name string, opts ...metric.GaugeOptionApplier) metric.Float64Gauge {
-	return metric.WrapFloat64GaugeInstrument(m.newInst(name, gaugeKind, core.Float64NumberKind, opts))
+func (m *meter) NewFloat64Gauge(ctx context.Context, name string, opts ...metric.GaugeOptionApplier) metric.Float64Gauge {
+	return metric.WrapFloat64GaugeInstrument(m.newInst(ctx, name, gaugeKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Int64Measure {
-	return metric.WrapInt64MeasureInstrument(m.newInst(name, measureKind, core.Int64NumberKind, opts))
+func (m *meter) NewInt64Measure(ctx context.Context, name string, opts ...metric.MeasureOptionApplier) metric.Int64Measure {
+	return metric.WrapInt64MeasureInstrument(m.newInst(ctx, name, measureKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
-	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
+func (m *meter) NewFloat64Measure(ctx context.Context, name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
+	return metric.WrapFloat64MeasureInstrument(m.newInst(ctx, name, measureKind, core.Float64NumberKind, opts))
 }

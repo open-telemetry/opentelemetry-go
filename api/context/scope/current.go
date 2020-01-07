@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/api/global"
+package scope
 
 import (
-	"go.opentelemetry.io/otel/api/context/scope"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"context"
+
+	"go.opentelemetry.io/otel/api/internal"
 )
 
-func SetScope(s scope.Scope) {
-	internal.SetScope(s)
+func ContextWithScope(ctx context.Context, sc Scope) context.Context {
+	return internal.SetScopeImpl(ctx, sc.scopeImpl)
 }
 
-func Scope() scope.Scope {
-	return internal.Scope()
+func Current(ctx context.Context) Scope {
+	return Scope{internal.ScopeImpl(ctx).(*scopeImpl)}
 }

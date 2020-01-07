@@ -4,88 +4,63 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/context/scope"
+	"go.opentelemetry.io/otel/api/internal"
 )
 
 type (
-	traceProviderHolder struct {
-		tp trace.Provider
-	}
-
-	meterProviderHolder struct {
-		mp metric.Provider
+	scopeHolder struct {
+		scope.Scope
 	}
 )
 
-var (
-	globalTracer = defaultTracerValue()
-	globalMeter  = defaultMeterValue()
-
-	delegateMeterOnce sync.Once
-	delegateTraceOnce sync.Once
-)
-
-// TraceProvider is the internal implementation for global.TraceProvider.
-func TraceProvider() trace.Provider {
-	return globalTracer.Load().(traceProviderHolder).tp
+func init() {
+	ResetForTest()
 }
 
-// SetTraceProvider is the internal implementation for global.SetTraceProvider.
-func SetTraceProvider(tp trace.Provider) {
-	delegateTraceOnce.Do(func() {
-		current := TraceProvider()
-		if current == tp {
-			// Setting the provider to the prior default is nonsense, panic.
+// Scope is the internal implementation for global.Scope().
+func Scope() scope.Scope {
+	return internal.GlobalScope.Load().(scopeHolder).Scope
+}
+
+// SetScope is the internal implementation for global.SetScope().
+func SetScope(sc scope.Scope) {
+	first := false
+	internal.GlobalDelegateOnce.Do(func() {
+		current := Scope()
+		currentProvider := current.Provider()
+		newProvider := sc.Provider()
+
+		first = true
+
+		if currentProvider.Meter() == newProvider.Meter() {
+			// Setting the global scope to former default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
 			panic("invalid Provider, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*traceProvider); ok {
-			def.setDelegate(tp)
-		}
-
-	})
-	globalTracer.Store(traceProviderHolder{tp: tp})
-}
-
-// MeterProvider is the internal implementation for global.MeterProvider.
-func MeterProvider() metric.Provider {
-	return globalMeter.Load().(meterProviderHolder).mp
-}
-
-// SetMeterProvider is the internal implementation for global.SetMeterProvider.
-func SetMeterProvider(mp metric.Provider) {
-	delegateMeterOnce.Do(func() {
-		current := MeterProvider()
-
-		if current == mp {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid Provider, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*meterProvider); ok {
-			def.setDelegate(mp)
+		} else if deft, ok := currentProvider.Tracer().(*tracer); ok {
+			deft.deferred.setDelegate(sc)
+		} else {
+			panic("impossible error")
 		}
 	})
-	globalMeter.Store(meterProviderHolder{mp: mp})
+	if !first {
+		panic("global scope has already been initialized")
+	}
+	internal.GlobalScope.Store(scopeHolder{Scope: sc})
 }
 
-func defaultTracerValue() *atomic.Value {
+func defaultScopeValue() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(traceProviderHolder{tp: &traceProvider{}})
-	return v
-}
-
-func defaultMeterValue() *atomic.Value {
-	v := &atomic.Value{}
-	v.Store(meterProviderHolder{mp: &meterProvider{}})
+	d := newDeferred()
+	v.Store(scopeHolder{
+		Scope: scope.NewProvider(&d.tracer, &d.meter, &d.propagators).New(),
+	})
 	return v
 }
 
 // ResetForTest restores the initial global state, for testing purposes.
 func ResetForTest() {
-	globalTracer = defaultTracerValue()
-	globalMeter = defaultMeterValue()
-	delegateMeterOnce = sync.Once{}
-	delegateTraceOnce = sync.Once{}
+	internal.GlobalScope = defaultScopeValue()
+	internal.GlobalDelegateOnce = sync.Once{}
 }

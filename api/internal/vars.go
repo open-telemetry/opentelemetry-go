@@ -12,17 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/api/global"
+package internal
 
 import (
-	"go.opentelemetry.io/otel/api/context/scope"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"context"
+	"sync"
+	"sync/atomic"
 )
 
-func SetScope(s scope.Scope) {
-	internal.SetScope(s)
+var (
+	GlobalScope        *atomic.Value
+	GlobalDelegateOnce sync.Once
+)
+
+type currentScopeKeyType struct{}
+
+var currentScopeKey = &currentScopeKeyType{}
+
+func SetScopeImpl(ctx context.Context, si interface{}) context.Context {
+	return context.WithValue(ctx, currentScopeKey, si)
 }
 
-func Scope() scope.Scope {
-	return internal.Scope()
+func ScopeImpl(ctx context.Context) interface{} {
+	return ctx.Value(currentScopeKey)
 }

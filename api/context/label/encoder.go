@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package label
 
 import (
 	"bytes"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-type defaultLabelEncoder struct {
+type defaultEncoder struct {
 	// pool is a pool of labelset builders.  The buffers in this
 	// pool grow to a size that most label encodings will not
 	// allocate new memory.  This pool reduces the number of
@@ -33,10 +32,12 @@ type defaultLabelEncoder struct {
 	pool sync.Pool // *bytes.Buffer
 }
 
-var _ export.LabelEncoder = &defaultLabelEncoder{}
+type Encoder = core.LabelEncoder
 
-func NewDefaultLabelEncoder() export.LabelEncoder {
-	return &defaultLabelEncoder{
+var _ Encoder = &defaultEncoder{}
+
+func NewDefaultEncoder() Encoder {
+	return &defaultEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
@@ -45,7 +46,7 @@ func NewDefaultLabelEncoder() export.LabelEncoder {
 	}
 }
 
-func (d *defaultLabelEncoder) Encode(labels []core.KeyValue) string {
+func (d *defaultEncoder) Encode(labels []core.KeyValue) string {
 	buf := d.pool.Get().(*bytes.Buffer)
 	defer d.pool.Put(buf)
 	buf.Reset()

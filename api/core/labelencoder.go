@@ -12,17 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/api/global"
+package core
 
-import (
-	"go.opentelemetry.io/otel/api/context/scope"
-	"go.opentelemetry.io/otel/api/global/internal"
-)
-
-func SetScope(s scope.Scope) {
-	internal.SetScope(s)
-}
-
-func Scope() scope.Scope {
-	return internal.Scope()
+type LabelEncoder interface {
+	// Encode is called (concurrently) in instrumentation context.
+	// It should return a unique representation of the labels
+	// suitable for the SDK to use as a map key, an aggregator
+	// grouping key, and/or the export encoding.
+	Encode([]KeyValue) string
 }
