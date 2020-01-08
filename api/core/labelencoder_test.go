@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright 2019, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package core_test
 
-type Namespace string
+import (
+	"testing"
 
-type Name struct {
-	Namespace Namespace
-	Base      string
-}
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+)
 
-func (n Namespace) Name(base string) Name {
-	return Name{
-		Namespace: n,
-		Base:      base,
-	}
-}
-
-func (n Name) String() string {
-	if n.Namespace == "" {
-		return n.Base
-	}
-	return string(n.Namespace) + "/" + n.Base
+func TestDefaultLabelEncoder(t *testing.T) {
+	encoder := label.NewDefaultEncoder()
+	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
+	require.Equal(t, `A=B,C=D`, encoded)
 }

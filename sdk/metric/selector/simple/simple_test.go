@@ -29,10 +29,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
+const (
+	ns core.Namespace = ""
+)
+
 var (
-	testGaugeDesc   = export.NewDescriptor("gauge", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
-	testCounterDesc = export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
-	testMeasureDesc = export.NewDescriptor("measure", export.MeasureKind, nil, "", "", core.Int64NumberKind, false)
+	testGaugeDesc   = export.NewDescriptor(ns.Name("gauge"), export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
+	testCounterDesc = export.NewDescriptor(ns.Name("counter"), export.CounterKind, nil, "", "", core.Int64NumberKind, false)
+	testMeasureDesc = export.NewDescriptor(ns.Name("measure"), export.MeasureKind, nil, "", "", core.Int64NumberKind, false)
 )
 
 func TestInexpensiveMeasure(t *testing.T) {

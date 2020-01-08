@@ -145,7 +145,7 @@ type (
 )
 
 var (
-	_ api.Meter               = &SDK{}
+	_ api.MeterWithNamespace  = &SDK{}
 	_ api.InstrumentImpl      = &instrument{}
 	_ api.BoundInstrumentImpl = &record{}
 
@@ -156,7 +156,7 @@ var (
 	hazardRecord = &record{}
 )
 
-func (i *instrument) Meter() api.Meter {
+func (i *instrument) Meter() api.MeterWithNamespace {
 	return i.meter
 }
 
@@ -233,7 +233,7 @@ func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
+func (m *SDK) newInstrument(name core.Name, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
 	descriptor := export.NewDescriptor(
 		name,
 		metricKind,
@@ -248,45 +248,45 @@ func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKin
 	}
 }
 
-func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
+func (m *SDK) newCounterInstrument(name core.Name, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyCounterOptions(&opts, cos...)
 	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
 }
 
-func (m *SDK) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
+func (m *SDK) newGaugeInstrument(name core.Name, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyGaugeOptions(&opts, gos...)
 	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
 }
 
-func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
+func (m *SDK) newMeasureInstrument(name core.Name, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyMeasureOptions(&opts, mos...)
 	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
 }
 
-func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
+func (m *SDK) NewInt64Counter(name core.Name, cos ...api.CounterOptionApplier) api.Int64Counter {
 	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...))
 }
 
-func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) api.Float64Counter {
+func (m *SDK) NewFloat64Counter(name core.Name, cos ...api.CounterOptionApplier) api.Float64Counter {
 	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...))
 }
 
-func (m *SDK) NewInt64Gauge(name string, gos ...api.GaugeOptionApplier) api.Int64Gauge {
+func (m *SDK) NewInt64Gauge(name core.Name, gos ...api.GaugeOptionApplier) api.Int64Gauge {
 	return api.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, core.Int64NumberKind, gos...))
 }
 
-func (m *SDK) NewFloat64Gauge(name string, gos ...api.GaugeOptionApplier) api.Float64Gauge {
+func (m *SDK) NewFloat64Gauge(name core.Name, gos ...api.GaugeOptionApplier) api.Float64Gauge {
 	return api.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, core.Float64NumberKind, gos...))
 }
 
-func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) api.Int64Measure {
+func (m *SDK) NewInt64Measure(name core.Name, mos ...api.MeasureOptionApplier) api.Int64Measure {
 	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...))
 }
 
-func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) api.Float64Measure {
+func (m *SDK) NewFloat64Measure(name core.Name, mos ...api.MeasureOptionApplier) api.Float64Measure {
 	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
 }
 

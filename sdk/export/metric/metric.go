@@ -262,7 +262,7 @@ const (
 // descriptor may be used to uniquely identify the instrument in an
 // exporter.
 type Descriptor struct {
-	name        string
+	name        core.Name
 	metricKind  MetricKind
 	keys        []core.Key
 	description string
@@ -278,7 +278,7 @@ type Descriptor struct {
 // descriptor may be used to uniquely identify the instrument in an
 // exporter.
 func NewDescriptor(
-	name string,
+	name core.Name,
 	metricKind MetricKind,
 	keys []core.Key,
 	description string,
@@ -298,7 +298,7 @@ func NewDescriptor(
 }
 
 // Name returns the metric instrument's name.
-func (d *Descriptor) Name() string {
+func (d *Descriptor) Name() core.Name {
 	return d.name
 }
 

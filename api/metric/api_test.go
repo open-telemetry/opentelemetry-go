@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -367,111 +369,121 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 	}
 }
 
+type testKey struct{}
+
+func background() context.Context {
+	return context.WithValue(context.Background(), testKey{}, testKey{})
+}
+
 func TestCounter(t *testing.T) {
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		c := meter.NewFloat64Counter("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		c.Add(ctx, 42, labels)
-		boundInstrument := c.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+
+		c.Add(ctx, 42, labels.Ordered()...)
+		boundInstrument := c.Bind(ctx, labels.Ordered()...)
 		boundInstrument.Add(ctx, 42)
-		meter.RecordBatch(ctx, labels, c.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, c.Impl())
+		checkBatches(t, labels, sdk, core.Float64NumberKind, c.Impl())
 	}
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		c := meter.NewInt64Counter("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		c.Add(ctx, 42, labels)
-		boundInstrument := c.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+		c.Add(ctx, 42, labels.Ordered()...)
+		boundInstrument := c.Bind(ctx, labels.Ordered()...)
 		boundInstrument.Add(ctx, 42)
-		meter.RecordBatch(ctx, labels, c.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, c.Impl())
+		checkBatches(t, labels, sdk, core.Int64NumberKind, c.Impl())
 	}
 }
 
 func TestGauge(t *testing.T) {
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		g := meter.NewFloat64Gauge("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+		g.Set(ctx, 42, labels.Ordered()...)
+		boundInstrument := g.Bind(ctx, labels.Ordered()...)
 		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), g.Measurement(42))
 		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.Impl())
+		checkBatches(t, labels, sdk, core.Float64NumberKind, g.Impl())
 	}
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		g := meter.NewInt64Gauge("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+		g.Set(ctx, 42, labels.Ordered()...)
+		boundInstrument := g.Bind(ctx, labels.Ordered()...)
 		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), g.Measurement(42))
 		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.Impl())
+		checkBatches(t, labels, sdk, core.Int64NumberKind, g.Impl())
 	}
 }
 
 func TestMeasure(t *testing.T) {
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		m := meter.NewFloat64Measure("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		m.Record(ctx, 42, labels)
-		boundInstrument := m.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+		m.Record(ctx, 42, labels.Ordered()...)
+		boundInstrument := m.Bind(ctx, labels.Ordered()...)
+
 		boundInstrument.Record(ctx, 42)
-		meter.RecordBatch(ctx, labels, m.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, m.Impl())
+		checkBatches(t, labels, sdk, core.Float64NumberKind, m.Impl())
 	}
 	{
-		meter := mock.NewMeter()
+		sdk := mock.NewMeter()
+		meter := scope.UnnamedMeter(sdk)
 		m := meter.NewInt64Measure("ajwaj")
-		ctx := context.Background()
-		labels := meter.Labels()
-		m.Record(ctx, 42, labels)
-		boundInstrument := m.Bind(labels)
+		ctx := background()
+		labels := label.NewSet(key.String("P", "Q"))
+		m.Record(ctx, 42, labels.Ordered()...)
+		boundInstrument := m.Bind(ctx, labels.Ordered()...)
 		boundInstrument.Record(ctx, 42)
-		meter.RecordBatch(ctx, labels, m.Measurement(42))
+		meter.RecordBatch(ctx, labels.Ordered(), m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.Impl())
+		checkBatches(t, labels, sdk, core.Int64NumberKind, m.Impl())
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, meter *mock.Meter, kind core.NumberKind, instrument metric.InstrumentImpl) {
+func checkBatches(t *testing.T, labels label.Set, meter *mock.Meter, kind core.NumberKind, instrument metric.InstrumentImpl) {
 	t.Helper()
 	if len(meter.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(meter.MeasurementBatches))
 	}
 	ourInstrument := instrument.(*mock.Instrument)
-	ourLabelSet := labels.(*mock.LabelSet)
 	minLen := 3
 	if minLen > len(meter.MeasurementBatches) {
 		minLen = len(meter.MeasurementBatches)
 	}
 	for i := 0; i < minLen; i++ {
 		got := meter.MeasurementBatches[i]
-		if got.Ctx != ctx {
-			d := func(c context.Context) string {
-				return fmt.Sprintf("(ptr: %p, ctx %#v)", c, c)
-			}
-			t.Errorf("Wrong recorded context in batch %d, expected %s, got %s", i, d(ctx), d(got.Ctx))
+		if got.Context.Value(testKey{}) != (testKey{}) {
+			t.Errorf("Wrong recorded context in batch %d, missing test key", i)
 		}
-		if got.LabelSet != ourLabelSet {
-			d := func(l *mock.LabelSet) string {
-				return fmt.Sprintf("(ptr: %p, labels %#v)", l, l.Labels)
+		if fmt.Sprint(got.Labels.Ordered()) != fmt.Sprint(labels.Ordered()) {
+			d := func(l label.Set) string {
+				return fmt.Sprintf("(ptr: %p, labels %#v)", l, l.Ordered())
 			}
-			t.Errorf("Wrong recorded label set in batch %d, expected %s, got %s", i, d(ourLabelSet), d(got.LabelSet))
+			t.Errorf("Wrong recorded label set in batch %d, expected %s, got %s", i, d(labels), d(got.Labels))
 		}
 		if len(got.Measurements) != 1 {
 			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(got.Measurements))

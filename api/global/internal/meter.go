@@ -61,7 +61,7 @@ type tracer struct {
 type instImpl struct {
 	meter *meter
 
-	name  string
+	name  core.Name
 	mkind metricKind
 	nkind core.NumberKind
 	opts  interface{}
@@ -78,7 +78,8 @@ type instBound struct {
 	delegate   unsafe.Pointer // (*metric.BoundImpl)
 }
 
-var _ metric.Meter = &meter{}
+var _ metric.MeterWithNamespace = &meter{}
+var _ trace.TracerWithNamespace = &tracer{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instBound{}
 
@@ -101,19 +102,19 @@ func (d *deferred) setDelegate(sc scope.Scope) {
 	d.meter.setDelegate(sc)
 }
 
-func (d *deferred) Tracer() trace.Tracer {
-	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
-		return (*implPtr).Tracer()
-	}
-	return &d.tracer
-}
+// func (d *deferred) Tracer() trace.Tracer {
+// 	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
+// 		return (*implPtr).Tracer()
+// 	}
+// 	return &d.tracer
+// }
 
-func (d *deferred) Meter() metric.Meter {
-	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
-		return (*implPtr).Meter()
-	}
-	return &d.meter
-}
+// func (d *deferred) Meter() metric.Meter {
+// 	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
+// 		return (*implPtr).Meter()
+// 	}
+// 	return &d.meter
+// }
 
 // Meter interface
 
@@ -124,12 +125,12 @@ func (m *meter) setDelegate(sc scope.Scope) {
 	m.instruments = nil
 }
 
-func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func (m *meter) newInst(name core.Name, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
 	m.deferred.lock.Lock()
 	defer m.deferred.lock.Unlock()
 
 	if implPtr := (*scope.Scope)(atomic.LoadPointer(&m.deferred.delegate)); implPtr != nil {
-		return newInstDelegate((*implPtr).Meter(), name, mkind, nkind, opts)
+		return newInstDelegate((*implPtr).Provider().Meter(), name, mkind, nkind, opts)
 	}
 
 	inst := &instImpl{
@@ -143,7 +144,7 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 	return inst
 }
 
-func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func newInstDelegate(m metric.MeterWithNamespace, name core.Name, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {
@@ -169,7 +170,7 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 func (inst *instImpl) setDelegate(sc scope.Scope) {
 	implPtr := new(metric.InstrumentImpl)
 
-	*implPtr = newInstDelegate(sc.Meter(), inst.name, inst.mkind, inst.nkind, inst.opts)
+	*implPtr = newInstDelegate(sc.Provider().Meter(), inst.name, inst.mkind, inst.nkind, inst.opts)
 
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
@@ -232,33 +233,33 @@ func (bound *instBound) RecordOne(ctx context.Context, number core.Number) {
 
 // Constructors
 
-func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier) metric.Int64Counter {
+func (m *meter) NewInt64Counter(name core.Name, opts ...metric.CounterOptionApplier) metric.Int64Counter {
 	return metric.WrapInt64CounterInstrument(m.newInst(name, counterKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) metric.Float64Counter {
+func (m *meter) NewFloat64Counter(name core.Name, opts ...metric.CounterOptionApplier) metric.Float64Counter {
 	return metric.WrapFloat64CounterInstrument(m.newInst(name, counterKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Gauge(name string, opts ...metric.GaugeOptionApplier) metric.Int64Gauge {
+func (m *meter) NewInt64Gauge(name core.Name, opts ...metric.GaugeOptionApplier) metric.Int64Gauge {
 	return metric.WrapInt64GaugeInstrument(m.newInst(name, gaugeKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Gauge(name string, opts ...metric.GaugeOptionApplier) metric.Float64Gauge {
+func (m *meter) NewFloat64Gauge(name core.Name, opts ...metric.GaugeOptionApplier) metric.Float64Gauge {
 	return metric.WrapFloat64GaugeInstrument(m.newInst(name, gaugeKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Int64Measure {
+func (m *meter) NewInt64Measure(name core.Name, opts ...metric.MeasureOptionApplier) metric.Int64Measure {
 	return metric.WrapInt64MeasureInstrument(m.newInst(name, measureKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
+func (m *meter) NewFloat64Measure(name core.Name, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
 }
 
 // Tracer interface
 
-func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
+func (t *tracer) Start(ctx context.Context, name core.Name, opts ...trace.StartOption) (context.Context, trace.Span) {
 	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&t.deferred.delegate)); delegatePtr != nil {
 		return (*delegatePtr).Provider().Tracer().Start(ctx, name, opts...)
 	}
@@ -267,7 +268,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 
 func (t *tracer) WithSpan(
 	ctx context.Context,
-	name string,
+	name core.Name,
 	fn func(ctx context.Context) error,
 ) error {
 	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&t.deferred.delegate)); delegatePtr != nil {

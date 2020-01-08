@@ -68,18 +68,18 @@ func TestUngroupedStateless(t *testing.T) {
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C~D&G~H": 60, // labels1
-		"counter.a/C~D&E~F": 20, // labels2
-		"counter.a/":        40, // labels3
-		"counter.b/C~D&G~H": 60, // labels1
-		"counter.b/C~D&E~F": 20, // labels2
-		"counter.b/":        40, // labels3
-		"gauge.a/C~D&G~H":   50, // labels1
-		"gauge.a/C~D&E~F":   20, // labels2
-		"gauge.a/":          30, // labels3
-		"gauge.b/C~D&G~H":   50, // labels1
-		"gauge.b/C~D&E~F":   20, // labels2
-		"gauge.b/":          30, // labels3
+		"test/counter.a/C~D&G~H": 60, // labels1
+		"test/counter.a/C~D&E~F": 20, // labels2
+		"test/counter.a/":        40, // labels3
+		"test/counter.b/C~D&G~H": 60, // labels1
+		"test/counter.b/C~D&E~F": 20, // labels2
+		"test/counter.b/":        40, // labels3
+		"test/gauge.a/C~D&G~H":   50, // labels1
+		"test/gauge.a/C~D&E~F":   20, // labels2
+		"test/gauge.a/":          30, // labels3
+		"test/gauge.b/C~D&G~H":   50, // labels1
+		"test/gauge.b/C~D&E~F":   20, // labels2
+		"test/gauge.b/":          30, // labels3
 	}, records.Values)
 
 	// Verify that state was reset
@@ -109,8 +109,8 @@ func TestUngroupedStateful(t *testing.T) {
 	checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C~D&G~H": 10, // labels1
-		"counter.b/C~D&G~H": 10, // labels1
+		"test/counter.a/C~D&G~H": 10, // labels1
+		"test/counter.b/C~D&G~H": 10, // labels1
 	}, records1.Values)
 
 	// Test that state was NOT reset
@@ -149,7 +149,7 @@ func TestUngroupedStateful(t *testing.T) {
 	checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C~D&G~H": 30,
-		"counter.b/C~D&G~H": 30,
+		"test/counter.a/C~D&G~H": 30,
+		"test/counter.b/C~D&G~H": 30,
 	}, records4.Values)
 }

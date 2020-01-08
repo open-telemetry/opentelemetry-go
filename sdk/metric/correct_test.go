@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -71,13 +72,14 @@ func TestInputRangeTestCounter(t *testing.T) {
 		agg: cagg,
 	}
 	sdk := sdk.New(batcher, label.NewDefaultEncoder())
+	meter := scope.UnnamedMeter(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
 
-	counter := sdk.NewInt64Counter("counter.name", metric.WithMonotonic(true))
+	counter := meter.NewInt64Counter("counter.name", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1)
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -106,13 +108,14 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		agg: magg,
 	}
 	sdk := sdk.New(batcher, label.NewDefaultEncoder())
+	meter := scope.UnnamedMeter(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
 
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := meter.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1)
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -141,7 +144,8 @@ func TestDisabledInstrument(t *testing.T) {
 		agg: nil,
 	}
 	sdk := sdk.New(batcher, label.NewDefaultEncoder())
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	meter := scope.UnnamedMeter(sdk)
+	measure := meter.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
@@ -156,12 +160,13 @@ func TestRecordNaN(t *testing.T) {
 		agg: gauge.New(),
 	}
 	sdk := sdk.New(batcher, label.NewDefaultEncoder())
+	meter := scope.UnnamedMeter(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	g := sdk.NewFloat64Gauge("gauge.name")
+	g := meter.NewFloat64Gauge("gauge.name")
 
 	require.Nil(t, sdkErr)
 	g.Set(ctx, math.NaN())
@@ -176,8 +181,9 @@ func TestSDKLabelEncoder(t *testing.T) {
 		agg: cagg,
 	}
 	sdk := sdk.New(batcher, &testLabelEncoder{})
+	meter := scope.UnnamedMeter(sdk)
 
-	measure := sdk.NewFloat64Measure("measure")
+	measure := meter.NewFloat64Measure("measure")
 	measure.Record(ctx, 1, key.String("A", "B"), key.String("C", "D"))
 
 	sdk.Collect(ctx)
@@ -186,10 +192,4 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 	labels := batcher.records[0].Labels()
 	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded(&testLabelEncoder{}))
-}
-
-func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := label.NewDefaultEncoder()
-	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
-	require.Equal(t, `A=B,C=D`, encoded)
 }

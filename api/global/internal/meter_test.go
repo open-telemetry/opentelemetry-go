@@ -57,29 +57,29 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, 1, len(sdk.MeasurementBatches[0].Measurements))
 	require.Equal(t, core.NewInt64Number(1),
 		sdk.MeasurementBatches[0].Measurements[0].Number)
-	require.Equal(t, "test.counter",
-		sdk.MeasurementBatches[0].Measurements[0].Instrument.Name)
+	require.Equal(t, "test1/test.counter",
+		sdk.MeasurementBatches[0].Measurements[0].Instrument.Name.String())
 
 	require.Equal(t, []core.KeyValue{lvals2}, sdk.MeasurementBatches[1].Labels.Ordered())
 	require.Equal(t, 1, len(sdk.MeasurementBatches[1].Measurements))
 	require.Equal(t, core.NewInt64Number(3),
 		sdk.MeasurementBatches[1].Measurements[0].Number)
-	require.Equal(t, "test.gauge",
-		sdk.MeasurementBatches[1].Measurements[0].Instrument.Name)
+	require.Equal(t, "test1/test.gauge",
+		sdk.MeasurementBatches[1].Measurements[0].Instrument.Name.String())
 
 	require.Equal(t, []core.KeyValue{lvals1}, sdk.MeasurementBatches[2].Labels.Ordered())
 	require.Equal(t, 1, len(sdk.MeasurementBatches[2].Measurements))
 	require.Equal(t, core.NewFloat64Number(3),
 		sdk.MeasurementBatches[2].Measurements[0].Number)
-	require.Equal(t, "test.measure",
-		sdk.MeasurementBatches[2].Measurements[0].Instrument.Name)
+	require.Equal(t, "test1/test.measure",
+		sdk.MeasurementBatches[2].Measurements[0].Instrument.Name.String())
 
 	require.Equal(t, []core.KeyValue{lvals3}, sdk.MeasurementBatches[3].Labels.Ordered())
 	require.Equal(t, 1, len(sdk.MeasurementBatches[3].Measurements))
 	require.Equal(t, core.NewFloat64Number(3),
 		sdk.MeasurementBatches[3].Measurements[0].Number)
-	require.Equal(t, "test.second",
-		sdk.MeasurementBatches[3].Measurements[0].Instrument.Name)
+	require.Equal(t, "test2/test.second",
+		sdk.MeasurementBatches[3].Measurements[0].Instrument.Name.String())
 }
 
 func TestBound(t *testing.T) {
@@ -120,22 +120,22 @@ func TestBound(t *testing.T) {
 	require.Equal(t, 1, len(sdk.MeasurementBatches[0].Measurements))
 	require.Equal(t, core.NewFloat64Number(1),
 		sdk.MeasurementBatches[0].Measurements[0].Number)
-	require.Equal(t, "test.counter",
-		sdk.MeasurementBatches[0].Measurements[0].Instrument.Name)
+	require.Equal(t, "test/test.counter",
+		sdk.MeasurementBatches[0].Measurements[0].Instrument.Name.String())
 
 	require.Equal(t, []core.KeyValue{lvals2}, sdk.MeasurementBatches[1].Labels.Ordered())
 	require.Equal(t, 1, len(sdk.MeasurementBatches[1].Measurements))
 	require.Equal(t, core.NewFloat64Number(3),
 		sdk.MeasurementBatches[1].Measurements[0].Number)
-	require.Equal(t, "test.gauge",
-		sdk.MeasurementBatches[1].Measurements[0].Instrument.Name)
+	require.Equal(t, "test/test.gauge",
+		sdk.MeasurementBatches[1].Measurements[0].Instrument.Name.String())
 
 	require.Equal(t, []core.KeyValue{lvals1}, sdk.MeasurementBatches[2].Labels.Ordered())
 	require.Equal(t, 1, len(sdk.MeasurementBatches[2].Measurements))
 	require.Equal(t, core.NewInt64Number(3),
 		sdk.MeasurementBatches[2].Measurements[0].Number)
-	require.Equal(t, "test.measure",
-		sdk.MeasurementBatches[2].Measurements[0].Instrument.Name)
+	require.Equal(t, "test/test.measure",
+		sdk.MeasurementBatches[2].Measurements[0].Instrument.Name.String())
 
 	boundC.Unbind()
 	boundG.Unbind()
@@ -173,7 +173,7 @@ func TestDefaultSDK(t *testing.T) {
 	meter1 := global.Scope().WithNamespace("builtin").Meter()
 	lvals1 := key.String("A", "B")
 
-	counter := meter1.NewInt64Counter("test.builtin")
+	counter := meter1.NewInt64Counter("count.b")
 	counter.Add(ctx, 1, lvals1)
 	counter.Add(ctx, 1, lvals1)
 
@@ -198,6 +198,6 @@ func TestDefaultSDK(t *testing.T) {
 	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"test.builtin","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"builtin/count.b","sum":1}]}
 `, <-ch)
 }

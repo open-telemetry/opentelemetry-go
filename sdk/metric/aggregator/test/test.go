@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
+const Namespace core.Namespace = "test"
 const Magnitude = 1000
 
 type Profile struct {
@@ -54,7 +55,7 @@ func newProfiles() []Profile {
 }
 
 func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) *export.Descriptor {
-	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
+	desc := export.NewDescriptor(Namespace.Name("test.name"), mkind, nil, "", "", nkind, alternate)
 	return desc
 }
 

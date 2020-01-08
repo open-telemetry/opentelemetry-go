@@ -43,11 +43,11 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	case export.GaugeKind:
 		return gauge.New()
 	case export.MeasureKind:
-		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
+		if strings.HasSuffix(descriptor.Name().String(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
-		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
+		} else if strings.HasSuffix(descriptor.Name().String(), "ddsketch") {
 			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
-		} else if strings.HasSuffix(descriptor.Name(), "array") {
+		} else if strings.HasSuffix(descriptor.Name().String(), "array") {
 			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
 		}
 	}
@@ -135,7 +135,7 @@ func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	})
 }
 
-func newTracer(b *testing.B, sampler sdktrace.Sampler) trace.Tracer {
+func newTracer(b *testing.B, sampler sdktrace.Sampler) trace.TracerWithNamespace {
 	tpi, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider with sampler: %v", err)

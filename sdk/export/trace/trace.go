@@ -50,8 +50,7 @@ type SpanData struct {
 	SpanContext  core.SpanContext
 	ParentSpanID core.SpanID
 	SpanKind     apitrace.SpanKind
-	Namespace    core.Namespace
-	Name         string
+	Name         core.Name
 	StartTime    time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.

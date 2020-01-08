@@ -16,6 +16,8 @@ package trace
 
 import (
 	"context"
+
+	"go.opentelemetry.io/otel/api/core"
 )
 
 type NoopTracer struct{}
@@ -29,6 +31,21 @@ func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context
 
 // Start starts a noop span.
 func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (context.Context, Span) {
+	span := NoopSpan{}
+	return ContextWithSpan(ctx, span), span
+}
+
+type NoopTracerWithNamespace struct{}
+
+var _ TracerWithNamespace = NoopTracerWithNamespace{}
+
+// WithSpan wraps around execution of func with noop span.
+func (t NoopTracerWithNamespace) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
+	return body(ctx)
+}
+
+// Start starts a noop span.
+func (NoopTracerWithNamespace) Start(ctx context.Context, name core.Name, opts ...StartOption) (context.Context, Span) {
 	span := NoopSpan{}
 	return ContextWithSpan(ctx, span), span
 }

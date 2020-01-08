@@ -160,7 +160,7 @@ func (f *testFixture) someLabels() []core.KeyValue {
 
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	name := fmt.Sprint("test_", i)
-	instrument := f.impl.newInstrument(sdk, name)
+	instrument := f.impl.newInstrument(scope.UnnamedMeter(sdk), name)
 	descriptor := sdk.GetDescriptor(instrument.Impl())
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)

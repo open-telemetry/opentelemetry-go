@@ -161,7 +161,7 @@ func (s *span) SetName(name string) {
 		// TODO: now what?
 		return
 	}
-	s.data.Name = name
+	s.data.Name = s.data.Name.Namespace.Name(name)
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
 	var ctx core.SpanContext
@@ -176,8 +176,7 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
-		namespace:    s.data.Namespace,
-		name:         name,
+		name:         s.data.Name,
 		cfg:          s.tracer.config.Load().(*Config),
 		span:         s,
 	}
@@ -263,8 +262,7 @@ func startSpanInternal(tr *Tracer, name core.Name, parent core.SpanContext, remo
 		noParent:     noParent,
 		remoteParent: remoteParent,
 		parent:       parent,
-		namespace:    name.Namespace,
-		name:         name.Base,
+		name:         name,
 		cfg:          cfg,
 		span:         span,
 	}
@@ -284,8 +282,7 @@ func startSpanInternal(tr *Tracer, name core.Name, parent core.SpanContext, remo
 		SpanContext:     span.spanContext,
 		StartTime:       startTime,
 		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
-		Name:            name.Base,
-		Namespace:       name.Namespace,
+		Name:            name,
 		HasRemoteParent: remoteParent,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
@@ -311,8 +308,7 @@ type samplingData struct {
 	noParent     bool
 	remoteParent bool
 	parent       core.SpanContext
-	namespace    core.Namespace
-	name         string
+	name         core.Name
 	cfg          *Config
 	span         *span
 }
@@ -334,7 +330,6 @@ func makeSamplingDecision(data samplingData) {
 			ParentContext:   data.parent,
 			TraceID:         spanContext.TraceID,
 			SpanID:          spanContext.SpanID,
-			Namespace:       data.namespace,
 			Name:            data.name,
 			HasRemoteParent: data.remoteParent}).Sample
 		if sampled {

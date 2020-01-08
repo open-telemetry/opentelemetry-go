@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/internal"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -45,4 +46,12 @@ func UnnamedTracer(ti trace.TracerWithNamespace) trace.Tracer {
 
 func NamedTracer(ti trace.TracerWithNamespace, ns core.Namespace) trace.Tracer {
 	return Empty().WithTracer(ti).WithNamespace(ns).Tracer()
+}
+
+func UnnamedMeter(ti metric.MeterWithNamespace) metric.Meter {
+	return Empty().WithMeter(ti).Meter()
+}
+
+func NamedMeter(ti metric.MeterWithNamespace, ns core.Namespace) metric.Meter {
+	return Empty().WithMeter(ti).WithNamespace(ns).Meter()
 }

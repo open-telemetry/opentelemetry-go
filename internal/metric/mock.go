@@ -31,7 +31,7 @@ type (
 
 	Instrument struct {
 		Meter      *Meter
-		Name       string
+		Name       core.Name
 		Kind       Kind
 		NumberKind core.NumberKind
 		Opts       apimetric.Options
@@ -39,6 +39,7 @@ type (
 
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
+		Context      context.Context
 		Measurements []Measurement
 		Labels       label.Set
 	}
@@ -59,7 +60,7 @@ type (
 var (
 	_ apimetric.InstrumentImpl      = &Instrument{}
 	_ apimetric.BoundInstrumentImpl = &Handle{}
-	_ apimetric.Meter               = &Meter{}
+	_ apimetric.MeterWithNamespace  = &Meter{}
 )
 
 const (
@@ -76,7 +77,7 @@ func (i *Instrument) Bind(ctx context.Context, labels []core.KeyValue) apimetric
 }
 
 func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
-	doRecordBatch(ctx, scope.Current(ctx).AddResources(labels...).Resources(), i, number)
+	doRecordBatch(ctx, scope.Labels(ctx, labels...), i, number)
 }
 
 func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
@@ -97,17 +98,17 @@ func NewMeter() *Meter {
 	return &Meter{}
 }
 
-func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
+func (m *Meter) NewInt64Counter(name core.Name, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
 	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
 	return apimetric.WrapInt64CounterInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Float64Counter {
+func (m *Meter) NewFloat64Counter(name core.Name, cos ...apimetric.CounterOptionApplier) apimetric.Float64Counter {
 	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
 	return apimetric.WrapFloat64CounterInstrument(instrument)
 }
 
-func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
+func (m *Meter) newCounterInstrument(name core.Name, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyCounterOptions(&opts, cos...)
 	return &Instrument{
@@ -119,17 +120,17 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 	}
 }
 
-func (m *Meter) NewInt64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Int64Gauge {
+func (m *Meter) NewInt64Gauge(name core.Name, gos ...apimetric.GaugeOptionApplier) apimetric.Int64Gauge {
 	instrument := m.newGaugeInstrument(name, core.Int64NumberKind, gos...)
 	return apimetric.WrapInt64GaugeInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Float64Gauge {
+func (m *Meter) NewFloat64Gauge(name core.Name, gos ...apimetric.GaugeOptionApplier) apimetric.Float64Gauge {
 	instrument := m.newGaugeInstrument(name, core.Float64NumberKind, gos...)
 	return apimetric.WrapFloat64GaugeInstrument(instrument)
 }
 
-func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
+func (m *Meter) newGaugeInstrument(name core.Name, numberKind core.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyGaugeOptions(&opts, gos...)
 	return &Instrument{
@@ -141,17 +142,17 @@ func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos 
 	}
 }
 
-func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Int64Measure {
+func (m *Meter) NewInt64Measure(name core.Name, mos ...apimetric.MeasureOptionApplier) apimetric.Int64Measure {
 	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
 	return apimetric.WrapInt64MeasureInstrument(instrument)
 }
 
-func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Float64Measure {
+func (m *Meter) NewFloat64Measure(name core.Name, mos ...apimetric.MeasureOptionApplier) apimetric.Float64Measure {
 	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
 	return apimetric.WrapFloat64MeasureInstrument(instrument)
 }
 
-func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
+func (m *Meter) newMeasureInstrument(name core.Name, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
 	opts := apimetric.Options{}
 	apimetric.ApplyMeasureOptions(&opts, mos...)
 	return &Instrument{
@@ -177,6 +178,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measure
 
 func (m *Meter) recordMockBatch(ctx context.Context, labels label.Set, measurements ...Measurement) {
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
+		Context:      ctx,
 		Labels:       labels,
 		Measurements: measurements,
 	})

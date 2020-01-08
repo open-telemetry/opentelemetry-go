@@ -7,10 +7,14 @@ import (
 )
 
 type NoopMeter struct{}
+type NoopMeterWithNamespace struct {
+	NoopMeter
+}
 type noopBoundInstrument struct{}
 type noopInstrument struct{}
 
 var _ Meter = NoopMeter{}
+var _ MeterWithNamespace = NoopMeterWithNamespace{}
 var _ InstrumentImpl = noopInstrument{}
 var _ BoundInstrumentImpl = noopBoundInstrument{}
 
@@ -52,4 +56,28 @@ func (NoopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Flo
 }
 
 func (NoopMeter) RecordBatch(context.Context, []core.KeyValue, ...Measurement) {
+}
+
+func (NoopMeterWithNamespace) NewInt64Counter(name core.Name, cos ...CounterOptionApplier) Int64Counter {
+	return WrapInt64CounterInstrument(noopInstrument{})
+}
+
+func (NoopMeterWithNamespace) NewFloat64Counter(name core.Name, cos ...CounterOptionApplier) Float64Counter {
+	return WrapFloat64CounterInstrument(noopInstrument{})
+}
+
+func (NoopMeterWithNamespace) NewInt64Gauge(name core.Name, gos ...GaugeOptionApplier) Int64Gauge {
+	return WrapInt64GaugeInstrument(noopInstrument{})
+}
+
+func (NoopMeterWithNamespace) NewFloat64Gauge(name core.Name, gos ...GaugeOptionApplier) Float64Gauge {
+	return WrapFloat64GaugeInstrument(noopInstrument{})
+}
+
+func (NoopMeterWithNamespace) NewInt64Measure(name core.Name, mos ...MeasureOptionApplier) Int64Measure {
+	return WrapInt64MeasureInstrument(noopInstrument{})
+}
+
+func (NoopMeterWithNamespace) NewFloat64Measure(name core.Name, mos ...MeasureOptionApplier) Float64Measure {
+	return WrapFloat64MeasureInstrument(noopInstrument{})
 }

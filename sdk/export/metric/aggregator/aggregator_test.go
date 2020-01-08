@@ -86,7 +86,7 @@ func TestRangeTest(t *testing.T) {
 					for _, alt := range []bool{true, false} {
 						t.Run(fmt.Sprint(alt), func(t *testing.T) {
 							desc := export.NewDescriptor(
-								"name",
+								core.Namespace("root").Name("name"),
 								mkind,
 								nil,
 								"",

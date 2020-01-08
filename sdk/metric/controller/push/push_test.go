@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -171,7 +172,7 @@ func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(fix.batcher, fix.exporter, time.Second)
-	meter := p.Meter()
+	meter := scope.UnnamedMeter(p.Meter())
 
 	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
@@ -200,7 +201,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, finishes)
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "counter", records[0].Descriptor().Name().String())
 
 	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
@@ -219,7 +220,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 2, finishes)
 	require.Equal(t, 2, exports)
 	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "counter", records[0].Descriptor().Name().String())
 
 	sum, err = records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
@@ -36,7 +37,8 @@ func ExampleNew() {
 	ctx := context.Background()
 
 	key := key.New("key")
-	meter := pusher.Meter()
+	sdk := pusher.Meter()
+	meter := scope.UnnamedMeter(sdk)
 
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
 

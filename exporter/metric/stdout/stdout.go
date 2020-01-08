@@ -222,7 +222,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		var sb strings.Builder
 
-		sb.WriteString(desc.Name())
+		sb.WriteString(desc.Name().String())
 
 		if labels := record.Labels(); labels.Len() > 0 {
 			sb.WriteRune('{')

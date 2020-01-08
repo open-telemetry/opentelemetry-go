@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -52,7 +53,7 @@ func (*monotoneBatcher) FinishedCollection() {
 }
 
 func (m *monotoneBatcher) Process(_ context.Context, record export.Record) error {
-	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
+	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name().String())
 	require.Equal(m.t, 1, record.Labels().Len())
 	require.Equal(m.t, "a", string(record.Labels().Ordered()[0].Key))
 	require.Equal(m.t, "b", record.Labels().Ordered()[0].Value.Emit())
@@ -73,10 +74,11 @@ func TestMonotoneGauge(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, label.NewDefaultEncoder())
+	meter := scope.UnnamedMeter(sdk)
 
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
-	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
+	gauge := meter.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
 	handle := gauge.Bind(ctx, key.String("a", "b"))
 

@@ -25,8 +25,8 @@ import (
 
 func TestMulitpleGlobalSetScope(t *testing.T) {
 
-	s1 := scope.Empty().WithTracer(trace.NoopTracer{}).WithMeter(metric.NoopMeter{})
-	s2 := scope.Empty().WithTracer(trace.NoopTracer{}).WithMeter(metric.NoopMeter{})
+	s1 := scope.Empty().WithTracer(trace.NoopTracerWithNamespace{}).WithMeter(metric.NoopMeterWithNamespace{})
+	s2 := scope.Empty().WithTracer(trace.NoopTracerWithNamespace{}).WithMeter(metric.NoopMeterWithNamespace{})
 
 	if s1.Provider() == s2.Provider() {
 		t.Fatal("impossible test condition")

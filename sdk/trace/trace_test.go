@@ -72,7 +72,7 @@ func TestSetName(t *testing.T) {
 		samplerIsCalled = true
 		t.Logf("called sampler for name %q", p.Name)
 		return SamplingDecision{
-			Sample: p.Namespace == "SetName" && strings.HasPrefix(p.Name, "foo"),
+			Sample: p.Name.Namespace == "SetName" && strings.HasPrefix(p.Name.Base, "foo"),
 		}
 	})
 	tr, _ := NewTracer(WithConfig(Config{DefaultSampler: fooSampler}))
@@ -315,8 +315,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Namespace:    "StartSpanAttribute",
-		Name:         "span0",
+		Name:         core.Namespace("StartSpanAttribute").Name("span0"),
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 			key.String("key2", "value2"),
@@ -345,8 +344,7 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Namespace:    "SpanAttribute",
-		Name:         "span0",
+		Name:         core.Namespace("SpanAttribute").Name("span0"),
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 		},
@@ -381,8 +379,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Namespace:    "SpanAttributesOverLimit",
-		Name:         "span0",
+		Name:         core.Namespace("SpanAttributesOverLimit").Name("span0"),
 		Attributes: []core.KeyValue{
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
@@ -427,8 +424,7 @@ func TestEvents(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Namespace:       "Events",
-		Name:            "span0",
+		Name:            core.Namespace("Events").Name("span0"),
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
@@ -478,8 +474,7 @@ func TestEventsOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Namespace:    "EventsOverLimit",
-		Name:         "span0",
+		Name:         core.Namespace("EventsOverLimit").Name("span0"),
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
@@ -523,8 +518,7 @@ func TestLinks(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Namespace:       "Links",
-		Name:            "span0",
+		Name:            core.Namespace("Links").Name("span0"),
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
@@ -567,8 +561,7 @@ func TestLinksOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Namespace:    "LinksOverLimit",
-		Name:         "span0",
+		Name:         core.Namespace("LinksOverLimit").Name("span0"),
 		Links: []apitrace.Link{
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
@@ -583,14 +576,13 @@ func TestLinksOverLimit(t *testing.T) {
 }
 
 func TestSetSpanName(t *testing.T) {
-	const pkg = "SetSpanName"
-	const name = "SpanName-1"
+	expect := core.Namespace("SetSpanName").Name("SpanName-1")
 
 	te := &testExporter{}
 	tri, _ := NewTracer(WithSyncer(te))
-	tr := scope.NamedTracer(tri, pkg)
+	tr := scope.NamedTracer(tri, expect.Namespace)
 
-	_, span := tr.Start(context.Background(), name,
+	_, span := tr.Start(context.Background(), expect.Base,
 		apitrace.ChildOf(core.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
@@ -602,8 +594,8 @@ func TestSetSpanName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got.Name != name && got.Namespace == pkg {
-		t.Errorf("span.Name: got %q/%q; want %q/%q", got.Namespace, got.Name, pkg, name)
+	if got.Name != expect {
+		t.Errorf("span.Name: got %q; want %q", got.Name, expect)
 	}
 }
 
@@ -624,8 +616,7 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Namespace:       "SpanStatus",
-		Name:            "span0",
+		Name:            core.Namespace("SpanStatus").Name("span0"),
 		SpanKind:        apitrace.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
@@ -736,7 +727,7 @@ func checkTime(x *time.Time) bool {
 type fakeExporter map[string]*export.SpanData
 
 func (f fakeExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	f[string(s.Namespace)+"/"+s.Name] = s
+	f[s.Name.String()] = s
 }
 
 func TestEndSpanTwice(t *testing.T) {

@@ -44,16 +44,18 @@ type (
 )
 
 var (
+	Namespace core.Namespace = "test"
+
 	// GaugeADesc and GaugeBDesc group by "G"
 	GaugeADesc = export.NewDescriptor(
-		"gauge.a", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		Namespace.Name("gauge.a"), export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
 	GaugeBDesc = export.NewDescriptor(
-		"gauge.b", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		Namespace.Name("gauge.b"), export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = export.NewDescriptor(
-		"counter.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+		Namespace.Name("counter.a"), export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
 	CounterBDesc = export.NewDescriptor(
-		"counter.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+		Namespace.Name("counter.b"), export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}

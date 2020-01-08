@@ -21,11 +21,11 @@ type testSpanProcesor struct {
 }
 
 func (t *testSpanProcesor) OnStart(s *export.SpanData) {
-	t.spansStarted = append(t.spansStarted, s.Namespace+"/"+s.Name)
+	t.spansStarted = append(t.spansStarted, s.Name.String())
 }
 
 func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
-	t.spansEnded = append(t.spansEnded, s.Namespace+"/"+s.Name)
+	t.spansEnded = append(t.spansEnded, s.Name.String())
 }
 
 func (t *testSpanProcesor) Shutdown() {}

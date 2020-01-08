@@ -38,7 +38,7 @@ func (p *CheckpointSet) Reset() {
 func (p *CheckpointSet) Add(desc *export.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
 	labelSet := label.NewSet(labels...)
 
-	key := desc.Name() + "_" + labelSet.Encoded(p.encoder)
+	key := desc.Name().String() + "_" + labelSet.Encoded(p.encoder)
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}
