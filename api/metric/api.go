@@ -21,18 +21,6 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 )
 
-// Provider supports named Meter instances.
-type Provider interface {
-	// Meter gets a named Meter interface.  If the name is an
-	// empty string, the provider uses a default name.
-	Meter(name string) Meter
-}
-
-// LabelSet is an implementation-level interface that represents a
-// []core.KeyValue for use as pre-defined labels in the metrics API.
-type LabelSet interface {
-}
-
 // Options contains some options for metrics of any kind.
 type Options struct {
 	// Description is an optional field describing the metric
@@ -104,10 +92,6 @@ func (m Measurement) Number() core.Number {
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	// Labels returns a reference to a set of labels that cannot
-	// be read by the application.
-	Labels(...core.KeyValue) LabelSet
-
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
 	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
@@ -128,7 +112,7 @@ type Meter interface {
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
 }
 
 // Option supports specifying the various metric options.

@@ -31,6 +31,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -74,7 +76,7 @@ type (
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) withImpl
 		getUpdateValue func() core.Number
-		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
+		operate        func(interface{}, context.Context, core.Number)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
@@ -157,13 +159,14 @@ func (f *testFixture) someLabels() []core.KeyValue {
 }
 
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
-	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(sdk, name)
 	descriptor := sdk.GetDescriptor(instrument.Impl())
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
-	labs := sdk.Labels(kvs...)
+	ctx := scope.ContextWithScope(
+		context.Background(),
+		scope.Empty().AddResources(kvs...))
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,
@@ -173,7 +176,7 @@ func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
 		time.Sleep(sleep)
 		value := f.impl.getUpdateValue()
-		f.impl.operate(instrument, ctx, value, labs)
+		f.impl.operate(instrument, ctx, value)
 
 		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
 
@@ -292,7 +295,7 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
+	sdk := sdk.New(fixture, label.NewDefaultEncoder())
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {
@@ -352,9 +355,9 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number) {
 			counter := inst.(api.Int64Counter)
-			counter.Add(ctx, value.AsInt64(), labels)
+			counter.Add(ctx, value.AsInt64())
 		},
 		newStore: func() interface{} {
 			n := core.NewInt64Number(0)
@@ -398,9 +401,9 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number) {
 			counter := inst.(api.Float64Counter)
-			counter.Add(ctx, value.AsFloat64(), labels)
+			counter.Add(ctx, value.AsFloat64())
 		},
 		newStore: func() interface{} {
 			n := core.NewFloat64Number(0.0)
@@ -444,9 +447,9 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 			}
 			return core.NewInt64Number(int64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number) {
 			gauge := inst.(api.Int64Gauge)
-			gauge.Set(ctx, value.AsInt64(), labels)
+			gauge.Set(ctx, value.AsInt64())
 		},
 		newStore: func() interface{} {
 			return &gaugeState{
@@ -495,9 +498,9 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 			}
 			return core.NewFloat64Number(float64(time.Since(startTime)))
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number) {
 			gauge := inst.(api.Float64Gauge)
-			gauge.Set(ctx, value.AsFloat64(), labels)
+			gauge.Set(ctx, value.AsFloat64())
 		},
 		newStore: func() interface{} {
 			return &gaugeState{

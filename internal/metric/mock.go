@@ -16,8 +16,9 @@ package metric
 
 import (
 	"context"
-	"sync"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 )
@@ -25,31 +26,21 @@ import (
 type (
 	Handle struct {
 		Instrument *Instrument
-		LabelSet   *LabelSet
+		Labels     label.Set
 	}
 
 	Instrument struct {
+		Meter      *Meter
 		Name       string
 		Kind       Kind
 		NumberKind core.NumberKind
 		Opts       apimetric.Options
 	}
 
-	LabelSet struct {
-		TheMeter *Meter
-		Labels   map[core.Key]core.Value
-	}
-
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
-		Ctx          context.Context
-		LabelSet     *LabelSet
-	}
-
-	MeterProvider struct {
-		lock       sync.Mutex
-		registered map[string]*Meter
+		Labels       label.Set
 	}
 
 	Meter struct {
@@ -68,7 +59,6 @@ type (
 var (
 	_ apimetric.InstrumentImpl      = &Instrument{}
 	_ apimetric.BoundInstrumentImpl = &Handle{}
-	_ apimetric.LabelSet            = &LabelSet{}
 	_ apimetric.Meter               = &Meter{}
 )
 
@@ -78,39 +68,29 @@ const (
 	KindMeasure
 )
 
-func (i *Instrument) Bind(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
-	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
-		labels = ld.Delegate()
-	}
+func (i *Instrument) Bind(ctx context.Context, labels []core.KeyValue) apimetric.BoundInstrumentImpl {
 	return &Handle{
 		Instrument: i,
-		LabelSet:   labels.(*LabelSet),
+		Labels:     scope.Current(ctx).AddResources(labels...).Resources(),
 	}
 }
 
-func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
-	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
-		labels = ld.Delegate()
-	}
-	doRecordBatch(ctx, labels.(*LabelSet), i, number)
+func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
+	doRecordBatch(ctx, scope.Current(ctx).AddResources(labels...).Resources(), i, number)
 }
 
 func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
-	doRecordBatch(ctx, h.LabelSet, h.Instrument, number)
+	doRecordBatch(ctx, h.Labels, h.Instrument, number)
 }
 
 func (h *Handle) Unbind() {
 }
 
-func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number core.Number) {
-	labelSet.TheMeter.recordMockBatch(ctx, labelSet, Measurement{
+func doRecordBatch(ctx context.Context, labelSet label.Set, instrument *Instrument, number core.Number) {
+	instrument.meter.recordMockBatch(ctx, labelSet, Measurement{
 		Instrument: instrument,
 		Number:     number,
 	})
-}
-
-func (s *LabelSet) Meter() apimetric.Meter {
-	return s.TheMeter
 }
 
 func NewProvider() *MeterProvider {
@@ -135,17 +115,6 @@ func NewMeter() *Meter {
 	return &Meter{}
 }
 
-func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
-	ul := make(map[core.Key]core.Value)
-	for _, kv := range labels {
-		ul[kv.Key] = kv.Value
-	}
-	return &LabelSet{
-		TheMeter: m,
-		Labels:   ul,
-	}
-}
-
 func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
 	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
 	return apimetric.WrapInt64CounterInstrument(instrument)
@@ -160,6 +129,7 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 	opts := apimetric.Options{}
 	apimetric.ApplyCounterOptions(&opts, cos...)
 	return &Instrument{
+		Meter:      m,
 		Name:       name,
 		Kind:       KindCounter,
 		NumberKind: numberKind,

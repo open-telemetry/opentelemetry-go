@@ -19,6 +19,7 @@ package export
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
 )
@@ -66,9 +67,9 @@ type Batcher interface {
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Record (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator).  The Batcher
+	// label.Set, and the checkpointed Aggregator).  The Batcher
 	// should be prepared to process duplicate (Descriptor,
-	// Labels) pairs during this pass due to race conditions, but
+	// label.Set) pairs during this pass due to race conditions, but
 	// this will usually be the ordinary course of events, as
 	// Aggregators are typically merged according the output set
 	// of labels.
@@ -184,7 +185,7 @@ type LabelEncoder interface {
 	// It should return a unique representation of the labels
 	// suitable for the SDK to use as a map key.
 	//
-	// The exported Labels object retains a reference to its
+	// The exported label.Set object retains a reference to its
 	// LabelEncoder to determine which encoding was used.
 	//
 	// The expectation is that Exporters with a pre-determined to
@@ -209,56 +210,14 @@ type CheckpointSet interface {
 // and label set.
 type Record struct {
 	descriptor *Descriptor
-	labels     Labels
+	labels     label.Set
 	aggregator Aggregator
 }
 
-// Labels stores complete information about a computed label set,
-// including the labels in an appropriate order (as defined by the
-// Batcher).  If the batcher does not re-order labels, they are
-// presented in sorted order by the SDK.
-type Labels struct {
-	ordered []core.KeyValue
-	encoded string
-	encoder LabelEncoder
-}
-
-// NewLabels builds a Labels object, consisting of an ordered set of
-// labels, a unique encoded representation, and the encoder that
-// produced it.
-func NewLabels(ordered []core.KeyValue, encoded string, encoder LabelEncoder) Labels {
-	return Labels{
-		ordered: ordered,
-		encoded: encoded,
-		encoder: encoder,
-	}
-}
-
-// Ordered returns the labels in a specified order, according to the
-// Batcher.
-func (l Labels) Ordered() []core.KeyValue {
-	return l.ordered
-}
-
-// Encoded is a pre-encoded form of the ordered labels.
-func (l Labels) Encoded() string {
-	return l.encoded
-}
-
-// Encoder is the encoder that computed the Encoded() representation.
-func (l Labels) Encoder() LabelEncoder {
-	return l.encoder
-}
-
-// Len returns the number of labels.
-func (l Labels) Len() int {
-	return len(l.ordered)
-}
-
 // NewRecord allows Batcher implementations to construct export
-// records.  The Descriptor, Labels, and Aggregator represent
+// records.  The Descriptor, label.Set, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *Descriptor, labels label.Set, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -277,9 +236,9 @@ func (r Record) Descriptor() *Descriptor {
 	return r.descriptor
 }
 
-// Labels describes the labels associated with the instrument and the
+// label.Set describes the labels associated with the instrument and the
 // aggregated data.
-func (r Record) Labels() Labels {
+func (r Record) Labels() label.Set {
 	return r.labels
 }
 

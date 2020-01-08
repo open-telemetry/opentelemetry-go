@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -38,8 +39,6 @@ type Controller struct {
 	ticker       Ticker
 	clock        Clock
 }
-
-var _ metric.Provider = &Controller{}
 
 // Several types below are created to match "github.com/benbjohnson/clock"
 // so that it remains a test-only dependency.
@@ -77,7 +76,7 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration)
 	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
-		lencoder = sdk.NewDefaultLabelEncoder()
+		lencoder = label.NewDefaultEncoder()
 	}
 
 	return &Controller{
@@ -106,9 +105,8 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.sdk.SetErrorHandler(errorHandler)
 }
 
-// Meter returns a named Meter, satisifying the metric.Provider
-// interface.
-func (c *Controller) Meter(_ string) metric.Meter {
+// Meter returns the Meter.
+func (c *Controller) Meter() metric.Meter {
 	return c.sdk
 }
 

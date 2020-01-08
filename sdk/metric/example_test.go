@@ -36,12 +36,11 @@ func ExampleNew() {
 	ctx := context.Background()
 
 	key := key.New("key")
-	meter := pusher.Meter("example")
+	meter := pusher.Meter()
 
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
 
-	counter.Add(ctx, 100, labels)
+	counter.Add(ctx, 100, key.String("value"))
 
 	// Output:
 	// {

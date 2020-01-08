@@ -54,7 +54,7 @@ func defaultScopeValue() *atomic.Value {
 	v := &atomic.Value{}
 	d := newDeferred()
 	v.Store(scopeHolder{
-		Scope: scope.NewProvider(&d.tracer, &d.meter, &d.propagators).New(),
+		Scope: scope.NewProvider(&d.tracer, &d.meter).New(),
 	})
 	return v
 }

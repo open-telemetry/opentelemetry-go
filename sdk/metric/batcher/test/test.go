@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"strings"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
@@ -32,7 +32,10 @@ type (
 	Encoder struct{}
 
 	// Output collects distinct metric/label set outputs.
-	Output map[string]int64
+	Output struct {
+		Encoder label.Encoder
+		Values  map[string]int64
+	}
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
@@ -55,17 +58,17 @@ var (
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
 	// GroupEncoder uses the SDK default encoder
-	GroupEncoder = sdk.NewDefaultLabelEncoder()
+	GroupEncoder = label.NewDefaultEncoder()
 
 	// Gauge groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(SdkEncoder, key.String("G", "H"), key.String("C", "D"))
+	Labels1 = label.NewSet(key.String("G", "H"), key.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
+	Labels2 = label.NewSet(key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
-	Labels3 = makeLabels(SdkEncoder)
+	Labels3 = label.NewSet()
 )
 
 // NewAggregationSelector returns a policy that is consistent with the
@@ -84,11 +87,6 @@ func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Ag
 	default:
 		panic("Invalid descriptor MetricKind for this test")
 	}
-}
-
-func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	encoded := encoder.Encode(labels)
-	return export.NewLabels(labels, encoded, encoder)
 }
 
 func (Encoder) Encode(labels []core.KeyValue) string {
@@ -114,12 +112,12 @@ func GaugeAgg(desc *export.Descriptor, v int64) export.Aggregator {
 }
 
 // Convenience method for building a test exported gauge record.
-func NewGaugeRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+func NewGaugeRecord(desc *export.Descriptor, labels label.Set, value int64) export.Record {
 	return export.NewRecord(desc, labels, GaugeAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
-func NewCounterRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+func NewCounterRecord(desc *export.Descriptor, labels label.Set, value int64) export.Record {
 	return export.NewRecord(desc, labels, CounterAgg(desc, value))
 }
 
@@ -132,11 +130,18 @@ func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
 	return cagg
 }
 
+func NewOutput(encoder label.Encoder) *Output {
+	return &Output{
+		Values:  map[string]int64{},
+		Encoder: encoder,
+	}
+}
+
 // AddTo adds a name/label-encoding entry with the gauge or counter
 // value to the output map.
 func (o Output) AddTo(rec export.Record) {
 	labels := rec.Labels()
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
+	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded(o.Encoder))
 	var value int64
 	switch t := rec.Aggregator().(type) {
 	case *counter.Aggregator:
@@ -146,5 +151,5 @@ func (o Output) AddTo(rec export.Record) {
 		lv, _, _ := t.LastValue()
 		value = lv.AsInt64()
 	}
-	o[key] = value
+	o.Values[key] = value
 }

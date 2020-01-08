@@ -23,11 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
-
+	"go.opentelemetry.io/otel/api/context/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -60,6 +58,9 @@ type Config struct {
 	// exporter may wish to configure quantiles on a per-metric
 	// basis.
 	Quantiles []float64
+
+	// How labels will be displayed.
+	LabelEncoder label.Encoder
 }
 
 type expoBatch struct {
@@ -100,6 +101,9 @@ func NewRawExporter(config Config) (*Exporter, error) {
 			}
 		}
 	}
+	if config.LabelEncoder == nil {
+		config.LabelEncoder = label.NewDefaultEncoder()
+	}
 	return &Exporter{
 		config: config,
 	}, nil
@@ -113,14 +117,14 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // }
 // defer pipeline.Stop()
 // ... Done
-func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config)
-	if err != nil {
-		return controller, err
-	}
-	global.SetMeterProvider(controller)
-	return controller, err
-}
+// func InstallNewPipeline(config Config) (*push.Controller, error) {
+// 	controller, err := NewExportPipeline(config)
+// 	if err != nil {
+// 		return controller, err
+// 	}
+// 	global.SetMeterProvider(controller)
+// 	return controller, err
+// }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
@@ -130,7 +134,7 @@ func NewExportPipeline(config Config) (*push.Controller, error) {
 	if err != nil {
 		return nil, err
 	}
-	batcher := defaultkeys.New(selector, metricsdk.NewDefaultLabelEncoder(), true)
+	batcher := defaultkeys.New(selector, exporter.config.LabelEncoder, true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
@@ -239,7 +243,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		if labels := record.Labels(); labels.Len() > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(labels.Encoded())
+			sb.WriteString(labels.Encoded(e.config.LabelEncoder))
 			sb.WriteRune('}')
 		}
 

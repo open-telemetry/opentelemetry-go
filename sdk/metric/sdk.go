@@ -18,11 +18,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
@@ -42,10 +43,6 @@ type (
 	SDK struct {
 		// current maps `mapkey` to *record.
 		current sync.Map
-
-		// empty is the (singleton) result of Labels()
-		// w/ zero arguments.
-		empty labels
 
 		// records is the head of both the primary and the
 		// reclaim records lists.
@@ -73,18 +70,6 @@ type (
 		meter      *SDK
 	}
 
-	// sortedLabels are used to de-duplicate and canonicalize labels.
-	sortedLabels []core.KeyValue
-
-	// labels implements the OpenTelemetry LabelSet API,
-	// represents an internalized set of labels that may be used
-	// repeatedly.
-	labels struct {
-		meter   *SDK
-		sorted  sortedLabels
-		encoded string
-	}
-
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
@@ -97,6 +82,10 @@ type (
 	// `record` in existence at a time, although at most one can
 	// be referenced from the `SDK.current` map.
 	record struct {
+		// meter is a pointer to the SDK, used for error
+		// handling.
+		meter *SDK
+
 		// refcount counts the number of active handles on
 		// referring to this record.  active handles prevent
 		// removing the record from the current map.
@@ -125,7 +114,7 @@ type (
 		reclaim int64
 
 		// labels is the LabelSet passed by the user.
-		labels *labels
+		labels label.Set
 
 		// descriptor describes the metric instrument.
 		descriptor *export.Descriptor
@@ -157,7 +146,6 @@ type (
 
 var (
 	_ api.Meter               = &SDK{}
-	_ api.LabelSet            = &labels{}
 	_ api.InstrumentImpl      = &instrument{}
 	_ api.BoundInstrumentImpl = &record{}
 
@@ -176,11 +164,11 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
-func (i *instrument) acquireHandle(ls *labels) *record {
+func (i *instrument) acquireHandle(ls label.Set) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: i.descriptor,
-		encoded:    ls.encoded,
+		encoded:    ls.Encoded(i.meter.labelEncoder),
 	}
 
 	if actual, ok := i.meter.current.Load(mk); ok {
@@ -192,6 +180,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 
 	// There's a memory allocation here.
 	rec := &record{
+		meter:          i.meter,
 		labels:         ls,
 		descriptor:     i.descriptor,
 		refcount:       1,
@@ -213,14 +202,12 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	return rec
 }
 
-func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
-	labs := i.meter.labsFor(ls)
-	return i.acquireHandle(labs)
+func (i *instrument) Bind(ctx context.Context, labels []core.KeyValue) api.BoundInstrumentImpl {
+	return i.acquireHandle(scope.Labels(ctx, labels...))
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
-	ourLs := i.meter.labsFor(ls)
-	h := i.acquireHandle(ourLs)
+func (i *instrument) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
+	h := i.acquireHandle(scope.Labels(ctx, labels...))
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
@@ -235,67 +222,15 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
 func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
-	m := &SDK{
+	return &SDK{
 		batcher:      batcher,
 		labelEncoder: labelEncoder,
 		errorHandler: DefaultErrorHandler,
 	}
-	m.empty.meter = m
-	return m
 }
 
 func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
-}
-
-// Labels returns a LabelSet corresponding to the arguments.  Passed
-// labels are de-duplicated, with last-value-wins semantics.
-func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
-	// Note: This computes a canonical encoding of the labels to
-	// use as a map key.  It happens to use the encoding used by
-	// statsd for labels, allowing an optimization for statsd
-	// batchers.  This could be made configurable in the
-	// constructor, to support the same optimization for different
-	// batchers.
-
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return &m.empty
-	}
-
-	ls := &labels{
-		meter:  m,
-		sorted: kvs,
-	}
-
-	// Sort and de-duplicate.
-	sort.Stable(&ls.sorted)
-	oi := 1
-	for i := 1; i < len(ls.sorted); i++ {
-		if ls.sorted[i-1].Key == ls.sorted[i].Key {
-			ls.sorted[oi-1] = ls.sorted[i]
-			continue
-		}
-		ls.sorted[oi] = ls.sorted[i]
-		oi++
-	}
-	ls.sorted = ls.sorted[0:oi]
-
-	ls.encoded = m.labelEncoder.Encode(ls.sorted)
-
-	return ls
-}
-
-// labsFor sanitizes the input LabelSet.  The input will be rejected
-// if it was created by another Meter instance, for example.
-func (m *SDK) labsFor(ls api.LabelSet) *labels {
-	if del, ok := ls.(api.LabelSetDelegate); ok {
-		ls = del.Delegate()
-	}
-	if l, _ := ls.(*labels); l != nil && l.meter == m {
-		return l
-	}
-	return &m.empty
 }
 
 func (m *SDK) newInstrument(name string, metricKind export.MetricKind, numberKind core.NumberKind, opts *api.Options) *instrument {
@@ -433,8 +368,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 		return 0
 	}
 	r.recorder.Checkpoint(ctx, r.descriptor)
-	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.labelEncoder)
-	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, labels, r.recorder))
+	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, r.labels, r.recorder))
 
 	if err != nil {
 		m.errorHandler(err)
@@ -443,7 +377,7 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
+func (m *SDK) RecordBatch(ctx context.Context, ls []core.KeyValue, measurements ...api.Measurement) {
 	for _, meas := range measurements {
 		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
 	}
@@ -464,11 +398,11 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		return
 	}
 	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
-		r.labels.meter.errorHandler(err)
+		r.meter.errorHandler(err)
 		return
 	}
 	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
-		r.labels.meter.errorHandler(err)
+		r.meter.errorHandler(err)
 		return
 	}
 }
@@ -490,7 +424,7 @@ func (r *record) Unbind() {
 
 		if modified < collected {
 			// This record could have been reclaimed.
-			r.labels.meter.saveFromReclaim(r)
+			r.meter.saveFromReclaim(r)
 		}
 
 		break
@@ -502,6 +436,6 @@ func (r *record) Unbind() {
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: r.descriptor,
-		encoded:    r.labels.encoded,
+		encoded:    r.labels.Encoded(r.meter.labelEncoder),
 	}
 }

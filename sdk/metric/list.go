@@ -19,18 +19,6 @@ import (
 	"unsafe"
 )
 
-func (l *sortedLabels) Len() int {
-	return len(*l)
-}
-
-func (l *sortedLabels) Swap(i, j int) {
-	(*l)[i], (*l)[j] = (*l)[j], (*l)[i]
-}
-
-func (l *sortedLabels) Less(i, j int) bool {
-	return (*l)[i].Key < (*l)[j].Key
-}
-
 func (m *SDK) addPrimary(rec *record) {
 	for {
 		rec.next.primary.store(m.records.primary.load())

@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -71,13 +72,13 @@ func TestMonotoneGauge(t *testing.T) {
 	batcher := &monotoneBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	sdk := sdk.New(batcher, label.NewDefaultEncoder())
 
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
 	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
-	handle := gauge.Bind(sdk.Labels(key.String("a", "b")))
+	handle := gauge.Bind(ctx, key.String("a", "b"))
 
 	require.Nil(t, batcher.currentTime)
 	require.Nil(t, batcher.currentValue)

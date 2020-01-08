@@ -115,13 +115,13 @@ func (s Scope) AddResources(kvs ...core.KeyValue) Scope {
 		return s
 	}
 	r := s.clone()
-	r.resources = s.resources.AddMany(kvs...)
+	r.resources = r.resources.AddMany(kvs...)
 	return r
 }
 
 func (s Scope) WithNamespace(name string) Scope {
 	r := s.clone()
-	r.resources = s.resources.AddOne(namespaceKey.String(name))
+	r.resources = r.resources.AddOne(namespaceKey.String(name))
 	return r
 }
 
@@ -209,28 +209,28 @@ func (s *scopeTracer) WithSpan(
 	return s.provider.Tracer().WithSpan(s.enterScope(ctx), s.subname(name), fn)
 }
 
-func (m *scopeMeter) NewInt64Counter(ctx context.Context, name string, cos ...metric.CounterOptionApplier) metric.Int64Counter {
-	return m.provider.Meter().NewInt64Counter(ctx, m.subname(name), cos...)
+func (m *scopeMeter) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) metric.Int64Counter {
+	return m.provider.Meter().NewInt64Counter(m.subname(name), cos...)
 }
 
-func (m *scopeMeter) NewFloat64Counter(ctx context.Context, name string, cos ...metric.CounterOptionApplier) metric.Float64Counter {
-	return m.provider.Meter().NewFloat64Counter(ctx, m.subname(name), cos...)
+func (m *scopeMeter) NewFloat64Counter(name string, cos ...metric.CounterOptionApplier) metric.Float64Counter {
+	return m.provider.Meter().NewFloat64Counter(m.subname(name), cos...)
 }
 
-func (m *scopeMeter) NewInt64Gauge(ctx context.Context, name string, gos ...metric.GaugeOptionApplier) metric.Int64Gauge {
-	return m.provider.Meter().NewInt64Gauge(ctx, m.subname(name), gos...)
+func (m *scopeMeter) NewInt64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Int64Gauge {
+	return m.provider.Meter().NewInt64Gauge(m.subname(name), gos...)
 }
 
-func (m *scopeMeter) NewFloat64Gauge(ctx context.Context, name string, gos ...metric.GaugeOptionApplier) metric.Float64Gauge {
-	return m.provider.Meter().NewFloat64Gauge(ctx, m.subname(name), gos...)
+func (m *scopeMeter) NewFloat64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Float64Gauge {
+	return m.provider.Meter().NewFloat64Gauge(m.subname(name), gos...)
 }
 
-func (m *scopeMeter) NewInt64Measure(ctx context.Context, name string, mos ...metric.MeasureOptionApplier) metric.Int64Measure {
-	return m.provider.Meter().NewInt64Measure(ctx, m.subname(name), mos...)
+func (m *scopeMeter) NewInt64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Int64Measure {
+	return m.provider.Meter().NewInt64Measure(m.subname(name), mos...)
 }
 
-func (m *scopeMeter) NewFloat64Measure(ctx context.Context, name string, mos ...metric.MeasureOptionApplier) metric.Float64Measure {
-	return m.provider.Meter().NewFloat64Measure(ctx, m.subname(name), mos...)
+func (m *scopeMeter) NewFloat64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Float64Measure {
+	return m.provider.Meter().NewFloat64Measure(m.subname(name), mos...)
 }
 
 func (m *scopeMeter) RecordBatch(ctx context.Context, labels []core.KeyValue, ms ...metric.Measurement) {

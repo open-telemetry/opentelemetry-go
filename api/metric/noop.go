@@ -6,21 +6,13 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type NoopProvider struct{}
 type NoopMeter struct{}
 type noopBoundInstrument struct{}
-type noopLabelSet struct{}
 type noopInstrument struct{}
 
-var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
 var _ InstrumentImpl = noopInstrument{}
 var _ BoundInstrumentImpl = noopBoundInstrument{}
-var _ LabelSet = noopLabelSet{}
-
-func (NoopProvider) Meter(name string) Meter {
-	return NoopMeter{}
-}
 
 func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 }
@@ -28,19 +20,11 @@ func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 func (noopBoundInstrument) Unbind() {
 }
 
-func (noopInstrument) Bind(LabelSet) BoundInstrumentImpl {
+func (noopInstrument) Bind(context.Context, []core.KeyValue) BoundInstrumentImpl {
 	return noopBoundInstrument{}
 }
 
-func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
-}
-
-func (noopInstrument) Meter() Meter {
-	return NoopMeter{}
-}
-
-func (NoopMeter) Labels(...core.KeyValue) LabelSet {
-	return noopLabelSet{}
+func (noopInstrument) RecordOne(context.Context, core.Number, []core.KeyValue) {
 }
 
 func (NoopMeter) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
@@ -67,5 +51,5 @@ func (NoopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Flo
 	return WrapFloat64MeasureInstrument(noopInstrument{})
 }
 
-func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
+func (NoopMeter) RecordBatch(context.Context, []core.KeyValue, ...Measurement) {
 }

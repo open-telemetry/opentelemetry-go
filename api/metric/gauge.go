@@ -51,8 +51,8 @@ type BoundInt64Gauge struct {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
-	h.commonBoundInstrument = g.bind(labels)
+func (g *Float64Gauge) Bind(ctx context.Context, labels ...core.KeyValue) (h BoundFloat64Gauge) {
+	h.commonBoundInstrument = g.bind(ctx, labels)
 	return
 }
 
@@ -63,8 +63,8 @@ func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) Bind(labels LabelSet) (h BoundInt64Gauge) {
-	h.commonBoundInstrument = g.bind(labels)
+func (g *Int64Gauge) Bind(ctx context.Context, labels ...core.KeyValue) (h BoundInt64Gauge) {
+	h.commonBoundInstrument = g.bind(ctx, labels)
 	return
 }
 
@@ -87,7 +87,7 @@ func (g *Int64Gauge) Measurement(value int64) Measurement {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
+func (g *Float64Gauge) Set(ctx context.Context, value float64, labels ...core.KeyValue) {
 	g.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
@@ -98,7 +98,7 @@ func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) 
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
+func (g *Int64Gauge) Set(ctx context.Context, value int64, labels ...core.KeyValue) {
 	g.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 

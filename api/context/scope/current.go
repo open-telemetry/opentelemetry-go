@@ -17,6 +17,8 @@ package scope
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/internal"
 )
 
@@ -25,5 +27,13 @@ func ContextWithScope(ctx context.Context, sc Scope) context.Context {
 }
 
 func Current(ctx context.Context) Scope {
+	impl := internal.ScopeImpl(ctx)
+	if impl == nil {
+		return Empty()
+	}
 	return Scope{internal.ScopeImpl(ctx).(*scopeImpl)}
+}
+
+func Labels(ctx context.Context, labels ...core.KeyValue) label.Set {
+	return Current(ctx).AddResources(labels...).Resources()
 }

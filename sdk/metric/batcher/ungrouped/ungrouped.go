@@ -17,14 +17,16 @@ package ungrouped // import "go.opentelemetry.io/otel/sdk/metric/batcher/ungroup
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 type (
 	Batcher struct {
-		selector export.AggregationSelector
-		batchMap batchMap
-		stateful bool
+		selector     export.AggregationSelector
+		labelEncoder label.Encoder
+		batchMap     batchMap
+		stateful     bool
 	}
 
 	batchKey struct {
@@ -34,7 +36,7 @@ type (
 
 	batchValue struct {
 		aggregator export.Aggregator
-		labels     export.Labels
+		labels     label.Set
 	}
 
 	batchMap map[batchKey]batchValue
@@ -43,11 +45,12 @@ type (
 var _ export.Batcher = &Batcher{}
 var _ export.CheckpointSet = batchMap{}
 
-func New(selector export.AggregationSelector, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, labelEncoder label.Encoder, stateful bool) *Batcher {
 	return &Batcher{
-		selector: selector,
-		batchMap: batchMap{},
-		stateful: stateful,
+		selector:     selector,
+		labelEncoder: labelEncoder,
+		batchMap:     batchMap{},
+		stateful:     stateful,
 	}
 }
 
@@ -59,7 +62,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	desc := record.Descriptor()
 	key := batchKey{
 		descriptor: desc,
-		encoded:    record.Labels().Encoded(),
+		encoded:    record.Labels().Encoded(b.labelEncoder),
 	}
 	agg := record.Aggregator()
 	value, ok := b.batchMap[key]

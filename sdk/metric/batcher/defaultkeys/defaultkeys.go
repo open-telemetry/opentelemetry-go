@@ -17,6 +17,7 @@ package defaultkeys // import "go.opentelemetry.io/otel/sdk/metric/batcher/defau
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
@@ -104,7 +105,8 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 
 	// Compute an encoded lookup key.
-	encoded := b.labelEncoder.Encode(outputLabels)
+	labelSet := label.NewSet(outputLabels...)
+	encoded := labelSet.Encoded(b.labelEncoder)
 
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.
@@ -134,7 +136,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 	b.aggCheckpoint[key] = export.NewRecord(
 		desc,
-		export.NewLabels(outputLabels, encoded, b.labelEncoder),
+		labelSet,
 		agg,
 	)
 	return nil
