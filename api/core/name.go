@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package core
 
-import (
-	"testing"
+type Namespace string
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
-
-var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}
-
-func basicTracer(t *testing.T) *sdktrace.Tracer {
-	tr, err := sdktrace.NewTracer(sdktrace.WithConfig(testConfig))
-	if err != nil {
-		t.Fatalf("failed to create provider, err: %v\n", err)
+func (n Namespace) Name(base string) Name {
+	return Name{
+		Base:      base,
+		Namespace: n,
 	}
-	return tr
+}
+
+type Name struct {
+	Base      string
+	Namespace Namespace
+}
+
+func (n Name) String() string {
+	if n.Namespace == "" {
+		return n.Base
+	}
+	return n.Base + "/" + string(n.Namespace)
 }

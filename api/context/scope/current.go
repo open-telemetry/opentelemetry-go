@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/internal"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 func ContextWithScope(ctx context.Context, sc Scope) context.Context {
@@ -36,4 +37,12 @@ func Current(ctx context.Context) Scope {
 
 func Labels(ctx context.Context, labels ...core.KeyValue) label.Set {
 	return Current(ctx).AddResources(labels...).Resources()
+}
+
+func UnnamedTracer(ti trace.TracerWithNamespace) trace.Tracer {
+	return Empty().WithTracer(ti).Tracer()
+}
+
+func NamedTracer(ti trace.TracerWithNamespace, ns core.Namespace) trace.Tracer {
+	return Empty().WithTracer(ti).WithNamespace(ns).Tracer()
 }

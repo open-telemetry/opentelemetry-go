@@ -30,6 +30,7 @@ type SamplingParameters struct {
 	ParentContext   core.SpanContext
 	TraceID         core.TraceID
 	SpanID          core.SpanID
+	Namespace       core.Namespace
 	Name            string
 	HasRemoteParent bool
 }

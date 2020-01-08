@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -49,15 +50,16 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
-	tp := basicProvider(t)
+	tri := basicTracer(t)
 	te := testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(&te)
 	if ssp == nil {
 		t.Errorf("Error creating new instance of SimpleSpanProcessor with nil Exporter\n")
 	}
 
-	tp.RegisterSpanProcessor(ssp)
-	tr := tp.Tracer("SimpleSpanProcessor")
+	tri.RegisterSpanProcessor(ssp)
+	tr := scope.UnnamedTracer(tri)
+
 	tid, _ := core.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := core.SpanIDFromHex("0102040810203040")
 	sc := core.SpanContext{

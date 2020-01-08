@@ -17,14 +17,13 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
-var _ apitrace.Tracer = &Tracer{}
+var _ apitrace.TracerWithNamespace = &Tracer{}
 
-func (tr *Tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
+func (tr *Tracer) Start(ctx context.Context, name core.Name, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig
 	var parent core.SpanContext
 	var remoteParent bool
@@ -48,8 +47,7 @@ func (tr *Tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		parent = p.spanContext
 	}
 
-	namespace := scope.Current(ctx).Namespace()
-	span := startSpanInternal(tr, name, namespace, parent, remoteParent, opts)
+	span := startSpanInternal(tr, name, parent, remoteParent, opts)
 	for _, l := range opts.Links {
 		span.addLink(l)
 	}
@@ -64,12 +62,12 @@ func (tr *Tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		}
 	}
 
-	ctx, end := startExecutionTracerTask(ctx, name)
+	ctx, end := startExecutionTracerTask(ctx, name.Base)
 	span.executionTracerTaskEnd = end
 	return apitrace.ContextWithSpan(ctx, span), span
 }
 
-func (tr *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
+func (tr *Tracer) WithSpan(ctx context.Context, name core.Name, body func(ctx context.Context) error) error {
 	ctx, span := tr.Start(ctx, name)
 	defer span.End()
 

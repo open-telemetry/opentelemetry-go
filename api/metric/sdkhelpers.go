@@ -20,6 +20,30 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
+type MeterWithNamespace interface {
+	// NewInt64Counter creates a new integral counter with a given
+	// name and customized with passed options.
+	NewInt64Counter(name core.Name, cos ...CounterOptionApplier) Int64Counter
+	// NewFloat64Counter creates a new floating point counter with
+	// a given name and customized with passed options.
+	NewFloat64Counter(name core.Name, cos ...CounterOptionApplier) Float64Counter
+	// NewInt64Gauge creates a new integral gauge with a given
+	// name and customized with passed options.
+	NewInt64Gauge(name core.Name, gos ...GaugeOptionApplier) Int64Gauge
+	// NewFloat64Gauge creates a new floating point gauge with a
+	// given name and customized with passed options.
+	NewFloat64Gauge(name core.Name, gos ...GaugeOptionApplier) Float64Gauge
+	// NewInt64Measure creates a new integral measure with a given
+	// name and customized with passed options.
+	NewInt64Measure(name core.Name, mos ...MeasureOptionApplier) Int64Measure
+	// NewFloat64Measure creates a new floating point measure with
+	// a given name and customized with passed options.
+	NewFloat64Measure(name core.Name, mos ...MeasureOptionApplier) Float64Measure
+
+	// RecordBatch atomically records a batch of measurements.
+	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
+}
+
 // InstrumentImpl is the implementation-level interface Set/Add/Record
 // individual metrics without precomputed labels.
 type InstrumentImpl interface {

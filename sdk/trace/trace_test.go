@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/testharness"
@@ -45,13 +46,13 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	tp, err := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
+	tr, err := NewTracer(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
 	if err != nil {
 		t.Fatalf("failed to create provider, err: %v\n", err)
 	}
 	harness := testharness.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
-		return tp.Tracer("")
+		return scope.Empty().WithTracer(tr).Tracer()
 	}
 
 	harness.TestTracer(subjectFactory)
@@ -70,9 +71,11 @@ func TestSetName(t *testing.T) {
 	fooSampler := Sampler(func(p SamplingParameters) SamplingDecision {
 		samplerIsCalled = true
 		t.Logf("called sampler for name %q", p.Name)
-		return SamplingDecision{Sample: strings.HasPrefix(p.Name, "SetName/foo")}
+		return SamplingDecision{
+			Sample: p.Namespace == "SetName" && strings.HasPrefix(p.Name, "foo"),
+		}
 	})
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
+	tr, _ := NewTracer(WithConfig(Config{DefaultSampler: fooSampler}))
 
 	type testCase struct {
 		name          string
@@ -106,7 +109,7 @@ func TestSetName(t *testing.T) {
 			sampledAfter:  true,
 		},
 	} {
-		span := startNamedSpan(tp, "SetName", tt.name)
+		span := startNamedSpan(tr, "SetName", tt.name)
 		if !samplerIsCalled {
 			t.Errorf("%d: the sampler was not even called during span creation", idx)
 		}
@@ -127,8 +130,9 @@ func TestSetName(t *testing.T) {
 }
 
 func TestRecordingIsOff(t *testing.T) {
-	tp, _ := NewProvider()
-	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
+	tri, _ := NewTracer()
+	tr := scope.UnnamedTracer(tri)
+	_, span := tr.Start(context.Background(), "StartSpan")
 	defer span.End()
 	if span.IsRecording() == true {
 		t.Error("new span is recording events")
@@ -168,11 +172,11 @@ func TestSampling(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			p, err := NewProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
+			tri, err := NewTracer(WithConfig(Config{DefaultSampler: tc.sampler}))
 			if err != nil {
 				t.Fatal("unexpected error:", err)
 			}
-			tr := p.Tracer("test")
+			tr := scope.UnnamedTracer(tri)
 			var sampled int
 			for i := 0; i < total; i++ {
 				var opts []apitrace.StartOption
@@ -209,8 +213,8 @@ func TestSampling(t *testing.T) {
 }
 
 func TestStartSpanWithChildOf(t *testing.T) {
-	tp, _ := NewProvider()
-	tr := tp.Tracer("SpanWith ChildOf")
+	tri, _ := NewTracer()
+	tr := scope.UnnamedTracer(tri)
 
 	sc1 := core.SpanContext{
 		TraceID:    tid,
@@ -251,8 +255,8 @@ func TestStartSpanWithChildOf(t *testing.T) {
 }
 
 func TestStartSpanWithFollowsFrom(t *testing.T) {
-	tp, _ := NewProvider()
-	tr := tp.Tracer("SpanWith FollowsFrom")
+	tri, _ := NewTracer()
+	tr := scope.UnnamedTracer(tri)
 
 	sc1 := core.SpanContext{
 		TraceID:    tid,
@@ -294,7 +298,7 @@ func TestStartSpanWithFollowsFrom(t *testing.T) {
 
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	tp, _ := NewTracer(WithSyncer(te))
 	span := startSpan(tp,
 		"StartSpanAttribute",
 		apitrace.WithAttributes(key.String("key1", "value1")),
@@ -311,7 +315,8 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         "StartSpanAttribute/span0",
+		Namespace:    "StartSpanAttribute",
+		Name:         "span0",
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 			key.String("key2", "value2"),
@@ -326,7 +331,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 
 func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	tp, _ := NewTracer(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
 	span.SetAttributes(key.New("key1").String("value1"))
 	got, err := endSpan(te, span)
@@ -340,7 +345,8 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         "SpanAttribute/span0",
+		Namespace:    "SpanAttribute",
+		Name:         "span0",
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 		},
@@ -355,7 +361,7 @@ func TestSetSpanAttributes(t *testing.T) {
 func TestSetSpanAttributesOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxAttributesPerSpan: 2}
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp, _ := NewTracer(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
@@ -375,7 +381,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         "SpanAttributesOverLimit/span0",
+		Namespace:    "SpanAttributesOverLimit",
+		Name:         "span0",
 		Attributes: []core.KeyValue{
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
@@ -391,7 +398,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 
 func TestEvents(t *testing.T) {
 	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	tp, _ := NewTracer(WithSyncer(te))
 
 	span := startSpan(tp, "Events")
 	k1v1 := key.New("key1").String("value1")
@@ -420,7 +427,8 @@ func TestEvents(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            "Events/span0",
+		Namespace:       "Events",
+		Name:            "span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
@@ -436,7 +444,7 @@ func TestEvents(t *testing.T) {
 func TestEventsOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxEventsPerSpan: 2}
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp, _ := NewTracer(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
 	k1v1 := key.New("key1").String("value1")
@@ -470,7 +478,8 @@ func TestEventsOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         "EventsOverLimit/span0",
+		Namespace:    "EventsOverLimit",
+		Name:         "span0",
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
@@ -486,7 +495,7 @@ func TestEventsOverLimit(t *testing.T) {
 
 func TestLinks(t *testing.T) {
 	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	tp, _ := NewTracer(WithSyncer(te))
 
 	k1v1 := key.New("key1").String("value1")
 	k2v2 := key.New("key2").String("value2")
@@ -514,7 +523,8 @@ func TestLinks(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            "Links/span0",
+		Namespace:       "Links",
+		Name:            "span0",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
@@ -535,7 +545,7 @@ func TestLinksOverLimit(t *testing.T) {
 	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
 
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp, _ := NewTracer(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
 		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
@@ -557,7 +567,8 @@ func TestLinksOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         "LinksOverLimit/span0",
+		Namespace:    "LinksOverLimit",
+		Name:         "span0",
 		Links: []apitrace.Link{
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
@@ -572,11 +583,14 @@ func TestLinksOverLimit(t *testing.T) {
 }
 
 func TestSetSpanName(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	const pkg = "SetSpanName"
+	const name = "SpanName-1"
 
-	want := "SetSpanName/SpanName-1"
-	_, span := tp.Tracer("SetSpanName").Start(context.Background(), "SpanName-1",
+	te := &testExporter{}
+	tri, _ := NewTracer(WithSyncer(te))
+	tr := scope.NamedTracer(tri, pkg)
+
+	_, span := tr.Start(context.Background(), name,
 		apitrace.ChildOf(core.SpanContext{
 			TraceID:    tid,
 			SpanID:     sid,
@@ -588,14 +602,14 @@ func TestSetSpanName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got.Name != want {
-		t.Errorf("span.Name: got %q; want %q", got.Name, want)
+	if got.Name != name && got.Namespace == pkg {
+		t.Errorf("span.Name: got %q/%q; want %q/%q", got.Namespace, got.Name, pkg, name)
 	}
 }
 
 func TestSetSpanStatus(t *testing.T) {
 	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	tp, _ := NewTracer(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
 	span.SetStatus(codes.Canceled)
@@ -610,7 +624,8 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            "SpanStatus/span0",
+		Namespace:       "SpanStatus",
+		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
@@ -657,17 +672,17 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitrace.Span {
-	return startNamedSpan(tp, trName, "span0", args...)
+func startSpan(tr *Tracer, trName core.Namespace, args ...apitrace.StartOption) apitrace.Span {
+	return startNamedSpan(tr, trName, "span0", args...)
 }
 
 // startNamed Span is a test utility func that starts a span with a
 // passed name and with ChildOf option.  remote span context contains
 // TraceFlags with sampled bit set. This allows the span to be
 // automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
+func startNamedSpan(tri *Tracer, trName core.Namespace, name string, args ...apitrace.StartOption) apitrace.Span {
 	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
-	_, span := tp.Tracer(trName).Start(
+	_, span := scope.NamedTracer(tri, trName).Start(
 		context.Background(),
 		name,
 		args...,
@@ -721,12 +736,12 @@ func checkTime(x *time.Time) bool {
 type fakeExporter map[string]*export.SpanData
 
 func (f fakeExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	f[s.Name] = s
+	f[string(s.Namespace)+"/"+s.Name] = s
 }
 
 func TestEndSpanTwice(t *testing.T) {
 	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithSyncer(spans))
+	tp, _ := NewTracer(WithSyncer(spans))
 
 	span := startSpan(tp, "EndSpanTwice")
 	span.End()
@@ -738,9 +753,9 @@ func TestEndSpanTwice(t *testing.T) {
 
 func TestStartSpanAfterEnd(t *testing.T) {
 	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	tri, _ := NewTracer(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	tr := scope.NamedTracer(tri, "SpanAfterEnd")
 
-	tr := tp.Tracer("SpanAfterEnd")
 	ctx, span0 := tr.Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
@@ -768,9 +783,10 @@ func TestStartSpanAfterEnd(t *testing.T) {
 
 func TestChildSpanCount(t *testing.T) {
 	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
 
-	tr := tp.Tracer("ChidSpanCount")
+	tri, _ := NewTracer(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	tr := scope.NamedTracer(tri, "ChildSpanCount")
+
 	ctx, span0 := tr.Start(context.Background(), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	_, span2 := tr.Start(ctx1, "span-2")
@@ -783,16 +799,16 @@ func TestChildSpanCount(t *testing.T) {
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
-	if got, want := spans["ChidSpanCount/span-3"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount/span-3"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-3.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChidSpanCount/span-2"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount/span-2"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-2.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChidSpanCount/span-1"].ChildSpanCount, 1; got != want {
+	if got, want := spans["ChildSpanCount/span-1"].ChildSpanCount, 1; got != want {
 		t.Errorf("span-1.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChidSpanCount/parent"].ChildSpanCount, 2; got != want {
+	if got, want := spans["ChildSpanCount/parent"].ChildSpanCount, 2; got != want {
 		t.Errorf("parent.ChildSpanCount=%q; want %q", got, want)
 	}
 }
@@ -804,8 +820,8 @@ func TestNilSpanEnd(t *testing.T) {
 
 func TestExecutionTracerTaskEnd(t *testing.T) {
 	var n uint64
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
-	tr := tp.Tracer("Execution Tracer Task End")
+	tri, _ := NewTracer(WithConfig(Config{DefaultSampler: NeverSample()}))
+	tr := scope.NamedTracer(tri, "Execution Tracer Task End")
 
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
@@ -852,11 +868,12 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 
 func TestCustomStartEndTime(t *testing.T) {
 	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tri, _ := NewTracer(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tr := scope.UnnamedTracer(tri)
 
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
-	_, span := tp.Tracer("Custom Start and End time").Start(
+	_, span := tr.Start(
 		context.Background(),
 		"testspan",
 		apitrace.WithStartTime(startTime),
@@ -877,8 +894,8 @@ func TestCustomStartEndTime(t *testing.T) {
 
 func TestWithSpanKind(t *testing.T) {
 	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
-	tr := tp.Tracer("withSpanKind")
+	tri, _ := NewTracer(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tr := scope.NamedTracer(tri, "withSpanKind")
 
 	_, span := tr.Start(context.Background(), "WithoutSpanKind")
 	spanData, err := endSpan(&te, span)

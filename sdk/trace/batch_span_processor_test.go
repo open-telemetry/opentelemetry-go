@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -139,13 +140,13 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
-		tp := basicProvider(t)
+		tri := basicTracer(t)
 		ssp := createAndRegisterBatchSP(t, option, &te)
 		if ssp == nil {
 			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 		}
-		tp.RegisterSpanProcessor(ssp)
-		tr := tp.Tracer("BatchSpanProcessorWithOptions")
+		tri.RegisterSpanProcessor(ssp)
+		tr := scope.UnnamedTracer(tri)
 
 		generateSpan(t, tr, option)
 
@@ -170,7 +171,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		if wantTraceID != gotTraceID {
 			t.Errorf("%s: first exported span: got %+v, want %+v\n", option.name, gotTraceID, wantTraceID)
 		}
-		tp.UnregisterSpanProcessor(ssp)
+		tri.UnregisterSpanProcessor(ssp)
 	}
 }
 

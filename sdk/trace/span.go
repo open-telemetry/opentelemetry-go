@@ -124,7 +124,9 @@ func (s *span) End(options ...apitrace.EndOption) {
 }
 
 func (s *span) Tracer() apitrace.Tracer {
-	return s.tracer
+	// TODO: should return the same-scoped tracer
+	// return s.tracer @@@
+	return nil
 }
 
 func (s *span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
@@ -174,6 +176,7 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
+		namespace:    s.data.Namespace,
 		name:         name,
 		cfg:          s.tracer.config.Load().(*Config),
 		span:         s,
@@ -244,7 +247,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *Tracer, name, namespace string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
+func startSpanInternal(tr *Tracer, name core.Name, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
@@ -260,7 +263,8 @@ func startSpanInternal(tr *Tracer, name, namespace string, parent core.SpanConte
 		noParent:     noParent,
 		remoteParent: remoteParent,
 		parent:       parent,
-		name:         name,
+		namespace:    name.Namespace,
+		name:         name.Base,
 		cfg:          cfg,
 		span:         span,
 	}
@@ -280,8 +284,8 @@ func startSpanInternal(tr *Tracer, name, namespace string, parent core.SpanConte
 		SpanContext:     span.spanContext,
 		StartTime:       startTime,
 		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
-		Name:            name,
-		Namespace:       namespace,
+		Name:            name.Base,
+		Namespace:       name.Namespace,
 		HasRemoteParent: remoteParent,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
@@ -307,6 +311,7 @@ type samplingData struct {
 	noParent     bool
 	remoteParent bool
 	parent       core.SpanContext
+	namespace    core.Namespace
 	name         string
 	cfg          *Config
 	span         *span
@@ -329,6 +334,7 @@ func makeSamplingDecision(data samplingData) {
 			ParentContext:   data.parent,
 			TraceID:         spanContext.TraceID,
 			SpanID:          spanContext.SpanID,
+			Namespace:       data.namespace,
 			Name:            data.name,
 			HasRemoteParent: data.remoteParent}).Sample
 		if sampled {

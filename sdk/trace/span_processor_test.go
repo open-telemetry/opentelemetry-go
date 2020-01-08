@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -41,11 +42,11 @@ func (t *testSpanProcesor) Shutdown() {
 
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
-	tp := basicProvider(t)
+	tri := basicTracer(t)
 	sp := NewTestSpanProcessor()
-	tp.RegisterSpanProcessor(sp)
+	tri.RegisterSpanProcessor(sp)
+	tr := scope.UnnamedTracer(tri)
 
-	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
 	wantCount := 1
@@ -61,14 +62,14 @@ func TestRegisterSpanProcessort(t *testing.T) {
 
 func TestUnregisterSpanProcessor(t *testing.T) {
 	name := "Start span after unregistering span processor"
-	tp := basicProvider(t)
+	tri := basicTracer(t)
 	sp := NewTestSpanProcessor()
-	tp.RegisterSpanProcessor(sp)
+	tri.RegisterSpanProcessor(sp)
+	tr := scope.UnnamedTracer(tri)
 
-	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
-	tp.UnregisterSpanProcessor(sp)
+	tri.UnregisterSpanProcessor(sp)
 
 	// start another span after unregistering span processor.
 	_, span = tr.Start(context.Background(), "Start span after unregister")
@@ -88,13 +89,13 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 
 func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	name := "Unregister span processor while span is active"
-	tp := basicProvider(t)
+	tri := basicTracer(t)
 	sp := NewTestSpanProcessor()
-	tp.RegisterSpanProcessor(sp)
+	tri.RegisterSpanProcessor(sp)
+	tr := scope.UnnamedTracer(tri)
 
-	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
-	tp.UnregisterSpanProcessor(sp)
+	tri.UnregisterSpanProcessor(sp)
 
 	span.End()
 
@@ -113,7 +114,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 
 func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
-	tp := basicProvider(t)
+	tp := basicTracer(t)
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
@@ -131,7 +132,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
-	tp := basicProvider(t)
+	tp := basicTracer(t)
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")

@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -155,7 +156,7 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 	}
 }
 
-func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Tracer)) {
+func traceBenchmark(b *testing.B, name core.Namespace, fn func(*testing.B, apitrace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
 		fn(b, tracer(b, name, sdktrace.AlwaysSample()))
@@ -166,10 +167,10 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Trac
 	})
 }
 
-func tracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
+func tracer(b *testing.B, name core.Namespace, sampler sdktrace.Sampler) apitrace.Tracer {
+	tri, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider for test %s\n", name)
 	}
-	return tp.Tracer(name)
+	return scope.NamedTracer(tri, name)
 }
