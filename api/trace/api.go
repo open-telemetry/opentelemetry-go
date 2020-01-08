@@ -23,12 +23,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type Provider interface {
-	// Tracer creates a named tracer that implements Tracer interface.
-	// If the name is an empty string then provider uses default name.
-	Tracer(name string) Tracer
-}
-
 type Tracer interface {
 	// Start a span.
 	Start(ctx context.Context, spanName string, opts ...StartOption) (context.Context, Span)

@@ -29,6 +29,7 @@ type (
 	}
 
 	scopeImpl struct {
+		namespace   string
 		resources   label.Set
 		provider    *Provider
 		scopeTracer scopeTracer
@@ -47,10 +48,6 @@ type (
 		tracer trace.Tracer
 		meter  metric.Meter
 	}
-)
-
-const (
-	namespaceKey core.Key = "$namespace"
 )
 
 var (
@@ -121,7 +118,7 @@ func (s Scope) AddResources(kvs ...core.KeyValue) Scope {
 
 func (s Scope) WithNamespace(name string) Scope {
 	r := s.clone()
-	r.resources = r.resources.AddOne(namespaceKey.String(name))
+	r.namespace = name
 	return r
 }
 
@@ -151,9 +148,11 @@ func (s Scope) Resources() label.Set {
 	return s.resources
 }
 
-func (s Scope) Name() string {
-	val, _ := s.Resources().Value(namespaceKey)
-	return val.AsString()
+func (s Scope) Namespace() string {
+	if s.scopeImpl == nil {
+		return ""
+	}
+	return s.namespace
 }
 
 func (s Scope) Tracer() trace.Tracer {
@@ -178,15 +177,6 @@ func (s *scopeImpl) enterScope(ctx context.Context) context.Context {
 	return ContextWithScope(ctx, Scope{s})
 }
 
-func (s *scopeImpl) subname(name string) string {
-	ns, _ := s.resources.Value(namespaceKey)
-	str := ns.AsString()
-	if str == "" {
-		return name
-	}
-	return str + "/" + name
-}
-
 func (s *scopeTracer) Start(
 	ctx context.Context,
 	name string,
@@ -195,7 +185,7 @@ func (s *scopeTracer) Start(
 	if s.scopeImpl == nil {
 		return ctx, trace.NoopSpan{}
 	}
-	return s.provider.Tracer().Start(s.enterScope(ctx), s.subname(name), opts...)
+	return s.provider.Tracer().Start(s.enterScope(ctx), name, opts...)
 }
 
 func (s *scopeTracer) WithSpan(
@@ -206,31 +196,31 @@ func (s *scopeTracer) WithSpan(
 	if s.scopeImpl == nil {
 		return fn(ctx)
 	}
-	return s.provider.Tracer().WithSpan(s.enterScope(ctx), s.subname(name), fn)
+	return s.provider.Tracer().WithSpan(s.enterScope(ctx), name, fn)
 }
 
 func (m *scopeMeter) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) metric.Int64Counter {
-	return m.provider.Meter().NewInt64Counter(m.subname(name), cos...)
+	return m.provider.Meter().NewInt64Counter(name, cos...)
 }
 
 func (m *scopeMeter) NewFloat64Counter(name string, cos ...metric.CounterOptionApplier) metric.Float64Counter {
-	return m.provider.Meter().NewFloat64Counter(m.subname(name), cos...)
+	return m.provider.Meter().NewFloat64Counter(name, cos...)
 }
 
 func (m *scopeMeter) NewInt64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Int64Gauge {
-	return m.provider.Meter().NewInt64Gauge(m.subname(name), gos...)
+	return m.provider.Meter().NewInt64Gauge(name, gos...)
 }
 
 func (m *scopeMeter) NewFloat64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Float64Gauge {
-	return m.provider.Meter().NewFloat64Gauge(m.subname(name), gos...)
+	return m.provider.Meter().NewFloat64Gauge(name, gos...)
 }
 
 func (m *scopeMeter) NewInt64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Int64Measure {
-	return m.provider.Meter().NewInt64Measure(m.subname(name), mos...)
+	return m.provider.Meter().NewInt64Measure(name, mos...)
 }
 
 func (m *scopeMeter) NewFloat64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Float64Measure {
-	return m.provider.Meter().NewFloat64Measure(m.subname(name), mos...)
+	return m.provider.Meter().NewFloat64Measure(name, mos...)
 }
 
 func (m *scopeMeter) RecordBatch(ctx context.Context, labels []core.KeyValue, ms ...metric.Measurement) {

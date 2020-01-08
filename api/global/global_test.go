@@ -17,50 +17,29 @@ package global_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-type (
-	testTraceProvider struct{}
-	testMeterProvider struct{}
-)
+func TestMulitpleGlobalSetScope(t *testing.T) {
 
-var (
-	_ trace.Provider  = &testTraceProvider{}
-	_ metric.Provider = &testMeterProvider{}
-)
+	s1 := scope.Empty().WithTracer(trace.NoopTracer{}).WithMeter(metric.NoopMeter{})
+	s2 := scope.Empty().WithTracer(trace.NoopTracer{}).WithMeter(metric.NoopMeter{})
 
-func (*testTraceProvider) Tracer(_ string) trace.Tracer {
-	return &trace.NoopTracer{}
-}
-
-func (*testMeterProvider) Meter(_ string) metric.Meter {
-	return &metric.NoopMeter{}
-}
-
-func TestMulitpleGlobalTracerProvider(t *testing.T) {
-	p1 := testTraceProvider{}
-	p2 := trace.NoopProvider{}
-	global.SetTraceProvider(&p1)
-	global.SetTraceProvider(&p2)
-
-	got := global.TraceProvider()
-	want := &p2
-	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	if s1.Provider() == s2.Provider() {
+		t.Fatal("impossible test condition")
 	}
-}
 
-func TestMulitpleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := metric.NoopProvider{}
-	global.SetMeterProvider(&p1)
-	global.SetMeterProvider(&p2)
+	global.SetScope(s1)
 
-	got := global.MeterProvider()
-	want := &p2
+	defer func() { _ = recover() }()
+
+	global.SetScope(s2)
+
+	got := global.Scope().Provider()
+	want := s1.Provider()
 	if got != want {
 		t.Fatalf("Provider: got %p, want %p\n", got, want)
 	}

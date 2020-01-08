@@ -53,7 +53,7 @@ type span struct {
 	endOnce sync.Once
 
 	executionTracerTaskEnd func()  // ends the execution tracer span
-	tracer                 *tracer // tracer used to create span.
+	tracer                 *Tracer // tracer used to create span.
 }
 
 var _ apitrace.Span = &span{}
@@ -107,7 +107,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 		opt(&opts)
 	}
 	s.endOnce.Do(func() {
-		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
+		sps, _ := s.tracer.spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
@@ -159,8 +159,7 @@ func (s *span) SetName(name string) {
 		// TODO: now what?
 		return
 	}
-	spanName := s.tracer.spanNameWithPrefix(name)
-	s.data.Name = spanName
+	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
 	var ctx core.SpanContext
@@ -175,8 +174,8 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
-		name:         spanName,
-		cfg:          s.tracer.provider.config.Load().(*Config),
+		name:         name,
+		cfg:          s.tracer.config.Load().(*Config),
 		span:         s,
 	}
 	makeSamplingDecision(data)
@@ -245,12 +244,12 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
+func startSpanInternal(tr *Tracer, name, namespace string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
-	cfg := tr.provider.config.Load().(*Config)
+	cfg := tr.config.Load().(*Config)
 
 	if parent == core.EmptySpanContext() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
@@ -282,6 +281,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		StartTime:       startTime,
 		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
 		Name:            name,
+		Namespace:       namespace,
 		HasRemoteParent: remoteParent,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)

@@ -34,5 +34,8 @@ func SetScopeImpl(ctx context.Context, si interface{}) context.Context {
 }
 
 func ScopeImpl(ctx context.Context) interface{} {
+	if ctx == nil {
+		return nil
+	}
 	return ctx.Value(currentScopeKey)
 }

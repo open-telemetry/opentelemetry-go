@@ -87,28 +87,10 @@ func (h *Handle) Unbind() {
 }
 
 func doRecordBatch(ctx context.Context, labelSet label.Set, instrument *Instrument, number core.Number) {
-	instrument.meter.recordMockBatch(ctx, labelSet, Measurement{
+	instrument.Meter.recordMockBatch(ctx, labelSet, Measurement{
 		Instrument: instrument,
 		Number:     number,
 	})
-}
-
-func NewProvider() *MeterProvider {
-	return &MeterProvider{
-		registered: map[string]*Meter{},
-	}
-}
-
-func (p *MeterProvider) Meter(name string) apimetric.Meter {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	if lookup, ok := p.registered[name]; ok {
-		return lookup
-	}
-	m := NewMeter()
-	p.registered[name] = m
-	return m
 }
 
 func NewMeter() *Meter {
@@ -151,6 +133,7 @@ func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos 
 	opts := apimetric.Options{}
 	apimetric.ApplyGaugeOptions(&opts, gos...)
 	return &Instrument{
+		Meter:      m,
 		Name:       name,
 		Kind:       KindGauge,
 		NumberKind: numberKind,
@@ -172,6 +155,7 @@ func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mo
 	opts := apimetric.Options{}
 	apimetric.ApplyMeasureOptions(&opts, mos...)
 	return &Instrument{
+		Meter:      m,
 		Name:       name,
 		Kind:       KindMeasure,
 		NumberKind: numberKind,
@@ -179,8 +163,7 @@ func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mo
 	}
 }
 
-func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
-	ourLabelSet := labels.(*LabelSet)
+func (m *Meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...apimetric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -189,13 +172,12 @@ func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, meas
 			Number:     m.Number(),
 		}
 	}
-	m.recordMockBatch(ctx, ourLabelSet, mm...)
+	m.recordMockBatch(ctx, scope.Labels(ctx, labels...), mm...)
 }
 
-func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measurements ...Measurement) {
+func (m *Meter) recordMockBatch(ctx context.Context, labels label.Set, measurements ...Measurement) {
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
-		Ctx:          ctx,
-		LabelSet:     labelSet,
+		Labels:       labels,
 		Measurements: measurements,
 	})
 }

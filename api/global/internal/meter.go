@@ -56,8 +56,6 @@ type meter struct {
 
 type tracer struct {
 	deferred *deferred
-
-	trace.NoopTracer
 }
 
 type instImpl struct {
@@ -181,6 +179,7 @@ func (inst *instImpl) Bind(ctx context.Context, labels []core.KeyValue) metric.B
 		return (*implPtr).Bind(ctx, labels)
 	}
 	return &instBound{
+		ctx:    ctx,
 		inst:   inst,
 		labels: labels,
 	}
@@ -202,7 +201,7 @@ func (bound *instBound) Unbind() {
 
 func (m *meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
 	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&m.deferred.delegate)); delegatePtr != nil {
-		(*delegatePtr).Meter().RecordBatch(ctx, labels, measurements...)
+		(*delegatePtr).Provider().Meter().RecordBatch(ctx, labels, measurements...)
 	}
 }
 
@@ -255,4 +254,24 @@ func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier
 
 func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
+}
+
+// Tracer interface
+
+func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
+	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&t.deferred.delegate)); delegatePtr != nil {
+		return (*delegatePtr).Provider().Tracer().Start(ctx, name, opts...)
+	}
+	return ctx, trace.NoopSpan{}
+}
+
+func (t *tracer) WithSpan(
+	ctx context.Context,
+	name string,
+	fn func(ctx context.Context) error,
+) error {
+	if delegatePtr := (*scope.Scope)(atomic.LoadPointer(&t.deferred.delegate)); delegatePtr != nil {
+		return (*delegatePtr).Provider().Tracer().WithSpan(ctx, name, fn)
+	}
+	return fn(ctx)
 }

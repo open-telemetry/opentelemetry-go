@@ -109,23 +109,6 @@ func NewRawExporter(config Config) (*Exporter, error) {
 	}, nil
 }
 
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-// pipeline, err := stdout.InstallNewPipeline(stdout.Config{...})
-// if err != nil {
-// 	...
-// }
-// defer pipeline.Stop()
-// ... Done
-// func InstallNewPipeline(config Config) (*push.Controller, error) {
-// 	controller, err := NewExportPipeline(config)
-// 	if err != nil {
-// 		return controller, err
-// 	}
-// 	global.SetMeterProvider(controller)
-// 	return controller, err
-// }
-
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
 func NewExportPipeline(config Config) (*push.Controller, error) {

@@ -19,8 +19,6 @@ import (
 	"sync/atomic"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
-
-	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -33,37 +31,32 @@ type batcher struct {
 	opts []BatchSpanProcessorOption
 }
 
-// ProviderOptions
-type ProviderOptions struct {
+// TracerOptions
+type TracerOptions struct {
 	syncers  []export.SpanSyncer
 	batchers []batcher
 	config   Config
 }
 
-type ProviderOption func(*ProviderOptions)
+type TracerOption func(*TracerOptions)
 
-type Provider struct {
+type Tracer struct {
 	mu             sync.Mutex
-	namedTracer    map[string]*tracer
 	spanProcessors atomic.Value
 	config         atomic.Value // access atomically
 }
 
-var _ apitrace.Provider = &Provider{}
-
-// NewProvider creates an instance of trace provider. Optional
+// NewTracer creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
 // to all tracer instances that will be created by this provider.
-func NewProvider(opts ...ProviderOption) (*Provider, error) {
-	o := &ProviderOptions{}
+func NewTracer(opts ...TracerOption) (*Tracer, error) {
+	o := &TracerOptions{}
 
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	tp := &Provider{
-		namedTracer: make(map[string]*tracer),
-	}
+	tp := &Tracer{}
 	tp.config.Store(&Config{
 		DefaultSampler:       ProbabilitySampler(defaultSamplingProbability),
 		IDGenerator:          defIDGenerator(),
@@ -90,24 +83,8 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 	return tp, nil
 }
 
-// Tracer with the given name. If a tracer for the given name does not exist,
-// it is created first. If the name is empty, DefaultTracerName is used.
-func (p *Provider) Tracer(name string) apitrace.Tracer {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if name == "" {
-		name = defaultTracerName
-	}
-	t, ok := p.namedTracer[name]
-	if !ok {
-		t = &tracer{name: name, provider: p}
-		p.namedTracer[name] = t
-	}
-	return t
-}
-
 // RegisterSpanProcessor adds the given SpanProcessor to the list of SpanProcessors
-func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
+func (p *Tracer) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	new := make(spanProcessorMap)
@@ -121,7 +98,7 @@ func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 }
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors
-func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
+func (p *Tracer) UnregisterSpanProcessor(s SpanProcessor) {
 	mu.Lock()
 	defer mu.Unlock()
 	new := make(spanProcessorMap)
@@ -141,7 +118,7 @@ func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
 
 // ApplyConfig changes the configuration of the provider.
 // If a field in the configuration is empty or nil then its original value is preserved.
-func (p *Provider) ApplyConfig(cfg Config) {
+func (p *Tracer) ApplyConfig(cfg Config) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	c := *p.config.Load().(*Config)
@@ -167,8 +144,8 @@ func (p *Provider) ApplyConfig(cfg Config) {
 // This option can be used multiple times.
 // The Syncers are wrapped into SimpleSpanProcessors and registered
 // with the provider.
-func WithSyncer(syncer export.SpanSyncer) ProviderOption {
-	return func(opts *ProviderOptions) {
+func WithSyncer(syncer export.SpanSyncer) TracerOption {
+	return func(opts *TracerOptions) {
 		opts.syncers = append(opts.syncers, syncer)
 	}
 }
@@ -177,15 +154,15 @@ func WithSyncer(syncer export.SpanSyncer) ProviderOption {
 // This option can be used multiple times.
 // The Batchers are wrapped into BatchedSpanProcessors and registered
 // with the provider.
-func WithBatcher(b export.SpanBatcher, bopts ...BatchSpanProcessorOption) ProviderOption {
-	return func(opts *ProviderOptions) {
+func WithBatcher(b export.SpanBatcher, bopts ...BatchSpanProcessorOption) TracerOption {
+	return func(opts *TracerOptions) {
 		opts.batchers = append(opts.batchers, batcher{b, bopts})
 	}
 }
 
 // WithConfig option sets the configuration to provider.
-func WithConfig(config Config) ProviderOption {
-	return func(opts *ProviderOptions) {
+func WithConfig(config Config) TracerOption {
+	return func(opts *TracerOptions) {
 		opts.config = config
 	}
 }
