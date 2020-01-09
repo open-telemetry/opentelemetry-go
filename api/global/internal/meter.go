@@ -102,20 +102,6 @@ func (d *deferred) setDelegate(sc scope.Scope) {
 	d.meter.setDelegate(sc)
 }
 
-// func (d *deferred) Tracer() trace.Tracer {
-// 	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
-// 		return (*implPtr).Tracer()
-// 	}
-// 	return &d.tracer
-// }
-
-// func (d *deferred) Meter() metric.Meter {
-// 	if implPtr := (*scope.Scope)(atomic.LoadPointer(&d.delegate)); implPtr != nil {
-// 		return (*implPtr).Meter()
-// 	}
-// 	return &d.meter
-// }
-
 // Meter interface
 
 func (m *meter) setDelegate(sc scope.Scope) {
