@@ -15,6 +15,7 @@
 package opentracing
 
 import (
+	"go.opentelemetry.io/otel/api/context/scope"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -24,9 +25,9 @@ import (
 // that wraps the passed tracer. BridgeTracer and WrapperProvider are returned to
 // the caller and the caller is expected to register BridgeTracer with opentracing and
 // WrapperProvider with opentelemetry.
-func NewTracerPair(tracer oteltrace.Tracer) (*BridgeTracer, *WrapperProvider) {
+func NewTracerPair(tracer oteltrace.TracerWithNamespace) (*BridgeTracer, *WrapperTracer) {
 	bridgeTracer := NewBridgeTracer()
-	wrapperProvider := NewWrappedProvider(bridgeTracer, tracer)
-	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.Tracer(""))
-	return bridgeTracer, wrapperProvider
+	wrapperTracer := NewWrapperTracer(bridgeTracer, tracer)
+	bridgeTracer.SetOpenTelemetryTracer(scope.UnnamedTracer(wrapperTracer))
+	return bridgeTracer, wrapperTracer
 }

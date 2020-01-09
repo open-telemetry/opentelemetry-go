@@ -13,14 +13,12 @@
 // limitations under the License.
 
 // TODO
-// 0. Fix remaining tests
+
 // 1. Add back sugar
 // 2. Make lib/ver obligatory (let namespace be namespace)
 // 3. Fix examples
 // 4. New examples
-//
-// 3. Comments
-// 4. OTEP draft?
+// ..
 
 package scope
 
@@ -179,6 +177,20 @@ func (s Scope) Meter() metric.Meter {
 	return &s.scopeMeter
 }
 
+func (s *scopeImpl) tracer() trace.TracerWithNamespace {
+	if s == nil {
+		return trace.NoopTracerWithNamespace{}
+	}
+	return s.provider.Tracer()
+}
+
+func (s *scopeImpl) meter() metric.MeterWithNamespace {
+	if s == nil {
+		return metric.NoopMeterWithNamespace{}
+	}
+	return s.provider.Meter()
+}
+
 func (s *scopeImpl) enterScope(ctx context.Context) context.Context {
 	o := Current(ctx)
 	if o.scopeImpl == s {
@@ -199,10 +211,7 @@ func (t *scopeTracer) Start(
 	name string,
 	opts ...trace.StartOption,
 ) (context.Context, trace.Span) {
-	if t.scopeImpl == nil {
-		return ctx, trace.NoopSpan{}
-	}
-	return t.provider.Tracer().Start(t.enterScope(ctx), t.name(name), opts...)
+	return t.tracer().Start(t.enterScope(ctx), t.name(name), opts...)
 }
 
 func (t *scopeTracer) WithSpan(
@@ -210,36 +219,33 @@ func (t *scopeTracer) WithSpan(
 	name string,
 	fn func(ctx context.Context) error,
 ) error {
-	if t.scopeImpl == nil {
-		return fn(ctx)
-	}
-	return t.provider.Tracer().WithSpan(t.enterScope(ctx), t.name(name), fn)
+	return t.tracer().WithSpan(t.enterScope(ctx), t.name(name), fn)
 }
 
 func (m *scopeMeter) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) metric.Int64Counter {
-	return m.provider.Meter().NewInt64Counter(m.name(name), cos...)
+	return m.meter().NewInt64Counter(m.name(name), cos...)
 }
 
 func (m *scopeMeter) NewFloat64Counter(name string, cos ...metric.CounterOptionApplier) metric.Float64Counter {
-	return m.provider.Meter().NewFloat64Counter(m.name(name), cos...)
+	return m.meter().NewFloat64Counter(m.name(name), cos...)
 }
 
 func (m *scopeMeter) NewInt64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Int64Gauge {
-	return m.provider.Meter().NewInt64Gauge(m.name(name), gos...)
+	return m.meter().NewInt64Gauge(m.name(name), gos...)
 }
 
 func (m *scopeMeter) NewFloat64Gauge(name string, gos ...metric.GaugeOptionApplier) metric.Float64Gauge {
-	return m.provider.Meter().NewFloat64Gauge(m.name(name), gos...)
+	return m.meter().NewFloat64Gauge(m.name(name), gos...)
 }
 
 func (m *scopeMeter) NewInt64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Int64Measure {
-	return m.provider.Meter().NewInt64Measure(m.name(name), mos...)
+	return m.meter().NewInt64Measure(m.name(name), mos...)
 }
 
 func (m *scopeMeter) NewFloat64Measure(name string, mos ...metric.MeasureOptionApplier) metric.Float64Measure {
-	return m.provider.Meter().NewFloat64Measure(m.name(name), mos...)
+	return m.meter().NewFloat64Measure(m.name(name), mos...)
 }
 
 func (m *scopeMeter) RecordBatch(ctx context.Context, labels []core.KeyValue, ms ...metric.Measurement) {
-	m.provider.Meter().RecordBatch(m.enterScope(ctx), labels, ms...)
+	m.meter().RecordBatch(m.enterScope(ctx), labels, ms...)
 }

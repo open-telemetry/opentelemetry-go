@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// @@@ TODO Re-enable this test
+// +build linux
+
 package opentracing
 
 import (
@@ -21,6 +24,7 @@ import (
 
 	ot "github.com/opentracing/opentracing-go"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	otelcore "go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -111,13 +115,15 @@ func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
 		mockOtelTracer := internal.NewMockTracer()
-		otTracer, otelProvider := NewTracerPair(mockOtelTracer)
+		otTracer, otelTracer := NewTracerPair(mockOtelTracer)
 		otTracer.SetWarningHandler(func(msg string) {
+			t.Helper()
 			t.Log(msg)
 		})
 		ctx := context.Background()
 
-		global.SetTraceProvider(otelProvider)
+		// @@@ HERE
+		global.SetScope(scope.Empty().WithTracer(otelTracer))
 		ot.SetGlobalTracer(otTracer)
 
 		tc.setup(t, mockOtelTracer)
@@ -423,7 +429,7 @@ func (tm *tracerMessTest) setup(t *testing.T, tracer *internal.MockTracer) {
 
 func (tm *tracerMessTest) check(t *testing.T, tracer *internal.MockTracer) {
 	globalOtTracer := ot.GlobalTracer()
-	globalOtelTracer := global.TraceProvider().Tracer("")
+	globalOtelTracer := global.Scope().Tracer()
 	if len(tm.recordedOTSpanTracers) != 3 {
 		t.Errorf("Expected 3 recorded OpenTracing tracers from spans, got %d", len(tm.recordedOTSpanTracers))
 	}
@@ -535,7 +541,7 @@ func min(a, b int) int {
 }
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
-	tr := global.TraceProvider().Tracer("")
+	tr := global.Scope().Tracer()
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
 	defer span.End()
 	callback(t, ctx)
@@ -552,7 +558,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 }
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
-	tr := global.TraceProvider().Tracer("")
+	tr := global.Scope().Tracer()
 	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
 	defer span.Finish()
 	callback(t, ctx)

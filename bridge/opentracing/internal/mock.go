@@ -22,6 +22,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
+	"go.opentelemetry.io/otel/api/core"
 	otelcore "go.opentelemetry.io/otel/api/core"
 	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
 	otelkey "go.opentelemetry.io/otel/api/key"
@@ -54,7 +56,7 @@ type MockTracer struct {
 	rand     *rand.Rand
 }
 
-var _ oteltrace.Tracer = &MockTracer{}
+var _ oteltrace.TracerWithNamespace = &MockTracer{}
 var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
@@ -69,13 +71,13 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (t *MockTracer) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
 	ctx, span := t.Start(ctx, name)
 	defer span.End()
 	return body(ctx)
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
+func (t *MockTracer) Start(ctx context.Context, name core.Name, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
 	spanOpts := oteltrace.StartConfig{}
 	for _, opt := range opts {
 		opt(&spanOpts)
@@ -90,8 +92,9 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		TraceFlags: 0,
 	}
 	span := &MockSpan{
+		Name:           name,
 		mockTracer:     t,
-		officialTracer: t,
+		officialTracer: scope.NamedTracer(t, name.Namespace),
 		spanContext:    spanContext,
 		recording:      spanOpts.Record,
 		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
@@ -200,6 +203,7 @@ type MockEvent struct {
 }
 
 type MockSpan struct {
+	Name           core.Name
 	mockTracer     *MockTracer
 	officialTracer oteltrace.Tracer
 	spanContext    otelcore.SpanContext

@@ -17,29 +17,31 @@ package opentracing
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/scope"
+	"go.opentelemetry.io/otel/api/core"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
-type WrapperProvider struct {
-	wTracer *WrapperTracer
-}
+// type WrapperProvider struct {
+// 	wTracer *WrapperTracer
+// }
 
-var _ oteltrace.Provider = (*WrapperProvider)(nil)
+// var _ oteltrace.Provider = (*WrapperProvider)(nil)
 
-// Tracer returns the WrapperTracer associated with the WrapperProvider.
-func (p *WrapperProvider) Tracer(name string) oteltrace.Tracer {
-	return p.wTracer
-}
+// // Tracer returns the WrapperTracer associated with the WrapperProvider.
+// func (p *WrapperProvider) Tracer(name string) oteltrace.Tracer {
+// 	return p.wTracer
+// }
 
-// NewWrappedProvider creates a new trace provider that creates a single
-// instance of WrapperTracer that wraps OpenTelemetry tracer.
-func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperProvider {
-	return &WrapperProvider{
-		wTracer: NewWrapperTracer(bridge, tracer),
-	}
-}
+// // NewWrappedProvider creates a new trace provider that creates a single
+// // instance of WrapperTracer that wraps OpenTelemetry tracer.
+// func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperProvider {
+// 	return &WrapperProvider{
+// 		wTracer: NewWrapperTracer(bridge, tracer),
+// 	}
+// }
 
 // WrapperTracer is a wrapper around an OpenTelemetry tracer. It
 // mostly forwards the calls to the wrapped tracer, but also does some
@@ -51,34 +53,34 @@ func NewWrappedProvider(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperP
 // used.
 type WrapperTracer struct {
 	bridge *BridgeTracer
-	tracer oteltrace.Tracer
+	tracer oteltrace.TracerWithNamespace
 }
 
-var _ oteltrace.Tracer = &WrapperTracer{}
+var _ oteltrace.TracerWithNamespace = &WrapperTracer{}
 var _ migration.DeferredContextSetupTracerExtension = &WrapperTracer{}
 
 // NewWrapperTracer wraps the passed tracer and also talks to the
 // passed bridge tracer when setting up the context with the new
 // active OpenTracing span.
-func NewWrapperTracer(bridge *BridgeTracer, tracer oteltrace.Tracer) *WrapperTracer {
+func NewWrapperTracer(bridge *BridgeTracer, tracer oteltrace.TracerWithNamespace) *WrapperTracer {
 	return &WrapperTracer{
 		bridge: bridge,
 		tracer: tracer,
 	}
 }
 
-func (t *WrapperTracer) otelTracer() oteltrace.Tracer {
+func (t *WrapperTracer) otelTracer() oteltrace.TracerWithNamespace {
 	return t.tracer
 }
 
 // WithSpan forwards the call to the wrapped tracer with a modified
 // body callback, which sets the active OpenTracing span before
 // calling the original callback.
-func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (t *WrapperTracer) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
 	return t.otelTracer().WithSpan(ctx, name, func(ctx context.Context) error {
 		span := oteltrace.SpanFromContext(ctx)
 		if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
-			spanWithExtension.OverrideTracer(t)
+			spanWithExtension.OverrideTracer(scope.NamedTracer(t, name.Namespace))
 		}
 		ctx = t.bridge.ContextWithBridgeSpan(ctx, span)
 		return body(ctx)
@@ -88,10 +90,10 @@ func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(con
 // Start forwards the call to the wrapped tracer. It also tries to
 // override the tracer of the returned span if the span implements the
 // OverrideTracerSpanExtension interface.
-func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
+func (t *WrapperTracer) Start(ctx context.Context, name core.Name, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
 	ctx, span := t.otelTracer().Start(ctx, name, opts...)
 	if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
-		spanWithExtension.OverrideTracer(t)
+		spanWithExtension.OverrideTracer(scope.NamedTracer(t, name.Namespace))
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = t.bridge.ContextWithBridgeSpan(ctx, span)
