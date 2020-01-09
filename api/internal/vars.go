@@ -18,11 +18,12 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 var (
-	GlobalScope        *atomic.Value
-	GlobalDelegateOnce sync.Once
+	GlobalScope        = unsafe.Pointer(newAtomicValue())
+	GlobalDelegateOnce = unsafe.Pointer(newSyncOnce())
 )
 
 type currentScopeKeyType struct{}
@@ -38,4 +39,14 @@ func ScopeImpl(ctx context.Context) interface{} {
 		return nil
 	}
 	return ctx.Value(currentScopeKey)
+}
+
+func newAtomicValue() *atomic.Value {
+	av := &atomic.Value{}
+	av.Store(int(1))
+	return av
+}
+
+func newSyncOnce() *sync.Once {
+	return &sync.Once{}
 }

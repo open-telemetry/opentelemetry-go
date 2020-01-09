@@ -15,9 +15,8 @@
 // TODO
 
 // 1. Add back sugar
-// 2. Make lib/ver obligatory (let namespace be namespace)
-// 3. Fix examples
-// 4. New examples
+// 2. Fix examples
+// 3. New examples
 // ..
 
 package scope

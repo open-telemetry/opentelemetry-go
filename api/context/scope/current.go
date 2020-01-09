@@ -16,6 +16,7 @@ package scope
 
 import (
 	"context"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
@@ -31,6 +32,10 @@ func ContextWithScope(ctx context.Context, sc Scope) context.Context {
 func Current(ctx context.Context) Scope {
 	impl := internal.ScopeImpl(ctx)
 	if impl == nil {
+		// If if the global not a Scope, it means the global package was not loaded
+		if sc, ok := (*atomic.Value)(atomic.LoadPointer(&internal.GlobalScope)).Load().(Scope); ok {
+			return sc
+		}
 		return Empty()
 	}
 	return Scope{internal.ScopeImpl(ctx).(*scopeImpl)}

@@ -3,15 +3,10 @@ package internal
 import (
 	"sync"
 	"sync/atomic"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/internal"
-)
-
-type (
-	scopeHolder struct {
-		scope.Scope
-	}
 )
 
 func init() {
@@ -20,13 +15,16 @@ func init() {
 
 // Scope is the internal implementation for global.Scope().
 func Scope() scope.Scope {
-	return internal.GlobalScope.Load().(scopeHolder).Scope
+	if sc, ok := (*atomic.Value)(atomic.LoadPointer(&internal.GlobalScope)).Load().(scope.Scope); ok {
+		return sc
+	}
+	return scope.Empty()
 }
 
 // SetScope is the internal implementation for global.SetScope().
 func SetScope(sc scope.Scope) {
 	first := false
-	internal.GlobalDelegateOnce.Do(func() {
+	(*sync.Once)(atomic.LoadPointer(&internal.GlobalDelegateOnce)).Do(func() {
 		current := Scope()
 		currentProvider := current.Provider()
 		newProvider := sc.Provider()
@@ -47,20 +45,18 @@ func SetScope(sc scope.Scope) {
 	if !first {
 		panic("global scope has already been initialized")
 	}
-	internal.GlobalScope.Store(scopeHolder{Scope: sc})
+	(*atomic.Value)(atomic.LoadPointer(&internal.GlobalScope)).Store(sc)
 }
 
 func defaultScopeValue() *atomic.Value {
 	v := &atomic.Value{}
 	d := newDeferred()
-	v.Store(scopeHolder{
-		Scope: scope.NewProvider(&d.tracer, &d.meter).New(),
-	})
+	v.Store(scope.NewProvider(&d.tracer, &d.meter).New())
 	return v
 }
 
 // ResetForTest restores the initial global state, for testing purposes.
 func ResetForTest() {
-	internal.GlobalScope = defaultScopeValue()
-	internal.GlobalDelegateOnce = sync.Once{}
+	atomic.StorePointer((*unsafe.Pointer)(&internal.GlobalScope), unsafe.Pointer(defaultScopeValue()))
+	atomic.StorePointer((*unsafe.Pointer)(&internal.GlobalDelegateOnce), unsafe.Pointer(&sync.Once{}))
 }
