@@ -38,7 +38,7 @@ type MockTracer struct {
 	Sampled bool
 }
 
-var _ apitrace.TracerWithNamespace = (*MockTracer)(nil)
+var _ apitrace.TracerSDK = (*MockTracer)(nil)
 
 // WithSpan does nothing except executing the body.
 func (mt *MockTracer) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {

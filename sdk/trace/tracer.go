@@ -21,7 +21,7 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
-var _ apitrace.TracerWithNamespace = &Tracer{}
+var _ apitrace.TracerSDK = &Tracer{}
 
 func (tr *Tracer) Start(ctx context.Context, name core.Name, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig

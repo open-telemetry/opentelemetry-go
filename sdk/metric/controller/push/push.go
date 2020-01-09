@@ -107,7 +107,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 }
 
 // Meter returns the Meter.
-func (c *Controller) Meter() metric.MeterWithNamespace {
+func (c *Controller) Meter() metric.MeterSDK {
 	return c.sdk
 }
 

@@ -53,23 +53,23 @@ import (
 // used.
 type WrapperTracer struct {
 	bridge *BridgeTracer
-	tracer oteltrace.TracerWithNamespace
+	tracer oteltrace.TracerSDK
 }
 
-var _ oteltrace.TracerWithNamespace = &WrapperTracer{}
+var _ oteltrace.TracerSDK = &WrapperTracer{}
 var _ migration.DeferredContextSetupTracerExtension = &WrapperTracer{}
 
 // NewWrapperTracer wraps the passed tracer and also talks to the
 // passed bridge tracer when setting up the context with the new
 // active OpenTracing span.
-func NewWrapperTracer(bridge *BridgeTracer, tracer oteltrace.TracerWithNamespace) *WrapperTracer {
+func NewWrapperTracer(bridge *BridgeTracer, tracer oteltrace.TracerSDK) *WrapperTracer {
 	return &WrapperTracer{
 		bridge: bridge,
 		tracer: tracer,
 	}
 }
 
-func (t *WrapperTracer) otelTracer() oteltrace.TracerWithNamespace {
+func (t *WrapperTracer) otelTracer() oteltrace.TracerSDK {
 	return t.tracer
 }
 

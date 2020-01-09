@@ -35,17 +35,17 @@ func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (
 	return ContextWithSpan(ctx, span), span
 }
 
-type NoopTracerWithNamespace struct{}
+type NoopTracerSDK struct{}
 
-var _ TracerWithNamespace = NoopTracerWithNamespace{}
+var _ TracerSDK = NoopTracerSDK{}
 
 // WithSpan wraps around execution of func with noop span.
-func (t NoopTracerWithNamespace) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
+func (t NoopTracerSDK) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
 	return body(ctx)
 }
 
 // Start starts a noop span.
-func (NoopTracerWithNamespace) Start(ctx context.Context, name core.Name, opts ...StartOption) (context.Context, Span) {
+func (NoopTracerSDK) Start(ctx context.Context, name core.Name, opts ...StartOption) (context.Context, Span) {
 	span := NoopSpan{}
 	return ContextWithSpan(ctx, span), span
 }

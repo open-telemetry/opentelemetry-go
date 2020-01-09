@@ -60,7 +60,7 @@ type (
 var (
 	_ apimetric.InstrumentImpl      = &Instrument{}
 	_ apimetric.BoundInstrumentImpl = &Handle{}
-	_ apimetric.MeterWithNamespace  = &Meter{}
+	_ apimetric.MeterSDK            = &Meter{}
 )
 
 const (

@@ -145,7 +145,7 @@ type (
 )
 
 var (
-	_ api.MeterWithNamespace  = &SDK{}
+	_ api.MeterSDK            = &SDK{}
 	_ api.InstrumentImpl      = &instrument{}
 	_ api.BoundInstrumentImpl = &record{}
 
@@ -156,7 +156,7 @@ var (
 	hazardRecord = &record{}
 )
 
-func (i *instrument) Meter() api.MeterWithNamespace {
+func (i *instrument) Meter() api.MeterSDK {
 	return i.meter
 }
 

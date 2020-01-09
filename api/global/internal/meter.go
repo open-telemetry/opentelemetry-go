@@ -78,8 +78,8 @@ type instBound struct {
 	delegate   unsafe.Pointer // (*metric.BoundImpl)
 }
 
-var _ metric.MeterWithNamespace = &meter{}
-var _ trace.TracerWithNamespace = &tracer{}
+var _ metric.MeterSDK = &meter{}
+var _ trace.TracerSDK = &tracer{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instBound{}
 
@@ -144,7 +144,7 @@ func (m *meter) newInst(name core.Name, mkind metricKind, nkind core.NumberKind,
 	return inst
 }
 
-func newInstDelegate(m metric.MeterWithNamespace, name core.Name, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func newInstDelegate(m metric.MeterSDK, name core.Name, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {

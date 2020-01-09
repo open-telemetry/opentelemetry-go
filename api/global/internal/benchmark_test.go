@@ -135,7 +135,7 @@ func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	})
 }
 
-func newTracer(b *testing.B, sampler sdktrace.Sampler) trace.TracerWithNamespace {
+func newTracer(b *testing.B, sampler sdktrace.Sampler) trace.TracerSDK {
 	tpi, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	if err != nil {
 		b.Fatalf("Failed to create trace provider with sampler: %v", err)

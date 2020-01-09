@@ -56,7 +56,7 @@ type MockTracer struct {
 	rand     *rand.Rand
 }
 
-var _ oteltrace.TracerWithNamespace = &MockTracer{}
+var _ oteltrace.TracerSDK = &MockTracer{}
 var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {

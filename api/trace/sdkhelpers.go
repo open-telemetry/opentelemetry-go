@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type TracerWithNamespace interface {
+type TracerSDK interface {
 	// Start a span.
 	Start(ctx context.Context, name core.Name, opts ...StartOption) (context.Context, Span)
 

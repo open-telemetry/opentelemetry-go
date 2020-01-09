@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type MeterWithNamespace interface {
+type MeterSDK interface {
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
 	NewInt64Counter(name core.Name, cos ...CounterOptionApplier) Int64Counter

@@ -40,18 +40,18 @@ func Labels(ctx context.Context, labels ...core.KeyValue) label.Set {
 	return Current(ctx).AddResources(labels...).Resources()
 }
 
-func UnnamedTracer(ti trace.TracerWithNamespace) trace.Tracer {
+func UnnamedTracer(ti trace.TracerSDK) trace.Tracer {
 	return Empty().WithTracer(ti).Tracer()
 }
 
-func NamedTracer(ti trace.TracerWithNamespace, ns core.Namespace) trace.Tracer {
+func NamedTracer(ti trace.TracerSDK, ns core.Namespace) trace.Tracer {
 	return Empty().WithTracer(ti).WithNamespace(ns).Tracer()
 }
 
-func UnnamedMeter(ti metric.MeterWithNamespace) metric.Meter {
+func UnnamedMeter(ti metric.MeterSDK) metric.Meter {
 	return Empty().WithMeter(ti).Meter()
 }
 
-func NamedMeter(ti metric.MeterWithNamespace, ns core.Namespace) metric.Meter {
+func NamedMeter(ti metric.MeterSDK, ns core.Namespace) metric.Meter {
 	return Empty().WithMeter(ti).WithNamespace(ns).Meter()
 }

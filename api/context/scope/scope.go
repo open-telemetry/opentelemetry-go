@@ -53,8 +53,8 @@ type (
 	}
 
 	Provider struct {
-		tracer trace.TracerWithNamespace
-		meter  metric.MeterWithNamespace
+		tracer trace.TracerSDK
+		meter  metric.MeterSDK
 	}
 )
 
@@ -65,18 +65,18 @@ var (
 	nilProvider = &Provider{}
 )
 
-func NewProvider(t trace.TracerWithNamespace, m metric.MeterWithNamespace) *Provider {
+func NewProvider(t trace.TracerSDK, m metric.MeterSDK) *Provider {
 	return &Provider{
 		tracer: t,
 		meter:  m,
 	}
 }
 
-func (p *Provider) Tracer() trace.TracerWithNamespace {
+func (p *Provider) Tracer() trace.TracerSDK {
 	return p.tracer
 }
 
-func (p *Provider) Meter() metric.MeterWithNamespace {
+func (p *Provider) Meter() metric.MeterSDK {
 	return p.meter
 }
 
@@ -130,13 +130,13 @@ func (s Scope) WithNamespace(name core.Namespace) Scope {
 	return r
 }
 
-func (s Scope) WithMeter(meter metric.MeterWithNamespace) Scope {
+func (s Scope) WithMeter(meter metric.MeterSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(r.provider.tracer, meter)
 	return r
 }
 
-func (s Scope) WithTracer(tracer trace.TracerWithNamespace) Scope {
+func (s Scope) WithTracer(tracer trace.TracerSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(tracer, r.provider.meter)
 	return r
@@ -177,16 +177,16 @@ func (s Scope) Meter() metric.Meter {
 	return &s.scopeMeter
 }
 
-func (s *scopeImpl) tracer() trace.TracerWithNamespace {
+func (s *scopeImpl) tracer() trace.TracerSDK {
 	if s == nil {
-		return trace.NoopTracerWithNamespace{}
+		return trace.NoopTracerSDK{}
 	}
 	return s.provider.Tracer()
 }
 
-func (s *scopeImpl) meter() metric.MeterWithNamespace {
+func (s *scopeImpl) meter() metric.MeterSDK {
 	if s == nil {
-		return metric.NoopMeterWithNamespace{}
+		return metric.NoopMeterSDK{}
 	}
 	return s.provider.Meter()
 }

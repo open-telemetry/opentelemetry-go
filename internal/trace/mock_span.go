@@ -28,7 +28,7 @@ import (
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
 	sc     core.SpanContext
-	tracer apitrace.TracerWithNamespace
+	tracer apitrace.TracerSDK
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
