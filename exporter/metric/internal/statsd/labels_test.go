@@ -22,8 +22,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
 var testLabels = []core.KeyValue{
@@ -42,32 +40,4 @@ func TestLabelSyntax(t *testing.T) {
 	}))
 
 	require.Equal(t, "", encoder.Encode(nil))
-}
-
-func TestLabelForceEncode(t *testing.T) {
-	defaultLabelEncoder := sdk.NewDefaultLabelEncoder()
-	statsdLabelEncoder := statsd.NewLabelEncoder()
-
-	exportLabelsDefault := export.NewLabels(testLabels, defaultLabelEncoder.Encode(testLabels), defaultLabelEncoder)
-	exportLabelsStatsd := export.NewLabels(testLabels, statsdLabelEncoder.Encode(testLabels), statsdLabelEncoder)
-
-	statsdEncoding := exportLabelsStatsd.Encoded()
-	require.NotEqual(t, statsdEncoding, exportLabelsDefault.Encoded())
-
-	forced, repeat := statsdLabelEncoder.ForceEncode(exportLabelsDefault)
-	require.Equal(t, statsdEncoding, forced)
-	require.True(t, repeat)
-
-	forced, repeat = statsdLabelEncoder.ForceEncode(exportLabelsStatsd)
-	require.Equal(t, statsdEncoding, forced)
-	require.False(t, repeat)
-
-	// Check that this works for an embedded implementation.
-	exportLabelsEmbed := export.NewLabels(testLabels, statsdEncoding, struct {
-		*statsd.LabelEncoder
-	}{LabelEncoder: statsdLabelEncoder})
-
-	forced, repeat = statsdLabelEncoder.ForceEncode(exportLabelsEmbed)
-	require.Equal(t, statsdEncoding, forced)
-	require.False(t, repeat)
 }

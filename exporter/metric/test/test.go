@@ -12,14 +12,14 @@ import (
 )
 
 type CheckpointSet struct {
-	encoder export.LabelEncoder
+	encoder core.LabelEncoder
 	records map[string]export.Record
 	updates []export.Record
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
 // Records are grouped by their LabelSet.
-func NewCheckpointSet(encoder export.LabelEncoder) *CheckpointSet {
+func NewCheckpointSet(encoder core.LabelEncoder) *CheckpointSet {
 	return &CheckpointSet{
 		encoder: encoder,
 		records: make(map[string]export.Record),

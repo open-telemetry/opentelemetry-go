@@ -21,11 +21,11 @@ type testSpanProcesor struct {
 }
 
 func (t *testSpanProcesor) OnStart(s *export.SpanData) {
-	t.spansStarted = append(t.spansStarted, s.Name.String())
+	t.spansStarted = append(t.spansStarted, s.Namespace.Name(s.Name).String())
 }
 
 func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
-	t.spansEnded = append(t.spansEnded, s.Name.String())
+	t.spansEnded = append(t.spansEnded, s.Namespace.Name(s.Name).String())
 }
 
 func (t *testSpanProcesor) Shutdown() {}
@@ -69,7 +69,7 @@ func TestTraceDefaultSDK(t *testing.T) {
 		t.Errorf("failed to wrap function with span post initialization with new tracer: %v", err)
 	}
 
-	expected := []string{"pre/span2", "pre/withSpan2", "post/span3", "post/withSpan3"}
+	expected := []string{"pre.span2", "pre.withSpan2", "post.span3", "post.withSpan3"}
 	require.Equal(t, expected, tsp.spansStarted)
 	require.Equal(t, expected, tsp.spansEnded)
 }

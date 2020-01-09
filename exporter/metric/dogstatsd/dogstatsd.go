@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -41,14 +41,12 @@ type (
 	Exporter struct {
 		*statsd.Exporter
 		*statsd.LabelEncoder
-
-		ReencodedLabelsCount int
 	}
 )
 
 var (
-	_ export.Exporter     = &Exporter{}
-	_ export.LabelEncoder = &Exporter{}
+	_ export.Exporter   = &Exporter{}
+	_ core.LabelEncoder = &Exporter{}
 )
 
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
@@ -65,23 +63,6 @@ func NewRawExporter(config Config) (*Exporter, error) {
 	return exp, err
 }
 
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-// pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Config{...})
-// if err != nil {
-// 	...
-// }
-// defer pipeline.Stop()
-// ... Done
-func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config)
-	if err != nil {
-		return controller, err
-	}
-	global.SetMeterProvider(controller)
-	return controller, err
-}
-
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
 func NewExportPipeline(config Config) (*push.Controller, error) {
@@ -93,7 +74,7 @@ func NewExportPipeline(config Config) (*push.Controller, error) {
 
 	// The ungrouped batcher ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(selector, false)
+	batcher := ungrouped.New(selector, exporter.LabelEncoder, false)
 
 	// The pusher automatically recognizes that the exporter
 	// implements the LabelEncoder interface, which ensures the
@@ -106,15 +87,10 @@ func NewExportPipeline(config Config) (*push.Controller, error) {
 
 // AppendName is part of the stats-internal adapter interface.
 func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
-	_, _ = buf.WriteString(rec.Descriptor().Name())
+	_, _ = buf.WriteString(rec.Descriptor().Name().String())
 }
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	encoded, inefficient := e.LabelEncoder.ForceEncode(rec.Labels())
-	_, _ = buf.WriteString(encoded)
-
-	if inefficient {
-		e.ReencodedLabelsCount++
-	}
+	_, _ = buf.WriteString(rec.Labels().Encoded(e.LabelEncoder))
 }

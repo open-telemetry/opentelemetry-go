@@ -315,7 +315,8 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         core.Namespace("StartSpanAttribute").Name("span0"),
+		Name:         "span0",
+		Namespace:    "StartSpanAttribute",
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 			key.String("key2", "value2"),
@@ -344,7 +345,8 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         core.Namespace("SpanAttribute").Name("span0"),
+		Name:         "span0",
+		Namespace:    "SpanAttribute",
 		Attributes: []core.KeyValue{
 			key.String("key1", "value1"),
 		},
@@ -379,7 +381,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         core.Namespace("SpanAttributesOverLimit").Name("span0"),
+		Name:         "span0",
+		Namespace:    "SpanAttributesOverLimit",
 		Attributes: []core.KeyValue{
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
@@ -424,7 +427,8 @@ func TestEvents(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            core.Namespace("Events").Name("span0"),
+		Name:            "span0",
+		Namespace:       "Events",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
@@ -474,7 +478,8 @@ func TestEventsOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         core.Namespace("EventsOverLimit").Name("span0"),
+		Name:         "span0",
+		Namespace:    "EventsOverLimit",
 		MessageEvents: []export.Event{
 			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
@@ -518,7 +523,8 @@ func TestLinks(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            core.Namespace("Links").Name("span0"),
+		Name:            "span0",
+		Namespace:       "Links",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
 			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
@@ -561,7 +567,8 @@ func TestLinksOverLimit(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
-		Name:         core.Namespace("LinksOverLimit").Name("span0"),
+		Name:         "span0",
+		Namespace:    "LinksOverLimit",
 		Links: []apitrace.Link{
 			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
@@ -594,8 +601,9 @@ func TestSetSpanName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got.Name != expect {
-		t.Errorf("span.Name: got %q; want %q", got.Name, expect)
+	want := got.Namespace.Name(got.Name)
+	if want != expect {
+		t.Errorf("span.Name: got %q; want %q", want, expect)
 	}
 }
 
@@ -616,7 +624,8 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceFlags: 0x1,
 		},
 		ParentSpanID:    sid,
-		Name:            core.Namespace("SpanStatus").Name("span0"),
+		Name:            "span0",
+		Namespace:       "SpanStatus",
 		SpanKind:        apitrace.SpanKindInternal,
 		Status:          codes.Canceled,
 		HasRemoteParent: true,
@@ -727,7 +736,7 @@ func checkTime(x *time.Time) bool {
 type fakeExporter map[string]*export.SpanData
 
 func (f fakeExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	f[s.Name.String()] = s
+	f[s.Namespace.Name(s.Name).String()] = s
 }
 
 func TestEndSpanTwice(t *testing.T) {
@@ -758,16 +767,16 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	if got, want := len(spans), 3; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
-	if got, want := spans["SpanAfterEnd/span-1"].SpanContext.TraceID, spans["SpanAfterEnd/parent"].SpanContext.TraceID; got != want {
+	if got, want := spans["SpanAfterEnd.span-1"].SpanContext.TraceID, spans["SpanAfterEnd.parent"].SpanContext.TraceID; got != want {
 		t.Errorf("span-1.TraceID=%q; want %q", got, want)
 	}
-	if got, want := spans["SpanAfterEnd/span-2"].SpanContext.TraceID, spans["SpanAfterEnd/parent"].SpanContext.TraceID; got != want {
+	if got, want := spans["SpanAfterEnd.span-2"].SpanContext.TraceID, spans["SpanAfterEnd.parent"].SpanContext.TraceID; got != want {
 		t.Errorf("span-2.TraceID=%q; want %q", got, want)
 	}
-	if got, want := spans["SpanAfterEnd/span-1"].ParentSpanID, spans["SpanAfterEnd/parent"].SpanContext.SpanID; got != want {
+	if got, want := spans["SpanAfterEnd.span-1"].ParentSpanID, spans["SpanAfterEnd.parent"].SpanContext.SpanID; got != want {
 		t.Errorf("span-1.ParentSpanID=%q; want %q (parent.SpanID)", got, want)
 	}
-	if got, want := spans["SpanAfterEnd/span-2"].ParentSpanID, spans["SpanAfterEnd/span-1"].SpanContext.SpanID; got != want {
+	if got, want := spans["SpanAfterEnd.span-2"].ParentSpanID, spans["SpanAfterEnd.span-1"].SpanContext.SpanID; got != want {
 		t.Errorf("span-2.ParentSpanID=%q; want %q (span1.SpanID)", got, want)
 	}
 }
@@ -790,16 +799,16 @@ func TestChildSpanCount(t *testing.T) {
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
-	if got, want := spans["ChildSpanCount/span-3"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount.span-3"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-3.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount/span-2"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount.span-2"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-2.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount/span-1"].ChildSpanCount, 1; got != want {
+	if got, want := spans["ChildSpanCount.span-1"].ChildSpanCount, 1; got != want {
 		t.Errorf("span-1.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount/parent"].ChildSpanCount, 2; got != want {
+	if got, want := spans["ChildSpanCount.parent"].ChildSpanCount, 2; got != want {
 		t.Errorf("parent.ChildSpanCount=%q; want %q", got, want)
 	}
 }

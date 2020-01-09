@@ -7,6 +7,7 @@ import (
 	"log"
 	"sync"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/dogstatsd"
@@ -55,13 +56,12 @@ func ExampleNew() {
 	key := key.New("key")
 
 	// pusher implements the metric.MeterProvider interface:
-	meter := pusher.Meter("example")
+	meter := scope.NamedMeter(pusher.Meter(), "hello")
 
 	// Create and update a single counter:
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
 
-	counter.Add(ctx, 100, labels)
+	counter.Add(ctx, 100, key.String("value"))
 
 	// Flush the exporter, close the pipe, and wait for the reader.
 	pusher.Stop()

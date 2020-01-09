@@ -56,14 +56,14 @@ func TestGroupingStateless(t *testing.T) {
 	// Output gauge should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"test/counter.a/C=D": 30, // labels1 + labels2
-		"test/counter.a/C=":  40, // labels3
-		"test/counter.b/C=D": 30, // labels1 + labels2
-		"test/counter.b/C=":  40, // labels3
-		"test/gauge.a/G=H":   10, // labels1
-		"test/gauge.a/G=":    30, // labels3 = last value
-		"test/gauge.b/G=H":   10, // labels1
-		"test/gauge.b/G=":    30, // labels3 = last value
+		"test.counter.a/C=D": 30, // labels1 + labels2
+		"test.counter.a/C=":  40, // labels3
+		"test.counter.b/C=D": 30, // labels1 + labels2
+		"test.counter.b/C=":  40, // labels3
+		"test.gauge.a/G=H":   10, // labels1
+		"test.gauge.a/G=":    30, // labels3 = last value
+		"test.gauge.b/G=H":   10, // labels1
+		"test.gauge.b/G=":    30, // labels3 = last value
 	}, records.Values)
 
 	// Verify that state is reset by FinishedCollection()
@@ -93,8 +93,8 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"test/counter.a/C=D": 10, // labels1
-		"test/counter.b/C=D": 10, // labels1
+		"test.counter.a/C=D": 10, // labels1
+		"test.counter.b/C=D": 10, // labels1
 	}, records1.Values)
 
 	// Test that state was NOT reset
@@ -133,7 +133,7 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"test/counter.a/C=D": 30,
-		"test/counter.b/C=D": 30,
+		"test.counter.a/C=D": 30,
+		"test.counter.b/C=D": 30,
 	}, records4.Values)
 }

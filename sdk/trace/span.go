@@ -161,7 +161,7 @@ func (s *span) SetName(name string) {
 		// TODO: now what?
 		return
 	}
-	s.data.Name = s.data.Name.Namespace.Name(name)
+	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
 	var ctx core.SpanContext
@@ -176,7 +176,7 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
-		name:         s.data.Name,
+		name:         s.data.Namespace.Name(s.data.Name),
 		cfg:          s.tracer.config.Load().(*Config),
 		span:         s,
 	}
@@ -282,7 +282,8 @@ func startSpanInternal(tr *Tracer, name core.Name, parent core.SpanContext, remo
 		SpanContext:     span.spanContext,
 		StartTime:       startTime,
 		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
-		Name:            name,
+		Namespace:       name.Namespace,
+		Name:            name.Base,
 		HasRemoteParent: remoteParent,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)

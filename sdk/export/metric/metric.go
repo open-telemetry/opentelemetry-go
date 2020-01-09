@@ -172,29 +172,6 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
-// LabelEncoder enables an optimization for export pipelines that use
-// text to encode their label sets.
-//
-// This interface allows configuring the encoder used in the SDK
-// and/or the Batcher so that by the time the exporter is called, the
-// same encoding may be used.
-//
-// If none is provided, a default will be used.
-type LabelEncoder interface {
-	// Encode is called (concurrently) in instrumentation context.
-	// It should return a unique representation of the labels
-	// suitable for the SDK to use as a map key.
-	//
-	// The exported label.Set object retains a reference to its
-	// LabelEncoder to determine which encoding was used.
-	//
-	// The expectation is that Exporters with a pre-determined to
-	// syntax for serialized label sets should implement
-	// LabelEncoder, thus avoiding duplicate computation in the
-	// export path.
-	Encode([]core.KeyValue) string
-}
-
 // CheckpointSet allows a controller to access a complete checkpoint of
 // aggregated metrics from the Batcher.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection

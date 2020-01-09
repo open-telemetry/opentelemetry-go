@@ -22,13 +22,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/dogstatsd"
 	"go.opentelemetry.io/otel/exporter/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 )
 
@@ -36,15 +36,15 @@ import (
 // whether or not the provided labels were encoded by a statsd label
 // encoder.
 func TestDogstatsLabels(t *testing.T) {
-	for inefficientCount, encoder := range []export.LabelEncoder{
-		statsd.NewLabelEncoder(),     // inefficientCount == 0
-		sdk.NewDefaultLabelEncoder(), // inefficientCount == 1
+	for _, encoder := range []core.LabelEncoder{
+		statsd.NewLabelEncoder(),
+		label.NewDefaultEncoder(),
 	} {
 		t.Run(fmt.Sprintf("%T", encoder), func(t *testing.T) {
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet(encoder)
 
-			desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
+			desc := export.NewDescriptor(core.Namespace("test").Name("name"), export.CounterKind, nil, "", "", core.Int64NumberKind, false)
 			cagg := counter.New()
 			_ = cagg.Update(ctx, core.NewInt64Number(123), desc)
 			cagg.Checkpoint(ctx, desc)
@@ -56,12 +56,9 @@ func TestDogstatsLabels(t *testing.T) {
 				Writer: &buf,
 			})
 			require.Nil(t, err)
-			require.Equal(t, 0, exp.ReencodedLabelsCount)
 
 			err = exp.Export(ctx, checkpointSet)
 			require.Nil(t, err)
-
-			require.Equal(t, inefficientCount, exp.ReencodedLabelsCount)
 
 			require.Equal(t, "test.name:123|c|#A:B\n", buf.String())
 		})

@@ -29,6 +29,8 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
+const ns core.Namespace = "stdout"
+
 func TestExporter_ExportSpan(t *testing.T) {
 	// write to buffer for testing
 	var b bytes.Buffer
@@ -49,7 +51,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
-		Name:      "/foo",
+		Namespace: ns,
+		Name:      "foo",
 		StartTime: now,
 		EndTime:   now,
 		Attributes: []core.KeyValue{

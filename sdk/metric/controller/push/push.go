@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -73,7 +74,7 @@ var _ Ticker = realTicker{}
 // otherwise the SDK will be configured with the default label
 // encoder.
 func New(batcher export.Batcher, exporter export.Exporter, period time.Duration) *Controller {
-	lencoder, _ := exporter.(export.LabelEncoder)
+	lencoder, _ := exporter.(core.LabelEncoder)
 
 	if lencoder == nil {
 		lencoder = label.NewDefaultEncoder()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
@@ -23,19 +24,18 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	key := key.New("key")
-	meter := pusher.Meter("example")
+	meter := scope.NamedMeter(pusher.Meter(), "test")
 
 	// Create and update a single counter:
 	counter := meter.NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
 
-	counter.Add(ctx, 100, labels)
+	counter.Add(ctx, 100, key.String("value"))
 
 	// Output:
 	// {
 	// 	"updates": [
 	// 		{
-	// 			"name": "a.counter{key=value}",
+	// 			"name": "test.a.counter{key=value}",
 	// 			"sum": 100
 	// 		}
 	// 	]
