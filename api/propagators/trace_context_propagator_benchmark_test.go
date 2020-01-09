@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
@@ -39,7 +40,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			TraceFlags: core.TraceFlagsSampled,
 		}
 		ctx := context.Background()
-		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))
+		ctx, _ = scope.UnnamedTracer(mockTracer).Start(ctx, "inject", trace.ChildOf(sc))
 		fn(ctx, b)
 	})
 

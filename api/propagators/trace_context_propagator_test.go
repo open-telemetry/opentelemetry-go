@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	dctx "go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/key"
@@ -231,6 +232,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
+	tracer := scope.UnnamedTracer(mockTracer)
 	var propagator propagators.TraceContext
 	tests := []struct {
 		name       string
@@ -274,7 +276,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
 			if tt.sc.IsValid() {
-				ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
+				ctx, _ = tracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
 			}
 			propagator.Inject(ctx, req.Header)
 

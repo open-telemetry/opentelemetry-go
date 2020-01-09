@@ -69,7 +69,7 @@ func TestTraceDefaultSDK(t *testing.T) {
 		t.Errorf("failed to wrap function with span post initialization with new tracer: %v", err)
 	}
 
-	expected := []string{"pre.span2", "pre.withSpan2", "post.span3", "post.withSpan3"}
+	expected := []string{"pre/span2", "pre/withSpan2", "post/span3", "post/withSpan3"}
 	require.Equal(t, expected, tsp.spansStarted)
 	require.Equal(t, expected, tsp.spansEnded)
 }

@@ -18,8 +18,8 @@ import (
 	"io"
 	"net/http"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -49,7 +49,7 @@ type Handler struct {
 	operation string
 	handler   http.Handler
 
-	tracer           trace.Tracer
+	scope            scope.Scope
 	prop             propagators.TextFormat
 	spanStartOptions []trace.StartOption
 	public           bool
@@ -60,11 +60,11 @@ type Handler struct {
 // Option function used for setting *optional* Handler properties
 type Option func(*Handler)
 
-// WithTracer configures the Handler with a specific tracer. If this option
-// isn't specified then the global tracer is used.
-func WithTracer(tracer trace.Tracer) Option {
+// WithScope configures the Handler with a specific scope. If this option
+// isn't specified then the global scope is used.
+func WithScope(scope scope.Scope) Option {
 	return func(h *Handler) {
-		h.tracer = tracer
+		h.scope = scope
 	}
 }
 
@@ -129,7 +129,6 @@ func WithMessageEvents(events ...event) Option {
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
-		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
 		WithPropagator(propagators.TraceContext{}),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
@@ -137,6 +136,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	for _, opt := range append(defaultOpts, opts...) {
 		opt(&h)
 	}
+	h.scope = h.scope.WithNamespace("go.opentelemetry.io/plugin/othttp")
 	return &h
 }
 
@@ -158,7 +158,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		opts = append(opts, opt)
 	}
 
-	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	ctx, span := h.scope.Tracer().Start(r.Context(), h.operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}

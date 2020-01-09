@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"strings"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	"go.opentelemetry.io/otel/plugin/othttp"
@@ -51,12 +51,12 @@ func ExampleNewHandler() {
 		log.Fatal(err)
 	}
 
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+	tri, err := sdktrace.NewTracer(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
 
 	figureOutName := func(ctx context.Context, s string) (string, error) {
 		pp := strings.SplitN(s, "/", 2)
@@ -105,6 +105,7 @@ func ExampleNewHandler() {
 
 	if err := http.ListenAndServe(":7777",
 		othttp.NewHandler(&mux, "server",
+			othttp.WithScope(scope.Empty().WithTracer(tri)),
 			othttp.WithMessageEvents(othttp.ReadEvents, othttp.WriteEvents),
 		),
 	); err != nil {

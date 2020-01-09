@@ -20,6 +20,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
@@ -27,7 +28,7 @@ import (
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
 	sc     core.SpanContext
-	tracer apitrace.Tracer
+	tracer apitrace.TracerWithNamespace
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
@@ -68,7 +69,7 @@ func (ms *MockSpan) SetName(name string) {
 
 // Tracer returns MockTracer implementation of Tracer.
 func (ms *MockSpan) Tracer() apitrace.Tracer {
-	return ms.tracer
+	return scope.UnnamedTracer(ms.tracer)
 }
 
 // AddEvent does nothing.

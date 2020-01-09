@@ -18,11 +18,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptrace"
+
+	"go.opentelemetry.io/otel/api/context/scope"
 )
 
 // Client
-func W3C(ctx context.Context, req *http.Request) (context.Context, *http.Request) {
-	ctx = httptrace.WithClientTrace(ctx, NewClientTrace(ctx))
+func W3C(ctx context.Context, scx scope.Scope, req *http.Request) (context.Context, *http.Request) {
+	ctx = httptrace.WithClientTrace(ctx, NewClientTrace(ctx, scx))
 	req = req.WithContext(ctx)
 	return ctx, req
 }

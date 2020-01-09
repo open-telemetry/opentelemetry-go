@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
@@ -94,6 +95,7 @@ func BenchmarkInjectB3(b *testing.B) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
+	tracer := scope.UnnamedTracer(mockTracer)
 
 	for _, tg := range testGroup {
 		id = 0
@@ -103,9 +105,9 @@ func BenchmarkInjectB3(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
+					ctx, _ = tracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
 				} else {
-					ctx, _ = mockTracer.Start(ctx, "inject")
+					ctx, _ = tracer.Start(ctx, "inject")
 				}
 				b.ReportAllocs()
 				b.ResetTimer()

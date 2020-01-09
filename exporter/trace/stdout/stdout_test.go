@@ -76,7 +76,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":"0000000000000000",` +
 		`"SpanKind":1,` +
-		`"Name":"/foo",` +
+		`"Namespace":"stdout",` +
+		`"Name":"foo",` +
 		`"StartTime":` + string(expectedSerializedNow) + "," +
 		`"EndTime":` + string(expectedSerializedNow) + "," +
 		`"Attributes":[` +

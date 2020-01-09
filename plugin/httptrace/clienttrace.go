@@ -24,8 +24,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -48,13 +48,14 @@ type clientTracer struct {
 	mtx         sync.Mutex
 }
 
-func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
+func NewClientTrace(ctx context.Context, scx scope.Scope) *httptrace.ClientTrace {
+	scx = scx.WithNamespace("go.opentelemetry.io/otel/plugin/httptrace")
 	ct := &clientTracer{
-		Context:     ctx,
+		Context:     scope.ContextWithScope(ctx, scx),
 		activeHooks: make(map[string]trace.Span),
 	}
 
-	ct.tr = global.TraceProvider().Tracer("go.opentelemetry.io/otel/plugin/httptrace")
+	ct.tr = scx.Tracer()
 
 	return &httptrace.ClientTrace{
 		GetConn:              ct.getConn,

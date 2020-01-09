@@ -69,6 +69,11 @@ type SpanData struct {
 	ChildSpanCount int
 }
 
+// FullName formats the <Namespace>/<Name>
+func (s SpanData) FullName() string {
+	return s.Namespace.Name(s.Name).String()
+}
+
 // Event is used to describe an Event with a message string and set of
 // Attributes.
 type Event struct {

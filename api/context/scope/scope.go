@@ -12,6 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO
+// 0. Fix remaining tests
+// 1. Add back sugar
+// 2. Make lib/ver obligatory (let namespace be namespace)
+// 3. Fix examples
+// 4. New examples
+//
+// 3. Comments
+// 4. OTEP draft?
+
 package scope
 
 import (

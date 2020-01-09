@@ -22,8 +22,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -38,15 +38,9 @@ type testExporter struct {
 func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	var spans []*export.SpanData
-	var ok bool
 
-	if spans, ok = t.spanMap[s.Name]; !ok {
-		spans = []*export.SpanData{}
-		t.spanMap[s.Name] = spans
-	}
-	spans = append(spans, s)
-	t.spanMap[s.Name] = spans
+	fn := s.FullName()
+	t.spanMap[fn] = append(t.spanMap[fn], s)
 }
 
 var _ export.SpanSyncer = (*testExporter)(nil)
@@ -55,10 +49,9 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	exp := &testExporter{
 		spanMap: make(map[string][]*export.SpanData),
 	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
+	tri, _ := sdktrace.NewTracer(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 
-	tr := tp.Tracer("httptrace/client")
+	scx := scope.Empty().WithTracer(tri).WithNamespace("httptrace/client")
 
 	// Mock http server
 	ts := httptest.NewServer(
@@ -69,10 +62,10 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	address := ts.Listener.Addr()
 
 	client := ts.Client()
-	err := tr.WithSpan(context.Background(), "test",
+	err := scx.Tracer().WithSpan(context.Background(), "test",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", ts.URL, nil)
-			_, req = httptrace.W3C(ctx, req)
+			_, req = httptrace.W3C(ctx, scx, req)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -152,10 +145,11 @@ func TestConcurrentConnectionStart(t *testing.T) {
 	exp := &testExporter{
 		spanMap: make(map[string][]*export.SpanData),
 	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
+	tri, _ := sdktrace.NewTracer(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	scx := scope.Empty().WithTracer(tri).WithNamespace("httptrace/client")
+	ctx := context.Background()
 
-	ct := httptrace.NewClientTrace(context.Background())
+	ct := httptrace.NewClientTrace(ctx, scx)
 
 	tts := []struct {
 		name string
@@ -235,7 +229,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			spans := exp.spanMap["go.opentelemetry.io/otel/plugin/httptrace/http.connect"]
 
 			if l := len(spans); l != 2 {
-				t.Fatalf("Expected 2 'http.connect' traces but found %d", l)
+				t.Fatalf("Expected 2 'http.connect' traces but found %d in %v", l, exp.spanMap)
 			}
 
 			remotes := make(map[string]struct{})

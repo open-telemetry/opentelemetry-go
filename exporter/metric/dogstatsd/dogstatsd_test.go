@@ -60,7 +60,7 @@ func TestDogstatsLabels(t *testing.T) {
 			err = exp.Export(ctx, checkpointSet)
 			require.Nil(t, err)
 
-			require.Equal(t, "test.name:123|c|#A:B\n", buf.String())
+			require.Equal(t, "test/name:123|c|#A:B\n", buf.String())
 		})
 	}
 }

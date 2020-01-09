@@ -90,16 +90,16 @@ func TestBasicFormat(t *testing.T) {
 
 	for _, ao := range []adapterOutput{{
 		adapter: newWithTagsAdapter(),
-		expected: `counter:%s|c|#A:B,C:D
-gauge:%s|g|#A:B,C:D
-measure:%s|h|#A:B,C:D
-timer:%s|ms|#A:B,C:D
+		expected: `ttst/counter:%s|c|#A:B,C:D
+ttst/gauge:%s|g|#A:B,C:D
+ttst/measure:%s|h|#A:B,C:D
+ttst/timer:%s|ms|#A:B,C:D
 `}, {
 		adapter: newNoTagsAdapter(),
-		expected: `counter.B.D:%s|c
-gauge.B.D:%s|g
-measure.B.D:%s|h
-timer.B.D:%s|ms
+		expected: `ttst/counter.B.D:%s|c
+ttst/gauge.B.D:%s|g
+ttst/measure.B.D:%s|h
+ttst/timer.B.D:%s|ms
 `},
 	} {
 		adapter := ao.adapter
@@ -167,7 +167,7 @@ func makeLabels(offset, nkeys int) []core.KeyValue {
 	for i := range r {
 		r[i] = key.New(fmt.Sprint("k", offset+i)).String(fmt.Sprint("v", offset+i))
 	}
-	return r
+	return label.NewSet(r...).Ordered()
 }
 
 type splitTestCase struct {
@@ -284,7 +284,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			const ns core.Namespace = "ttst"
+			const ns core.Namespace = ""
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
 			desc := export.NewDescriptor(ns.Name("counter"), export.CounterKind, nil, "", "", core.Int64NumberKind, false)
@@ -295,7 +295,7 @@ func TestPacketSplit(t *testing.T) {
 			tcase.setup(func(nkeys int) {
 				labels := makeLabels(offset, nkeys)
 				offset += nkeys
-				expect := fmt.Sprint("ns/counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
+				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
 				expected = append(expected, expect)
 				checkpointSet.AddCounter(desc, 100, labels...)
 			})

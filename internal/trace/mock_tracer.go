@@ -38,10 +38,10 @@ type MockTracer struct {
 	Sampled bool
 }
 
-var _ apitrace.Tracer = (*MockTracer)(nil)
+var _ apitrace.TracerWithNamespace = (*MockTracer)(nil)
 
 // WithSpan does nothing except executing the body.
-func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (mt *MockTracer) WithSpan(ctx context.Context, name core.Name, body func(context.Context) error) error {
 	return body(ctx)
 }
 
@@ -49,7 +49,7 @@ func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(conte
 // TracdID is used from Relation Span Context and SpanID is assigned.
 // If Relation SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
-func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
+func (mt *MockTracer) Start(ctx context.Context, name core.Name, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig
 	for _, op := range o {
 		op(&opts)

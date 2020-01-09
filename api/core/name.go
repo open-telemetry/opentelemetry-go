@@ -32,5 +32,5 @@ func (n Name) String() string {
 	if n.Namespace == "" {
 		return n.Base
 	}
-	return string(n.Namespace) + "." + n.Base
+	return string(n.Namespace) + "/" + n.Base
 }

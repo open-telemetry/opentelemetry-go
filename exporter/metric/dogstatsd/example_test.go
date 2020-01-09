@@ -69,5 +69,5 @@ func ExampleNew() {
 	wg.Wait()
 
 	// Output:
-	// a.counter:100|c|#key:value
+	// hello/a.counter:100|c|#key:value
 }

@@ -767,16 +767,16 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	if got, want := len(spans), 3; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
-	if got, want := spans["SpanAfterEnd.span-1"].SpanContext.TraceID, spans["SpanAfterEnd.parent"].SpanContext.TraceID; got != want {
+	if got, want := spans["SpanAfterEnd/span-1"].SpanContext.TraceID, spans["SpanAfterEnd/parent"].SpanContext.TraceID; got != want {
 		t.Errorf("span-1.TraceID=%q; want %q", got, want)
 	}
-	if got, want := spans["SpanAfterEnd.span-2"].SpanContext.TraceID, spans["SpanAfterEnd.parent"].SpanContext.TraceID; got != want {
+	if got, want := spans["SpanAfterEnd/span-2"].SpanContext.TraceID, spans["SpanAfterEnd/parent"].SpanContext.TraceID; got != want {
 		t.Errorf("span-2.TraceID=%q; want %q", got, want)
 	}
-	if got, want := spans["SpanAfterEnd.span-1"].ParentSpanID, spans["SpanAfterEnd.parent"].SpanContext.SpanID; got != want {
+	if got, want := spans["SpanAfterEnd/span-1"].ParentSpanID, spans["SpanAfterEnd/parent"].SpanContext.SpanID; got != want {
 		t.Errorf("span-1.ParentSpanID=%q; want %q (parent.SpanID)", got, want)
 	}
-	if got, want := spans["SpanAfterEnd.span-2"].ParentSpanID, spans["SpanAfterEnd.span-1"].SpanContext.SpanID; got != want {
+	if got, want := spans["SpanAfterEnd/span-2"].ParentSpanID, spans["SpanAfterEnd/span-1"].SpanContext.SpanID; got != want {
 		t.Errorf("span-2.ParentSpanID=%q; want %q (span1.SpanID)", got, want)
 	}
 }
@@ -799,16 +799,16 @@ func TestChildSpanCount(t *testing.T) {
 	if got, want := len(spans), 4; got != want {
 		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
 	}
-	if got, want := spans["ChildSpanCount.span-3"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount/span-3"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-3.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount.span-2"].ChildSpanCount, 0; got != want {
+	if got, want := spans["ChildSpanCount/span-2"].ChildSpanCount, 0; got != want {
 		t.Errorf("span-2.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount.span-1"].ChildSpanCount, 1; got != want {
+	if got, want := spans["ChildSpanCount/span-1"].ChildSpanCount, 1; got != want {
 		t.Errorf("span-1.ChildSpanCount=%q; want %q", got, want)
 	}
-	if got, want := spans["ChildSpanCount.parent"].ChildSpanCount, 2; got != want {
+	if got, want := spans["ChildSpanCount/parent"].ChildSpanCount, 2; got != want {
 		t.Errorf("parent.ChildSpanCount=%q; want %q", got, want)
 	}
 }

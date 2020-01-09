@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/propagators"
 
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
@@ -37,7 +38,8 @@ func TestBasics(t *testing.T) {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithTracer(&tracer))
+		WithScope(scope.Empty().WithTracer(&tracer)),
+	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
 	if err != nil {

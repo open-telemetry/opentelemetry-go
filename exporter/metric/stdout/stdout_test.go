@@ -138,7 +138,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"stdout/test.name{A=B,C=D}","sum":123}]}`, fix.Output())
 }
 
 func TestStdoutGaugeFormat(t *testing.T) {
@@ -155,7 +155,7 @@ func TestStdoutGaugeFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"stdout/test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
@@ -173,7 +173,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"stdout/test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
@@ -199,7 +199,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 	require.Equal(t, `{
 	"updates": [
 		{
-			"name": "test.name{A=B,C=D}",
+			"name": "stdout/test.name{A=B,C=D}",
 			"min": 0.5,
 			"max": 999.5,
 			"sum": 500000,

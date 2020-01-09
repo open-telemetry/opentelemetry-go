@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
@@ -96,6 +97,7 @@ func TestInjectB3(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
+	tracer := scope.UnnamedTracer(mockTracer)
 
 	for _, tg := range testGroup {
 		id = 0
@@ -105,9 +107,9 @@ func TestInjectB3(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
+					ctx, _ = tracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
 				} else {
-					ctx, _ = mockTracer.Start(ctx, "inject")
+					ctx, _ = tracer.Start(ctx, "inject")
 				}
 				propagator.Inject(ctx, req.Header)
 
