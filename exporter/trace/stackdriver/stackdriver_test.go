@@ -31,7 +31,6 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/api/context/scope"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -113,8 +112,7 @@ func TestExporter_ExportSpans(t *testing.T) {
 		))
 	assert.NoError(t, err)
 
-	global.SetScope(scope.Empty().WithTracer(tr))
-	_, span := global.Scope().WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
+	_, span := scope.Empty().WithTracer(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
@@ -145,8 +143,7 @@ func TestExporter_Timeout(t *testing.T) {
 		sdktrace.WithSyncer(exp))
 	assert.NoError(t, err)
 
-	global.SetScope(scope.Empty().WithTracer(tr))
-	_, span := global.Scope().WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
+	_, span := scope.Empty().WithTracer(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
