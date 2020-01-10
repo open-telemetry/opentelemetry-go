@@ -60,3 +60,7 @@ func UnnamedMeter(ti metric.MeterSDK) metric.Meter {
 func NamedMeter(ti metric.MeterSDK, ns core.Namespace) metric.Meter {
 	return Empty().WithMeter(ti).WithNamespace(ns).Meter()
 }
+
+func (s Scope) InContext(ctx context.Context) context.Context {
+	return ContextWithScope(ctx, s)
+}

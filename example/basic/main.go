@@ -18,6 +18,8 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/context/scope"
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -34,26 +36,33 @@ var (
 	barKey     = key.New("ex.com/bar")
 	lemonsKey  = key.New("ex.com/lemons")
 	anotherKey = key.New("ex.com/another")
+
+	// Note that metric instruments are declared globally.  They
+	// are initialized when the global scope is set.
+	exGauge = metric.NewFloat64Gauge("gauge.one",
+		metric.WithKeys(fooKey, barKey, lemonsKey),
+		metric.WithDescription("A gauge set to 1.0"),
+	)
+
+	exMeasure = metric.NewFloat64Measure("measure.two")
 )
 
-// initTracer creates and registers trace provider instance.
-func initTracer() {
+func initTracer() trace.TracerSDK {
 	var err error
 	exp, err := tracestdout.NewExporter(tracestdout.Options{PrettyPrint: false})
 	if err != nil {
 		log.Panicf("failed to initialize trace stdout exporter %v", err)
-		return
 	}
-	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+	tr, err := sdktrace.NewTracer(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
-	global.SetTraceProvider(tp)
+	return tr
 }
 
 func initMeter() *push.Controller {
-	pusher, err := metricstdout.InstallNewPipeline(metricstdout.Config{
+	pusher, err := metricstdout.NewExportPipeline(metricstdout.Config{
 		Quantiles:   []float64{0.5, 0.9, 0.99},
 		PrettyPrint: false,
 	})
@@ -63,62 +72,81 @@ func initMeter() *push.Controller {
 	return pusher
 }
 
-func main() {
-	defer initMeter().Stop()
-	initTracer()
-
-	// Note: Have to get the meter and tracer after the global is
-	// initialized.  See OTEP 0005.
-
-	tracer := global.TraceProvider().Tracer("ex.com/basic")
-	meter := global.MeterProvider().Meter("ex.com/basic")
-
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
-		metric.WithKeys(fooKey, barKey, lemonsKey),
-		metric.WithDescription("A gauge set to 1.0"),
+func initTelemetry() func() {
+	tracer := initTracer()
+	pusher := initMeter()
+	global.SetScope(
+		scope.Empty().
+			WithTracer(tracer).
+			WithMeter(pusher.Meter()).
+			WithNamespace("example").
+			AddResources(
+				key.String("process1", "value1"),
+				key.String("process2", "value2"),
+			),
 	)
+	return pusher.Stop
+}
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two")
+func main() {
+	defer initTelemetry()()
 
-	ctx := context.Background()
+	// Use the global scope, provide a namespace & resources, get a base context.
+	ctx := global.Scope().
+		WithNamespace("ex.com/basic").
+		AddResources(
+			lemonsKey.Int(10),
+			key.String("A", "1"),
+			key.String("B", "2"),
+			key.String("C", "3"),
+		).
+		InContext(context.Background())
 
-	ctx = distributedcontext.NewContext(ctx,
+	// Setup a distributed context
+	ctx = distributedcontext.NewContext(
+		ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
 
-	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
-
-	gauge := oneMetric.Bind(commonLabels)
+	// Binding in this context gets the process-wide labels and
+	// the scoped labels entered above automatically.  One new
+	// label is added at the call site for each bound instrument.
+	gauge := exGauge.Bind(ctx, key.Float64("D", 1.3))
 	defer gauge.Unbind()
 
-	measure := measureTwo.Bind(commonLabels)
+	measure := exMeasure.Bind(ctx, key.Bool("E", false))
 	defer measure.Unbind()
 
-	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
+	// Using the static method `trace.WithSpan` here, it uses
+	// the current scope's tracer this inherits the resource
+	// scope.
+	err := trace.WithSpan(ctx, "operation", func(ctx context.Context) error {
+		span := trace.SpanFromContext(ctx)
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
+		span.AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
 
-		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
+		span.SetAttributes(anotherKey.String("yes"))
 
 		gauge.Set(ctx, 1)
 
-		meter.RecordBatch(
-			// Note: call-site variables added as context Entries:
-			distributedcontext.NewContext(ctx, anotherKey.String("xyz")),
-			commonLabels,
-
-			oneMetric.Measurement(1.0),
-			measureTwo.Measurement(2.0),
+		metric.RecordBatch(
+			ctx,
+			[]core.KeyValue{
+				anotherKey.String("xyz"),
+			},
+			exGauge.Measurement(1.0),
+			exMeasure.Measurement(2.0),
 		)
 
-		return tracer.WithSpan(
+		return trace.WithSpan(
 			ctx,
 			"Sub operation...",
 			func(ctx context.Context) error {
-				trace.SpanFromContext(ctx).SetAttributes(lemonsKey.String("five"))
+				span := trace.SpanFromContext(ctx)
+				span.SetAttributes(lemonsKey.String("five"))
 
-				trace.SpanFromContext(ctx).AddEvent(ctx, "Sub span event")
+				span.AddEvent(ctx, "Sub span event")
 
 				measure.Record(ctx, 1.3)
 

@@ -31,11 +31,6 @@ type LabelEncoder struct {
 	pool sync.Pool
 }
 
-// sameCheck is used to test whether label encoders are the same.
-type sameCheck interface {
-	isStatsd()
-}
-
 var _ core.LabelEncoder = &LabelEncoder{}
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric

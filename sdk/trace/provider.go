@@ -21,10 +21,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-const (
-	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
-)
-
 // batcher contains export.SpanBatcher and its options.
 type batcher struct {
 	b    export.SpanBatcher

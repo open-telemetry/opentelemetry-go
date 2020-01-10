@@ -481,7 +481,7 @@ func checkBatches(t *testing.T, labels label.Set, meter *mock.Meter, kind core.N
 		}
 		if fmt.Sprint(got.Labels.Ordered()) != fmt.Sprint(labels.Ordered()) {
 			d := func(l label.Set) string {
-				return fmt.Sprintf("(ptr: %p, labels %#v)", l, l.Ordered())
+				return fmt.Sprintf("(labels %#v)", l.Ordered())
 			}
 			t.Errorf("Wrong recorded label set in batch %d, expected %s, got %s", i, d(labels), d(got.Labels))
 		}

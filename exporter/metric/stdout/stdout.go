@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/context/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -117,7 +117,7 @@ func NewExportPipeline(config Config) (*push.Controller, error) {
 	if err != nil {
 		return nil, err
 	}
-	batcher := defaultkeys.New(selector, exporter.config.LabelEncoder, true)
+	batcher := ungrouped.New(selector, exporter.config.LabelEncoder, true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
