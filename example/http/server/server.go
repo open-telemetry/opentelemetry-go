@@ -19,6 +19,7 @@ import (
 	"log"
 	"net/http"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
@@ -37,17 +38,17 @@ func initTracer() {
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+	tr, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 }
 
 func main() {
 	initTracer()
-	tr := global.TraceProvider().Tracer("example/server")
+	tr := global.Scope().WithNamespace("example/server").Tracer()
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)

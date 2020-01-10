@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -33,8 +34,6 @@ var (
 	anotherKey = key.New("ex.com/another")
 )
 
-var tp *sdktrace.Provider
-
 // initTracer creates and registers trace provider instance.
 func initTracer() {
 	var err error
@@ -43,12 +42,12 @@ func initTracer() {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
-	tp, err = sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+	tr, err := sdktrace.NewTracer(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 }
 
 func main() {
@@ -56,7 +55,7 @@ func main() {
 	initTracer()
 
 	// Create a named tracer with package path as its name.
-	tracer := tp.Tracer("example/namedtracer/main")
+	tracer := global.Scope().WithNamespace("example/namedtracer/main").Tracer()
 	ctx := context.Background()
 
 	ctx = distributedcontext.NewContext(ctx,

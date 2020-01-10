@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/api/context/scope"
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -34,7 +36,7 @@ var (
 )
 
 func initMeter() *push.Controller {
-	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	pusher, hf, err := prometheus.NewExportPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
@@ -42,39 +44,44 @@ func initMeter() *push.Controller {
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()
-
+	global.SetScope(scope.Empty().WithMeter(pusher.Meter()).WithNamespace("ex.com/basic"))
 	return pusher
 }
 
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.MeterProvider().Meter("ex.com/basic")
-
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+	oneMetric := metric.NewFloat64Gauge("one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
-	measureThree := meter.NewFloat64Counter("ex.com.three")
+	measureTwo := metric.NewFloat64Measure("two", metric.WithKeys(key.New("A")))
+	measureThree := metric.NewFloat64Counter("three")
 
-	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
-	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))
+	ctx := global.Scope().AddResources(
+		lemonsKey.Int(10),
+		key.String("A", "1"),
+		key.String("B", "2"),
+		key.String("C", "3"),
+	).InContext(context.Background())
 
-	ctx := context.Background()
+	extraLabels := []core.KeyValue{
+		barKey.Bool(false),
+		lemonsKey.Int(13),
+	}
 
-	meter.RecordBatch(
+	metric.RecordBatch(
 		ctx,
-		commonLabels,
+		nil,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 		measureThree.Measurement(12.0),
 	)
 
-	meter.RecordBatch(
+	metric.RecordBatch(
 		ctx,
-		notSoCommonLabels,
+		extraLabels,
 		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 		measureThree.Measurement(22.0),
@@ -82,9 +89,9 @@ func main() {
 
 	time.Sleep(5 * time.Second)
 
-	meter.RecordBatch(
+	metric.RecordBatch(
 		ctx,
-		commonLabels,
+		nil,
 		oneMetric.Measurement(13.0),
 		measureTwo.Measurement(12.0),
 		measureThree.Measurement(13.0),

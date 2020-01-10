@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 
@@ -104,14 +105,14 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp, err := sdktrace.NewProvider(
+	tr, err := sdktrace.NewTracer(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp))
 
 	assert.NoError(t, err)
 
-	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
+	global.SetScope(scope.Empty().WithTracer(tr))
+	_, span := global.Scope().WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())

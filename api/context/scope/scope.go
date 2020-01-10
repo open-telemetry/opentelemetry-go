@@ -108,12 +108,6 @@ func (s Scope) clone() Scope {
 	}
 }
 
-func (s Scope) WithResources(labels label.Set) Scope {
-	r := s.clone()
-	r.resources = labels
-	return r
-}
-
 func (s Scope) AddResources(kvs ...core.KeyValue) Scope {
 	if len(kvs) == 0 {
 		return s

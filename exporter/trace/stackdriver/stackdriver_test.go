@@ -30,6 +30,7 @@ import (
 	tracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v2"
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -104,7 +105,7 @@ func TestExporter_ExportSpans(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	tp, err := sdktrace.NewProvider(
+	tr, err := sdktrace.NewTracer(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
 			sdktrace.WithScheduleDelayMillis(1),
@@ -112,8 +113,8 @@ func TestExporter_ExportSpans(t *testing.T) {
 		))
 	assert.NoError(t, err)
 
-	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
+	global.SetScope(scope.Empty().WithTracer(tr))
+	_, span := global.Scope().WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
@@ -139,13 +140,13 @@ func TestExporter_Timeout(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	tp, err := sdktrace.NewProvider(
+	tr, err := sdktrace.NewTracer(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp))
 	assert.NoError(t, err)
 
-	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
+	global.SetScope(scope.Empty().WithTracer(tr))
+	_, span := global.Scope().WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 

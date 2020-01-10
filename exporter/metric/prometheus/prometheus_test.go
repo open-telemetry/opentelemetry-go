@@ -10,12 +10,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/context/label"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/exporter/metric/prometheus"
 	"go.opentelemetry.io/otel/exporter/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -27,14 +27,15 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(label.NewDefaultEncoder())
+	var ns core.Namespace
 
 	counter := export.NewDescriptor(
-		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
+		ns.Name("counter"), export.CounterKind, nil, "", "", core.Float64NumberKind, false)
 	gauge := export.NewDescriptor(
-		"gauge", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+		ns.Name("gauge"), export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
 	measure := export.NewDescriptor(
-		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+		ns.Name("measure"), export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 
 	labels := []core.KeyValue{
 		key.New("A").String("B"),

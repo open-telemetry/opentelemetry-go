@@ -25,6 +25,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -44,12 +45,12 @@ func initTracer() {
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+	tr, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 }
 
 func main() {
@@ -62,12 +63,17 @@ func main() {
 
 	var body []byte
 
-	tr := global.TraceProvider().Tracer("example/client")
+	tr := global.Scope().WithNamespace("example/client").Tracer()
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
-			ctx, req = httptrace.W3C(ctx, req)
+			// Note: Using the current Scope implies the
+			// namespace and resources of the tracer that
+			// began the enclosing span.  We could pass an
+			// explicit scope instead, to change the
+			// namespace.
+			ctx, req = httptrace.W3C(ctx, scope.Current(ctx), req)
 			httptrace.Inject(ctx, req)
 
 			fmt.Printf("Sending request...\n")

@@ -17,6 +17,7 @@ package config
 import (
 	"log"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporter/trace/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -28,12 +29,12 @@ func Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tp, err := sdktrace.NewProvider(
+	tr, err := sdktrace.NewTracer(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 }

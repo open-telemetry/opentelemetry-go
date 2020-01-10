@@ -198,6 +198,6 @@ func TestDefaultSDK(t *testing.T) {
 	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"builtin/count.b","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"builtin/count.b{A=B}","sum":1}]}
 `, <-ch)
 }

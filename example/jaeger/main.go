@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -48,32 +49,31 @@ func initTracer() func() {
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
 	// probability.
-	tp, err := sdktrace.NewProvider(
+	tr, err := sdktrace.NewTracer(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 	return func() {
 		exporter.Flush()
 	}
 }
 
 func main() {
-	fn := initTracer()
-	defer fn()
+	defer initTracer()()
 
 	ctx := context.Background()
 
-	tr := global.TraceProvider().Tracer("component-main")
+	tr := global.Scope().WithNamespace("component-main").Tracer()
 	ctx, span := tr.Start(ctx, "foo")
 	bar(ctx)
 	span.End()
 }
 
 func bar(ctx context.Context) {
-	tr := global.TraceProvider().Tracer("component-bar")
+	tr := global.Scope().WithNamespace("component-bar").Tracer()
 	_, span := tr.Start(ctx, "bar")
 	defer span.End()
 

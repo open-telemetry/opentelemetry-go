@@ -26,6 +26,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -49,17 +50,17 @@ func initTracer() {
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+	tr, err := sdktrace.NewTracer(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetScope(scope.Empty().WithTracer(tr))
 }
 
 func main() {
 	initTracer()
-	tr := global.TraceProvider().Tracer("stackdriver/example/client")
+	tr := global.Scope().WithNamespace("stackdriver/example/client").Tracer()
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
@@ -72,7 +73,7 @@ func main() {
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
-			ctx, req = httptrace.W3C(ctx, req)
+			ctx, req = httptrace.W3C(ctx, scope.Current(ctx), req)
 			httptrace.Inject(ctx, req)
 
 			fmt.Printf("Sending request...\n")

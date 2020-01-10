@@ -23,11 +23,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"go.opentelemetry.io/otel/api/context/label"
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -129,7 +130,8 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 	if err != nil {
 		return controller, hf, err
 	}
-	global.SetMeterProvider(controller)
+	global.SetScope(scope.Empty().WithMeter(controller.Meter()))
+
 	return controller, hf, err
 }
 
@@ -150,7 +152,7 @@ func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	batcher := defaultkeys.New(selector, label.NewDefaultEncoder(), false)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
@@ -286,14 +288,14 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 func (c *collector) toDesc(metric *export.Record) *prometheus.Desc {
 	desc := metric.Descriptor()
 	labels := labelsKeys(metric.Labels())
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
+	return prometheus.NewDesc(sanitize(desc.Name().String()), desc.Description(), labels, nil)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
 
-func labelsKeys(labels export.Labels) []string {
+func labelsKeys(labels label.Set) []string {
 	keys := make([]string, 0, labels.Len())
 	for _, kv := range labels.Ordered() {
 		keys = append(keys, sanitize(string(kv.Key)))
@@ -301,7 +303,7 @@ func labelsKeys(labels export.Labels) []string {
 	return keys
 }
 
-func labelValues(labels export.Labels) []string {
+func labelValues(labels label.Set) []string {
 	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
 	//  this would avoid unnecessary allocations.
 	values := make([]string, 0, labels.Len())

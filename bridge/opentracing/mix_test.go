@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // @@@ TODO Re-enable this test
-// +build linux
+// +build actuallydontbuild
 
 package opentracing
 
