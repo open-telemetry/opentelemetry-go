@@ -110,7 +110,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	_, span := scope.Empty().WithTracer(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
+	_, span := scope.WithTracerSDK(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())

@@ -44,7 +44,7 @@ func initMeter() *push.Controller {
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()
-	global.SetScope(scope.Empty().WithMeter(pusher.Meter()).WithNamespace("ex.com/basic"))
+	global.SetScope(scope.WithMeterSDK(pusher.Meter()).WithNamespace("ex.com/basic"))
 	return pusher
 }
 

@@ -51,7 +51,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	}
 	tri, _ := sdktrace.NewTracer(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 
-	scx := scope.WithTracer(tri).WithNamespace("httptrace/client")
+	scx := scope.WithTracerSDK(tri).WithNamespace("httptrace/client")
 
 	// Mock http server
 	ts := httptest.NewServer(
@@ -146,7 +146,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		spanMap: make(map[string][]*export.SpanData),
 	}
 	tri, _ := sdktrace.NewTracer(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	scx := scope.WithTracer(tri).WithNamespace("httptrace/client")
+	scx := scope.WithTracerSDK(tri).WithNamespace("httptrace/client")
 	ctx := context.Background()
 
 	ct := httptrace.NewClientTrace(ctx, scx)

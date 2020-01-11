@@ -38,7 +38,7 @@ func TestBasics(t *testing.T) {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithScope(scope.WithTracer(&tracer)),
+		WithScope(scope.WithTracerSDK(&tracer)),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)

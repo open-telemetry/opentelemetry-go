@@ -62,8 +62,8 @@ func start() func() {
 	meter := initMeter()
 
 	telemetry := scope.
-		WithTracer(tracer).
-		WithMeter(meter.Meter()).
+		WithTracerSDK(tracer).
+		WithMeterSDK(meter.Meter()).
 		WithNamespace(namespace).
 		AddResources(
 			environmentKey1.String("ENV1"),

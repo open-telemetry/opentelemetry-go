@@ -76,9 +76,8 @@ func initTelemetry() func() {
 	tracer := initTracer()
 	pusher := initMeter()
 	global.SetScope(
-		scope.Empty().
-			WithTracer(tracer).
-			WithMeter(pusher.Meter()).
+		scope.WithTracerSDK(tracer).
+			WithMeterSDK(pusher.Meter()).
 			WithNamespace("example").
 			AddResources(
 				key.String("process1", "value1"),

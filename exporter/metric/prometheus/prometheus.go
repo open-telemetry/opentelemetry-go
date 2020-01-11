@@ -130,7 +130,7 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 	if err != nil {
 		return controller, hf, err
 	}
-	global.SetScope(scope.Empty().WithMeter(controller.Meter()))
+	global.SetScope(scope.WithMeterSDK(controller.Meter()))
 
 	return controller, hf, err
 }

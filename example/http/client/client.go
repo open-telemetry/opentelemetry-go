@@ -50,7 +50,7 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetScope(scope.Empty().WithTracer(tr))
+	global.SetScope(scope.WithTracerSDK(tr))
 }
 
 func main() {

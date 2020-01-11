@@ -141,7 +141,7 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 	labelSets := makeLabelSets(b.N)
 
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk)
+	scx := scope.WithMeterSDK(fix.sdk)
 
 	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
@@ -161,7 +161,7 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 	labelSets := makeLabelSets(b.N)
 
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk)
+	scx := scope.WithMeterSDK(fix.sdk)
 
 	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
@@ -182,7 +182,7 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	labelSets := makeLabelSets(b.N)
 
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk)
+	scx := scope.WithMeterSDK(fix.sdk)
 
 	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
@@ -203,7 +203,7 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	cnt := scx.Meter().NewInt64Counter("int64.counter")
@@ -217,7 +217,7 @@ func BenchmarkInt64CounterAdd(b *testing.B) {
 
 func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	cnt := scx.Meter().NewInt64Counter("int64.counter")
@@ -233,7 +233,7 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 
 func BenchmarkFloat64CounterAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	cnt := scx.Meter().NewFloat64Counter("float64.counter")
@@ -247,7 +247,7 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 
 func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	cnt := scx.Meter().NewFloat64Counter("float64.counter")
@@ -264,7 +264,7 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 
 func BenchmarkInt64GaugeAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	gau := scx.Meter().NewInt64Gauge("int64.gauge")
@@ -278,7 +278,7 @@ func BenchmarkInt64GaugeAdd(b *testing.B) {
 
 func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	gau := scx.Meter().NewInt64Gauge("int64.gauge")
@@ -293,7 +293,7 @@ func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 
 func BenchmarkFloat64GaugeAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	gau := scx.Meter().NewFloat64Gauge("float64.gauge")
@@ -307,7 +307,7 @@ func BenchmarkFloat64GaugeAdd(b *testing.B) {
 
 func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	gau := scx.Meter().NewFloat64Gauge("float64.gauge")
@@ -324,7 +324,7 @@ func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 
 func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	mea := scx.Meter().NewInt64Measure("int64.measure")
@@ -338,7 +338,7 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 
 func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	mea := scx.Meter().NewInt64Measure("int64.measure")
@@ -353,7 +353,7 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 
 func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	mea := scx.Meter().NewFloat64Measure("float64.measure")
@@ -367,7 +367,7 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 
 func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	fix := newFixture(b)
-	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+	scx := scope.WithMeterSDK(fix.sdk).AddResources(makeLabels(1)...)
 
 	ctx := scx.InContext(context.Background())
 	mea := scx.Meter().NewFloat64Measure("float64.measure")

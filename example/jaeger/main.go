@@ -55,7 +55,7 @@ func initTracer() func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetScope(scope.Empty().WithTracer(tr))
+	global.SetScope(scope.WithTracerSDK(tr))
 	return func() {
 		exporter.Flush()
 	}

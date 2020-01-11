@@ -160,7 +160,7 @@ func (f *testFixture) someLabels() []core.KeyValue {
 
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 	kvs := f.someLabels()
-	scx := scope.WithMeter(sdk).AddResources(kvs...)
+	scx := scope.WithMeterSDK(sdk).AddResources(kvs...)
 	ctx := scx.InContext(context.Background())
 
 	name := fmt.Sprint("test_", i)

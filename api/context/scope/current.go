@@ -42,10 +42,12 @@ func (s Scope) InContext(ctx context.Context) context.Context {
 func Current(ctx context.Context) Scope {
 	impl := internal.ScopeImpl(ctx)
 	if impl == nil {
-		// If if the global not a Scope, it means the global package was not loaded
 		if sc, ok := (*atomic.Value)(atomic.LoadPointer(&internal.GlobalScope)).Load().(Scope); ok {
 			return sc
 		}
+		// If if the global not a Scope, it means the global
+		// package was not a dependency, only api/global/internal
+		// sets this.
 		return Scope{}
 	}
 	return impl.(Scope)
@@ -58,36 +60,36 @@ func Labels(ctx context.Context, labels ...core.KeyValue) label.Set {
 	return Current(ctx).AddResources(labels...).Resources()
 }
 
-// WithTracer returns a new Scope with just a Tracer attached.
-func WithTracer(ti trace.TracerSDK) Scope {
-	return Scope{}.WithTracer(ti)
+// WithTracerSDK returns a new Scope with just a Tracer attached.
+func WithTracerSDK(ti trace.TracerSDK) Scope {
+	return Scope{}.WithTracerSDK(ti)
+}
+
+// WithMeterSDK returns a new Scope with just a Meter attached.
+func WithMeterSDK(ti metric.MeterSDK) Scope {
+	return Scope{}.WithMeterSDK(ti)
 }
 
 // UnnamedTracer returns a Tracer implementation with an empty namespace,
 // as a convenience.
 func UnnamedTracer(ti trace.TracerSDK) trace.Tracer {
-	return WithTracer(ti).Tracer()
-}
-
-// NamedTracer returns a Tracer implementation with the specified
-// namespace, as a convenience.
-func NamedTracer(ti trace.TracerSDK, ns core.Namespace) trace.Tracer {
-	return WithTracer(ti).WithNamespace(ns).Tracer()
-}
-
-// WithMeter returns a new Scope with just a Meter attached.
-func WithMeter(ti metric.MeterSDK) Scope {
-	return Scope{}.WithMeter(ti)
+	return WithTracerSDK(ti).Tracer()
 }
 
 // UnnamedMeter returns a Meter implementation with an empty namespace,
 // as a convenience.
 func UnnamedMeter(ti metric.MeterSDK) metric.Meter {
-	return WithMeter(ti).Meter()
+	return WithMeterSDK(ti).Meter()
+}
+
+// NamedTracer returns a Tracer implementation with the specified
+// namespace, as a convenience.
+func NamedTracer(ti trace.TracerSDK, ns core.Namespace) trace.Tracer {
+	return WithTracerSDK(ti).WithNamespace(ns).Tracer()
 }
 
 // NamedMeter returns a Tracer implementation with the specified
 // namespace, as a convenience.
 func NamedMeter(ti metric.MeterSDK, ns core.Namespace) metric.Meter {
-	return WithMeter(ti).WithNamespace(ns).Meter()
+	return WithMeterSDK(ti).WithNamespace(ns).Meter()
 }

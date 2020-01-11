@@ -136,15 +136,15 @@ func (s Scope) WithNamespace(name core.Namespace) Scope {
 	return r
 }
 
-// WithMeter returns a Scope with the effective Meter SDK set.
-func (s Scope) WithMeter(meter metric.MeterSDK) Scope {
+// WithMeterSDK returns a Scope with the effective Meter SDK set.
+func (s Scope) WithMeterSDK(meter metric.MeterSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(r.provider.tracer, meter)
 	return r
 }
 
-// WithTracer returns a Tracer with the effective Tracer SDK set.
-func (s Scope) WithTracer(tracer trace.TracerSDK) Scope {
+// WithTracerSDK returns a Tracer with the effective Tracer SDK set.
+func (s Scope) WithTracerSDK(tracer trace.TracerSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(tracer, r.provider.meter)
 	return r

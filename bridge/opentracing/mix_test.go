@@ -123,7 +123,7 @@ func TestMixedAPIs(t *testing.T) {
 		ctx := context.Background()
 
 		// @@@ HERE
-		global.SetScope(scope.Empty().WithTracer(otelTracer))
+		global.SetScope(scope.Empty().WithTracerSDK(otelTracer))
 		ot.SetGlobalTracer(otTracer)
 
 		tc.setup(t, mockOtelTracer)

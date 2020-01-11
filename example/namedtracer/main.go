@@ -47,7 +47,7 @@ func initTracer() {
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
 	}
-	global.SetScope(scope.Empty().WithTracer(tr))
+	global.SetScope(scope.WithTracerSDK(tr))
 }
 
 func main() {
