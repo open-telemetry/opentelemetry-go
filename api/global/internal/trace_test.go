@@ -49,7 +49,7 @@ func TestTraceDefaultSDK(t *testing.T) {
 	tsp := &testSpanProcesor{}
 	tpi.RegisterSpanProcessor(tsp)
 
-	global.SetScope(scope.Empty().WithTracer(tpi))
+	global.SetScope(scope.WithTracer(tpi))
 
 	// This span was started before initialization, it is expected to be dropped.
 	span1.End()

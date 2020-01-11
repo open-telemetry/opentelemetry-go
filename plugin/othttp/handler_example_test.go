@@ -105,7 +105,7 @@ func ExampleNewHandler() {
 
 	if err := http.ListenAndServe(":7777",
 		othttp.NewHandler(&mux, "server",
-			othttp.WithScope(scope.Empty().WithTracer(tri)),
+			othttp.WithScope(scope.WithTracer(tri)),
 			othttp.WithMessageEvents(othttp.ReadEvents, othttp.WriteEvents),
 		),
 	); err != nil {

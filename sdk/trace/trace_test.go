@@ -52,7 +52,7 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	}
 	harness := testharness.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
-		return scope.Empty().WithTracer(tr).Tracer()
+		return scope.WithTracer(tr).Tracer()
 	}
 
 	harness.TestTracer(subjectFactory)

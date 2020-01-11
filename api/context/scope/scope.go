@@ -12,13 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO
-
-// 1. Add back sugar
-// 2. Fix examples
-// 3. New examples
-// ..
-
 package scope
 
 import (
@@ -31,6 +24,13 @@ import (
 )
 
 type (
+	// Scope is a container for static context related to
+	// OpenTelemetry, including access to the effective Tracer()
+	// and Meter() instances, resources, and namespace.
+	//
+	// Scopes are used to configure the OpenTelemetry
+	// implementation locally in code.  Use Scopes to inject an
+	// OpenTelemetry dependency into third-party libraries.
 	Scope struct {
 		*scopeImpl
 	}

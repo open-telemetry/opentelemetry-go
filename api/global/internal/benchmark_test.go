@@ -87,15 +87,12 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	// Comapare with BenchmarkInt64CounterAdd() in ../../sdk/meter/benchmark_test.go
 	fix := newFixture(b)
 
-	sdk := global.Scope().WithNamespace("test").Meter()
+	ctx := scope.WithMeter(fix.sdk).
+		WithNamespace("test").
+		AddResources(key.String("A", "B")).
+		InContext(context.Background())
 
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(key.String("A", "B")))
-
-	global.SetScope(scope.Empty().WithMeter(fix.sdk))
-
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := scope.Current(ctx).Meter().NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -125,12 +122,12 @@ func traceBenchmark(b *testing.B, fn func(*testing.B)) {
 	})
 	b.Run("Default SDK (AlwaysSample)", func(b *testing.B) {
 		b.ReportAllocs()
-		global.SetScope(scope.Empty().WithTracer(newTracer(b, sdktrace.AlwaysSample())))
+		global.SetScope(scope.WithTracer(newTracer(b, sdktrace.AlwaysSample())))
 		fn(b)
 	})
 	b.Run("Default SDK (NeverSample)", func(b *testing.B) {
 		b.ReportAllocs()
-		global.SetScope(scope.Empty().WithTracer(newTracer(b, sdktrace.NeverSample())))
+		global.SetScope(scope.WithTracer(newTracer(b, sdktrace.NeverSample())))
 		fn(b)
 	})
 }

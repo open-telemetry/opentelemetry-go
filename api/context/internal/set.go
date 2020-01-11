@@ -28,6 +28,14 @@ const maxConcurrentEncoders = 3
 
 type sorted []core.KeyValue
 
+// Set is the internal representation for LabelSet.  It manages an
+// immutable set of labels with an internal cache for storing encoded
+// labels.
+//
+// Note this has a remarkably similar API to the
+// `distributedcontext.Map` type.  This code, which uses a sorted
+// KeyValue list, could be used to implement `distributedcontext.Map`,
+// which uses a map[Key]Value.
 type Set struct {
 	ordered sorted
 

@@ -44,7 +44,7 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 2, lvals3)
 
 	sdk := metrictest.NewMeter()
-	global.SetScope(scope.Empty().WithMeter(sdk))
+	global.SetScope(scope.WithMeter(sdk))
 
 	counter.Add(ctx, 1, lvals1)
 	gauge.Set(ctx, 3, lvals2)
@@ -108,7 +108,7 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 2)
 
 	sdk := metrictest.NewMeter()
-	global.SetScope(scope.Empty().WithMeter(sdk))
+	global.SetScope(scope.WithMeter(sdk))
 
 	boundC.Add(ctx, 1)
 	boundG.Set(ctx, 3)
@@ -185,7 +185,7 @@ func TestDefaultSDK(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	global.SetScope(scope.Empty().WithMeter(pusher.Meter()))
+	global.SetScope(scope.WithMeter(pusher.Meter()))
 
 	counter.Add(ctx, 1, lvals1)
 

@@ -145,8 +145,7 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 	ctxs := make([]context.Context, b.N)
 
 	for i := 0; i < b.N; i++ {
-		ctxs[i] = scope.ContextWithScope(context.Background(),
-			scope.Empty().AddResources(labelSets[i]...))
+		ctxs[i] = scope.Empty().AddResources(labelSets[i]...).InContext(context.Background())
 	}
 
 	b.ResetTimer()
@@ -164,8 +163,7 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 	ctxs := make([]context.Context, b.N)
 
 	for i := 0; i < b.N; i++ {
-		ctxs[i] = scope.ContextWithScope(context.Background(),
-			scope.Empty().AddResources(labelSets[i]...))
+		ctxs[i] = scope.Empty().AddResources(labelSets[i]...).InContext(context.Background())
 		cnt.Bind(ctxs[i]).Unbind()
 	}
 
