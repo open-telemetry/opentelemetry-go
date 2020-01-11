@@ -37,8 +37,8 @@ func (s Scope) InContext(ctx context.Context) context.Context {
 }
 
 // Current returns the Scope associated with a Context as set by
-// ContextWithScope.  If no Scope is located in the context, the
-// global scope will be used.
+// Scope.InContext().  If no Scope is located in the context, the
+// global scope will be returned.
 func Current(ctx context.Context) Scope {
 	impl := internal.ScopeImpl(ctx)
 	if impl == nil {
