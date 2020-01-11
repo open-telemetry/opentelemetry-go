@@ -51,7 +51,7 @@ type clientTracer struct {
 func NewClientTrace(ctx context.Context, scx scope.Scope) *httptrace.ClientTrace {
 	scx = scx.WithNamespace("go.opentelemetry.io/otel/plugin/httptrace")
 	ct := &clientTracer{
-		Context:     scope.ContextWithScope(ctx, scx),
+		Context:     scx.InContext(ctx),
 		activeHooks: make(map[string]trace.Span),
 	}
 

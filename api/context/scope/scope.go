@@ -104,11 +104,6 @@ func (p *Provider) New() Scope {
 	return Scope{si}
 }
 
-// Empty is an empty Scope, equivalent to Scope{}.
-func Empty() Scope {
-	return Scope{}
-}
-
 func (s Scope) clone() Scope {
 	var ri scopeImpl
 	if s.scopeImpl != nil {
@@ -214,7 +209,7 @@ func (s *scopeImpl) enterScope(ctx context.Context) context.Context {
 	if o.scopeImpl == s {
 		return ctx
 	}
-	return ContextWithScope(ctx, Scope{s})
+	return Scope{s}.InContext(ctx)
 }
 
 func (s *scopeImpl) name(n string) core.Name {

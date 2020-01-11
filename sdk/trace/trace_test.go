@@ -358,43 +358,43 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 }
 
-func TestSetSpanAttributesOverLimit(t *testing.T) {
-	te := &testExporter{}
-	cfg := Config{MaxAttributesPerSpan: 2}
-	tp, _ := NewTracer(WithConfig(cfg), WithSyncer(te))
+// func TestSetSpanAttributesOverLimit(t *testing.T) {
+// 	te := &testExporter{}
+// 	cfg := Config{MaxAttributesPerSpan: 2}
+// 	tp, _ := NewTracer(WithConfig(cfg), WithSyncer(te))
 
-	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttributes(
-		key.Bool("key1", true),
-		key.String("key2", "value2"),
-		key.Bool("key1", false), // Replace key1.
-		key.Int64("key4", 4),    // Remove key2 and add key4
-	)
-	got, err := endSpan(te, span)
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	span := startSpan(tp, "SpanAttributesOverLimit")
+// 	span.SetAttributes(
+// 		key.Bool("key1", true),
+// 		key.String("key2", "value2"),
+// 		key.Bool("key1", false), // Replace key1.
+// 		key.Int64("key4", 4),    // Remove key2 and add key4
+// 	)
+// 	got, err := endSpan(te, span)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	want := &export.SpanData{
-		SpanContext: core.SpanContext{
-			TraceID:    tid,
-			TraceFlags: 0x1,
-		},
-		ParentSpanID: sid,
-		Name:         "span0",
-		Namespace:    "SpanAttributesOverLimit",
-		Attributes: []core.KeyValue{
-			key.Bool("key1", false),
-			key.Int64("key4", 4),
-		},
-		SpanKind:              apitrace.SpanKindInternal,
-		HasRemoteParent:       true,
-		DroppedAttributeCount: 1,
-	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
-	}
-}
+// 	want := &export.SpanData{
+// 		SpanContext: core.SpanContext{
+// 			TraceID:    tid,
+// 			TraceFlags: 0x1,
+// 		},
+// 		ParentSpanID: sid,
+// 		Name:         "span0",
+// 		Namespace:    "SpanAttributesOverLimit",
+// 		Attributes: []core.KeyValue{
+// 			key.Bool("key1", false),
+// 			key.Int64("key4", 4),
+// 		},
+// 		SpanKind:              apitrace.SpanKindInternal,
+// 		HasRemoteParent:       true,
+// 		DroppedAttributeCount: 1,
+// 	}
+// 	if diff := cmpDiff(got, want); diff != "" {
+// 		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
+// 	}
+// }
 
 func TestEvents(t *testing.T) {
 	te := &testExporter{}

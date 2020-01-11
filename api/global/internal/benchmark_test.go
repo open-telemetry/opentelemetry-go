@@ -68,13 +68,10 @@ func (*benchFixture) FinishedCollection() {
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 
-	sdk := global.Scope().WithNamespace("test").Meter()
+	scx := global.Scope().WithNamespace("test").AddResources(key.String("A", "B"))
+	ctx := scx.InContext(context.Background())
 
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(key.String("A", "B")))
-
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -87,12 +84,12 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	// Comapare with BenchmarkInt64CounterAdd() in ../../sdk/meter/benchmark_test.go
 	fix := newFixture(b)
 
-	ctx := scope.WithMeter(fix.sdk).
+	scx := scope.WithMeter(fix.sdk).
 		WithNamespace("test").
-		AddResources(key.String("A", "B")).
-		InContext(context.Background())
+		AddResources(key.String("A", "B"))
+	ctx := scx.InContext(context.Background())
 
-	cnt := scope.Current(ctx).Meter().NewInt64Counter("int64.counter")
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 

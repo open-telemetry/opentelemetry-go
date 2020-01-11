@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/context/scope"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
@@ -51,7 +52,8 @@ func (tr *Tracer) Start(ctx context.Context, name core.Name, o ...apitrace.Start
 	for _, l := range opts.Links {
 		span.addLink(l)
 	}
-	span.SetAttributes(opts.Attributes...)
+	scx := scope.Current(ctx).AddResources(opts.Attributes...)
+	span.attributes = scx.Resources()
 
 	span.tracer = tr
 
@@ -64,7 +66,9 @@ func (tr *Tracer) Start(ctx context.Context, name core.Name, o ...apitrace.Start
 
 	ctx, end := startExecutionTracerTask(ctx, name.Base)
 	span.executionTracerTaskEnd = end
-	return apitrace.ContextWithSpan(ctx, span), span
+	return scx.InContext(
+		apitrace.ContextWithSpan(ctx, span),
+	), span
 }
 
 func (tr *Tracer) WithSpan(ctx context.Context, name core.Name, body func(ctx context.Context) error) error {

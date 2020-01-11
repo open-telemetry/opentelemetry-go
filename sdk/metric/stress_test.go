@@ -159,14 +159,15 @@ func (f *testFixture) someLabels() []core.KeyValue {
 }
 
 func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
-	name := fmt.Sprint("test_", i)
-	instrument := f.impl.newInstrument(scope.UnnamedMeter(sdk), name)
-	descriptor := sdk.GetDescriptor(instrument.Impl())
 	kvs := f.someLabels()
+	scx := scope.WithMeter(sdk).AddResources(kvs...)
+	ctx := scx.InContext(context.Background())
+
+	name := fmt.Sprint("test_", i)
+	instrument := f.impl.newInstrument(scx.Meter(), name)
+	descriptor := sdk.GetDescriptor(instrument.Impl())
 	clabs := canonicalizeLabels(kvs)
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(kvs...))
+
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,

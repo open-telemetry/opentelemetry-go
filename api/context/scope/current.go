@@ -25,15 +25,15 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// ContextWithScope returns a context with a new current Scope.  The
-// active Scope's resources will be implicitly associated with metric
-// events that happen in the returned context.
+// InContext returns a context with this Scope current.  The current
+// Scope's resources will be implicitly associated with metric events
+// that happen in the returned context.
 //
 // When using a Scope's Tracer() or Meter() handle for an API method
 // call, the Scope is automatically applied, making it the current
-// Scope for the resulting call.
-func ContextWithScope(ctx context.Context, sc Scope) context.Context {
-	return internal.SetScopeImpl(ctx, sc.scopeImpl)
+// Scope in the context of the resulting call.
+func (s Scope) InContext(ctx context.Context) context.Context {
+	return internal.SetScopeImpl(ctx, s)
 }
 
 // Current returns the Scope associated with a Context as set by
@@ -48,7 +48,7 @@ func Current(ctx context.Context) Scope {
 		}
 		return Scope{}
 	}
-	return Scope{internal.ScopeImpl(ctx).(*scopeImpl)}
+	return impl.(Scope)
 }
 
 // Labels is a convenience method to return a LabelSet given the
@@ -90,15 +90,4 @@ func UnnamedMeter(ti metric.MeterSDK) metric.Meter {
 // namespace, as a convenience.
 func NamedMeter(ti metric.MeterSDK, ns core.Namespace) metric.Meter {
 	return WithMeter(ti).WithNamespace(ns).Meter()
-}
-
-// InContext returns a context for this scope.  Uses of the global
-// Tracer methods (e.g., trace.Start) and Meter methods (e.g.,
-// metric.NewInt64Counter) will be constructed using the namespace
-// from this scope.
-//
-// Uses of the global meter.RecordBatch will use the resources of this
-// scope from the context.
-func (s Scope) InContext(ctx context.Context) context.Context {
-	return ContextWithScope(ctx, s)
 }

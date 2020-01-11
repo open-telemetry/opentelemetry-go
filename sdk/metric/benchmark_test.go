@@ -138,14 +138,16 @@ func BenchmarkLabels_16(b *testing.B) {
 // benchmarks below.
 
 func BenchmarkAcquireNewHandle(b *testing.B) {
-	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
 	labelSets := makeLabelSets(b.N)
-	cnt := meter.NewInt64Counter("int64.counter")
+
+	fix := newFixture(b)
+	scx := scope.WithMeter(fix.sdk)
+
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
 
 	for i := 0; i < b.N; i++ {
-		ctxs[i] = scope.Empty().AddResources(labelSets[i]...).InContext(context.Background())
+		ctxs[i] = scx.AddResources(labelSets[i]...).InContext(context.Background())
 	}
 
 	b.ResetTimer()
@@ -156,14 +158,16 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 }
 
 func BenchmarkAcquireExistingHandle(b *testing.B) {
-	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
 	labelSets := makeLabelSets(b.N)
-	cnt := meter.NewInt64Counter("int64.counter")
+
+	fix := newFixture(b)
+	scx := scope.WithMeter(fix.sdk)
+
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
 
 	for i := 0; i < b.N; i++ {
-		ctxs[i] = scope.Empty().AddResources(labelSets[i]...).InContext(context.Background())
+		ctxs[i] = scx.AddResources(labelSets[i]...).InContext(context.Background())
 		cnt.Bind(ctxs[i]).Unbind()
 	}
 
@@ -175,15 +179,16 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 }
 
 func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
-	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
 	labelSets := makeLabelSets(b.N)
-	cnt := meter.NewInt64Counter("int64.counter")
+
+	fix := newFixture(b)
+	scx := scope.WithMeter(fix.sdk)
+
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 	ctxs := make([]context.Context, b.N)
 
 	for i := 0; i < b.N; i++ {
-		ctxs[i] = scope.ContextWithScope(context.Background(),
-			scope.Empty().AddResources(labelSets[i]...))
+		ctxs[i] = scx.AddResources(labelSets[i]...).InContext(context.Background())
 		cnt.Bind(ctxs[i]).Unbind()
 	}
 
@@ -198,11 +203,10 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-	cnt := meter.NewInt64Counter("int64.counter")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -212,13 +216,12 @@ func BenchmarkInt64CounterAdd(b *testing.B) {
 }
 
 func BenchmarkInt64CounterHandleAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	cnt := meter.NewInt64Counter("int64.counter")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	cnt := scx.Meter().NewInt64Counter("int64.counter")
+
 	handle := cnt.Bind(ctx)
 
 	b.ResetTimer()
@@ -229,13 +232,11 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 }
 
 func BenchmarkFloat64CounterAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	cnt := meter.NewFloat64Counter("float64.counter")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	cnt := scx.Meter().NewFloat64Counter("float64.counter")
 
 	b.ResetTimer()
 
@@ -245,13 +246,11 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 }
 
 func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	cnt := meter.NewFloat64Counter("float64.counter")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	cnt := scx.Meter().NewFloat64Counter("float64.counter")
 	handle := cnt.Bind(ctx)
 
 	b.ResetTimer()
@@ -264,13 +263,11 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 // Gauges
 
 func BenchmarkInt64GaugeAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	gau := meter.NewInt64Gauge("int64.gauge")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	gau := scx.Meter().NewInt64Gauge("int64.gauge")
 
 	b.ResetTimer()
 
@@ -280,13 +277,11 @@ func BenchmarkInt64GaugeAdd(b *testing.B) {
 }
 
 func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	gau := meter.NewInt64Gauge("int64.gauge")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	gau := scx.Meter().NewInt64Gauge("int64.gauge")
 	handle := gau.Bind(ctx)
 
 	b.ResetTimer()
@@ -297,13 +292,11 @@ func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
 }
 
 func BenchmarkFloat64GaugeAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	gau := meter.NewFloat64Gauge("float64.gauge")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	gau := scx.Meter().NewFloat64Gauge("float64.gauge")
 
 	b.ResetTimer()
 
@@ -313,13 +306,11 @@ func BenchmarkFloat64GaugeAdd(b *testing.B) {
 }
 
 func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	gau := meter.NewFloat64Gauge("float64.gauge")
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	gau := scx.Meter().NewFloat64Gauge("float64.gauge")
 	handle := gau.Bind(ctx)
 
 	b.ResetTimer()
@@ -332,13 +323,11 @@ func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
 // Measures
 
 func benchmarkInt64MeasureAdd(b *testing.B, name string) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	mea := meter.NewInt64Measure(name)
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	mea := scx.Meter().NewInt64Measure("int64.measure")
 
 	b.ResetTimer()
 
@@ -348,13 +337,11 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 }
 
 func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	mea := meter.NewInt64Measure(name)
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	mea := scx.Meter().NewInt64Measure("int64.measure")
 	handle := mea.Bind(ctx)
 
 	b.ResetTimer()
@@ -365,13 +352,11 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 }
 
 func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	mea := meter.NewFloat64Measure(name)
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	mea := scx.Meter().NewFloat64Measure("float64.measure")
 
 	b.ResetTimer()
 
@@ -381,13 +366,11 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 }
 
 func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
-	ctx := scope.ContextWithScope(
-		context.Background(),
-		scope.Empty().AddResources(makeLabels(1)...))
-
 	fix := newFixture(b)
-	meter := scope.UnnamedMeter(fix.sdk)
-	mea := meter.NewFloat64Measure(name)
+	scx := scope.WithMeter(fix.sdk).AddResources(makeLabels(1)...)
+
+	ctx := scx.InContext(context.Background())
+	mea := scx.Meter().NewFloat64Measure("float64.measure")
 	handle := mea.Bind(ctx)
 
 	b.ResetTimer()

@@ -18,7 +18,7 @@ func Scope() scope.Scope {
 	if sc, ok := (*atomic.Value)(atomic.LoadPointer(&internal.GlobalScope)).Load().(scope.Scope); ok {
 		return sc
 	}
-	return scope.Empty()
+	return scope.Scope{}
 }
 
 // SetScope is the internal implementation for global.SetScope().
