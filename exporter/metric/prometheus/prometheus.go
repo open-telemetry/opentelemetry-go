@@ -150,7 +150,7 @@ func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), false)
+	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, time.Second)
 	pusher.Start()
 
