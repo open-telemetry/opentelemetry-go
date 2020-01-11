@@ -112,7 +112,7 @@ func TestExporter_ExportSpans(t *testing.T) {
 		))
 	assert.NoError(t, err)
 
-	_, span := scope.Empty().WithTracerSDK(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
+	_, span := scope.WithTracerSDK(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
@@ -143,7 +143,7 @@ func TestExporter_Timeout(t *testing.T) {
 		sdktrace.WithSyncer(exp))
 	assert.NoError(t, err)
 
-	_, span := scope.Empty().WithTracerSDK(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
+	_, span := scope.WithTracerSDK(tr).WithNamespace("test-tracer").Tracer().Start(context.Background(), "test-span")
 	span.End()
 	assert.True(t, span.SpanContext().IsValid())
 
