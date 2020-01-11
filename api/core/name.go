@@ -14,8 +14,13 @@
 
 package core
 
+// Namespace qualifies for names used to describe spans and metrics.
 type Namespace string
 
+// Name pairs a Namespace and a Base name.  OpenTelemetry libraries
+// will presume that identical names refer to the same thing; using
+// namespaces offers a way to disambiguate names used by different
+// modules of code.
 type Name struct {
 	Namespace Namespace
 	Base      string

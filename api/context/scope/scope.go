@@ -30,7 +30,15 @@ type (
 	//
 	// Scopes are used to configure the OpenTelemetry
 	// implementation locally in code.  Use Scopes to inject an
-	// OpenTelemetry dependency into third-party libraries.
+	// OpenTelemetry dependency into third-party libraries,
+	// pre-bound to a set of resource labels.
+	//
+	// Scope provides a Meter and Tracer instance that, when used,
+	// switch into the corresponding Scope.  The Tracer and Meter
+	// provided by the Scope auomatically swiches into the Scope.
+	// As a result, Spans created through a Scope.Tracer() take
+	// place in the Scope's namespace and inherit the Scope's
+	// resources.
 	Scope struct {
 		*scopeImpl
 	}
@@ -51,6 +59,8 @@ type (
 		*scopeImpl
 	}
 
+	// Provider is an immutable description of the SDK that
+	// provides Tracer and Meter interfaces.
 	Provider struct {
 		tracer trace.TracerSDK
 		meter  metric.MeterSDK
@@ -64,6 +74,7 @@ var (
 	nilProvider = &Provider{}
 )
 
+// NewProvider constructs an SDK provider.
 func NewProvider(t trace.TracerSDK, m metric.MeterSDK) *Provider {
 	return &Provider{
 		tracer: t,
@@ -71,14 +82,18 @@ func NewProvider(t trace.TracerSDK, m metric.MeterSDK) *Provider {
 	}
 }
 
+// Tracer returns a Tracer with the namespace and resources of this Scope.
 func (p *Provider) Tracer() trace.TracerSDK {
 	return p.tracer
 }
 
+// Meter returns a Meter with the namespace and resources of this Scope.
 func (p *Provider) Meter() metric.MeterSDK {
 	return p.meter
 }
 
+// New returns a Scope for this Provider, with empty resources and
+// namespace.
 func (p *Provider) New() Scope {
 	si := &scopeImpl{
 		resources: label.Empty(),
@@ -89,6 +104,7 @@ func (p *Provider) New() Scope {
 	return Scope{si}
 }
 
+// Empty is an empty Scope, equivalent to Scope{}.
 func Empty() Scope {
 	return Scope{}
 }
@@ -108,6 +124,7 @@ func (s Scope) clone() Scope {
 	}
 }
 
+// AddResources returns a Scope with the addition of new resource labels.
 func (s Scope) AddResources(kvs ...core.KeyValue) Scope {
 	if len(kvs) == 0 {
 		return s
@@ -117,24 +134,28 @@ func (s Scope) AddResources(kvs ...core.KeyValue) Scope {
 	return r
 }
 
+// WithNamespace returns a Scope with the namespace set to `name`.
 func (s Scope) WithNamespace(name core.Namespace) Scope {
 	r := s.clone()
 	r.namespace = name
 	return r
 }
 
+// WithMeter returns a Scope with the effective Meter SDK set.
 func (s Scope) WithMeter(meter metric.MeterSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(r.provider.tracer, meter)
 	return r
 }
 
+// WithTracer returns a Tracer with the effective Tracer SDK set.
 func (s Scope) WithTracer(tracer trace.TracerSDK) Scope {
 	r := s.clone()
 	r.provider = NewProvider(tracer, r.provider.meter)
 	return r
 }
 
+// Provider returns the underlying interfaces that provide the SDK.
 func (s Scope) Provider() *Provider {
 	if s.scopeImpl == nil {
 		return nilProvider
@@ -142,6 +163,7 @@ func (s Scope) Provider() *Provider {
 	return s.provider
 }
 
+// Resources returns the label set of this Scope.
 func (s Scope) Resources() label.Set {
 	if s.scopeImpl == nil {
 		return label.Empty()
@@ -149,6 +171,7 @@ func (s Scope) Resources() label.Set {
 	return s.resources
 }
 
+// Namespace returns the namespace of this Scope.
 func (s Scope) Namespace() core.Namespace {
 	if s.scopeImpl == nil {
 		return ""
@@ -156,6 +179,7 @@ func (s Scope) Namespace() core.Namespace {
 	return s.namespace
 }
 
+// Tracer returns the effective Tracer of this Scope.
 func (s Scope) Tracer() trace.Tracer {
 	if s.scopeImpl == nil {
 		return trace.NoopTracer{}
@@ -163,6 +187,7 @@ func (s Scope) Tracer() trace.Tracer {
 	return &s.scopeTracer
 }
 
+// Meter returns the effective Meter of this Scope.
 func (s Scope) Meter() metric.Meter {
 	if s.scopeImpl == nil {
 		return metric.NoopMeter{}

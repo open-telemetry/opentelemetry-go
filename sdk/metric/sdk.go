@@ -82,10 +82,6 @@ type (
 	// `record` in existence at a time, although at most one can
 	// be referenced from the `SDK.current` map.
 	record struct {
-		// meter is a pointer to the SDK, used for error
-		// handling.
-		meter *SDK
-
 		// refcount counts the number of active handles on
 		// referring to this record.  active handles prevent
 		// removing the record from the current map.
@@ -127,6 +123,10 @@ type (
 		// next contains the next pointer for both the primary
 		// and the reclaim lists.
 		next doublePtr
+
+		// meter is a pointer to the SDK, used for error
+		// handling.
+		meter *SDK
 	}
 
 	ErrorHandler func(error)
