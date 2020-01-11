@@ -23,8 +23,8 @@ import (
 )
 
 type (
-	// Aggregator aggregates measure events and calculates
-	// sum, count and buckets count.
+	// Aggregator observe events and counts them in pre-determined boundaries.
+	// It also calculates the sum and count of all events.
 	Aggregator struct {
 		current    State
 		checkpoint State
@@ -32,6 +32,9 @@ type (
 		kind       core.NumberKind
 	}
 
+	// State represents the state of a histogram, consisting of
+	// the sum and counts for all observed values and
+	// the less than equal bucket count for the pre-determined boundaries.
 	State struct {
 		Buckets []core.Number
 		Count   core.Number
@@ -73,9 +76,9 @@ func (c *Aggregator) Histogram() (State, error) {
 	return c.checkpoint, nil
 }
 
-// Checkpoint saves the current bucket and resets the current bucket to
+// Checkpoint saves the current state and resets the current state to
 // the empty set.  Since no locks are taken, there is a chance that
-// the independent Min, Max, Sum, and Count are not consistent with each
+// the independent Sum, Count and Bucket Count are not consistent with each
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	// N.B. There is no atomic operation that can update all three
@@ -90,8 +93,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 
 	c.checkpoint.Count.SetUint64(c.current.Count.SwapUint64Atomic(0))
 	c.checkpoint.Sum = c.current.Sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.Buckets = c.current.Buckets
-	c.current.Buckets = make([]core.Number, len(c.bounds)+1)
+	c.checkpoint.Buckets, c.current.Buckets = c.current.Buckets, make([]core.Number, len(c.bounds)+1)
 }
 
 // Update adds the recorded measurement to the current data set.
