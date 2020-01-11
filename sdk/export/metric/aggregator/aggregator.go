@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 // These interfaces describe the various ways to access state from an
@@ -66,13 +67,7 @@ type (
 	// Quantile returns an exact or estimated quantile over the
 	// set of values that were aggregated.
 	Histogram interface {
-		Buckets() (HistogramValue, error)
-	}
-
-	HistogramValue struct {
-		Buckets []core.Number
-		Count   core.Number
-		Sum     core.Number
+		Histogram() (histogram.State, error)
 	}
 
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.

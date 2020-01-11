@@ -23,13 +23,19 @@ import (
 )
 
 type (
-	// Aggregator aggregates measure events, keeping only the le,
-	// sum, and count.
+	// Aggregator aggregates measure events and calculates
+	// sum, count and buckets count.
 	Aggregator struct {
-		current    aggregator.HistogramValue
-		checkpoint aggregator.HistogramValue
+		current    State
+		checkpoint State
 		bounds     []float64
 		kind       core.NumberKind
+	}
+
+	State struct {
+		Buckets []core.Number
+		Count   core.Number
+		Sum     core.Number
 	}
 )
 
@@ -38,7 +44,7 @@ var _ aggregator.Sum = &Aggregator{}
 var _ aggregator.Count = &Aggregator{}
 var _ aggregator.Histogram = &Aggregator{}
 
-// New returns a new measure aggregator for computing count, sum and buckets.
+// New returns a new measure aggregator for computing count, sum and buckets count.
 //
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
@@ -46,7 +52,7 @@ var _ aggregator.Histogram = &Aggregator{}
 func New(desc *export.Descriptor, bounds []float64) *Aggregator {
 	return &Aggregator{
 		kind: desc.NumberKind(),
-		current: aggregator.HistogramValue{
+		current: State{
 			Buckets: make([]core.Number, len(bounds)+1),
 		},
 		bounds: bounds,
@@ -63,7 +69,7 @@ func (c *Aggregator) Count() (int64, error) {
 	return int64(c.checkpoint.Count.AsUint64()), nil
 }
 
-func (c *Aggregator) Buckets() (aggregator.HistogramValue, error) {
+func (c *Aggregator) Histogram() (State, error) {
 	return c.checkpoint, nil
 }
 
