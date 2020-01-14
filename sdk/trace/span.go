@@ -159,8 +159,7 @@ func (s *span) SetName(name string) {
 		// TODO: now what?
 		return
 	}
-	spanName := s.tracer.spanNameWithPrefix(name)
-	s.data.Name = spanName
+	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
 	var ctx core.SpanContext
@@ -175,7 +174,7 @@ func (s *span) SetName(name string) {
 		noParent:     noParent,
 		remoteParent: s.data.HasRemoteParent,
 		parent:       ctx,
-		name:         spanName,
+		name:         name,
 		cfg:          s.tracer.provider.config.Load().(*Config),
 		span:         s,
 	}
