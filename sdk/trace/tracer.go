@@ -52,8 +52,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		parent = p.spanContext
 	}
 
-	spanName := tr.spanNameWithPrefix(name)
-	span := startSpanInternal(tr, spanName, parent, remoteParent, opts)
+	span := startSpanInternal(tr, name, parent, remoteParent, opts)
 	for _, l := range opts.Links {
 		span.addLink(l)
 	}
@@ -68,7 +67,7 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		}
 	}
 
-	ctx, end := startExecutionTracerTask(ctx, spanName)
+	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
 	return apitrace.ContextWithSpan(ctx, span), span
 }
@@ -82,11 +81,4 @@ func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx conte
 		return err
 	}
 	return nil
-}
-
-func (tr *tracer) spanNameWithPrefix(name string) string {
-	if tr.name != "" {
-		return tr.name + "/" + name
-	}
-	return name
 }

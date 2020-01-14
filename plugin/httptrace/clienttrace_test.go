@@ -91,24 +91,24 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		attributes []core.KeyValue
 	}{
 		{
-			name:       "go.opentelemetry.io/otel/plugin/httptrace/http.connect",
+			name:       "http.connect",
 			attributes: []core.KeyValue{key.String("http.remote", address.String())},
 		},
 		{
-			name: "go.opentelemetry.io/otel/plugin/httptrace/http.getconn",
+			name: "http.getconn",
 			attributes: []core.KeyValue{
 				key.String("http.remote", address.String()),
 				key.String("http.host", address.String()),
 			},
 		},
 		{
-			name: "go.opentelemetry.io/otel/plugin/httptrace/http.receive",
+			name: "http.receive",
 		},
 		{
-			name: "go.opentelemetry.io/otel/plugin/httptrace/http.send",
+			name: "http.send",
 		},
 		{
-			name: "httptrace/client/test",
+			name: "test",
 		},
 	}
 	for _, tl := range testLen {
@@ -132,7 +132,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			expectedAttrs[attr.Key] = attr.Value.Emit()
 		}
 
-		if tl.name == "go.opentelemetry.io/otel/plugin/httptrace/http.getconn" {
+		if tl.name == "http.getconn" {
 			local := key.New("http.local")
 			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
 			if _, ok := actualAttrs[local]; ok {
@@ -232,7 +232,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.run()
-			spans := exp.spanMap["go.opentelemetry.io/otel/plugin/httptrace/http.connect"]
+			spans := exp.spanMap["http.connect"]
 
 			if l := len(spans); l != 2 {
 				t.Fatalf("Expected 2 'http.connect' traces but found %d", l)
