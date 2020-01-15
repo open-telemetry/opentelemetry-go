@@ -53,7 +53,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind export.MetricKind, nkind core.NumberKind, alternate bool) *export.Descriptor {
+func NewAggregatorTest(mkind export.Kind, nkind core.NumberKind, alternate bool) *export.Descriptor {
 	desc := export.NewDescriptor("test.name", mkind, nil, "", "", nkind, alternate)
 	return desc
 }
