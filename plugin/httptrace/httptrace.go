@@ -23,10 +23,6 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-const (
-	Vendor = "ot"
-)
-
 var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
