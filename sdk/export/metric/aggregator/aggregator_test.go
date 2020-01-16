@@ -77,7 +77,7 @@ func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
 func TestRangeTest(t *testing.T) {
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []export.MetricKind{
+			for _, mkind := range []export.Kind{
 				export.CounterKind,
 				export.GaugeKind,
 				export.MeasureKind,

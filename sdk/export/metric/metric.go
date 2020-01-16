@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package export
+package metric
 
-//go:generate stringer -type=MetricKind
+//go:generate stringer -type=Kind
 
 import (
 	"context"
@@ -283,12 +283,12 @@ func (r Record) Labels() Labels {
 	return r.labels
 }
 
-// MetricKind describes the kind of instrument.
-type MetricKind int8
+// Kind describes the kind of instrument.
+type Kind int8
 
 const (
 	// Counter kind indicates a counter instrument.
-	CounterKind MetricKind = iota
+	CounterKind Kind = iota
 
 	// Gauge kind indicates a gauge instrument.
 	GaugeKind
@@ -304,7 +304,7 @@ const (
 // exporter.
 type Descriptor struct {
 	name        string
-	metricKind  MetricKind
+	metricKind  Kind
 	keys        []core.Key
 	description string
 	unit        unit.Unit
@@ -320,7 +320,7 @@ type Descriptor struct {
 // exporter.
 func NewDescriptor(
 	name string,
-	metricKind MetricKind,
+	metricKind Kind,
 	keys []core.Key,
 	description string,
 	unit unit.Unit,
@@ -345,7 +345,7 @@ func (d *Descriptor) Name() string {
 
 // MetricKind returns the kind of instrument: counter, gauge, or
 // measure.
-func (d *Descriptor) MetricKind() MetricKind {
+func (d *Descriptor) MetricKind() Kind {
 	return d.metricKind
 }
 
