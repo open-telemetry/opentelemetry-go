@@ -23,20 +23,20 @@ import (
 )
 
 type (
-	// Aggregator observe events and counts them in pre-determined boundaries.
+	// Aggregator observe events and counts them in pre-determined buckets.
 	// It also calculates the sum and count of all events.
 	Aggregator struct {
-		current    State
-		checkpoint State
-		bounds     []float64
+		current    state
+		checkpoint state
+		boundaries []core.Number
 		kind       core.NumberKind
 	}
 
-	// State represents the state of a histogram, consisting of
+	// state represents the state of a histogram, consisting of
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
-	State struct {
-		Buckets []core.Number
+	state struct {
+		Buckets aggregator.Buckets
 		Count   core.Number
 		Sum     core.Number
 	}
@@ -47,22 +47,35 @@ var _ aggregator.Sum = &Aggregator{}
 var _ aggregator.Count = &Aggregator{}
 var _ aggregator.Histogram = &Aggregator{}
 
-// New returns a new measure aggregator for computing count, sum and buckets count.
+// New returns a new measure aggregator for computing Histograms.
+//
+// A Histogram observe events and counts them in pre-defined buckets.
+// And also provides the total sum and count of all observations.
 //
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *export.Descriptor, bounds []float64) *Aggregator {
-	return &Aggregator{
-		kind: desc.NumberKind(),
-		current: State{
-			Buckets: make([]core.Number, len(bounds)+1),
+func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
+	agg := Aggregator{
+		kind:       desc.NumberKind(),
+		boundaries: boundaries,
+		current: state{
+			Buckets: aggregator.Buckets{
+				Boundaries: boundaries,
+				Counts:     make([]core.Number, len(boundaries)+1),
+			},
 		},
-		bounds: bounds,
+		checkpoint: state{
+			Buckets: aggregator.Buckets{
+				Boundaries: boundaries,
+				Counts:     make([]core.Number, len(boundaries)+1),
+			},
+		},
 	}
+	return &agg
 }
 
-// Count returns the number of values in the checkpoint.
+// Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
 	return c.checkpoint.Sum, nil
 }
@@ -72,8 +85,8 @@ func (c *Aggregator) Count() (int64, error) {
 	return int64(c.checkpoint.Count.AsUint64()), nil
 }
 
-func (c *Aggregator) Histogram() (State, error) {
-	return c.checkpoint, nil
+func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
+	return c.checkpoint.Buckets, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -93,7 +106,10 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 
 	c.checkpoint.Count.SetUint64(c.current.Count.SwapUint64Atomic(0))
 	c.checkpoint.Sum = c.current.Sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.Buckets, c.current.Buckets = c.current.Buckets, make([]core.Number, len(c.bounds)+1)
+
+	for i := 0; i < len(c.checkpoint.Buckets.Counts); i++ {
+		c.checkpoint.Buckets.Counts[i].SetUint64(c.current.Buckets.Counts[i].SwapUint64Atomic(0))
+	}
 }
 
 // Update adds the recorded measurement to the current data set.
@@ -103,14 +119,15 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	c.current.Count.AddUint64Atomic(1)
 	c.current.Sum.AddNumberAtomic(kind, number)
 
-	for i, boundary := range c.bounds {
-		if number.CoerceToFloat64(kind) <= boundary {
-			c.current.Buckets[i].AddUint64Atomic(1)
+	for i, boundary := range c.boundaries {
+		if number.CompareNumber(kind, boundary) < 1 {
+			c.current.Buckets.Counts[i].AddUint64Atomic(1)
 			return nil
 		}
 	}
 
-	c.current.Buckets[len(c.bounds)].AddUint64Atomic(1)
+	// Observed event is bigger than every boundary.
+	c.current.Buckets.Counts[len(c.boundaries)].AddUint64Atomic(1)
 	return nil
 }
 
@@ -124,8 +141,8 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 	c.checkpoint.Sum.AddNumber(desc.NumberKind(), o.checkpoint.Sum)
 	c.checkpoint.Count.AddNumber(core.Uint64NumberKind, o.checkpoint.Count)
 
-	for i := 0; i < len(c.current.Buckets); i++ {
-		c.checkpoint.Buckets[i].AddNumber(desc.NumberKind(), o.checkpoint.Buckets[i])
+	for i := 0; i < len(c.current.Buckets.Counts); i++ {
+		c.checkpoint.Buckets.Counts[i].AddNumber(core.Uint64NumberKind, o.checkpoint.Buckets.Counts[i])
 	}
 	return nil
 }

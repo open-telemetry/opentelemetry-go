@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 // These interfaces describe the various ways to access state from an
@@ -64,10 +63,18 @@ type (
 		Points() ([]core.Number, error)
 	}
 
-	// Quantile returns an exact or estimated quantile over the
-	// set of values that were aggregated.
+	// Buckets represents histogram buckets boundaries and counts.
+	//
+	// For a Histogram with N defined boundaries, e.g, [x, y, z].
+	// There are N+1 counts: [-inf, x], (x, y], (y, z], (z, +inf)
+	Buckets struct {
+		Boundaries []core.Number
+		Counts     []core.Number
+	}
+
+	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
-		Histogram() (histogram.State, error)
+		Histogram() (Buckets, error)
 	}
 
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
