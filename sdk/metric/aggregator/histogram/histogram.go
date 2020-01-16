@@ -85,6 +85,7 @@ func (c *Aggregator) Count() (int64, error) {
 	return int64(c.checkpoint.Count.AsUint64()), nil
 }
 
+// Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 	return c.checkpoint.Buckets, nil
 }
