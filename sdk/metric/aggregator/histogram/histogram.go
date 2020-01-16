@@ -52,6 +52,9 @@ var _ aggregator.Histogram = &Aggregator{}
 // A Histogram observe events and counts them in pre-defined buckets.
 // And also provides the total sum and count of all observations.
 //
+// Boundaries MUST be ordered otherwise the histogram could not
+// be properly computed.
+//
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
@@ -127,7 +130,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 		}
 	}
 
-	// Observed event is bigger than every boundary.
+	// Observed event is bigger than all defined boundaries.
 	c.current.Buckets.Counts[len(c.boundaries)].AddUint64Atomic(1)
 	return nil
 }
