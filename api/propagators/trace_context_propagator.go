@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -52,7 +52,7 @@ func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
 		supplier.Set(TraceparentHeader, h)
 	}
 
-	correlationCtx := dctx.FromContext(ctx)
+	correlationCtx := correlation.FromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	correlationCtx.Foreach(func(kv core.KeyValue) bool {
@@ -73,7 +73,7 @@ func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
 
 func (hp TraceContext) Extract(
 	ctx context.Context, supplier Supplier,
-) (core.SpanContext, dctx.Map) {
+) (core.SpanContext, correlation.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
@@ -146,10 +146,10 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Supplier) dctx.Map {
+func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Supplier) correlation.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
-		return dctx.NewEmptyMap()
+		return correlation.NewEmptyMap()
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
@@ -185,7 +185,7 @@ func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Suppl
 
 		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
 	}
-	return dctx.NewMap(dctx.MapUpdate{
+	return correlation.NewMap(correlation.MapUpdate{
 		MultiKV: keyValues,
 	})
 }

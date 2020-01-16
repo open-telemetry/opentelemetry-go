@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -76,11 +76,11 @@ func (b3 B3) Inject(ctx context.Context, supplier Supplier) {
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, correlation.Map) {
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
+		return b3.extractSingleHeader(supplier), correlation.NewEmptyMap()
 	}
-	return b3.extract(supplier), dctx.NewEmptyMap()
+	return b3.extract(supplier), correlation.NewEmptyMap()
 }
 
 func (b3 B3) GetAllKeys() []string {

@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
@@ -350,7 +350,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			_, gotCorCtx := propagator.Extract(ctx, req.Header)
-			wantCorCtx := dctx.NewMap(dctx.MapUpdate{MultiKV: tt.wantKVs})
+			wantCorCtx := correlation.NewMap(correlation.MapUpdate{MultiKV: tt.wantKVs})
 			if gotCorCtx.Len() != wantCorCtx.Len() {
 				t.Errorf(
 					"Got and Want CorCtx are not the same size %d != %d",
@@ -453,7 +453,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			ctx := dctx.WithMap(context.Background(), dctx.NewMap(dctx.MapUpdate{MultiKV: tt.kvs}))
+			ctx := correlation.WithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")

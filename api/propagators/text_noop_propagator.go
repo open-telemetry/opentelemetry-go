@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 )
 
 // NoopTextFormat implements TextFormat that does nothing.
@@ -31,8 +31,8 @@ func (np NoopTextFormat) Inject(ctx context.Context, supplier Supplier) {
 }
 
 // Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormat) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
-	return core.EmptySpanContext(), dctx.NewEmptyMap()
+func (np NoopTextFormat) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, correlation.Map) {
+	return core.EmptySpanContext(), correlation.NewEmptyMap()
 }
 
 // GetAllKeys returns empty list of strings.

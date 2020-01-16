@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
@@ -39,7 +39,7 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 	metadataCopy := requestMetadata.Copy()
 
 	entries, spanCtx := grpctrace.Extract(ctx, &metadataCopy)
-	ctx = distributedcontext.WithMap(ctx, distributedcontext.NewMap(distributedcontext.MapUpdate{
+	ctx = correlation.WithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 		MultiKV: entries,
 	}))
 
