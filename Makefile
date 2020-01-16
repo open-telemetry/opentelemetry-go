@@ -25,7 +25,7 @@ $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 $(TOOLS_DIR)/stringer: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: lint generate build examples test
+precommit: generate build lint examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
