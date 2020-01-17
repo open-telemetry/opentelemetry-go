@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package testtrace_test
 
 import (
 	"context"
@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -46,7 +45,7 @@ func mustSpanIDFromHex(s string) (t core.SpanID) {
 }
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	tests := []struct {
 		name   string
 		header string
@@ -139,7 +138,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
 		name   string
@@ -231,7 +230,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	tests := []struct {
 		name       string
 		sc         core.SpanContext
@@ -287,7 +286,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name    string
 		header  string
@@ -375,7 +374,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -401,7 +400,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name         string
 		kvs          []core.KeyValue
@@ -475,7 +474,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	want := []string{"Traceparent", "Correlation-Context"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
