@@ -84,7 +84,7 @@ examples:
 	done
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
+lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -98,5 +98,5 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
 	    go mod tidy); \
 	done
 
-generate:
+generate: $(TOOLS_DIR)/stringer
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
