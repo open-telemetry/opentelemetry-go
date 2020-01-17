@@ -100,25 +100,10 @@ type StartConfig struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
 	Links      []Link
-	Relation   Relation
 	Record     bool
+	Parent     context.Context
 	SpanKind   SpanKind
 }
-
-// Relation is used to establish relationship between newly created span and the
-// other span. The other span could be related as a parent or linked or any other
-// future relationship type.
-type Relation struct {
-	core.SpanContext
-	RelationshipType
-}
-
-type RelationshipType int
-
-const (
-	ChildOfRelationship RelationshipType = iota
-	FollowsFromRelationship
-)
 
 // Link is used to establish relationship between two spans within the same Trace or
 // across different Traces. Few examples of Link usage.
@@ -189,6 +174,22 @@ func (sk SpanKind) String() string {
 	}
 }
 
+// WithParent explicitly sets the parent context.  When the
+// parent context is not set explicitly, it defaults to:
+//  1. If a remote context is set
+//     a. If a current span is set with the same trace_id, use the span's
+//        SpanContext as parent.
+//     b. If the current span belongs to a different trace_id, use the remote
+//        context as parent.
+//  2. If a current span is set and remote context is not set, use the span's
+//     SpanContext as parent.
+//  3. If neither remote context nor current span is set, a new root.
+func WithParent(ctx context.Context) StartOption {
+	return func(c *StartConfig) {
+		c.Parent = ctx
+	}
+}
+
 // WithStartTime sets the start time of the span to provided time t, when it is started.
 // In absence of this option, wall clock time is used as start time.
 // This option is typically used when starting of the span is delayed.
@@ -213,26 +214,6 @@ func WithAttributes(attrs ...core.KeyValue) StartOption {
 func WithRecord() StartOption {
 	return func(c *StartConfig) {
 		c.Record = true
-	}
-}
-
-// ChildOf. TODO: do we need this?.
-func ChildOf(sc core.SpanContext) StartOption {
-	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: ChildOfRelationship,
-		}
-	}
-}
-
-// FollowsFrom. TODO: do we need this?.
-func FollowsFrom(sc core.SpanContext) StartOption {
-	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: FollowsFromRelationship,
-		}
 	}
 }
 

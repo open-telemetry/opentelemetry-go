@@ -66,7 +66,7 @@ func main() {
 			req.Context(),
 			"hello",
 			trace.WithAttributes(attrs...),
-			trace.ChildOf(spanCtx),
+			trace.WithParent(trace.WithRemoteContext(req.Context(), spanCtx)),
 		)
 		defer span.End()
 

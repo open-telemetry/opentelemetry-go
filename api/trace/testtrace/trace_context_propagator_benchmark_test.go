@@ -39,7 +39,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			TraceFlags: core.TraceFlagsSampled,
 		}
 		ctx := context.Background()
-		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))
+		ctx, _ = mockTracer.Start(ctx, "inject", trace.WithParent(trace.WithRemoteContext(ctx, sc)))
 		fn(ctx, b)
 	})
 

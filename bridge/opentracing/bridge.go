@@ -316,7 +316,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
-		opts.Relation = bRelation.ToOtelRelation()
+		opts.Parent = bRelation.ToOtelParent()
 		opts.Record = true
 		opts.SpanKind = kind
 	})
@@ -442,17 +442,21 @@ func otTagToOtelCoreKey(k string) otelcore.Key {
 
 type bridgeRelation struct {
 	spanContext      *bridgeSpanContext
-	relationshipType oteltrace.RelationshipType
+	relationshipType ot.SpanReferenceType
 }
 
-func (r bridgeRelation) ToOtelRelation() oteltrace.Relation {
+func (r bridgeRelation) ToOtelParent() context.Context {
+	ctx := context.Background()
 	if r.spanContext == nil {
-		return oteltrace.Relation{}
+		return ctx
 	}
-	return oteltrace.Relation{
-		SpanContext:      r.spanContext.otelSpanContext,
-		RelationshipType: r.relationshipType,
-	}
+	ctx = oteltrace.WithRemoteContext(ctx, otelcore.SpanContext{
+		TraceID: r.spanContext.otelSpanContext.TraceID,
+		SpanID:  r.spanContext.otelSpanContext.SpanID,
+		// TODO: Flags
+	})
+	// TODO: relationshipType
+	return ctx
 }
 
 func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (bridgeRelation, []*bridgeSpanContext) {
@@ -462,7 +466,7 @@ func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (br
 	first := references[0]
 	relation := bridgeRelation{
 		spanContext:      mustGetBridgeSpanContext(first.ReferencedContext),
-		relationshipType: otSpanReferenceTypeToOtelRelationshipType(first.Type),
+		relationshipType: first.Type,
 	}
 	var links []*bridgeSpanContext
 	for _, reference := range references[1:] {
@@ -477,17 +481,6 @@ func mustGetBridgeSpanContext(ctx ot.SpanContext) *bridgeSpanContext {
 		panic("oops, some foreign span context here")
 	}
 	return ourCtx
-}
-
-func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltrace.RelationshipType {
-	switch srt {
-	case ot.ChildOfRef:
-		return oteltrace.ChildOfRelationship
-	case ot.FollowsFromRef:
-		return oteltrace.FollowsFromRelationship
-	default:
-		panic("fix yer code, it uses bogus opentracing reference type")
-	}
 }
 
 // TODO: these headers are most likely bogus

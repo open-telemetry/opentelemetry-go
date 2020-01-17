@@ -153,7 +153,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// and incoming remote sctx should be added as a link.
 			opt = trace.LinkedTo(sc)
 		} else { // not a private endpoint, so assume child relationship
-			opt = trace.ChildOf(sc)
+			opt = trace.WithParent(r.Context())
 		}
 		opts = append(opts, opt)
 	}

@@ -53,7 +53,7 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 		ctx,
 		"hello-api-op",
 		trace.WithAttributes(serverSpanAttrs...),
-		trace.ChildOf(spanCtx),
+		trace.WithParent(trace.WithRemoteContext(ctx, spanCtx)),
 		trace.WithSpanKind(trace.SpanKindServer),
 	)
 	defer span.End()

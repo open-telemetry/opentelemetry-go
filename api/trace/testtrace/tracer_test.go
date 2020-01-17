@@ -74,17 +74,17 @@ func TestTracer(t *testing.T) {
 			e.Expect(attributes[attr2.Key]).ToEqual(attr2.Value)
 		})
 
-		t.Run("uses the parent's span context from ChildOf", func(t *testing.T) {
+		t.Run("uses the parent's span context from WithParent", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
 			subject := testtrace.NewTracer()
 
-			_, parent := subject.Start(context.Background(), "parent")
-			parentSpanContext := parent.SpanContext()
+			parent, parentSpan := subject.Start(context.Background(), "parent")
+			parentSpanContext := parentSpan.SpanContext()
 
-			_, span := subject.Start(context.Background(), "child", trace.ChildOf(parentSpanContext))
+			_, span := subject.Start(context.Background(), "child", trace.WithParent(parent))
 
 			testSpan, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
@@ -102,54 +102,11 @@ func TestTracer(t *testing.T) {
 
 			subject := testtrace.NewTracer()
 
-			_, parent := subject.Start(context.Background(), "parent")
-			parentSpanContext := parent.SpanContext()
+			parentCtx, parentSpan := subject.Start(context.Background(), "parent")
+			parentSpanContext := parentSpan.SpanContext()
 
 			ctx, _ := subject.Start(context.Background(), "should be ignored")
-			_, span := subject.Start(ctx, "child", trace.ChildOf(parentSpanContext))
-
-			testSpan, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
-		})
-
-		t.Run("uses the parent's span context from FollowsFrom", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			subject := testtrace.NewTracer()
-
-			_, parent := subject.Start(context.Background(), "parent")
-			parentSpanContext := parent.SpanContext()
-
-			_, span := subject.Start(context.Background(), "child", trace.FollowsFrom(parentSpanContext))
-
-			testSpan, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
-		})
-
-		t.Run("defers to FollowsFrom if the provided context also contains a parent span", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			subject := testtrace.NewTracer()
-
-			_, parent := subject.Start(context.Background(), "parent")
-			parentSpanContext := parent.SpanContext()
-
-			ctx, _ := subject.Start(context.Background(), "should be ignored")
-			_, span := subject.Start(ctx, "child", trace.FollowsFrom(parentSpanContext))
+			_, span := subject.Start(ctx, "child", trace.WithParent(parentCtx))
 
 			testSpan, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
