@@ -104,10 +104,9 @@ func TestInjectB3(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
-				} else {
-					ctx, _ = mockTracer.Start(ctx, "inject")
+					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
 				}
+				ctx, _ = mockTracer.Start(ctx, "inject")
 				propagator.Inject(ctx, req.Header)
 
 				for h, v := range tt.wantHeaders {

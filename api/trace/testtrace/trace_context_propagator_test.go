@@ -273,7 +273,8 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
 			if tt.sc.IsValid() {
-				ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.sc))
+				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
+				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
 			propagator.Inject(ctx, req.Header)
 
