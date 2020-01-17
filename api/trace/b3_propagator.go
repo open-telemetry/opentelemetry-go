@@ -21,7 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/propagators"
+	"go.opentelemetry.io/otel/api/propagation"
 )
 
 const (
@@ -50,9 +50,9 @@ type B3 struct {
 	SingleHeader bool
 }
 
-var _ propagators.TextFormat = B3{}
+var _ propagation.TextFormat = B3{}
 
-func (b3 B3) Inject(ctx context.Context, supplier propagators.Supplier) {
+func (b3 B3) Inject(ctx context.Context, supplier propagation.Supplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
@@ -76,7 +76,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagators.Supplier) {
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3) Extract(ctx context.Context, supplier propagators.Supplier) (core.SpanContext, correlation.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier propagation.Supplier) (core.SpanContext, correlation.Map) {
 	if b3.SingleHeader {
 		return b3.extractSingleHeader(supplier), correlation.NewEmptyMap()
 	}
@@ -90,7 +90,7 @@ func (b3 B3) GetAllKeys() []string {
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 B3) extract(supplier propagators.Supplier) core.SpanContext {
+func (b3 B3) extract(supplier propagation.Supplier) core.SpanContext {
 	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return core.EmptySpanContext()
@@ -125,7 +125,7 @@ func (b3 B3) extract(supplier propagators.Supplier) core.SpanContext {
 	return sc
 }
 
-func (b3 B3) extractSingleHeader(supplier propagators.Supplier) core.SpanContext {
+func (b3 B3) extractSingleHeader(supplier propagation.Supplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
 		core.EmptySpanContext()
