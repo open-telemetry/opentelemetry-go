@@ -25,9 +25,9 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
-	ottest "go.opentelemetry.io/otel/internal/testing"
 
 	"go.opentelemetry.io/otel/api/core"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
