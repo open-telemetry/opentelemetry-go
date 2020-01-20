@@ -16,6 +16,7 @@ package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/hist
 
 import (
 	"context"
+	"sort"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -56,13 +57,21 @@ var _ aggregator.Histogram = &Aggregator{}
 // A Histogram observe events and counts them in pre-defined buckets.
 // And also provides the total sum and count of all observations.
 //
-// Boundaries MUST be ordered otherwise the histogram could not
-// be properly computed.
-//
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
 func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
+	// Boundaries MUST be ordered otherwise the histogram could not
+	// be properly computed.
+	sortedBoundaries := numbers{
+		numbers: make([]core.Number, len(boundaries)),
+		kind:    desc.NumberKind(),
+	}
+
+	copy(sortedBoundaries.numbers, boundaries)
+	sort.Sort(&sortedBoundaries)
+	boundaries = sortedBoundaries.numbers
+
 	agg := Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: boundaries,
@@ -153,4 +162,24 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 		c.checkpoint.buckets.Counts[i].AddNumber(core.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
 	}
 	return nil
+}
+
+// numbers is an auxiliary struct to order histogram bucket boundaries (slice of core.Number)
+type numbers struct {
+	numbers []core.Number
+	kind    core.NumberKind
+}
+
+var _ sort.Interface = (*numbers)(nil)
+
+func (n *numbers) Len() int {
+	return len(n.numbers)
+}
+
+func (n *numbers) Less(i, j int) bool {
+	return -1 == n.numbers[i].CompareNumber(n.kind, n.numbers[j])
+}
+
+func (n *numbers) Swap(i, j int) {
+	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }

@@ -20,6 +20,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 	"unsafe"
 
@@ -62,8 +63,8 @@ var (
 	}
 
 	boundaries = map[core.NumberKind][]core.Number{
-		core.Float64NumberKind: {core.NewFloat64Number(250), core.NewFloat64Number(500), core.NewFloat64Number(750)},
-		core.Int64NumberKind:   {core.NewInt64Number(250), core.NewInt64Number(500), core.NewInt64Number(750)},
+		core.Float64NumberKind: {core.NewFloat64Number(500), core.NewFloat64Number(250), core.NewFloat64Number(750)},
+		core.Int64NumberKind:   {core.NewInt64Number(500), core.NewInt64Number(250), core.NewInt64Number(750)},
 	}
 )
 
@@ -157,7 +158,7 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	counts := calcBuckets(all.Points(), profile)
 	for i, v := range counts {
 		bCount := agg.checkpoint.buckets.Counts[i].AsUint64()
-		require.Equal(t, v, bCount, "Wrong bucket #%d count", i)
+		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint.buckets.Counts)
 	}
 }
 
@@ -208,7 +209,7 @@ func TestHistogramMerge(t *testing.T) {
 		counts := calcBuckets(all.Points(), profile)
 		for i, v := range counts {
 			bCount := agg1.checkpoint.buckets.Counts[i].AsUint64()
-			require.Equal(t, v, bCount, "Wrong bucket #%d count", i)
+			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint.buckets.Counts)
 		}
 	})
 }
@@ -238,10 +239,19 @@ func TestHistogramNotSet(t *testing.T) {
 }
 
 func calcBuckets(points []core.Number, profile test.Profile) []uint64 {
-	counts := make([]uint64, len(boundaries[profile.NumberKind])+1)
+	sortedBoundaries := numbers{
+		numbers: make([]core.Number, len(boundaries[profile.NumberKind])),
+		kind:    profile.NumberKind,
+	}
+
+	copy(sortedBoundaries.numbers, boundaries[profile.NumberKind])
+	sort.Sort(&sortedBoundaries)
+	boundaries := sortedBoundaries.numbers
+
+	counts := make([]uint64, len(boundaries)+1)
 	idx := 0
 	for _, p := range points {
-		for idx < len(boundaries[profile.NumberKind]) && p.CompareNumber(profile.NumberKind, boundaries[profile.NumberKind][idx]) != -1 {
+		for idx < len(boundaries) && p.CompareNumber(profile.NumberKind, boundaries[idx]) != -1 {
 			idx++
 		}
 		counts[idx]++
