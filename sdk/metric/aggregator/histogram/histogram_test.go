@@ -16,11 +16,15 @@ package histogram
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -57,8 +61,46 @@ var (
 		},
 	}
 
-	boundaries = []core.Number{core.NewFloat64Number(250), core.NewFloat64Number(500), core.NewFloat64Number(700)}
+	boundaries = map[core.NumberKind][]core.Number{
+		core.Float64NumberKind: {core.NewFloat64Number(250), core.NewFloat64Number(500), core.NewFloat64Number(750)},
+		core.Int64NumberKind:   {core.NewInt64Number(250), core.NewInt64Number(500), core.NewInt64Number(750)},
+	}
 )
+
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "Aggregator.current",
+			Offset: unsafe.Offsetof(Aggregator{}.current),
+		},
+		{
+			Name:   "Aggregator.checkpoint",
+			Offset: unsafe.Offsetof(Aggregator{}.checkpoint),
+		},
+		{
+			Name:   "state.buckets",
+			Offset: unsafe.Offsetof(state{}.buckets),
+		},
+		{
+			Name:   "state.sum",
+			Offset: unsafe.Offsetof(state{}.sum),
+		},
+		{
+			Name:   "state.count",
+			Offset: unsafe.Offsetof(state{}.count),
+		},
+	}
+	fmt.Println(fields)
+
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		fmt.Println("QUEBROU")
+
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestHistogramAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
@@ -83,7 +125,7 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !policy.absolute)
 
-	agg := New(descriptor, boundaries)
+	agg := New(descriptor, boundaries[profile.NumberKind])
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -110,11 +152,11 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
-	require.Equal(t, len(agg.checkpoint.Buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
+	require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 	counts := calcBuckets(all.Points(), profile)
 	for i, v := range counts {
-		bCount := agg.checkpoint.Buckets.Counts[i].AsUint64()
+		bCount := agg.checkpoint.buckets.Counts[i].AsUint64()
 		require.Equal(t, v, bCount, "Wrong bucket #%d count", i)
 	}
 }
@@ -125,8 +167,8 @@ func TestHistogramMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg1 := New(descriptor, boundaries)
-		agg2 := New(descriptor, boundaries)
+		agg1 := New(descriptor, boundaries[profile.NumberKind])
+		agg2 := New(descriptor, boundaries[profile.NumberKind])
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -161,11 +203,11 @@ func TestHistogramMerge(t *testing.T) {
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg1.checkpoint.Buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
+		require.Equal(t, len(agg1.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 		counts := calcBuckets(all.Points(), profile)
 		for i, v := range counts {
-			bCount := agg1.checkpoint.Buckets.Counts[i].AsUint64()
+			bCount := agg1.checkpoint.buckets.Counts[i].AsUint64()
 			require.Equal(t, v, bCount, "Wrong bucket #%d count", i)
 		}
 	})
@@ -177,7 +219,7 @@ func TestHistogramNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
 
-		agg := New(descriptor, boundaries)
+		agg := New(descriptor, boundaries[profile.NumberKind])
 		agg.Checkpoint(ctx, descriptor)
 
 		asum, err := agg.Sum()
@@ -188,18 +230,18 @@ func TestHistogramNotSet(t *testing.T) {
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg.checkpoint.Buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
-		for i, bCount := range agg.checkpoint.Buckets.Counts {
+		require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		for i, bCount := range agg.checkpoint.buckets.Counts {
 			require.Equal(t, uint64(0), bCount.AsUint64(), "Bucket #%d must have 0 observed values", i)
 		}
 	})
 }
 
 func calcBuckets(points []core.Number, profile test.Profile) []uint64 {
-	counts := make([]uint64, len(boundaries)+1)
+	counts := make([]uint64, len(boundaries[profile.NumberKind])+1)
 	idx := 0
 	for _, p := range points {
-		if idx < len(boundaries) && p.CompareNumber(profile.NumberKind, boundaries[idx]) == 1 {
+		for idx < len(boundaries[profile.NumberKind]) && p.CompareNumber(profile.NumberKind, boundaries[profile.NumberKind][idx]) != -1 {
 			idx++
 		}
 		counts[idx]++
