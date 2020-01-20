@@ -50,7 +50,7 @@ func (w *bodyWrapper) Close() error {
 var _ http.ResponseWriter = &respWriterWrapper{}
 
 type injector interface {
-	Inject(context.Context, propagation.Supplier)
+	Inject(context.Context, propagation.HTTPSupplier)
 }
 
 // respWriterWrapper wraps a http.ResponseWriter in order to track the number of

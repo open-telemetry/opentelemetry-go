@@ -42,7 +42,7 @@ type TraceContext struct{}
 var _ propagation.TextFormat = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp TraceContext) Inject(ctx context.Context, supplier propagation.Supplier) {
+func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
@@ -73,13 +73,13 @@ func (hp TraceContext) Inject(ctx context.Context, supplier propagation.Supplier
 }
 
 func (hp TraceContext) Extract(
-	ctx context.Context, supplier propagation.Supplier,
+	ctx context.Context, supplier propagation.HTTPSupplier,
 ) (core.SpanContext, correlation.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
 func (hp TraceContext) extractSpanContext(
-	ctx context.Context, supplier propagation.Supplier,
+	ctx context.Context, supplier propagation.HTTPSupplier,
 ) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
@@ -147,7 +147,7 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.Supplier) correlation.Map {
+func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.HTTPSupplier) correlation.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
 		return correlation.NewEmptyMap()
