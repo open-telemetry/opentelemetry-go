@@ -95,8 +95,6 @@ func TestMain(m *testing.M) {
 	fmt.Println(fields)
 
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		fmt.Println("QUEBROU")
-
 		os.Exit(1)
 	}
 
