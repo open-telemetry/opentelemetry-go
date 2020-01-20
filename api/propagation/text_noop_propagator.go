@@ -27,11 +27,11 @@ type NoopTextFormat struct{}
 var _ TextFormat = NoopTextFormat{}
 
 // Inject does nothing.
-func (np NoopTextFormat) Inject(ctx context.Context, supplier Supplier) {
+func (np NoopTextFormat) Inject(ctx context.Context, supplier HTTPSupplier) {
 }
 
 // Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormat) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, correlation.Map) {
+func (np NoopTextFormat) Extract(ctx context.Context, supplier HTTPSupplier) (core.SpanContext, correlation.Map) {
 	return core.EmptySpanContext(), correlation.NewEmptyMap()
 }
 
