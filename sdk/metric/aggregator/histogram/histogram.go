@@ -39,7 +39,6 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		a uint8
 		// all fields have to be aligned for 64-bit atomic operations.
 		buckets aggregator.Buckets
 		count   core.Number
