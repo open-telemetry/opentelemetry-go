@@ -22,22 +22,9 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-)
-
-const (
-	// Vendor is the integration provider
-	Vendor = "ot"
-)
-
-var (
-	tcPropagator = trace.TraceContext{}
-	ccPropagator = correlation.CorrelationContext{}
-	propagators  = propagation.New(
-		propagation.WithInjectors(tcPropagator, ccPropagator),
-		propagation.WithExtractors(tcPropagator, ccPropagator),
-	)
 )
 
 type metadataSupplier struct {
@@ -57,7 +44,7 @@ func (s *metadataSupplier) Set(key string, value string) {
 // metadata object. This function is meant to be used on outgoing
 // requests.
 func Inject(ctx context.Context, metadata *metadata.MD) {
-	propagation.InjectHTTP(ctx, propagators, &metadataSupplier{
+	propagation.InjectHTTP(ctx, global.Propagators(), &metadataSupplier{
 		metadata: metadata,
 	})
 }
@@ -66,7 +53,7 @@ func Inject(ctx context.Context, metadata *metadata.MD) {
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.SpanContext) {
-	ctx = propagation.ExtractHTTP(ctx, propagators, &metadataSupplier{
+	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), &metadataSupplier{
 		metadata: metadata,
 	})
 
