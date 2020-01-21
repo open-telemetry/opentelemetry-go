@@ -223,6 +223,6 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
 		span.SetAttributes(RouteKey.String(route))
-		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
+		h.ServeHTTP(w, r)
 	})
 }
