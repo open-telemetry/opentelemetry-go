@@ -53,24 +53,25 @@ var _ propagation.HTTPPropagator = B3{}
 
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
-	if sc.IsValid() {
-		if b3.SingleHeader {
-			sampled := sc.TraceFlags & core.TraceFlagsSampled
-			supplier.Set(B3SingleHeader,
-				fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
-		} else {
-			supplier.Set(B3TraceIDHeader, sc.TraceIDString())
-			supplier.Set(B3SpanIDHeader,
-				fmt.Sprintf("%.16x", sc.SpanID))
+	if !sc.IsValid() {
+		return
+	}
+	if b3.SingleHeader {
+		sampled := sc.TraceFlags & core.TraceFlagsSampled
+		supplier.Set(B3SingleHeader,
+			fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
+	} else {
+		supplier.Set(B3TraceIDHeader, sc.TraceIDString())
+		supplier.Set(B3SpanIDHeader,
+			fmt.Sprintf("%.16x", sc.SpanID))
 
-			var sampled string
-			if sc.IsSampled() {
-				sampled = "1"
-			} else {
-				sampled = "0"
-			}
-			supplier.Set(B3SampledHeader, sampled)
+		var sampled string
+		if sc.IsSampled() {
+			sampled = "1"
+		} else {
+			sampled = "0"
 		}
+		supplier.Set(B3SampledHeader, sampled)
 	}
 }
 
