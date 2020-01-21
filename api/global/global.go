@@ -17,6 +17,7 @@ package global
 import (
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -47,4 +48,16 @@ func MeterProvider() metric.Provider {
 // SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.Provider) {
 	internal.SetMeterProvider(mp)
+}
+
+// Propagators returns the registered global propagators instance.  If
+// none is registered then an instance of propagators.NoopPropagators
+// is returned.
+func Propagators() propagation.Propagators {
+	return internal.Propagators()
+}
+
+// SetPropagators registers `p` as the global propagators instance.
+func SetPropagators(p propagation.Propagators) {
+	internal.SetPropagators(p)
 }
