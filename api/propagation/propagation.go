@@ -55,6 +55,23 @@ type HTTPInjector interface {
 	Inject(context.Context, HTTPSupplier)
 }
 
+// Config contains the current set of extractors and injectors.
+type Config struct {
+	httpEx []HTTPExtractor
+	httpIn []HTTPInjector
+}
+
+// Propagators is the interface to a set of injectors and extractors
+// for all supported carrier formats. It can be used to chain multiple
+// propagators into a single entity.
+type Propagators interface {
+	// HTTPExtractors returns the configured extractors.
+	HTTPExtractors() []HTTPExtractor
+
+	// HTTPInjectors returns the configured injectors.
+	HTTPInjectors() []HTTPInjector
+}
+
 // HTTPPropagator is the interface to inject to and extract from
 // HTTPSupplier.
 type HTTPPropagator interface {
@@ -63,4 +80,64 @@ type HTTPPropagator interface {
 
 	// GetAllKeys returns the HTTP header names used.
 	GetAllKeys() []string
+}
+
+// Option support passing configuration parameters to New().
+type Option func(*Config)
+
+// propagators is the default Propagators implementation.
+type propagators struct {
+	config Config
+}
+
+// New returns a standard Propagators implementation.
+func New(options ...Option) Propagators {
+	config := Config{}
+	for _, opt := range options {
+		opt(&config)
+	}
+	return &propagators{
+		config: config,
+	}
+}
+
+// WithInjectors appends to the optional injector set.
+func WithInjectors(inj ...HTTPInjector) Option {
+	return func(config *Config) {
+		config.httpIn = append(config.httpIn, inj...)
+	}
+}
+
+// WithExtractors appends to the optional extractor set.
+func WithExtractors(ext ...HTTPExtractor) Option {
+	return func(config *Config) {
+		config.httpEx = append(config.httpEx, ext...)
+	}
+}
+
+// HTTPExtractors implements Propagators.
+func (p *propagators) HTTPExtractors() []HTTPExtractor {
+	return p.config.httpEx
+}
+
+// HTTPExtractors implements Propagators.
+func (p *propagators) HTTPInjectors() []HTTPInjector {
+	return p.config.httpIn
+}
+
+// ExtractHTTP applies props.HTTPExtractors() to the passed context
+// and the supplier and returns the combined result context.
+func ExtractHTTP(ctx context.Context, props Propagators, supplier HTTPSupplier) context.Context {
+	for _, ex := range props.HTTPExtractors() {
+		ctx = ex.Extract(ctx, supplier)
+	}
+	return ctx
+}
+
+// InjectHTTP applies props.HTTPInjectors() to the passed context and
+// the supplier.
+func InjectHTTP(ctx context.Context, props Propagators, supplier HTTPSupplier) {
+	for _, in := range props.HTTPInjectors() {
+		in.Inject(ctx, supplier)
+	}
 }

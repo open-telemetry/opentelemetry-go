@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -45,7 +46,7 @@ func mustSpanIDFromHex(s string) (t core.SpanID) {
 }
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator trace.TraceContext
+	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -129,7 +130,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagator.Extract(ctx, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -139,8 +140,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator trace.TraceContext
 	wantSc := core.EmptySpanContext()
+	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -217,7 +218,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagator.Extract(ctx, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -232,7 +233,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	var propagator trace.TraceContext
+	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}))
 	tests := []struct {
 		name       string
 		sc         core.SpanContext
@@ -278,7 +279,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			propagator.Inject(ctx, req.Header)
+			propagation.InjectHTTP(ctx, props, req.Header)
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
@@ -290,6 +291,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	propagator := trace.TraceContext{}
+	props := propagation.New(propagation.WithExtractors(propagator))
 	tests := []struct {
 		name    string
 		header  string
@@ -351,7 +353,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("Correlation-Context", tt.header)
 
 			ctx := context.Background()
-			ctx = propagator.Extract(ctx, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotCorCtx := correlation.FromContext(ctx)
 			wantCorCtx := correlation.NewMap(correlation.MapUpdate{MultiKV: tt.wantKVs})
 			if gotCorCtx.Len() != wantCorCtx.Len() {
@@ -379,6 +381,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	propagator := trace.TraceContext{}
+	props := propagation.New(propagation.WithExtractors(propagator))
 	tests := []struct {
 		name   string
 		header string
@@ -395,7 +398,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("Correlation-Context", tt.header)
 
 			ctx := context.Background()
-			ctx = propagator.Extract(ctx, req.Header)
+			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotCorCtx := correlation.FromContext(ctx)
 			if gotCorCtx.Len() != 0 {
 				t.Errorf("Got and Want CorCtx are not the same size %d != %d", gotCorCtx.Len(), 0)
@@ -406,6 +409,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	propagator := trace.TraceContext{}
+	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
 		kvs          []core.KeyValue
@@ -458,7 +462,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := correlation.WithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
-			propagator.Inject(ctx, req.Header)
+			propagation.InjectHTTP(ctx, props, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
