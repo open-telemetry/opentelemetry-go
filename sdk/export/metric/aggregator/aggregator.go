@@ -63,6 +63,20 @@ type (
 		Points() ([]core.Number, error)
 	}
 
+	// Buckets represents histogram buckets boundaries and counts.
+	//
+	// For a Histogram with N defined boundaries, e.g, [x, y, z].
+	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
+	Buckets struct {
+		Boundaries []core.Number
+		Counts     []core.Number
+	}
+
+	// Histogram returns the count of events in pre-determined buckets.
+	Histogram interface {
+		Histogram() (Buckets, error)
+	}
+
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
 	MinMaxSumCount interface {
 		Min
