@@ -40,14 +40,15 @@ var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-
 
 func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
-	if sc.IsValid() {
-		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
-			supportedVersion,
-			sc.TraceIDString(),
-			sc.SpanID,
-			sc.TraceFlags&core.TraceFlagsSampled)
-		supplier.Set(TraceparentHeader, h)
+	if !sc.IsValid() {
+		return
 	}
+	h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
+		supportedVersion,
+		sc.TraceIDString(),
+		sc.SpanID,
+		sc.TraceFlags&core.TraceFlagsSampled)
+	supplier.Set(TraceparentHeader, h)
 }
 
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
