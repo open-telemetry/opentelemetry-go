@@ -63,7 +63,8 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				gotSc, _ := propagator.Extract(ctx, req.Header)
+				ctx = propagator.Extract(ctx, req.Header)
+				gotSc := trace.RemoteContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}

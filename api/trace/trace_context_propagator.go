@@ -39,10 +39,10 @@ const (
 //nolint:golint
 type TraceContext struct{}
 
-var _ propagation.TextFormat = TraceContext{}
+var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
@@ -72,15 +72,11 @@ func (hp TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupp
 	}
 }
 
-func (hp TraceContext) Extract(
-	ctx context.Context, supplier propagation.HTTPSupplier,
-) (core.SpanContext, correlation.Map) {
-	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
+func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	return correlation.WithMap(WithRemoteContext(ctx, tc.extractSpanContext(supplier)), tc.extractCorrelationCtx(supplier))
 }
 
-func (hp TraceContext) extractSpanContext(
-	ctx context.Context, supplier propagation.HTTPSupplier,
-) core.SpanContext {
+func (TraceContext) extractSpanContext(supplier propagation.HTTPSupplier) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
@@ -147,7 +143,7 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.HTTPSupplier) correlation.Map {
+func (TraceContext) extractCorrelationCtx(supplier propagation.HTTPSupplier) correlation.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
 		return correlation.NewEmptyMap()
@@ -191,6 +187,6 @@ func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propa
 	})
 }
 
-func (hp TraceContext) GetAllKeys() []string {
+func (TraceContext) GetAllKeys() []string {
 	return []string{TraceparentHeader, CorrelationContextHeader}
 }
