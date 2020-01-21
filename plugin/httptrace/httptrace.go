@@ -33,8 +33,12 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	propagator  = trace.TraceContext{}
-	propagators = propagation.New(propagation.WithInjectors(propagator), propagation.WithExtractors(propagator))
+	tcPropagator = trace.TraceContext{}
+	ccPropagator = correlation.CorrelationContext{}
+	propagators  = propagation.New(
+		propagation.WithInjectors(tcPropagator, ccPropagator),
+		propagation.WithExtractors(tcPropagator, ccPropagator),
+	)
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.

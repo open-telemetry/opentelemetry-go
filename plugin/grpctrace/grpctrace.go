@@ -32,8 +32,12 @@ const (
 )
 
 var (
-	propagator  = trace.TraceContext{}
-	propagators = propagation.New(propagation.WithInjectors(propagator), propagation.WithExtractors(propagator))
+	tcPropagator = trace.TraceContext{}
+	ccPropagator = correlation.CorrelationContext{}
+	propagators  = propagation.New(
+		propagation.WithInjectors(tcPropagator, ccPropagator),
+		propagation.WithExtractors(tcPropagator, ccPropagator),
+	)
 )
 
 type metadataSupplier struct {
