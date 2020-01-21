@@ -129,7 +129,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			gotSc, _ := propagator.Extract(ctx, req.Header)
+			ctx = propagator.Extract(ctx, req.Header)
+			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -216,7 +217,8 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			gotSc, _ := propagator.Extract(ctx, req.Header)
+			ctx = propagator.Extract(ctx, req.Header)
+			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -349,7 +351,8 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("Correlation-Context", tt.header)
 
 			ctx := context.Background()
-			_, gotCorCtx := propagator.Extract(ctx, req.Header)
+			ctx = propagator.Extract(ctx, req.Header)
+			gotCorCtx := correlation.FromContext(ctx)
 			wantCorCtx := correlation.NewMap(correlation.MapUpdate{MultiKV: tt.wantKVs})
 			if gotCorCtx.Len() != wantCorCtx.Len() {
 				t.Errorf(
@@ -392,7 +395,8 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("Correlation-Context", tt.header)
 
 			ctx := context.Background()
-			_, gotCorCtx := propagator.Extract(ctx, req.Header)
+			ctx = propagator.Extract(ctx, req.Header)
+			gotCorCtx := correlation.FromContext(ctx)
 			if gotCorCtx.Len() != 0 {
 				t.Errorf("Got and Want CorCtx are not the same size %d != %d", gotCorCtx.Len(), 0)
 			}

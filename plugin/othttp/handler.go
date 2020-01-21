@@ -50,7 +50,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
-	prop             propagation.TextFormat
+	prop             propagation.HTTPPropagator
 	spanStartOptions []trace.StartOption
 	public           bool
 	readEvent        bool
@@ -78,9 +78,9 @@ func WithPublicEndpoint() Option {
 }
 
 // WithPropagator configures the Handler with a specific propagator. If this
-// option isn't specificed then
-// go.opentelemetry.io/otel/api/trace.DefaultPropagator is used.
-func WithPropagator(p propagation.TextFormat) Option {
+// option isn't specified then
+// go.opentelemetry.io/otel/api/trace.DefaultHTTPPropagator is used.
+func WithPropagator(p propagation.HTTPPropagator) Option {
 	return func(h *Handler) {
 		h.prop = p
 	}
@@ -130,7 +130,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagator(trace.DefaultPropagator()),
+		WithPropagator(trace.DefaultHTTPPropagator()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -145,9 +145,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	// TODO: do something with the correlation context
-	sc, _ := h.prop.Extract(r.Context(), r.Header)
-	ctx := r.Context()
-	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
+	ctx := h.prop.Extract(r.Context(), r.Header)
+	// not a valid span context, so no link / parent relationship to establish
+	if sc := trace.RemoteSpanContextFromContext(ctx); sc.IsValid() {
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace

@@ -16,26 +16,23 @@ package propagation
 
 import (
 	"context"
-
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/correlation"
 )
 
-// NoopTextFormat implements TextFormat that does nothing.
-type NoopTextFormat struct{}
+// NoopHTTPPropagator implements HTTPPropagator that does nothing.
+type NoopHTTPPropagator struct{}
 
-var _ TextFormat = NoopTextFormat{}
+var _ HTTPPropagator = NoopHTTPPropagator{}
 
 // Inject does nothing.
-func (np NoopTextFormat) Inject(ctx context.Context, supplier HTTPSupplier) {
+func (NoopHTTPPropagator) Inject(ctx context.Context, supplier HTTPSupplier) {
 }
 
-// Extract does nothing and returns an empty SpanContext
-func (np NoopTextFormat) Extract(ctx context.Context, supplier HTTPSupplier) (core.SpanContext, correlation.Map) {
-	return core.EmptySpanContext(), correlation.NewEmptyMap()
+// Extract does nothing.
+func (NoopHTTPPropagator) Extract(ctx context.Context, supplier HTTPSupplier) context.Context {
+	return ctx
 }
 
 // GetAllKeys returns empty list of strings.
-func (np NoopTextFormat) GetAllKeys() []string {
+func (NoopHTTPPropagator) GetAllKeys() []string {
 	return []string{}
 }

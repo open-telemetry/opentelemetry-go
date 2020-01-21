@@ -20,11 +20,12 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
-	propagator = trace.DefaultPropagator()
+	propagator = trace.DefaultHTTPPropagator()
 )
 
 type metadataSupplier struct {
@@ -56,12 +57,13 @@ func Inject(ctx context.Context, metadata *metadata.MD) {
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.SpanContext) {
-	spanContext, correlationCtx := propagator.Extract(ctx, &metadataSupplier{
+	ctx = propagator.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 
+	spanContext := trace.RemoteSpanContextFromContext(ctx)
 	var correlationCtxKVs []core.KeyValue
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	correlation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})

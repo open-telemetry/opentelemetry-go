@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -50,7 +49,7 @@ type B3 struct {
 	SingleHeader bool
 }
 
-var _ propagation.TextFormat = B3{}
+var _ propagation.HTTPPropagator = B3{}
 
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
@@ -76,18 +75,14 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) (core.SpanContext, correlation.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	var sc core.SpanContext
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier), correlation.NewEmptyMap()
+		sc = b3.extractSingleHeader(supplier)
+	} else {
+		sc = b3.extract(supplier)
 	}
-	return b3.extract(supplier), correlation.NewEmptyMap()
-}
-
-func (b3 B3) GetAllKeys() []string {
-	if b3.SingleHeader {
-		return []string{B3SingleHeader}
-	}
-	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
+	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
@@ -128,7 +123,7 @@ func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
 func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
-		core.EmptySpanContext()
+		return core.EmptySpanContext()
 	}
 	sc := core.SpanContext{}
 	parts := strings.Split(h, "-")
@@ -201,4 +196,11 @@ func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
 		return core.TraceFlagsSampled, true
 	}
 	return 0, false
+}
+
+func (b3 B3) GetAllKeys() []string {
+	if b3.SingleHeader {
+		return []string{B3SingleHeader}
+	}
+	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
