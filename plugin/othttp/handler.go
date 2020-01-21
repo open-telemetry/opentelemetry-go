@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -78,8 +77,8 @@ func WithPublicEndpoint() Option {
 }
 
 // WithPropagators configures the Handler with specific propagators. If this
-// option isn't specified then Propagators with
-// go.opentelemetry.io/otel/api/trace.DefaultHTTPPropagator are used.
+// option isn't specified then
+// go.opentelemetry.io/otel/api/global.Propagators are used.
 func WithPropagators(ps propagation.Propagators) Option {
 	return func(h *Handler) {
 		h.props = ps
@@ -128,15 +127,9 @@ func WithMessageEvents(events ...event) Option {
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
-	tcPropagator := trace.DefaultHTTPPropagator()
-	ccPropagator := correlation.DefaultHTTPPropagator()
-	props := propagation.New(
-		propagation.WithInjectors(tcPropagator, ccPropagator),
-		propagation.WithExtractors(tcPropagator, ccPropagator),
-	)
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagators(props),
+		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 

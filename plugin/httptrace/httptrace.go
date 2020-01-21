@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -28,18 +29,11 @@ import (
 var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
-
-	tcPropagator = trace.DefaultHTTPPropagator()
-	ccPropagator = correlation.DefaultHTTPPropagator()
-	propagators  = propagation.New(
-		propagation.WithInjectors(tcPropagator, ccPropagator),
-		propagation.WithExtractors(tcPropagator, ccPropagator),
-	)
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.KeyValue, core.SpanContext) {
-	ctx = propagation.ExtractHTTP(ctx, propagators, req.Header)
+	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), req.Header)
 
 	attrs := []core.KeyValue{
 		URLKey.String(req.URL.String()),
@@ -56,5 +50,5 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 }
 
 func Inject(ctx context.Context, req *http.Request) {
-	propagation.InjectHTTP(ctx, propagators, req.Header)
+	propagation.InjectHTTP(ctx, global.Propagators(), req.Header)
 }
