@@ -144,7 +144,6 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	// TODO: do something with the correlation context
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
 
 	// not a valid span context, so no link / parent relationship to establish
@@ -223,7 +222,6 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
-		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttributes(RouteKey.String(route))
 		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
 	})
