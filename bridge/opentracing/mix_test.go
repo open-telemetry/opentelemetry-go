@@ -22,7 +22,9 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
+	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
+	otelglobal "go.opentelemetry.io/otel/api/global"
+	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
@@ -42,6 +44,7 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 	coin := newContextIntactTest()
 	bip := newBaggageItemsPreservationTest()
 	tm := newTracerMessTest()
+	bio := newBaggageInteroperationTest()
 
 	return []mixedAPIsTestCase{
 		{
@@ -104,6 +107,18 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 			run:   tm.runOTOtelOT,
 			check: tm.check,
 		},
+		{
+			desc:  "baggage items interoperation across layers ot -> otel -> ot",
+			setup: bio.setup,
+			run:   bio.runOTOtelOT,
+			check: bio.check,
+		},
+		{
+			desc:  "baggage items interoperation across layers otel -> ot -> otel",
+			setup: bio.setup,
+			run:   bio.runOtelOTOtel,
+			check: bio.check,
+		},
 	}
 }
 
@@ -111,13 +126,12 @@ func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
 		mockOtelTracer := internal.NewMockTracer()
-		otTracer, otelProvider := NewTracerPair(mockOtelTracer)
+		ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
 		otTracer.SetWarningHandler(func(msg string) {
 			t.Log(msg)
 		})
-		ctx := context.Background()
 
-		global.SetTraceProvider(otelProvider)
+		otelglobal.SetTraceProvider(otelProvider)
 		ot.SetGlobalTracer(otTracer)
 
 		tc.setup(t, mockOtelTracer)
@@ -427,7 +441,7 @@ func (tm *tracerMessTest) setup(t *testing.T, tracer *internal.MockTracer) {
 
 func (tm *tracerMessTest) check(t *testing.T, tracer *internal.MockTracer) {
 	globalOtTracer := ot.GlobalTracer()
-	globalOtelTracer := global.TraceProvider().Tracer("")
+	globalOtelTracer := otelglobal.TraceProvider().Tracer("")
 	if len(tm.recordedOTSpanTracers) != 3 {
 		t.Errorf("Expected 3 recorded OpenTracing tracers from spans, got %d", len(tm.recordedOTSpanTracers))
 	}
@@ -465,6 +479,137 @@ func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) conte
 	otelSpan := oteltrace.SpanFromContext(ctx)
 	tm.recordedOtelSpanTracers = append(tm.recordedOtelSpanTracers, otelSpan.Tracer())
 	return ctx
+}
+
+// baggage interoperation test
+
+type baggageInteroperationTest struct {
+	baggageItems []bipBaggage
+
+	step                int
+	recordedOTBaggage   []map[string]string
+	recordedOtelBaggage []map[string]string
+}
+
+func newBaggageInteroperationTest() *baggageInteroperationTest {
+	return &baggageInteroperationTest{
+		baggageItems: []bipBaggage{
+			{
+				key:   "First",
+				value: "one",
+			},
+			{
+				key:   "Second",
+				value: "two",
+			},
+			{
+				key:   "Third",
+				value: "three",
+			},
+		},
+	}
+}
+
+func (bio *baggageInteroperationTest) setup(t *testing.T, tracer *internal.MockTracer) {
+	bio.step = 0
+	bio.recordedOTBaggage = nil
+	bio.recordedOtelBaggage = nil
+}
+
+func (bio *baggageInteroperationTest) check(t *testing.T, tracer *internal.MockTracer) {
+	checkBIORecording(t, "OT", bio.baggageItems, bio.recordedOTBaggage)
+	checkBIORecording(t, "Otel", bio.baggageItems, bio.recordedOtelBaggage)
+}
+
+func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, recordings []map[string]string) {
+	// expect recordings count to equal the number of initial
+	// items
+
+	// each recording should have a duplicated item from initial
+	// items, one with OT suffix, another one with Otel suffix
+
+	// expect each subsequent recording to have two more items, up
+	// to double of the count of the initial items
+
+	if len(initialItems) != len(recordings) {
+		t.Errorf("Expected %d recordings from %s, got %d", len(initialItems), apiDesc, len(recordings))
+	}
+	minRecLen := min(len(initialItems), len(recordings))
+	for i := 0; i < minRecLen; i++ {
+		recordedItems := recordings[i]
+		expectedItemsInStep := (i + 1) * 2
+		if expectedItemsInStep != len(recordedItems) {
+			t.Errorf("Expected %d recorded items in recording %d from %s, got %d", expectedItemsInStep, i, apiDesc, len(recordedItems))
+		}
+		recordedItemsCopy := make(map[string]string, len(recordedItems))
+		for k, v := range recordedItems {
+			recordedItemsCopy[k] = v
+		}
+		for j := 0; j < i+1; j++ {
+			otKey, otelKey := generateBaggageKeys(initialItems[j].key)
+			value := initialItems[j].value
+			for _, k := range []string{otKey, otelKey} {
+				if v, ok := recordedItemsCopy[k]; ok {
+					if value != v {
+						t.Errorf("Expected value %s under key %s in recording %d from %s, got %s", value, k, i, apiDesc, v)
+					}
+					delete(recordedItemsCopy, k)
+				} else {
+					t.Errorf("Missing key %s in recording %d from %s", k, i, apiDesc)
+				}
+			}
+		}
+		for k, v := range recordedItemsCopy {
+			t.Errorf("Unexpected key-value pair %s = %s in recording %d from %s", k, v, i, apiDesc)
+		}
+	}
+}
+
+func (bio *baggageInteroperationTest) runOtelOTOtel(t *testing.T, ctx context.Context) {
+	runOtelOTOtel(t, ctx, "bio", bio.addAndRecordBaggage)
+}
+
+func (bio *baggageInteroperationTest) runOTOtelOT(t *testing.T, ctx context.Context) {
+	runOTOtelOT(t, ctx, "bio", bio.addAndRecordBaggage)
+}
+
+func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx context.Context) context.Context {
+	if bio.step >= len(bio.baggageItems) {
+		t.Errorf("Too many steps?")
+		return ctx
+	}
+	otSpan := ot.SpanFromContext(ctx)
+	if otSpan == nil {
+		t.Errorf("No active OpenTracing span")
+		return ctx
+	}
+	idx := bio.step
+	bio.step++
+	key := bio.baggageItems[idx].key
+	otKey, otelKey := generateBaggageKeys(key)
+	value := bio.baggageItems[idx].value
+
+	otSpan.SetBaggageItem(otKey, value)
+	ctx = otelcorrelation.NewContext(ctx, otelkey.String(otelKey, value))
+
+	otRecording := make(map[string]string)
+	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
+		otRecording[key] = value
+		return true
+	})
+	otelRecording := make(map[string]string)
+	otelcorrelation.FromContext(ctx).Foreach(func(kv otelcore.KeyValue) bool {
+		otelRecording[string(kv.Key)] = kv.Value.Emit()
+		return true
+	})
+	bio.recordedOTBaggage = append(bio.recordedOTBaggage, otRecording)
+	bio.recordedOtelBaggage = append(bio.recordedOtelBaggage, otelRecording)
+	return ctx
+}
+
+func generateBaggageKeys(key string) (otKey, otelKey string) {
+	otKey, otelKey = key+"-Ot", key+"-Otel"
+	return
 }
 
 // helpers
@@ -540,7 +685,7 @@ func min(a, b int) int {
 }
 
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
-	tr := global.TraceProvider().Tracer("")
+	tr := otelglobal.TraceProvider().Tracer("")
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
 	defer span.End()
 	ctx = callback(t, ctx)
@@ -557,7 +702,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 }
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
-	tr := global.TraceProvider().Tracer("")
+	tr := otelglobal.TraceProvider().Tracer("")
 	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
 	defer span.Finish()
 	ctx = callback(t, ctx)
