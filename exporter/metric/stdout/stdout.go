@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -232,13 +233,30 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 		}
 
+		specifiedKeyMap := make(map[core.Key]core.Value)
+		for _, kv := range record.Labels().Ordered() {
+			specifiedKeyMap[kv.Key] = kv.Value
+		}
+
+		var materializedKeys []string
+
+		if labels := record.Labels(); labels.Len() > 0 {
+			materializedKeys = append(materializedKeys, labels.Encoded())
+		}
+
+		for _, k := range desc.Keys() {
+			if _, ok := specifiedKeyMap[k]; !ok {
+				materializedKeys = append(materializedKeys, string(k))
+			}
+		}
+
 		var sb strings.Builder
 
 		sb.WriteString(desc.Name())
 
-		if labels := record.Labels(); labels.Len() > 0 {
+		if len(materializedKeys) > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(labels.Encoded())
+			sb.WriteString(strings.Join(materializedKeys, ","))
 			sb.WriteRune('}')
 		}
 
