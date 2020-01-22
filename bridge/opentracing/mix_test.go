@@ -157,7 +157,8 @@ func (st *simpleTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "simple", st.noop)
 }
 
-func (st *simpleTest) noop(t *testing.T, ctx context.Context) {
+func (st *simpleTest) noop(t *testing.T, ctx context.Context) context.Context {
+	return ctx
 }
 
 // current/active span test
@@ -214,7 +215,7 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 	runOTOtelOT(t, ctx, "cast", cast.recordSpans)
 }
 
-func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) {
+func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
 	spanID := oteltrace.SpanFromContext(ctx).SpanContext().SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
@@ -223,6 +224,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
 	}
 	cast.recordedActiveOTSpanIDs = append(cast.recordedActiveOTSpanIDs, spanID)
+	return ctx
 }
 
 // context intact test
@@ -296,14 +298,15 @@ func (coin *contextIntactTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "coin", coin.recordValue)
 }
 
-func (coin *contextIntactTest) recordValue(t *testing.T, ctx context.Context) {
+func (coin *contextIntactTest) recordValue(t *testing.T, ctx context.Context) context.Context {
 	if coin.recordIdx >= len(coin.contextKeyValues) {
 		t.Errorf("Too many steps?")
-		return
+		return ctx
 	}
 	key := coin.contextKeyValues[coin.recordIdx].Key
 	coin.recordIdx++
 	coin.recordedContextValues = append(coin.recordedContextValues, ctx.Value(key))
+	return ctx
 }
 
 // baggage items preservation test
@@ -380,15 +383,15 @@ func (bip *baggageItemsPreservationTest) runOTOtelOT(t *testing.T, ctx context.C
 	runOTOtelOT(t, ctx, "bip", bip.addAndRecordBaggage)
 }
 
-func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx context.Context) {
+func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx context.Context) context.Context {
 	if bip.step >= len(bip.baggageItems) {
 		t.Errorf("Too many steps?")
-		return
+		return ctx
 	}
 	span := ot.SpanFromContext(ctx)
 	if span == nil {
 		t.Errorf("No active OpenTracing span")
-		return
+		return ctx
 	}
 	idx := bip.step
 	bip.step++
@@ -400,6 +403,7 @@ func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx c
 		return true
 	})
 	bip.recordedBaggage = append(bip.recordedBaggage, recording)
+	return ctx
 }
 
 // tracer mess test
@@ -450,7 +454,7 @@ func (tm *tracerMessTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "tm", tm.recordTracers)
 }
 
-func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) {
+func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) context.Context {
 	otSpan := ot.SpanFromContext(ctx)
 	if otSpan == nil {
 		t.Errorf("No current OpenTracing span?")
@@ -460,6 +464,7 @@ func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) {
 
 	otelSpan := oteltrace.SpanFromContext(ctx)
 	tm.recordedOtelSpanTracers = append(tm.recordedOtelSpanTracers, otelSpan.Tracer())
+	return ctx
 }
 
 // helpers
@@ -534,36 +539,36 @@ func min(a, b int) int {
 	return a
 }
 
-func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
+func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
 	tr := global.TraceProvider().Tracer("")
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
 	defer span.End()
-	callback(t, ctx)
+	ctx = callback(t, ctx)
 	func(ctx2 context.Context) {
 		span, ctx2 := ot.StartSpanFromContext(ctx2, fmt.Sprintf("%sOtel_OT_Otel", name))
 		defer span.Finish()
-		callback(t, ctx2)
+		ctx2 = callback(t, ctx2)
 		func(ctx3 context.Context) {
 			ctx3, span := tr.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name), oteltrace.WithSpanKind(oteltrace.SpanKindProducer))
 			defer span.End()
-			callback(t, ctx3)
+			_ = callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
 }
 
-func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context)) {
+func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
 	tr := global.TraceProvider().Tracer("")
 	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
 	defer span.Finish()
-	callback(t, ctx)
+	ctx = callback(t, ctx)
 	func(ctx2 context.Context) {
 		ctx2, span := tr.Start(ctx2, fmt.Sprintf("%sOT_Otel_OT", name))
 		defer span.End()
-		callback(t, ctx2)
+		ctx2 = callback(t, ctx2)
 		func(ctx3 context.Context) {
 			span, ctx3 := ot.StartSpanFromContext(ctx3, fmt.Sprintf("%sOTOtel_OT_", name), ot.Tag{Key: "span.kind", Value: "producer"})
 			defer span.Finish()
-			callback(t, ctx3)
+			_ = callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
 }
