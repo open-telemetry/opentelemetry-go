@@ -157,13 +157,13 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 	//  this reduces the chances of inconsistencies on the exporter.
 }
 
+// current returns the current state with the lower bit of currentIdx.
 func (c *Aggregator) current() *state {
-	// Find the current state with the lower bit of currentIdx.
 	return &c.states[c.currentIdx&1]
 }
 
+// checkpoint returns the checkpoint state by inverting the lower bit of currentIdx.
 func (c *Aggregator) checkpoint() *state {
-	// Find the checkpoint state by inverting the lower bit of currentIdx.
 	return &c.states[^c.currentIdx&1]
 }
 
@@ -179,7 +179,6 @@ func (c *Aggregator) resetCheckpoint() {
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
 
-	// Find the current current state by the id that is stored in the higher 1 bit.
 	current := c.current()
 	current.count.AddUint64Atomic(1)
 	current.sum.AddNumberAtomic(kind, number)
