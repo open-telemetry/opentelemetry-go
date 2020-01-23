@@ -34,11 +34,12 @@ type (
 		// is called by the sdk itself and it is not part of a hot path,
 		// the user is not impacted by these blocking calls.
 		//
-		// The algorithm keeps two states. At every instance of time there exist one current state, in which
-		// new updates are aggregated, and one checkpoint state, that represents the state since the last Checkpoint().
+		// The algorithm keeps two states. At every instance of time there exist one current state,
+		// in which new updates are aggregated, and one checkpoint state, that represents the state
+		// since the last Checkpoint().
 		//
-		// These states are defined by the currentIdx, which stores a uint32 number where the least significant bit
-		// indicates the current state.
+		// These states are defined by the currentIdx, which stores a uint32 number where the least
+		// significant bit indicates the current state.
 		//
 		// When the Update() or Checkpoint() method is called, the necessary state (current or checkpoint)
 		// is found using the currentIdx and all operations are executed in this state,
