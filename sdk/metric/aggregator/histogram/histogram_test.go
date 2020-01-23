@@ -75,10 +75,6 @@ func TestMain(m *testing.M) {
 			Offset: unsafe.Offsetof(Aggregator{}.states),
 		},
 		{
-			Name:   "Aggregator.currentIdx",
-			Offset: unsafe.Offsetof(Aggregator{}.currentIdx),
-		},
-		{
 			Name:   "state.buckets",
 			Offset: unsafe.Offsetof(state{}.buckets),
 		},

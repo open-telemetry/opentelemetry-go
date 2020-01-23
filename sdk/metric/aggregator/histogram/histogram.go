@@ -48,11 +48,9 @@ type (
 		// When a Checkpoint() occurs the currentIdx number is incremented, swapping the
 		// the current and the checkpoint state. The checkpoint is cleared before this swap occurs.
 
-		// currentIdx needs to be aligned for 64-bit atomic operations.
-		currentIdx uint32
 		// states needs to be aligned for 64-bit atomic operations.
-		states [2]state
-
+		states     [2]state
+		currentIdx uint32
 		boundaries []core.Number
 		kind       core.NumberKind
 
