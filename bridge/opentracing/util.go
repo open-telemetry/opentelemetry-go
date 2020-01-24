@@ -15,6 +15,8 @@
 package opentracing
 
 import (
+	"context"
+
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -29,4 +31,10 @@ func NewTracerPair(tracer oteltrace.Tracer) (*BridgeTracer, *WrapperProvider) {
 	wrapperProvider := NewWrappedProvider(bridgeTracer, tracer)
 	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.Tracer(""))
 	return bridgeTracer, wrapperProvider
+}
+
+func NewTracerPairWithContext(ctx context.Context, tracer oteltrace.Tracer) (context.Context, *BridgeTracer, *WrapperProvider) {
+	bridgeTracer, wrapperProvider := NewTracerPair(tracer)
+	ctx = bridgeTracer.NewHookedContext(ctx)
+	return ctx, bridgeTracer, wrapperProvider
 }
