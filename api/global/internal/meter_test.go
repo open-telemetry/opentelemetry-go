@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporter/metric/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
@@ -224,41 +223,5 @@ func TestDefaultSDK(t *testing.T) {
 	out.Close()
 
 	require.Equal(t, `{"updates":[{"name":"test.builtin{A=B}","sum":1}]}
-`, <-ch)
-}
-
-func TestDefaultUnspecifiedKey(t *testing.T) {
-	internal.ResetForTest()
-
-	ctx := context.Background()
-	meter1 := global.MeterProvider().Meter("builtin")
-
-	counter := meter1.NewInt64Counter("test.builtin",
-		metric.WithKeys(key.New("ex.com/bar")),
-	)
-	counter.Add(ctx, 1, nil)
-	counter.Add(ctx, 1, nil)
-
-	in, out := io.Pipe()
-	pusher, err := stdout.InstallNewPipeline(stdout.Config{
-		Writer:         out,
-		DoNotPrintTime: true,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	counter.Add(ctx, 1, nil)
-
-	ch := make(chan string)
-	go func() {
-		data, _ := ioutil.ReadAll(in)
-		ch <- string(data)
-	}()
-
-	pusher.Stop()
-	out.Close()
-
-	require.Equal(t, `{"updates":[{"name":"test.builtin{ex.com/bar}","sum":1}]}
 `, <-ch)
 }

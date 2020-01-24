@@ -262,3 +262,22 @@ func TestStdoutGaugeNotSet(t *testing.T) {
 
 	require.Equal(t, `{"updates":null}`, fix.Output())
 }
+
+func TestStdoutCounterWithUnspecifiedKeys(t *testing.T) {
+	fix := newFixture(t, stdout.Config{})
+
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+
+	keys := []core.Key{key.New("C"), key.New("D")}
+
+	desc := export.NewDescriptor("test.name", export.CounterKind, keys, "", "", core.Int64NumberKind, false)
+	cagg := counter.New()
+	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(10), desc)
+	cagg.Checkpoint(fix.ctx, desc)
+
+	checkpointSet.Add(desc, cagg, key.String("A", "B"))
+
+	fix.Export(checkpointSet)
+
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C,D}","sum":10}]}`, fix.Output())
+}
