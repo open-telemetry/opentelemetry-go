@@ -575,7 +575,7 @@ func (s fakeSpan) SpanContext() otelcore.SpanContext {
 // Inject is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is kinda sorta supported.
+// Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
@@ -604,7 +604,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 // Extract is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is kinda sorta supported.
+// Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
 		return nil, ot.ErrUnsupportedFormat
