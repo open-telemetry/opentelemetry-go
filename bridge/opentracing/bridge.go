@@ -446,7 +446,11 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span oteltrace
 // DeferredContextSetupTracerExtension interface.
 func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) context.Context {
 	bSpan, ok := span.(*bridgeSpan)
-	if !ok || bSpan.skipDeferHook {
+	if !ok {
+		t.warningHandler("Encountered a foreign OpenTracing span, will not run a possible deferred context setup hook\n")
+		return ctx
+	}
+	if bSpan.skipDeferHook {
 		return ctx
 	}
 	if tracerWithExtension, ok := bSpan.tracer.setTracer.tracer().(migration.DeferredContextSetupTracerExtension); ok {
