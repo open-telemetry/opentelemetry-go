@@ -46,14 +46,18 @@ func (s *metadataSupplier) Set(key string, value string) {
 	s.metadata.Append(key, value)
 }
 
-// Inject injects the gRPC call metadata into the Span
+// Inject injects correlation context and span context into the gRPC
+// metadata object. This function is meant to be used on outgoing
+// requests.
 func Inject(ctx context.Context, metadata *metadata.MD) {
 	propagator.Inject(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 }
 
-// Extract returns the Context Entries and SpanContext that were encoded by Inject.
+// Extract returns the correlation context and span context that
+// another service encoded in the gRPC metadata object with Inject.
+// This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.SpanContext) {
 	spanContext, correlationCtx := propagator.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
