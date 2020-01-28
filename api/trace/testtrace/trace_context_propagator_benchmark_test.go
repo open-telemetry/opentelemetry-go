@@ -1,4 +1,4 @@
-package propagators
+package testtrace_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkInject(b *testing.B) {
-	var t TraceContext
+	var t trace.TraceContext
 
 	injectSubBenchmarks(b, func(ctx context.Context, b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -52,7 +52,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 
 func BenchmarkExtract(b *testing.B) {
 	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
-		var propagator TraceContext
+		var propagator trace.TraceContext
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

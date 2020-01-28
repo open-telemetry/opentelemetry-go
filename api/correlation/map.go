@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext
+package correlation
 
 import (
 	"go.opentelemetry.io/otel/api/core"
 )
+
+// TODO Comments needed! This was formerly known as distributedcontext.Map
 
 type entry struct {
 	value core.Value

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators
+package propagation
 
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 )
 
 // TextFormat is an interface that specifies methods to inject and extract SpanContext
@@ -33,10 +33,10 @@ type TextFormat interface {
 	Inject(ctx context.Context, supplier Supplier)
 
 	// Extract method retrieves encoded SpanContext using supplier from the associated carrier.
-	// It decodes the SpanContext and returns it and a dctx of correlated context.
+	// It decodes the SpanContext and returns it and a baggage of correlated context.
 	// If no SpanContext was retrieved OR if the retrieved SpanContext is invalid then
 	// an empty SpanContext is returned.
-	Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map)
+	Extract(ctx context.Context, supplier Supplier) (core.SpanContext, correlation.Map)
 
 	// GetAllKeys returns all the keys that this propagator injects/extracts into/from a
 	// carrier. The use cases for this are

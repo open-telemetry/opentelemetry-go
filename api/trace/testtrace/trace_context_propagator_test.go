@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package testtrace_test
 
 import (
 	"context"
@@ -23,9 +23,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/propagators"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -46,7 +45,7 @@ func mustSpanIDFromHex(s string) (t core.SpanID) {
 }
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	tests := []struct {
 		name   string
 		header string
@@ -139,7 +138,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	wantSc := core.EmptySpanContext()
 	tests := []struct {
 		name   string
@@ -231,7 +230,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	tests := []struct {
 		name       string
 		sc         core.SpanContext
@@ -287,7 +286,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name    string
 		header  string
@@ -350,7 +349,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			_, gotCorCtx := propagator.Extract(ctx, req.Header)
-			wantCorCtx := dctx.NewMap(dctx.MapUpdate{MultiKV: tt.wantKVs})
+			wantCorCtx := correlation.NewMap(correlation.MapUpdate{MultiKV: tt.wantKVs})
 			if gotCorCtx.Len() != wantCorCtx.Len() {
 				t.Errorf(
 					"Got and Want CorCtx are not the same size %d != %d",
@@ -375,7 +374,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -401,7 +400,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
-	propagator := propagators.TraceContext{}
+	propagator := trace.TraceContext{}
 	tests := []struct {
 		name         string
 		kvs          []core.KeyValue
@@ -453,7 +452,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			ctx := dctx.WithMap(context.Background(), dctx.NewMap(dctx.MapUpdate{MultiKV: tt.kvs}))
+			ctx := correlation.WithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("Correlation-Context")
@@ -475,7 +474,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator trace.TraceContext
 	want := []string{"Traceparent", "Correlation-Context"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
