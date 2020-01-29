@@ -85,6 +85,15 @@ type bridgeSpan struct {
 
 var _ ot.Span = &bridgeSpan{}
 
+func newBridgeSpan(otelSpan oteltrace.Span, bridgeSC *bridgeSpanContext, tracer *BridgeTracer) *bridgeSpan {
+	return &bridgeSpan{
+		otelSpan:      otelSpan,
+		ctx:           bridgeSC,
+		tracer:        tracer,
+		skipDeferHook: false,
+	}
+}
+
 func (s *bridgeSpan) Finish() {
 	s.otelSpan.End()
 }
@@ -344,11 +353,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		otSpanContext = parentBridgeSC
 	}
 	sctx := newBridgeSpanContext(otelSpan.SpanContext(), otSpanContext)
-	span := &bridgeSpan{
-		otelSpan: otelSpan,
-		ctx:      sctx,
-		tracer:   t,
-	}
+	span := newBridgeSpan(otelSpan, sctx, t)
 
 	return span
 }
@@ -365,12 +370,8 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span oteltrace
 		otSpanContext = parentSpan.Context()
 	}
 	bCtx := newBridgeSpanContext(span.SpanContext(), otSpanContext)
-	bSpan := &bridgeSpan{
-		otelSpan:      span,
-		ctx:           bCtx,
-		tracer:        t,
-		skipDeferHook: true,
-	}
+	bSpan := newBridgeSpan(span, bCtx, t)
+	bSpan.skipDeferHook = true
 	return ot.ContextWithSpan(ctx, bSpan)
 }
 
