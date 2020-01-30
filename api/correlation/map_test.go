@@ -69,6 +69,55 @@ func TestMap(t *testing.T) {
 			wantKVs: []core.KeyValue{},
 		},
 		{
+			name:    "NewMap with DropSingleK",
+			value:   MapUpdate{DropSingleK: core.Key("key1")},
+			init:    []int{},
+			wantKVs: []core.KeyValue{},
+		},
+		{
+			name: "NewMap with DropMultiK",
+			value: MapUpdate{DropMultiK: []core.Key{
+				core.Key("key1"), core.Key("key2"),
+			}},
+			init:    []int{},
+			wantKVs: []core.KeyValue{},
+		},
+		{
+			name: "NewMap with both drop fields",
+			value: MapUpdate{
+				DropSingleK: core.Key("key1"),
+				DropMultiK: []core.Key{
+					core.Key("key1"),
+					core.Key("key2"),
+				},
+			},
+			init:    []int{},
+			wantKVs: []core.KeyValue{},
+		},
+		{
+			name: "NewMap with mixed fields",
+			value: MapUpdate{
+				DropSingleK: core.Key("key1"),
+				DropMultiK: []core.Key{
+					core.Key("key1"),
+					core.Key("key2"),
+				},
+				SingleKV: key.String("key4", "val4"),
+				MultiKV: []core.KeyValue{
+					key.String("key1", ""),
+					key.String("key2", "val2"),
+					key.String("key3", "val3"),
+				},
+			},
+			init: []int{},
+			wantKVs: []core.KeyValue{
+				key.String("key1", ""),
+				key.String("key2", "val2"),
+				key.String("key3", "val3"),
+				key.String("key4", "val4"),
+			},
+		},
+		{
 			name: "Map with MultiKV",
 			value: MapUpdate{MultiKV: []core.KeyValue{
 				key.Int64("key1", 1),
@@ -110,6 +159,64 @@ func TestMap(t *testing.T) {
 			init:  []int{5},
 			wantKVs: []core.KeyValue{
 				key.Int("key5", 5),
+			},
+		},
+		{
+			name:  "NewMap with DropSingleK",
+			value: MapUpdate{DropSingleK: core.Key("key1")},
+			init:  []int{1, 5},
+			wantKVs: []core.KeyValue{
+				key.Int("key5", 5),
+			},
+		},
+		{
+			name: "NewMap with DropMultiK",
+			value: MapUpdate{DropMultiK: []core.Key{
+				core.Key("key1"), core.Key("key2"),
+			}},
+			init: []int{1, 5},
+			wantKVs: []core.KeyValue{
+				key.Int("key5", 5),
+			},
+		},
+		{
+			name: "NewMap with both drop fields",
+			value: MapUpdate{
+				DropSingleK: core.Key("key1"),
+				DropMultiK: []core.Key{
+					core.Key("key1"),
+					core.Key("key2"),
+				},
+			},
+			init: []int{1, 2, 5},
+			wantKVs: []core.KeyValue{
+				key.Int("key5", 5),
+			},
+		},
+		{
+			name: "NewMap with mixed fields",
+			value: MapUpdate{
+				DropSingleK: core.Key("key1"),
+				DropMultiK: []core.Key{
+					core.Key("key1"),
+					core.Key("key2"),
+					core.Key("key5"),
+					core.Key("key6"),
+				},
+				SingleKV: key.String("key4", "val4"),
+				MultiKV: []core.KeyValue{
+					key.String("key1", ""),
+					key.String("key2", "val2"),
+					key.String("key3", "val3"),
+				},
+			},
+			init: []int{5, 6, 7},
+			wantKVs: []core.KeyValue{
+				key.String("key1", ""),
+				key.String("key2", "val2"),
+				key.String("key3", "val3"),
+				key.String("key4", "val4"),
+				key.Int("key7", 7),
 			},
 		},
 	} {
