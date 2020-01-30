@@ -21,6 +21,7 @@ import (
 // TODO Comments needed! This was formerly known as distributedcontext.Map
 
 type rawMap map[core.Key]core.Value
+type keySet map[core.Key]struct{}
 
 type Map struct {
 	m rawMap
@@ -46,8 +47,21 @@ func NewMap(update MapUpdate) Map {
 }
 
 func (m Map) Apply(update MapUpdate) Map {
-	r := make(rawMap, len(m.m)+len(update.MultiKV))
+	addSet := getModificationSet(update)
+
+	mapSizeDiff := 0
+	for k := range addSet {
+		if _, ok := m.m[k]; !ok {
+			mapSizeDiff++
+		}
+	}
+
+	r := make(rawMap, len(m.m)+mapSizeDiff)
 	for k, v := range m.m {
+		// do not copy items we would overwrite
+		if _, ok := addSet[k]; ok {
+			continue
+		}
 		r[k] = v
 	}
 	if update.SingleKV.Key.Defined() {
@@ -60,6 +74,25 @@ func (m Map) Apply(update MapUpdate) Map {
 		r = nil
 	}
 	return newMap(r)
+}
+
+func getModificationSet(update MapUpdate) keySet {
+	additionsCount := len(update.MultiKV)
+	if update.SingleKV.Key.Defined() {
+		additionsCount++
+	}
+	var addSet keySet
+	if additionsCount > 0 {
+		addSet = make(map[core.Key]struct{}, additionsCount)
+		for _, k := range update.MultiKV {
+			addSet[k.Key] = struct{}{}
+		}
+		if update.SingleKV.Key.Defined() {
+			addSet[update.SingleKV.Key] = struct{}{}
+		}
+	}
+
+	return addSet
 }
 
 func (m Map) Value(k core.Key) (core.Value, bool) {
