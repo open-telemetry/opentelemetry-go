@@ -10,12 +10,13 @@ type correlationsType struct{}
 
 var correlationsKey = &correlationsType{}
 
-// WithMap enters a Map into a new Context.
+// WithMap returns a context with the Map entered into it.
 func WithMap(ctx context.Context, m Map) context.Context {
 	return context.WithValue(ctx, correlationsKey, m)
 }
 
-// WithMap enters a key:value set into a new Context.
+// NewContext returns a context with the map from passed context
+// updated with the passed key-value pairs.
 func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
 		MultiKV: keyvalues,

@@ -18,21 +18,32 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-// TODO Comments needed! This was formerly known as distributedcontext.Map
-
 type rawMap map[core.Key]core.Value
 type keySet map[core.Key]struct{}
 
+// Map is an immutable storage for correlations.
 type Map struct {
 	m rawMap
 }
 
+// MapUpdate contains information about correlation changes to be
+// made.
 type MapUpdate struct {
+	// DropSingleK contains a single key to be dropped from
+	// correlations. Use this to avoid an overhead of a slice
+	// allocation if there is only one key to drop.
 	DropSingleK core.Key
-	DropMultiK  []core.Key
+	// DropMultiK contains all the keys to be dropped from
+	// correlations.
+	DropMultiK []core.Key
 
+	// SingleKV contains a single key-value pair to be added to
+	// correlations. Use this to avoid an overhead of a slice
+	// allocation if there is only one key-value pair to add.
 	SingleKV core.KeyValue
-	MultiKV  []core.KeyValue
+	// MultiKV contains all the key-value pairs to be added to
+	// correlations.
+	MultiKV []core.KeyValue
 }
 
 func newMap(raw rawMap) Map {
@@ -41,14 +52,21 @@ func newMap(raw rawMap) Map {
 	}
 }
 
+// NewEmptyMap creates an empty correlations map.
 func NewEmptyMap() Map {
 	return newMap(nil)
 }
 
+// NewMap creates a map with the contents of the update applied. In
+// this function, having an update with DropSingleK or DropMultiK
+// makes no sense.
 func NewMap(update MapUpdate) Map {
 	return NewEmptyMap().Apply(update)
 }
 
+// Apply creates a copy of the map with the contents of the updated
+// applied. Apply will first drop the keys from DropSingleK and
+// DropMultiK, then add key-value pairs from SingleKV and MultiKV.
 func (m Map) Apply(update MapUpdate) Map {
 	delSet, addSet := getModificationSets(update)
 
@@ -124,20 +142,28 @@ func getModificationSets(update MapUpdate) (keySet, keySet) {
 	return delSet, addSet
 }
 
+// Value gets a value from correlations map and returns a boolean
+// value indicating whether the key exist in the map.
 func (m Map) Value(k core.Key) (core.Value, bool) {
 	value, ok := m.m[k]
 	return value, ok
 }
 
+// HasValue returns a boolean value indicating whether the key exist
+// in the map.
 func (m Map) HasValue(k core.Key) bool {
 	_, has := m.Value(k)
 	return has
 }
 
+// Len returns a length of the map.
 func (m Map) Len() int {
 	return len(m.m)
 }
 
+// Foreach calls a passed callback once on each key-value pair until
+// all the key-value pairs of the map were iterated or the callback
+// returns false, whichever happens first.
 func (m Map) Foreach(f func(kv core.KeyValue) bool) {
 	for k, v := range m.m {
 		if !f(core.KeyValue{
