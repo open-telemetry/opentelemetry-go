@@ -28,6 +28,9 @@ type Map struct {
 }
 
 type MapUpdate struct {
+	DropSingleK core.Key
+	DropMultiK  []core.Key
+
 	SingleKV core.KeyValue
 	MultiKV  []core.KeyValue
 }
@@ -47,7 +50,7 @@ func NewMap(update MapUpdate) Map {
 }
 
 func (m Map) Apply(update MapUpdate) Map {
-	addSet := getModificationSet(update)
+	delSet, addSet := getModificationSets(update)
 
 	mapSizeDiff := 0
 	for k := range addSet {
@@ -55,9 +58,20 @@ func (m Map) Apply(update MapUpdate) Map {
 			mapSizeDiff++
 		}
 	}
+	for k := range delSet {
+		if _, ok := m.m[k]; ok {
+			if _, inAddSet := addSet[k]; !inAddSet {
+				mapSizeDiff--
+			}
+		}
+	}
 
 	r := make(rawMap, len(m.m)+mapSizeDiff)
 	for k, v := range m.m {
+		// do not copy items we want to drop
+		if _, ok := delSet[k]; ok {
+			continue
+		}
 		// do not copy items we would overwrite
 		if _, ok := addSet[k]; ok {
 			continue
@@ -76,7 +90,22 @@ func (m Map) Apply(update MapUpdate) Map {
 	return newMap(r)
 }
 
-func getModificationSet(update MapUpdate) keySet {
+func getModificationSets(update MapUpdate) (keySet, keySet) {
+	deletionsCount := len(update.DropMultiK)
+	if update.DropSingleK.Defined() {
+		deletionsCount++
+	}
+	var delSet keySet
+	if deletionsCount > 0 {
+		delSet = make(map[core.Key]struct{}, deletionsCount)
+		for _, k := range update.DropMultiK {
+			delSet[k] = struct{}{}
+		}
+		if update.DropSingleK.Defined() {
+			delSet[update.DropSingleK] = struct{}{}
+		}
+	}
+
 	additionsCount := len(update.MultiKV)
 	if update.SingleKV.Key.Defined() {
 		additionsCount++
@@ -92,7 +121,7 @@ func getModificationSet(update MapUpdate) keySet {
 		}
 	}
 
-	return addSet
+	return delSet, addSet
 }
 
 func (m Map) Value(k core.Key) (core.Value, bool) {
