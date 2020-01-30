@@ -20,9 +20,7 @@ import (
 
 type currentSpanKeyType struct{}
 
-var (
-	currentSpanKey = &currentSpanKeyType{}
-)
+var currentSpanKey = &currentSpanKeyType{}
 
 func ContextWithSpan(ctx context.Context, span Span) context.Context {
 	return context.WithValue(ctx, currentSpanKey, span)
