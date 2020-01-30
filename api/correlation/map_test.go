@@ -22,13 +22,68 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 )
 
+type testCase struct {
+	name    string
+	value   MapUpdate
+	init    []int
+	wantKVs []core.KeyValue
+}
+
 func TestMap(t *testing.T) {
-	for _, testcase := range []struct {
-		name    string
-		value   MapUpdate
-		init    []int
-		wantKVs []core.KeyValue
-	}{
+	for _, testcase := range getTestCases() {
+		t.Logf("Running test case %s", testcase.name)
+		var got Map
+		if len(testcase.init) > 0 {
+			got = makeTestMap(testcase.init).Apply(testcase.value)
+		} else {
+			got = NewMap(testcase.value)
+		}
+		for _, s := range testcase.wantKVs {
+			if ok := got.HasValue(s.Key); !ok {
+				t.Errorf("Expected Key %s to have Value", s.Key)
+			}
+			if g, ok := got.Value(s.Key); !ok || g != s.Value {
+				t.Errorf("+got: %v, -want: %v", g, s.Value)
+			}
+		}
+		// test Foreach()
+		got.Foreach(func(kv core.KeyValue) bool {
+			for _, want := range testcase.wantKVs {
+				if kv == want {
+					return false
+				}
+			}
+			t.Errorf("Expected kv %v, but not found", kv)
+			return true
+		})
+		if l, exp := got.Len(), len(testcase.wantKVs); l != exp {
+			t.Errorf("+got: %d, -want: %d", l, exp)
+		}
+	}
+}
+
+func TestSizeComputation(t *testing.T) {
+	for _, testcase := range getTestCases() {
+		t.Logf("Running test case %s", testcase.name)
+		var initMap Map
+		if len(testcase.init) > 0 {
+			initMap = makeTestMap(testcase.init)
+		} else {
+			initMap = NewEmptyMap()
+		}
+		gotMap := initMap.Apply(testcase.value)
+
+		delSet, addSet := getModificationSets(testcase.value)
+		mapSize := getNewMapSize(initMap.m, delSet, addSet)
+
+		if gotMap.Len() != mapSize {
+			t.Errorf("Expected computed size to be %d, got %d", gotMap.Len(), mapSize)
+		}
+	}
+}
+
+func getTestCases() []testCase {
+	return []testCase{
 		{
 			name: "NewMap with MultiKV",
 			value: MapUpdate{MultiKV: []core.KeyValue{
@@ -219,35 +274,6 @@ func TestMap(t *testing.T) {
 				key.Int("key7", 7),
 			},
 		},
-	} {
-		t.Logf("Running test case %s", testcase.name)
-		var got Map
-		if len(testcase.init) > 0 {
-			got = makeTestMap(testcase.init).Apply(testcase.value)
-		} else {
-			got = NewMap(testcase.value)
-		}
-		for _, s := range testcase.wantKVs {
-			if ok := got.HasValue(s.Key); !ok {
-				t.Errorf("Expected Key %s to have Value", s.Key)
-			}
-			if g, ok := got.Value(s.Key); !ok || g != s.Value {
-				t.Errorf("+got: %v, -want: %v", g, s.Value)
-			}
-		}
-		// test Foreach()
-		got.Foreach(func(kv core.KeyValue) bool {
-			for _, want := range testcase.wantKVs {
-				if kv == want {
-					return false
-				}
-			}
-			t.Errorf("Expected kv %v, but not found", kv)
-			return true
-		})
-		if l, exp := got.Len(), len(testcase.wantKVs); l != exp {
-			t.Errorf("+got: %d, -want: %d", l, exp)
-		}
 	}
 }
 

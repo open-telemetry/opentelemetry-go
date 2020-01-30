@@ -69,22 +69,9 @@ func NewMap(update MapUpdate) Map {
 // DropMultiK, then add key-value pairs from SingleKV and MultiKV.
 func (m Map) Apply(update MapUpdate) Map {
 	delSet, addSet := getModificationSets(update)
+	mapSize := getNewMapSize(m.m, delSet, addSet)
 
-	mapSizeDiff := 0
-	for k := range addSet {
-		if _, ok := m.m[k]; !ok {
-			mapSizeDiff++
-		}
-	}
-	for k := range delSet {
-		if _, ok := m.m[k]; ok {
-			if _, inAddSet := addSet[k]; !inAddSet {
-				mapSizeDiff--
-			}
-		}
-	}
-
-	r := make(rawMap, len(m.m)+mapSizeDiff)
+	r := make(rawMap, mapSize)
 	for k, v := range m.m {
 		// do not copy items we want to drop
 		if _, ok := delSet[k]; ok {
@@ -140,6 +127,23 @@ func getModificationSets(update MapUpdate) (keySet, keySet) {
 	}
 
 	return delSet, addSet
+}
+
+func getNewMapSize(m rawMap, delSet keySet, addSet keySet) int {
+	mapSizeDiff := 0
+	for k := range addSet {
+		if _, ok := m[k]; !ok {
+			mapSizeDiff++
+		}
+	}
+	for k := range delSet {
+		if _, ok := m[k]; ok {
+			if _, inAddSet := addSet[k]; !inAddSet {
+				mapSizeDiff--
+			}
+		}
+	}
+	return len(m) + mapSizeDiff
 }
 
 // Value gets a value from correlations map and returns a boolean
