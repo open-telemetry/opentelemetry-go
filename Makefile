@@ -25,7 +25,7 @@ $(TOOLS_DIR)/misspell: go.mod go.sum tools.go
 $(TOOLS_DIR)/stringer: go.mod go.sum tools.go
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: lint generate build examples test
+precommit: generate build lint examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -84,7 +84,7 @@ examples:
 	done
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
+lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -98,5 +98,5 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/stringer
 	    go mod tidy); \
 	done
 
-generate:
+generate: $(TOOLS_DIR)/stringer
 	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...

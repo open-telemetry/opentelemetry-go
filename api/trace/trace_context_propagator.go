@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators
+package trace
 
 import (
 	"context"
@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/propagation"
 )
 
 const (
@@ -36,13 +36,14 @@ const (
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
+//nolint:golint
 type TraceContext struct{}
 
-var _ TextFormat = TraceContext{}
+var _ propagation.TextFormat = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
-	sc := trace.SpanFromContext(ctx).SpanContext()
+func (hp TraceContext) Inject(ctx context.Context, supplier propagation.Supplier) {
+	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
 			supportedVersion,
@@ -52,7 +53,7 @@ func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
 		supplier.Set(TraceparentHeader, h)
 	}
 
-	correlationCtx := dctx.FromContext(ctx)
+	correlationCtx := correlation.FromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	correlationCtx.Foreach(func(kv core.KeyValue) bool {
@@ -72,13 +73,13 @@ func (hp TraceContext) Inject(ctx context.Context, supplier Supplier) {
 }
 
 func (hp TraceContext) Extract(
-	ctx context.Context, supplier Supplier,
-) (core.SpanContext, dctx.Map) {
+	ctx context.Context, supplier propagation.Supplier,
+) (core.SpanContext, correlation.Map) {
 	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
 }
 
 func (hp TraceContext) extractSpanContext(
-	ctx context.Context, supplier Supplier,
+	ctx context.Context, supplier propagation.Supplier,
 ) core.SpanContext {
 	h := supplier.Get(TraceparentHeader)
 	if h == "" {
@@ -146,10 +147,10 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Supplier) dctx.Map {
+func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.Supplier) correlation.Map {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
-		return dctx.NewEmptyMap()
+		return correlation.NewEmptyMap()
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
@@ -185,7 +186,7 @@ func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier Suppl
 
 		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
 	}
-	return dctx.NewMap(dctx.MapUpdate{
+	return correlation.NewMap(correlation.MapUpdate{
 		MultiKV: keyValues,
 	})
 }
