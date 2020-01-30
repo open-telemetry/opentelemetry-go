@@ -76,7 +76,7 @@ func ExampleNewHandler() {
 			func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
 				var name string
-				// Wrap another function in it's own span
+				// Wrap another function in its own span
 				if err := trace.SpanFromContext(ctx).Tracer().WithSpan(ctx, "figureOutName",
 					func(ctx context.Context) error {
 						var err error
