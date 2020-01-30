@@ -147,9 +147,7 @@ func TestMap(t *testing.T) {
 func makeTestMap(ints []int) Map {
 	r := make(rawMap, len(ints))
 	for _, v := range ints {
-		r[core.Key(fmt.Sprintf("key%d", v))] = entry{
-			value: core.Int(v),
-		}
+		r[core.Key(fmt.Sprintf("key%d", v))] = core.Int(v)
 	}
 	return newMap(r)
 }

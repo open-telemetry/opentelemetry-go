@@ -20,11 +20,7 @@ import (
 
 // TODO Comments needed! This was formerly known as distributedcontext.Map
 
-type entry struct {
-	value core.Value
-}
-
-type rawMap map[core.Key]entry
+type rawMap map[core.Key]core.Value
 
 type Map struct {
 	m rawMap
@@ -55,14 +51,10 @@ func (m Map) Apply(update MapUpdate) Map {
 		r[k] = v
 	}
 	if update.SingleKV.Key.Defined() {
-		r[update.SingleKV.Key] = entry{
-			value: update.SingleKV.Value,
-		}
+		r[update.SingleKV.Key] = update.SingleKV.Value
 	}
 	for _, kv := range update.MultiKV {
-		r[kv.Key] = entry{
-			value: kv.Value,
-		}
+		r[kv.Key] = kv.Value
 	}
 	if len(r) == 0 {
 		r = nil
@@ -71,8 +63,8 @@ func (m Map) Apply(update MapUpdate) Map {
 }
 
 func (m Map) Value(k core.Key) (core.Value, bool) {
-	entry, ok := m.m[k]
-	return entry.value, ok
+	value, ok := m.m[k]
+	return value, ok
 }
 
 func (m Map) HasValue(k core.Key) bool {
@@ -88,7 +80,7 @@ func (m Map) Foreach(f func(kv core.KeyValue) bool) {
 	for k, v := range m.m {
 		if !f(core.KeyValue{
 			Key:   k,
-			Value: v.value,
+			Value: v,
 		}) {
 			return
 		}
