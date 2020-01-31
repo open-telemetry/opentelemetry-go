@@ -79,7 +79,7 @@ func WithPublicEndpoint() Option {
 
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
-// go.opentelemetry.io/otel/api/trace.TraceContext is used.
+// go.opentelemetry.io/otel/api/trace.DefaultPropagator is used.
 func WithPropagator(p propagation.TextFormat) Option {
 	return func(h *Handler) {
 		h.prop = p
