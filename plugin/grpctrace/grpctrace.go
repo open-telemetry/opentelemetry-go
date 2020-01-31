@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	propagator = trace.TraceContext{}
+	propagator = trace.DefaultPropagator
 )
 
 type metadataSupplier struct {
