@@ -42,6 +42,9 @@ type TraceContext struct{}
 var _ propagation.TextFormat = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
+// DefaultPropagator is the default TraceContext propagator
+var DefaultPropagator propagation.TextFormat = TraceContext{}
+
 func (hp TraceContext) Inject(ctx context.Context, supplier propagation.Supplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
