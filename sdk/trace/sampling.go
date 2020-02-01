@@ -80,8 +80,8 @@ func NeverSample() Sampler {
 
 // AlwaysParentSample returns a Sampler that samples a trace only
 // if the parent span is sampled.
+// This Sampler is a passthrough to the ProbabilitySampler with
+// a fraction of value 0.
 func AlwaysParentSample() Sampler {
-	return func(p SamplingParameters) SamplingDecision {
-		return SamplingDecision{Sample: p.ParentContext.IsSampled()}
-	}
+	return ProbabilitySampler(0)
 }
