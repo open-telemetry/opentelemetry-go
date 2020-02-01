@@ -37,7 +37,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-func TestNewExporter(t *testing.T) {
+func TestNewRawExporter(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
 		serviceName       = "test-service"
@@ -45,7 +45,7 @@ func TestNewExporter(t *testing.T) {
 		tagVal            = "val"
 	)
 	// Create Jaeger Exporter
-	exp, err := NewExporter(
+	exp, err := NewRawExporter(
 		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
@@ -60,8 +60,8 @@ func TestNewExporter(t *testing.T) {
 	assert.Len(t, exp.process.Tags, 1)
 }
 
-func TestNewExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
-	_, err := NewExporter(
+func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+	_, err := NewRawExporter(
 		WithCollectorEndpoint(""),
 	)
 
@@ -92,7 +92,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		tagVal      = "val"
 	)
 	// Create Jaeger Exporter
-	exp, err := NewExporter(
+	exp, err := NewRawExporter(
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
@@ -121,24 +121,24 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.True(t, len(tc.spansUploaded) == 1)
 }
 
-func TestNewExporterWithAgentEndpoint(t *testing.T) {
+func TestNewRawExporterWithAgentEndpoint(t *testing.T) {
 	const agentEndpoint = "localhost:6831"
 	// Create Jaeger Exporter
-	_, err := NewExporter(
+	_, err := NewRawExporter(
 		WithAgentEndpoint(agentEndpoint),
 	)
 	assert.NoError(t, err)
 }
 
-func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
+func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 	//empty
-	_, err := NewExporter(
+	_, err := NewRawExporter(
 		WithAgentEndpoint(""),
 	)
 	assert.Error(t, err)
 
 	//invalid endpoint addr
-	_, err = NewExporter(
+	_, err = NewRawExporter(
 		WithAgentEndpoint("http://localhost"),
 	)
 	assert.Error(t, err)

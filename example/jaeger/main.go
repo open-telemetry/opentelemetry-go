@@ -30,8 +30,8 @@ import (
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
 func initTracer() func() {
-	// Create Jaeger Exporter
-	exporter, err := jaeger.NewExporter(
+	// Create and install Jaeger export pipeline
+	tp, flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
@@ -45,18 +45,15 @@ func initTracer() func() {
 		log.Fatal(err)
 	}
 
-	// For demoing purposes, always sample. In a production application, you should
-	// configure this to a trace.ProbabilitySampler set at the desired
-	// probability.
-	tp, err := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
-	if err != nil {
-		log.Fatal(err)
-	}
-	global.SetTraceProvider(tp)
+	// For demoing purposes, use trace.AlwaysSample to sample every trace.
+	// In a production application, you should configure this to a trace.ProbabilitySampler
+	// set at the desired probability.
+	tp.ApplyConfig(sdktrace.Config{
+		DefaultSampler: sdktrace.AlwaysSample(),
+	})
+
 	return func() {
-		exporter.Flush()
+		flush()
 	}
 }
 
