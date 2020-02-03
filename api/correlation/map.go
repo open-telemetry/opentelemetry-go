@@ -95,12 +95,11 @@ func (m Map) Apply(update MapUpdate) Map {
 	return newMap(r)
 }
 
-func getModificationSets(update MapUpdate) (keySet, keySet) {
+func getModificationSets(update MapUpdate) (delSet, addSet keySet) {
 	deletionsCount := len(update.DropMultiK)
 	if update.DropSingleK.Defined() {
 		deletionsCount++
 	}
-	var delSet keySet
 	if deletionsCount > 0 {
 		delSet = make(map[core.Key]struct{}, deletionsCount)
 		for _, k := range update.DropMultiK {
@@ -115,7 +114,6 @@ func getModificationSets(update MapUpdate) (keySet, keySet) {
 	if update.SingleKV.Key.Defined() {
 		additionsCount++
 	}
-	var addSet keySet
 	if additionsCount > 0 {
 		addSet = make(map[core.Key]struct{}, additionsCount)
 		for _, k := range update.MultiKV {
@@ -126,10 +124,10 @@ func getModificationSets(update MapUpdate) (keySet, keySet) {
 		}
 	}
 
-	return delSet, addSet
+	return
 }
 
-func getNewMapSize(m rawMap, delSet keySet, addSet keySet) int {
+func getNewMapSize(m rawMap, delSet, addSet keySet) int {
 	mapSizeDiff := 0
 	for k := range addSet {
 		if _, ok := m[k]; !ok {
