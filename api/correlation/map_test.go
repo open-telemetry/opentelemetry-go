@@ -85,7 +85,7 @@ func TestSizeComputation(t *testing.T) {
 func getTestCases() []testCase {
 	return []testCase{
 		{
-			name: "NewMap with MultiKV",
+			name: "New map with MultiKV",
 			value: MapUpdate{MultiKV: []core.KeyValue{
 				key.Int64("key1", 1),
 				key.String("key2", "val2")},
@@ -97,7 +97,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name:  "NewMap with SingleKV",
+			name:  "New map with SingleKV",
 			value: MapUpdate{SingleKV: key.String("key1", "val1")},
 			init:  []int{},
 			wantKVs: []core.KeyValue{
@@ -105,7 +105,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "NewMap with MapUpdate",
+			name: "New map with both add fields",
 			value: MapUpdate{SingleKV: key.Int64("key1", 3),
 				MultiKV: []core.KeyValue{
 					key.String("key1", ""),
@@ -118,19 +118,19 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name:    "NewMap with empty MapUpdate",
-			value:   MapUpdate{MultiKV: []core.KeyValue{}},
+			name:    "New map with empty MapUpdate",
+			value:   MapUpdate{},
 			init:    []int{},
 			wantKVs: []core.KeyValue{},
 		},
 		{
-			name:    "NewMap with DropSingleK",
+			name:    "New map with DropSingleK",
 			value:   MapUpdate{DropSingleK: core.Key("key1")},
 			init:    []int{},
 			wantKVs: []core.KeyValue{},
 		},
 		{
-			name: "NewMap with DropMultiK",
+			name: "New map with DropMultiK",
 			value: MapUpdate{DropMultiK: []core.Key{
 				core.Key("key1"), core.Key("key2"),
 			}},
@@ -138,7 +138,7 @@ func getTestCases() []testCase {
 			wantKVs: []core.KeyValue{},
 		},
 		{
-			name: "NewMap with both drop fields",
+			name: "New map with both drop fields",
 			value: MapUpdate{
 				DropSingleK: core.Key("key1"),
 				DropMultiK: []core.Key{
@@ -150,7 +150,7 @@ func getTestCases() []testCase {
 			wantKVs: []core.KeyValue{},
 		},
 		{
-			name: "NewMap with mixed fields",
+			name: "New map with all fields",
 			value: MapUpdate{
 				DropSingleK: core.Key("key1"),
 				DropMultiK: []core.Key{
@@ -173,7 +173,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "Map with MultiKV",
+			name: "Existing map with MultiKV",
 			value: MapUpdate{MultiKV: []core.KeyValue{
 				key.Int64("key1", 1),
 				key.String("key2", "val2")},
@@ -186,7 +186,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name:  "Map with SingleKV",
+			name:  "Existing map with SingleKV",
 			value: MapUpdate{SingleKV: key.String("key1", "val1")},
 			init:  []int{5},
 			wantKVs: []core.KeyValue{
@@ -195,7 +195,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "Map with MapUpdate",
+			name: "Existing map with both add fields",
 			value: MapUpdate{SingleKV: key.Int64("key1", 3),
 				MultiKV: []core.KeyValue{
 					key.String("key1", ""),
@@ -209,15 +209,15 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name:  "Map with empty MapUpdate",
-			value: MapUpdate{MultiKV: []core.KeyValue{}},
+			name:  "Existing map with empty MapUpdate",
+			value: MapUpdate{},
 			init:  []int{5},
 			wantKVs: []core.KeyValue{
 				key.Int("key5", 5),
 			},
 		},
 		{
-			name:  "NewMap with DropSingleK",
+			name:  "Existing map with DropSingleK",
 			value: MapUpdate{DropSingleK: core.Key("key1")},
 			init:  []int{1, 5},
 			wantKVs: []core.KeyValue{
@@ -225,7 +225,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "NewMap with DropMultiK",
+			name: "Existing map with DropMultiK",
 			value: MapUpdate{DropMultiK: []core.Key{
 				core.Key("key1"), core.Key("key2"),
 			}},
@@ -235,7 +235,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "NewMap with both drop fields",
+			name: "Existing map with both drop fields",
 			value: MapUpdate{
 				DropSingleK: core.Key("key1"),
 				DropMultiK: []core.Key{
@@ -249,7 +249,7 @@ func getTestCases() []testCase {
 			},
 		},
 		{
-			name: "NewMap with mixed fields",
+			name: "Existing map with all the fields",
 			value: MapUpdate{
 				DropSingleK: core.Key("key1"),
 				DropMultiK: []core.Key{
