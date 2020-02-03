@@ -59,7 +59,7 @@ func NewEmptyMap() Map {
 
 // NewMap creates a map with the contents of the update applied. In
 // this function, having an update with DropSingleK or DropMultiK
-// makes no sense.
+// makes no sense - those fields are effectively ignored.
 func NewMap(update MapUpdate) Map {
 	return NewEmptyMap().Apply(update)
 }
