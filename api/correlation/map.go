@@ -64,7 +64,7 @@ func NewMap(update MapUpdate) Map {
 	return NewEmptyMap().Apply(update)
 }
 
-// Apply creates a copy of the map with the contents of the updated
+// Apply creates a copy of the map with the contents of the update
 // applied. Apply will first drop the keys from DropSingleK and
 // DropMultiK, then add key-value pairs from SingleKV and MultiKV.
 func (m Map) Apply(update MapUpdate) Map {
