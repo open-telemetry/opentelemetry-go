@@ -159,6 +159,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 
 	tags = append(tags, getInt64Tag("status.code", int64(data.Status)),
 		getStringTag("status.message", data.Status.String()),
+		getStringTag("span.kind", data.SpanKind.String()),
 	)
 
 	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.

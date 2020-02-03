@@ -16,7 +16,6 @@ package grpctrace
 
 import (
 	"context"
-	"strings"
 
 	"google.golang.org/grpc/metadata"
 
@@ -34,11 +33,14 @@ type metadataSupplier struct {
 
 func (s *metadataSupplier) Get(key string) string {
 	values := s.metadata.Get(key)
-	return strings.Join(values, ",")
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
 }
 
 func (s *metadataSupplier) Set(key string, value string) {
-	s.metadata.Append(key, value)
+	s.metadata.Set(key, value)
 }
 
 // Inject injects correlation context and span context into the gRPC
