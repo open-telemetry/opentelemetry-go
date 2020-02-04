@@ -100,25 +100,10 @@ type StartConfig struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
 	Links      []Link
-	Relation   Relation
 	Record     bool
+	NewRoot    bool
 	SpanKind   SpanKind
 }
-
-// Relation is used to establish relationship between newly created span and the
-// other span. The other span could be related as a parent or linked or any other
-// future relationship type.
-type Relation struct {
-	core.SpanContext
-	RelationshipType
-}
-
-type RelationshipType int
-
-const (
-	ChildOfRelationship RelationshipType = iota
-	FollowsFromRelationship
-)
 
 // Link is used to establish relationship between two spans within the same Trace or
 // across different Traces. Few examples of Link usage.
@@ -216,23 +201,14 @@ func WithRecord() StartOption {
 	}
 }
 
-// ChildOf. TODO: do we need this?.
-func ChildOf(sc core.SpanContext) StartOption {
+// WithNewRoot specifies that the current span or remote span context
+// in context passed to `Start` should be ignored when deciding about
+// a parent, which effectively means creating a span with new trace
+// ID. The current span and the remote span context may be added as
+// links to the span by the implementation.
+func WithNewRoot() StartOption {
 	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: ChildOfRelationship,
-		}
-	}
-}
-
-// FollowsFrom. TODO: do we need this?.
-func FollowsFrom(sc core.SpanContext) StartOption {
-	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: FollowsFromRelationship,
-		}
+		c.NewRoot = true
 	}
 }
 
