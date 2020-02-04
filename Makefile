@@ -1,10 +1,11 @@
 EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
+TOOLS_MOD_DIR := ./tools
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 # All directories with go.mod files. Used in go mod tidy.
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
-ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example' | sort)
+ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
@@ -14,15 +15,18 @@ GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic
 
 .PHONY: precommit
 
-TOOLS_DIR := ./.tools
+TOOLS_DIR := $(abspath ./.tools)
 
-$(TOOLS_DIR)/golangci-lint: go.mod go.sum tools.go
+$(TOOLS_DIR)/golangci-lint: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 
-$(TOOLS_DIR)/misspell: go.mod go.sum tools.go
+$(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
-$(TOOLS_DIR)/stringer: go.mod go.sum tools.go
+$(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
 precommit: generate build lint examples test
@@ -52,7 +56,7 @@ check-clean-work-tree:
 .PHONY: build
 build:
 	# TODO: Fix this on windows.
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
 	  echo "compiling all packages in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go build ./... && \
@@ -61,7 +65,7 @@ build:
 
 .PHONY: test
 test:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
 	  echo "go test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST) ./...); \
@@ -69,7 +73,7 @@ test:
 
 .PHONY: test-386
 test-386:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
 	  echo "go test ./... GOARCH 386 in $${dir}"; \
 	  (cd "$${dir}" && \
 	    GOARCH=386 $(GOTEST_MIN) ./...); \
@@ -85,11 +89,11 @@ examples:
 
 .PHONY: lint
 lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(abspath $(TOOLS_DIR))/golangci-lint run --fix && \
-	    $(abspath $(TOOLS_DIR))/golangci-lint run); \
+	    $(TOOLS_DIR)/golangci-lint run --fix && \
+	    $(TOOLS_DIR)/golangci-lint run); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
@@ -99,4 +103,4 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	done
 
 generate: $(TOOLS_DIR)/stringer
-	PATH="$(abspath $(TOOLS_DIR)):$${PATH}" go generate ./...
+	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
