@@ -63,10 +63,9 @@ func main() {
 		})))
 
 		ctx, span := tr.Start(
-			req.Context(),
+			trace.ContextWithRemoteSpanContext(req.Context(), spanCtx),
 			"hello",
 			trace.WithAttributes(attrs...),
-			trace.ChildOf(spanCtx),
 		)
 		defer span.End()
 

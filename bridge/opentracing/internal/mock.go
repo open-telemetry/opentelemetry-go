@@ -26,6 +26,7 @@ import (
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -146,14 +147,8 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.St
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanContext {
-	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
-		spanOpts.Relation.SpanContext.IsValid() {
-		return spanOpts.Relation.SpanContext
-	}
-	if parentSpanContext := oteltrace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
-		return parentSpanContext
-	}
-	return otelcore.EmptySpanContext()
+	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, spanOpts.NewRoot)
+	return spanCtx
 }
 
 func (t *MockTracer) getSpanID() otelcore.SpanID {

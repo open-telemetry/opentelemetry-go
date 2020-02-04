@@ -146,19 +146,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: do something with the correlation context
 	sc, _ := h.prop.Extract(r.Context(), r.Header)
+	ctx := r.Context()
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace
 			// and incoming remote sctx should be added as a link.
 			opt = trace.LinkedTo(sc)
+			opts = append(opts, opt)
 		} else { // not a private endpoint, so assume child relationship
-			opt = trace.ChildOf(sc)
+			ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 		}
-		opts = append(opts, opt)
 	}
 
-	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}
