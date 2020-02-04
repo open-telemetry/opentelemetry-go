@@ -51,7 +51,7 @@ type BoundInt64Measure struct {
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Measure) Bind(labels LabelSet) (h BoundFloat64Measure) {
+func (c Float64Measure) Bind(labels LabelSet) (h BoundFloat64Measure) {
 	h.commonBoundInstrument = c.bind(labels)
 	return
 }
@@ -63,20 +63,20 @@ func (c *Float64Measure) Bind(labels LabelSet) (h BoundFloat64Measure) {
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Measure) Bind(labels LabelSet) (h BoundInt64Measure) {
+func (c Int64Measure) Bind(labels LabelSet) (h BoundInt64Measure) {
 	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c *Float64Measure) Measurement(value float64) Measurement {
+func (c Float64Measure) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c *Int64Measure) Measurement(value int64) Measurement {
+func (c Int64Measure) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
@@ -87,7 +87,7 @@ func (c *Int64Measure) Measurement(value int64) Measurement {
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
+func (c Float64Measure) Record(ctx context.Context, value float64, labels LabelSet) {
 	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
@@ -98,16 +98,16 @@ func (c *Float64Measure) Record(ctx context.Context, value float64, labels Label
 // If the labels do not contain a value for the key specified in the
 // measure with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
+func (c Int64Measure) Record(ctx context.Context, value int64, labels LabelSet) {
 	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records.
-func (b *BoundFloat64Measure) Record(ctx context.Context, value float64) {
+func (b BoundFloat64Measure) Record(ctx context.Context, value float64) {
 	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Record adds a new value to the list of measure's records.
-func (b *BoundInt64Measure) Record(ctx context.Context, value int64) {
+func (b BoundInt64Measure) Record(ctx context.Context, value int64) {
 	b.directRecord(ctx, core.NewInt64Number(value))
 }
