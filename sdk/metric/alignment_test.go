@@ -13,19 +13,11 @@ func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
 			Name:   "record.refcount",
-			Offset: unsafe.Offsetof(record{}.refcount),
-		},
-		{
-			Name:   "record.collectedEpoch",
-			Offset: unsafe.Offsetof(record{}.collectedEpoch),
+			Offset: unsafe.Offsetof(record{}.refMapped.value),
 		},
 		{
 			Name:   "record.modifiedEpoch",
-			Offset: unsafe.Offsetof(record{}.modifiedEpoch),
-		},
-		{
-			Name:   "record.reclaim",
-			Offset: unsafe.Offsetof(record{}.reclaim),
+			Offset: unsafe.Offsetof(record{}.modified),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {

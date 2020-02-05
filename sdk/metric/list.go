@@ -19,6 +19,12 @@ import (
 	"unsafe"
 )
 
+// singlePointer wraps an unsafe.Pointer and supports basic
+// load(), store(), clear(), and swapNil() operations.
+type singlePtr struct {
+	ptr unsafe.Pointer
+}
+
 func (l *sortedLabels) Len() int {
 	return len(*l)
 }
@@ -31,25 +37,12 @@ func (l *sortedLabels) Less(i, j int) bool {
 	return (*l)[i].Key < (*l)[j].Key
 }
 
-func (m *SDK) addPrimary(rec *record) {
+func (m *SDK) addRecord(rec *record) {
 	for {
-		rec.next.primary.store(m.records.primary.load())
+		rec.next.store(m.records.load())
 		if atomic.CompareAndSwapPointer(
-			&m.records.primary.ptr,
-			rec.next.primary.ptr,
-			unsafe.Pointer(rec),
-		) {
-			return
-		}
-	}
-}
-
-func (m *SDK) addReclaim(rec *record) {
-	for {
-		rec.next.reclaim.store(m.records.reclaim.load())
-		if atomic.CompareAndSwapPointer(
-			&m.records.reclaim.ptr,
-			rec.next.reclaim.ptr,
+			&m.records.ptr,
+			rec.next.ptr,
 			unsafe.Pointer(rec),
 		) {
 			return
