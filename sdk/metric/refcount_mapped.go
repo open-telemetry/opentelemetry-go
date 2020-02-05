@@ -34,15 +34,9 @@ type refcountMapped struct {
 // ref returns true if the entry is still mapped and increases the
 // reference usages, if unmapped returns false.
 func (rm *refcountMapped) ref() bool {
-	if atomic.AddInt64(&rm.value, 2)&1 != 0 {
-		// This entry was removed from the map between the moment
-		// we got a reference to it (or will be removed very soon)
-		// and here.
-		return false
-	}
-	// At this moment it is guaranteed that the entry is in
-	// the map and referenced (so it will not be unmapped).
-	return true
+	// Check if this entry was marked as unmapped between the moment
+	// we got a reference to it (or will be removed very soon) and here.
+	return atomic.AddInt64(&rm.value, 2)&1 == 0
 }
 
 func (rm *refcountMapped) unref() {

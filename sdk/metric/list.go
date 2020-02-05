@@ -67,7 +67,3 @@ func (s *singlePtr) load() *record {
 func (s *singlePtr) store(r *record) {
 	atomic.StorePointer(&s.ptr, unsafe.Pointer(r))
 }
-
-func (s *singlePtr) clear() {
-	atomic.StorePointer(&s.ptr, unsafe.Pointer(nil))
-}

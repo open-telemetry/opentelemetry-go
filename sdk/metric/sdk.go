@@ -129,12 +129,6 @@ var (
 	_ api.LabelSet            = &labels{}
 	_ api.InstrumentImpl      = &instrument{}
 	_ api.BoundInstrumentImpl = &record{}
-
-	// hazardRecord is used as a pointer value that indicates the
-	// value is not included in any list.  (`nil` would be
-	// ambiguous, since the final element in a list has `nil` as
-	// the next pointer).
-	hazardRecord = &record{}
 )
 
 func (i *instrument) Meter() api.Meter {
