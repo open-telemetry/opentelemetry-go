@@ -169,12 +169,13 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		// Load/Store: there's a memory allocation to place `mk` into
 		// an interface here.
 		if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
-			// Existing record case.
-			rec = actual.(*record)
-			if rec.refMapped.ref() {
+			// Existing record case. Cannot change rec here because if fail
+			// will try to add rec again to avoid new allocations.
+			oldRec := actual.(*record)
+			if oldRec.refMapped.ref() {
 				// At this moment it is guaranteed that the entry is in
 				// the map and will not be removed.
-				return rec
+				return oldRec
 			}
 			// This loaded entry is marked as unmapped (so Collect will remove
 			// it from the map immediately), try again - this is a busy waiting
