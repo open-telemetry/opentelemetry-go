@@ -48,7 +48,7 @@ func (rm *refcountMapped) inUse() bool {
 	return val >= 2 && val&1 == 0
 }
 
-// tryUnmaps flips the mapped bit to "unmapped" state and returns true if both of the
+// tryUnmap flips the mapped bit to "unmapped" state and returns true if both of the
 // following conditions are true upon entry to this function:
 //  * There are no active references;
 //  * The mapped bit is in "mapped" state.
