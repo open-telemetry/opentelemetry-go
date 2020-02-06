@@ -3,8 +3,8 @@ TOOLS_MOD_DIR := ./tools
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
-# All directories with go.mod files. Used in go mod tidy.
-ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+# All directories with go.mod files related to opentelemetry library. Used for building, testing and linting.
+ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 GOTEST_MIN = go test -v -timeout 30s
@@ -56,7 +56,7 @@ check-clean-work-tree:
 .PHONY: build
 build:
 	# TODO: Fix this on windows.
-	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "compiling all packages in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go build ./... && \
@@ -65,7 +65,7 @@ build:
 
 .PHONY: test
 test:
-	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST) ./...); \
@@ -73,7 +73,7 @@ test:
 
 .PHONY: test-386
 test-386:
-	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... GOARCH 386 in $${dir}"; \
 	  (cd "$${dir}" && \
 	    GOARCH=386 $(GOTEST_MIN) ./...); \
@@ -89,14 +89,14 @@ examples:
 
 .PHONY: lint
 lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
-	set -e; for dir in $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS)); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(TOOLS_DIR)/golangci-lint run --fix && \
 	    $(TOOLS_DIR)/golangci-lint run); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS) $(TOOLS_MOD_DIR); do \
 	  echo "go mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go mod tidy); \
