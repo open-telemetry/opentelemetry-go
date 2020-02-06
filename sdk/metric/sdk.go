@@ -155,6 +155,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 		labels:     ls,
 		descriptor: i.descriptor,
 		refMapped:  refcountMapped{value: 2},
+		modified:   0,
 		recorder:   i.meter.batcher.AggregatorFor(i.descriptor),
 	}
 
