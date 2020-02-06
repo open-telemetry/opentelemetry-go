@@ -38,8 +38,8 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			SpanID:     spanID,
 			TraceFlags: core.TraceFlagsSampled,
 		}
-		ctx := context.Background()
-		ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(sc))
+		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+		ctx, _ = mockTracer.Start(ctx, "inject")
 		fn(ctx, b)
 	})
 

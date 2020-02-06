@@ -21,6 +21,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
+
+	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 var _ trace.Tracer = (*Tracer)(nil)
@@ -52,10 +54,9 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	var traceID core.TraceID
 	var parentSpanID core.SpanID
 
-	if parentSpanContext := c.Relation.SpanContext; parentSpanContext.IsValid() {
-		traceID = parentSpanContext.TraceID
-		parentSpanID = parentSpanContext.SpanID
-	} else if parentSpanContext := trace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
+	parentSpanContext, _, links := parent.GetSpanContextAndLinks(ctx, c.NewRoot)
+
+	if parentSpanContext.IsValid() {
 		traceID = parentSpanContext.TraceID
 		parentSpanID = parentSpanContext.SpanID
 	} else {
@@ -86,6 +87,9 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	span.SetName(name)
 	span.SetAttributes(c.Attributes...)
 
+	for _, link := range links {
+		span.links[link.SpanContext] = link.Attributes
+	}
 	for _, link := range c.Links {
 		span.links[link.SpanContext] = link.Attributes
 	}
