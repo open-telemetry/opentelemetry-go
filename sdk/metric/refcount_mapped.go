@@ -25,7 +25,8 @@ import (
 // unmap() will fail if the entry is in use.
 //
 // refcountMapped uses an atomic value where the least significant bit is used to
-// keep the state of mapping and the rest of the bits are used for recounting.
+// keep the state of mapping ('1' is used for unmapped and '0' is for mapped) and
+// the rest of the bits are used for recounting.
 type refcountMapped struct {
 	// refcount has to be aligned for 64-bit atomic operations.
 	value int64
@@ -43,13 +44,14 @@ func (rm *refcountMapped) unref() {
 	atomic.AddInt64(&rm.value, -2)
 }
 
-// inUse returns true if there is a reference to the entry and it is not unmapped.
+// inUse returns true if there is a reference to the entry and it is mapped.
 func (rm *refcountMapped) inUse() bool {
 	val := atomic.LoadInt64(&rm.value)
 	return val >= 2 && val&1 == 0
 }
 
-// unmap returns true if no references are active, and the
+// unmap returns true if no references are active, and the if the mapped bit
+// is switched to unmap.
 func (rm *refcountMapped) tryUnmap() bool {
 	if atomic.LoadInt64(&rm.value) != 0 {
 		return false
