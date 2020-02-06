@@ -14,17 +14,6 @@
 
 package metric
 
-import (
-	"sync/atomic"
-	"unsafe"
-)
-
-// singlePointer wraps an unsafe.Pointer and supports basic
-// load(), store(), clear(), and swapNil() operations.
-type singlePtr struct {
-	ptr unsafe.Pointer
-}
-
 func (l *sortedLabels) Len() int {
 	return len(*l)
 }
@@ -35,35 +24,4 @@ func (l *sortedLabels) Swap(i, j int) {
 
 func (l *sortedLabels) Less(i, j int) bool {
 	return (*l)[i].Key < (*l)[j].Key
-}
-
-func (m *SDK) addRecord(rec *record) {
-	for {
-		rec.next.store(m.records.load())
-		if atomic.CompareAndSwapPointer(
-			&m.records.ptr,
-			rec.next.ptr,
-			unsafe.Pointer(rec),
-		) {
-			return
-		}
-	}
-}
-
-func (s *singlePtr) swapNil() *record {
-	for {
-		newValue := unsafe.Pointer(nil)
-		swapped := atomic.LoadPointer(&s.ptr)
-		if atomic.CompareAndSwapPointer(&s.ptr, swapped, newValue) {
-			return (*record)(swapped)
-		}
-	}
-}
-
-func (s *singlePtr) load() *record {
-	return (*record)(atomic.LoadPointer(&s.ptr))
-}
-
-func (s *singlePtr) store(r *record) {
-	atomic.StorePointer(&s.ptr, unsafe.Pointer(r))
 }

@@ -46,10 +46,6 @@ type (
 		// w/ zero arguments.
 		empty labels
 
-		// records is the head of both the primary and the
-		// reclaim records lists.
-		records singlePtr
-
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
 		currentEpoch int64
@@ -116,9 +112,6 @@ type (
 		// depending on the type of aggregation.  If nil, the
 		// metric was disabled by the exporter.
 		recorder export.Aggregator
-
-		// next contains the next pointer for the records lists.
-		next singlePtr
 	}
 
 	ErrorHandler func(error)
@@ -188,11 +181,8 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 			continue
 		}
 		// The new entry was added to the map, good to go.
-		break
+		return rec
 	}
-
-	i.meter.addRecord(rec)
-	return rec
 }
 
 func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
@@ -350,10 +340,8 @@ func (m *SDK) Collect(ctx context.Context) int {
 
 	checkpointed := 0
 
-	var next *record
-	for inuse := m.records.swapNil(); inuse != nil; inuse = next {
-		next = inuse.next.load()
-
+	m.current.Range(func(key interface{}, value interface{}) bool {
+		inuse := value.(*record)
 		unmapped := inuse.refMapped.tryUnmap()
 		// If able to unmap then remove the record from the current Map.
 		if unmapped {
@@ -368,11 +356,9 @@ func (m *SDK) Collect(ctx context.Context) int {
 			checkpointed += m.checkpoint(ctx, inuse)
 		}
 
-		// This entry was not removed from the Map, add it back to the records list.
-		if !unmapped {
-			m.addRecord(inuse)
-		}
-	}
+		// Always continue to iterate over the entire map.
+		return true
+	})
 
 	m.currentEpoch++
 	return checkpointed
