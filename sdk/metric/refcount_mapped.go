@@ -19,14 +19,11 @@ import (
 )
 
 // refcountMapped atomically counts the number of references (usages) of an entry
-// while also keeping a state of mapped/unmapped into a different datastructure.
-//
-// ref() will fail if the entry is unmapped.
-// unmap() will fail if the entry is in use.
+// while also keeping a state of mapped/unmapped into a different data structure.
 //
 // refcountMapped uses an atomic value where the least significant bit is used to
 // keep the state of mapping ('1' is used for unmapped and '0' is for mapped) and
-// the rest of the bits are used for recounting.
+// the rest of the bits are used for refcounting.
 type refcountMapped struct {
 	// refcount has to be aligned for 64-bit atomic operations.
 	value int64
@@ -50,7 +47,7 @@ func (rm *refcountMapped) inUse() bool {
 	return val >= 2 && val&1 == 0
 }
 
-// unmap returns true if no references are active, and the if the mapped bit
+// tryUnmap returns true if no references are active, and if the mapped bit
 // is switched to unmap.
 func (rm *refcountMapped) tryUnmap() bool {
 	if atomic.LoadInt64(&rm.value) != 0 {

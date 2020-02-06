@@ -92,7 +92,7 @@ type (
 	// `record` in existence at a time, although at most one can
 	// be referenced from the `SDK.current` map.
 	record struct {
-		// refMap to keep track of refcounts and the mapping state to the
+		// refMapped keeps track of refcounts and the mapping state to the
 		// SDK.current map.
 		refMapped refcountMapped
 
@@ -147,7 +147,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 			// the map and will not be removed.
 			return rec
 		}
-		// This entry is nolonger mapped, try to add a new entry.
+		// This entry is no longer mapped, try to add a new entry.
 	}
 
 	// There's a memory allocation here.

@@ -12,11 +12,11 @@ import (
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "record.refcount",
+			Name:   "record.refMapped.value",
 			Offset: unsafe.Offsetof(record{}.refMapped.value),
 		},
 		{
-			Name:   "record.modifiedEpoch",
+			Name:   "record.modified",
 			Offset: unsafe.Offsetof(record{}.modified),
 		},
 	}
