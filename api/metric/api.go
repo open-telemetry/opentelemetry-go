@@ -81,6 +81,14 @@ type MeasureOptionApplier interface {
 	ApplyMeasureOption(*Options)
 }
 
+// ObserverOptionApplier is an interface for applying metric options
+// that are valid only for observer metrics.
+type ObserverOptionApplier interface {
+	// ApplyObserverOption is used to make some general or
+	// observer-specific changes in the Options.
+	ApplyObserverOption(*Options)
+}
+
 // Measurement is used for reporting a batch of metric
 // values. Instances of this type should be created by instruments
 // (e.g., Int64Counter.Measurement()).
@@ -127,8 +135,22 @@ type Meter interface {
 	// a given name and customized with passed options.
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
+	// NewInt64Observer creates a new integral observer with a
+	// given name and customized with passed options.
+	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
+}
+
+type Int64ObserverResult interface {
+	Observe(value int64, labels LabelSet)
+}
+
+type Int64ObserverCallback func(result Int64ObserverResult)
+
+type Int64Observer interface {
+	SetCallback(callback Int64ObserverCallback)
 }
 
 // Option supports specifying the various metric options.
@@ -140,6 +162,7 @@ type OptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
 	MeasureOptionApplier
+	ObserverOptionApplier
 	// ApplyOption is used to make some general changes in the
 	// Options.
 	ApplyOption(*Options)
@@ -168,16 +191,21 @@ type measureOptionWrapper struct {
 	F Option
 }
 
+type observerOptionWrapper struct {
+	F Option
+}
+
 type counterGaugeOptionWrapper struct {
 	FC Option
 	FG Option
 }
 
 var (
-	_ OptionApplier        = optionWrapper{}
-	_ CounterOptionApplier = counterOptionWrapper{}
-	_ GaugeOptionApplier   = gaugeOptionWrapper{}
-	_ MeasureOptionApplier = measureOptionWrapper{}
+	_ OptionApplier         = optionWrapper{}
+	_ CounterOptionApplier  = counterOptionWrapper{}
+	_ GaugeOptionApplier    = gaugeOptionWrapper{}
+	_ MeasureOptionApplier  = measureOptionWrapper{}
+	_ ObserverOptionApplier = observerOptionWrapper{}
 )
 
 func (o optionWrapper) ApplyCounterOption(opts *Options) {
@@ -189,6 +217,10 @@ func (o optionWrapper) ApplyGaugeOption(opts *Options) {
 }
 
 func (o optionWrapper) ApplyMeasureOption(opts *Options) {
+	o.ApplyOption(opts)
+}
+
+func (o optionWrapper) ApplyObserverOption(opts *Options) {
 	o.ApplyOption(opts)
 }
 
@@ -214,6 +246,10 @@ func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
 
 func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
 	o.FG(opts)
+}
+
+func (o observerOptionWrapper) ApplyObserverOption(opts *Options) {
+	o.F(opts)
 }
 
 // WithDescription applies provided description.

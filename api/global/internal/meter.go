@@ -51,6 +51,7 @@ type meter struct {
 
 	lock        sync.Mutex
 	instruments []*instImpl
+	observers   []*obsImpl
 
 	delegate unsafe.Pointer // (*metric.Meter)
 }
@@ -62,6 +63,19 @@ type instImpl struct {
 	opts  interface{}
 
 	delegate unsafe.Pointer // (*metric.InstrumentImpl)
+}
+
+type obsImpl struct {
+	name     string
+	nkind    core.NumberKind
+	opts     interface{}
+	callback interface{}
+
+	delegate unsafe.Pointer // (*metric.Int64Observer)
+}
+
+type int64ObsImpl struct {
+	observer *obsImpl
 }
 
 type labelSet struct {
@@ -86,6 +100,7 @@ var _ metric.LabelSet = &labelSet{}
 var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instHandle{}
+var _ metric.Int64Observer = int64ObsImpl{}
 
 // Provider interface and delegation
 
@@ -130,6 +145,10 @@ func (m *meter) setDelegate(provider metric.Provider) {
 		inst.setDelegate(*d)
 	}
 	m.instruments = nil
+	for _, obs := range m.observers {
+		obs.setDelegate(*d)
+	}
+	m.observers = nil
 }
 
 func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
@@ -201,6 +220,32 @@ func (bound *instHandle) Unbind() {
 	}
 
 	(*implPtr).Unbind()
+}
+
+// Any Observer delegation
+
+func (obs *obsImpl) setDelegate(d metric.Meter) {
+	if obs.nkind == core.Int64NumberKind {
+		obs.setInt64Delegate(d)
+	}
+}
+
+// Int64Observer delegation
+
+func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
+	obsPtr := new(metric.Int64Observer)
+	cb := obs.callback.(metric.Int64ObserverCallback)
+	opts := obs.opts.([]metric.ObserverOptionApplier)
+	*obsPtr = d.RegisterInt64Observer(obs.name, cb, opts...)
+	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
+}
+
+func (obs int64ObsImpl) SetCallback(callback metric.Int64ObserverCallback) {
+	if obsPtr := (*metric.Int64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
+		(*obsPtr).SetCallback(callback)
+		return
+	}
+	obs.observer.callback = callback
 }
 
 // Metric updates
@@ -295,4 +340,24 @@ func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier
 
 func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
+}
+
+func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Int64Observer {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).RegisterInt64Observer(name, callback, oos...)
+	}
+
+	obs := &obsImpl{
+		name:     name,
+		nkind:    core.Int64NumberKind,
+		opts:     oos,
+		callback: callback,
+	}
+	m.observers = append(m.observers, obs)
+	return int64ObsImpl{
+		observer: obs,
+	}
 }

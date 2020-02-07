@@ -43,6 +43,9 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
+		// observers is a set of `*observer` instances
+		observers sync.Map
+
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
 		empty labels
@@ -115,6 +118,28 @@ type (
 		recorder export.Aggregator
 	}
 
+	observerResult struct {
+		observer     *observer
+		checkpointed int
+	}
+
+	int64ObserverResult struct {
+		result *observerResult
+	}
+
+	observerCallback func(result *observerResult)
+
+	observer struct {
+		meter      *SDK
+		descriptor *export.Descriptor
+		recorder   export.Aggregator
+		callback   observerCallback
+	}
+
+	int64Observer struct {
+		observer *observer
+	}
+
 	ErrorHandler func(error)
 )
 
@@ -123,7 +148,44 @@ var (
 	_ api.LabelSet            = &labels{}
 	_ api.InstrumentImpl      = &instrument{}
 	_ api.BoundInstrumentImpl = &record{}
+	_ api.Int64Observer       = int64Observer{}
+	_ api.Int64ObserverResult = int64ObserverResult{}
 )
+
+func (r *observerResult) observe(number core.Number, ls api.LabelSet) {
+	obs := r.observer
+	ourLs := obs.meter.labsFor(ls)
+	if obs.recorder == nil {
+		// The instrument is disabled according to the AggregationSelector.
+		return
+	}
+	if err := aggregator.RangeTest(number, obs.descriptor); err != nil {
+		obs.meter.errorHandler(err)
+		return
+	}
+	if err := obs.recorder.Update(context.Background(), number, obs.descriptor); err != nil {
+		obs.meter.errorHandler(err)
+		return
+	}
+
+	ctx := context.Background()
+	obs.recorder.Checkpoint(ctx, obs.descriptor)
+	labels := export.NewLabels(ourLs.sorted, ourLs.encoded, obs.meter.labelEncoder)
+	err := obs.meter.batcher.Process(ctx, export.NewRecord(obs.descriptor, labels, obs.recorder))
+
+	if err != nil {
+		obs.meter.errorHandler(err)
+	}
+	r.checkpointed++
+}
+
+func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
+	r.result.observe(core.NewInt64Number(value), labels)
+}
+
+func (o int64Observer) SetCallback(callback api.Int64ObserverCallback) {
+	o.observer.callback = wrapInt64ObserverCallback(callback)
+}
 
 func (i *instrument) Meter() api.Meter {
 	return i.meter
@@ -275,8 +337,8 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
-	descriptor := export.NewDescriptor(
+func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *export.Descriptor {
+	return export.NewDescriptor(
 		name,
 		metricKind,
 		opts.Keys,
@@ -284,6 +346,10 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core
 		opts.Unit,
 		numberKind,
 		opts.Alternate)
+}
+
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
+	descriptor := newDescriptor(name, metricKind, numberKind, opts)
 	return &instrument{
 		descriptor: descriptor,
 		meter:      m,
@@ -332,6 +398,40 @@ func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) ap
 	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
 }
 
+func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) api.Int64Observer {
+	opts := api.Options{}
+	api.ApplyObserverOptions(&opts, oos...)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, &opts)
+	cb := wrapInt64ObserverCallback(callback)
+	obs := m.newObserver(descriptor, cb)
+	return int64Observer{
+		observer: obs,
+	}
+}
+
+func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
+	if callback == nil {
+		return func(result *observerResult) {}
+	}
+	return func(result *observerResult) {
+		typeSafeResult := int64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
+	obs := &observer{
+		meter:      m,
+		descriptor: descriptor,
+		recorder:   m.batcher.AggregatorFor(descriptor),
+		callback:   callback,
+	}
+	m.observers.Store(obs, nil)
+	return obs
+}
+
 // Collect traverses the list of active records and exports data for
 // each active instrument.  Collect() may not be called concurrently.
 //
@@ -344,6 +444,17 @@ func (m *SDK) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := 0
+
+	m.observers.Range(func(key, value interface{}) bool {
+		obs := key.(*observer)
+		result := observerResult{
+			observer:     obs,
+			checkpointed: 0,
+		}
+		obs.callback(&result)
+		checkpointed += result.checkpointed
+		return true
+	})
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
 		inuse := value.(*record)
