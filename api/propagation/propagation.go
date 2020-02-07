@@ -120,7 +120,7 @@ func (p *propagators) HTTPExtractors() []HTTPExtractor {
 	return p.config.httpEx
 }
 
-// HTTPExtractors implements Propagators.
+// HTTPInjectors implements Propagators.
 func (p *propagators) HTTPInjectors() []HTTPInjector {
 	return p.config.httpIn
 }
