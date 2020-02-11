@@ -78,6 +78,10 @@ type int64ObsImpl struct {
 	observer *obsImpl
 }
 
+type float64ObsImpl struct {
+	observer *obsImpl
+}
+
 type labelSet struct {
 	meter *meter
 	value []core.KeyValue
@@ -101,6 +105,7 @@ var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instHandle{}
 var _ metric.Int64Observer = int64ObsImpl{}
+var _ metric.Float64Observer = float64ObsImpl{}
 
 // Provider interface and delegation
 
@@ -227,6 +232,8 @@ func (bound *instHandle) Unbind() {
 func (obs *obsImpl) setDelegate(d metric.Meter) {
 	if obs.nkind == core.Int64NumberKind {
 		obs.setInt64Delegate(d)
+	} else {
+		obs.setFloat64Delegate(d)
 	}
 }
 
@@ -242,6 +249,24 @@ func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
 
 func (obs int64ObsImpl) SetCallback(callback metric.Int64ObserverCallback) {
 	if obsPtr := (*metric.Int64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
+		(*obsPtr).SetCallback(callback)
+		return
+	}
+	obs.observer.callback = callback
+}
+
+// Float64Observer delegation
+
+func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
+	obsPtr := new(metric.Float64Observer)
+	cb := obs.callback.(metric.Float64ObserverCallback)
+	opts := obs.opts.([]metric.ObserverOptionApplier)
+	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, opts...)
+	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
+}
+
+func (obs float64ObsImpl) SetCallback(callback metric.Float64ObserverCallback) {
+	if obsPtr := (*metric.Float64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
 		(*obsPtr).SetCallback(callback)
 		return
 	}
@@ -358,6 +383,26 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 	}
 	m.observers = append(m.observers, obs)
 	return int64ObsImpl{
+		observer: obs,
+	}
+}
+
+func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Float64Observer {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).RegisterFloat64Observer(name, callback, oos...)
+	}
+
+	obs := &obsImpl{
+		name:     name,
+		nkind:    core.Float64NumberKind,
+		opts:     oos,
+		callback: callback,
+	}
+	m.observers = append(m.observers, obs)
+	return float64ObsImpl{
 		observer: obs,
 	}
 }

@@ -138,6 +138,9 @@ type Meter interface {
 	// NewInt64Observer creates a new integral observer with a
 	// given name and customized with passed options.
 	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	// NewFloat64Observer creates a new floating point observer
+	// with a given name and customized with passed options.
+	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
 
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
@@ -147,10 +150,20 @@ type Int64ObserverResult interface {
 	Observe(value int64, labels LabelSet)
 }
 
+type Float64ObserverResult interface {
+	Observe(value float64, labels LabelSet)
+}
+
 type Int64ObserverCallback func(result Int64ObserverResult)
+
+type Float64ObserverCallback func(result Float64ObserverResult)
 
 type Int64Observer interface {
 	SetCallback(callback Int64ObserverCallback)
+}
+
+type Float64Observer interface {
+	SetCallback(callback Float64ObserverCallback)
 }
 
 // Option supports specifying the various metric options.

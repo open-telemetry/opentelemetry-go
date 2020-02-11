@@ -127,6 +127,10 @@ type (
 		result *observerResult
 	}
 
+	float64ObserverResult struct {
+		result *observerResult
+	}
+
 	observerCallback func(result *observerResult)
 
 	observer struct {
@@ -140,16 +144,22 @@ type (
 		observer *observer
 	}
 
+	float64Observer struct {
+		observer *observer
+	}
+
 	ErrorHandler func(error)
 )
 
 var (
-	_ api.Meter               = &SDK{}
-	_ api.LabelSet            = &labels{}
-	_ api.InstrumentImpl      = &instrument{}
-	_ api.BoundInstrumentImpl = &record{}
-	_ api.Int64Observer       = int64Observer{}
-	_ api.Int64ObserverResult = int64ObserverResult{}
+	_ api.Meter                 = &SDK{}
+	_ api.LabelSet              = &labels{}
+	_ api.InstrumentImpl        = &instrument{}
+	_ api.BoundInstrumentImpl   = &record{}
+	_ api.Int64Observer         = int64Observer{}
+	_ api.Float64Observer       = float64Observer{}
+	_ api.Int64ObserverResult   = int64ObserverResult{}
+	_ api.Float64ObserverResult = float64ObserverResult{}
 )
 
 func (r *observerResult) observe(number core.Number, ls api.LabelSet) {
@@ -183,8 +193,16 @@ func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
 	r.result.observe(core.NewInt64Number(value), labels)
 }
 
+func (r float64ObserverResult) Observe(value float64, labels api.LabelSet) {
+	r.result.observe(core.NewFloat64Number(value), labels)
+}
+
 func (o int64Observer) SetCallback(callback api.Int64ObserverCallback) {
 	o.observer.callback = wrapInt64ObserverCallback(callback)
+}
+
+func (o float64Observer) SetCallback(callback api.Float64ObserverCallback) {
+	o.observer.callback = wrapFloat64ObserverCallback(callback)
 }
 
 func (i *instrument) Meter() api.Meter {
@@ -415,6 +433,29 @@ func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallb
 	}
 	return func(result *observerResult) {
 		typeSafeResult := int64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) api.Float64Observer {
+	opts := api.Options{}
+	api.ApplyObserverOptions(&opts, oos...)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, &opts)
+	cb := wrapFloat64ObserverCallback(callback)
+	obs := m.newObserver(descriptor, cb)
+	return float64Observer{
+		observer: obs,
+	}
+}
+
+func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
+	if callback == nil {
+		return func(result *observerResult) {}
+	}
+	return func(result *observerResult) {
+		typeSafeResult := float64ObserverResult{
 			result: result,
 		}
 		callback(typeSafeResult)
