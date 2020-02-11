@@ -70,8 +70,8 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
-	ctx, span := t.Start(ctx, name)
+func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
+	ctx, span := t.Start(ctx, name, opts...)
 	defer span.End()
 	return body(ctx)
 }

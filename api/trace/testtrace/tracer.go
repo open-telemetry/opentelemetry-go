@@ -103,8 +103,8 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 	return trace.ContextWithSpan(ctx, span), span
 }
 
-func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
-	ctx, _ = t.Start(ctx, name)
+func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error, opts ...trace.StartOption) error {
+	ctx, _ = t.Start(ctx, name, opts...)
 
 	return body(ctx)
 }
