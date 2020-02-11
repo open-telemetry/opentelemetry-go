@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator_test // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
+package aggregator_test // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 
 import (
 	"errors"
@@ -77,7 +77,7 @@ func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
 func TestRangeTest(t *testing.T) {
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []export.MetricKind{
+			for _, mkind := range []export.Kind{
 				export.CounterKind,
 				export.GaugeKind,
 				export.MeasureKind,

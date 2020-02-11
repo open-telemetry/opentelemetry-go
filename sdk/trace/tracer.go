@@ -17,8 +17,8 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 type tracer struct {
@@ -30,34 +30,23 @@ var _ apitrace.Tracer = &tracer{}
 
 func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig
-	var parent core.SpanContext
-	var remoteParent bool
 
-	//TODO [rghetia] : Add new option for parent. If parent is configured then use that parent.
 	for _, op := range o {
 		op(&opts)
 	}
 
-	if relation := opts.Relation; relation.SpanContext != core.EmptySpanContext() {
-		switch relation.RelationshipType {
-		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
-			parent = relation.SpanContext
-			remoteParent = true
-		default:
-			// Future relationship types may have different behavior,
-			// e.g., adding a `Link` instead of setting the `parent`
-		}
-	} else {
-		if p := apitrace.SpanFromContext(ctx); p != nil {
-			if sdkSpan, ok := p.(*span); ok {
-				sdkSpan.addChild()
-				parent = sdkSpan.spanContext
-			}
+	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+
+	if p := apitrace.SpanFromContext(ctx); p != nil {
+		if sdkSpan, ok := p.(*span); ok {
+			sdkSpan.addChild()
 		}
 	}
 
-	spanName := tr.spanNameWithPrefix(name)
-	span := startSpanInternal(tr, spanName, parent, remoteParent, opts)
+	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, opts)
+	for _, l := range links {
+		span.addLink(l)
+	}
 	for _, l := range opts.Links {
 		span.addLink(l)
 	}
@@ -72,13 +61,13 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		}
 	}
 
-	ctx, end := startExecutionTracerTask(ctx, spanName)
+	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
 	return apitrace.ContextWithSpan(ctx, span), span
 }
 
-func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error) error {
-	ctx, span := tr.Start(ctx, name)
+func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error, opts ...apitrace.StartOption) error {
+	ctx, span := tr.Start(ctx, name, opts...)
 	defer span.End()
 
 	if err := body(ctx); err != nil {
@@ -86,11 +75,4 @@ func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx conte
 		return err
 	}
 	return nil
-}
-
-func (tr *tracer) spanNameWithPrefix(name string) string {
-	if tr.name != "" {
-		return tr.name + "/" + name
-	}
-	return name
 }

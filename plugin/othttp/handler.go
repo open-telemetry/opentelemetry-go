@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagators"
+	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -50,7 +50,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
-	prop             propagators.TextFormat
+	prop             propagation.TextFormat
 	spanStartOptions []trace.StartOption
 	public           bool
 	readEvent        bool
@@ -79,8 +79,8 @@ func WithPublicEndpoint() Option {
 
 // WithPropagator configures the Handler with a specific propagator. If this
 // option isn't specificed then
-// go.opentelemetry.io/otel/api/propagators.TraceContext is used.
-func WithPropagator(p propagators.TextFormat) Option {
+// go.opentelemetry.io/otel/api/trace.DefaultPropagator is used.
+func WithPropagator(p propagation.TextFormat) Option {
 	return func(h *Handler) {
 		h.prop = p
 	}
@@ -130,7 +130,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagator(propagators.TraceContext{}),
+		WithPropagator(trace.DefaultPropagator()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -146,19 +146,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: do something with the correlation context
 	sc, _ := h.prop.Extract(r.Context(), r.Header)
+	ctx := r.Context()
 	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace
 			// and incoming remote sctx should be added as a link.
 			opt = trace.LinkedTo(sc)
+			opts = append(opts, opt)
 		} else { // not a private endpoint, so assume child relationship
-			opt = trace.ChildOf(sc)
+			ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 		}
-		opts = append(opts, opt)
 	}
 
-	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}

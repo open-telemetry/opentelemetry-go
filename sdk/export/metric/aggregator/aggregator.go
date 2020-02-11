@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
+package aggregator // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 
 import (
 	"fmt"
@@ -61,6 +61,20 @@ type (
 	// Points returns the raw set of values that were aggregated.
 	Points interface {
 		Points() ([]core.Number, error)
+	}
+
+	// Buckets represents histogram buckets boundaries and counts.
+	//
+	// For a Histogram with N defined boundaries, e.g, [x, y, z].
+	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
+	Buckets struct {
+		Boundaries []core.Number
+		Counts     []core.Number
+	}
+
+	// Histogram returns the count of events in pre-determined buckets.
+	Histogram interface {
+		Histogram() (Buckets, error)
 	}
 
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.

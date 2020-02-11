@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,45 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext
+package correlation
 
 import (
 	"context"
-	"runtime/pprof"
 
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type ctxEntriesType struct{}
+type correlationsType struct{}
 
-var (
-	ctxEntriesKey = &ctxEntriesType{}
-)
+var correlationsKey = &correlationsType{}
 
+// WithMap returns a context with the Map entered into it.
 func WithMap(ctx context.Context, m Map) context.Context {
-	return context.WithValue(ctx, ctxEntriesKey, m)
+	return context.WithValue(ctx, correlationsKey, m)
 }
 
+// NewContext returns a context with the map from passed context
+// updated with the passed key-value pairs.
 func NewContext(ctx context.Context, keyvalues ...core.KeyValue) context.Context {
 	return WithMap(ctx, FromContext(ctx).Apply(MapUpdate{
 		MultiKV: keyvalues,
 	}))
 }
 
+// FromContext gets the current Map from a Context.
 func FromContext(ctx context.Context) Map {
-	if m, ok := ctx.Value(ctxEntriesKey).(Map); ok {
+	if m, ok := ctx.Value(correlationsKey).(Map); ok {
 		return m
 	}
 	return NewEmptyMap()
-}
-
-// Note: the golang pprof.Do API forces this memory allocation, we
-// should file an issue about that.  (There's a TODO in the source.)
-func Do(ctx context.Context, f func(ctx context.Context)) {
-	m := FromContext(ctx)
-	keyvals := make([]string, 0, 2*len(m.m))
-	for k, v := range m.m {
-		keyvals = append(keyvals, string(k), v.value.Emit())
-	}
-	pprof.Do(ctx, pprof.Labels(keyvals...), f)
 }

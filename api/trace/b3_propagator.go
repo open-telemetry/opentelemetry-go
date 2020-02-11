@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators
+package trace
 
 import (
 	"context"
@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	dctx "go.opentelemetry.io/otel/api/distributedcontext"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/propagation"
 )
 
 const (
@@ -50,10 +50,10 @@ type B3 struct {
 	SingleHeader bool
 }
 
-var _ TextFormat = B3{}
+var _ propagation.TextFormat = B3{}
 
-func (b3 B3) Inject(ctx context.Context, supplier Supplier) {
-	sc := trace.SpanFromContext(ctx).SpanContext()
+func (b3 B3) Inject(ctx context.Context, supplier propagation.Supplier) {
+	sc := SpanFromContext(ctx).SpanContext()
 	if sc.IsValid() {
 		if b3.SingleHeader {
 			sampled := sc.TraceFlags & core.TraceFlagsSampled
@@ -76,11 +76,11 @@ func (b3 B3) Inject(ctx context.Context, supplier Supplier) {
 }
 
 // Extract retrieves B3 Headers from the supplier
-func (b3 B3) Extract(ctx context.Context, supplier Supplier) (core.SpanContext, dctx.Map) {
+func (b3 B3) Extract(ctx context.Context, supplier propagation.Supplier) (core.SpanContext, correlation.Map) {
 	if b3.SingleHeader {
-		return b3.extractSingleHeader(supplier), dctx.NewEmptyMap()
+		return b3.extractSingleHeader(supplier), correlation.NewEmptyMap()
 	}
-	return b3.extract(supplier), dctx.NewEmptyMap()
+	return b3.extract(supplier), correlation.NewEmptyMap()
 }
 
 func (b3 B3) GetAllKeys() []string {
@@ -90,7 +90,7 @@ func (b3 B3) GetAllKeys() []string {
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
 }
 
-func (b3 B3) extract(supplier Supplier) core.SpanContext {
+func (b3 B3) extract(supplier propagation.Supplier) core.SpanContext {
 	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return core.EmptySpanContext()
@@ -125,7 +125,7 @@ func (b3 B3) extract(supplier Supplier) core.SpanContext {
 	return sc
 }
 
-func (b3 B3) extractSingleHeader(supplier Supplier) core.SpanContext {
+func (b3 B3) extractSingleHeader(supplier propagation.Supplier) core.SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
 		core.EmptySpanContext()

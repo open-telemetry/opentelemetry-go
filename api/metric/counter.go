@@ -51,7 +51,7 @@ type BoundInt64Counter struct {
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
+func (c Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
 	h.commonBoundInstrument = c.bind(labels)
 	return
 }
@@ -63,20 +63,20 @@ func (c *Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Counter) Bind(labels LabelSet) (h BoundInt64Counter) {
+func (c Int64Counter) Bind(labels LabelSet) (h BoundInt64Counter) {
 	h.commonBoundInstrument = c.bind(labels)
 	return
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c *Float64Counter) Measurement(value float64) Measurement {
+func (c Float64Counter) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c *Int64Counter) Measurement(value int64) Measurement {
+func (c Int64Counter) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
@@ -87,7 +87,7 @@ func (c *Int64Counter) Measurement(value int64) Measurement {
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
+func (c Float64Counter) Add(ctx context.Context, value float64, labels LabelSet) {
 	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
@@ -98,16 +98,16 @@ func (c *Float64Counter) Add(ctx context.Context, value float64, labels LabelSet
 // If the labels do not contain a value for the key specified in the
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (c *Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
+func (c Int64Counter) Add(ctx context.Context, value int64, labels LabelSet) {
 	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum.
-func (b *BoundFloat64Counter) Add(ctx context.Context, value float64) {
+func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
 	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum.
-func (b *BoundInt64Counter) Add(ctx context.Context, value int64) {
+func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
 	b.directRecord(ctx, core.NewInt64Number(value))
 }

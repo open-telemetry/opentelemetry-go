@@ -25,7 +25,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
@@ -56,7 +56,7 @@ func main() {
 	initTracer()
 
 	client := http.DefaultClient
-	ctx := distributedcontext.NewContext(context.Background(),
+	ctx := correlation.NewContext(context.Background(),
 		key.String("username", "donuts"),
 	)
 
