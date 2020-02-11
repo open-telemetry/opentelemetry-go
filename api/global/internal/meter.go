@@ -68,10 +68,10 @@ type instImpl struct {
 type obsImpl struct {
 	name     string
 	nkind    core.NumberKind
-	opts     interface{}
+	opts     []metric.ObserverOptionApplier
 	callback interface{}
 
-	delegate unsafe.Pointer // (*metric.Int64Observer)
+	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
 }
 
 type int64ObsImpl struct {
@@ -242,8 +242,7 @@ func (obs *obsImpl) setDelegate(d metric.Meter) {
 func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Int64Observer)
 	cb := obs.callback.(metric.Int64ObserverCallback)
-	opts := obs.opts.([]metric.ObserverOptionApplier)
-	*obsPtr = d.RegisterInt64Observer(obs.name, cb, opts...)
+	*obsPtr = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
@@ -260,8 +259,7 @@ func (obs int64ObsImpl) SetCallback(callback metric.Int64ObserverCallback) {
 func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Float64Observer)
 	cb := obs.callback.(metric.Float64ObserverCallback)
-	opts := obs.opts.([]metric.ObserverOptionApplier)
-	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, opts...)
+	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
