@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
+	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
@@ -59,7 +59,7 @@ func main() {
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
-	ctx = distributedcontext.NewContext(ctx,
+	ctx = correlation.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)

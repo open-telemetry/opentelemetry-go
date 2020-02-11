@@ -23,9 +23,10 @@ import (
 	"google.golang.org/grpc/codes"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
-	oteldctx "go.opentelemetry.io/otel/api/distributedcontext"
+	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -44,7 +45,7 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             oteldctx.Map
+	Resources             otelcorrelation.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []otelcore.TraceID
 	SpareSpanIDs          []otelcore.SpanID
@@ -59,7 +60,7 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             oteldctx.NewEmptyMap(),
+		Resources:             otelcorrelation.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -94,7 +95,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      spanOpts.Record,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{
 			MultiKV: spanOpts.Attributes,
 		}),
 		StartTime:    startTime,
@@ -146,14 +147,8 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.St
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanContext {
-	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
-		spanOpts.Relation.SpanContext.IsValid() {
-		return spanOpts.Relation.SpanContext
-	}
-	if parentSpanContext := oteltrace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
-		return parentSpanContext
-	}
-	return otelcore.EmptySpanContext()
+	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, spanOpts.NewRoot)
+	return spanCtx
 }
 
 func (t *MockTracer) getSpanID() otelcore.SpanID {
@@ -193,10 +188,10 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 }
 
 type MockEvent struct {
-	CtxAttributes oteldctx.Map
+	CtxAttributes otelcorrelation.Map
 	Timestamp     time.Time
 	Name          string
-	Attributes    oteldctx.Map
+	Attributes    otelcorrelation.Map
 }
 
 type MockSpan struct {
@@ -206,7 +201,7 @@ type MockSpan struct {
 	SpanKind       oteltrace.SpanKind
 	recording      bool
 
-	Attributes   oteldctx.Map
+	Attributes   otelcorrelation.Map
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID otelcore.SpanID
@@ -237,12 +232,12 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
-	s.applyUpdate(oteldctx.MapUpdate{
+	s.applyUpdate(otelcorrelation.MapUpdate{
 		MultiKV: attributes,
 	})
 }
 
-func (s *MockSpan) applyUpdate(update oteldctx.MapUpdate) {
+func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
@@ -274,10 +269,10 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: oteldctx.FromContext(ctx),
+		CtxAttributes: otelcorrelation.FromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
-		Attributes: oteldctx.NewMap(oteldctx.MapUpdate{
+		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{
 			MultiKV: attrs,
 		}),
 	})

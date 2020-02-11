@@ -17,8 +17,8 @@ package trace
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 type tracer struct {
@@ -30,29 +30,23 @@ var _ apitrace.Tracer = &tracer{}
 
 func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig
-	var parent core.SpanContext
-	var remoteParent bool
 
-	//TODO [rghetia] : Add new option for parent. If parent is configured then use that parent.
 	for _, op := range o {
 		op(&opts)
 	}
 
-	if relation := opts.Relation; relation.SpanContext != core.EmptySpanContext() {
-		switch relation.RelationshipType {
-		case apitrace.ChildOfRelationship, apitrace.FollowsFromRelationship:
-			parent = relation.SpanContext
-			remoteParent = true
-		default:
-			// Future relationship types may have different behavior,
-			// e.g., adding a `Link` instead of setting the `parent`
+	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+
+	if p := apitrace.SpanFromContext(ctx); p != nil {
+		if sdkSpan, ok := p.(*span); ok {
+			sdkSpan.addChild()
 		}
-	} else if p, ok := apitrace.SpanFromContext(ctx).(*span); ok {
-		p.addChild()
-		parent = p.spanContext
 	}
 
-	span := startSpanInternal(tr, name, parent, remoteParent, opts)
+	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, opts)
+	for _, l := range links {
+		span.addLink(l)
+	}
 	for _, l := range opts.Links {
 		span.addLink(l)
 	}

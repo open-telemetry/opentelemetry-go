@@ -14,11 +14,6 @@
 
 package metric
 
-import (
-	"sync/atomic"
-	"unsafe"
-)
-
 func (l *sortedLabels) Len() int {
 	return len(*l)
 }
@@ -29,52 +24,4 @@ func (l *sortedLabels) Swap(i, j int) {
 
 func (l *sortedLabels) Less(i, j int) bool {
 	return (*l)[i].Key < (*l)[j].Key
-}
-
-func (m *SDK) addPrimary(rec *record) {
-	for {
-		rec.next.primary.store(m.records.primary.load())
-		if atomic.CompareAndSwapPointer(
-			&m.records.primary.ptr,
-			rec.next.primary.ptr,
-			unsafe.Pointer(rec),
-		) {
-			return
-		}
-	}
-}
-
-func (m *SDK) addReclaim(rec *record) {
-	for {
-		rec.next.reclaim.store(m.records.reclaim.load())
-		if atomic.CompareAndSwapPointer(
-			&m.records.reclaim.ptr,
-			rec.next.reclaim.ptr,
-			unsafe.Pointer(rec),
-		) {
-			return
-		}
-	}
-}
-
-func (s *singlePtr) swapNil() *record {
-	for {
-		newValue := unsafe.Pointer(nil)
-		swapped := atomic.LoadPointer(&s.ptr)
-		if atomic.CompareAndSwapPointer(&s.ptr, swapped, newValue) {
-			return (*record)(swapped)
-		}
-	}
-}
-
-func (s *singlePtr) load() *record {
-	return (*record)(atomic.LoadPointer(&s.ptr))
-}
-
-func (s *singlePtr) store(r *record) {
-	atomic.StorePointer(&s.ptr, unsafe.Pointer(r))
-}
-
-func (s *singlePtr) clear() {
-	atomic.StorePointer(&s.ptr, unsafe.Pointer(nil))
 }

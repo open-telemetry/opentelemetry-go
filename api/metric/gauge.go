@@ -51,7 +51,7 @@ type BoundInt64Gauge struct {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
+func (g Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
 	h.commonBoundInstrument = g.bind(labels)
 	return
 }
@@ -63,20 +63,20 @@ func (g *Float64Gauge) Bind(labels LabelSet) (h BoundFloat64Gauge) {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) Bind(labels LabelSet) (h BoundInt64Gauge) {
+func (g Int64Gauge) Bind(labels LabelSet) (h BoundInt64Gauge) {
 	h.commonBoundInstrument = g.bind(labels)
 	return
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (g *Float64Gauge) Measurement(value float64) Measurement {
+func (g Float64Gauge) Measurement(value float64) Measurement {
 	return g.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (g *Int64Gauge) Measurement(value int64) Measurement {
+func (g Int64Gauge) Measurement(value int64) Measurement {
 	return g.int64Measurement(value)
 }
 
@@ -87,7 +87,7 @@ func (g *Int64Gauge) Measurement(value int64) Measurement {
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
+func (g Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) {
 	g.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
@@ -98,16 +98,16 @@ func (g *Float64Gauge) Set(ctx context.Context, value float64, labels LabelSet) 
 // If the labels do not contain a value for the key specified in the
 // gauge with the WithKeys option, then the missing value will be
 // treated as unspecified.
-func (g *Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
+func (g Int64Gauge) Set(ctx context.Context, value int64, labels LabelSet) {
 	g.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (b *BoundFloat64Gauge) Set(ctx context.Context, value float64) {
+func (b BoundFloat64Gauge) Set(ctx context.Context, value float64) {
 	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
 // Set assigns the passed value to the value of the gauge.
-func (b *BoundInt64Gauge) Set(ctx context.Context, value int64) {
+func (b BoundInt64Gauge) Set(ctx context.Context, value int64) {
 	b.directRecord(ctx, core.NewInt64Number(value))
 }

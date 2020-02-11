@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,4 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distributedcontext // import "go.opentelemetry.io/otel/api/distributedcontext"
+// This package implements the correlation functionality as specified
+// in the OpenTelemetry specification. Currently it provides a data
+// structure for storing correlations (Map) and a way of putting Map
+// object into the context and retrieving it from context.
+package correlation // import "go.opentelemetry.io/otel/api/correlation"

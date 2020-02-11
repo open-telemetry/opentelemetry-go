@@ -175,7 +175,7 @@ func TestSampling(t *testing.T) {
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
-				var opts []apitrace.StartOption
+				ctx := context.Background()
 				if tc.parent {
 					psc := core.SpanContext{
 						TraceID: idg.NewTraceID(),
@@ -184,9 +184,9 @@ func TestSampling(t *testing.T) {
 					if tc.sampledParent {
 						psc.TraceFlags = core.TraceFlagsSampled
 					}
-					opts = append(opts, apitrace.ChildOf(psc))
+					ctx = apitrace.ContextWithRemoteSpanContext(ctx, psc)
 				}
-				_, span := tr.Start(context.Background(), "test", opts...)
+				_, span := tr.Start(ctx, "test")
 				if span.SpanContext().IsSampled() {
 					sampled++
 				}
@@ -208,21 +208,22 @@ func TestSampling(t *testing.T) {
 	}
 }
 
-func TestStartSpanWithChildOf(t *testing.T) {
+func TestStartSpanWithParent(t *testing.T) {
 	tp, _ := NewProvider()
-	tr := tp.Tracer("SpanWith ChildOf")
+	tr := tp.Tracer("SpanWithParent")
+	ctx := context.Background()
 
 	sc1 := core.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x0,
 	}
-	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", apitrace.ChildOf(sc1))
+	_, s1 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
 	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", apitrace.ChildOf(sc1))
+	_, s2 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc1), "span2-unsampled-parent1")
 	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
@@ -233,60 +234,18 @@ func TestStartSpanWithChildOf(t *testing.T) {
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.ChildOf(sc2))
+	_, s3 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.ChildOf(sc2))
+	ctx2, s4 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc2), "span4-sampled-parent2")
 	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
 
 	s4Sc := s4.SpanContext()
-	_, s5 := tr.Start(ctx, "span5-implicit-childof-span4")
-	if err := checkChild(s4Sc, s5); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestStartSpanWithFollowsFrom(t *testing.T) {
-	tp, _ := NewProvider()
-	tr := tp.Tracer("SpanWith FollowsFrom")
-
-	sc1 := core.SpanContext{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 0x0,
-	}
-	_, s1 := tr.Start(context.Background(), "span1-unsampled-parent1", apitrace.FollowsFrom(sc1))
-	if err := checkChild(sc1, s1); err != nil {
-		t.Error(err)
-	}
-
-	_, s2 := tr.Start(context.Background(), "span2-unsampled-parent1", apitrace.FollowsFrom(sc1))
-	if err := checkChild(sc1, s2); err != nil {
-		t.Error(err)
-	}
-
-	sc2 := core.SpanContext{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 0x1,
-		//Tracestate:   testTracestate,
-	}
-	_, s3 := tr.Start(context.Background(), "span3-sampled-parent2", apitrace.FollowsFrom(sc2))
-	if err := checkChild(sc2, s3); err != nil {
-		t.Error(err)
-	}
-
-	ctx, s4 := tr.Start(context.Background(), "span4-sampled-parent2", apitrace.FollowsFrom(sc2))
-	if err := checkChild(sc2, s4); err != nil {
-		t.Error(err)
-	}
-
-	s4Sc := s4.SpanContext()
-	_, s5 := tr.Start(ctx, "span5-implicit-childof-span4")
+	_, s5 := tr.Start(ctx2, "span5-implicit-childof-span4")
 	if err := checkChild(s4Sc, s5); err != nil {
 		t.Error(err)
 	}
@@ -574,15 +533,15 @@ func TestLinksOverLimit(t *testing.T) {
 func TestSetSpanName(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
+	ctx := context.Background()
 
 	want := "SpanName-1"
-	_, span := tp.Tracer("SetSpanName").Start(context.Background(), "SpanName-1",
-		apitrace.ChildOf(core.SpanContext{
-			TraceID:    tid,
-			SpanID:     sid,
-			TraceFlags: 1,
-		}),
-	)
+	ctx = apitrace.ContextWithRemoteSpanContext(ctx, core.SpanContext{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 1,
+	})
+	_, span := tp.Tracer("SetSpanName").Start(ctx, "SpanName-1")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -662,13 +621,15 @@ func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitra
 }
 
 // startNamed Span is a test utility func that starts a span with a
-// passed name and with ChildOf option.  remote span context contains
-// TraceFlags with sampled bit set. This allows the span to be
-// automatically sampled.
+// passed name and with remote span context as parent. The remote span
+// context contains TraceFlags with sampled bit set. This allows the
+// span to be automatically sampled.
 func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
-	args = append(args, apitrace.ChildOf(remoteSpanContext()), apitrace.WithRecord())
+	ctx := context.Background()
+	ctx = apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
+	args = append(args, apitrace.WithRecord())
 	_, span := tp.Tracer(trName).Start(
-		context.Background(),
+		ctx,
 		name,
 		args...,
 	)
@@ -678,7 +639,7 @@ func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOpt
 // endSpan is a test utility function that ends the span in the context and
 // returns the exported export.SpanData.
 // It requires that span be sampled using one of these methods
-//  1. Passing parent span context using ChildOf option
+//  1. Passing parent span context in context
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //
@@ -739,9 +700,10 @@ func TestEndSpanTwice(t *testing.T) {
 func TestStartSpanAfterEnd(t *testing.T) {
 	spans := make(fakeExporter)
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
-	ctx, span0 := tr.Start(context.Background(), "parent", apitrace.ChildOf(remoteSpanContext()))
+	ctx, span0 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext()), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
 	// Start a new span with the context containing span-1
@@ -852,17 +814,18 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 
 	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
 	sID, _ := core.SpanIDFromHex("0001020304050607")
+	ctx := context.Background()
 
+	ctx = apitrace.ContextWithRemoteSpanContext(ctx,
+		core.SpanContext{
+			TraceID:    tID,
+			SpanID:     sID,
+			TraceFlags: 0,
+		},
+	)
 	_, apiSpan = tr.Start(
-		context.Background(),
+		ctx,
 		"foo",
-		apitrace.ChildOf(
-			core.SpanContext{
-				TraceID:    tID,
-				SpanID:     sID,
-				TraceFlags: 0,
-			},
-		),
 	)
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd

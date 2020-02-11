@@ -16,6 +16,6 @@
 Package trace contains support for OpenTelemetry distributed tracing.
 
 The following assumes a basic familiarity with OpenTelemetry concepts.
-See http://opentelemetry.io/otel
+See https://opentelemetry.io.
 */
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
