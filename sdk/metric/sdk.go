@@ -119,25 +119,29 @@ type (
 	}
 
 	observerResult struct {
-		observer     *observer
-		checkpointed int
+		observer *observer
 	}
 
 	int64ObserverResult struct {
-		result *observerResult
+		result observerResult
 	}
 
 	float64ObserverResult struct {
-		result *observerResult
+		result observerResult
 	}
 
-	observerCallback func(result *observerResult)
+	observerCallback func(result observerResult)
 
 	observer struct {
 		meter      *SDK
 		descriptor *export.Descriptor
-		recorder   export.Aggregator
+		recorders  map[string]labeledRecorder
 		callback   observerCallback
+	}
+
+	labeledRecorder struct {
+		recorder export.Aggregator
+		labels   *labels
 	}
 
 	int64Observer struct {
@@ -164,29 +168,38 @@ var (
 
 func (r *observerResult) observe(number core.Number, ls api.LabelSet) {
 	obs := r.observer
-	ourLs := obs.meter.labsFor(ls)
-	if obs.recorder == nil {
-		// The instrument is disabled according to the AggregationSelector.
-		return
-	}
 	if err := aggregator.RangeTest(number, obs.descriptor); err != nil {
 		obs.meter.errorHandler(err)
 		return
 	}
-	if err := obs.recorder.Update(context.Background(), number, obs.descriptor); err != nil {
+	ourLs := obs.meter.labsFor(ls)
+	var recorder export.Aggregator
+	if lrec, ok := obs.recorders[ourLs.encoded]; ok {
+		recorder = lrec.recorder
+	} else {
+		rec := obs.meter.batcher.AggregatorFor(obs.descriptor)
+		if obs.recorders == nil {
+			obs.recorders = make(map[string]labeledRecorder)
+		}
+		// TODO: This may store nil recorder in the map, thus
+		// disabling the observer for good. Is it ok? Or we
+		// should rather not store anything if recorder is nil
+		// and query te aggregator selector again?
+		obs.recorders[ourLs.encoded] = labeledRecorder{
+			recorder: rec,
+			labels:   ourLs,
+		}
+		recorder = rec
+	}
+	if recorder == nil {
+		// The instrument is disabled according to the
+		// AggregationSelector.
+		return
+	}
+	if err := recorder.Update(context.Background(), number, obs.descriptor); err != nil {
 		obs.meter.errorHandler(err)
 		return
 	}
-
-	ctx := context.Background()
-	obs.recorder.Checkpoint(ctx, obs.descriptor)
-	labels := export.NewLabels(ourLs.sorted, ourLs.encoded, obs.meter.labelEncoder)
-	err := obs.meter.batcher.Process(ctx, export.NewRecord(obs.descriptor, labels, obs.recorder))
-
-	if err != nil {
-		obs.meter.errorHandler(err)
-	}
-	r.checkpointed++
 }
 
 func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
@@ -429,9 +442,9 @@ func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallb
 
 func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
 	if callback == nil {
-		return func(result *observerResult) {}
+		return func(result observerResult) {}
 	}
-	return func(result *observerResult) {
+	return func(result observerResult) {
 		typeSafeResult := int64ObserverResult{
 			result: result,
 		}
@@ -452,9 +465,9 @@ func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverC
 
 func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
 	if callback == nil {
-		return func(result *observerResult) {}
+		return func(result observerResult) {}
 	}
-	return func(result *observerResult) {
+	return func(result observerResult) {
 		typeSafeResult := float64ObserverResult{
 			result: result,
 		}
@@ -466,7 +479,7 @@ func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallba
 	obs := &observer{
 		meter:      m,
 		descriptor: descriptor,
-		recorder:   m.batcher.AggregatorFor(descriptor),
+		recorders:  nil,
 		callback:   callback,
 	}
 	m.observers.Store(obs, nil)
@@ -486,17 +499,6 @@ func (m *SDK) Collect(ctx context.Context) int {
 
 	checkpointed := 0
 
-	m.observers.Range(func(key, value interface{}) bool {
-		obs := key.(*observer)
-		result := observerResult{
-			observer:     obs,
-			checkpointed: 0,
-		}
-		obs.callback(&result)
-		checkpointed += result.checkpointed
-		return true
-	})
-
 	m.current.Range(func(key interface{}, value interface{}) bool {
 		inuse := value.(*record)
 		unmapped := inuse.refMapped.tryUnmap()
@@ -510,10 +512,20 @@ func (m *SDK) Collect(ctx context.Context) int {
 		// TODO: Reconsider this logic.
 		if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modified) != 0 {
 			atomic.StoreInt64(&inuse.modified, 0)
-			checkpointed += m.checkpoint(ctx, inuse)
+			checkpointed += m.checkpointRecord(ctx, inuse)
 		}
 
 		// Always continue to iterate over the entire map.
+		return true
+	})
+
+	m.observers.Range(func(key, value interface{}) bool {
+		obs := key.(*observer)
+		result := observerResult{
+			observer: obs,
+		}
+		obs.callback(result)
+		checkpointed += m.checkpointObserver(obs)
 		return true
 	})
 
@@ -521,7 +533,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, r *record) int {
+func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
 	if r.recorder == nil {
 		return 0
 	}
@@ -533,6 +545,29 @@ func (m *SDK) checkpoint(ctx context.Context, r *record) int {
 		m.errorHandler(err)
 	}
 	return 1
+}
+
+func (m *SDK) checkpointObserver(obs *observer) int {
+	if len(obs.recorders) == 0 {
+		return 0
+	}
+	checkpointed := 0
+	ctx := context.Background()
+	for _, lrec := range obs.recorders {
+		if lrec.recorder == nil {
+			continue
+		}
+		lrec.recorder.Checkpoint(ctx, obs.descriptor)
+		exportLabels := export.NewLabels(lrec.labels.sorted, lrec.labels.encoded, obs.meter.labelEncoder)
+
+		err := obs.meter.batcher.Process(ctx, export.NewRecord(obs.descriptor, exportLabels, lrec.recorder))
+		if err != nil {
+			obs.meter.errorHandler(err)
+			continue
+		}
+		checkpointed++
+	}
+	return checkpointed
 }
 
 // RecordBatch enters a batch of metric events.
