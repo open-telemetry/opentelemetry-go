@@ -40,6 +40,7 @@ type Tracer interface {
 		ctx context.Context,
 		spanName string,
 		fn func(ctx context.Context) error,
+		opts ...StartOption,
 	) error
 }
 

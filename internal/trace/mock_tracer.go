@@ -42,7 +42,10 @@ type MockTracer struct {
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
 // WithSpan does nothing except executing the body.
-func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...apitrace.StartOption) error {
+	ctx, span := mt.Start(ctx, name, opts...)
+	defer span.End()
+
 	return body(ctx)
 }
 
