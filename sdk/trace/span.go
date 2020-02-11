@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 
@@ -123,7 +124,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 	})
 }
 
-func (s *span) Error(err error, opts ...apitrace.ErrorOption) {
+func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
 	if s == nil || err == nil {
 		return
 	}
@@ -132,20 +133,20 @@ func (s *span) Error(err error, opts ...apitrace.ErrorOption) {
 		return
 	}
 
-	cfg := apitrace.ErrorConfig{
-		Status: codes.Internal,
-		Key:    core.Key("error"),
-	}
+	cfg := apitrace.ErrorConfig{}
 
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
 
-	s.data.Status = cfg.Status
-	s.attributes.add(cfg.Key.String(err.Error()))
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+		core.Key("error.type").String(reflect.TypeOf(err).String()),
+		core.Key("error.message").String(err.Error()),
+	)
 }
 
 func (s *span) Tracer() apitrace.Tracer {

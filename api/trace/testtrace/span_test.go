@@ -121,25 +121,31 @@ func TestSpan(t *testing.T) {
 		})
 	})
 
-	t.Run("#Error", func(t *testing.T) {
+	t.Run("#RecordError", func(t *testing.T) {
 		t.Run("records an error", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
 			tracer := testtrace.NewTracer()
-			_, span := tracer.Start(context.Background(), "test")
+			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
 			errMsg := "test error message"
-			subject.Error(errors.New(errMsg))
+			testTime := time.Now()
+			subject.RecordError(ctx, errors.New(errMsg), trace.WithErrorTime(testTime))
 
-			expectedAttrs := map[core.Key]core.Value{core.Key("error"): core.String(errMsg)}
-			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
-
-			e.Expect(subject.Status()).ToEqual(codes.Internal)
+			expectedEvents := []testtrace.Event{{
+				Timestamp: testTime,
+				Name:      "error",
+				Attributes: map[core.Key]core.Value{
+					core.Key("error.type"):    core.String("*errors.errorString"),
+					core.Key("error.message"): core.String(errMsg),
+				},
+			}}
+			e.Expect(subject.Events()).ToEqual(expectedEvents)
 		})
 
 		t.Run("cannot be set after the span has ended", func(t *testing.T) {
@@ -148,38 +154,15 @@ func TestSpan(t *testing.T) {
 			e := matchers.NewExpecter(t)
 
 			tracer := testtrace.NewTracer()
-			_, span := tracer.Start(context.Background(), "test")
+			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
 			subject.End()
-			subject.Error(errors.New("ignored error"))
+			subject.RecordError(ctx, errors.New("ignored error"))
 
-			e.Expect(subject.Status()).ToEqual(codes.OK)
-		})
-
-		t.Run("honors ErrorOption values", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			tracer := testtrace.NewTracer()
-			_, span := tracer.Start(context.Background(), "test")
-
-			subject, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
-			errMsg := "test error message"
-			errKey := core.Key("altError")
-			errStatus := codes.Canceled
-
-			subject.Error(errors.New(errMsg), trace.WithErrorKey(errKey), trace.WithErrorStatus(errStatus))
-
-			expectedAttrs := map[core.Key]core.Value{errKey: core.String(errMsg)}
-			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
-
-			e.Expect(subject.Status()).ToEqual(errStatus)
+			e.Expect(len(subject.Events())).ToEqual(0)
 		})
 
 		t.Run("has no effect with nil error", func(t *testing.T) {
@@ -188,17 +171,14 @@ func TestSpan(t *testing.T) {
 			e := matchers.NewExpecter(t)
 
 			tracer := testtrace.NewTracer()
-			_, span := tracer.Start(context.Background(), "test")
+			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			subject.Error(nil)
+			subject.RecordError(ctx, nil)
 
-			expectedAttrs := map[core.Key]core.Value{}
-			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
-
-			e.Expect(subject.Status()).ToEqual(codes.OK)
+			e.Expect(len(subject.Events())).ToEqual(0)
 		})
 	})
 

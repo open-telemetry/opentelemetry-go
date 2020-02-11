@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -871,43 +872,15 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 }
 
-func TestSpanError(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "SpanEnd")
-	span.Error(errors.New("test error"))
-	got, err := endSpan(te, span)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := &export.SpanData{
-		SpanContext: core.SpanContext{
-			TraceID:    tid,
-			TraceFlags: 0x1,
-		},
-		ParentSpanID: sid,
-		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.String("error", "test error"),
-		},
-		SpanKind:        apitrace.SpanKindInternal,
-		HasRemoteParent: true,
-		Status:          codes.Internal,
-	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SpanError: -got +want %s", diff)
-	}
-}
-
-func TestSpanErrorOptions(t *testing.T) {
+func TestRecordError(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanEnd")
 
-	span.Error(errors.New("test error"),
-		apitrace.WithErrorKey("foo"),
-		apitrace.WithErrorStatus(codes.Canceled),
+	testErr := errors.New("test error")
+	errTime := time.Now()
+	span.RecordError(context.Background(), testErr,
+		apitrace.WithErrorTime(errTime),
 	)
 
 	got, err := endSpan(te, span)
@@ -920,14 +893,20 @@ func TestSpanErrorOptions(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID: sid,
-		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.String("foo", "test error"),
-		},
+		ParentSpanID:    sid,
+		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Status:          codes.Canceled,
+		MessageEvents: []export.Event{
+			{
+				Name: "error",
+				Time: errTime,
+				Attributes: []core.KeyValue{
+					core.Key("error.type").String(reflect.TypeOf(testErr).String()),
+					core.Key("error.message").String(testErr.Error()),
+				},
+			},
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -939,7 +918,7 @@ func TestSpanErrorNil(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanEnd")
 
-	span.Error(nil)
+	span.RecordError(context.Background(), nil)
 
 	got, err := endSpan(te, span)
 	if err != nil {

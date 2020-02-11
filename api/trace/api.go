@@ -60,27 +60,19 @@ func WithEndTime(t time.Time) EndOption {
 	}
 }
 
-// ErrorConfig provides options to set properties of a span at the time
+// ErrorConfig provides options to set properties of an event at the time
 // that an error is recorded.
 type ErrorConfig struct {
-	Status codes.Code
-	Key    core.Key
+	Timestamp time.Time
 }
 
 // ErrorOption applies changes to ErrorConfig that sets options when a span error is recorded.
 type ErrorOption func(*ErrorConfig)
 
-// WithErrorStatus sets the status code of the span to provided code s.
-func WithErrorStatus(s codes.Code) ErrorOption {
+// WithErrorTime sets the time at which the error event should be recorded.
+func WithErrorTime(t time.Time) ErrorOption {
 	return func(c *ErrorConfig) {
-		c.Status = s
-	}
-}
-
-// WithErrorKey sets the attribute key to be used when recording an error message.
-func WithErrorKey(k core.Key) ErrorOption {
-	return func(c *ErrorConfig) {
-		c.Key = k
+		c.Timestamp = t
 	}
 }
 
@@ -92,11 +84,6 @@ type Span interface {
 	// ends. The only exception is setting status of the span.
 	End(options ...EndOption)
 
-	// Error records an error as a span attribute. If err is not nil the span's status
-	// will be set to codes.Internal by default and the message will be recorded with a
-	// key of "error". Both can be changed by providing appropriate ErrorOption values.
-	Error(err error, opts ...ErrorOption)
-
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, name string, attrs ...core.KeyValue)
 	// AddEventWithTimestamp adds an event with a custom timestamp
@@ -105,6 +92,9 @@ type Span interface {
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
+
+	// RecordError records an error as a span event.
+	RecordError(ctx context.Context, err error, opts ...ErrorOption)
 
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.

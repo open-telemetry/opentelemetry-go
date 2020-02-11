@@ -88,7 +88,7 @@ func (mockSpan) End(options ...trace.EndOption) {
 }
 
 // Error does nothing.
-func (mockSpan) Error(err error, opts ...trace.ErrorOption) {
+func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
 }
 
 // Tracer returns noop implementation of Tracer.

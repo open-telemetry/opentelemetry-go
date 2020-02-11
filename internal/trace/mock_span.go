@@ -63,7 +63,7 @@ func (ms *MockSpan) End(options ...apitrace.EndOption) {
 }
 
 // Error does nothing.
-func (ms *MockSpan) Error(err error, opts ...apitrace.ErrorOption) {
+func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
 }
 
 // SetName does nothing.

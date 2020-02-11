@@ -55,7 +55,7 @@ func (NoopSpan) End(options ...EndOption) {
 }
 
 // Error does nothing.
-func (NoopSpan) Error(err error, opts ...ErrorOption) {
+func (NoopSpan) RecordError(ctx context.Context, err error, opts ...ErrorOption) {
 }
 
 // Tracer returns noop implementation of Tracer.

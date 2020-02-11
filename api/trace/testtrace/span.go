@@ -16,6 +16,7 @@ package testtrace
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 
@@ -69,29 +70,24 @@ func (s *Span) End(opts ...trace.EndOption) {
 	s.ended = true
 }
 
-func (s *Span) Error(err error, opts ...trace.ErrorOption) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if err == nil {
+func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
+	if err == nil || s.ended {
 		return
 	}
 
-	if s.ended {
-		return
-	}
-
-	cfg := trace.ErrorConfig{
-		Status: codes.Internal,
-		Key:    core.Key("error"),
-	}
-
+	cfg := trace.ErrorConfig{}
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	s.status = cfg.Status
-	s.attributes[cfg.Key] = core.String(err.Error())
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+		core.Key("error.type").String(reflect.TypeOf(err).String()),
+		core.Key("error.message").String(err.Error()),
+	)
 }
 
 func (s *Span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
