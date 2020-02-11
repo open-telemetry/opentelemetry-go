@@ -92,8 +92,8 @@ type Span interface {
 	// ends. The only exception is setting status of the span.
 	End(options ...EndOption)
 
-	// Error records an error as a span attribute. The span's status will be
-	// set to codes.Internal by default and the message will be recorded with a
+	// Error records an error as a span attribute. If err is not nil the span's status
+	// will be set to codes.Internal by default and the message will be recorded with a
 	// key of "error". Both can be changed by providing appropriate ErrorOption values.
 	Error(err error, opts ...ErrorOption)
 

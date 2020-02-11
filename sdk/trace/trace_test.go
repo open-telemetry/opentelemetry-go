@@ -934,6 +934,34 @@ func TestSpanErrorOptions(t *testing.T) {
 	}
 }
 
+func TestSpanErrorNil(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "SpanEnd")
+
+	span.Error(nil)
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+		Status:          codes.OK,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanErrorOptions: -got +want %s", diff)
+	}
+}
+
 func TestWithSpanKind(t *testing.T) {
 	var te testExporter
 	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))

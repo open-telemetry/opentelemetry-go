@@ -73,6 +73,10 @@ func (s *Span) Error(err error, opts ...trace.ErrorOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	if err == nil {
+		return
+	}
+
 	if s.ended {
 		return
 	}

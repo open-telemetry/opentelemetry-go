@@ -260,6 +260,10 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 }
 
 func (s *MockSpan) Error(err error, opts ...oteltrace.ErrorOption) {
+	if err == nil {
+		return // no-op on nil error
+	}
+
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}

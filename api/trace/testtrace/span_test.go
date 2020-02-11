@@ -181,6 +181,25 @@ func TestSpan(t *testing.T) {
 
 			e.Expect(subject.Status()).ToEqual(errStatus)
 		})
+
+		t.Run("has no effect with nil error", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			_, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			subject.Error(nil)
+
+			expectedAttrs := map[core.Key]core.Value{}
+			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
+
+			e.Expect(subject.Status()).ToEqual(codes.OK)
+		})
 	})
 
 	t.Run("#IsRecording", func(t *testing.T) {

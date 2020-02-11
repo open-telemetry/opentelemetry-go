@@ -124,7 +124,7 @@ func (s *span) End(options ...apitrace.EndOption) {
 }
 
 func (s *span) Error(err error, opts ...apitrace.ErrorOption) {
-	if s == nil {
+	if s == nil || err == nil {
 		return
 	}
 
