@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -179,6 +180,9 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 			// one time only usages, OR we can make this a blocking path and use
 			// a Mutex that protects the delete operation (delete only if the old
 			// record is associated with the key).
+
+			// Let collector get work done to remove the entry from the map.
+			runtime.Gosched()
 			continue
 		}
 		// The new entry was added to the map, good to go.
