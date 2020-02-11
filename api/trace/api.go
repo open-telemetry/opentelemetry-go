@@ -60,6 +60,30 @@ func WithEndTime(t time.Time) EndOption {
 	}
 }
 
+// ErrorConfig provides options to set properties of a span at the time
+// that an error is recorded.
+type ErrorConfig struct {
+	Status codes.Code
+	Key    core.Key
+}
+
+// ErrorOption applies changes to ErrorConfig that sets options when a span error is recorded.
+type ErrorOption func(*ErrorConfig)
+
+// WithErrorStatus sets the status code of the span to provided code s.
+func WithErrorStatus(s codes.Code) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Status = s
+	}
+}
+
+// WithErrorKey sets the attribute key to be used when recording an error message.
+func WithErrorKey(k core.Key) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Key = k
+	}
+}
+
 type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
@@ -67,6 +91,11 @@ type Span interface {
 	// End completes the span. No updates are allowed to span after it
 	// ends. The only exception is setting status of the span.
 	End(options ...EndOption)
+
+	// Error records an error as a span attribute. The span's status will be
+	// set to codes.Internal by default and the message will be recorded with a
+	// key of "error". Both can be changed by providing appropriate ErrorOption values.
+	Error(err error, opts ...ErrorOption)
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, name string, attrs ...core.KeyValue)

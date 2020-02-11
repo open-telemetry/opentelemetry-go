@@ -54,6 +54,10 @@ func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 func (NoopSpan) End(options ...EndOption) {
 }
 
+// Error does nothing.
+func (NoopSpan) Error(err error, opts ...ErrorOption) {
+}
+
 // Tracer returns noop implementation of Tracer.
 func (NoopSpan) Tracer() Tracer {
 	return NoopTracer{}

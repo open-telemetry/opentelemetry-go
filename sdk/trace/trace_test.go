@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -867,6 +868,69 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 	if got.EndTime != endTime {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
+	}
+}
+
+func TestSpanError(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "SpanEnd")
+	span.Error(errors.New("test error"))
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []core.KeyValue{
+			key.String("error", "test error"),
+		},
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+		Status:          codes.Internal,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanError: -got +want %s", diff)
+	}
+}
+
+func TestSpanErrorOptions(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "SpanEnd")
+
+	span.Error(errors.New("test error"),
+		apitrace.WithErrorKey("foo"),
+		apitrace.WithErrorStatus(codes.Canceled),
+	)
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []core.KeyValue{
+			key.String("foo", "test error"),
+		},
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+		Status:          codes.Canceled,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanErrorOptions: -got +want %s", diff)
 	}
 }
 

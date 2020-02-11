@@ -123,6 +123,31 @@ func (s *span) End(options ...apitrace.EndOption) {
 	})
 }
 
+func (s *span) Error(err error, opts ...apitrace.ErrorOption) {
+	if s == nil {
+		return
+	}
+
+	if !s.IsRecording() {
+		return
+	}
+
+	cfg := apitrace.ErrorConfig{
+		Status: codes.Internal,
+		Key:    core.Key("error"),
+	}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.data.Status = cfg.Status
+	s.attributes.add(cfg.Key.String(err.Error()))
+}
+
 func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }

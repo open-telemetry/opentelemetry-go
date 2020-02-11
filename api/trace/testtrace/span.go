@@ -69,6 +69,27 @@ func (s *Span) End(opts ...trace.EndOption) {
 	s.ended = true
 }
 
+func (s *Span) Error(err error, opts ...trace.ErrorOption) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.ended {
+		return
+	}
+
+	cfg := trace.ErrorConfig{
+		Status: codes.Internal,
+		Key:    core.Key("error"),
+	}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	s.status = cfg.Status
+	s.attributes[cfg.Key] = core.String(err.Error())
+}
+
 func (s *Span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
 	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }

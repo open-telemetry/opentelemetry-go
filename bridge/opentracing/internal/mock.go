@@ -259,6 +259,24 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
+func (s *MockSpan) Error(err error, opts ...oteltrace.ErrorOption) {
+	if !s.EndTime.IsZero() {
+		return // already finished
+	}
+
+	cfg := oteltrace.ErrorConfig{
+		Status: codes.Internal,
+		Key:    otelcore.Key("error"),
+	}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	s.SetStatus(cfg.Status)
+	s.SetAttributes(cfg.Key.String(err.Error()))
+}
+
 func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }

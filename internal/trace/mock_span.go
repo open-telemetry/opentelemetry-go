@@ -62,6 +62,10 @@ func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 func (ms *MockSpan) End(options ...apitrace.EndOption) {
 }
 
+// Error does nothing.
+func (ms *MockSpan) Error(err error, opts ...apitrace.ErrorOption) {
+}
+
 // SetName does nothing.
 func (ms *MockSpan) SetName(name string) {
 }

@@ -16,6 +16,7 @@ package testtrace_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -117,6 +118,68 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			e.Expect(endTime).ToEqual(expectedEndTime)
+		})
+	})
+
+	t.Run("#Error", func(t *testing.T) {
+		t.Run("records an error", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			_, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			errMsg := "test error message"
+			subject.Error(errors.New(errMsg))
+
+			expectedAttrs := map[core.Key]core.Value{core.Key("error"): core.String(errMsg)}
+			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
+
+			e.Expect(subject.Status()).ToEqual(codes.Internal)
+		})
+
+		t.Run("cannot be set after the span has ended", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			_, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			subject.End()
+			subject.Error(errors.New("ignored error"))
+
+			e.Expect(subject.Status()).ToEqual(codes.OK)
+		})
+
+		t.Run("honors ErrorOption values", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			_, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			errMsg := "test error message"
+			errKey := core.Key("altError")
+			errStatus := codes.Canceled
+
+			subject.Error(errors.New(errMsg), trace.WithErrorKey(errKey), trace.WithErrorStatus(errStatus))
+
+			expectedAttrs := map[core.Key]core.Value{errKey: core.String(errMsg)}
+			e.Expect(subject.Attributes()).ToEqual(expectedAttrs)
+
+			e.Expect(subject.Status()).ToEqual(errStatus)
 		})
 	})
 
