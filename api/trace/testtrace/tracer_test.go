@@ -262,6 +262,32 @@ func TestTracer(t *testing.T) {
 
 			return span, err
 		})
+
+		t.Run("honors StartOptions", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			attr1 := core.Key("a").String("1")
+			attr2 := core.Key("b").String("2")
+
+			subject := testtrace.NewTracer()
+			var span trace.Span
+			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
+				span = trace.SpanFromContext(ctx)
+
+				return nil
+			}, trace.WithAttributes(attr1, attr2))
+			e.Expect(err).ToBeNil()
+
+			testSpan, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			attributes := testSpan.Attributes()
+			e.Expect(attributes[attr1.Key]).ToEqual(attr1.Value)
+			e.Expect(attributes[attr2.Key]).ToEqual(attr2.Value)
+		})
+
 	})
 }
 
