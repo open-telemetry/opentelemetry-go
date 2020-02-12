@@ -181,11 +181,13 @@ type OptionApplier interface {
 	ApplyOption(*Options)
 }
 
-// CounterGaugeOptionApplier is an interface for applying metric
-// options that are valid for counter or gauge metrics.
-type CounterGaugeOptionApplier interface {
+// CounterGaugeObserverOptionApplier is an interface for applying
+// metric options that are valid for counter, gauge or observer
+// metrics.
+type CounterGaugeObserverOptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
+	ObserverOptionApplier
 }
 
 type optionWrapper struct {
@@ -208,9 +210,10 @@ type observerOptionWrapper struct {
 	F Option
 }
 
-type counterGaugeOptionWrapper struct {
+type counterGaugeObserverOptionWrapper struct {
 	FC Option
 	FG Option
+	FO Option
 }
 
 var (
@@ -253,12 +256,16 @@ func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
 	o.F(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
+func (o counterGaugeObserverOptionWrapper) ApplyCounterOption(opts *Options) {
 	o.FC(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+func (o counterGaugeObserverOptionWrapper) ApplyGaugeOption(opts *Options) {
 	o.FG(opts)
+}
+
+func (o counterGaugeObserverOptionWrapper) ApplyObserverOption(opts *Options) {
+	o.FO(opts)
 }
 
 func (o observerOptionWrapper) ApplyObserverOption(opts *Options) {
@@ -293,14 +300,17 @@ func WithKeys(keys ...core.Key) OptionApplier {
 	}
 }
 
-// WithMonotonic sets whether a counter or a gauge is not permitted to
-// go down.
-func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
-	return counterGaugeOptionWrapper{
+// WithMonotonic sets whether a counter, a gauge or an observer is not
+// permitted to go down.
+func WithMonotonic(monotonic bool) CounterGaugeObserverOptionApplier {
+	return counterGaugeObserverOptionWrapper{
 		FC: func(opts *Options) {
 			opts.Alternate = !monotonic
 		},
 		FG: func(opts *Options) {
+			opts.Alternate = monotonic
+		},
+		FO: func(opts *Options) {
 			opts.Alternate = monotonic
 		},
 	}
