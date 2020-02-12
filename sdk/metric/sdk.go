@@ -166,40 +166,46 @@ var (
 	_ api.Float64ObserverResult = float64ObserverResult{}
 )
 
-func (r *observerResult) observe(number core.Number, ls api.LabelSet) {
-	obs := r.observer
-	if err := aggregator.RangeTest(number, obs.descriptor); err != nil {
-		obs.meter.errorHandler(err)
+func (r observerResult) observe(number core.Number, ls api.LabelSet) {
+	r.observer.recordOne(number, ls)
+}
+
+func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
+	if err := aggregator.RangeTest(number, o.descriptor); err != nil {
+		o.meter.errorHandler(err)
 		return
 	}
-	ourLs := obs.meter.labsFor(ls)
-	var recorder export.Aggregator
-	if lrec, ok := obs.recorders[ourLs.encoded]; ok {
-		recorder = lrec.recorder
-	} else {
-		rec := obs.meter.batcher.AggregatorFor(obs.descriptor)
-		if obs.recorders == nil {
-			obs.recorders = make(map[string]labeledRecorder)
-		}
-		// TODO: This may store nil recorder in the map, thus
-		// disabling the observer for good. Is it ok? Or we
-		// should rather not store anything if recorder is nil
-		// and query te aggregator selector again?
-		obs.recorders[ourLs.encoded] = labeledRecorder{
-			recorder: rec,
-			labels:   ourLs,
-		}
-		recorder = rec
-	}
+	recorder := o.getRecorder(ourLs)
 	if recorder == nil {
 		// The instrument is disabled according to the
 		// AggregationSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, obs.descriptor); err != nil {
-		obs.meter.errorHandler(err)
+	if err := recorder.Update(context.Background(), number, o.descriptor); err != nil {
+		o.meter.errorHandler(err)
 		return
 	}
+}
+
+func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
+	labels := o.meter.labsFor(ls)
+	lrec, ok := o.recorders[labels.encoded]
+	if ok {
+		return lrec.recorder
+	}
+	rec := o.meter.batcher.AggregatorFor(o.descriptor)
+	if o.recorders == nil {
+		o.recorders = make(map[string]labeledRecorder)
+	}
+	// TODO: This may store nil recorder in the map, thus
+	// disabling the observer for good. Is it ok? Or should we
+	// rather not store anything if recorder is nil and query the
+	// aggregator selector again?
+	o.recorders[labels.encoded] = labeledRecorder{
+		recorder: rec,
+		labels:   labels,
+	}
+	return rec
 }
 
 func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
@@ -486,8 +492,9 @@ func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallba
 	return obs
 }
 
-// Collect traverses the list of active records and exports data for
-// each active instrument.  Collect() may not be called concurrently.
+// Collect traverses the list of active records and observers and
+// exports data for each active instrument.  Collect() may not be
+// called concurrently.
 //
 // During the collection pass, the export.Batcher will receive
 // one Export() call per current aggregation.
@@ -497,6 +504,13 @@ func (m *SDK) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
+	checkpointed := m.collectRecords(ctx)
+	checkpointed += m.collectObservers()
+	m.currentEpoch++
+	return checkpointed
+}
+
+func (m *SDK) collectRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -519,6 +533,12 @@ func (m *SDK) Collect(ctx context.Context) int {
 		return true
 	})
 
+	return checkpointed
+}
+
+func (m *SDK) collectObservers() int {
+	checkpointed := 0
+
 	m.observers.Range(func(key, value interface{}) bool {
 		obs := key.(*observer)
 		result := observerResult{
@@ -529,22 +549,11 @@ func (m *SDK) Collect(ctx context.Context) int {
 		return true
 	})
 
-	m.currentEpoch++
 	return checkpointed
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
-	if r.recorder == nil {
-		return 0
-	}
-	r.recorder.Checkpoint(ctx, r.descriptor)
-	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.labelEncoder)
-	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, labels, r.recorder))
-
-	if err != nil {
-		m.errorHandler(err)
-	}
-	return 1
+	return m.checkpoint(ctx, r.descriptor, r.recorder, r.labels)
 }
 
 func (m *SDK) checkpointObserver(obs *observer) int {
@@ -554,20 +563,23 @@ func (m *SDK) checkpointObserver(obs *observer) int {
 	checkpointed := 0
 	ctx := context.Background()
 	for _, lrec := range obs.recorders {
-		if lrec.recorder == nil {
-			continue
-		}
-		lrec.recorder.Checkpoint(ctx, obs.descriptor)
-		exportLabels := export.NewLabels(lrec.labels.sorted, lrec.labels.encoded, obs.meter.labelEncoder)
-
-		err := obs.meter.batcher.Process(ctx, export.NewRecord(obs.descriptor, exportLabels, lrec.recorder))
-		if err != nil {
-			obs.meter.errorHandler(err)
-			continue
-		}
-		checkpointed++
+		checkpointed += m.checkpoint(ctx, obs.descriptor, lrec.recorder, lrec.labels)
 	}
 	return checkpointed
+}
+
+func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, recorder export.Aggregator, labels *labels) int {
+	if recorder == nil {
+		return 0
+	}
+	recorder.Checkpoint(ctx, descriptor)
+	exportLabels := export.NewLabels(labels.sorted, labels.encoded, m.labelEncoder)
+	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
+	err := m.batcher.Process(ctx, exportRecord)
+	if err != nil {
+		m.errorHandler(err)
+	}
+	return 1
 }
 
 // RecordBatch enters a batch of metric events.
