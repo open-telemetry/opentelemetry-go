@@ -137,8 +137,8 @@ type (
 		descriptor *export.Descriptor
 		// recorders maps encoded labelset to the pair of
 		// labelset and recorder
-		recorders  map[string]labeledRecorder
-		callback   observerCallback
+		recorders map[string]labeledRecorder
+		callback  observerCallback
 	}
 
 	labeledRecorder struct {
@@ -177,7 +177,7 @@ func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
 		o.meter.errorHandler(err)
 		return
 	}
-	recorder := o.getRecorder(ourLs)
+	recorder := o.getRecorder(ls)
 	if recorder == nil {
 		// The instrument is disabled according to the
 		// AggregationSelector.
