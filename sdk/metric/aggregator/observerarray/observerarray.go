@@ -40,6 +40,8 @@ var (
 	_ aggregator.Points         = &Aggregator{}
 )
 
+// New returns a new observer-array aggregator, which aggregates
+// recorded measurements with a gauge.Aggregator and array.Aggregator.
 func New() *Aggregator {
 	return &Aggregator{
 		g: gauge.New(),
@@ -47,6 +49,7 @@ func New() *Aggregator {
 	}
 }
 
+// Update forwards the call to the gauge and array aggregators.
 func (a *Aggregator) Update(ctx context.Context, number core.Number, descriptor *export.Descriptor) error {
 	if err := a.g.Update(ctx, number, descriptor); err != nil {
 		return err
@@ -55,11 +58,13 @@ func (a *Aggregator) Update(ctx context.Context, number core.Number, descriptor 
 	return nil
 }
 
+// Checkpoint forwards the call to the gauge and array aggregators.
 func (a *Aggregator) Checkpoint(ctx context.Context, descriptor *export.Descriptor) {
 	a.g.Checkpoint(ctx, descriptor)
 	a.a.Checkpoint(ctx, descriptor)
 }
 
+// Merge forwards the call to the gauge and array aggregators.
 func (a *Aggregator) Merge(oa export.Aggregator, descriptor *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
@@ -71,30 +76,40 @@ func (a *Aggregator) Merge(oa export.Aggregator, descriptor *export.Descriptor) 
 	return nil
 }
 
+// LastValue gets the last recorded measurement from the gauge
+// aggregator.
 func (a *Aggregator) LastValue() (core.Number, time.Time, error) {
 	return a.g.LastValue()
 }
 
+// Min returns the minimum value from the array aggregator.
 func (a *Aggregator) Min() (core.Number, error) {
 	return a.a.Min()
 }
 
+// Max returns the maximum value from the array aggregator.
 func (a *Aggregator) Max() (core.Number, error) {
 	return a.a.Max()
 }
 
+// Sum returns the sum of values from the array aggregator.
 func (a *Aggregator) Sum() (core.Number, error) {
 	return a.a.Sum()
 }
 
+// Count returns the number of values from the array aggregator.
 func (a *Aggregator) Count() (int64, error) {
 	return a.a.Count()
 }
 
+// Quantile returns the estimated quantile of data from the array
+// aggregator.
 func (a *Aggregator) Quantile(q float64) (core.Number, error) {
 	return a.a.Quantile(q)
 }
 
+// Points returns access to the raw data set from the array
+// aggregator.
 func (a *Aggregator) Points() ([]core.Number, error) {
 	return a.a.Points()
 }

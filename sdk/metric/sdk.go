@@ -135,6 +135,8 @@ type (
 	observer struct {
 		meter      *SDK
 		descriptor *export.Descriptor
+		// recorders maps encoded labelset to the pair of
+		// labelset and recorder
 		recorders  map[string]labeledRecorder
 		callback   observerCallback
 	}

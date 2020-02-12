@@ -128,6 +128,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
+// UpdateMMSC adds the recorded measurement to the current data set.
 func (c *Aggregator) UpdateMMSC(number core.Number, desc *export.Descriptor) {
 	kind := desc.NumberKind()
 
@@ -167,6 +168,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 	return nil
 }
 
+// MergeMMSCAggregator combines two data sets into one.
 func (c *Aggregator) MergeMMSCAggregator(o *Aggregator, desc *export.Descriptor) {
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)

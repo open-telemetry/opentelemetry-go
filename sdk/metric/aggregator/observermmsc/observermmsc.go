@@ -38,6 +38,9 @@ var (
 	_ aggregator.MinMaxSumCount = &Aggregator{}
 )
 
+// New returns a new observer-mmsc aggregator, which aggregates
+// recorded measurements with a gauge.Aggregator and
+// minmaxsumcount.Aggregator.
 func New(desc *export.Descriptor) *Aggregator {
 	return &Aggregator{
 		g:    gauge.New(),
@@ -45,6 +48,8 @@ func New(desc *export.Descriptor) *Aggregator {
 	}
 }
 
+// Update forwards the measurement to the gauge and minmaxsumcount
+// aggregators.
 func (a *Aggregator) Update(ctx context.Context, number core.Number, descriptor *export.Descriptor) error {
 	if err := a.g.Update(ctx, number, descriptor); err != nil {
 		return err
@@ -53,11 +58,15 @@ func (a *Aggregator) Update(ctx context.Context, number core.Number, descriptor 
 	return nil
 }
 
+// Checkpoint forwards the call to the gauge and minmaxsumcount
+// aggregators.
 func (a *Aggregator) Checkpoint(ctx context.Context, descriptor *export.Descriptor) {
 	a.g.Checkpoint(ctx, descriptor)
 	a.mmsc.Checkpoint(ctx, descriptor)
 }
 
+// Merge forwards the call to the gauge and minmaxsumcount
+// aggregators.
 func (a *Aggregator) Merge(oa export.Aggregator, descriptor *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
@@ -69,22 +78,29 @@ func (a *Aggregator) Merge(oa export.Aggregator, descriptor *export.Descriptor) 
 	return nil
 }
 
+// LastValue gets the last recorded measurement from the gauge
+// aggregator.
 func (a *Aggregator) LastValue() (core.Number, time.Time, error) {
 	return a.g.LastValue()
 }
 
+// Min returns the minimum value from the minmaxsumcount aggregator.
 func (a *Aggregator) Min() (core.Number, error) {
 	return a.mmsc.Min()
 }
 
+// Max returns the maximum value from the minmaxsumcount aggregator.
 func (a *Aggregator) Max() (core.Number, error) {
 	return a.mmsc.Max()
 }
 
+// Sum returns the sum of values from the minmaxsumcount aggregator.
 func (a *Aggregator) Sum() (core.Number, error) {
 	return a.mmsc.Sum()
 }
 
+// Count returns the number of values from the minmaxsumcount
+// aggregator.
 func (a *Aggregator) Count() (int64, error) {
 	return a.mmsc.Count()
 }

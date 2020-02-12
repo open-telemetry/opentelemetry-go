@@ -13,14 +13,14 @@
 // limitations under the License.
 
 // metric package provides an API for reporting diagnostic
-// measurements using three basic kinds of instruments (or four, if
-// calling one special case a separate one).
+// measurements using four basic kinds of instruments.
 //
-// The three basic kinds are:
+// The four basic kinds are:
 //
 // - counters
 // - gauges
 // - measures
+// - observers
 //
 // All instruments report either float64 or int64 values.
 //

@@ -18,10 +18,10 @@ supports configurable metrics export behavior through a collection of
 export interfaces that support various export strategies, described below.
 
 The metric.Meter API consists of methods for constructing each of the
-basic kinds of metric instrument.  There are six types of instrument
-available to the end user, comprised of three basic kinds of metric
-instrument (Counter, Gauge, Measure) crossed with two kinds of number
-(int64, float64).
+basic kinds of metric instrument.  There are eight types of instrument
+available to the end user, comprised of four basic kinds of metric
+instrument (Counter, Gauge, Measure, Observer) crossed with two kinds
+of number (int64, float64).
 
 The API assists the SDK by consolidating the variety of metric instruments
 into a narrower interface, allowing the SDK to avoid repetition of
@@ -31,9 +31,10 @@ numerical value.
 
 To this end, the API uses a core.Number type to represent either an int64
 or a float64, depending on the instrument's definition.  A single
-implementation interface is used for instruments, metric.InstrumentImpl,
-and a single implementation interface is used for handles,
-metric.HandleImpl.
+implementation interface is used for counter, gauge and measure
+instruments, metric.InstrumentImpl, and a single implementation interface
+is used for their handles, metric.HandleImpl. For observers, API defines
+interfaces, for which the SDK should provide an implementation.
 
 There are three entry points for events in the Metrics API: via instrument
 handles, via direct instrument calls, and via BatchRecord.  The SDK is

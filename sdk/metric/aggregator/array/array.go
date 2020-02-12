@@ -111,6 +111,9 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
+// UpdateArray adds the recorded measurement to the current data set.
+// UpdateArray takes a lock to prevent concurrent UpdateArray() and
+// Checkpoint() calls.
 func (c *Aggregator) UpdateArray(number core.Number, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.current = append(c.current, number)
