@@ -116,10 +116,17 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+	c.UpdateDDSketch(number, desc)
+	return nil
+}
+
+// UpdateDDSketch adds the recorded measurement to the current data
+// set.  UpdateDDSketch takes a lock to prevent concurrent
+// UpdateDDSketch() and Checkpoint() calls.
+func (c *Aggregator) UpdateDDSketch(number core.Number, desc *export.Descriptor) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
-	return nil
 }
 
 // Merge combines two sketches into one.
@@ -129,6 +136,11 @@ func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.Merge(o.checkpoint)
+	c.MergeDDSketchAggregator(o)
 	return nil
+}
+
+// MergeDDSketchAggregator combines two sketches into one.
+func (c *Aggregator) MergeDDSketchAggregator(o *Aggregator) {
+	c.checkpoint.Merge(o.checkpoint)
 }

@@ -21,6 +21,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/observerarray"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/observerddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/observermmsc"
 )
 
 type (
@@ -70,6 +73,8 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		return observermmsc.New(descriptor)
 	case export.MeasureKind:
 		return minmaxsumcount.New(descriptor)
 	default:
@@ -81,6 +86,8 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		return observerddsketch.New(s.config, descriptor)
 	case export.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
@@ -92,6 +99,8 @@ func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		return observerarray.New()
 	case export.MeasureKind:
 		return array.New()
 	default:
