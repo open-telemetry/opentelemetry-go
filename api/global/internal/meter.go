@@ -233,6 +233,12 @@ func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
 	if implPtr == nil {
 		implPtr = (*metric.BoundInstrumentImpl)(atomic.LoadPointer(&bound.delegate))
 	}
+	// This may still be nil if instrument was created and bound
+	// without a delegate, then the instrument was set to have a
+	// delegate and unbound.
+	if implPtr == nil {
+		return
+	}
 	(*implPtr).RecordOne(ctx, number)
 }
 
