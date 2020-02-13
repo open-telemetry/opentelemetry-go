@@ -66,10 +66,12 @@ type instImpl struct {
 }
 
 type obsImpl struct {
-	name     string
-	nkind    core.NumberKind
-	opts     []metric.ObserverOptionApplier
-	meter    *meter
+	name  string
+	nkind core.NumberKind
+	opts  []metric.ObserverOptionApplier
+	meter *meter
+
+	lock     sync.Mutex
 	callback interface{}
 
 	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
@@ -259,6 +261,12 @@ func (obs *obsImpl) unregister() {
 	}
 }
 
+func (obs *obsImpl) setCallback(callback interface{}) {
+	obs.lock.Lock()
+	defer obs.lock.Unlock()
+	obs.callback = callback
+}
+
 func (obs *obsImpl) getUnregister() observerUnregister {
 	ptr := atomic.LoadPointer(&obs.delegate)
 	if ptr == nil {
@@ -274,17 +282,33 @@ func (obs *obsImpl) getUnregister() observerUnregister {
 
 func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Int64Observer)
+	obs.lock.Lock()
+	defer obs.lock.Unlock()
 	cb := obs.callback.(metric.Int64ObserverCallback)
 	*obsPtr = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
 func (obs int64ObsImpl) SetCallback(callback metric.Int64ObserverCallback) {
-	if obsPtr := (*metric.Int64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
-		(*obsPtr).SetCallback(callback)
+	if obs.trySetCallbackInDelegate(callback) {
 		return
 	}
-	obs.observer.callback = callback
+	obs.observer.setCallback(callback)
+	// it is possible that if SetCallback and setInt64Delegate are
+	// running concurrently then trySetCallbackInDelegate may call
+	// SetCallback with the same callback as the callback
+	// RegisterInt64Observer received in setInt64Delegate
+	//
+	// this should be harmless
+	obs.trySetCallbackInDelegate(callback)
+}
+
+func (obs int64ObsImpl) trySetCallbackInDelegate(callback metric.Int64ObserverCallback) bool {
+	if obsPtr := (*metric.Int64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
+		(*obsPtr).SetCallback(callback)
+		return true
+	}
+	return false
 }
 
 func (obs int64ObsImpl) Unregister() {
@@ -295,17 +319,33 @@ func (obs int64ObsImpl) Unregister() {
 
 func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Float64Observer)
+	obs.lock.Lock()
+	defer obs.lock.Unlock()
 	cb := obs.callback.(metric.Float64ObserverCallback)
 	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
 func (obs float64ObsImpl) SetCallback(callback metric.Float64ObserverCallback) {
-	if obsPtr := (*metric.Float64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
-		(*obsPtr).SetCallback(callback)
+	if obs.trySetCallbackInDelegate(callback) {
 		return
 	}
-	obs.observer.callback = callback
+	obs.observer.setCallback(callback)
+	// it is possible that if SetCallback and setFloat64Delegate
+	// are running concurrently then trySetCallbackInDelegate may
+	// call SetCallback with the same callback as the callback
+	// RegisterFloat64Observer received in setFloat64Delegate
+	//
+	// this should be harmless
+	obs.trySetCallbackInDelegate(callback)
+}
+
+func (obs float64ObsImpl) trySetCallbackInDelegate(callback metric.Float64ObserverCallback) bool {
+	if obsPtr := (*metric.Float64Observer)(atomic.LoadPointer(&obs.observer.delegate)); obsPtr != nil {
+		(*obsPtr).SetCallback(callback)
+		return true
+	}
+	return false
 }
 
 func (obs float64ObsImpl) Unregister() {

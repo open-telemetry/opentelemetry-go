@@ -113,7 +113,7 @@ const (
 )
 
 func (o Int64Observer) SetCallback(callback apimetric.Int64ObserverCallback) {
-	o.Observer.callback = wrapInt64ObserverCallback(callback)
+	o.Observer.setCallback(wrapInt64ObserverCallback(callback))
 }
 
 func (o Int64Observer) Unregister() {
@@ -121,11 +121,15 @@ func (o Int64Observer) Unregister() {
 }
 
 func (o Float64Observer) SetCallback(callback apimetric.Float64ObserverCallback) {
-	o.Observer.callback = wrapFloat64ObserverCallback(callback)
+	o.Observer.setCallback(wrapFloat64ObserverCallback(callback))
 }
 
 func (o Float64Observer) Unregister() {
 	o.Observer.unregister()
+}
+
+func (o *Observer) setCallback(callback observerCallback) {
+	o.callback = callback
 }
 
 func (o *Observer) unregister() {

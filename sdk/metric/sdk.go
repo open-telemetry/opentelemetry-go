@@ -22,6 +22,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
@@ -138,7 +139,7 @@ type (
 		// recorders maps encoded labelset to the pair of
 		// labelset and recorder
 		recorders map[string]labeledRecorder
-		callback  observerCallback
+		callback  unsafe.Pointer // *observerCallback
 	}
 
 	labeledRecorder struct {
@@ -214,6 +215,17 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	return rec
 }
 
+func (o *observer) setCallback(callback observerCallback) {
+	atomic.StorePointer(&o.callback, unsafe.Pointer(&callback))
+}
+
+func (o *observer) getCallback() observerCallback {
+	ptr := atomic.LoadPointer(&o.callback)
+	// assumption: ptr is never nil, see wrapInt64ObserverCallback
+	// or wrapFloat64ObserverCallback
+	return *((*observerCallback)(ptr))
+}
+
 func (o *observer) unregister() {
 	o.meter.observers.Delete(o)
 }
@@ -227,7 +239,7 @@ func (r float64ObserverResult) Observe(value float64, labels api.LabelSet) {
 }
 
 func (o int64Observer) SetCallback(callback api.Int64ObserverCallback) {
-	o.observer.callback = wrapInt64ObserverCallback(callback)
+	o.observer.setCallback(wrapInt64ObserverCallback(callback))
 }
 
 func (o int64Observer) Unregister() {
@@ -235,7 +247,7 @@ func (o int64Observer) Unregister() {
 }
 
 func (o float64Observer) SetCallback(callback api.Float64ObserverCallback) {
-	o.observer.callback = wrapFloat64ObserverCallback(callback)
+	o.observer.setCallback(wrapFloat64ObserverCallback(callback))
 }
 
 func (o float64Observer) Unregister() {
@@ -504,7 +516,7 @@ func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallba
 		meter:      m,
 		descriptor: descriptor,
 		recorders:  nil,
-		callback:   callback,
+		callback:   unsafe.Pointer(&callback),
 	}
 	m.observers.Store(obs, nil)
 	return obs
@@ -559,10 +571,11 @@ func (m *SDK) collectObservers() int {
 
 	m.observers.Range(func(key, value interface{}) bool {
 		obs := key.(*observer)
+		cb := obs.getCallback()
 		result := observerResult{
 			observer: obs,
 		}
-		obs.callback(result)
+		cb(result)
 		checkpointed += m.checkpointObserver(obs)
 		return true
 	})
