@@ -154,7 +154,7 @@ type Int64ObserverResult interface {
 	Observe(value int64, labels LabelSet)
 }
 
-// Int64ObserverResult is an interface for reporting floating point
+// Float64ObserverResult is an interface for reporting floating point
 // observations.
 type Float64ObserverResult interface {
 	Observe(value float64, labels LabelSet)
