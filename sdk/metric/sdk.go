@@ -142,8 +142,9 @@ type (
 	}
 
 	labeledRecorder struct {
-		recorder export.Aggregator
-		labels   *labels
+		recorder      export.Aggregator
+		labels        *labels
+		modifiedEpoch int64
 	}
 
 	int64Observer struct {
@@ -193,6 +194,8 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	labels := o.meter.labsFor(ls)
 	lrec, ok := o.recorders[labels.encoded]
 	if ok {
+		lrec.modifiedEpoch = o.meter.currentEpoch
+		o.recorders[labels.encoded] = lrec
 		return lrec.recorder
 	}
 	rec := o.meter.batcher.AggregatorFor(o.descriptor)
@@ -204,8 +207,9 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	// rather not store anything if recorder is nil and query the
 	// aggregator selector again?
 	o.recorders[labels.encoded] = labeledRecorder{
-		recorder: rec,
-		labels:   labels,
+		recorder:      rec,
+		labels:        labels,
+		modifiedEpoch: o.meter.currentEpoch,
 	}
 	return rec
 }
@@ -564,8 +568,19 @@ func (m *SDK) checkpointObserver(obs *observer) int {
 	}
 	checkpointed := 0
 	ctx := context.Background()
-	for _, lrec := range obs.recorders {
-		checkpointed += m.checkpoint(ctx, obs.descriptor, lrec.recorder, lrec.labels)
+	for encodedLabels, lrec := range obs.recorders {
+		epochDiff := m.currentEpoch - lrec.modifiedEpoch
+		if epochDiff == 0 {
+			checkpointed += m.checkpoint(ctx, obs.descriptor, lrec.recorder, lrec.labels)
+		} else if epochDiff > 1 {
+			// This is second collection cycle with no
+			// observations for this labelset. Remove the
+			// recorder.
+			delete(obs.recorders, encodedLabels)
+		}
+	}
+	if len(obs.recorders) == 0 {
+		obs.recorders = nil
 	}
 	return checkpointed
 }
