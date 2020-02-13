@@ -51,7 +51,7 @@ type meter struct {
 
 	lock        sync.Mutex
 	instruments []*instImpl
-	observers   []*obsImpl
+	observers   map[*obsImpl]struct{}
 
 	delegate unsafe.Pointer // (*metric.Meter)
 }
@@ -69,6 +69,7 @@ type obsImpl struct {
 	name     string
 	nkind    core.NumberKind
 	opts     []metric.ObserverOptionApplier
+	meter    *meter
 	callback interface{}
 
 	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
@@ -80,6 +81,11 @@ type int64ObsImpl struct {
 
 type float64ObsImpl struct {
 	observer *obsImpl
+}
+
+// this is a common subset of the metric observers interfaces
+type observerUnregister interface {
+	Unregister()
 }
 
 type labelSet struct {
@@ -106,6 +112,8 @@ var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instHandle{}
 var _ metric.Int64Observer = int64ObsImpl{}
 var _ metric.Float64Observer = float64ObsImpl{}
+var _ observerUnregister = (metric.Int64Observer)(nil)
+var _ observerUnregister = (metric.Float64Observer)(nil)
 
 // Provider interface and delegation
 
@@ -150,7 +158,7 @@ func (m *meter) setDelegate(provider metric.Provider) {
 		inst.setDelegate(*d)
 	}
 	m.instruments = nil
-	for _, obs := range m.observers {
+	for obs := range m.observers {
 		obs.setDelegate(*d)
 	}
 	m.observers = nil
@@ -237,6 +245,31 @@ func (obs *obsImpl) setDelegate(d metric.Meter) {
 	}
 }
 
+func (obs *obsImpl) unregister() {
+	unreg := obs.getUnregister()
+	if unreg != nil {
+		unreg.Unregister()
+		return
+	}
+	obs.meter.lock.Lock()
+	defer obs.meter.lock.Unlock()
+	delete(obs.meter.observers, obs)
+	if len(obs.meter.observers) == 0 {
+		obs.meter.observers = nil
+	}
+}
+
+func (obs *obsImpl) getUnregister() observerUnregister {
+	ptr := atomic.LoadPointer(&obs.delegate)
+	if ptr == nil {
+		return nil
+	}
+	if obs.nkind == core.Int64NumberKind {
+		return *(*metric.Int64Observer)(ptr)
+	}
+	return *(*metric.Float64Observer)(ptr)
+}
+
 // Int64Observer delegation
 
 func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
@@ -254,6 +287,10 @@ func (obs int64ObsImpl) SetCallback(callback metric.Int64ObserverCallback) {
 	obs.observer.callback = callback
 }
 
+func (obs int64ObsImpl) Unregister() {
+	obs.observer.unregister()
+}
+
 // Float64Observer delegation
 
 func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
@@ -269,6 +306,10 @@ func (obs float64ObsImpl) SetCallback(callback metric.Float64ObserverCallback) {
 		return
 	}
 	obs.observer.callback = callback
+}
+
+func (obs float64ObsImpl) Unregister() {
+	obs.observer.unregister()
 }
 
 // Metric updates
@@ -379,7 +420,7 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 		opts:     oos,
 		callback: callback,
 	}
-	m.observers = append(m.observers, obs)
+	m.addObserver(obs)
 	return int64ObsImpl{
 		observer: obs,
 	}
@@ -399,8 +440,15 @@ func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64Obse
 		opts:     oos,
 		callback: callback,
 	}
-	m.observers = append(m.observers, obs)
+	m.addObserver(obs)
 	return float64ObsImpl{
 		observer: obs,
 	}
+}
+
+func (m *meter) addObserver(obs *obsImpl) {
+	if m.observers == nil {
+		m.observers = make(map[*obsImpl]struct{})
+	}
+	m.observers[obs] = struct{}{}
 }

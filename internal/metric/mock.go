@@ -54,7 +54,7 @@ type (
 
 	Meter struct {
 		MeasurementBatches []Batch
-		Observers          []*Observer
+		Observers          map[*Observer]struct{}
 	}
 
 	Kind int8
@@ -81,6 +81,7 @@ type (
 
 	Observer struct {
 		Instrument *Instrument
+		Meter      *Meter
 		callback   observerCallback
 	}
 
@@ -115,8 +116,20 @@ func (o Int64Observer) SetCallback(callback apimetric.Int64ObserverCallback) {
 	o.Observer.callback = wrapInt64ObserverCallback(callback)
 }
 
+func (o Int64Observer) Unregister() {
+	o.Observer.unregister()
+}
+
 func (o Float64Observer) SetCallback(callback apimetric.Float64ObserverCallback) {
 	o.Observer.callback = wrapFloat64ObserverCallback(callback)
+}
+
+func (o Float64Observer) Unregister() {
+	o.Observer.unregister()
+}
+
+func (o *Observer) unregister() {
+	delete(o.Meter.Observers, o)
 }
 
 func (r int64ObserverResult) Observe(value int64, labels apimetric.LabelSet) {
@@ -310,9 +323,13 @@ func (m *Meter) newObserver(name string, callback observerCallback, numberKind c
 			NumberKind: numberKind,
 			Opts:       opts,
 		},
+		Meter:    m,
 		callback: callback,
 	}
-	m.Observers = append(m.Observers, obs)
+	if m.Observers == nil {
+		m.Observers = make(map[*Observer]struct{})
+	}
+	m.Observers[obs] = struct{}{}
 	return obs
 }
 
@@ -338,7 +355,7 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 }
 
 func (m *Meter) RunObservers() {
-	for _, observer := range m.Observers {
+	for observer := range m.Observers {
 		observer.callback(observerResult{
 			instrument: observer.Instrument,
 		})

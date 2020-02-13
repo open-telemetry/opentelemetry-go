@@ -214,6 +214,10 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	return rec
 }
 
+func (o *observer) unregister() {
+	o.meter.observers.Delete(o)
+}
+
 func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
 	r.result.observe(core.NewInt64Number(value), labels)
 }
@@ -226,8 +230,16 @@ func (o int64Observer) SetCallback(callback api.Int64ObserverCallback) {
 	o.observer.callback = wrapInt64ObserverCallback(callback)
 }
 
+func (o int64Observer) Unregister() {
+	o.observer.unregister()
+}
+
 func (o float64Observer) SetCallback(callback api.Float64ObserverCallback) {
 	o.observer.callback = wrapFloat64ObserverCallback(callback)
+}
+
+func (o float64Observer) Unregister() {
+	o.observer.unregister()
 }
 
 func (i *instrument) Meter() api.Meter {

@@ -46,7 +46,13 @@ func (noopInstrument) Meter() Meter {
 func (noopInt64Observer) SetCallback(callback Int64ObserverCallback) {
 }
 
+func (noopInt64Observer) Unregister() {
+}
+
 func (noopFloat64Observer) SetCallback(callback Float64ObserverCallback) {
+}
+
+func (noopFloat64Observer) Unregister() {
 }
 
 func (NoopMeter) Labels(...core.KeyValue) LabelSet {
