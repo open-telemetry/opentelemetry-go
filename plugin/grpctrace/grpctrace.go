@@ -69,7 +69,7 @@ func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, core.
 
 	spanContext := trace.RemoteSpanContextFromContext(ctx)
 	var correlationCtxKVs []core.KeyValue
-	correlation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
+	correlation.MapFromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})
