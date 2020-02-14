@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -55,6 +56,8 @@ func TestExtractB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		props := propagation.New(propagation.WithExtractors(propagator))
+
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -63,7 +66,8 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				gotSc, _ := propagator.Extract(ctx, req.Header)
+				ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+				gotSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
@@ -99,6 +103,7 @@ func TestInjectB3(t *testing.T) {
 	for _, tg := range testGroup {
 		id = 0
 		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		props := propagation.New(propagation.WithInjectors(propagator))
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -107,7 +112,7 @@ func TestInjectB3(t *testing.T) {
 					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
 				}
 				ctx, _ = mockTracer.Start(ctx, "inject")
-				propagator.Inject(ctx, req.Header)
+				propagation.InjectHTTP(ctx, props, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v
