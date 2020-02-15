@@ -50,7 +50,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
-	prop             propagation.TextFormat
+	props            propagation.Propagators
 	spanStartOptions []trace.StartOption
 	public           bool
 	readEvent        bool
@@ -77,12 +77,12 @@ func WithPublicEndpoint() Option {
 	}
 }
 
-// WithPropagator configures the Handler with a specific propagator. If this
-// option isn't specificed then
-// go.opentelemetry.io/otel/api/trace.DefaultPropagator is used.
-func WithPropagator(p propagation.TextFormat) Option {
+// WithPropagators configures the Handler with specific propagators. If this
+// option isn't specified then Propagators with
+// go.opentelemetry.io/otel/api/trace.DefaultHTTPPropagator are used.
+func WithPropagators(ps propagation.Propagators) Option {
 	return func(h *Handler) {
-		h.prop = p
+		h.props = ps
 	}
 }
 
@@ -128,9 +128,10 @@ func WithMessageEvents(events ...event) Option {
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
+	propagator := trace.DefaultHTTPPropagator()
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagator(trace.DefaultPropagator()),
+		WithPropagators(propagation.New(propagation.WithInjectors(propagator), propagation.WithExtractors(propagator))),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -145,9 +146,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	// TODO: do something with the correlation context
-	sc, _ := h.prop.Extract(r.Context(), r.Header)
-	ctx := r.Context()
-	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
+	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
+
+	// not a valid span context, so no link / parent relationship to establish
+	if sc := trace.RemoteSpanContextFromContext(ctx); sc.IsValid() {
 		var opt trace.StartOption
 		if h.public {
 			// If the endpoint is a public endpoint, it should start a new trace
@@ -178,7 +180,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, injector: h.prop}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.props}
 
 	// Setup basic span attributes before calling handler.ServeHTTP so that they
 	// are available to be mutated by the handler if needed.

@@ -63,7 +63,7 @@ func BenchmarkExtractB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					_, _ = propagator.Extract(ctx, req.Header)
+					_ = propagator.Extract(ctx, req.Header)
 				}
 			})
 		}

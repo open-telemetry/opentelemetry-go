@@ -19,8 +19,7 @@ func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (core.SpanC
 		return core.EmptySpanContext(), false, links
 	}
 	if lsctx.IsValid() {
-		links := addLinkIfValid(nil, rsctx, "remote")
-		return lsctx, false, links
+		return lsctx, false, nil
 	}
 	if rsctx.IsValid() {
 		return rsctx, true, nil

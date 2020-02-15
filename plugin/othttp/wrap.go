@@ -49,10 +49,6 @@ func (w *bodyWrapper) Close() error {
 
 var _ http.ResponseWriter = &respWriterWrapper{}
 
-type injector interface {
-	Inject(context.Context, propagation.Supplier)
-}
-
 // respWriterWrapper wraps a http.ResponseWriter in order to track the number of
 // bytes written, the last error, and to catch the returned statusCode
 // TODO: The wrapped http.ResponseWriter doesn't implement any of the optional
@@ -64,7 +60,8 @@ type respWriterWrapper struct {
 
 	// used to inject the header
 	ctx context.Context
-	injector
+
+	props propagation.Propagators
 
 	written     int64
 	statusCode  int
@@ -95,6 +92,6 @@ func (w *respWriterWrapper) WriteHeader(statusCode int) {
 	}
 	w.wroteHeader = true
 	w.statusCode = statusCode
-	w.injector.Inject(w.ctx, w.Header())
+	propagation.InjectHTTP(w.ctx, w.props, w.Header())
 	w.ResponseWriter.WriteHeader(statusCode)
 }
