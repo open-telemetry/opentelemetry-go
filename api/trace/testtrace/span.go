@@ -84,6 +84,10 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 		cfg.Timestamp = time.Now()
 	}
 
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
 		core.Key("error.type").String(reflect.TypeOf(err).String()),
 		core.Key("error.message").String(err.Error()),

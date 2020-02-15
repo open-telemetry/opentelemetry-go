@@ -64,6 +64,7 @@ func WithEndTime(t time.Time) EndOption {
 // that an error is recorded.
 type ErrorConfig struct {
 	Timestamp time.Time
+	Status    codes.Code
 }
 
 // ErrorOption applies changes to ErrorConfig that sets options when a span error is recorded.
@@ -73,6 +74,13 @@ type ErrorOption func(*ErrorConfig)
 func WithErrorTime(t time.Time) ErrorOption {
 	return func(c *ErrorConfig) {
 		c.Timestamp = t
+	}
+}
+
+// WithErrorStatus sets the span status when recording an error.
+func WithErrorStatus(s codes.Code) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Status = s
 	}
 }
 

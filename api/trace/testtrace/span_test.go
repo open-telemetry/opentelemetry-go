@@ -146,6 +146,35 @@ func TestSpan(t *testing.T) {
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
+			e.Expect(subject.Status()).ToEqual(codes.OK)
+		})
+
+		t.Run("sets span status if provided", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := testtrace.NewTracer()
+			ctx, span := tracer.Start(context.Background(), "test")
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+
+			errMsg := "test error message"
+			testTime := time.Now()
+			expStatus := codes.Unknown
+			subject.RecordError(ctx, errors.New(errMsg), trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatus))
+
+			expectedEvents := []testtrace.Event{{
+				Timestamp: testTime,
+				Name:      "error",
+				Attributes: map[core.Key]core.Value{
+					core.Key("error.type"):    core.String("*errors.errorString"),
+					core.Key("error.message"): core.String(errMsg),
+				},
+			}}
+			e.Expect(subject.Events()).ToEqual(expectedEvents)
+			e.Expect(subject.Status()).ToEqual(expStatus)
 		})
 
 		t.Run("cannot be set after the span has ended", func(t *testing.T) {

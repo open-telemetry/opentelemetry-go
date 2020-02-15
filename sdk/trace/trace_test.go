@@ -913,6 +913,50 @@ func TestRecordError(t *testing.T) {
 	}
 }
 
+func TestRecordErrorWithStatus(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "SpanEnd")
+
+	testErr := errors.New("test error")
+	errTime := time.Now()
+	testStatus := codes.Unknown
+	span.RecordError(context.Background(), testErr,
+		apitrace.WithErrorTime(errTime),
+		apitrace.WithErrorStatus(testStatus),
+	)
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
+		SpanKind:        apitrace.SpanKindInternal,
+		Status:          codes.Unknown,
+		HasRemoteParent: true,
+		MessageEvents: []export.Event{
+			{
+				Name: "error",
+				Time: errTime,
+				Attributes: []core.KeyValue{
+					core.Key("error.type").String(reflect.TypeOf(testErr).String()),
+					core.Key("error.message").String(testErr.Error()),
+				},
+			},
+		},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanErrorOptions: -got +want %s", diff)
+	}
+}
+
 func TestSpanErrorNil(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
