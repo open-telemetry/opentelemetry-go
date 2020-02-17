@@ -225,3 +225,23 @@ func TestDefaultSDK(t *testing.T) {
 	require.Equal(t, `{"updates":[{"name":"test.builtin{A=B}","sum":1}]}
 `, <-ch)
 }
+
+func TestUnbindThenRecordOne(t *testing.T) {
+	internal.ResetForTest()
+
+	// Note: this test uses oppsite Float64/Int64 number kinds
+	// vs. the above, to cover all the instruments.
+	ctx := context.Background()
+	sdk := metrictest.NewProvider()
+	meter := global.MeterProvider().Meter("test")
+	counter := meter.NewInt64Counter("test.counter")
+	boundC := counter.Bind(meter.Labels())
+	global.SetMeterProvider(sdk)
+	boundC.Unbind()
+
+	require.NotPanics(t, func() {
+		boundC.Add(ctx, 1)
+	})
+	mock := global.MeterProvider().Meter("test").(*metrictest.Meter)
+	require.Equal(t, 0, len(mock.MeasurementBatches))
+}
