@@ -16,6 +16,7 @@ package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/hist
 
 import (
 	"context"
+	"runtime"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -50,11 +51,9 @@ type (
 
 		// states needs to be aligned for 64-bit atomic operations.
 		states     [2]state
-		currentIdx uint32
+		locker     locker
 		boundaries []core.Number
 		kind       core.NumberKind
-
-		mtx sync.Mutex
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -65,6 +64,13 @@ type (
 		buckets aggregator.Buckets
 		count   core.Number
 		sum     core.Number
+	}
+
+	locker struct {
+		currentIdx uint64
+		counts     [2]uint64
+
+		sync.Mutex
 	}
 )
 
@@ -116,22 +122,22 @@ func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
 
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+	c.locker.Lock()
+	defer c.locker.Unlock()
 	return c.checkpoint().sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+	c.locker.Lock()
+	defer c.locker.Unlock()
 	return int64(c.checkpoint().count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+	c.locker.Lock()
+	defer c.locker.Unlock()
 	return c.checkpoint().buckets, nil
 }
 
@@ -140,30 +146,55 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	// clear the checkpoint state before making it the new current state.
-	c.resetCheckpoint()
-
-	// swap the current and checkpoint state by changing the least significant bit
-	// of the currentIdx
-	atomic.AddUint32(&c.currentIdx, 1)
-
-	// TODO(paivagustavo): there is a chance where the SDK calls Checkpoint and an update
-	//  to the new checkpoint is still occurring, could this be a problem?
-	//  Checkpoint is called for every active records and then it gets exported,
-	//  this reduces the chances of inconsistencies on the exporter.
-}
-
-// current returns the current state with the lower bit of currentIdx.
-func (c *Aggregator) current() *state {
-	return &c.states[c.currentIdx&1]
+	c.locker.swapState(c.resetCheckpoint)
 }
 
 // checkpoint returns the checkpoint state by inverting the lower bit of currentIdx.
 func (c *Aggregator) checkpoint() *state {
-	return &c.states[^c.currentIdx&1]
+	return &c.states[c.locker.checkpointIdx()]
+}
+
+// current returns the current state with the lower bit of currentIdx.
+func (c *locker) startWrite() int {
+	n := atomic.AddUint64(&c.currentIdx, 1)
+	return int(n >> 63)
+}
+
+func (c *locker) finishWrite(idx int) {
+	atomic.AddUint64(&c.counts[idx], 1)
+}
+
+// checkpoint returns the checkpoint state by inverting the lower bit of currentIdx.
+func (c *locker) checkpointIdx() int {
+	return int((^c.currentIdx) >> 63)
+}
+
+func (c *locker) swapState(cleanUp func()) {
+	c.Lock()
+	defer c.Unlock()
+
+	// clear any state that could exist
+	if cleanUp != nil {
+		cleanUp()
+	}
+
+	// Adding 1<<63 switches the hot index (from 0 to 1 or from 1 to 0)
+	// without touching the count bits. See the struct comments for a full
+	// description of the algorithm.
+	n := atomic.AddUint64(&c.currentIdx, 1<<63)
+	// count is contained unchanged in the lower 63 bits.
+	count := n & ((1 << 63) - 1)
+
+	hotCounts := &c.counts[n>>63]
+	coldCounts := &c.counts[(^n)>>63]
+
+	// Await all cold writers to finish writing.
+	for count != atomic.LoadUint64(coldCounts) {
+		runtime.Gosched() // Let observations get work done.
+	}
+
+	atomic.AddUint64(hotCounts, count)
+	atomic.StoreUint64(coldCounts, 0)
 }
 
 func (c *Aggregator) resetCheckpoint() {
@@ -178,7 +209,10 @@ func (c *Aggregator) resetCheckpoint() {
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
 
-	current := c.current()
+	cIdx := c.locker.startWrite()
+	defer c.locker.finishWrite(cIdx)
+
+	current := &c.states[cIdx]
 	current.count.AddUint64Atomic(1)
 	current.sum.AddNumberAtomic(kind, number)
 
