@@ -16,10 +16,8 @@ package trace
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
-	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -872,12 +870,24 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 }
 
+type testError string
+
+var _ error = testError("")
+
+func newTestError(s string) error {
+	return testError(s)
+}
+
+func (e testError) Error() string {
+	return string(e)
+}
+
 func TestRecordError(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "RecordError")
 
-	testErr := errors.New("test error")
+	testErr := newTestError("test error")
 	errTime := time.Now()
 	span.RecordError(context.Background(), testErr,
 		apitrace.WithErrorTime(errTime),
@@ -902,8 +912,8 @@ func TestRecordError(t *testing.T) {
 				Name: errorEventName,
 				Time: errTime,
 				Attributes: []core.KeyValue{
-					errorTypeKey.String(reflect.TypeOf(testErr).String()),
-					errorMessageKey.String(testErr.Error()),
+					errorTypeKey.String("go.opentelemetry.io/otel/sdk/trace.testError"),
+					errorMessageKey.String("test error"),
 				},
 			},
 		},
@@ -918,7 +928,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "RecordErrorWithStatus")
 
-	testErr := errors.New("test error")
+	testErr := newTestError("test error")
 	errTime := time.Now()
 	testStatus := codes.Unknown
 	span.RecordError(context.Background(), testErr,
@@ -946,8 +956,8 @@ func TestRecordErrorWithStatus(t *testing.T) {
 				Name: errorEventName,
 				Time: errTime,
 				Attributes: []core.KeyValue{
-					errorTypeKey.String(reflect.TypeOf(testErr).String()),
-					errorMessageKey.String(testErr.Error()),
+					errorTypeKey.String("go.opentelemetry.io/otel/sdk/trace.testError"),
+					errorMessageKey.String("test error"),
 				},
 			},
 		},

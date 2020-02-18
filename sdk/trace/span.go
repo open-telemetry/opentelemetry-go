@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -153,8 +154,15 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		s.SetStatus(cfg.Status)
 	}
 
+	errType := reflect.TypeOf(err)
+	errTypeString := fmt.Sprintf("%s.%s", errType.PkgPath(), errType.Name())
+	if errTypeString == "." {
+		// PkgPath() and Name() may be empty for builtin Types
+		errTypeString = errType.String()
+	}
+
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
-		errorTypeKey.String(reflect.TypeOf(err).String()),
+		errorTypeKey.String(errTypeString),
 		errorMessageKey.String(err.Error()),
 	)
 }
