@@ -60,14 +60,13 @@ func WithEndTime(t time.Time) EndOption {
 	}
 }
 
-// ErrorConfig provides options to set properties of an event at the time
-// that an error is recorded.
+// ErrorConfig provides options to set properties of an error event at the time it is recorded.
 type ErrorConfig struct {
 	Timestamp time.Time
 	Status    codes.Code
 }
 
-// ErrorOption applies changes to ErrorConfig that sets options when a span error is recorded.
+// ErrorOption applies changes to ErrorConfig that sets options when an error event is recorded.
 type ErrorOption func(*ErrorConfig)
 
 // WithErrorTime sets the time at which the error event should be recorded.
@@ -77,7 +76,7 @@ func WithErrorTime(t time.Time) ErrorOption {
 	}
 }
 
-// WithErrorStatus sets the span status when recording an error.
+// WithErrorStatus indicates the span status that should be set when recording an error event.
 func WithErrorStatus(s codes.Code) ErrorOption {
 	return func(c *ErrorConfig) {
 		c.Status = s

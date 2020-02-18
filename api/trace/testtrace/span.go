@@ -26,6 +26,12 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
+const (
+	errorTypeKey    = core.Key("error.type")
+	errorMessageKey = core.Key("error.message")
+	errorEventName  = "error"
+)
+
 var _ trace.Span = (*Span)(nil)
 
 type Span struct {
@@ -88,9 +94,9 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 		s.SetStatus(cfg.Status)
 	}
 
-	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
-		core.Key("error.type").String(reflect.TypeOf(err).String()),
-		core.Key("error.message").String(err.Error()),
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+		errorTypeKey.String(reflect.TypeOf(err).String()),
+		errorMessageKey.String(err.Error()),
 	)
 }
 

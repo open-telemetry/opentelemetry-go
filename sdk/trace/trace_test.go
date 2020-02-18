@@ -899,11 +899,11 @@ func TestRecordError(t *testing.T) {
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
-				Name: "error",
+				Name: errorEventName,
 				Time: errTime,
 				Attributes: []core.KeyValue{
-					core.Key("error.type").String(reflect.TypeOf(testErr).String()),
-					core.Key("error.message").String(testErr.Error()),
+					errorTypeKey.String(reflect.TypeOf(testErr).String()),
+					errorMessageKey.String(testErr.Error()),
 				},
 			},
 		},
@@ -943,11 +943,11 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
-				Name: "error",
+				Name: errorEventName,
 				Time: errTime,
 				Attributes: []core.KeyValue{
-					core.Key("error.type").String(reflect.TypeOf(testErr).String()),
-					core.Key("error.message").String(testErr.Error()),
+					errorTypeKey.String(reflect.TypeOf(testErr).String()),
+					errorMessageKey.String(testErr.Error()),
 				},
 			},
 		},

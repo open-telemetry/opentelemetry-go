@@ -28,6 +28,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/internal"
 )
 
+const (
+	errorTypeKey    = core.Key("error.type")
+	errorMessageKey = core.Key("error.message")
+	errorEventName  = "error"
+)
+
 // span implements apitrace.Span interface.
 type span struct {
 	// data contains information recorded about the span.
@@ -147,9 +153,9 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		s.SetStatus(cfg.Status)
 	}
 
-	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
-		core.Key("error.type").String(reflect.TypeOf(err).String()),
-		core.Key("error.message").String(err.Error()),
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+		errorTypeKey.String(reflect.TypeOf(err).String()),
+		errorMessageKey.String(err.Error()),
 	)
 }
 
