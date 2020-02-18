@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/internal/matchers"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
 func TestSpan(t *testing.T) {
@@ -125,28 +126,46 @@ func TestSpan(t *testing.T) {
 		t.Run("records an error", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
-
-			tracer := testtrace.NewTracer()
-			ctx, span := tracer.Start(context.Background(), "test")
-
-			subject, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
-			errMsg := "test error message"
-			testTime := time.Now()
-			subject.RecordError(ctx, errors.New(errMsg), trace.WithErrorTime(testTime))
-
-			expectedEvents := []testtrace.Event{{
-				Timestamp: testTime,
-				Name:      "error",
-				Attributes: map[core.Key]core.Value{
-					core.Key("error.type"):    core.String("*errors.errorString"),
-					core.Key("error.message"): core.String(errMsg),
+			scenarios := []struct {
+				err error
+				typ string
+				msg string
+			}{
+				{
+					err: ottest.NewTestError("test error"),
+					typ: "go.opentelemetry.io/otel/internal/testing.TestError",
+					msg: "test error",
 				},
-			}}
-			e.Expect(subject.Events()).ToEqual(expectedEvents)
-			e.Expect(subject.Status()).ToEqual(codes.OK)
+				{
+					err: errors.New("test error 2"),
+					typ: "*errors.errorString",
+					msg: "test error 2",
+				},
+			}
+
+			for _, s := range scenarios {
+				e := matchers.NewExpecter(t)
+
+				tracer := testtrace.NewTracer()
+				ctx, span := tracer.Start(context.Background(), "test")
+
+				subject, ok := span.(*testtrace.Span)
+				e.Expect(ok).ToBeTrue()
+
+				testTime := time.Now()
+				subject.RecordError(ctx, s.err, trace.WithErrorTime(testTime))
+
+				expectedEvents := []testtrace.Event{{
+					Timestamp: testTime,
+					Name:      "error",
+					Attributes: map[core.Key]core.Value{
+						core.Key("error.type"):    core.String(s.typ),
+						core.Key("error.message"): core.String(s.msg),
+					},
+				}}
+				e.Expect(subject.Events()).ToEqual(expectedEvents)
+				e.Expect(subject.Status()).ToEqual(codes.OK)
+			}
 		})
 
 		t.Run("sets span status if provided", func(t *testing.T) {
@@ -161,15 +180,16 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			errMsg := "test error message"
+			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
 			expStatus := codes.Unknown
-			subject.RecordError(ctx, errors.New(errMsg), trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatus))
+			subject.RecordError(ctx, testErr, trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatus))
 
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
 				Name:      "error",
 				Attributes: map[core.Key]core.Value{
-					core.Key("error.type"):    core.String("*errors.errorString"),
+					core.Key("error.type"):    core.String("go.opentelemetry.io/otel/internal/testing.TestError"),
 					core.Key("error.message"): core.String(errMsg),
 				},
 			}}
