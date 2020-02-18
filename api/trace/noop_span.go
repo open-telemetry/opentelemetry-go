@@ -54,7 +54,7 @@ func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 func (NoopSpan) End(options ...EndOption) {
 }
 
-// Error does nothing.
+// RecordError does nothing.
 func (NoopSpan) RecordError(ctx context.Context, err error, opts ...ErrorOption) {
 }
 

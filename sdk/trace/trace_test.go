@@ -875,7 +875,7 @@ func TestCustomStartEndTime(t *testing.T) {
 func TestRecordError(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "SpanEnd")
+	span := startSpan(tp, "RecordError")
 
 	testErr := errors.New("test error")
 	errTime := time.Now()
@@ -916,7 +916,7 @@ func TestRecordError(t *testing.T) {
 func TestRecordErrorWithStatus(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "SpanEnd")
+	span := startSpan(tp, "RecordErrorWithStatus")
 
 	testErr := errors.New("test error")
 	errTime := time.Now()
@@ -957,10 +957,10 @@ func TestRecordErrorWithStatus(t *testing.T) {
 	}
 }
 
-func TestSpanErrorNil(t *testing.T) {
+func TestRecordErrorNil(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
-	span := startSpan(tp, "SpanEnd")
+	span := startSpan(tp, "RecordErrorNil")
 
 	span.RecordError(context.Background(), nil)
 

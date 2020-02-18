@@ -87,7 +87,7 @@ func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 func (mockSpan) End(options ...trace.EndOption) {
 }
 
-// Error does nothing.
+// RecordError does nothing.
 func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
 }
 
