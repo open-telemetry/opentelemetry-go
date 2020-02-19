@@ -8,6 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-cmp v0.3.1
 	github.com/google/gofuzz v1.0.0 // indirect
+	github.com/jinzhu/gorm v1.9.12
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.1.1-0.20190913142402-a7454ce5950e
 	github.com/stretchr/testify v1.4.0
