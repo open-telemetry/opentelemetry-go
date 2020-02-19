@@ -19,6 +19,7 @@
 package metric_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 	"time"
@@ -35,22 +36,20 @@ func TestStressInt64Histogram(t *testing.T) {
 	go func() {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		for {
-			_ = h.Update(nil, core.NewInt64Number(rnd.Int63()), desc)
+			_ = h.Update(context.TODO(), core.NewInt64Number(rnd.Int63()), desc)
 		}
 	}()
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		h.Checkpoint(nil, desc)
+		h.Checkpoint(context.TODO(), desc)
 
 		b, _ := h.Histogram()
 		c, _ := h.Count()
 
 		var realCount int64
-		var counts []int64
 		for _, c := range b.Counts {
 			v := c.AsInt64()
-			counts = append(counts, v)
 			realCount += v
 		}
 
