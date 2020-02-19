@@ -38,7 +38,7 @@ import (
 // 2. Call to `SwitchState(fn)`
 // 2.1 run `fn` function to prepare the new state
 // 2.2 make state 1 active
-// 2.3 wait the end of every in-flight operation of the state 0.
+// 2.3 wait in-flight operations of the state 0 to end.
 // 3. State 1 is now active and every new operation are executed in it.
 //
 //
@@ -53,7 +53,8 @@ type StateLocker struct {
 	sync.Mutex
 }
 
-// current returns the current state with the lower bit of countsAndActiveIdx.
+// TODO(paivagustavo): doc methods
+
 func (c *StateLocker) Start() int {
 	n := atomic.AddUint64(&c.countsAndActiveIdx, 1)
 	return int(n >> 63)
@@ -63,7 +64,6 @@ func (c *StateLocker) End(idx int) {
 	atomic.AddUint64(&c.finishedOperations[idx], 1)
 }
 
-// checkpoint returns the checkpoint state by inverting the lower bit of countsAndActiveIdx.
 func (c *StateLocker) ColdIdx() int {
 	return int((^c.countsAndActiveIdx) >> 63)
 }
