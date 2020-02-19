@@ -105,6 +105,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		registerer:              config.Registerer,
 		gatherer:                config.Gatherer,
 		defaultSummaryQuantiles: config.DefaultSummaryQuantiles,
+		onError:                 config.OnError,
 	}
 
 	c := newCollector(e)
