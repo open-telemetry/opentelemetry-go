@@ -67,12 +67,13 @@ func NewRawExporter(config Config) (*Exporter, error) {
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
-// pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Config{...})
-// if err != nil {
-// 	...
-// }
-// defer pipeline.Stop()
-// ... Done
+//
+// 	pipeline, err := dogstatsd.InstallNewPipeline(dogstatsd.Config{...})
+// 	if err != nil {
+// 		...
+// 	}
+// 	defer pipeline.Stop()
+// 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, error) {
 	controller, err := NewExportPipeline(config)
 	if err != nil {

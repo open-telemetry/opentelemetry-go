@@ -26,8 +26,12 @@ import (
 )
 
 var (
-	propagator  = trace.DefaultHTTPPropagator()
-	propagators = propagation.New(propagation.WithInjectors(propagator), propagation.WithExtractors(propagator))
+	tcPropagator = trace.DefaultHTTPPropagator()
+	ccPropagator = correlation.DefaultHTTPPropagator()
+	propagators  = propagation.New(
+		propagation.WithInjectors(tcPropagator, ccPropagator),
+		propagation.WithExtractors(tcPropagator, ccPropagator),
+	)
 )
 
 type metadataSupplier struct {

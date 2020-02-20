@@ -105,6 +105,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		registerer:              config.Registerer,
 		gatherer:                config.Gatherer,
 		defaultSummaryQuantiles: config.DefaultSummaryQuantiles,
+		onError:                 config.OnError,
 	}
 
 	c := newCollector(e)
@@ -117,13 +118,15 @@ func NewRawExporter(config Config) (*Exporter, error) {
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
-// pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
-// if err != nil {
-// 	...
-// }
-// http.HandleFunc("/metrics", hf)
-// defer pipeline.Stop()
-// ... Done
+//
+// 	pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
+//
+// 	if err != nil {
+// 		...
+// 	}
+// 	http.HandleFunc("/metrics", hf)
+// 	defer pipeline.Stop()
+// 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
 	controller, hf, err := NewExportPipeline(config)
 	if err != nil {
