@@ -100,7 +100,7 @@ func TestDirect(t *testing.T) {
 func TestBound(t *testing.T) {
 	internal.ResetForTest()
 
-	// Note: this test uses oppsite Float64/Int64 number kinds
+	// Note: this test uses opposite Float64/Int64 number kinds
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.MeterProvider().Meter("test")
@@ -229,8 +229,6 @@ func TestDefaultSDK(t *testing.T) {
 func TestUnbindThenRecordOne(t *testing.T) {
 	internal.ResetForTest()
 
-	// Note: this test uses oppsite Float64/Int64 number kinds
-	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	sdk := metrictest.NewProvider()
 	meter := global.MeterProvider().Meter("test")
