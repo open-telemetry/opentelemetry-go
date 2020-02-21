@@ -19,6 +19,10 @@ func TestMain(m *testing.M) {
 			Name:   "record.modified",
 			Offset: unsafe.Offsetof(record{}.modified),
 		},
+		{
+			Name:   "observer.callback",
+			Offset: unsafe.Offsetof(observer{}.callback),
+		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
 		os.Exit(1)

@@ -458,6 +458,7 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 		name:     name,
 		nkind:    core.Int64NumberKind,
 		opts:     oos,
+		meter:    m,
 		callback: callback,
 	}
 	m.addObserver(obs)
@@ -478,6 +479,7 @@ func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64Obse
 		name:     name,
 		nkind:    core.Float64NumberKind,
 		opts:     oos,
+		meter:    m,
 		callback: callback,
 	}
 	m.addObserver(obs)
