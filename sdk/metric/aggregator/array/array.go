@@ -107,17 +107,10 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
-	c.UpdateArray(number, desc)
-	return nil
-}
-
-// UpdateArray adds the recorded measurement to the current data set.
-// UpdateArray takes a lock to prevent concurrent UpdateArray() and
-// Checkpoint() calls.
-func (c *Aggregator) UpdateArray(number core.Number, desc *export.Descriptor) {
 	c.lock.Lock()
 	c.current = append(c.current, number)
 	c.lock.Unlock()
+	return nil
 }
 
 // Merge combines two data sets into one.
@@ -127,14 +120,9 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.MergeArrayAggregator(o, desc)
-	return nil
-}
-
-// MergeArrayAggregator combines two data sets into one.
-func (c *Aggregator) MergeArrayAggregator(o *Aggregator, desc *export.Descriptor) {
 	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
 	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
+	return nil
 }
 
 func (c *Aggregator) sort(kind core.NumberKind) {

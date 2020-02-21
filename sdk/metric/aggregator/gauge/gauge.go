@@ -136,15 +136,6 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
-	g.MergeGaugeAggregator(o, desc)
-	return nil
-}
-
-// MergeGaugeAggregator combines state from two aggregators.  If the
-// gauge is declared as monotonic, the greater value is chosen.  If
-// the gauge is declared as non-monotonic, the most-recently set value
-// is chosen.
-func (g *Aggregator) MergeGaugeAggregator(o *Aggregator, desc *export.Descriptor) {
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))
 	ogd := (*gaugeData)(atomic.LoadPointer(&o.checkpoint))
 
@@ -153,18 +144,19 @@ func (g *Aggregator) MergeGaugeAggregator(o *Aggregator, desc *export.Descriptor
 		cmp := ggd.value.CompareNumber(desc.NumberKind(), ogd.value)
 
 		if cmp > 0 {
-			return
+			return nil
 		}
 
 		if cmp < 0 {
 			g.checkpoint = unsafe.Pointer(ogd)
-			return
+			return nil
 		}
 	}
 	// Non-monotonic gauge or equal values
 	if ggd.timestamp.After(ogd.timestamp) {
-		return
+		return nil
 	}
 
 	g.checkpoint = unsafe.Pointer(ogd)
+	return nil
 }

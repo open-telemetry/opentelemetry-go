@@ -124,12 +124,6 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
-	c.UpdateMMSC(number, desc)
-	return nil
-}
-
-// UpdateMMSC adds the recorded measurement to the current data set.
-func (c *Aggregator) UpdateMMSC(number core.Number, desc *export.Descriptor) {
 	kind := desc.NumberKind()
 
 	c.current.count.AddUint64Atomic(1)
@@ -155,6 +149,7 @@ func (c *Aggregator) UpdateMMSC(number core.Number, desc *export.Descriptor) {
 			break
 		}
 	}
+	return nil
 }
 
 // Merge combines two data sets into one.
@@ -164,12 +159,6 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.MergeMMSCAggregator(o, desc)
-	return nil
-}
-
-// MergeMMSCAggregator combines two data sets into one.
-func (c *Aggregator) MergeMMSCAggregator(o *Aggregator, desc *export.Descriptor) {
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
 
@@ -179,4 +168,5 @@ func (c *Aggregator) MergeMMSCAggregator(o *Aggregator, desc *export.Descriptor)
 	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
 		c.checkpoint.max.SetNumber(o.checkpoint.max)
 	}
+	return nil
 }
