@@ -135,13 +135,13 @@ type Meter interface {
 	// a given name and customized with passed options.
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
-	// NewInt64Observer creates a new integral observer with a
-	// given name, running a given callback, and customized with
-	// passed options. Callback can be nil.
+	// RegisterInt64Observer creates a new integral observer with a
+	// given name, running a given callback, and customized with passed
+	// options. Callback can be nil.
 	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
-	// NewFloat64Observer creates a new floating point observer
-	// with a given name, running a given callback and customized
-	// with passed options. Callback can be nil.
+	// RegisterFloat64Observer creates a new floating point observer
+	// with a given name, running a given callback, and customized with
+	// passed options. Callback can be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
 
 	// RecordBatch atomically records a batch of measurements.
