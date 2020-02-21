@@ -70,6 +70,8 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		fallthrough
 	case export.MeasureKind:
 		return minmaxsumcount.New(descriptor)
 	default:
@@ -81,6 +83,8 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		fallthrough
 	case export.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
@@ -92,6 +96,8 @@ func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	switch descriptor.MetricKind() {
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		fallthrough
 	case export.MeasureKind:
 		return array.New()
 	default:
