@@ -370,7 +370,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.NewFloat64Counter("ajwaj")
+		c := meter.NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -382,7 +382,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.NewInt64Counter("ajwaj")
+		c := meter.NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -397,7 +397,7 @@ func TestCounter(t *testing.T) {
 func TestGauge(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		g := meter.NewFloat64Gauge("ajwaj")
+		g := meter.NewFloat64Gauge("test.gauge.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -409,7 +409,7 @@ func TestGauge(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		g := meter.NewInt64Gauge("ajwaj")
+		g := meter.NewInt64Gauge("test.gauge.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -424,7 +424,7 @@ func TestGauge(t *testing.T) {
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.NewFloat64Measure("ajwaj")
+		m := meter.NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -436,7 +436,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.NewInt64Measure("ajwaj")
+		m := meter.NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
