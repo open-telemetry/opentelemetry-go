@@ -84,12 +84,21 @@ test:
 .PHONY: test-386
 test-386:
 	if [ $(SKIP_386_TEST) = true ] ; then \
+<<<<<<< HEAD
 	  echo "skipping the test for GOARCH 386 as it is not supported on the current OS"; \
 	else \
 	  set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	    echo "go test ./... GOARCH 386 in $${dir}"; \
 	    (cd "$${dir}" && \
 	      GOARCH=386 $(GOTEST_MIN) ./...); \
+=======
+		echo "skippin the test for GOARCH 386 as it is not supported on the current OS"; \
+  else \
+    set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+        echo "go test ./... GOARCH 386 in $${dir}"; \
+        (cd "$${dir}" && \
+          GOARCH=386 $(GOTEST_MIN) ./...); \
+>>>>>>> opentelemetry collector exporter
 	  done; \
 	fi
 
