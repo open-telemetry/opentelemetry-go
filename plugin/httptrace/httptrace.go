@@ -47,7 +47,7 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 	}
 
 	var correlationCtxKVs []core.KeyValue
-	correlation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
+	correlation.MapFromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})

@@ -269,7 +269,7 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: otelcorrelation.FromContext(ctx),
+		CtxAttributes: otelcorrelation.MapFromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
 		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{

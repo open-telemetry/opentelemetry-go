@@ -29,7 +29,7 @@ func DefaultHTTPPropagator() propagation.HTTPPropagator {
 
 // Inject implements HTTPInjector.
 func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
-	correlationCtx := FromContext(ctx)
+	correlationCtx := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	correlationCtx.Foreach(func(kv core.KeyValue) bool {
@@ -52,7 +52,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	correlationContext := supplier.Get(CorrelationContextHeader)
 	if correlationContext == "" {
-		return WithMap(ctx, NewEmptyMap())
+		return ContextWithMap(ctx, NewEmptyMap())
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
@@ -88,7 +88,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 
 		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
 	}
-	return WithMap(ctx, NewMap(MapUpdate{
+	return ContextWithMap(ctx, NewMap(MapUpdate{
 		MultiKV: keyValues,
 	}))
 }
