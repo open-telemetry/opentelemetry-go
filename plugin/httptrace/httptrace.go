@@ -29,8 +29,12 @@ var (
 	HostKey = key.New("http.host")
 	URLKey  = key.New("http.url")
 
-	propagator  = trace.DefaultHTTPPropagator()
-	propagators = propagation.New(propagation.WithInjectors(propagator), propagation.WithExtractors(propagator))
+	tcPropagator = trace.DefaultHTTPPropagator()
+	ccPropagator = correlation.DefaultHTTPPropagator()
+	propagators  = propagation.New(
+		propagation.WithInjectors(tcPropagator, ccPropagator),
+		propagation.WithExtractors(tcPropagator, ccPropagator),
+	)
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
@@ -43,7 +47,7 @@ func Extract(ctx context.Context, req *http.Request) ([]core.KeyValue, []core.Ke
 	}
 
 	var correlationCtxKVs []core.KeyValue
-	correlation.FromContext(ctx).Foreach(func(kv core.KeyValue) bool {
+	correlation.MapFromContext(ctx).Foreach(func(kv core.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})
