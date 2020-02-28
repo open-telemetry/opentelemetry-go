@@ -62,6 +62,10 @@ func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 func (ms *MockSpan) End(options ...apitrace.EndOption) {
 }
 
+// RecordError does nothing.
+func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
+}
+
 // SetName does nothing.
 func (ms *MockSpan) SetName(name string) {
 }

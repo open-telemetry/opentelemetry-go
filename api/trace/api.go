@@ -60,6 +60,29 @@ func WithEndTime(t time.Time) EndOption {
 	}
 }
 
+// ErrorConfig provides options to set properties of an error event at the time it is recorded.
+type ErrorConfig struct {
+	Timestamp time.Time
+	Status    codes.Code
+}
+
+// ErrorOption applies changes to ErrorConfig that sets options when an error event is recorded.
+type ErrorOption func(*ErrorConfig)
+
+// WithErrorTime sets the time at which the error event should be recorded.
+func WithErrorTime(t time.Time) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Timestamp = t
+	}
+}
+
+// WithErrorStatus indicates the span status that should be set when recording an error event.
+func WithErrorStatus(s codes.Code) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Status = s
+	}
+}
+
 type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
@@ -76,6 +99,9 @@ type Span interface {
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
+
+	// RecordError records an error as a span event.
+	RecordError(ctx context.Context, err error, opts ...ErrorOption)
 
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
