@@ -17,6 +17,7 @@ package internal
 import (
 	"context"
 	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
@@ -257,6 +258,35 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	}
 	s.EndTime = endTime
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
+}
+
+func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace.ErrorOption) {
+	if err == nil {
+		return // no-op on nil error
+	}
+
+	if !s.EndTime.IsZero() {
+		return // already finished
+	}
+
+	cfg := oteltrace.ErrorConfig{}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+		otelcore.Key("error.type").String(reflect.TypeOf(err).String()),
+		otelcore.Key("error.message").String(err.Error()),
+	)
 }
 
 func (s *MockSpan) Tracer() oteltrace.Tracer {

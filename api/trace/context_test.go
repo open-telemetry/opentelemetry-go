@@ -87,6 +87,10 @@ func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
 func (mockSpan) End(options ...trace.EndOption) {
 }
 
+// RecordError does nothing.
+func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
+}
+
 // Tracer returns noop implementation of Tracer.
 func (mockSpan) Tracer() trace.Tracer {
 	return trace.NoopTracer{}

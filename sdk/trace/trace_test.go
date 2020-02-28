@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -867,6 +869,137 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 	if got.EndTime != endTime {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
+	}
+}
+
+func TestRecordError(t *testing.T) {
+	scenarios := []struct {
+		err error
+		typ string
+		msg string
+	}{
+		{
+			err: ottest.NewTestError("test error"),
+			typ: "go.opentelemetry.io/otel/internal/testing.TestError",
+			msg: "test error",
+		},
+		{
+			err: errors.New("test error 2"),
+			typ: "*errors.errorString",
+			msg: "test error 2",
+		},
+	}
+
+	for _, s := range scenarios {
+		te := &testExporter{}
+		tp, _ := NewProvider(WithSyncer(te))
+		span := startSpan(tp, "RecordError")
+
+		errTime := time.Now()
+		span.RecordError(context.Background(), s.err,
+			apitrace.WithErrorTime(errTime),
+		)
+
+		got, err := endSpan(te, span)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		want := &export.SpanData{
+			SpanContext: core.SpanContext{
+				TraceID:    tid,
+				TraceFlags: 0x1,
+			},
+			ParentSpanID:    sid,
+			Name:            "span0",
+			SpanKind:        apitrace.SpanKindInternal,
+			HasRemoteParent: true,
+			MessageEvents: []export.Event{
+				{
+					Name: errorEventName,
+					Time: errTime,
+					Attributes: []core.KeyValue{
+						errorTypeKey.String(s.typ),
+						errorMessageKey.String(s.msg),
+					},
+				},
+			},
+		}
+		if diff := cmpDiff(got, want); diff != "" {
+			t.Errorf("SpanErrorOptions: -got +want %s", diff)
+		}
+	}
+}
+
+func TestRecordErrorWithStatus(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "RecordErrorWithStatus")
+
+	testErr := ottest.NewTestError("test error")
+	errTime := time.Now()
+	testStatus := codes.Unknown
+	span.RecordError(context.Background(), testErr,
+		apitrace.WithErrorTime(errTime),
+		apitrace.WithErrorStatus(testStatus),
+	)
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
+		SpanKind:        apitrace.SpanKindInternal,
+		Status:          codes.Unknown,
+		HasRemoteParent: true,
+		MessageEvents: []export.Event{
+			{
+				Name: errorEventName,
+				Time: errTime,
+				Attributes: []core.KeyValue{
+					errorTypeKey.String("go.opentelemetry.io/otel/internal/testing.TestError"),
+					errorMessageKey.String("test error"),
+				},
+			},
+		},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanErrorOptions: -got +want %s", diff)
+	}
+}
+
+func TestRecordErrorNil(t *testing.T) {
+	te := &testExporter{}
+	tp, _ := NewProvider(WithSyncer(te))
+	span := startSpan(tp, "RecordErrorNil")
+
+	span.RecordError(context.Background(), nil)
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+		Status:          codes.OK,
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SpanErrorOptions: -got +want %s", diff)
 	}
 }
 
