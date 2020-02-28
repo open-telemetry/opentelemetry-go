@@ -35,7 +35,7 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/trace/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

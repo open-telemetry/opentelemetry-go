@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
