@@ -115,7 +115,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, time.Second)
+	controller, err := NewExportPipeline(config, time.Minute)
 	if err != nil {
 		return controller, err
 	}

@@ -15,7 +15,7 @@ func ExampleNewExportPipeline() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true,
-	}, time.Second)
+	}, time.Minute)
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}

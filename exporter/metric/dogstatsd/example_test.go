@@ -46,7 +46,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, time.Hour)
+	}, time.Minute)
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}

@@ -28,7 +28,7 @@ func ExampleNew() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
-	}, time.Second)
+	}, time.Minute)
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
