@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -45,7 +46,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	})
+	}, time.Minute)
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}

@@ -17,6 +17,7 @@ package metric_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -27,7 +28,7 @@ func ExampleNew() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
-	})
+	}, time.Minute)
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}

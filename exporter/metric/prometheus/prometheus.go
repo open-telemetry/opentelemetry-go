@@ -128,7 +128,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(config)
+	controller, hf, err := NewExportPipeline(config, time.Minute)
 	if err != nil {
 		return controller, hf, err
 	}
@@ -138,7 +138,7 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
+func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -154,7 +154,7 @@ func NewExportPipeline(config Config) (*push.Controller, http.HandlerFunc, error
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
 	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
-	pusher := push.New(batcher, exporter, time.Second)
+	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
 	return pusher, exporter.ServeHTTP, nil

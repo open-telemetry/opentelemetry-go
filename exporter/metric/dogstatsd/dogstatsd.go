@@ -75,7 +75,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config)
+	controller, err := NewExportPipeline(config, time.Minute)
 	if err != nil {
 		return controller, err
 	}
@@ -85,7 +85,7 @@ func InstallNewPipeline(config Config) (*push.Controller, error) {
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config) (*push.Controller, error) {
+func NewExportPipeline(config Config, period time.Duration) (*push.Controller, error) {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -99,7 +99,7 @@ func NewExportPipeline(config Config) (*push.Controller, error) {
 	// The pusher automatically recognizes that the exporter
 	// implements the LabelEncoder interface, which ensures the
 	// export encoding for labels is encoded in the LabelSet.
-	pusher := push.New(batcher, exporter, time.Hour)
+	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
 	return pusher, nil
