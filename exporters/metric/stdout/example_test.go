@@ -3,6 +3,7 @@ package stdout_test
 import (
 	"context"
 	"log"
+	"time"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -14,7 +15,7 @@ func ExampleNewExportPipeline() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true,
-	})
+	}, time.Minute)
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}

@@ -115,7 +115,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config)
+	controller, err := NewExportPipeline(config, time.Minute)
 	if err != nil {
 		return controller, err
 	}
@@ -125,14 +125,14 @@ func InstallNewPipeline(config Config) (*push.Controller, error) {
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config) (*push.Controller, error) {
+func NewExportPipeline(config Config, period time.Duration) (*push.Controller, error) {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
 	batcher := ungrouped.New(selector, true)
-	pusher := push.New(batcher, exporter, time.Second)
+	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
 	return pusher, nil
