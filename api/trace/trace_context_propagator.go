@@ -28,7 +28,7 @@ import (
 const (
 	supportedVersion  = 0
 	maxVersion        = 254
-	TraceparentHeader = "Traceparent"
+	traceparentHeader = "Traceparent"
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
@@ -51,7 +51,7 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 			sc.TraceIDString(),
 			sc.SpanID,
 			sc.TraceFlags&core.TraceFlagsSampled)
-		supplier.Set(TraceparentHeader, h)
+		supplier.Set(traceparentHeader, h)
 	}
 }
 
@@ -60,7 +60,7 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 }
 
 func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
-	h := supplier.Get(TraceparentHeader)
+	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
 	}
@@ -127,5 +127,5 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext 
 }
 
 func (TraceContext) GetAllKeys() []string {
-	return []string{TraceparentHeader}
+	return []string{traceparentHeader}
 }
