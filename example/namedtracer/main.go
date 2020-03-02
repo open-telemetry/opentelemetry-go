@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/trace/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

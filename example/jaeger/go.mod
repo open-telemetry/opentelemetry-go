@@ -4,10 +4,10 @@ go 1.13
 
 replace (
 	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/exporter/trace/jaeger => ../../exporter/trace/jaeger
+	go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
 )
 
 require (
 	go.opentelemetry.io/otel v0.2.1
-	go.opentelemetry.io/otel/exporter/trace/jaeger v0.2.1
+	go.opentelemetry.io/otel/exporters/trace/jaeger v0.2.1
 )
