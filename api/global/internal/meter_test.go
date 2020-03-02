@@ -72,8 +72,8 @@ func TestDirect(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewInt64Number(1),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.Equal(t, int64(1),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.counter",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 
@@ -81,8 +81,8 @@ func TestDirect(t *testing.T) {
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[1].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[1].Measurements, 1)
-	require.Equal(t, core.NewInt64Number(3),
-		mock.MeasurementBatches[1].Measurements[0].Number)
+	require.Equal(t, int64(3),
+		mock.MeasurementBatches[1].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.gauge",
 		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
 
@@ -90,8 +90,9 @@ func TestDirect(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[2].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[2].Measurements, 1)
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[2].Measurements[0].Number)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[2].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
 
@@ -99,8 +100,9 @@ func TestDirect(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[3].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[3].Measurements, 1)
-	require.Equal(t, core.NewFloat64Number(1.),
-		mock.MeasurementBatches[3].Measurements[0].Number)
+	require.InDelta(t, float64(1),
+		mock.MeasurementBatches[3].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.observer.float",
 		mock.MeasurementBatches[3].Measurements[0].Instrument.Name)
 
@@ -108,8 +110,9 @@ func TestDirect(t *testing.T) {
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[4].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[4].Measurements, 1)
-	require.Equal(t, core.NewFloat64Number(2.),
-		mock.MeasurementBatches[4].Measurements[0].Number)
+	require.InDelta(t, float64(2),
+		mock.MeasurementBatches[4].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.observer.float",
 		mock.MeasurementBatches[4].Measurements[0].Instrument.Name)
 
@@ -117,8 +120,8 @@ func TestDirect(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[5].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[5].Measurements, 1)
-	require.Equal(t, core.NewInt64Number(1),
-		mock.MeasurementBatches[5].Measurements[0].Number)
+	require.Equal(t, int64(1),
+		mock.MeasurementBatches[5].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
 		mock.MeasurementBatches[5].Measurements[0].Instrument.Name)
 
@@ -126,8 +129,8 @@ func TestDirect(t *testing.T) {
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[6].LabelSet.Labels)
 	require.Len(t, mock.MeasurementBatches[6].Measurements, 1)
-	require.Equal(t, core.NewInt64Number(2),
-		mock.MeasurementBatches[6].Measurements[0].Number)
+	require.Equal(t, int64(2),
+		mock.MeasurementBatches[6].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
 		mock.MeasurementBatches[6].Measurements[0].Instrument.Name)
 
@@ -139,8 +142,9 @@ func TestDirect(t *testing.T) {
 		lvals3.Key: lvals3.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.second",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 }
@@ -186,8 +190,9 @@ func TestBound(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewFloat64Number(1),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.InDelta(t, float64(1),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.counter",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 
@@ -195,8 +200,9 @@ func TestBound(t *testing.T) {
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[1].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[1].Measurements))
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[1].Measurements[0].Number)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[1].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.gauge",
 		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
 
@@ -204,8 +210,8 @@ func TestBound(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[2].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[2].Measurements))
-	require.Equal(t, core.NewInt64Number(3),
-		mock.MeasurementBatches[2].Measurements[0].Number)
+	require.Equal(t, int64(3),
+		mock.MeasurementBatches[2].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
 
