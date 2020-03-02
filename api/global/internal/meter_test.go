@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/exporter/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
 
