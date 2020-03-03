@@ -128,11 +128,11 @@ func TestSetName(t *testing.T) {
 	}
 }
 
-func TestRecordingIsOff(t *testing.T) {
+func TestRecordingIsOn(t *testing.T) {
 	tp, _ := NewProvider()
 	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
 	defer span.End()
-	if span.IsRecording() == true {
+	if span.IsRecording() == false {
 		t.Error("new span is recording events")
 	}
 }
@@ -218,7 +218,7 @@ func TestStartSpanWithParent(t *testing.T) {
 	sc1 := core.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
-		TraceFlags: 0x0,
+		TraceFlags: 0x1,
 	}
 	_, s1 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
 	if err := checkChild(sc1, s1); err != nil {
