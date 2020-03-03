@@ -24,10 +24,11 @@
 //
 // All instruments report either float64 or int64 values.
 //
-// The primary object that handles metrics is Meter. The
-// implementation of the Meter is provided by SDK. Normally, the Meter
-// is used directly only for the LabelSet generation, batch recording
-// and the bound instrument destruction.
+// The primary object that handles metrics is Meter. Meter can be
+// obtained from Provider. The implementations of the Meter and
+// Provider are provided by SDK. Normally, the Meter is used directly
+// only for the instrument creation, LabelSet generation and batch
+// recording.
 //
 // LabelSet is a set of keys and values that are in a suitable,
 // optimized form to be used by Meter.
@@ -60,7 +61,20 @@
 // the New*Measure function - this allows reporting negative values
 // too. To report a new value, use the Record function.
 //
-// All the basic kinds of instruments also support creating bound
+// Observers are instruments that are reporting a current state of a
+// set of values. An example could be voltage or
+// temperature. Observers can be created with either
+// RegisterFloat64Observer or RegisterInt64Observer. Observers by
+// default have no limitations about reported values - they can be
+// less or greater than the last reported value. This can be changed
+// with the WithMonotonic option passed to the Register*Observer
+// function - this permits the reported values only to go
+// up. Reporting of the new values happens asynchronously, with the
+// use of a callback passed to the Register*Observer function. The
+// callback can report multiple values. To unregister the observer,
+// call Unregister on it.
+//
+// Counters, gauges and measures also support creating bound
 // instruments for a potentially more efficient reporting. The bound
 // instruments have the same function names as the instruments (so a
 // Counter bound instrument has Add, a Gauge bound instrument has Set,
