@@ -40,12 +40,15 @@ const (
 )
 
 type meterProvider struct {
-	lock     sync.Mutex
-	meters   []*meter
 	delegate metric.Provider
+
+	lock   sync.Mutex
+	meters []*meter
 }
 
 type meter struct {
+	delegate unsafe.Pointer // (*metric.Meter)
+
 	provider *meterProvider
 	name     string
 
@@ -57,20 +60,20 @@ type meter struct {
 	// observers. The liveObservers map should be consulted to
 	// check if the observer is registered or not.
 	observersOrdered []*obsImpl
-
-	delegate unsafe.Pointer // (*metric.Meter)
 }
 
 type instImpl struct {
+	delegate unsafe.Pointer // (*metric.InstrumentImpl)
+
 	name  string
 	mkind metricKind
 	nkind core.NumberKind
 	opts  interface{}
-
-	delegate unsafe.Pointer // (*metric.InstrumentImpl)
 }
 
 type obsImpl struct {
+	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
+
 	name  string
 	nkind core.NumberKind
 	opts  []metric.ObserverOptionApplier
@@ -78,8 +81,6 @@ type obsImpl struct {
 
 	lock     sync.Mutex
 	callback interface{}
-
-	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
 }
 
 type int64ObsImpl struct {
@@ -96,19 +97,21 @@ type observerUnregister interface {
 }
 
 type labelSet struct {
+	delegate unsafe.Pointer // (* metric.LabelSet)
+
 	meter *meter
 	value []core.KeyValue
 
 	initialize sync.Once
-	delegate   unsafe.Pointer // (* metric.LabelSet)
 }
 
 type instHandle struct {
+	delegate unsafe.Pointer // (*metric.HandleImpl)
+
 	inst   *instImpl
 	labels metric.LabelSet
 
 	initialize sync.Once
-	delegate   unsafe.Pointer // (*metric.HandleImpl)
 }
 
 var _ metric.Provider = &meterProvider{}
@@ -503,4 +506,15 @@ func (m *meter) addObserver(obs *obsImpl) {
 	}
 	m.liveObservers[obs] = struct{}{}
 	m.observersOrdered = append(m.observersOrdered, obs)
+}
+
+func AtomicFieldOffsets() map[string]uintptr {
+	return map[string]uintptr{
+		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
+		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
+		"instImpl.delegate":      unsafe.Offsetof(instImpl{}.delegate),
+		"obsImpl.delegate":       unsafe.Offsetof(obsImpl{}.delegate),
+		"labelSet.delegate":      unsafe.Offsetof(labelSet{}.delegate),
+		"instHandle.delegate":    unsafe.Offsetof(instHandle{}.delegate),
+	}
 }
