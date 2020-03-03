@@ -19,13 +19,26 @@ Libraries that produce telemetry data should only depend on `api`
 and defer the choice of the SDK to the application developer. Applications may
 depend on `sdk` or another package that implements the API.
 
-To install the API and SDK packages,
+All packages are published to [https://pkg.go.dev/go.opentelemetry.io/otel](https://pkg.go.dev/go.opentelemetry.io/otel) and is the preferred location to import from.
 
+## Building the code
+
+You can view and edit the source code by cloning this repository:
+
+```bash
+git clone https://github.com/open-telemetry/opentelemetry-go.git
 ```
-$ go get -u go.opentelemetry.io/otel
+
+Once cloned, there are [makefile](https://github.com/open-telemetry/opentelemetry-go/blob/master/Makefile#L56) configurations to help build and test the packages:
+
+```bash
+make build
+make test
 ```
 
 ## Quick Start
+
+Below is a brief example of importing OpenTelemetry, initializing a tracer and creating some single spans.
 
 ```go
 package main
