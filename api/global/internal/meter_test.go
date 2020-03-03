@@ -71,7 +71,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
+	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
 	require.Equal(t, int64(1),
 		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.counter",
@@ -136,12 +136,12 @@ func TestDirect(t *testing.T) {
 
 	// This tests the second Meter instance
 	mock = sdk.Meter("test2").(*metrictest.Meter)
-	require.Equal(t, 1, len(mock.MeasurementBatches))
+	require.Len(t, mock.MeasurementBatches, 1)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals3.Key: lvals3.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
+	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
 	require.InDelta(t, float64(3),
 		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
 		0.01)
