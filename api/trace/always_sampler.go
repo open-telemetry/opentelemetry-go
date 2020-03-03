@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	alwaysSamplerDescription = "AlwaysSampleSampler"
+	alwaysSamplerDescription = "AlwaysOnSampler"
 )
 
 var alwaysSampleDecision = Decision{Sampled: true}

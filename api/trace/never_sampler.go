@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	neverSamplerDescription = "NeverSampleSampler"
+	neverSamplerDescription = "AlwaysOffSampler"
 )
 
 var neverSampledecision = Decision{Sampled: false}
