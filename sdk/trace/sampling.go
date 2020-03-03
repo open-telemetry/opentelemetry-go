@@ -79,7 +79,7 @@ func (ps probabilitySampler) Description() string {
 
 // ProbabilitySampler samples a given fraction of traces. Fractions >= 1 will
 // always sample. If the parent span is sampled, then it's child spans will
-// automatically be sampled. Fractions <0 are treated as zero, but spans may
+// automatically be sampled. Fractions < 0 are treated as zero, but spans may
 // still be sampled if their parent is.
 func ProbabilitySampler(fraction float64) Sampler {
 	if fraction >= 1 {
