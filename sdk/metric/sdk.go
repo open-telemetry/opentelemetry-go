@@ -134,12 +134,14 @@ type (
 	observerCallback func(result observerResult)
 
 	observer struct {
+		// callback has to be aligned for 64-bit atomic operations.
+		callback unsafe.Pointer // *observerCallback
+
 		meter      *SDK
 		descriptor *export.Descriptor
 		// recorders maps encoded labelset to the pair of
 		// labelset and recorder
 		recorders map[string]labeledRecorder
-		callback  unsafe.Pointer // *observerCallback
 	}
 
 	labeledRecorder struct {
@@ -513,10 +515,10 @@ func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerC
 
 func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
 	obs := &observer{
+		callback:   unsafe.Pointer(&callback),
 		meter:      m,
 		descriptor: descriptor,
 		recorders:  nil,
-		callback:   unsafe.Pointer(&callback),
 	}
 	m.observers.Store(obs, nil)
 	return obs
