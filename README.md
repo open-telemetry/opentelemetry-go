@@ -38,7 +38,7 @@ make test
 
 ## Quick Start
 
-Below is a brief example of importing OpenTelemetry, initializing a tracer and creating some single spans.
+Below is a brief example of importing OpenTelemetry, initializing a tracer and creating some simple spans.
 
 ```go
 package main
