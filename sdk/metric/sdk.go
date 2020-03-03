@@ -205,10 +205,9 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	if o.recorders == nil {
 		o.recorders = make(map[string]labeledRecorder)
 	}
-	// TODO: This may store nil recorder in the map, thus
-	// disabling the observer for good. Is it ok? Or should we
-	// rather not store anything if recorder is nil and query the
-	// aggregator selector again?
+	// This may store nil recorder in the map, thus disabling the
+	// observer for the labelset for good. This is intentional,
+	// but will be revisited later.
 	o.recorders[labels.encoded] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
