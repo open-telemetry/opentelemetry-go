@@ -49,9 +49,14 @@ type meter struct {
 	provider *meterProvider
 	name     string
 
-	lock        sync.Mutex
-	instruments []*instImpl
-	observers   map[*obsImpl]struct{}
+	lock          sync.Mutex
+	instruments   []*instImpl
+	liveObservers map[*obsImpl]struct{}
+	// observersOrdered slice contains observers in their order of
+	// registration. It may also contain unregistered
+	// observers. The liveObservers map should be consulted to
+	// check if the observer is registered or not.
+	observersOrdered []*obsImpl
 
 	delegate unsafe.Pointer // (*metric.Meter)
 }
@@ -160,10 +165,13 @@ func (m *meter) setDelegate(provider metric.Provider) {
 		inst.setDelegate(*d)
 	}
 	m.instruments = nil
-	for obs := range m.observers {
-		obs.setDelegate(*d)
+	for _, obs := range m.observersOrdered {
+		if _, ok := m.liveObservers[obs]; ok {
+			obs.setDelegate(*d)
+		}
 	}
-	m.observers = nil
+	m.liveObservers = nil
+	m.observersOrdered = nil
 }
 
 func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
@@ -255,9 +263,10 @@ func (obs *obsImpl) unregister() {
 	}
 	obs.meter.lock.Lock()
 	defer obs.meter.lock.Unlock()
-	delete(obs.meter.observers, obs)
-	if len(obs.meter.observers) == 0 {
-		obs.meter.observers = nil
+	delete(obs.meter.liveObservers, obs)
+	if len(obs.meter.liveObservers) == 0 {
+		obs.meter.liveObservers = nil
+		obs.meter.observersOrdered = nil
 	}
 }
 
@@ -489,8 +498,9 @@ func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64Obse
 }
 
 func (m *meter) addObserver(obs *obsImpl) {
-	if m.observers == nil {
-		m.observers = make(map[*obsImpl]struct{})
+	if m.liveObservers == nil {
+		m.liveObservers = make(map[*obsImpl]struct{})
 	}
-	m.observers[obs] = struct{}{}
+	m.liveObservers[obs] = struct{}{}
+	m.observersOrdered = append(m.observersOrdered, obs)
 }
