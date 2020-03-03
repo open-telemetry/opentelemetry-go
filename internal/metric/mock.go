@@ -54,7 +54,10 @@ type (
 
 	Meter struct {
 		MeasurementBatches []Batch
-		Observers          map[*Observer]struct{}
+		// Observers contains also unregistered
+		// observers. Check the Dead field of the Observer to
+		// figure out its status.
+		Observers []*Observer
 	}
 
 	Kind int8
@@ -82,6 +85,7 @@ type (
 	Observer struct {
 		Instrument *Instrument
 		Meter      *Meter
+		Dead       bool
 		callback   observerCallback
 	}
 
@@ -133,7 +137,7 @@ func (o *Observer) setCallback(callback observerCallback) {
 }
 
 func (o *Observer) unregister() {
-	delete(o.Meter.Observers, o)
+	o.Dead = true
 }
 
 func (r int64ObserverResult) Observe(value int64, labels apimetric.LabelSet) {
@@ -328,12 +332,10 @@ func (m *Meter) newObserver(name string, callback observerCallback, numberKind c
 			Opts:       opts,
 		},
 		Meter:    m,
+		Dead:     false,
 		callback: callback,
 	}
-	if m.Observers == nil {
-		m.Observers = make(map[*Observer]struct{})
-	}
-	m.Observers[obs] = struct{}{}
+	m.Observers = append(m.Observers, obs)
 	return obs
 }
 
@@ -359,7 +361,10 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 }
 
 func (m *Meter) RunObservers() {
-	for observer := range m.Observers {
+	for _, observer := range m.Observers {
+		if observer.Dead {
+			continue
+		}
 		observer.callback(observerResult{
 			instrument: observer.Instrument,
 		})
