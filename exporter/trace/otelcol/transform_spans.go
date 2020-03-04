@@ -154,10 +154,16 @@ func otTimeEventsToProtoTimeEvents(es []export.Event) []*tracepb.Span_Event {
 
 func otSpanKindToProtoSpanKind(kind apitrace.SpanKind) tracepb.Span_SpanKind {
 	switch kind {
+	case apitrace.SpanKindInternal:
+		return tracepb.Span_INTERNAL
 	case apitrace.SpanKindClient:
 		return tracepb.Span_CLIENT
 	case apitrace.SpanKindServer:
 		return tracepb.Span_SERVER
+	case apitrace.SpanKindProducer:
+		return tracepb.Span_PRODUCER
+	case apitrace.SpanKindConsumer:
+		return tracepb.Span_CONSUMER
 	default:
 		return tracepb.Span_SPAN_KIND_UNSPECIFIED
 	}
