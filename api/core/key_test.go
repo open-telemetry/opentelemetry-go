@@ -207,7 +207,7 @@ func TestEmit(t *testing.T) {
 
 func TestEmptyValue(t *testing.T) {
 	falses := []core.Value{
-		core.Value{},
+		{},
 
 		core.Bool(false),
 		core.Int(0),
