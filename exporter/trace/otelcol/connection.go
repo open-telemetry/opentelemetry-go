@@ -55,12 +55,12 @@ func (e *Exporter) connected() bool {
 
 const defaultConnReattemptPeriod = 10 * time.Second
 
-func (e *Exporter) indefiniteBackgroundConnection() error {
+func (e *Exporter) indefiniteBackgroundConnection() {
 	defer func() {
 		e.backgroundConnectionDoneCh <- true
 	}()
 
-	connReattemptPeriod := e.reconnectionPeriod
+	connReattemptPeriod := e.c.reconnectionPeriod
 	if connReattemptPeriod <= 0 {
 		connReattemptPeriod = defaultConnReattemptPeriod
 	}
@@ -80,7 +80,7 @@ func (e *Exporter) indefiniteBackgroundConnection() error {
 		//    then retry connecting
 		select {
 		case <-e.stopCh:
-			return errStopped
+			return
 
 		case <-e.disconnectedCh:
 			// Normal scenario that we'll wait for
@@ -98,7 +98,7 @@ func (e *Exporter) indefiniteBackgroundConnection() error {
 		jitter := time.Duration(rng.Int63n(maxJitter))
 		select {
 		case <-e.stopCh:
-			return errStopped
+			return
 		case <-time.After(connReattemptPeriod + jitter):
 		}
 	}

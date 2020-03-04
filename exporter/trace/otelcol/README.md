@@ -4,7 +4,7 @@
 
 
 This repository contains the Go implementation of the OpenTelemetry Collector Exporter.
-OpenTelemetry Agent is a deamon process running in a VM that can retrieve spans/stats/metrics from
+OpenTelemetry Agent is a daemon process running in a VM that can retrieve spans/stats/metrics from
 OpenTelemetry Library and export them to other backends.
 
 ## Installation

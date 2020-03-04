@@ -41,11 +41,9 @@ func TestOCSpanToProtoSpan_endToEnd(t *testing.T) {
 		_ = collector.stop()
 	}()
 
-	serviceName := "spanTranslation"
 	exp, err := otelcol.NewExporter(otelcol.WithInsecure(),
 		otelcol.WithAddress(collector.address),
-		otelcol.WithReconnectionPeriod(50*time.Millisecond),
-		otelcol.WithServiceName(serviceName))
+		otelcol.WithReconnectionPeriod(50*time.Millisecond))
 	if err != nil {
 		t.Fatalf("Failed to create a new collector exporter: %v", err)
 	}
@@ -114,6 +112,8 @@ func TestOCSpanToProtoSpan_endToEnd(t *testing.T) {
 			core.Key("agent").String("otelcol"),
 			core.Key("cache_hit").Bool(true),
 			core.Key("ping_count").Int(25), // Should be transformed into int64
+			core.Key("float32").Float32(3.598549),
+			core.Key("float64").Float64(14.598549),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
@@ -264,6 +264,22 @@ func TestOCSpanToProtoSpan_endToEnd(t *testing.T) {
 				StringValue: "",
 				IntValue:    25,
 				DoubleValue: 0,
+				BoolValue:   false,
+			},
+			{
+				Key:         "float32",
+				Type:        commonpb.AttributeKeyValue_DOUBLE,
+				StringValue: "",
+				IntValue:    0,
+				DoubleValue: 3.5985488891601562,
+				BoolValue:   false,
+			},
+			{
+				Key:         "float64",
+				Type:        commonpb.AttributeKeyValue_DOUBLE,
+				StringValue: "",
+				IntValue:    0,
+				DoubleValue: 14.598549,
 				BoolValue:   false,
 			},
 		},

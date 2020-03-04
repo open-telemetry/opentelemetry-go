@@ -56,12 +56,10 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otelcol.ExporterOpti
 
 	<-time.After(5 * time.Millisecond)
 
-	serviceName := "endToEnd_test"
 	opts := []otelcol.ExporterOption{
 		otelcol.WithInsecure(),
 		otelcol.WithAddress(mc.address),
 		otelcol.WithReconnectionPeriod(50 * time.Millisecond),
-		otelcol.WithServiceName(serviceName),
 	}
 
 	opts = append(opts, additionalOpts...)

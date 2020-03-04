@@ -24,7 +24,6 @@ import (
 	"unsafe"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/traces/v1"
@@ -41,18 +40,12 @@ type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
 	// senderMu protects the concurrent unsafe send on traceExporter client
-	senderMu           sync.Mutex
-	started            bool
-	stopped            bool
-	collectorAddr      string
-	serviceName        string
-	canDialInsecure    bool
-	traceExporter      coltracepb.TraceServiceClient
-	grpcClientConn     *grpc.ClientConn
-	reconnectionPeriod time.Duration
-	compressor         string
-	headers            map[string]string
-	lastConnectErrPtr  unsafe.Pointer
+	senderMu          sync.Mutex
+	started           bool
+	stopped           bool
+	traceExporter     coltracepb.TraceServiceClient
+	grpcClientConn    *grpc.ClientConn
+	lastConnectErrPtr unsafe.Pointer
 
 	startOnce      sync.Once
 	stopCh         chan bool
@@ -60,12 +53,16 @@ type Exporter struct {
 
 	backgroundConnectionDoneCh chan bool
 
-	clientTransportCredentials credentials.TransportCredentials
-
-	grpcDialOptions []grpc.DialOption
+	c Config
 }
 
 var _ export.SpanBatcher = (*Exporter)(nil)
+
+func configureOptions(cfg *Config, opts ...ExporterOption) {
+	for _, opt := range opts {
+		opt(cfg)
+	}
+}
 
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 	exp, err := NewUnstartedExporter(opts...)
@@ -80,9 +77,8 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 
 func NewUnstartedExporter(opts ...ExporterOption) (*Exporter, error) {
 	e := new(Exporter)
-	for _, opt := range opts {
-		opt.withExporter(e)
-	}
+	e.c = Config{}
+	configureOptions(&e.c, opts...)
 
 	// TODO (rghetia): add resources
 
@@ -92,7 +88,6 @@ func NewUnstartedExporter(opts ...ExporterOption) (*Exporter, error) {
 var (
 	errAlreadyStarted = errors.New("already started")
 	errNotStarted     = errors.New("not started")
-	errStopped        = errors.New("stopped")
 )
 
 // Start dials to the collector, establishing a connection to it. It also
@@ -112,15 +107,13 @@ func (e *Exporter) Start() error {
 
 		// An optimistic first connection attempt to ensure that
 		// applications under heavy load can immediately process
-		// data. See https://github.com/census-ecosystem/opencensus-go-exporter-otelcol/pull/63
+		// data. See https://github.com/census-ecosystem/opencensus-go-exporter-ocagent/pull/63
 		if err := e.connect(); err == nil {
 			e.setStateConnected()
 		} else {
 			e.setStateDisconnected(err)
 		}
-		go func() {
-			err = e.indefiniteBackgroundConnection()
-		}()
+		go e.indefiniteBackgroundConnection()
 
 		err = nil
 	})
@@ -129,8 +122,8 @@ func (e *Exporter) Start() error {
 }
 
 func (e *Exporter) prepareCollectorAddress() string {
-	if e.collectorAddr != "" {
-		return e.collectorAddr
+	if e.c.collectorAddr != "" {
+		return e.c.collectorAddr
 	}
 	return fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
 }
@@ -145,6 +138,13 @@ func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
 	}
 
 	e.mu.Lock()
+	// If previous clientConn is same as the current then just return.
+	// This doesn't happen right now as this func is only called with new ClientConn.
+	// It is more about future-proofing.
+	if e.grpcClientConn == cc {
+		e.mu.Unlock()
+		return nil
+	}
 	// If the previous clientConn was non-nil, close it
 	if e.grpcClientConn != nil {
 		_ = e.grpcClientConn.Close()
@@ -159,27 +159,28 @@ func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
 func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	addr := e.prepareCollectorAddress()
 	var dialOpts []grpc.DialOption
-	if e.clientTransportCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(e.clientTransportCredentials))
-	} else if e.canDialInsecure {
+	if e.c.clientCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(e.c.clientCredentials))
+	} else if e.c.canDialInsecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
-	if e.compressor != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(e.compressor)))
+	if e.c.compressor != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(e.c.compressor)))
 	}
-	if len(e.grpcDialOptions) != 0 {
-		dialOpts = append(dialOpts, e.grpcDialOptions...)
+	if len(e.c.grpcDialOptions) != 0 {
+		dialOpts = append(dialOpts, e.c.grpcDialOptions...)
 	}
 
 	ctx := context.Background()
-	if len(e.headers) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(e.headers))
+	if len(e.c.headers) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(e.c.headers))
 	}
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
 // Stop shuts down all the connections and resources
 // related to the exporter.
+// If the exporter is already stopped then this func does nothing.
 func (e *Exporter) Stop() error {
 	e.mu.RLock()
 	cc := e.grpcClientConn
@@ -191,7 +192,6 @@ func (e *Exporter) Stop() error {
 		return errNotStarted
 	}
 	if stopped {
-		// TODO: tell the user that we've already stopped, so perhaps a sentinel error?
 		return nil
 	}
 
@@ -236,13 +236,6 @@ func otSpanDataToPbSpans(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	}
 }
 
-func newContextWithTimeout(ctx context.Context, timeout time.Duration) (context.Context, func()) {
-	if timeout <= 0 {
-		timeout = defaultTimeout
-	}
-	return context.WithTimeout(ctx, timeout)
-}
-
 func (e *Exporter) uploadTraces(sdl []*export.SpanData) {
 	select {
 	case <-e.stopCh:
@@ -258,7 +251,7 @@ func (e *Exporter) uploadTraces(sdl []*export.SpanData) {
 			return
 		}
 		var cancel func()
-		ctx, cancel := newContextWithTimeout(context.Background(), 0)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
 
 		e.senderMu.Lock()

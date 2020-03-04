@@ -28,7 +28,7 @@ import (
 )
 
 func Example_insecure() {
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure(), otelcol.WithServiceName("engine"))
+	exp, err := otelcol.NewExporter(otelcol.WithInsecure())
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -69,7 +69,7 @@ func Example_withTLS() {
 		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
 	}
 
-	exp, err := otelcol.NewExporter(otelcol.WithTLSCredentials(creds), otelcol.WithServiceName("engine"))
+	exp, err := otelcol.NewExporter(otelcol.WithTLSCredentials(creds))
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}

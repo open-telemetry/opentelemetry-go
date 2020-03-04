@@ -26,94 +26,62 @@ const (
 	DefaultCollectorHost string = "localhost"
 )
 
-type ExporterOption interface {
-	withExporter(e *Exporter)
-}
+type ExporterOption func(*Config)
 
-type insecureGrpcConnection int
-
-var _ ExporterOption = (*insecureGrpcConnection)(nil)
-
-func (igc *insecureGrpcConnection) withExporter(e *Exporter) {
-	e.canDialInsecure = true
+type Config struct {
+	canDialInsecure    bool
+	collectorAddr      string
+	compressor         string
+	reconnectionPeriod time.Duration
+	grpcDialOptions    []grpc.DialOption
+	headers            map[string]string
+	clientCredentials  credentials.TransportCredentials
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
 // just like grpc.WithInsecure() https://godoc.org/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
-func WithInsecure() ExporterOption { return new(insecureGrpcConnection) }
-
-type addressSetter string
-
-func (as addressSetter) withExporter(e *Exporter) {
-	e.collectorAddr = string(as)
+func WithInsecure() ExporterOption {
+	return func(cfg *Config) {
+		cfg.canDialInsecure = true
+	}
 }
-
-var _ ExporterOption = (*addressSetter)(nil)
 
 // WithAddress allows one to set the address that the exporter will
 // connect to the collector on. If unset, it will instead try to use
 // connect to DefaultCollectorHost:DefaultCollectorPort
 func WithAddress(addr string) ExporterOption {
-	return addressSetter(addr)
+	return func(cfg *Config) {
+		cfg.collectorAddr = addr
+	}
 }
 
-type serviceNameSetter string
-
-func (sns serviceNameSetter) withExporter(e *Exporter) {
-	e.serviceName = string(sns)
-}
-
-var _ ExporterOption = (*serviceNameSetter)(nil)
-
-// WithServiceName allows one to set/override the service name
-// that the exporter will report to the collector.
-func WithServiceName(serviceName string) ExporterOption {
-	return serviceNameSetter(serviceName)
-}
-
-type reconnectionPeriod time.Duration
-
-func (rp reconnectionPeriod) withExporter(e *Exporter) {
-	e.reconnectionPeriod = time.Duration(rp)
-}
-
+// WithReconnectionPeriod allows one to set the delay between next connection attempt
+// after failing to connect with the collector.
 func WithReconnectionPeriod(rp time.Duration) ExporterOption {
-	return reconnectionPeriod(rp)
+	return func(cfg *Config) {
+		cfg.reconnectionPeriod = rp
+	}
 }
 
-type compressorSetter string
-
-func (c compressorSetter) withExporter(e *Exporter) {
-	e.compressor = string(c)
-}
-
-// UseCompressor will set the compressor for the gRPC client to use when sending requests.
+// WithCompressor will set the compressor for the gRPC client to use when sending requests.
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
-func UseCompressor(compressorName string) ExporterOption {
-	return compressorSetter(compressorName)
-}
-
-type headerSetter map[string]string
-
-func (h headerSetter) withExporter(e *Exporter) {
-	e.headers = map[string]string(h)
+func WithCompressor(compressor string) ExporterOption {
+	return func(cfg *Config) {
+		cfg.compressor = compressor
+	}
 }
 
 // WithHeaders will send the provided headers when the gRPC stream connection
 // is instantiated
 func WithHeaders(headers map[string]string) ExporterOption {
-	return headerSetter(headers)
+	return func(cfg *Config) {
+		cfg.headers = headers
+	}
 }
-
-type clientCredentials struct {
-	credentials.TransportCredentials
-}
-
-var _ ExporterOption = (*clientCredentials)(nil)
 
 // WithTLSCredentials allows the connection to use TLS credentials
 // when talking to the server. It takes in grpc.TransportCredentials instead
@@ -121,24 +89,25 @@ var _ ExporterOption = (*clientCredentials)(nil)
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) ExporterOption {
-	return &clientCredentials{TransportCredentials: creds}
+	return func(cfg *Config) {
+		cfg.clientCredentials = creds
+	}
 }
-
-func (cc *clientCredentials) withExporter(e *Exporter) {
-	e.clientTransportCredentials = cc.TransportCredentials
-}
-
-type grpcDialOptions []grpc.DialOption
-
-var _ ExporterOption = (*grpcDialOptions)(nil)
 
 // WithGRPCDialOption opens support to any grpc.DialOption to be used. If it conflicts
 // with some other configuration the GRPC specified via the collector the ones here will
 // take preference since they are set last.
 func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
-	return grpcDialOptions(opts)
+	return func(cfg *Config) {
+		cfg.grpcDialOptions = opts
+	}
 }
 
-func (opts grpcDialOptions) withExporter(e *Exporter) {
-	e.grpcDialOptions = opts
-}
+//func ConfigureExporterOptions(opts ...Option) * {
+//	c := Config{}
+//	for _, opt := range opts {
+//		opt(&c)
+//	}
+//	t := NewT(c)
+//	// ...
+//}

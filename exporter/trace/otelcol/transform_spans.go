@@ -98,7 +98,14 @@ func otAttributesToProtoAttributes(attrs []core.KeyValue) []*commonpb.AttributeK
 				Type:     commonpb.AttributeKeyValue_INT,
 				IntValue: v.Value.AsInt64(),
 			})
-		case core.FLOAT64, core.FLOAT32:
+		case core.FLOAT32:
+			f32 := v.Value.AsFloat32()
+			out = append(out, &commonpb.AttributeKeyValue{
+				Key:         string(v.Key),
+				Type:        commonpb.AttributeKeyValue_DOUBLE,
+				DoubleValue: float64(f32),
+			})
+		case core.FLOAT64:
 			out = append(out, &commonpb.AttributeKeyValue{
 				Key:         string(v.Key),
 				Type:        commonpb.AttributeKeyValue_DOUBLE,
