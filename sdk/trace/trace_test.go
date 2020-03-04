@@ -130,7 +130,7 @@ func TestSetName(t *testing.T) {
 
 func TestRecordingIsOn(t *testing.T) {
 	tp, _ := NewProvider()
-	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
+	_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
 	defer span.End()
 	if span.IsRecording() == false {
 		t.Error("new span is not recording events")
