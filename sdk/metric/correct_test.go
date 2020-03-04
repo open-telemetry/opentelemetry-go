@@ -167,7 +167,7 @@ func TestRecordNaN(t *testing.T) {
 	require.Error(t, sdkErr)
 }
 
-func TestSDKLabelEncoder(t *testing.T) {
+func TestSDKAltLabelEncoder(t *testing.T) {
 	ctx := context.Background()
 	cagg := counter.New()
 	batcher := &correctnessBatcher{
@@ -185,6 +185,50 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 	labels := batcher.records[0].Labels()
 	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
+}
+
+func TestSDKLabelsEmptyBehavior(t *testing.T) {
+	ctx := context.Background()
+	cagg := counter.New()
+	batcher := &correctnessBatcher{
+		t:   t,
+		agg: cagg,
+	}
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+
+	counter := sdk.NewInt64Counter("counter")
+
+	tf := func(expect string, kvs ...core.KeyValue) {
+		counter.Add(ctx, 1, sdk.Labels(kvs...))
+		sdk.Collect(ctx)
+		require.Equal(t, 1, len(batcher.records))
+		labels := batcher.records[0].Labels()
+		require.Equal(t, expect, labels.Encoded())
+		batcher.records = nil
+	}
+
+	tf(``, key.String("A", ""))
+	tf(``, key.String("A", ""), key.String("A", ""))
+	tf(``, key.String("A", "X"), key.String("A", ""))
+	tf(``, key.String("A", "X"), key.String("A", "X"), key.String("A", ""))
+	tf(``, key.String("A", "X"), key.String("A", "X"), key.String("A", ""), key.String("A", "X"), key.String("A", ""))
+
+	tf(`A=B`, key.String("A", "B"))
+	tf(`A=B`, key.String("A", "B"), key.String("C", ""))
+	tf(`A=B`, key.String("A", "B"), key.String("C", ""), key.String("C", "X"), key.String("C", ""))
+	tf(`A=B`, key.String("C", ""), key.String("A", "B"))
+	tf(`A=B`, key.String("C", ""), key.String("C", "X"), key.String("C", ""), key.String("A", "B"))
+
+	tf(`A=B,C=D`, key.String("A", "B"), key.String("C", ""), key.String("C", "D"))
+	tf(`A=B,C=D`, key.String("A", "B"), key.String("C", "X"), key.String("C", "D"))
+	tf(`A=B,C=D`, key.String("A", "B"), key.String("C", "X"), key.String("C", "D"), key.String("C", ""), key.String("C", "D"))
+
+	tf(`E=F`, key.String("A", ""), key.String("E", "F"))
+	tf(`E=F`, key.String("A", ""), key.String("A", ""), key.String("E", "F"))
+	tf(`E=F`, key.String("A", "X"), key.String("A", ""), key.String("E", "F"))
+	tf(`E=F`, key.String("A", "X"), key.String("A", "X"), key.String("A", ""), key.String("E", "F"))
+	tf(`E=F`, key.String("A", "X"), key.String("A", "X"), key.String("A", ""), key.String("A", "X"), key.String("A", ""), key.String("E", "F"))
+
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {

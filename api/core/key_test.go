@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 )
@@ -201,6 +202,45 @@ func TestEmit(t *testing.T) {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
+	}
+}
+
+func TestEmptyValue(t *testing.T) {
+	falses := []core.Value{
+		core.Value{},
+
+		core.Bool(false),
+		core.Int(0),
+		core.Uint(0),
+		core.Int32(0),
+		core.Uint32(0),
+		core.Int64(0),
+		core.Uint64(0),
+		core.Float32(0),
+		core.Float64(0),
+		core.String("0"),
+
+		core.Bool(true),
+		core.Int(1),
+		core.Uint(1),
+		core.Int32(1),
+		core.Uint32(1),
+		core.Int64(1),
+		core.Uint64(1),
+		core.Float32(1),
+		core.Float64(1),
+		core.String("1"),
+	}
+	trues := []core.Value{
+		core.String(""),
+	}
+
+	for _, v := range falses {
+		require.False(t, v.Empty())
+	}
+
+	for _, v := range trues {
+		require.True(t, v.Empty())
 	}
 }
 

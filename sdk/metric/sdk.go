@@ -247,13 +247,37 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 
 	// Sort and de-duplicate.
 	sort.Stable(&ls.sorted)
-	oi := 1
-	for i := 1; i < len(ls.sorted); i++ {
-		if ls.sorted[i-1].Key == ls.sorted[i].Key {
-			ls.sorted[oi-1] = ls.sorted[i]
+	oi := 0
+	for i := 0; i < len(ls.sorted); i++ {
+		vNew := ls.sorted[i]
+
+		if oi == 0 {
+			if vNew.Value.Empty() {
+				continue
+			}
+
+			ls.sorted[oi] = vNew
+			oi++
 			continue
 		}
-		ls.sorted[oi] = ls.sorted[i]
+
+		vOld := ls.sorted[oi-1]
+
+		if vOld.Key == vNew.Key {
+			if vNew.Value.Empty() {
+				oi--
+				continue
+			}
+
+			ls.sorted[oi-1] = vNew
+			continue
+		}
+
+		if vNew.Value.Empty() {
+			continue
+		}
+
+		ls.sorted[oi] = vNew
 		oi++
 	}
 	ls.sorted = ls.sorted[0:oi]

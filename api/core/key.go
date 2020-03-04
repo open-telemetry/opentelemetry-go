@@ -230,6 +230,12 @@ func (v *Value) Type() ValueType {
 	return v.vtype
 }
 
+// Empty returns true if this value is an empty string.  No other type
+// (including INVALID) is considered Empty().
+func (v *Value) Empty() bool {
+	return v.Type() == STRING && v.AsString() == ""
+}
+
 // Bool returns the bool value. Make sure that the Value's type is
 // BOOL.
 func (v *Value) AsBool() bool {
