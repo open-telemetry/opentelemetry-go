@@ -53,7 +53,6 @@ type Handler struct {
 	tracer           trace.Tracer
 	props            propagation.Propagators
 	spanStartOptions []trace.StartOption
-	public           bool
 	readEvent        bool
 	writeEvent       bool
 }
@@ -74,7 +73,7 @@ func WithTracer(tracer trace.Tracer) Option {
 // association instead of a link.
 func WithPublicEndpoint() Option {
 	return func(h *Handler) {
-		h.public = true
+		h.spanStartOptions = append(h.spanStartOptions, trace.WithNewRoot())
 	}
 }
 
@@ -91,7 +90,7 @@ func WithPropagators(ps propagation.Propagators) Option {
 // trace.StartOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.StartOption) Option {
 	return func(h *Handler) {
-		h.spanStartOptions = opts
+		h.spanStartOptions = append(h.spanStartOptions, opts...)
 	}
 }
 
@@ -153,20 +152,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: do something with the correlation context
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
-
-	// not a valid span context, so no link / parent relationship to establish
-	if sc := trace.RemoteSpanContextFromContext(ctx); sc.IsValid() {
-		var opt trace.StartOption
-		if h.public {
-			// If the endpoint is a public endpoint, it should start a new trace
-			// and incoming remote sctx should be added as a link.
-			opt = trace.LinkedTo(sc)
-			opts = append(opts, opt)
-		} else { // not a private endpoint, so assume child relationship
-			ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
-		}
-	}
-
 	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
 
