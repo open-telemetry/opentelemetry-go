@@ -1,10 +1,10 @@
-module go.opentelemetry.io/otel/exporter/trace/otelcol
+module go.opentelemetry.io/otel/exporter/trace/otlp
 
 replace go.opentelemetry.io/otel => ../../..
 
 require (
 	github.com/golang/protobuf v1.3.2
-	github.com/google/go-cmp v0.3.1
+	github.com/google/go-cmp v0.4.0
 	github.com/open-telemetry/opentelemetry-proto v0.0.0-20200219184922-5e1d5bc66d5a
 	github.com/stretchr/testify v1.4.0
 	go.opentelemetry.io/otel v0.0.0-00010101000000-000000000000

@@ -10,7 +10,7 @@ OpenTelemetry Library and export them to other backends.
 ## Installation
 
 ```bash
-$ go get -u go.opentelemetry.io/otel/exporter/otelcol
+$ go get -u go.opentelemetry.io/otel/exporter/otlp
 ```
 
 ## Usage
@@ -20,5 +20,5 @@ package main
 // TBD
 ```
 
-[godoc-url]: https://godoc.org/go.opentelemetry.io/otel/exporter/otelcol
+[godoc-url]: https://godoc.org/go.opentelemetry.io/otel/exporter/otlp
 

@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelcol contains an OpenTelemetry tracing exporter for OpenTelemetry Collector.
-package otelcol // import "go.opentelemetry.io/otel/exporter/trace/otelcol"
+// Package otlp contains an OpenTelemetry tracing exporter for OpenTelemetry Collector.
+package otlp // import "go.opentelemetry.io/otel/exporter/trace/otlp"

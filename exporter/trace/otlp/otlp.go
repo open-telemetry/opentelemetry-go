@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // code in this package is mostly copied from contrib.go.opencensus.io/exporter/ocagent/connection.go
-package otelcol
+package otlp
 
 import (
 	"context"

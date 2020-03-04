@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelcol_test
+package otlp_test
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/otelcol"
+	"go.opentelemetry.io/otel/exporter/trace/otlp"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -369,9 +369,9 @@ func testAndVerify(name string, t *testing.T, f func(t *testing.T) []testCases) 
 		_ = collector.stop()
 	}()
 
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure(),
-		otelcol.WithAddress(collector.address),
-		otelcol.WithReconnectionPeriod(50*time.Millisecond))
+	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+		otlp.WithAddress(collector.address),
+		otlp.WithReconnectionPeriod(50*time.Millisecond))
 	if err != nil {
 		t.Fatalf("Failed to create a new collector exporter: %v", err)
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelcol_test
+package otlp_test
 
 import (
 	"context"
@@ -23,12 +23,12 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporter/trace/otelcol"
+	"go.opentelemetry.io/otel/exporter/trace/otlp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func Example_insecure() {
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure())
+	exp, err := otlp.NewExporter(otlp.WithInsecure())
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -69,7 +69,7 @@ func Example_withTLS() {
 		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
 	}
 
-	exp, err := otelcol.NewExporter(otelcol.WithTLSCredentials(creds))
+	exp, err := otlp.NewExporter(otlp.WithTLSCredentials(creds))
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}

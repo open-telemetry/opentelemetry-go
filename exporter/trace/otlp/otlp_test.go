@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelcol_test
+package otlp_test
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/exporter/trace/otelcol"
+	"go.opentelemetry.io/otel/exporter/trace/otlp"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -33,7 +33,7 @@ import (
 func TestNewExporter_endToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
-		additionalOpts []otelcol.ExporterOption
+		additionalOpts []otlp.ExporterOption
 	}{
 		{
 			name: "StandardExporter",
@@ -47,7 +47,7 @@ func TestNewExporter_endToEnd(t *testing.T) {
 	}
 }
 
-func newExporterEndToEndTest(t *testing.T, additionalOpts []otelcol.ExporterOption) {
+func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
 	mc := runMockColAtAddr(t, "localhost:56561")
 
 	defer func() {
@@ -56,14 +56,14 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otelcol.ExporterOpti
 
 	<-time.After(5 * time.Millisecond)
 
-	opts := []otelcol.ExporterOption{
-		otelcol.WithInsecure(),
-		otelcol.WithAddress(mc.address),
-		otelcol.WithReconnectionPeriod(50 * time.Millisecond),
+	opts := []otlp.ExporterOption{
+		otlp.WithInsecure(),
+		otlp.WithAddress(mc.address),
+		otlp.WithReconnectionPeriod(50 * time.Millisecond),
 	}
 
 	opts = append(opts, additionalOpts...)
-	exp, err := otelcol.NewExporter(opts...)
+	exp, err := otlp.NewExporter(opts...)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -123,9 +123,9 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure(),
-		otelcol.WithReconnectionPeriod(50*time.Millisecond),
-		otelcol.WithAddress(mc.address))
+	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address))
 	if err != nil {
 		t.Fatal("Surprisingly connected with a bad port")
 	}
@@ -153,9 +153,9 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCol(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure(),
-		otelcol.WithAddress(mc.address),
-		otelcol.WithReconnectionPeriod(reconnectionPeriod))
+	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+		otlp.WithAddress(mc.address),
+		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -218,9 +218,9 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
 	address := fmt.Sprintf("localhost:%s", collectorPortStr)
-	exp, err := otelcol.NewExporter(otelcol.WithInsecure(),
-		otelcol.WithReconnectionPeriod(50*time.Millisecond),
-		otelcol.WithAddress(address))
+	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(address))
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
@@ -233,10 +233,10 @@ func TestNewExporter_withAddress(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp, err := otelcol.NewUnstartedExporter(
-		otelcol.WithInsecure(),
-		otelcol.WithReconnectionPeriod(50*time.Millisecond),
-		otelcol.WithAddress(mc.address))
+	exp, err := otlp.NewUnstartedExporter(
+		otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address))
 	if err != nil {
 		t.Fatal("Surprisingly connected with a bad port")
 	}
