@@ -54,7 +54,7 @@ const (
 	labelHTTPPath       = `/http/path`
 	labelHTTPUserAgent  = `/http/user_agent`
 
-	version = "0.1.0"
+	version = "0.2.3"
 )
 
 var userAgent = fmt.Sprintf("opentelemetry-go %s; stackdriver-exporter %s", opentelemetry.Version(), version)
