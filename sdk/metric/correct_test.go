@@ -189,6 +189,13 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.NewDefaultLabelEncoder()
+
 	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
 	require.Equal(t, `A=B,C=D`, encoded)
+
+	encoded = encoder.Encode([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")})
+	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
+
+	encoded = encoder.Encode([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)})
+	require.Equal(t, `\\=\=,\,=\\`, encoded)
 }
