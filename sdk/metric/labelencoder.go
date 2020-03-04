@@ -79,9 +79,7 @@ func copyAndEscape(buf *bytes.Buffer, val string) {
 		switch ch {
 		case '=', ',', escapeChar:
 			buf.WriteRune(escapeChar)
-			fallthrough
-		default:
-			buf.WriteRune(ch)
 		}
+		buf.WriteRune(ch)
 	}
 }
