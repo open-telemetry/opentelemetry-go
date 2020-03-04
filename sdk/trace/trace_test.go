@@ -133,7 +133,7 @@ func TestRecordingIsOn(t *testing.T) {
 	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
 	defer span.End()
 	if span.IsRecording() == false {
-		t.Error("new span is recording events")
+		t.Error("new span is not recording events")
 	}
 }
 
