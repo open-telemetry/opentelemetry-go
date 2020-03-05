@@ -71,6 +71,7 @@ type testOption struct {
 	wantBatchCount int
 	genNumSpans    int
 	waitTime       time.Duration
+	parallel       bool
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
@@ -130,6 +131,18 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			genNumSpans:    205,
 			waitTime:       waitTime,
 		},
+		{
+			name: "parallel span generation",
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
+				sdktrace.WithMaxQueueSize(200),
+			},
+			wantNumSpans:   200,
+			wantBatchCount: 1,
+			genNumSpans:    205,
+			waitTime:       waitTime,
+			parallel:       true,
+		},
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
@@ -142,7 +155,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
 		wg := &sync.WaitGroup{}
-		generateSpan(t, wg, tr, option)
+		generateSpan(t, option.parallel, wg, tr, option)
 		wg.Wait()
 
 		time.Sleep(option.waitTime)
@@ -170,18 +183,23 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	return ssp
 }
 
-func generateSpan(t *testing.T, wg *sync.WaitGroup, tr apitrace.Tracer, option testOption) {
+func generateSpan(t *testing.T, parallel bool, wg *sync.WaitGroup, tr apitrace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
-		go func(sc core.SpanContext) {
+		f := func(sc core.SpanContext) {
 			ctx := apitrace.ContextWithRemoteSpanContext(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
-		}(sc)
+		}
+		if parallel {
+			go f(sc)
+		} else {
+			f(sc)
+		}
 	}
 }
 
