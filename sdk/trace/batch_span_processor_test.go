@@ -154,9 +154,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		tp.RegisterSpanProcessor(ssp)
 		tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-		wg := &sync.WaitGroup{}
-		generateSpan(t, option.parallel, wg, tr, option)
-		wg.Wait()
+		generateSpan(t, option.parallel, tr, option)
 
 		time.Sleep(option.waitTime)
 
@@ -183,9 +181,10 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	return ssp
 }
 
-func generateSpan(t *testing.T, parallel bool, wg *sync.WaitGroup, tr apitrace.Tracer, option testOption) {
+func generateSpan(t *testing.T, parallel bool, tr apitrace.Tracer, option testOption) {
 	sc := getSpanContext()
 
+	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
@@ -201,6 +200,7 @@ func generateSpan(t *testing.T, parallel bool, wg *sync.WaitGroup, tr apitrace.T
 			f(sc)
 		}
 	}
+	wg.Wait()
 }
 
 func getSpanContext() core.SpanContext {
