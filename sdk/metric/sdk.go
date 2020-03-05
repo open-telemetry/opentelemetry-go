@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"sync"
@@ -72,23 +73,31 @@ type (
 		meter      *SDK
 	}
 
-	// sortedLabels are used to de-duplicate and canonicalize labels.
-	sortedLabels []core.KeyValue
+	// orderedLabels is a variable-size array of core.KeyValue
+	// suitable for use as a map key.  use toSlice()
+	// []core.KeyValue to get a []core.KeyValue.
+	orderedLabels interface{}
 
 	// labels implements the OpenTelemetry LabelSet API,
 	// represents an internalized set of labels that may be used
 	// repeatedly.
 	labels struct {
-		meter   *SDK
-		sorted  sortedLabels
-		encoded string
+		meter *SDK
+
+		// slice is a slice of `ordered`.
+		slice sortedLabels
+
+		// ordered is the output of sorting and deduplicating
+		// the labels, copied into an array of the correct
+		// size.
+		ordered orderedLabels
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
 		descriptor *export.Descriptor
-		encoded    string
+		ordered    orderedLabels
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -137,7 +146,7 @@ type (
 		descriptor *export.Descriptor
 		// recorders maps encoded labelset to the pair of
 		// labelset and recorder
-		recorders map[string]labeledRecorder
+		recorders map[orderedLabels]labeledRecorder
 		callback  observerCallback
 	}
 
@@ -167,6 +176,8 @@ var (
 	_ api.Float64Observer       = float64Observer{}
 	_ api.Int64ObserverResult   = int64ObserverResult{}
 	_ api.Float64ObserverResult = float64ObserverResult{}
+
+	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
 func (r observerResult) observe(number core.Number, ls api.LabelSet) {
@@ -192,20 +203,20 @@ func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
 
 func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	labels := o.meter.labsFor(ls)
-	lrec, ok := o.recorders[labels.encoded]
+	lrec, ok := o.recorders[labels.ordered]
 	if ok {
 		lrec.modifiedEpoch = o.meter.currentEpoch
-		o.recorders[labels.encoded] = lrec
+		o.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
 	rec := o.meter.batcher.AggregatorFor(o.descriptor)
 	if o.recorders == nil {
-		o.recorders = make(map[string]labeledRecorder)
+		o.recorders = make(map[orderedLabels]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// observer for the labelset for good. This is intentional,
 	// but will be revisited later.
-	o.recorders[labels.encoded] = labeledRecorder{
+	o.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
 		modifiedEpoch: o.meter.currentEpoch,
@@ -245,7 +256,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: i.descriptor,
-		encoded:    ls.encoded,
+		ordered:    ls.ordered,
 	}
 
 	if actual, ok := i.meter.current.Load(mk); ok {
@@ -336,39 +347,96 @@ func DefaultErrorHandler(err error) {
 // Labels returns a LabelSet corresponding to the arguments.  Passed
 // labels are de-duplicated, with last-value-wins semantics.
 func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
-	// Note: This computes a canonical encoding of the labels to
-	// use as a map key.  It happens to use the encoding used by
-	// statsd for labels, allowing an optimization for statsd
-	// batchers.  This could be made configurable in the
-	// constructor, to support the same optimization for different
-	// batchers.
-
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return &m.empty
 	}
 
-	ls := &labels{
-		meter:  m,
-		sorted: kvs,
+	ls := &labels{ // allocation
+		meter: m,
+		slice: kvs,
 	}
 
-	// Sort and de-duplicate.
-	sort.Stable(&ls.sorted)
+	// Sort and de-duplicate.  Note: this use of `ls.slice` avoids
+	// an allocation by using the address-able field rather than
+	// `kvs`.  Labels retains a copy of this slice, i.e., the
+	// initial allocation at the varargs call site.
+	//
+	// Note that `ls.slice` continues to refer to this memory,
+	// even though a new array is allocated for `ls.ordered`.  It
+	// is not possible for these two variables (one inside an
+	// interface) to alias the same memory.
+	sort.Stable(&ls.slice)
+
 	oi := 1
-	for i := 1; i < len(ls.sorted); i++ {
-		if ls.sorted[i-1].Key == ls.sorted[i].Key {
-			ls.sorted[oi-1] = ls.sorted[i]
+	for i := 1; i < len(kvs); i++ {
+		if kvs[i-1].Key == kvs[i].Key {
+			kvs[oi-1] = kvs[i]
 			continue
 		}
-		ls.sorted[oi] = ls.sorted[i]
+		kvs[oi] = kvs[i]
 		oi++
 	}
-	ls.sorted = ls.sorted[0:oi]
-
-	ls.encoded = m.labelEncoder.Encode(ls.sorted)
-
+	kvs = kvs[0:oi]
+	ls.slice = kvs
+	ls.computeOrdered(kvs)
 	return ls
+}
+
+func (ls *labels) computeOrdered(kvs []core.KeyValue) {
+	switch {
+	case len(kvs) == 1:
+		ptr := new([1]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 2:
+		ptr := new([2]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 3:
+		ptr := new([3]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 4:
+		ptr := new([4]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 5:
+		ptr := new([5]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 6:
+		ptr := new([6]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 7:
+		ptr := new([7]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 8:
+		ptr := new([8]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 9:
+		ptr := new([9]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case len(kvs) == 10:
+		ptr := new([10]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	default:
+		at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
+
+		for i := 0; i < len(kvs); i++ {
+			*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kvs[i]
+		}
+
+		ls.ordered = at.Interface()
+	}
+}
+
+func computeReflect(kvs []core.KeyValue) {
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -592,7 +660,8 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, rec
 		return 0
 	}
 	recorder.Checkpoint(ctx, descriptor)
-	exportLabels := export.NewLabels(labels.sorted, labels.encoded, m.labelEncoder)
+
+	exportLabels := export.NewLabels(labels.slice, m.labelEncoder.Encode(labels.slice), m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
@@ -643,6 +712,6 @@ func (r *record) Unbind() {
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: r.descriptor,
-		encoded:    r.labels.encoded,
+		ordered:    r.labels.ordered,
 	}
 }

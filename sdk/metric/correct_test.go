@@ -167,7 +167,7 @@ func TestRecordNaN(t *testing.T) {
 	require.Error(t, sdkErr)
 }
 
-func TestSDKLabelEncoder(t *testing.T) {
+func TestSDKAltLabelEncoder(t *testing.T) {
 	ctx := context.Background()
 	cagg := counter.New()
 	batcher := &correctnessBatcher{
@@ -185,6 +185,70 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 	labels := batcher.records[0].Labels()
 	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
+}
+
+func TestSDKLabelsDeduplication(t *testing.T) {
+	ctx := context.Background()
+	cagg := counter.New()
+	batcher := &correctnessBatcher{
+		t:   t,
+		agg: cagg,
+	}
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+
+	counter := sdk.NewInt64Counter("counter")
+
+	const (
+		maxKeys = 21
+		keySets = 2
+		repeats = 3
+	)
+	var keysA []core.Key
+	var keysB []core.Key
+
+	for i := 0; i < maxKeys; i++ {
+		keysA = append(keysA, core.Key(fmt.Sprintf("A%03d", i)))
+		keysB = append(keysB, core.Key(fmt.Sprintf("B%03d", i)))
+	}
+
+	var allExpect [][]core.KeyValue
+	for numKeys := 0; numKeys < maxKeys; numKeys++ {
+
+		var kvsA []core.KeyValue
+		var kvsB []core.KeyValue
+		for r := 0; r < repeats; r++ {
+			for i := 0; i < numKeys; i++ {
+				kvsA = append(kvsA, keysA[i].Int(r))
+				kvsB = append(kvsB, keysB[i].Int(r))
+			}
+		}
+
+		var expectA []core.KeyValue
+		var expectB []core.KeyValue
+		for i := 0; i < numKeys; i++ {
+			expectA = append(expectA, keysA[i].Int(repeats-1))
+			expectB = append(expectB, keysB[i].Int(repeats-1))
+		}
+
+		counter.Add(ctx, 1, sdk.Labels(kvsA...))
+		allExpect = append(allExpect, expectA)
+
+		if numKeys != 0 {
+			// In this case A and B sets are the same.
+			counter.Add(ctx, 1, sdk.Labels(kvsB...))
+			allExpect = append(allExpect, expectB)
+		}
+
+	}
+
+	sdk.Collect(ctx)
+
+	var actual [][]core.KeyValue
+	for _, rec := range batcher.records {
+		actual = append(actual, rec.Labels().Ordered())
+	}
+
+	require.ElementsMatch(t, allExpect, actual)
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
