@@ -90,8 +90,8 @@ test-386:
 	else \
 	  set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	    echo "go test ./... GOARCH 386 in $${dir}"; \
-		(cd "$${dir}" && \
-		  GOARCH=386 $(GOTEST_MIN) ./...); \
+	    (cd "$${dir}" && \
+	      GOARCH=386 $(GOTEST_MIN) ./...); \
 	  done; \
 	fi
 
