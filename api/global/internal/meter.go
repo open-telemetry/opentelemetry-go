@@ -40,44 +40,76 @@ const (
 )
 
 type meterProvider struct {
-	lock     sync.Mutex
-	meters   []*meter
 	delegate metric.Provider
+
+	lock   sync.Mutex
+	meters []*meter
 }
 
 type meter struct {
+	delegate unsafe.Pointer // (*metric.Meter)
+
 	provider *meterProvider
 	name     string
 
-	lock        sync.Mutex
-	instruments []*instImpl
-
-	delegate unsafe.Pointer // (*metric.Meter)
+	lock          sync.Mutex
+	instruments   []*instImpl
+	liveObservers map[*obsImpl]struct{}
+	// orderedObservers slice contains observers in their order of
+	// registration. It may also contain unregistered
+	// observers. The liveObservers map should be consulted to
+	// check if the observer is registered or not.
+	orderedObservers []*obsImpl
 }
 
 type instImpl struct {
+	delegate unsafe.Pointer // (*metric.InstrumentImpl)
+
 	name  string
 	mkind metricKind
 	nkind core.NumberKind
 	opts  interface{}
+}
 
-	delegate unsafe.Pointer // (*metric.InstrumentImpl)
+type obsImpl struct {
+	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
+
+	name     string
+	nkind    core.NumberKind
+	opts     []metric.ObserverOptionApplier
+	meter    *meter
+	callback interface{}
+}
+
+type int64ObsImpl struct {
+	observer *obsImpl
+}
+
+type float64ObsImpl struct {
+	observer *obsImpl
+}
+
+// this is a common subset of the metric observers interfaces
+type observerUnregister interface {
+	Unregister()
 }
 
 type labelSet struct {
+	delegate unsafe.Pointer // (* metric.LabelSet)
+
 	meter *meter
 	value []core.KeyValue
 
 	initialize sync.Once
-	delegate   unsafe.Pointer // (* metric.LabelSet)
 }
 
 type instHandle struct {
+	delegate unsafe.Pointer // (*metric.HandleImpl)
+
 	inst   *instImpl
 	labels metric.LabelSet
 
 	initialize sync.Once
-	delegate   unsafe.Pointer // (*metric.HandleImpl)
 }
 
 var _ metric.Provider = &meterProvider{}
@@ -86,6 +118,10 @@ var _ metric.LabelSet = &labelSet{}
 var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &instImpl{}
 var _ metric.BoundInstrumentImpl = &instHandle{}
+var _ metric.Int64Observer = int64ObsImpl{}
+var _ metric.Float64Observer = float64ObsImpl{}
+var _ observerUnregister = (metric.Int64Observer)(nil)
+var _ observerUnregister = (metric.Float64Observer)(nil)
 
 // Provider interface and delegation
 
@@ -130,6 +166,13 @@ func (m *meter) setDelegate(provider metric.Provider) {
 		inst.setDelegate(*d)
 	}
 	m.instruments = nil
+	for _, obs := range m.orderedObservers {
+		if _, ok := m.liveObservers[obs]; ok {
+			obs.setDelegate(*d)
+		}
+	}
+	m.liveObservers = nil
+	m.orderedObservers = nil
 }
 
 func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
@@ -201,6 +244,68 @@ func (bound *instHandle) Unbind() {
 	}
 
 	(*implPtr).Unbind()
+}
+
+// Any Observer delegation
+
+func (obs *obsImpl) setDelegate(d metric.Meter) {
+	if obs.nkind == core.Int64NumberKind {
+		obs.setInt64Delegate(d)
+	} else {
+		obs.setFloat64Delegate(d)
+	}
+}
+
+func (obs *obsImpl) unregister() {
+	unreg := obs.getUnregister()
+	if unreg != nil {
+		unreg.Unregister()
+		return
+	}
+	obs.meter.lock.Lock()
+	defer obs.meter.lock.Unlock()
+	delete(obs.meter.liveObservers, obs)
+	if len(obs.meter.liveObservers) == 0 {
+		obs.meter.liveObservers = nil
+		obs.meter.orderedObservers = nil
+	}
+}
+
+func (obs *obsImpl) getUnregister() observerUnregister {
+	ptr := atomic.LoadPointer(&obs.delegate)
+	if ptr == nil {
+		return nil
+	}
+	if obs.nkind == core.Int64NumberKind {
+		return *(*metric.Int64Observer)(ptr)
+	}
+	return *(*metric.Float64Observer)(ptr)
+}
+
+// Int64Observer delegation
+
+func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
+	obsPtr := new(metric.Int64Observer)
+	cb := obs.callback.(metric.Int64ObserverCallback)
+	*obsPtr = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
+	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
+}
+
+func (obs int64ObsImpl) Unregister() {
+	obs.observer.unregister()
+}
+
+// Float64Observer delegation
+
+func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
+	obsPtr := new(metric.Float64Observer)
+	cb := obs.callback.(metric.Float64ObserverCallback)
+	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
+	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
+}
+
+func (obs float64ObsImpl) Unregister() {
+	obs.observer.unregister()
 }
 
 // Metric updates
@@ -295,4 +400,65 @@ func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier
 
 func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
+}
+
+func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Int64Observer {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).RegisterInt64Observer(name, callback, oos...)
+	}
+
+	obs := &obsImpl{
+		name:     name,
+		nkind:    core.Int64NumberKind,
+		opts:     oos,
+		meter:    m,
+		callback: callback,
+	}
+	m.addObserver(obs)
+	return int64ObsImpl{
+		observer: obs,
+	}
+}
+
+func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Float64Observer {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).RegisterFloat64Observer(name, callback, oos...)
+	}
+
+	obs := &obsImpl{
+		name:     name,
+		nkind:    core.Float64NumberKind,
+		opts:     oos,
+		meter:    m,
+		callback: callback,
+	}
+	m.addObserver(obs)
+	return float64ObsImpl{
+		observer: obs,
+	}
+}
+
+func (m *meter) addObserver(obs *obsImpl) {
+	if m.liveObservers == nil {
+		m.liveObservers = make(map[*obsImpl]struct{})
+	}
+	m.liveObservers[obs] = struct{}{}
+	m.orderedObservers = append(m.orderedObservers, obs)
+}
+
+func AtomicFieldOffsets() map[string]uintptr {
+	return map[string]uintptr{
+		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
+		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
+		"instImpl.delegate":      unsafe.Offsetof(instImpl{}.delegate),
+		"obsImpl.delegate":       unsafe.Offsetof(obsImpl{}.delegate),
+		"labelSet.delegate":      unsafe.Offsetof(labelSet{}.delegate),
+		"instHandle.delegate":    unsafe.Offsetof(instHandle{}.delegate),
+	}
 }
