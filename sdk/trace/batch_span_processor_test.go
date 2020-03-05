@@ -55,12 +55,6 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-func (t *testBatchExporter) get(idx int) *export.SpanData {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.spans[idx]
-}
-
 var _ export.SpanBatcher = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
@@ -164,14 +158,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			t.Errorf("Batches %v\n", te.sizes)
 		}
 
-		// Check first Span is reported. Most recent one is dropped.
-		sc := getSpanContext()
-		wantTraceID := sc.TraceID
-		binary.BigEndian.PutUint64(wantTraceID[0:8], uint64(1))
-		gotTraceID := te.get(0).SpanContext.TraceID
-		if wantTraceID != gotTraceID {
-			t.Errorf("%s: first exported span: got %+v, want %+v\n", option.name, gotTraceID, wantTraceID)
-		}
 		tp.UnregisterSpanProcessor(ssp)
 	}
 }
@@ -190,7 +176,7 @@ func generateSpan(t *testing.T, wg *sync.WaitGroup, tr apitrace.Tracer, option t
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
-		go func (sc core.SpanContext) {
+		go func(sc core.SpanContext) {
 			ctx := apitrace.ContextWithRemoteSpanContext(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
