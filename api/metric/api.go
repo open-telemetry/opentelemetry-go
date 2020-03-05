@@ -171,14 +171,12 @@ type Float64ObserverCallback func(result Float64ObserverResult)
 // Int64Observer is a metric that captures a set of int64 values at a
 // point in time.
 type Int64Observer interface {
-	SetCallback(callback Int64ObserverCallback)
 	Unregister()
 }
 
 // Float64Observer is a metric that captures a set of float64 values
 // at a point in time.
 type Float64Observer interface {
-	SetCallback(callback Float64ObserverCallback)
 	Unregister()
 }
 

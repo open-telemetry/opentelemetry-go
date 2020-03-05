@@ -88,14 +88,6 @@ type (
 		Dead       bool
 		callback   observerCallback
 	}
-
-	Int64Observer struct {
-		Observer *Observer
-	}
-
-	Float64Observer struct {
-		Observer *Observer
-	}
 )
 
 var (
@@ -103,8 +95,8 @@ var (
 	_ apimetric.BoundInstrumentImpl   = &Handle{}
 	_ apimetric.LabelSet              = &LabelSet{}
 	_ apimetric.Meter                 = &Meter{}
-	_ apimetric.Int64Observer         = Int64Observer{}
-	_ apimetric.Float64Observer       = Float64Observer{}
+	_ apimetric.Int64Observer         = &Observer{}
+	_ apimetric.Float64Observer       = &Observer{}
 	_ apimetric.Int64ObserverResult   = int64ObserverResult{}
 	_ apimetric.Float64ObserverResult = float64ObserverResult{}
 )
@@ -116,27 +108,7 @@ const (
 	KindObserver
 )
 
-func (o Int64Observer) SetCallback(callback apimetric.Int64ObserverCallback) {
-	o.Observer.setCallback(wrapInt64ObserverCallback(callback))
-}
-
-func (o Int64Observer) Unregister() {
-	o.Observer.unregister()
-}
-
-func (o Float64Observer) SetCallback(callback apimetric.Float64ObserverCallback) {
-	o.Observer.setCallback(wrapFloat64ObserverCallback(callback))
-}
-
-func (o Float64Observer) Unregister() {
-	o.Observer.unregister()
-}
-
-func (o *Observer) setCallback(callback observerCallback) {
-	o.callback = callback
-}
-
-func (o *Observer) unregister() {
+func (o *Observer) Unregister() {
 	o.Dead = true
 }
 
@@ -285,9 +257,7 @@ func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mo
 
 func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Int64Observer {
 	wrappedCallback := wrapInt64ObserverCallback(callback)
-	return Int64Observer{
-		Observer: m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...),
-	}
+	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...)
 }
 
 func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observerCallback {
@@ -304,9 +274,7 @@ func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observe
 
 func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Float64Observer {
 	wrappedCallback := wrapFloat64ObserverCallback(callback)
-	return Float64Observer{
-		Observer: m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...),
-	}
+	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...)
 }
 
 func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) observerCallback {

@@ -637,7 +637,7 @@ func checkObserverBatch(t *testing.T, labels metric.LabelSet, meter *mock.Meter,
 	if len(meter.MeasurementBatches) < 1 {
 		return
 	}
-	o := getMockObserver(t, observer, kind)
+	o := observer.(*mock.Observer)
 	if !assert.NotNil(t, o) {
 		return
 	}
@@ -652,18 +652,6 @@ func checkObserverBatch(t *testing.T, labels metric.LabelSet, meter *mock.Meter,
 	assert.Equal(t, o.Instrument, measurement.Instrument)
 	ft := fortyTwo(t, kind)
 	assert.Equal(t, 0, measurement.Number.CompareNumber(kind, ft))
-}
-
-func getMockObserver(t *testing.T, observer interface{}, kind core.NumberKind) *mock.Observer {
-	t.Helper()
-	switch kind {
-	case core.Int64NumberKind:
-		return observer.(mock.Int64Observer).Observer
-	case core.Float64NumberKind:
-		return observer.(mock.Float64Observer).Observer
-	}
-	t.Errorf("Invalid value kind %q", kind)
-	return nil
 }
 
 func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {

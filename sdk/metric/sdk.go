@@ -22,7 +22,6 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
@@ -134,14 +133,12 @@ type (
 	observerCallback func(result observerResult)
 
 	observer struct {
-		// callback has to be aligned for 64-bit atomic operations.
-		callback unsafe.Pointer // *observerCallback
-
 		meter      *SDK
 		descriptor *export.Descriptor
 		// recorders maps encoded labelset to the pair of
 		// labelset and recorder
 		recorders map[string]labeledRecorder
+		callback  observerCallback
 	}
 
 	labeledRecorder struct {
@@ -216,17 +213,6 @@ func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	return rec
 }
 
-func (o *observer) setCallback(callback observerCallback) {
-	atomic.StorePointer(&o.callback, unsafe.Pointer(&callback))
-}
-
-func (o *observer) getCallback() observerCallback {
-	ptr := atomic.LoadPointer(&o.callback)
-	// assumption: ptr is never nil, see wrapInt64ObserverCallback
-	// or wrapFloat64ObserverCallback
-	return *((*observerCallback)(ptr))
-}
-
 func (o *observer) unregister() {
 	o.meter.observers.Delete(o)
 }
@@ -239,16 +225,8 @@ func (r float64ObserverResult) Observe(value float64, labels api.LabelSet) {
 	r.result.observe(core.NewFloat64Number(value), labels)
 }
 
-func (o int64Observer) SetCallback(callback api.Int64ObserverCallback) {
-	o.observer.setCallback(wrapInt64ObserverCallback(callback))
-}
-
 func (o int64Observer) Unregister() {
 	o.observer.unregister()
-}
-
-func (o float64Observer) SetCallback(callback api.Float64ObserverCallback) {
-	o.observer.setCallback(wrapFloat64ObserverCallback(callback))
 }
 
 func (o float64Observer) Unregister() {
@@ -467,6 +445,9 @@ func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) ap
 }
 
 func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) api.Int64Observer {
+	if callback == nil {
+		return api.NoopMeter{}.RegisterInt64Observer("", nil)
+	}
 	opts := api.Options{}
 	api.ApplyObserverOptions(&opts, oos...)
 	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, &opts)
@@ -478,9 +459,6 @@ func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallb
 }
 
 func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
-	if callback == nil {
-		return func(result observerResult) {}
-	}
 	return func(result observerResult) {
 		typeSafeResult := int64ObserverResult{
 			result: result,
@@ -490,6 +468,9 @@ func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallb
 }
 
 func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) api.Float64Observer {
+	if callback == nil {
+		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
+	}
 	opts := api.Options{}
 	api.ApplyObserverOptions(&opts, oos...)
 	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, &opts)
@@ -501,9 +482,6 @@ func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverC
 }
 
 func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
-	if callback == nil {
-		return func(result observerResult) {}
-	}
 	return func(result observerResult) {
 		typeSafeResult := float64ObserverResult{
 			result: result,
@@ -514,10 +492,10 @@ func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerC
 
 func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
 	obs := &observer{
-		callback:   unsafe.Pointer(&callback),
 		meter:      m,
 		descriptor: descriptor,
 		recorders:  nil,
+		callback:   callback,
 	}
 	m.observers.Store(obs, nil)
 	return obs
@@ -572,11 +550,10 @@ func (m *SDK) collectObservers(ctx context.Context) int {
 
 	m.observers.Range(func(key, value interface{}) bool {
 		obs := key.(*observer)
-		cb := obs.getCallback()
 		result := observerResult{
 			observer: obs,
 		}
-		cb(result)
+		obs.callback(result)
 		checkpointed += m.checkpointObserver(ctx, obs)
 		return true
 	})
