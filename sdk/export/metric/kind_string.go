@@ -11,11 +11,12 @@ func _() {
 	_ = x[CounterKind-0]
 	_ = x[GaugeKind-1]
 	_ = x[MeasureKind-2]
+	_ = x[ObserverKind-3]
 }
 
-const _Kind_name = "CounterKindGaugeKindMeasureKind"
+const _Kind_name = "CounterKindGaugeKindMeasureKindObserverKind"
 
-var _Kind_index = [...]uint8{0, 11, 20, 31}
+var _Kind_index = [...]uint8{0, 11, 20, 31, 43}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {
