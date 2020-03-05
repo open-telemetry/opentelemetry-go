@@ -20,8 +20,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-const defaultSamplingProbability = 1e-4
-
 // Sampler decides whether a trace should be sampled and exported.
 type Sampler func(SamplingParameters) SamplingDecision
 
