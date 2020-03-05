@@ -69,12 +69,12 @@ func (e *Exporter) indefiniteBackgroundConnection() {
 	// already help with pseudo uniqueness.
 	rng := rand.New(rand.NewSource(time.Now().UnixNano() + rand.Int63n(1024)))
 
-	// maxJitter: 1 + (70% of the connectionReattemptPeriod)
-	maxJitter := int64(1 + 0.7*float64(connReattemptPeriod))
+	// maxJitterNanos: 70% of the connectionReattemptPeriod
+	maxJitterNanos := int64(0.7 * float64(connReattemptPeriod))
 
 	for {
 		// Otherwise these will be the normal scenarios to enable
-		// reconnections if we trip out.
+		// reconnection if we trip out.
 		// 1. If we've stopped, return entirely
 		// 2. Otherwise block until we are disconnected, and
 		//    then retry connecting
@@ -95,7 +95,7 @@ func (e *Exporter) indefiniteBackgroundConnection() {
 		// Apply some jitter to avoid lockstep retrials of other
 		// collector-exporters. Lockstep retrials could result in an
 		// innocent DDOS, by clogging the machine's resources and network.
-		jitter := time.Duration(rng.Int63n(maxJitter))
+		jitter := time.Duration(rng.Int63n(maxJitterNanos))
 		select {
 		case <-e.stopCh:
 			return
