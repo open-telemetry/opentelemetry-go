@@ -443,9 +443,6 @@ func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	}
 }
 
-func computeReflect(kvs []core.KeyValue) {
-}
-
 // labsFor sanitizes the input LabelSet.  The input will be rejected
 // if it was created by another Meter instance, for example.
 func (m *SDK) labsFor(ls api.LabelSet) *labels {
