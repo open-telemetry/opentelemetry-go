@@ -142,12 +142,14 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		tp := basicProvider(t)
 		ssp := createAndRegisterBatchSP(t, option, &te)
 		if ssp == nil {
-			t.Errorf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+			t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 		}
 		tp.RegisterSpanProcessor(ssp)
 		tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-		generateSpan(t, tr, option)
+		wg := &sync.WaitGroup{}
+		generateSpan(t, wg, tr, option)
+		wg.Wait()
 
 		time.Sleep(option.waitTime)
 
@@ -182,14 +184,18 @@ func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExpo
 	return ssp
 }
 
-func generateSpan(t *testing.T, tr apitrace.Tracer, option testOption) {
+func generateSpan(t *testing.T, wg *sync.WaitGroup, tr apitrace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
-		ctx := apitrace.ContextWithRemoteSpanContext(context.Background(), sc)
-		_, span := tr.Start(ctx, option.name)
-		span.End()
+		wg.Add(1)
+		go func (sc core.SpanContext) {
+			ctx := apitrace.ContextWithRemoteSpanContext(context.Background(), sc)
+			_, span := tr.Start(ctx, option.name)
+			span.End()
+			wg.Done()
+		}(sc)
 	}
 }
 
