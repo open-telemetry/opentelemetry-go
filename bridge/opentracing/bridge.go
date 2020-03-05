@@ -28,6 +28,7 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
+	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
@@ -35,9 +36,7 @@ import (
 )
 
 type bridgeSpanContext struct {
-	// TODO: have a look at the java implementation of the shim to
-	// see what do they do with the baggage items
-	baggageItems    map[string]string
+	baggageItems    otelcorrelation.Map
 	otelSpanContext otelcore.SpanContext
 }
 
@@ -45,7 +44,7 @@ var _ ot.SpanContext = &bridgeSpanContext{}
 
 func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
 	bCtx := &bridgeSpanContext{
-		baggageItems:    nil,
+		baggageItems:    otelcorrelation.NewEmptyMap(),
 		otelSpanContext: otelSpanContext,
 	}
 	if parentOtSpanContext != nil {
@@ -58,24 +57,20 @@ func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanCont
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for k, v := range c.baggageItems {
-		if !handler(k, v) {
-			break
-		}
-	}
+	c.baggageItems.Foreach(func(kv otelcore.KeyValue) bool {
+		return handler(string(kv.Key), kv.Value.Emit())
+	})
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
-	if c.baggageItems == nil {
-		c.baggageItems = make(map[string]string)
-	}
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems[crk] = value
+	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelkey.New(crk).String(value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	return c.baggageItems[crk]
+	val, _ := c.baggageItems.Value(otelkey.New(crk))
+	return val.Emit()
 }
 
 type bridgeSpan struct {
