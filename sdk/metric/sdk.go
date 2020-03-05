@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
@@ -43,13 +43,12 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
+		// observers is a set of `*observer` instances
+		observers sync.Map
+
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
 		empty labels
-
-		// records is the head of both the primary and the
-		// reclaim records lists.
-		records doublePtr
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -97,32 +96,15 @@ type (
 	// `record` in existence at a time, although at most one can
 	// be referenced from the `SDK.current` map.
 	record struct {
-		// refcount counts the number of active handles on
-		// referring to this record.  active handles prevent
-		// removing the record from the current map.
-		//
-		// refcount has to be aligned for 64-bit atomic operations.
-		refcount int64
+		// refMapped keeps track of refcounts and the mapping state to the
+		// SDK.current map.
+		refMapped refcountMapped
 
-		// collectedEpoch is the epoch number for which this
-		// record has been exported.  This is modified by the
-		// `Collect()` method.
+		// modified is an atomic boolean that tracks if the current record
+		// was modified since the last Collect().
 		//
-		// collectedEpoch has to be aligned for 64-bit atomic operations.
-		collectedEpoch int64
-
-		// modifiedEpoch is the latest epoch number for which
-		// this record was updated.  Generally, if
-		// modifiedEpoch is less than collectedEpoch, this
-		// record is due for reclaimation.
-		//
-		// modifiedEpoch has to be aligned for 64-bit atomic operations.
-		modifiedEpoch int64
-
-		// reclaim is an atomic to control the start of reclaiming.
-		//
-		// reclaim has to be aligned for 64-bit atomic operations.
-		reclaim int64
+		// modified has to be aligned for 64-bit atomic operations.
+		modified int64
 
 		// labels is the LabelSet passed by the user.
 		labels *labels
@@ -134,39 +116,122 @@ type (
 		// depending on the type of aggregation.  If nil, the
 		// metric was disabled by the exporter.
 		recorder export.Aggregator
+	}
 
-		// next contains the next pointer for both the primary
-		// and the reclaim lists.
-		next doublePtr
+	observerResult struct {
+		observer *observer
+	}
+
+	int64ObserverResult struct {
+		result observerResult
+	}
+
+	float64ObserverResult struct {
+		result observerResult
+	}
+
+	observerCallback func(result observerResult)
+
+	observer struct {
+		meter      *SDK
+		descriptor *export.Descriptor
+		// recorders maps encoded labelset to the pair of
+		// labelset and recorder
+		recorders map[string]labeledRecorder
+		callback  observerCallback
+	}
+
+	labeledRecorder struct {
+		recorder      export.Aggregator
+		labels        *labels
+		modifiedEpoch int64
+	}
+
+	int64Observer struct {
+		observer *observer
+	}
+
+	float64Observer struct {
+		observer *observer
 	}
 
 	ErrorHandler func(error)
-
-	// singlePointer wraps an unsafe.Pointer and supports basic
-	// load(), store(), clear(), and swapNil() operations.
-	singlePtr struct {
-		ptr unsafe.Pointer
-	}
-
-	// doublePtr is used for the head and next links of two lists.
-	doublePtr struct {
-		primary singlePtr
-		reclaim singlePtr
-	}
 )
 
 var (
-	_ api.Meter               = &SDK{}
-	_ api.LabelSet            = &labels{}
-	_ api.InstrumentImpl      = &instrument{}
-	_ api.BoundInstrumentImpl = &record{}
-
-	// hazardRecord is used as a pointer value that indicates the
-	// value is not included in any list.  (`nil` would be
-	// ambiguous, since the final element in a list has `nil` as
-	// the next pointer).
-	hazardRecord = &record{}
+	_ api.Meter                 = &SDK{}
+	_ api.LabelSet              = &labels{}
+	_ api.InstrumentImpl        = &instrument{}
+	_ api.BoundInstrumentImpl   = &record{}
+	_ api.Int64Observer         = int64Observer{}
+	_ api.Float64Observer       = float64Observer{}
+	_ api.Int64ObserverResult   = int64ObserverResult{}
+	_ api.Float64ObserverResult = float64ObserverResult{}
 )
+
+func (r observerResult) observe(number core.Number, ls api.LabelSet) {
+	r.observer.recordOne(number, ls)
+}
+
+func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
+	if err := aggregator.RangeTest(number, o.descriptor); err != nil {
+		o.meter.errorHandler(err)
+		return
+	}
+	recorder := o.getRecorder(ls)
+	if recorder == nil {
+		// The instrument is disabled according to the
+		// AggregationSelector.
+		return
+	}
+	if err := recorder.Update(context.Background(), number, o.descriptor); err != nil {
+		o.meter.errorHandler(err)
+		return
+	}
+}
+
+func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
+	labels := o.meter.labsFor(ls)
+	lrec, ok := o.recorders[labels.encoded]
+	if ok {
+		lrec.modifiedEpoch = o.meter.currentEpoch
+		o.recorders[labels.encoded] = lrec
+		return lrec.recorder
+	}
+	rec := o.meter.batcher.AggregatorFor(o.descriptor)
+	if o.recorders == nil {
+		o.recorders = make(map[string]labeledRecorder)
+	}
+	// This may store nil recorder in the map, thus disabling the
+	// observer for the labelset for good. This is intentional,
+	// but will be revisited later.
+	o.recorders[labels.encoded] = labeledRecorder{
+		recorder:      rec,
+		labels:        labels,
+		modifiedEpoch: o.meter.currentEpoch,
+	}
+	return rec
+}
+
+func (o *observer) unregister() {
+	o.meter.observers.Delete(o)
+}
+
+func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
+	r.result.observe(core.NewInt64Number(value), labels)
+}
+
+func (r float64ObserverResult) Observe(value float64, labels api.LabelSet) {
+	r.result.observe(core.NewFloat64Number(value), labels)
+}
+
+func (o int64Observer) Unregister() {
+	o.observer.unregister()
+}
+
+func (o float64Observer) Unregister() {
+	o.observer.unregister()
+}
 
 func (i *instrument) Meter() api.Meter {
 	return i.meter
@@ -186,31 +251,51 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	if actual, ok := i.meter.current.Load(mk); ok {
 		// Existing record case, only one allocation so far.
 		rec := actual.(*record)
-		atomic.AddInt64(&rec.refcount, 1)
-		return rec
+		if rec.refMapped.ref() {
+			// At this moment it is guaranteed that the entry is in
+			// the map and will not be removed.
+			return rec
+		}
+		// This entry is no longer mapped, try to add a new entry.
 	}
 
 	// There's a memory allocation here.
 	rec := &record{
-		labels:         ls,
-		descriptor:     i.descriptor,
-		refcount:       1,
-		collectedEpoch: -1,
-		modifiedEpoch:  0,
-		recorder:       i.meter.batcher.AggregatorFor(i.descriptor),
+		labels:     ls,
+		descriptor: i.descriptor,
+		refMapped:  refcountMapped{value: 2},
+		modified:   0,
+		recorder:   i.meter.batcher.AggregatorFor(i.descriptor),
 	}
 
-	// Load/Store: there's a memory allocation to place `mk` into
-	// an interface here.
-	if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
-		// Existing record case.
-		rec = actual.(*record)
-		atomic.AddInt64(&rec.refcount, 1)
+	for {
+		// Load/Store: there's a memory allocation to place `mk` into
+		// an interface here.
+		if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
+			// Existing record case. Cannot change rec here because if fail
+			// will try to add rec again to avoid new allocations.
+			oldRec := actual.(*record)
+			if oldRec.refMapped.ref() {
+				// At this moment it is guaranteed that the entry is in
+				// the map and will not be removed.
+				return oldRec
+			}
+			// This loaded entry is marked as unmapped (so Collect will remove
+			// it from the map immediately), try again - this is a busy waiting
+			// strategy to wait until Collect() removes this entry from the map.
+			//
+			// This can be improved by having a list of "Unmapped" entries for
+			// one time only usages, OR we can make this a blocking path and use
+			// a Mutex that protects the delete operation (delete only if the old
+			// record is associated with the key).
+
+			// Let collector get work done to remove the entry from the map.
+			runtime.Gosched()
+			continue
+		}
+		// The new entry was added to the map, good to go.
 		return rec
 	}
-
-	i.meter.addPrimary(rec)
-	return rec
 }
 
 func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
@@ -298,8 +383,8 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
-	descriptor := export.NewDescriptor(
+func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *export.Descriptor {
+	return export.NewDescriptor(
 		name,
 		metricKind,
 		opts.Keys,
@@ -307,6 +392,10 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core
 		opts.Unit,
 		numberKind,
 		opts.Alternate)
+}
+
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
+	descriptor := newDescriptor(name, metricKind, numberKind, opts)
 	return &instrument{
 		descriptor: descriptor,
 		meter:      m,
@@ -355,24 +444,66 @@ func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) ap
 	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
 }
 
-// saveFromReclaim puts a record onto the "reclaim" list when it
-// detects an attempt to delete the record while it is still in use.
-func (m *SDK) saveFromReclaim(rec *record) {
-	for {
-		reclaimed := atomic.LoadInt64(&rec.reclaim)
-		if reclaimed != 0 {
-			return
-		}
-		if atomic.CompareAndSwapInt64(&rec.reclaim, 0, 1) {
-			break
-		}
+func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) api.Int64Observer {
+	if callback == nil {
+		return api.NoopMeter{}.RegisterInt64Observer("", nil)
 	}
-
-	m.addReclaim(rec)
+	opts := api.Options{}
+	api.ApplyObserverOptions(&opts, oos...)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, &opts)
+	cb := wrapInt64ObserverCallback(callback)
+	obs := m.newObserver(descriptor, cb)
+	return int64Observer{
+		observer: obs,
+	}
 }
 
-// Collect traverses the list of active records and exports data for
-// each active instrument.  Collect() may not be called concurrently.
+func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
+	return func(result observerResult) {
+		typeSafeResult := int64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) api.Float64Observer {
+	if callback == nil {
+		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
+	}
+	opts := api.Options{}
+	api.ApplyObserverOptions(&opts, oos...)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, &opts)
+	cb := wrapFloat64ObserverCallback(callback)
+	obs := m.newObserver(descriptor, cb)
+	return float64Observer{
+		observer: obs,
+	}
+}
+
+func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
+	return func(result observerResult) {
+		typeSafeResult := float64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
+	obs := &observer{
+		meter:      m,
+		descriptor: descriptor,
+		recorders:  nil,
+		callback:   callback,
+	}
+	m.observers.Store(obs, nil)
+	return obs
+}
+
+// Collect traverses the list of active records and observers and
+// exports data for each active instrument.  Collect() may not be
+// called concurrently.
 //
 // During the collection pass, the export.Batcher will receive
 // one Export() call per current aggregation.
@@ -382,60 +513,88 @@ func (m *SDK) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := 0
-
-	var next *record
-	for inuse := m.records.primary.swapNil(); inuse != nil; inuse = next {
-		next = inuse.next.primary.load()
-
-		refcount := atomic.LoadInt64(&inuse.refcount)
-
-		if refcount > 0 {
-			checkpointed += m.checkpoint(ctx, inuse)
-			m.addPrimary(inuse)
-			continue
-		}
-
-		modified := atomic.LoadInt64(&inuse.modifiedEpoch)
-		collected := atomic.LoadInt64(&inuse.collectedEpoch)
-		checkpointed += m.checkpoint(ctx, inuse)
-
-		if modified >= collected {
-			atomic.StoreInt64(&inuse.collectedEpoch, m.currentEpoch)
-			m.addPrimary(inuse)
-			continue
-		}
-
-		// Remove this entry.
-		m.current.Delete(inuse.mapkey())
-		inuse.next.primary.store(hazardRecord)
-	}
-
-	for chances := m.records.reclaim.swapNil(); chances != nil; chances = next {
-		atomic.StoreInt64(&chances.collectedEpoch, m.currentEpoch)
-
-		next = chances.next.reclaim.load()
-		chances.next.reclaim.clear()
-		atomic.StoreInt64(&chances.reclaim, 0)
-
-		if chances.next.primary.load() == hazardRecord {
-			checkpointed += m.checkpoint(ctx, chances)
-			m.addPrimary(chances)
-		}
-	}
-
+	checkpointed := m.collectRecords(ctx)
+	checkpointed += m.collectObservers(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, r *record) int {
-	if r.recorder == nil {
+func (m *SDK) collectRecords(ctx context.Context) int {
+	checkpointed := 0
+
+	m.current.Range(func(key interface{}, value interface{}) bool {
+		inuse := value.(*record)
+		unmapped := inuse.refMapped.tryUnmap()
+		// If able to unmap then remove the record from the current Map.
+		if unmapped {
+			m.current.Delete(inuse.mapkey())
+		}
+
+		// Always report the values if a reference to the Record is active,
+		// this is to keep the previous behavior.
+		// TODO: Reconsider this logic.
+		if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modified) != 0 {
+			atomic.StoreInt64(&inuse.modified, 0)
+			checkpointed += m.checkpointRecord(ctx, inuse)
+		}
+
+		// Always continue to iterate over the entire map.
+		return true
+	})
+
+	return checkpointed
+}
+
+func (m *SDK) collectObservers(ctx context.Context) int {
+	checkpointed := 0
+
+	m.observers.Range(func(key, value interface{}) bool {
+		obs := key.(*observer)
+		result := observerResult{
+			observer: obs,
+		}
+		obs.callback(result)
+		checkpointed += m.checkpointObserver(ctx, obs)
+		return true
+	})
+
+	return checkpointed
+}
+
+func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
+	return m.checkpoint(ctx, r.descriptor, r.recorder, r.labels)
+}
+
+func (m *SDK) checkpointObserver(ctx context.Context, obs *observer) int {
+	if len(obs.recorders) == 0 {
 		return 0
 	}
-	r.recorder.Checkpoint(ctx, r.descriptor)
-	labels := export.NewLabels(r.labels.sorted, r.labels.encoded, m.labelEncoder)
-	err := m.batcher.Process(ctx, export.NewRecord(r.descriptor, labels, r.recorder))
+	checkpointed := 0
+	for encodedLabels, lrec := range obs.recorders {
+		epochDiff := m.currentEpoch - lrec.modifiedEpoch
+		if epochDiff == 0 {
+			checkpointed += m.checkpoint(ctx, obs.descriptor, lrec.recorder, lrec.labels)
+		} else if epochDiff > 1 {
+			// This is second collection cycle with no
+			// observations for this labelset. Remove the
+			// recorder.
+			delete(obs.recorders, encodedLabels)
+		}
+	}
+	if len(obs.recorders) == 0 {
+		obs.recorders = nil
+	}
+	return checkpointed
+}
 
+func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, recorder export.Aggregator, labels *labels) int {
+	if recorder == nil {
+		return 0
+	}
+	recorder.Checkpoint(ctx, descriptor)
+	exportLabels := export.NewLabels(labels.sorted, labels.encoded, m.labelEncoder)
+	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
+	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)
 	}
@@ -474,29 +633,11 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 }
 
 func (r *record) Unbind() {
-	for {
-		collected := atomic.LoadInt64(&r.collectedEpoch)
-		modified := atomic.LoadInt64(&r.modifiedEpoch)
-
-		updated := collected + 1
-
-		if modified == updated {
-			// No change
-			break
-		}
-		if !atomic.CompareAndSwapInt64(&r.modifiedEpoch, modified, updated) {
-			continue
-		}
-
-		if modified < collected {
-			// This record could have been reclaimed.
-			r.labels.meter.saveFromReclaim(r)
-		}
-
-		break
-	}
-
-	_ = atomic.AddInt64(&r.refcount, -1)
+	// Record was modified, inform the Collect() that things need to be collected.
+	// TODO: Reconsider if we should marked as modified when an Update happens and
+	// collect only when updates happened even for Bounds.
+	atomic.StoreInt64(&r.modified, 1)
+	r.refMapped.unref()
 }
 
 func (r *record) mapkey() mapkey {

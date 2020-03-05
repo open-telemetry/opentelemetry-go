@@ -40,6 +40,7 @@ type Tracer interface {
 		ctx context.Context,
 		spanName string,
 		fn func(ctx context.Context) error,
+		opts ...StartOption,
 	) error
 }
 
@@ -59,6 +60,29 @@ func WithEndTime(t time.Time) EndOption {
 	}
 }
 
+// ErrorConfig provides options to set properties of an error event at the time it is recorded.
+type ErrorConfig struct {
+	Timestamp time.Time
+	Status    codes.Code
+}
+
+// ErrorOption applies changes to ErrorConfig that sets options when an error event is recorded.
+type ErrorOption func(*ErrorConfig)
+
+// WithErrorTime sets the time at which the error event should be recorded.
+func WithErrorTime(t time.Time) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Timestamp = t
+	}
+}
+
+// WithErrorStatus indicates the span status that should be set when recording an error event.
+func WithErrorStatus(s codes.Code) ErrorOption {
+	return func(c *ErrorConfig) {
+		c.Status = s
+	}
+}
+
 type Span interface {
 	// Tracer returns tracer used to create this span. Tracer cannot be nil.
 	Tracer() Tracer
@@ -75,6 +99,9 @@ type Span interface {
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
+
+	// RecordError records an error as a span event.
+	RecordError(ctx context.Context, err error, opts ...ErrorOption)
 
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
@@ -100,25 +127,10 @@ type StartConfig struct {
 	Attributes []core.KeyValue
 	StartTime  time.Time
 	Links      []Link
-	Relation   Relation
 	Record     bool
+	NewRoot    bool
 	SpanKind   SpanKind
 }
-
-// Relation is used to establish relationship between newly created span and the
-// other span. The other span could be related as a parent or linked or any other
-// future relationship type.
-type Relation struct {
-	core.SpanContext
-	RelationshipType
-}
-
-type RelationshipType int
-
-const (
-	ChildOfRelationship RelationshipType = iota
-	FollowsFromRelationship
-)
 
 // Link is used to establish relationship between two spans within the same Trace or
 // across different Traces. Few examples of Link usage.
@@ -216,23 +228,14 @@ func WithRecord() StartOption {
 	}
 }
 
-// ChildOf. TODO: do we need this?.
-func ChildOf(sc core.SpanContext) StartOption {
+// WithNewRoot specifies that the current span or remote span context
+// in context passed to `Start` should be ignored when deciding about
+// a parent, which effectively means creating a span with new trace
+// ID. The current span and the remote span context may be added as
+// links to the span by the implementation.
+func WithNewRoot() StartOption {
 	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: ChildOfRelationship,
-		}
-	}
-}
-
-// FollowsFrom. TODO: do we need this?.
-func FollowsFrom(sc core.SpanContext) StartOption {
-	return func(c *StartConfig) {
-		c.Relation = Relation{
-			SpanContext:      sc,
-			RelationshipType: FollowsFromRelationship,
-		}
+		c.NewRoot = true
 	}
 }
 

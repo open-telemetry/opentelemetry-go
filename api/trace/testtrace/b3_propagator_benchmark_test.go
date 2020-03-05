@@ -63,7 +63,7 @@ func BenchmarkExtractB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					_, _ = propagator.Extract(ctx, req.Header)
+					_ = propagator.Extract(ctx, req.Header)
 				}
 			})
 		}
@@ -102,10 +102,9 @@ func BenchmarkInjectB3(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()
 				if tt.parentSc.IsValid() {
-					ctx, _ = mockTracer.Start(ctx, "inject", trace.ChildOf(tt.parentSc))
-				} else {
-					ctx, _ = mockTracer.Start(ctx, "inject")
+					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
 				}
+				ctx, _ = mockTracer.Start(ctx, "inject")
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {

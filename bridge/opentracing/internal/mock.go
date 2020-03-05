@@ -17,6 +17,7 @@ package internal
 import (
 	"context"
 	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -69,8 +71,8 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
-	ctx, span := t.Start(ctx, name)
+func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
+	ctx, span := t.Start(ctx, name, opts...)
 	defer span.End()
 	return body(ctx)
 }
@@ -146,14 +148,8 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.St
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) otelcore.SpanContext {
-	if spanOpts.Relation.RelationshipType == oteltrace.ChildOfRelationship &&
-		spanOpts.Relation.SpanContext.IsValid() {
-		return spanOpts.Relation.SpanContext
-	}
-	if parentSpanContext := oteltrace.SpanFromContext(ctx).SpanContext(); parentSpanContext.IsValid() {
-		return parentSpanContext
-	}
-	return otelcore.EmptySpanContext()
+	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, spanOpts.NewRoot)
+	return spanCtx
 }
 
 func (t *MockTracer) getSpanID() otelcore.SpanID {
@@ -264,6 +260,35 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
+func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace.ErrorOption) {
+	if err == nil {
+		return // no-op on nil error
+	}
+
+	if !s.EndTime.IsZero() {
+		return // already finished
+	}
+
+	cfg := oteltrace.ErrorConfig{}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+		otelcore.Key("error.type").String(reflect.TypeOf(err).String()),
+		otelcore.Key("error.message").String(err.Error()),
+	)
+}
+
 func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
@@ -274,7 +299,7 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: otelcorrelation.FromContext(ctx),
+		CtxAttributes: otelcorrelation.MapFromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
 		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{

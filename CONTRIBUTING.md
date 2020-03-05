@@ -138,6 +138,7 @@ Approvers:
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Ted Young](https://github.com/tedsuo), LightStep
+- [Tyler Yahn](https://github.com/MrAlias), New Relic
 
 Maintainers:
 

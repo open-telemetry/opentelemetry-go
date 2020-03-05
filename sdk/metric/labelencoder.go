@@ -22,6 +22,13 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
+// escapeChar is used to ensure uniqueness of the label encoding where
+// keys or values contain either '=' or ','.  Since there is no parser
+// needed for this encoding and its only requirement is to be unique,
+// this choice is arbitrary.  Users will see these in some exporters
+// (e.g., stdout), so the backslash ('\') is used a conventional choice.
+const escapeChar = '\\'
+
 type defaultLabelEncoder struct {
 	// pool is a pool of labelset builders.  The buffers in this
 	// pool grow to a size that most label encodings will not
@@ -54,9 +61,25 @@ func (d *defaultLabelEncoder) Encode(labels []core.KeyValue) string {
 		if i > 0 {
 			_, _ = buf.WriteRune(',')
 		}
-		_, _ = buf.WriteString(string(kv.Key))
+		copyAndEscape(buf, string(kv.Key))
+
 		_, _ = buf.WriteRune('=')
-		_, _ = buf.WriteString(kv.Value.Emit())
+
+		if kv.Value.Type() == core.STRING {
+			copyAndEscape(buf, kv.Value.AsString())
+		} else {
+			_, _ = buf.WriteString(kv.Value.Emit())
+		}
 	}
 	return buf.String()
+}
+
+func copyAndEscape(buf *bytes.Buffer, val string) {
+	for _, ch := range val {
+		switch ch {
+		case '=', ',', escapeChar:
+			buf.WriteRune(escapeChar)
+		}
+		buf.WriteRune(ch)
+	}
 }

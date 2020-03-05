@@ -18,70 +18,50 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
 const (
-	supportedVersion         = 0
-	maxVersion               = 254
-	TraceparentHeader        = "Traceparent"
-	CorrelationContextHeader = "Correlation-Context"
+	supportedVersion  = 0
+	maxVersion        = 254
+	traceparentHeader = "Traceparent"
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
 //nolint:golint
 type TraceContext struct{}
 
-var _ propagation.TextFormat = TraceContext{}
+var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
 
-func (hp TraceContext) Inject(ctx context.Context, supplier propagation.Supplier) {
+// DefaultHTTPPropagator returns the default trace HTTP propagator.
+func DefaultHTTPPropagator() propagation.HTTPPropagator {
+	return TraceContext{}
+}
+
+func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
-	if sc.IsValid() {
-		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
-			supportedVersion,
-			sc.TraceIDString(),
-			sc.SpanID,
-			sc.TraceFlags&core.TraceFlagsSampled)
-		supplier.Set(TraceparentHeader, h)
+	if !sc.IsValid() {
+		return
 	}
-
-	correlationCtx := correlation.FromContext(ctx)
-	firstIter := true
-	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
-		if !firstIter {
-			headerValueBuilder.WriteRune(',')
-		}
-		firstIter = false
-		headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace((string)(kv.Key))))
-		headerValueBuilder.WriteRune('=')
-		headerValueBuilder.WriteString(url.QueryEscape(strings.TrimSpace(kv.Value.Emit())))
-		return true
-	})
-	if headerValueBuilder.Len() > 0 {
-		headerString := headerValueBuilder.String()
-		supplier.Set(CorrelationContextHeader, headerString)
-	}
+	h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
+		supportedVersion,
+		sc.TraceIDString(),
+		sc.SpanID,
+		sc.TraceFlags&core.TraceFlagsSampled)
+	supplier.Set(traceparentHeader, h)
 }
 
-func (hp TraceContext) Extract(
-	ctx context.Context, supplier propagation.Supplier,
-) (core.SpanContext, correlation.Map) {
-	return hp.extractSpanContext(ctx, supplier), hp.extractCorrelationCtx(ctx, supplier)
+func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	return ContextWithRemoteSpanContext(ctx, tc.extract(supplier))
 }
 
-func (hp TraceContext) extractSpanContext(
-	ctx context.Context, supplier propagation.Supplier,
-) core.SpanContext {
-	h := supplier.Get(TraceparentHeader)
+func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
+	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
 	}
@@ -147,50 +127,6 @@ func (hp TraceContext) extractSpanContext(
 	return sc
 }
 
-func (hp TraceContext) extractCorrelationCtx(ctx context.Context, supplier propagation.Supplier) correlation.Map {
-	correlationContext := supplier.Get(CorrelationContextHeader)
-	if correlationContext == "" {
-		return correlation.NewEmptyMap()
-	}
-
-	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]core.KeyValue, 0, len(contextValues))
-	for _, contextValue := range contextValues {
-		valueAndProps := strings.Split(contextValue, ";")
-		if len(valueAndProps) < 1 {
-			continue
-		}
-		nameValue := strings.Split(valueAndProps[0], "=")
-		if len(nameValue) < 2 {
-			continue
-		}
-		name, err := url.QueryUnescape(nameValue[0])
-		if err != nil {
-			continue
-		}
-		trimmedName := strings.TrimSpace(name)
-		value, err := url.QueryUnescape(nameValue[1])
-		if err != nil {
-			continue
-		}
-		trimmedValue := strings.TrimSpace(value)
-
-		// TODO (skaris): properties defiend https://w3c.github.io/correlation-context/, are currently
-		// just put as part of the value.
-		var trimmedValueWithProps strings.Builder
-		trimmedValueWithProps.WriteString(trimmedValue)
-		for _, prop := range valueAndProps[1:] {
-			trimmedValueWithProps.WriteRune(';')
-			trimmedValueWithProps.WriteString(prop)
-		}
-
-		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
-	}
-	return correlation.NewMap(correlation.MapUpdate{
-		MultiKV: keyValues,
-	})
-}
-
-func (hp TraceContext) GetAllKeys() []string {
-	return []string{TraceparentHeader, CorrelationContextHeader}
+func (TraceContext) GetAllKeys() []string {
+	return []string{traceparentHeader}
 }

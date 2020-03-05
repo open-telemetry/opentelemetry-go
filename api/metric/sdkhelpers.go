@@ -122,3 +122,11 @@ func ApplyMeasureOptions(opts *Options, mos ...MeasureOptionApplier) {
 		o.ApplyMeasureOption(opts)
 	}
 }
+
+// ApplyObserverOptions is a helper that applies all the observer
+// options to passed opts.
+func ApplyObserverOptions(opts *Options, mos ...ObserverOptionApplier) {
+	for _, o := range mos {
+		o.ApplyObserverOption(opts)
+	}
+}

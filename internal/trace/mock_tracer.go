@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 // MockTracer is a simple tracer used for testing purpose only.
@@ -41,13 +42,16 @@ type MockTracer struct {
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
 // WithSpan does nothing except executing the body.
-func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (mt *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...apitrace.StartOption) error {
+	ctx, span := mt.Start(ctx, name, opts...)
+	defer span.End()
+
 	return body(ctx)
 }
 
-// Start starts a MockSpan. It creates a new Span based on Relation SpanContext option.
-// TracdID is used from Relation Span Context and SpanID is assigned.
-// If Relation SpanContext option is not specified then random TraceID is used.
+// Start starts a MockSpan. It creates a new Span based on Parent SpanContext option.
+// TracdID is used from Parent Span Context and SpanID is assigned.
+// If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
 func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
 	var opts apitrace.StartConfig
@@ -56,14 +60,17 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 	}
 	var span *MockSpan
 	var sc core.SpanContext
-	if !opts.Relation.SpanContext.IsValid() {
+
+	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+
+	if !parentSpanContext.IsValid() {
 		sc = core.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
 			sc.TraceFlags = core.TraceFlagsSampled
 		}
 	} else {
-		sc = opts.Relation.SpanContext
+		sc = parentSpanContext
 	}
 
 	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))

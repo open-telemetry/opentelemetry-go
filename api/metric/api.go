@@ -81,6 +81,14 @@ type MeasureOptionApplier interface {
 	ApplyMeasureOption(*Options)
 }
 
+// ObserverOptionApplier is an interface for applying metric options
+// that are valid only for observer metrics.
+type ObserverOptionApplier interface {
+	// ApplyObserverOption is used to make some general or
+	// observer-specific changes in the Options.
+	ApplyObserverOption(*Options)
+}
+
 // Measurement is used for reporting a batch of metric
 // values. Instances of this type should be created by instruments
 // (e.g., Int64Counter.Measurement()).
@@ -127,8 +135,49 @@ type Meter interface {
 	// a given name and customized with passed options.
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
 
+	// RegisterInt64Observer creates a new integral observer with a
+	// given name, running a given callback, and customized with passed
+	// options. Callback can be nil.
+	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	// RegisterFloat64Observer creates a new floating point observer
+	// with a given name, running a given callback, and customized with
+	// passed options. Callback can be nil.
+	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
+
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
+}
+
+// Int64ObserverResult is an interface for reporting integral
+// observations.
+type Int64ObserverResult interface {
+	Observe(value int64, labels LabelSet)
+}
+
+// Float64ObserverResult is an interface for reporting floating point
+// observations.
+type Float64ObserverResult interface {
+	Observe(value float64, labels LabelSet)
+}
+
+// Int64ObserverCallback is a type of callback that integral
+// observers run.
+type Int64ObserverCallback func(result Int64ObserverResult)
+
+// Float64ObserverCallback is a type of callback that floating point
+// observers run.
+type Float64ObserverCallback func(result Float64ObserverResult)
+
+// Int64Observer is a metric that captures a set of int64 values at a
+// point in time.
+type Int64Observer interface {
+	Unregister()
+}
+
+// Float64Observer is a metric that captures a set of float64 values
+// at a point in time.
+type Float64Observer interface {
+	Unregister()
 }
 
 // Option supports specifying the various metric options.
@@ -140,16 +189,19 @@ type OptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
 	MeasureOptionApplier
+	ObserverOptionApplier
 	// ApplyOption is used to make some general changes in the
 	// Options.
 	ApplyOption(*Options)
 }
 
-// CounterGaugeOptionApplier is an interface for applying metric
-// options that are valid for counter or gauge metrics.
-type CounterGaugeOptionApplier interface {
+// CounterGaugeObserverOptionApplier is an interface for applying
+// metric options that are valid for counter, gauge or observer
+// metrics.
+type CounterGaugeObserverOptionApplier interface {
 	CounterOptionApplier
 	GaugeOptionApplier
+	ObserverOptionApplier
 }
 
 type optionWrapper struct {
@@ -168,16 +220,22 @@ type measureOptionWrapper struct {
 	F Option
 }
 
-type counterGaugeOptionWrapper struct {
+type observerOptionWrapper struct {
+	F Option
+}
+
+type counterGaugeObserverOptionWrapper struct {
 	FC Option
 	FG Option
+	FO Option
 }
 
 var (
-	_ OptionApplier        = optionWrapper{}
-	_ CounterOptionApplier = counterOptionWrapper{}
-	_ GaugeOptionApplier   = gaugeOptionWrapper{}
-	_ MeasureOptionApplier = measureOptionWrapper{}
+	_ OptionApplier         = optionWrapper{}
+	_ CounterOptionApplier  = counterOptionWrapper{}
+	_ GaugeOptionApplier    = gaugeOptionWrapper{}
+	_ MeasureOptionApplier  = measureOptionWrapper{}
+	_ ObserverOptionApplier = observerOptionWrapper{}
 )
 
 func (o optionWrapper) ApplyCounterOption(opts *Options) {
@@ -189,6 +247,10 @@ func (o optionWrapper) ApplyGaugeOption(opts *Options) {
 }
 
 func (o optionWrapper) ApplyMeasureOption(opts *Options) {
+	o.ApplyOption(opts)
+}
+
+func (o optionWrapper) ApplyObserverOption(opts *Options) {
 	o.ApplyOption(opts)
 }
 
@@ -208,12 +270,20 @@ func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
 	o.F(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyCounterOption(opts *Options) {
+func (o counterGaugeObserverOptionWrapper) ApplyCounterOption(opts *Options) {
 	o.FC(opts)
 }
 
-func (o counterGaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
+func (o counterGaugeObserverOptionWrapper) ApplyGaugeOption(opts *Options) {
 	o.FG(opts)
+}
+
+func (o counterGaugeObserverOptionWrapper) ApplyObserverOption(opts *Options) {
+	o.FO(opts)
+}
+
+func (o observerOptionWrapper) ApplyObserverOption(opts *Options) {
+	o.F(opts)
 }
 
 // WithDescription applies provided description.
@@ -244,14 +314,17 @@ func WithKeys(keys ...core.Key) OptionApplier {
 	}
 }
 
-// WithMonotonic sets whether a counter or a gauge is not permitted to
-// go down.
-func WithMonotonic(monotonic bool) CounterGaugeOptionApplier {
-	return counterGaugeOptionWrapper{
+// WithMonotonic sets whether a counter, a gauge or an observer is not
+// permitted to go down.
+func WithMonotonic(monotonic bool) CounterGaugeObserverOptionApplier {
+	return counterGaugeObserverOptionWrapper{
 		FC: func(opts *Options) {
 			opts.Alternate = !monotonic
 		},
 		FG: func(opts *Options) {
+			opts.Alternate = monotonic
+		},
+		FO: func(opts *Options) {
 			opts.Alternate = monotonic
 		},
 	}

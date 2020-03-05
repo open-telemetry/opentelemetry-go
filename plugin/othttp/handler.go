@@ -50,9 +50,8 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
-	prop             propagation.TextFormat
+	props            propagation.Propagators
 	spanStartOptions []trace.StartOption
-	public           bool
 	readEvent        bool
 	writeEvent       bool
 }
@@ -73,16 +72,16 @@ func WithTracer(tracer trace.Tracer) Option {
 // association instead of a link.
 func WithPublicEndpoint() Option {
 	return func(h *Handler) {
-		h.public = true
+		h.spanStartOptions = append(h.spanStartOptions, trace.WithNewRoot())
 	}
 }
 
-// WithPropagator configures the Handler with a specific propagator. If this
-// option isn't specificed then
-// go.opentelemetry.io/otel/api/trace.TraceContext is used.
-func WithPropagator(p propagation.TextFormat) Option {
+// WithPropagators configures the Handler with specific propagators. If this
+// option isn't specified then
+// go.opentelemetry.io/otel/api/global.Propagators are used.
+func WithPropagators(ps propagation.Propagators) Option {
 	return func(h *Handler) {
-		h.prop = p
+		h.props = ps
 	}
 }
 
@@ -90,7 +89,7 @@ func WithPropagator(p propagation.TextFormat) Option {
 // trace.StartOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.StartOption) Option {
 	return func(h *Handler) {
-		h.spanStartOptions = opts
+		h.spanStartOptions = append(h.spanStartOptions, opts...)
 	}
 }
 
@@ -130,7 +129,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagator(trace.TraceContext{}),
+		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -144,21 +143,8 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	// TODO: do something with the correlation context
-	sc, _ := h.prop.Extract(r.Context(), r.Header)
-	if sc.IsValid() { // not a valid span context, so no link / parent relationship to establish
-		var opt trace.StartOption
-		if h.public {
-			// If the endpoint is a public endpoint, it should start a new trace
-			// and incoming remote sctx should be added as a link.
-			opt = trace.LinkedTo(sc)
-		} else { // not a private endpoint, so assume child relationship
-			opt = trace.ChildOf(sc)
-		}
-		opts = append(opts, opt)
-	}
-
-	ctx, span := h.tracer.Start(r.Context(), h.operation, opts...)
+	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
+	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}
@@ -177,7 +163,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, injector: h.prop}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.props}
 
 	// Setup basic span attributes before calling handler.ServeHTTP so that they
 	// are available to be mutated by the handler if needed.
@@ -221,8 +207,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
-		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttributes(RouteKey.String(route))
-		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
+		h.ServeHTTP(w, r)
 	})
 }

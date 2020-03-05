@@ -39,7 +39,7 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 	metadataCopy := requestMetadata.Copy()
 
 	entries, spanCtx := grpctrace.Extract(ctx, &metadataCopy)
-	ctx = correlation.WithMap(ctx, correlation.NewMap(correlation.MapUpdate{
+	ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 		MultiKV: entries,
 	}))
 
@@ -50,10 +50,9 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 
 	tr := global.TraceProvider().Tracer("example/grpc")
 	ctx, span := tr.Start(
-		ctx,
+		trace.ContextWithRemoteSpanContext(ctx, spanCtx),
 		"hello-api-op",
 		trace.WithAttributes(serverSpanAttrs...),
-		trace.ChildOf(spanCtx),
 		trace.WithSpanKind(trace.SpanKindServer),
 	)
 	defer span.End()

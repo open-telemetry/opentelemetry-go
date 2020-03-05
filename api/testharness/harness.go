@@ -125,35 +125,53 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
 		})
 
-		t.Run("propagates a parent's trace ID through `ChildOf`", func(t *testing.T) {
+		t.Run("ignores parent's trace ID when new root is requested", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.ChildOf(parent.SpanContext()))
+			ctx, parent := subject.Start(context.Background(), "parent")
+			_, child := subject.Start(ctx, "child", trace.WithNewRoot())
 
 			psc := parent.SpanContext()
+			csc := child.SpanContext()
+
+			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
+			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+		})
+
+		t.Run("propagates remote parent's trace ID through the context", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+			subject := subjectFactory()
+
+			_, remoteParent := subject.Start(context.Background(), "remote parent")
+			parentCtx := trace.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			_, child := subject.Start(parentCtx, "child")
+
+			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
 			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
 		})
 
-		t.Run("propagates a parent's trace ID through `FollowsFrom`", func(t *testing.T) {
+		t.Run("ignores remote parent's trace ID when new root is requested", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
-			_, parent := subject.Start(context.Background(), "parent")
-			_, child := subject.Start(context.Background(), "child", trace.FollowsFrom(parent.SpanContext()))
+			_, remoteParent := subject.Start(context.Background(), "remote parent")
+			parentCtx := trace.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			_, child := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
-			psc := parent.SpanContext()
+			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
+			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
 		})
 	})

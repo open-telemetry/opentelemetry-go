@@ -23,7 +23,7 @@ type NoopTracer struct{}
 var _ Tracer = NoopTracer{}
 
 // WithSpan wraps around execution of func with noop span.
-func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error) error {
+func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...StartOption) error {
 	return body(ctx)
 }
 

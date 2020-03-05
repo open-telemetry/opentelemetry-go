@@ -28,6 +28,7 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
+	otelkey "go.opentelemetry.io/otel/api/key"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -309,15 +310,18 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	for _, opt := range opts {
 		opt.Apply(&sso)
 	}
-	// TODO: handle links, needs SpanData to be in the API first?
-	bRelation, _ := otSpanReferencesToBridgeRelationAndLinks(sso.References)
+	parentBridgeSC, links := otSpanReferencesToParentAndLinks(sso.References)
 	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
+	if parentBridgeSC != nil {
+		checkCtx = oteltrace.ContextWithRemoteSpanContext(checkCtx, parentBridgeSC.otelSpanContext)
+	}
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
 		opts.Attributes = attributes
 		opts.StartTime = sso.StartTime
-		opts.Relation = bRelation.ToOtelRelation()
+		opts.Links = links
 		opts.Record = true
+		opts.NewRoot = false
 		opts.SpanKind = kind
 	})
 	if checkCtx != checkCtx2 {
@@ -328,9 +332,15 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	if hadTrueErrorTag {
 		otelSpan.SetStatus(codes.Unknown)
 	}
+	// One does not simply pass a concrete pointer to function
+	// that takes some interface. In case of passing nil concrete
+	// pointer, we get an interface with non-nil type (because the
+	// pointer type is known) and a nil value. Which means
+	// interface is not nil, but calling some interface function
+	// on it will most likely result in nil pointer dereference.
 	var otSpanContext ot.SpanContext
-	if bRelation.spanContext != nil {
-		otSpanContext = bRelation.spanContext
+	if parentBridgeSC != nil {
+		otSpanContext = parentBridgeSC
 	}
 	sctx := newBridgeSpanContext(otelSpan.SpanContext(), otSpanContext)
 	span := &bridgeSpan{
@@ -440,53 +450,59 @@ func otTagToOtelCoreKey(k string) otelcore.Key {
 	return otelcore.Key(k)
 }
 
-type bridgeRelation struct {
-	spanContext      *bridgeSpanContext
-	relationshipType oteltrace.RelationshipType
+func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpanContext, []oteltrace.Link) {
+	var (
+		parent *bridgeSpanContext
+		links  []oteltrace.Link
+	)
+	for _, reference := range references {
+		bridgeSC, ok := reference.ReferencedContext.(*bridgeSpanContext)
+		if !ok {
+			// We ignore foreign ot span contexts,
+			// sorry. We have no way of getting any
+			// TraceID and SpanID out of it for form a
+			// otelcore.SpanContext for otelcore.Link. And
+			// we can't make it a parent - it also needs a
+			// valid otelcore.SpanContext.
+			continue
+		}
+		if parent != nil {
+			links = append(links, otSpanReferenceToOtelLink(bridgeSC, reference.Type))
+		} else {
+			if reference.Type == ot.ChildOfRef {
+				parent = bridgeSC
+			} else {
+				links = append(links, otSpanReferenceToOtelLink(bridgeSC, reference.Type))
+			}
+		}
+	}
+	return parent, links
 }
 
-func (r bridgeRelation) ToOtelRelation() oteltrace.Relation {
-	if r.spanContext == nil {
-		return oteltrace.Relation{}
-	}
-	return oteltrace.Relation{
-		SpanContext:      r.spanContext.otelSpanContext,
-		RelationshipType: r.relationshipType,
+func otSpanReferenceToOtelLink(bridgeSC *bridgeSpanContext, refType ot.SpanReferenceType) oteltrace.Link {
+	return oteltrace.Link{
+		SpanContext: bridgeSC.otelSpanContext,
+		Attributes:  otSpanReferenceTypeToOtelLinkAttributes(refType),
 	}
 }
 
-func otSpanReferencesToBridgeRelationAndLinks(references []ot.SpanReference) (bridgeRelation, []*bridgeSpanContext) {
-	if len(references) == 0 {
-		return bridgeRelation{}, nil
+func otSpanReferenceTypeToOtelLinkAttributes(refType ot.SpanReferenceType) []otelcore.KeyValue {
+	return []otelcore.KeyValue{
+		otelkey.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
 	}
-	first := references[0]
-	relation := bridgeRelation{
-		spanContext:      mustGetBridgeSpanContext(first.ReferencedContext),
-		relationshipType: otSpanReferenceTypeToOtelRelationshipType(first.Type),
-	}
-	var links []*bridgeSpanContext
-	for _, reference := range references[1:] {
-		links = append(links, mustGetBridgeSpanContext(reference.ReferencedContext))
-	}
-	return relation, links
 }
 
-func mustGetBridgeSpanContext(ctx ot.SpanContext) *bridgeSpanContext {
-	ourCtx, ok := ctx.(*bridgeSpanContext)
-	if !ok {
-		panic("oops, some foreign span context here")
-	}
-	return ourCtx
-}
-
-func otSpanReferenceTypeToOtelRelationshipType(srt ot.SpanReferenceType) oteltrace.RelationshipType {
-	switch srt {
+func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
+	switch refType {
 	case ot.ChildOfRef:
-		return oteltrace.ChildOfRelationship
+		// "extra", because first child-of reference is used
+		// as a parent, so this function isn't even called for
+		// it.
+		return "extra-child-of"
 	case ot.FollowsFromRef:
-		return oteltrace.FollowsFromRelationship
+		return "follows-from-ref"
 	default:
-		panic("fix yer code, it uses bogus opentracing reference type")
+		return fmt.Sprintf("unknown-%d", int(refType))
 	}
 }
 

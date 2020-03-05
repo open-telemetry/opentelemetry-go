@@ -16,6 +16,8 @@ package testtrace
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -23,6 +25,12 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
+)
+
+const (
+	errorTypeKey    = core.Key("error.type")
+	errorMessageKey = core.Key("error.message")
+	errorEventName  = "error"
 )
 
 var _ trace.Span = (*Span)(nil)
@@ -67,6 +75,36 @@ func (s *Span) End(opts ...trace.EndOption) {
 	}
 
 	s.ended = true
+}
+
+func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
+	if err == nil || s.ended {
+		return
+	}
+
+	cfg := trace.ErrorConfig{}
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
+	errType := reflect.TypeOf(err)
+	errTypeString := fmt.Sprintf("%s.%s", errType.PkgPath(), errType.Name())
+	if errTypeString == "." {
+		errTypeString = errType.String()
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+		errorTypeKey.String(errTypeString),
+		errorMessageKey.String(err.Error()),
+	)
 }
 
 func (s *Span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
