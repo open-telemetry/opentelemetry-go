@@ -74,11 +74,11 @@
 // callback can report multiple values. To unregister the observer,
 // call Unregister on it.
 //
-// Counters, gauges and measures also support creating bound
-// instruments for a potentially more efficient reporting. The bound
-// instruments have the same function names as the instruments (so a
-// Counter bound instrument has Add, a Gauge bound instrument has Set,
-// and a Measure bound instrument has Record).  Bound Instruments can
-// be created with the Bind function of the respective
-// instrument. When done with the bound instrument, call Unbind on it.
+// Counters, gauges and measures support creating bound instruments
+// for a potentially more efficient reporting. The bound instruments
+// have the same function names as the instruments (so a Counter bound
+// instrument has Add, a Gauge bound instrument has Set, and a Measure
+// bound instrument has Record).  Bound Instruments can be created
+// with the Bind function of the respective instrument. When done with
+// the bound instrument, call Unbind on it.
 package metric // import "go.opentelemetry.io/otel/api/metric"

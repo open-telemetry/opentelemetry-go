@@ -160,7 +160,7 @@ type Float64ObserverResult interface {
 	Observe(value float64, labels LabelSet)
 }
 
-// Int64ObserverCallback is a type of callback that intergral
+// Int64ObserverCallback is a type of callback that integral
 // observers run.
 type Int64ObserverCallback func(result Int64ObserverResult)
 

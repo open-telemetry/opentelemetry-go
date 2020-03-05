@@ -536,7 +536,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectObservers()
+	checkpointed += m.collectObservers(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
@@ -567,7 +567,7 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectObservers() int {
+func (m *SDK) collectObservers(ctx context.Context) int {
 	checkpointed := 0
 
 	m.observers.Range(func(key, value interface{}) bool {
@@ -577,7 +577,7 @@ func (m *SDK) collectObservers() int {
 			observer: obs,
 		}
 		cb(result)
-		checkpointed += m.checkpointObserver(obs)
+		checkpointed += m.checkpointObserver(ctx, obs)
 		return true
 	})
 
@@ -588,12 +588,11 @@ func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, r.descriptor, r.recorder, r.labels)
 }
 
-func (m *SDK) checkpointObserver(obs *observer) int {
+func (m *SDK) checkpointObserver(ctx context.Context, obs *observer) int {
 	if len(obs.recorders) == 0 {
 		return 0
 	}
 	checkpointed := 0
-	ctx := context.Background()
 	for encodedLabels, lrec := range obs.recorders {
 		epochDiff := m.currentEpoch - lrec.modifiedEpoch
 		if epochDiff == 0 {

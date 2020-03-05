@@ -33,8 +33,8 @@ To this end, the API uses a core.Number type to represent either an int64
 or a float64, depending on the instrument's definition.  A single
 implementation interface is used for counter, gauge and measure
 instruments, metric.InstrumentImpl, and a single implementation interface
-is used for their handles, metric.HandleImpl. For observers, API defines
-interfaces, for which the SDK provides an implementation.
+is used for their handles, metric.HandleImpl. For observers, the API
+defines interfaces, for which the SDK provides an implementation.
 
 There are four entry points for events in the Metrics API - three for
 synchronous instruments (counters, gauges and measures) and one for
@@ -59,8 +59,8 @@ user-level code or a short-lived device, there exists an internal record
 managed by the SDK.  Each internal record corresponds to a specific
 instrument and label set combination.
 
-Each observer also has its own kind of record stored in SDK. This record
-contains a set of recorders for every specific label set used in the
+Each observer also has its own kind of record stored in the SDK. This
+record contains a set of recorders for every specific label set used in the
 callback.
 
 A sync.Map maintains the mapping of current instruments and label sets to
@@ -76,15 +76,15 @@ record is discovered that has no references and has not been updated since
 the prior collection pass, it is removed from the Map.
 
 The SDK maintains a current epoch number, corresponding to the number of
-completed collections.  Each recorder in observer record contains the last
-epoch during which it was updated.  This variable allow the collection code
-path to detect stale recorders and remove them.
+completed collections.  Each recorder of an observer record contains the
+last epoch during which it was updated.  This variable allows the collection
+code path to detect stale recorders and remove them.
 
-Each record and recorder in observer has an associated aggregator, which
-maintains the current state resulting from all metric events since its last
-checkpoint.  Aggregators may be lock-free or they may use locking, but they
-should expect to be called concurrently.  Aggregators must be capable of
-merging with another aggregator of the same type.
+Each record of a handle and recorder of an observer has an associated
+aggregator, which maintains the current state resulting from all metric
+events since its last checkpoint.  Aggregators may be lock-free or they may
+use locking, but they should expect to be called concurrently.  Aggregators
+must be capable of merging with another aggregator of the same type.
 
 Export Pipeline
 

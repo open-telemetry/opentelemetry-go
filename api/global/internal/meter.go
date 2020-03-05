@@ -55,11 +55,11 @@ type meter struct {
 	lock          sync.Mutex
 	instruments   []*instImpl
 	liveObservers map[*obsImpl]struct{}
-	// observersOrdered slice contains observers in their order of
+	// orderedObservers slice contains observers in their order of
 	// registration. It may also contain unregistered
 	// observers. The liveObservers map should be consulted to
 	// check if the observer is registered or not.
-	observersOrdered []*obsImpl
+	orderedObservers []*obsImpl
 }
 
 type instImpl struct {
@@ -168,13 +168,13 @@ func (m *meter) setDelegate(provider metric.Provider) {
 		inst.setDelegate(*d)
 	}
 	m.instruments = nil
-	for _, obs := range m.observersOrdered {
+	for _, obs := range m.orderedObservers {
 		if _, ok := m.liveObservers[obs]; ok {
 			obs.setDelegate(*d)
 		}
 	}
 	m.liveObservers = nil
-	m.observersOrdered = nil
+	m.orderedObservers = nil
 }
 
 func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
@@ -269,7 +269,7 @@ func (obs *obsImpl) unregister() {
 	delete(obs.meter.liveObservers, obs)
 	if len(obs.meter.liveObservers) == 0 {
 		obs.meter.liveObservers = nil
-		obs.meter.observersOrdered = nil
+		obs.meter.orderedObservers = nil
 	}
 }
 
@@ -505,7 +505,7 @@ func (m *meter) addObserver(obs *obsImpl) {
 		m.liveObservers = make(map[*obsImpl]struct{})
 	}
 	m.liveObservers[obs] = struct{}{}
-	m.observersOrdered = append(m.observersOrdered, obs)
+	m.orderedObservers = append(m.orderedObservers, obs)
 }
 
 func AtomicFieldOffsets() map[string]uintptr {

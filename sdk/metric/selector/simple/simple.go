@@ -38,19 +38,19 @@ var (
 )
 
 // NewWithInexpensiveMeasure returns a simple aggregation selector
-// that uses counter, gauge, minmaxsumcount, and observermmsc
-// aggregators for the four kinds of metric.  This selector is faster
-// and uses less memory than the others because minmaxsumcount does
-// not aggregate quantile information.
+// that uses counter, gauge, and minmaxsumcount aggregators for the
+// four kinds of metric.  This selector is faster and uses less memory
+// than the others because minmaxsumcount does not aggregate quantile
+// information.
 func NewWithInexpensiveMeasure() export.AggregationSelector {
 	return selectorInexpensive{}
 }
 
 // NewWithSketchMeasure returns a simple aggregation selector that
-// uses counter, gauge, ddsketch, and observerddsketch aggregators for
-// the four kinds of metric.  This selector uses more cpu and memory
-// than the NewWithInexpensiveMeasure because it uses one DDSketch per
-// distinct measure/observer and labelset.
+// uses counter, gauge, and ddsketch aggregators for the four kinds of
+// metric.  This selector uses more cpu and memory than the
+// NewWithInexpensiveMeasure because it uses one DDSketch per distinct
+// measure/observer and labelset.
 func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
 	return selectorSketch{
 		config: config,
@@ -58,10 +58,10 @@ func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
 }
 
 // NewWithExactMeasure returns a simple aggregation selector that uses
-// counter, gauge, array, and observerarray aggregators for the four
-// kinds of metric.  This selector uses more memory than the
-// NewWithSketchMeasure because it aggregates an array of all values,
-// therefore is able to compute exact quantiles.
+// counter, gauge, and array aggregators for the four kinds of metric.
+// This selector uses more memory than the NewWithSketchMeasure
+// because it aggregates an array of all values, therefore is able to
+// compute exact quantiles.
 func NewWithExactMeasure() export.AggregationSelector {
 	return selectorExact{}
 }
