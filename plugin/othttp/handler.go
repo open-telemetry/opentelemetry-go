@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -78,8 +77,8 @@ func WithPublicEndpoint() Option {
 }
 
 // WithPropagators configures the Handler with specific propagators. If this
-// option isn't specified then Propagators with
-// go.opentelemetry.io/otel/api/trace.DefaultHTTPPropagator are used.
+// option isn't specified then
+// go.opentelemetry.io/otel/api/global.Propagators are used.
 func WithPropagators(ps propagation.Propagators) Option {
 	return func(h *Handler) {
 		h.props = ps
@@ -128,15 +127,9 @@ func WithMessageEvents(events ...event) Option {
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
-	tcPropagator := trace.DefaultHTTPPropagator()
-	ccPropagator := correlation.DefaultHTTPPropagator()
-	props := propagation.New(
-		propagation.WithInjectors(tcPropagator, ccPropagator),
-		propagation.WithExtractors(tcPropagator, ccPropagator),
-	)
 	defaultOpts := []Option{
 		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
-		WithPropagators(props),
+		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
@@ -150,7 +143,6 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	// TODO: do something with the correlation context
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
 	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
 	defer span.End()
@@ -215,8 +207,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rer
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
-		//TODO: Why doesn't tag.Upsert work?
 		span.SetAttributes(RouteKey.String(route))
-		h.ServeHTTP(w, r.WithContext(trace.ContextWithSpan(r.Context(), span)))
+		h.ServeHTTP(w, r)
 	})
 }

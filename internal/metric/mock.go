@@ -54,6 +54,10 @@ type (
 
 	Meter struct {
 		MeasurementBatches []Batch
+		// Observers contains also unregistered
+		// observers. Check the Dead field of the Observer to
+		// figure out its status.
+		Observers []*Observer
 	}
 
 	Kind int8
@@ -63,20 +67,62 @@ type (
 		Number     core.Number
 		Instrument *Instrument
 	}
+
+	observerResult struct {
+		instrument *Instrument
+	}
+
+	int64ObserverResult struct {
+		result observerResult
+	}
+
+	float64ObserverResult struct {
+		result observerResult
+	}
+
+	observerCallback func(observerResult)
+
+	Observer struct {
+		Instrument *Instrument
+		Meter      *Meter
+		Dead       bool
+		callback   observerCallback
+	}
 )
 
 var (
-	_ apimetric.InstrumentImpl      = &Instrument{}
-	_ apimetric.BoundInstrumentImpl = &Handle{}
-	_ apimetric.LabelSet            = &LabelSet{}
-	_ apimetric.Meter               = &Meter{}
+	_ apimetric.InstrumentImpl        = &Instrument{}
+	_ apimetric.BoundInstrumentImpl   = &Handle{}
+	_ apimetric.LabelSet              = &LabelSet{}
+	_ apimetric.Meter                 = &Meter{}
+	_ apimetric.Int64Observer         = &Observer{}
+	_ apimetric.Float64Observer       = &Observer{}
+	_ apimetric.Int64ObserverResult   = int64ObserverResult{}
+	_ apimetric.Float64ObserverResult = float64ObserverResult{}
 )
 
 const (
 	KindCounter Kind = iota
 	KindGauge
 	KindMeasure
+	KindObserver
 )
+
+func (o *Observer) Unregister() {
+	o.Dead = true
+}
+
+func (r int64ObserverResult) Observe(value int64, labels apimetric.LabelSet) {
+	r.result.observe(core.NewInt64Number(value), labels)
+}
+
+func (r float64ObserverResult) Observe(value float64, labels apimetric.LabelSet) {
+	r.result.observe(core.NewFloat64Number(value), labels)
+}
+
+func (r observerResult) observe(number core.Number, labels apimetric.LabelSet) {
+	r.instrument.RecordOne(context.Background(), number, labels)
+}
 
 func (i *Instrument) Bind(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
@@ -209,6 +255,58 @@ func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mo
 	}
 }
 
+func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Int64Observer {
+	wrappedCallback := wrapInt64ObserverCallback(callback)
+	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...)
+}
+
+func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observerCallback {
+	if callback == nil {
+		return func(result observerResult) {}
+	}
+	return func(result observerResult) {
+		typeSafeResult := int64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Float64Observer {
+	wrappedCallback := wrapFloat64ObserverCallback(callback)
+	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...)
+}
+
+func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) observerCallback {
+	if callback == nil {
+		return func(result observerResult) {}
+	}
+	return func(result observerResult) {
+		typeSafeResult := float64ObserverResult{
+			result: result,
+		}
+		callback(typeSafeResult)
+	}
+}
+
+func (m *Meter) newObserver(name string, callback observerCallback, numberKind core.NumberKind, oos ...apimetric.ObserverOptionApplier) *Observer {
+	opts := apimetric.Options{}
+	apimetric.ApplyObserverOptions(&opts, oos...)
+	obs := &Observer{
+		Instrument: &Instrument{
+			Name:       name,
+			Kind:       KindObserver,
+			NumberKind: numberKind,
+			Opts:       opts,
+		},
+		Meter:    m,
+		Dead:     false,
+		callback: callback,
+	}
+	m.Observers = append(m.Observers, obs)
+	return obs
+}
+
 func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
 	ourLabelSet := labels.(*LabelSet)
 	mm := make([]Measurement, len(measurements))
@@ -228,4 +326,15 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 		LabelSet:     labelSet,
 		Measurements: measurements,
 	})
+}
+
+func (m *Meter) RunObservers() {
+	for _, observer := range m.Observers {
+		if observer.Dead {
+			continue
+		}
+		observer.callback(observerResult{
+			instrument: observer.Instrument,
+		})
+	}
 }

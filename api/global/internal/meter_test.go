@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
@@ -41,6 +42,16 @@ func TestDirect(t *testing.T) {
 	measure.Record(ctx, 1, labels1)
 	measure.Record(ctx, 2, labels1)
 
+	_ = meter1.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		result.Observe(1., labels1)
+		result.Observe(2., labels2)
+	})
+
+	_ = meter1.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		result.Observe(1, labels1)
+		result.Observe(2, labels2)
+	})
+
 	second := meter2.NewFloat64Measure("test.second")
 	second.Record(ctx, 1, labels3)
 	second.Record(ctx, 2, labels3)
@@ -54,45 +65,86 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 3, labels3)
 
 	mock := sdk.Meter("test1").(*metrictest.Meter)
-	require.Equal(t, 3, len(mock.MeasurementBatches))
+	mock.RunObservers()
+	require.Len(t, mock.MeasurementBatches, 7)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewInt64Number(1),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
+	require.Equal(t, int64(1),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.counter",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[1].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[1].Measurements))
-	require.Equal(t, core.NewInt64Number(3),
-		mock.MeasurementBatches[1].Measurements[0].Number)
+	require.Len(t, mock.MeasurementBatches[1].Measurements, 1)
+	require.Equal(t, int64(3),
+		mock.MeasurementBatches[1].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.gauge",
 		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[2].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[2].Measurements))
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[2].Measurements[0].Number)
+	require.Len(t, mock.MeasurementBatches[2].Measurements, 1)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[2].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
 
+	require.Equal(t, map[core.Key]core.Value{
+		lvals1.Key: lvals1.Value,
+	}, mock.MeasurementBatches[3].LabelSet.Labels)
+	require.Len(t, mock.MeasurementBatches[3].Measurements, 1)
+	require.InDelta(t, float64(1),
+		mock.MeasurementBatches[3].Measurements[0].Number.AsFloat64(),
+		0.01)
+	require.Equal(t, "test.observer.float",
+		mock.MeasurementBatches[3].Measurements[0].Instrument.Name)
+
+	require.Equal(t, map[core.Key]core.Value{
+		lvals2.Key: lvals2.Value,
+	}, mock.MeasurementBatches[4].LabelSet.Labels)
+	require.Len(t, mock.MeasurementBatches[4].Measurements, 1)
+	require.InDelta(t, float64(2),
+		mock.MeasurementBatches[4].Measurements[0].Number.AsFloat64(),
+		0.01)
+	require.Equal(t, "test.observer.float",
+		mock.MeasurementBatches[4].Measurements[0].Instrument.Name)
+
+	require.Equal(t, map[core.Key]core.Value{
+		lvals1.Key: lvals1.Value,
+	}, mock.MeasurementBatches[5].LabelSet.Labels)
+	require.Len(t, mock.MeasurementBatches[5].Measurements, 1)
+	require.Equal(t, int64(1),
+		mock.MeasurementBatches[5].Measurements[0].Number.AsInt64())
+	require.Equal(t, "test.observer.int",
+		mock.MeasurementBatches[5].Measurements[0].Instrument.Name)
+
+	require.Equal(t, map[core.Key]core.Value{
+		lvals2.Key: lvals2.Value,
+	}, mock.MeasurementBatches[6].LabelSet.Labels)
+	require.Len(t, mock.MeasurementBatches[6].Measurements, 1)
+	require.Equal(t, int64(2),
+		mock.MeasurementBatches[6].Measurements[0].Number.AsInt64())
+	require.Equal(t, "test.observer.int",
+		mock.MeasurementBatches[6].Measurements[0].Instrument.Name)
+
 	// This tests the second Meter instance
 	mock = sdk.Meter("test2").(*metrictest.Meter)
-	require.Equal(t, 1, len(mock.MeasurementBatches))
+	require.Len(t, mock.MeasurementBatches, 1)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals3.Key: lvals3.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.second",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 }
@@ -138,8 +190,9 @@ func TestBound(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[0].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[0].Measurements))
-	require.Equal(t, core.NewFloat64Number(1),
-		mock.MeasurementBatches[0].Measurements[0].Number)
+	require.InDelta(t, float64(1),
+		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.counter",
 		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
 
@@ -147,8 +200,9 @@ func TestBound(t *testing.T) {
 		lvals2.Key: lvals2.Value,
 	}, mock.MeasurementBatches[1].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[1].Measurements))
-	require.Equal(t, core.NewFloat64Number(3),
-		mock.MeasurementBatches[1].Measurements[0].Number)
+	require.InDelta(t, float64(3),
+		mock.MeasurementBatches[1].Measurements[0].Number.AsFloat64(),
+		0.01)
 	require.Equal(t, "test.gauge",
 		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
 
@@ -156,8 +210,8 @@ func TestBound(t *testing.T) {
 		lvals1.Key: lvals1.Value,
 	}, mock.MeasurementBatches[2].LabelSet.Labels)
 	require.Equal(t, 1, len(mock.MeasurementBatches[2].Measurements))
-	require.Equal(t, core.NewInt64Number(3),
-		mock.MeasurementBatches[2].Measurements[0].Number)
+	require.Equal(t, int64(3),
+		mock.MeasurementBatches[2].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.measure",
 		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
 
@@ -185,9 +239,14 @@ func TestUnbind(t *testing.T) {
 	measure := glob.NewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 
+	observerInt := glob.RegisterInt64Observer("test.observer.int", nil)
+	observerFloat := glob.RegisterFloat64Observer("test.observer.float", nil)
+
 	boundC.Unbind()
 	boundG.Unbind()
 	boundM.Unbind()
+	observerInt.Unregister()
+	observerFloat.Unregister()
 }
 
 func TestDefaultSDK(t *testing.T) {

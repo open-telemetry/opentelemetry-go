@@ -52,6 +52,8 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 		return counter.New()
 	case export.GaugeKind:
 		return gauge.New()
+	case export.ObserverKind:
+		fallthrough
 	case export.MeasureKind:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
@@ -355,6 +357,89 @@ func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	for i := 0; i < b.N; i++ {
 		handle.Record(ctx, float64(i))
 	}
+}
+
+// Observers
+
+func BenchmarkObserverRegistration(b *testing.B) {
+	fix := newFixture(b)
+	names := make([]string, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		names = append(names, fmt.Sprintf("test.observer.%d", i))
+	}
+	cb := func(result metric.Int64ObserverResult) {}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		fix.sdk.RegisterInt64Observer(names[i], cb)
+	}
+}
+
+func BenchmarkObserverRegistrationUnregistration(b *testing.B) {
+	fix := newFixture(b)
+	names := make([]string, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		names = append(names, fmt.Sprintf("test.observer.%d", i))
+	}
+	cb := func(result metric.Int64ObserverResult) {}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		fix.sdk.RegisterInt64Observer(names[i], cb).Unregister()
+	}
+}
+
+func BenchmarkObserverRegistrationUnregistrationBatched(b *testing.B) {
+	fix := newFixture(b)
+	names := make([]string, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		names = append(names, fmt.Sprintf("test.observer.%d", i))
+	}
+	observers := make([]metric.Int64Observer, 0, b.N)
+	cb := func(result metric.Int64ObserverResult) {}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		observers = append(observers, fix.sdk.RegisterInt64Observer(names[i], cb))
+	}
+	for i := 0; i < b.N; i++ {
+		observers[i].Unregister()
+	}
+}
+
+func BenchmarkObserverObservationInt64(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	_ = fix.sdk.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
+		b.StartTimer()
+		defer b.StopTimer()
+		for i := 0; i < b.N; i++ {
+			result.Observe((int64)(i), labs)
+		}
+	})
+	b.StopTimer()
+	b.ResetTimer()
+	fix.sdk.Collect(ctx)
+}
+
+func BenchmarkObserverObservationFloat64(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	_ = fix.sdk.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
+		b.StartTimer()
+		defer b.StopTimer()
+		for i := 0; i < b.N; i++ {
+			result.Observe((float64)(i), labs)
+		}
+	})
+	b.StopTimer()
+	b.ResetTimer()
+	fix.sdk.Collect(ctx)
 }
 
 // MaxSumCount
