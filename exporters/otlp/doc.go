@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package otlp contains an OpenTelemetry tracing exporter for OpenTelemetry Collector.
-package otlp // import "go.opentelemetry.io/otel/exporter/trace/otlp"
+package otlp // import "go.opentelemetry.io/otel/exporters/otlp"

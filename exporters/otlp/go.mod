@@ -1,6 +1,6 @@
-module go.opentelemetry.io/otel/exporter/trace/otlp
+module go.opentelemetry.io/otel/exporters/otlp
 
-replace go.opentelemetry.io/otel => ../../..
+replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/golang/protobuf v1.3.2

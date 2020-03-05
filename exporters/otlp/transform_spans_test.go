@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
