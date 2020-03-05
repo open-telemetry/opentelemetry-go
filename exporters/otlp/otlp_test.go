@@ -127,7 +127,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address))
 	if err != nil {
-		t.Fatal("Surprisingly connected with a bad port")
+		t.Fatalf("error creating exporter: %v", err)
 	}
 	defer func() {
 		_ = exp.Stop()
@@ -143,8 +143,8 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	_ = exp.Stop()
 	// Invoke Stop numerous times
 	for i := 0; i < 10; i++ {
-		if err := exp.Stop(); err == nil || !strings.Contains(err.Error(), "not started") {
-			t.Fatalf(`#%d got error (%v) expected a "not started error"`, i, err)
+		if err := exp.Stop(); err != nil {
+			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
 	}
 }
@@ -233,13 +233,11 @@ func TestNewExporter_withAddress(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp, err := otlp.NewUnstartedExporter(
+	exp := otlp.NewUnstartedExporter(
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address))
-	if err != nil {
-		t.Fatal("Surprisingly connected with a bad port")
-	}
+
 	defer func() {
 		_ = exp.Stop()
 	}()

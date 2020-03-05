@@ -42,7 +42,6 @@ type Exporter struct {
 	// senderMu protects the concurrent unsafe send on traceExporter client
 	senderMu          sync.Mutex
 	started           bool
-	stopped           bool
 	traceExporter     coltracepb.TraceServiceClient
 	grpcClientConn    *grpc.ClientConn
 	lastConnectErrPtr unsafe.Pointer
@@ -65,24 +64,21 @@ func configureOptions(cfg *Config, opts ...ExporterOption) {
 }
 
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
-	exp, err := NewUnstartedExporter(opts...)
-	if err != nil {
-		return nil, err
-	}
+	exp := NewUnstartedExporter(opts...)
 	if err := exp.Start(); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-func NewUnstartedExporter(opts ...ExporterOption) (*Exporter, error) {
+func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
 	e.c = Config{}
 	configureOptions(&e.c, opts...)
 
 	// TODO (rghetia): add resources
 
-	return e, nil
+	return e
 }
 
 var (
@@ -180,18 +176,14 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 
 // Stop shuts down all the connections and resources
 // related to the exporter.
-// If the exporter is already stopped then this func does nothing.
+// If the exporter is not started then this func does nothing.
 func (e *Exporter) Stop() error {
 	e.mu.RLock()
 	cc := e.grpcClientConn
 	started := e.started
-	stopped := e.stopped
 	e.mu.RUnlock()
 
 	if !started {
-		return errNotStarted
-	}
-	if stopped {
 		return nil
 	}
 
@@ -201,10 +193,9 @@ func (e *Exporter) Stop() error {
 		err = cc.Close()
 	}
 
-	// At this point we can change the state variables: started and stopped
+	// At this point we can change the state variable started
 	e.mu.Lock()
 	e.started = false
-	e.stopped = true
 	e.mu.Unlock()
 	close(e.stopCh)
 

@@ -49,7 +49,7 @@ func WithInsecure() ExporterOption {
 
 // WithAddress allows one to set the address that the exporter will
 // connect to the collector on. If unset, it will instead try to use
-// connect to DefaultCollectorHost:DefaultCollectorPort
+// connect to DefaultCollectorHost:DefaultCollectorPort.
 func WithAddress(addr string) ExporterOption {
 	return func(cfg *Config) {
 		cfg.collectorAddr = addr
@@ -76,7 +76,7 @@ func WithCompressor(compressor string) ExporterOption {
 }
 
 // WithHeaders will send the provided headers when the gRPC stream connection
-// is instantiated
+// is instantiated.
 func WithHeaders(headers map[string]string) ExporterOption {
 	return func(cfg *Config) {
 		cfg.headers = headers
@@ -102,12 +102,3 @@ func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
 		cfg.grpcDialOptions = opts
 	}
 }
-
-//func ConfigureExporterOptions(opts ...Option) * {
-//	c := Config{}
-//	for _, opt := range opts {
-//		opt(&c)
-//	}
-//	t := NewT(c)
-//	// ...
-//}

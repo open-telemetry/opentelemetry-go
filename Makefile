@@ -90,7 +90,6 @@ test-386:
 	    echo "go test ./... GOARCH 386 in $${dir}"; \
 	    (cd "$${dir}" && \
 	      GOARCH=386 $(GOTEST_MIN) ./...); \
-		echo "skipping the test for GOARCH 386 as it is not supported on the current OS"; \
 	  done; \
 	fi
 
