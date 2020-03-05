@@ -89,7 +89,7 @@ type (
 
 		// ordered is the output of sorting and deduplicating
 		// the labels, copied into an array of the correct
-		// size.
+		// size for use as a map key.
 		ordered orderedLabels
 	}
 
@@ -364,8 +364,15 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	//
 	// Note that `ls.slice` continues to refer to this memory,
 	// even though a new array is allocated for `ls.ordered`.  It
-	// is not possible for these two variables (one inside an
-	// interface) to alias the same memory.
+	// is possible for the `slice` to refer to the same memory,
+	// although in the reflection code path of `computeOrdered` it
+	// costs an allocation to yield a slice through
+	// `(reflect.Value).Interface()`.
+	//
+	// TODO: It would be better overall if the export.Labels interface
+	// did not expose a slice via `Ordered()`, if instead it exposed
+	// getter methods like `Len()` and `Order(i int)`.  Then we would
+	// just implement the interface using the `orderedLabels` array.
 	sort.Stable(&ls.slice)
 
 	oi := 1
