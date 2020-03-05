@@ -7,7 +7,6 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
-
 # Mac OS Catalina 10.5.x doesn't support 386. Hence skip 386 test
 SKIP_386_TEST = false
 UNAME_S := $(shell uname -s)
@@ -17,7 +16,6 @@ ifeq ($(UNAME_S),Darwin)
 		SKIP_386_TEST = true
 	endif
 endif
-
 
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
