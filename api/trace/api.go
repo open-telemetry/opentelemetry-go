@@ -107,9 +107,8 @@ type Span interface {
 	// even after the span ends.
 	SpanContext() core.SpanContext
 
-	// SetStatus sets the status of the span. The status of the span can be updated
-	// even after span ends.
-	SetStatus(codes.Code)
+	// SetStatus sets the status of the span in the form of a code and a message.
+	SetStatus(codes.Code, string)
 
 	// SetName sets the name of the span.
 	SetName(name string)

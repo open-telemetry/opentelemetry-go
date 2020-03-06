@@ -39,7 +39,7 @@ func (NoopSpan) IsRecording() bool {
 }
 
 // SetStatus does nothing.
-func (NoopSpan) SetStatus(status codes.Code) {
+func (NoopSpan) SetStatus(status codes.Code, msg string) {
 }
 
 // SetError does nothing.

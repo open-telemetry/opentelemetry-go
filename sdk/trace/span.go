@@ -80,7 +80,7 @@ func (s *span) IsRecording() bool {
 	return s.data != nil
 }
 
-func (s *span) SetStatus(status codes.Code) {
+func (s *span) SetStatus(code codes.Code, msg string) {
 	if s == nil {
 		return
 	}
@@ -88,7 +88,8 @@ func (s *span) SetStatus(status codes.Code) {
 		return
 	}
 	s.mu.Lock()
-	s.data.Status = status
+	s.data.StatusCode = code
+	s.data.StatusMessage = msg
 	s.mu.Unlock()
 }
 
@@ -151,7 +152,7 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 	}
 
 	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status)
+		s.SetStatus(cfg.Status, "")
 	}
 
 	errType := reflect.TypeOf(err)

@@ -129,7 +129,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			if b {
 				status = codes.Unknown
 			}
-			s.otelSpan.SetStatus(status)
+			s.otelSpan.SetStatus(status, "")
 		}
 	default:
 		s.otelSpan.SetAttributes(otTagToOtelCoreKeyValue(key, value))
@@ -330,7 +330,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		})
 	}
 	if hadTrueErrorTag {
-		otelSpan.SetStatus(codes.Unknown)
+		otelSpan.SetStatus(codes.Unknown, "")
 	}
 	// One does not simply pass a concrete pointer to function
 	// that takes some interface. In case of passing nil concrete
