@@ -92,8 +92,8 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status, "")
+	if cfg.StatusCode != codes.OK {
+		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	errType := reflect.TypeOf(err)

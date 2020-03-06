@@ -280,8 +280,8 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status, "")
+	if cfg.StatusCode != codes.OK {
+		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",

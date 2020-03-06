@@ -569,9 +569,10 @@ func TestSpan(t *testing.T) {
 				e.Expect(ok).ToBeTrue()
 
 				subject.SetStatus(codes.OK, "OK")
-				subject.SetStatus(status, fmt.Sprint(status))
+				subject.SetStatus(status, "Yo!")
 
 				e.Expect(subject.StatusCode()).ToEqual(status)
+				e.Expect(subject.StatusMessage()).ToEqual("Yo!")
 			})
 
 			t.Run("cannot be changed after the span has been ended", func(t *testing.T) {

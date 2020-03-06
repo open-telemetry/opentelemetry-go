@@ -85,8 +85,11 @@ func protoFromSpanData(s *export.SpanData, projectID string) *tracepb.Span {
 	if s.ParentSpanID != s.SpanContext.SpanID && s.ParentSpanID.IsValid() {
 		sp.ParentSpanId = fmt.Sprintf("%.16x", s.ParentSpanID)
 	}
-	if s.Status != codes.OK {
-		sp.Status = &statuspb.Status{Code: int32(s.Status)}
+	if s.StatusCode != codes.OK || s.StatusMessage != "" {
+		sp.Status = &statuspb.Status{
+			Code:    int32(s.StatusCode),
+			Message: s.StatusMessage,
+		}
 	}
 
 	copyAttributes(&sp.Attributes, s.Attributes)

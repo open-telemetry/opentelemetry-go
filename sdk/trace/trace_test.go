@@ -959,6 +959,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		StatusCode:      codes.Unknown,
+		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
@@ -998,6 +999,7 @@ func TestRecordErrorNil(t *testing.T) {
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
 		StatusCode:      codes.OK,
+		StatusMessage:   "",
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
