@@ -74,8 +74,7 @@ type (
 	}
 
 	// orderedLabels is a variable-size array of core.KeyValue
-	// suitable for use as a map key.  use toSlice()
-	// []core.KeyValue to get a []core.KeyValue.
+	// suitable for use as a map key.
 	orderedLabels interface{}
 
 	// labels implements the OpenTelemetry LabelSet API,
