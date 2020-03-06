@@ -12,4 +12,6 @@
 #  https://help.github.com/en/articles/about-code-owners
 #
 
-* @rghetia @tedsuo @jmacd @iredelmeier @paivagustavo @krnowak @lizthegrey @MrAlias
+* @rghetia @tedsuo @jmacd @paivagustavo @krnowak @lizthegrey @MrAlias
+
+CODEOWNERS @rghetia @jmacd
