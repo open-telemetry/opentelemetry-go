@@ -13,6 +13,12 @@ join the meeting or get in touch on
 
 ## Development
 
+You can view and edit the source code by cloning this repository:
+
+```bash
+git clone https://github.com/open-telemetry/opentelemetry-go.git
+```
+
 There are some generated files checked into the repo. To make sure
 that the generated files are up-to-date, run `make` (or `make
 precommit` - the `precommit` target is the default).
