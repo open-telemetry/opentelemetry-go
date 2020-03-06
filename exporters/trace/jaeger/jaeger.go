@@ -45,6 +45,12 @@ type options struct {
 
 	//BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
+
+	Config *sdktrace.Config
+
+	// Registration is set to true if the trace provider of the new pipeline should be
+	// registered as Global Trace Provider
+	Registeration bool
 }
 
 // WithOnError sets the hook to be called when there is
@@ -67,6 +73,21 @@ func WithProcess(process Process) func(o *options) {
 func WithBufferMaxCount(bufferMaxCount int) func(o *options) {
 	return func(o *options) {
 		o.BufferMaxCount = bufferMaxCount
+	}
+}
+
+// WithSDK sets the SDK config for the exporter pipeline.
+func WithSDK(config *sdktrace.Config) func(o *options) {
+	return func(o *options) {
+		o.Config = config
+	}
+}
+
+// WithRegistration enables the registration of the trace provider of the new pipeline
+// as Global Trace Provider.
+func WithRegistration() func(o *options) {
+	return func(o *options) {
+		o.Registeration = true
 	}
 }
 
@@ -107,6 +128,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 			ServiceName: service,
 			Tags:        tags,
 		},
+		o: o,
 	}
 	bundler := bundler.NewBundler((*gen.Span)(nil), func(bundle interface{}) {
 		if err := e.upload(bundle.([]*gen.Span)); err != nil {
@@ -125,23 +147,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	return e, nil
 }
 
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-// pipeline, flushFn, err := stdout.InstallNewPipeline(stdout.Config{...})
-// if err != nil {
-// 	...
-// }
-// defer flushFn()
-// ... Done
-func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.Provider, func(), error) {
-	provider, flushFn, err := NewExportPipeline(endpointOption, opts...)
-	if err != nil {
-		return provider, flushFn, err
-	}
-	global.SetTraceProvider(provider)
-	return provider, flushFn, nil
-}
-
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
 func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.Provider, func(), error) {
@@ -153,6 +158,12 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace
 	tp, err := sdktrace.NewProvider(syncer)
 	if err != nil {
 		return nil, nil, err
+	}
+	if exporter.o.Config != nil {
+		tp.ApplyConfig(*exporter.o.Config)
+	}
+	if exporter.o.Registeration {
+		global.SetTraceProvider(tp)
 	}
 
 	return tp, exporter.Flush, nil
@@ -173,6 +184,7 @@ type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler
 	uploader batchUploader
+	o        options
 }
 
 var _ export.SpanSyncer = (*Exporter)(nil)
