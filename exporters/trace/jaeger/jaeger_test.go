@@ -37,6 +37,53 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
+func TestNewExporterPipelineWithRegistration(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithRegistration(),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.Same(t, tp, global.TraceProvider())
+}
+
+func TestNewExporterPipelineWithoutRegistration(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.NotEqual(t, tp, global.TraceProvider())
+}
+
+func TestNewExporterPipelineWithSDK(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		}),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	_, span := tp.Tracer("jaeger test").Start(context.Background(), "always-on")
+	spanCtx := span.SpanContext()
+	assert.True(t, spanCtx.IsSampled())
+	span.End()
+
+	tp2, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.NeverSample(),
+		}),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	_, span2 := tp2.Tracer("jaeger test").Start(context.Background(), "never")
+	span2Ctx := span2.SpanContext()
+	assert.False(t, span2Ctx.IsSampled())
+	span2.End()
+}
+
 func TestNewRawExporter(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
