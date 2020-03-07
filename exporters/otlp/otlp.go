@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 	"unsafe"
 
 	"google.golang.org/grpc"
@@ -31,10 +30,6 @@ import (
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
-
-var defaultTimeout = time.Duration(60 * time.Second)
-
-var _ export.SpanBatcher = (*Exporter)(nil)
 
 type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
@@ -206,7 +201,7 @@ func (e *Exporter) Stop() error {
 }
 
 func (e *Exporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
-	e.uploadTraces(sds)
+	e.uploadTraces(ctx, sds)
 }
 
 func otSpanDataToPbSpans(sdl []*export.SpanData) []*tracepb.ResourceSpans {
@@ -227,7 +222,7 @@ func otSpanDataToPbSpans(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	}
 }
 
-func (e *Exporter) uploadTraces(sdl []*export.SpanData) {
+func (e *Exporter) uploadTraces(ctx context.Context, sdl []*export.SpanData) {
 	select {
 	case <-e.stopCh:
 		return
@@ -241,9 +236,6 @@ func (e *Exporter) uploadTraces(sdl []*export.SpanData) {
 		if len(protoSpans) == 0 {
 			return
 		}
-		var cancel func()
-		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-		defer cancel()
 
 		e.senderMu.Lock()
 		_, err := e.traceExporter.Export(ctx, &coltracepb.ExportTraceServiceRequest{
