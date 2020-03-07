@@ -33,11 +33,12 @@ import (
 )
 
 var (
-	ComponentKey = otelkey.New("component")
-	ServiceKey   = otelkey.New("service")
-	StatusKey    = otelkey.New("status")
-	ErrorKey     = otelkey.New("error")
-	NameKey      = otelkey.New("name")
+	ComponentKey     = otelkey.New("component")
+	ServiceKey       = otelkey.New("service")
+	StatusCodeKey    = otelkey.New("status.code")
+	StatusMessageKey = otelkey.New("status.message")
+	ErrorKey         = otelkey.New("error")
+	NameKey          = otelkey.New("name")
 )
 
 type MockContextKeyValue struct {
@@ -220,8 +221,8 @@ func (s *MockSpan) IsRecording() bool {
 	return s.recording
 }
 
-func (s *MockSpan) SetStatus(status codes.Code) {
-	s.SetAttributes(NameKey.Uint32(uint32(status)))
+func (s *MockSpan) SetStatus(code codes.Code, msg string) {
+	s.SetAttributes(StatusCodeKey.Uint32(uint32(code)), StatusMessageKey.String(msg))
 }
 
 func (s *MockSpan) SetName(name string) {
@@ -279,8 +280,8 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status)
+	if cfg.StatusCode != codes.OK {
+		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",

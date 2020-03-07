@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/plugin/grpctrace"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
@@ -81,8 +80,6 @@ func UnaryClientInterceptor(ctx context.Context, method string, req, reply inter
 func setTraceStatus(ctx context.Context, err error) {
 	if err != nil {
 		s, _ := status.FromError(err)
-		trace.SpanFromContext(ctx).SetStatus(s.Code())
-	} else {
-		trace.SpanFromContext(ctx).SetStatus(codes.OK)
+		trace.SpanFromContext(ctx).SetStatus(s.Code(), s.Message())
 	}
 }
