@@ -36,13 +36,13 @@ func TestStressInt64Histogram(t *testing.T) {
 	go func() {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		for {
-			_ = h.Update(context.TODO(), core.NewInt64Number(rnd.Int63()), desc)
+			_ = h.Update(context.Background(), core.NewInt64Number(rnd.Int63()), desc)
 		}
 	}()
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		h.Checkpoint(context.TODO(), desc)
+		h.Checkpoint(context.Background(), desc)
 
 		b, _ := h.Histogram()
 		c, _ := h.Count()
