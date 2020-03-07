@@ -2,6 +2,7 @@ package internal_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -301,4 +302,39 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	})
 	mock := global.MeterProvider().Meter("test").(*metrictest.Meter)
 	require.Equal(t, 0, len(mock.MeasurementBatches))
+}
+
+type meterProviderWithConstructorError struct {
+	metric.Provider
+}
+
+type meterWithConstructorError struct {
+	metric.Meter
+}
+
+func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
+	return &meterWithConstructorError{m.Provider.Meter(name)}
+}
+
+func (m *meterWithConstructorError) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) (metric.Int64Counter, error) {
+	return metric.Int64Counter{}, errors.New("constructor error")
+}
+
+func TestErrorInDeferredConstructor(t *testing.T) {
+	internal.ResetForTest()
+
+	ctx := context.Background()
+	meter := global.MeterProvider().Meter("builtin")
+
+	c1 := meter.MustNewInt64Counter("test")
+	c2 := meter.MustNewInt64Counter("test")
+
+	sdk := &meterProviderWithConstructorError{metrictest.NewProvider()}
+
+	require.Panics(t, func() {
+		global.SetMeterProvider(sdk)
+	})
+
+	c1.Add(ctx, 1, meter.Labels())
+	c2.Add(ctx, 2, meter.Labels())
 }

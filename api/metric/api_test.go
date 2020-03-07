@@ -16,6 +16,7 @@ package metric_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCounterOptions(t *testing.T) {
@@ -664,4 +666,38 @@ func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
 	}
 	t.Errorf("Invalid value kind %q", kind)
 	return core.NewInt64Number(0)
+}
+
+type testWrappedInst struct{}
+
+func (*testWrappedInst) Bind(labels metric.LabelSet) metric.BoundInstrumentImpl {
+	panic("Not called")
+}
+
+func (*testWrappedInst) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+	panic("Not called")
+}
+
+func TestWrappedInstrumentError(t *testing.T) {
+	i0 := &testWrappedInst{}
+	e0 := errors.New("Test wrap error")
+	inst, err := metric.WrapInt64GaugeInstrument(i0, e0)
+
+	// Check that error passes through w/o modifying instrument.
+	require.Equal(t, inst.Impl().(*testWrappedInst), i0)
+	require.Equal(t, err, e0)
+
+	// Check that nil instrument is handled.
+	inst, err = metric.WrapInt64GaugeInstrument(nil, e0)
+
+	require.Equal(t, err, e0)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
+
+	// Check that nil instrument generates an error.
+	inst, err = metric.WrapInt64GaugeInstrument(nil, nil)
+
+	require.NotNil(t, err)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
 }
