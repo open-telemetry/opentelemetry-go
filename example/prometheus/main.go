@@ -51,13 +51,13 @@ func main() {
 
 	meter := global.MeterProvider().Meter("ex.com/basic")
 
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+	oneMetric := meter.MustNewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
-	measureThree := meter.NewFloat64Counter("ex.com.three")
+	measureTwo := meter.MustNewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
+	measureThree := meter.MustNewFloat64Counter("ex.com.three")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))

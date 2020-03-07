@@ -178,7 +178,7 @@ func TestPushTicker(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := meter.NewInt64Counter("counter")
+	counter := meter.MustNewInt64Counter("counter")
 
 	p.Start()
 

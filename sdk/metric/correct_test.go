@@ -76,7 +76,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := sdk.NewInt64Counter("counter.name", metric.WithMonotonic(true))
+	counter := sdk.MustNewInt64Counter("counter.name", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -111,7 +111,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := sdk.MustNewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -140,7 +140,7 @@ func TestDisabledInstrument(t *testing.T) {
 		agg: nil,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := sdk.MustNewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
@@ -160,7 +160,7 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	g := sdk.NewFloat64Gauge("gauge.name")
+	g := sdk.MustNewFloat64Gauge("gauge.name")
 
 	require.Nil(t, sdkErr)
 	g.Set(ctx, math.NaN(), sdk.Labels())
@@ -176,7 +176,7 @@ func TestSDKLabelEncoder(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, testLabelEncoder{})
 
-	measure := sdk.NewFloat64Measure("measure")
+	measure := sdk.MustNewFloat64Measure("measure")
 	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
 
 	sdk.Collect(ctx)

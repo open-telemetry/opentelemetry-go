@@ -77,53 +77,59 @@ func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 // MeasureConstructors
 
 func (NoopMeasureConstructors) NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error) {
-	return WrapInt64CounterInstrument(noopInstrument{}), nil
+	return WrapInt64CounterInstrument(noopInstrument{}, nil)
 }
 
 func (NoopMeasureConstructors) NewFloat64Counter(name string, cos ...CounterOptionApplier) (Float64Counter, error) {
-	return WrapFloat64CounterInstrument(noopInstrument{}), nil
+	return WrapFloat64CounterInstrument(noopInstrument{}, nil)
 }
 
 func (NoopMeasureConstructors) NewInt64Gauge(name string, gos ...GaugeOptionApplier) (Int64Gauge, error) {
-	return WrapInt64GaugeInstrument(noopInstrument{}), nil
+	return WrapInt64GaugeInstrument(noopInstrument{}, nil)
 }
 
 func (NoopMeasureConstructors) NewFloat64Gauge(name string, gos ...GaugeOptionApplier) (Float64Gauge, error) {
-	return WrapFloat64GaugeInstrument(noopInstrument{}), nil
+	return WrapFloat64GaugeInstrument(noopInstrument{}, nil)
 }
 
 func (NoopMeasureConstructors) NewInt64Measure(name string, mos ...MeasureOptionApplier) (Int64Measure, error) {
-	return WrapInt64MeasureInstrument(noopInstrument{}), nil
+	return WrapInt64MeasureInstrument(noopInstrument{}, nil)
 }
 
 func (NoopMeasureConstructors) NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error) {
-	return WrapFloat64MeasureInstrument(noopInstrument{}), nil
+	return WrapFloat64MeasureInstrument(noopInstrument{}, nil)
 }
 
 // MeasureConstructorsMust
 
 func (NoopMeasureConstructorsMust) MustNewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
-	return WrapInt64CounterInstrument(noopInstrument{})
+	inst, _ := WrapInt64CounterInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 func (NoopMeasureConstructorsMust) MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
-	return WrapFloat64CounterInstrument(noopInstrument{})
+	inst, _ := WrapFloat64CounterInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 func (NoopMeasureConstructorsMust) MustNewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
-	return WrapInt64GaugeInstrument(noopInstrument{})
+	inst, _ := WrapInt64GaugeInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 func (NoopMeasureConstructorsMust) MustNewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
-	return WrapFloat64GaugeInstrument(noopInstrument{})
+	inst, _ := WrapFloat64GaugeInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 func (NoopMeasureConstructorsMust) MustNewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
-	return WrapInt64MeasureInstrument(noopInstrument{})
+	inst, _ := WrapInt64MeasureInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 func (NoopMeasureConstructorsMust) MustNewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
-	return WrapFloat64MeasureInstrument(noopInstrument{})
+	inst, _ := WrapFloat64MeasureInstrument(noopInstrument{}, nil)
+	return inst
 }
 
 // ObserverConstructors

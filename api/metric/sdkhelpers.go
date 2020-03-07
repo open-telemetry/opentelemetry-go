@@ -70,48 +70,54 @@ var _ ObserverConstructorsMust = ObserverConstructorsMustImpl{}
 // wrapper as an integral counter.
 //
 // It is mostly intended for SDKs.
-func WrapInt64CounterInstrument(instrument InstrumentImpl) Int64Counter {
-	return Int64Counter{commonMetric: newCommonMetric(instrument)}
+func WrapInt64CounterInstrument(instrument InstrumentImpl, err error) (Int64Counter, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Int64Counter{commonMetric: common}, err
 }
 
 // WrapFloat64CounterInstrument wraps the instrument in the type-safe
 // wrapper as an floating point counter.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64CounterInstrument(instrument InstrumentImpl) Float64Counter {
-	return Float64Counter{commonMetric: newCommonMetric(instrument)}
+func WrapFloat64CounterInstrument(instrument InstrumentImpl, err error) (Float64Counter, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Float64Counter{commonMetric: common}, err
 }
 
 // WrapInt64GaugeInstrument wraps the instrument in the type-safe
 // wrapper as an integral gauge.
 //
 // It is mostly intended for SDKs.
-func WrapInt64GaugeInstrument(instrument InstrumentImpl) Int64Gauge {
-	return Int64Gauge{commonMetric: newCommonMetric(instrument)}
+func WrapInt64GaugeInstrument(instrument InstrumentImpl, err error) (Int64Gauge, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Int64Gauge{commonMetric: common}, err
 }
 
 // WrapFloat64GaugeInstrument wraps the instrument in the type-safe
 // wrapper as an floating point gauge.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64GaugeInstrument(instrument InstrumentImpl) Float64Gauge {
-	return Float64Gauge{commonMetric: newCommonMetric(instrument)}
+func WrapFloat64GaugeInstrument(instrument InstrumentImpl, err error) (Float64Gauge, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Float64Gauge{commonMetric: common}, err
 }
 
 // WrapInt64MeasureInstrument wraps the instrument in the type-safe
 // wrapper as an integral measure.
 //
 // It is mostly intended for SDKs.
-func WrapInt64MeasureInstrument(instrument InstrumentImpl) Int64Measure {
-	return Int64Measure{commonMetric: newCommonMetric(instrument)}
+func WrapInt64MeasureInstrument(instrument InstrumentImpl, err error) (Int64Measure, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Int64Measure{commonMetric: common}, err
 }
 
 // WrapFloat64MeasureInstrument wraps the instrument in the type-safe
 // wrapper as an floating point measure.
 //
 // It is mostly intended for SDKs.
-func WrapFloat64MeasureInstrument(instrument InstrumentImpl) Float64Measure {
-	return Float64Measure{commonMetric: newCommonMetric(instrument)}
+func WrapFloat64MeasureInstrument(instrument InstrumentImpl, err error) (Float64Measure, error) {
+	common, err := newCommonMetric(instrument, err)
+	return Float64Measure{commonMetric: common}, err
 }
 
 // ApplyCounterOptions is a helper that applies all the counter

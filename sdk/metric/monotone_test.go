@@ -75,7 +75,7 @@ func TestMonotoneGauge(t *testing.T) {
 
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
-	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
+	gauge := sdk.MustNewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
 
 	handle := gauge.Bind(sdk.Labels(key.String("a", "b")))
 

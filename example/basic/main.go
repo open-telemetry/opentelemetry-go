@@ -73,12 +73,12 @@ func main() {
 	tracer := global.TraceProvider().Tracer("ex.com/basic")
 	meter := global.MeterProvider().Meter("ex.com/basic")
 
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+	oneMetric := meter.MustNewFloat64Gauge("ex.com.one",
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A gauge set to 1.0"),
 	)
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two")
+	measureTwo := meter.MustNewFloat64Measure("ex.com.two")
 
 	ctx := context.Background()
 

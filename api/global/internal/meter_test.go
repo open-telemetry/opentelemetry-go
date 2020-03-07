@@ -30,29 +30,29 @@ func TestDirect(t *testing.T) {
 	lvals3 := key.String("E", "F")
 	labels3 := meter2.Labels(lvals3)
 
-	counter := meter1.NewInt64Counter("test.counter")
+	counter := meter1.MustNewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1)
 	counter.Add(ctx, 1, labels1)
 
-	gauge := meter1.NewInt64Gauge("test.gauge")
+	gauge := meter1.MustNewInt64Gauge("test.gauge")
 	gauge.Set(ctx, 1, labels2)
 	gauge.Set(ctx, 2, labels2)
 
-	measure := meter1.NewFloat64Measure("test.measure")
+	measure := meter1.MustNewFloat64Measure("test.measure")
 	measure.Record(ctx, 1, labels1)
 	measure.Record(ctx, 2, labels1)
 
-	_ = meter1.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+	_ = meter1.MustRegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 		result.Observe(1., labels1)
 		result.Observe(2., labels2)
 	})
 
-	_ = meter1.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+	_ = meter1.MustRegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 		result.Observe(1, labels1)
 		result.Observe(2, labels2)
 	})
 
-	second := meter2.NewFloat64Measure("test.second")
+	second := meter2.MustNewFloat64Measure("test.second")
 	second.Record(ctx, 1, labels3)
 	second.Record(ctx, 2, labels3)
 
@@ -161,17 +161,17 @@ func TestBound(t *testing.T) {
 	lvals2 := key.String("C", "D")
 	labels2 := glob.Labels(lvals2)
 
-	counter := glob.NewFloat64Counter("test.counter")
+	counter := glob.MustNewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1)
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
-	gauge := glob.NewFloat64Gauge("test.gauge")
+	gauge := glob.MustNewFloat64Gauge("test.gauge")
 	boundG := gauge.Bind(labels2)
 	boundG.Set(ctx, 1)
 	boundG.Set(ctx, 2)
 
-	measure := glob.NewInt64Measure("test.measure")
+	measure := glob.MustNewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
@@ -230,17 +230,17 @@ func TestUnbind(t *testing.T) {
 	lvals2 := key.New("C").String("D")
 	labels2 := glob.Labels(lvals2)
 
-	counter := glob.NewFloat64Counter("test.counter")
+	counter := glob.MustNewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1)
 
-	gauge := glob.NewFloat64Gauge("test.gauge")
+	gauge := glob.MustNewFloat64Gauge("test.gauge")
 	boundG := gauge.Bind(labels2)
 
-	measure := glob.NewInt64Measure("test.measure")
+	measure := glob.MustNewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 
-	observerInt := glob.RegisterInt64Observer("test.observer.int", nil)
-	observerFloat := glob.RegisterFloat64Observer("test.observer.float", nil)
+	observerInt := glob.MustRegisterInt64Observer("test.observer.int", nil)
+	observerFloat := glob.MustRegisterFloat64Observer("test.observer.float", nil)
 
 	boundC.Unbind()
 	boundG.Unbind()
@@ -257,7 +257,7 @@ func TestDefaultSDK(t *testing.T) {
 	lvals1 := key.String("A", "B")
 	labels1 := meter1.Labels(lvals1)
 
-	counter := meter1.NewInt64Counter("test.builtin")
+	counter := meter1.MustNewInt64Counter("test.builtin")
 	counter.Add(ctx, 1, labels1)
 	counter.Add(ctx, 1, labels1)
 
@@ -291,7 +291,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	ctx := context.Background()
 	sdk := metrictest.NewProvider()
 	meter := global.MeterProvider().Meter("test")
-	counter := meter.NewInt64Counter("test.counter")
+	counter := meter.MustNewInt64Counter("test.counter")
 	boundC := counter.Bind(meter.Labels())
 	global.SetMeterProvider(sdk)
 	boundC.Unbind()

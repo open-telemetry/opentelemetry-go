@@ -196,12 +196,12 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 
 func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Int64Counter, error) {
 	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
-	return apimetric.WrapInt64CounterInstrument(instrument), nil
+	return apimetric.WrapInt64CounterInstrument(instrument, nil)
 }
 
 func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Float64Counter, error) {
 	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
-	return apimetric.WrapFloat64CounterInstrument(instrument), nil
+	return apimetric.WrapFloat64CounterInstrument(instrument, nil)
 }
 
 func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
@@ -217,12 +217,12 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 
 func (m *Meter) NewInt64Gauge(name string, gos ...apimetric.GaugeOptionApplier) (apimetric.Int64Gauge, error) {
 	instrument := m.newGaugeInstrument(name, core.Int64NumberKind, gos...)
-	return apimetric.WrapInt64GaugeInstrument(instrument), nil
+	return apimetric.WrapInt64GaugeInstrument(instrument, nil)
 }
 
 func (m *Meter) NewFloat64Gauge(name string, gos ...apimetric.GaugeOptionApplier) (apimetric.Float64Gauge, error) {
 	instrument := m.newGaugeInstrument(name, core.Float64NumberKind, gos...)
-	return apimetric.WrapFloat64GaugeInstrument(instrument), nil
+	return apimetric.WrapFloat64GaugeInstrument(instrument, nil)
 }
 
 func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
@@ -238,12 +238,12 @@ func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos 
 
 func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Int64Measure, error) {
 	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
-	return apimetric.WrapInt64MeasureInstrument(instrument), nil
+	return apimetric.WrapInt64MeasureInstrument(instrument, nil)
 }
 
 func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Float64Measure, error) {
 	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
-	return apimetric.WrapFloat64MeasureInstrument(instrument), nil
+	return apimetric.WrapFloat64MeasureInstrument(instrument, nil)
 }
 
 func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {

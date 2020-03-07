@@ -338,7 +338,7 @@ func float64sEqual(a, b core.Number) bool {
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
+			return meter.MustNewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset int64
@@ -384,7 +384,7 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
+			return meter.MustNewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset float64
@@ -435,7 +435,7 @@ func intGaugeTestImpl(monotonic bool) testImpl {
 
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Gauge(name, api.WithMonotonic(monotonic))
+			return meter.MustNewInt64Gauge(name, api.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() core.Number {
 			if !monotonic {
@@ -487,7 +487,7 @@ func floatGaugeTestImpl(monotonic bool) testImpl {
 
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Gauge(name, api.WithMonotonic(monotonic))
+			return meter.MustNewFloat64Gauge(name, api.WithMonotonic(monotonic))
 		},
 		getUpdateValue: func() core.Number {
 			if !monotonic {
