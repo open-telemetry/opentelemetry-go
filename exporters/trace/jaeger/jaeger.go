@@ -48,9 +48,9 @@ type options struct {
 
 	Config *sdktrace.Config
 
-	// Registration is set to true if the trace provider of the new pipeline should be
+	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
 	// registered as Global Trace Provider
-	Registeration bool
+	RegisterGlobal bool
 }
 
 // WithOnError sets the hook to be called when there is
@@ -87,7 +87,7 @@ func WithSDK(config *sdktrace.Config) func(o *options) {
 // as Global Trace Provider.
 func WithRegistration() func(o *options) {
 	return func(o *options) {
-		o.Registeration = true
+		o.RegisterGlobal = true
 	}
 }
 
@@ -162,7 +162,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace
 	if exporter.o.Config != nil {
 		tp.ApplyConfig(*exporter.o.Config)
 	}
-	if exporter.o.Registeration {
+	if exporter.o.RegisterGlobal {
 		global.SetTraceProvider(tp)
 	}
 
