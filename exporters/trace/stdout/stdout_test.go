@@ -116,7 +116,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"DroppedAttributeCount":0,` +
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
-		`"ChildSpanCount":0}` + "\n"
+		`"ChildSpanCount":0,` +
+		`"Resource":null}` + "\n"
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)

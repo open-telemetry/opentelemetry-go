@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -26,40 +27,78 @@ import (
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
+	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 )
 
 func makeMockCollector(t *testing.T) *mockCol {
 	return &mockCol{
-		t:         t,
-		traceSvc:  &mockTraceService{},
+		t: t,
+		traceSvc: &mockTraceService{
+			rsm: map[string]*tracepb.ResourceSpans{},
+		},
 		metricSvc: &mockMetricService{},
 	}
 }
 
 type mockTraceService struct {
-	mu    sync.RWMutex
-	spans []*tracepb.Span
+	mu  sync.RWMutex
+	rsm map[string]*tracepb.ResourceSpans
 }
 
 func (mts *mockTraceService) getSpans() []*tracepb.Span {
 	mts.mu.RLock()
-	spans := append([]*tracepb.Span{}, mts.spans...)
-	mts.mu.RUnlock()
-
+	defer mts.mu.RUnlock()
+	spans := []*tracepb.Span{}
+	for _, rs := range mts.rsm {
+		spans = append(spans, rs.Spans...)
+	}
 	return spans
 }
 
-func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
-	resourceSpans := exp.GetResourceSpans()
-	// TODO (rghetia): handle Resources
-	mts.mu.Lock()
-	for _, rs := range resourceSpans {
-		mts.spans = append(mts.spans, rs.Spans...)
+func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
+	mts.mu.RLock()
+	defer mts.mu.RUnlock()
+	rss := make([]*tracepb.ResourceSpans, 0, len(mts.rsm))
+	for _, rs := range mts.rsm {
+		rss = append(rss, rs)
 	}
-	mts.mu.Unlock()
+	return rss
+}
+
+func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
+	mts.mu.Lock()
+	defer mts.mu.Unlock()
+	rss := exp.GetResourceSpans()
+	for _, rs := range rss {
+		rstr := resourceString(rs.Resource)
+		existingRs, ok := mts.rsm[rstr]
+		if !ok {
+			mts.rsm[rstr] = rs
+		} else {
+			existingRs.Spans = append(existingRs.Spans, rs.GetSpans()...)
+		}
+	}
 	return &coltracepb.ExportTraceServiceResponse{}, nil
+}
+
+func resourceString(res *resourcepb.Resource) string {
+	sAttrs := sortedAttributes(res.GetAttributes())
+	rstr := ""
+	for _, attr := range sAttrs {
+		rstr = rstr + attr.String()
+
+	}
+	return rstr
+}
+
+func sortedAttributes(attrs []*commonpb.AttributeKeyValue) []*commonpb.AttributeKeyValue {
+	sort.Slice(attrs[:], func(i, j int) bool {
+		return attrs[i].Key < attrs[j].Key
+	})
+	return attrs
 }
 
 type mockMetricService struct {
@@ -132,6 +171,10 @@ func (mc *mockCol) stop() error {
 
 func (mc *mockCol) getSpans() []*tracepb.Span {
 	return mc.traceSvc.getSpans()
+}
+
+func (mc *mockCol) getResourceSpans() []*tracepb.ResourceSpans {
+	return mc.traceSvc.getResourceSpans()
 }
 
 func (mc *mockCol) getMetrics() []*metricpb.Metric {

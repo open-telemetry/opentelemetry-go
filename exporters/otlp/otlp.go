@@ -23,6 +23,8 @@ import (
 	"sync"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -346,18 +348,26 @@ func otSpanDataToPbSpans(sdl []*tracesdk.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
-	protoSpans := make([]*tracepb.Span, 0, len(sdl))
+	rsm := make(map[*resource.Resource]*tracepb.ResourceSpans)
+
 	for _, sd := range sdl {
 		if sd != nil {
-			protoSpans = append(protoSpans, otSpanToProtoSpan(sd))
+			rs, ok := rsm[sd.Resource]
+			if !ok {
+				rs = &tracepb.ResourceSpans{
+					Resource: otResourceToProtoResource(sd.Resource),
+					Spans:    []*tracepb.Span{},
+				}
+				rsm[sd.Resource] = rs
+			}
+			rs.Spans = append(rs.Spans, otSpanToProtoSpan(sd))
 		}
 	}
-	return []*tracepb.ResourceSpans{
-		{
-			Resource: nil,
-			Spans:    protoSpans,
-		},
+	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))
+	for _, rs := range rsm {
+		rss = append(rss, rs)
 	}
+	return rss
 }
 
 func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
