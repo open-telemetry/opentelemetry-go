@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/stackdriver"
+	"go.opentelemetry.io/otel/exporters/trace/stackdriver"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -58,7 +58,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(correlation.WithMap(req.Context(), correlation.NewMap(correlation.MapUpdate{
+		req = req.WithContext(correlation.ContextWithMap(req.Context(), correlation.NewMap(correlation.MapUpdate{
 			MultiKV: entries,
 		})))
 

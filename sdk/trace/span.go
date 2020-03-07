@@ -16,6 +16,8 @@ package trace
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -25,6 +27,12 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
+)
+
+const (
+	errorTypeKey    = core.Key("error.type")
+	errorMessageKey = core.Key("error.message")
+	errorEventName  = "error"
 )
 
 // span implements apitrace.Span interface.
@@ -121,6 +129,42 @@ func (s *span) End(options ...apitrace.EndOption) {
 			}
 		}
 	})
+}
+
+func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
+	if s == nil || err == nil {
+		return
+	}
+
+	if !s.IsRecording() {
+		return
+	}
+
+	cfg := apitrace.ErrorConfig{}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
+	errType := reflect.TypeOf(err)
+	errTypeString := fmt.Sprintf("%s.%s", errType.PkgPath(), errType.Name())
+	if errTypeString == "." {
+		// PkgPath() and Name() may be empty for builtin Types
+		errTypeString = errType.String()
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+		errorTypeKey.String(errTypeString),
+		errorMessageKey.String(err.Error()),
+	)
 }
 
 func (s *span) Tracer() apitrace.Tracer {

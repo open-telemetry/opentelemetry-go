@@ -17,6 +17,7 @@ package internal
 import (
 	"context"
 	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
@@ -259,6 +260,35 @@ func (s *MockSpan) End(options ...oteltrace.EndOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
+func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace.ErrorOption) {
+	if err == nil {
+		return // no-op on nil error
+	}
+
+	if !s.EndTime.IsZero() {
+		return // already finished
+	}
+
+	cfg := oteltrace.ErrorConfig{}
+
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	if cfg.Timestamp.IsZero() {
+		cfg.Timestamp = time.Now()
+	}
+
+	if cfg.Status != codes.OK {
+		s.SetStatus(cfg.Status)
+	}
+
+	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+		otelcore.Key("error.type").String(reflect.TypeOf(err).String()),
+		otelcore.Key("error.message").String(err.Error()),
+	)
+}
+
 func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
@@ -269,7 +299,7 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: otelcorrelation.FromContext(ctx),
+		CtxAttributes: otelcorrelation.MapFromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
 		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{

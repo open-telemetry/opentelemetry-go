@@ -189,6 +189,29 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.NewDefaultLabelEncoder()
+
 	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
 	require.Equal(t, `A=B,C=D`, encoded)
+
+	encoded = encoder.Encode([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")})
+	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
+
+	encoded = encoder.Encode([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)})
+	require.Equal(t, `\\=\=,\,=\\`, encoded)
+
+	// Note: the label encoder does not sort or de-dup values,
+	// that is done in Labels(...).
+	encoded = encoder.Encode([]core.KeyValue{
+		key.Int("I", 1),
+		key.Uint("U", 1),
+		key.Int32("I32", 1),
+		key.Uint32("U32", 1),
+		key.Int64("I64", 1),
+		key.Uint64("U64", 1),
+		key.Float64("F64", 1),
+		key.Float64("F64", 1),
+		key.String("S", "1"),
+		key.Bool("B", true),
+	})
+	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
 }

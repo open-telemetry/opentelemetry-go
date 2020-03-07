@@ -26,6 +26,7 @@ import (
 	mock "go.opentelemetry.io/otel/internal/metric"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCounterOptions(t *testing.T) {
@@ -361,6 +362,117 @@ func TestMeasureOptions(t *testing.T) {
 	}
 }
 
+func TestObserverOptions(t *testing.T) {
+	type testcase struct {
+		name string
+		opts []metric.ObserverOptionApplier
+		keys []core.Key
+		desc string
+		unit unit.Unit
+		alt  bool
+	}
+	testcases := []testcase{
+		{
+			name: "no opts",
+			opts: nil,
+			keys: nil,
+			desc: "",
+			unit: "",
+			alt:  false,
+		},
+		{
+			name: "keys keys keys",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithKeys(key.New("foo"), key.New("foo2")),
+				metric.WithKeys(key.New("bar"), key.New("bar2")),
+				metric.WithKeys(key.New("baz"), key.New("baz2")),
+			},
+			keys: []core.Key{
+				key.New("foo"), key.New("foo2"),
+				key.New("bar"), key.New("bar2"),
+				key.New("baz"), key.New("baz2"),
+			},
+			desc: "",
+			unit: "",
+			alt:  false,
+		},
+		{
+			name: "description",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithDescription("stuff"),
+			},
+			keys: nil,
+			desc: "stuff",
+			unit: "",
+			alt:  false,
+		},
+		{
+			name: "description override",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
+			},
+			keys: nil,
+			desc: "things",
+			unit: "",
+			alt:  false,
+		},
+		{
+			name: "unit",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithUnit("s"),
+			},
+			keys: nil,
+			desc: "",
+			unit: "s",
+			alt:  false,
+		},
+		{
+			name: "unit override",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithUnit("s"),
+				metric.WithUnit("h"),
+			},
+			keys: nil,
+			desc: "",
+			unit: "h",
+			alt:  false,
+		},
+		{
+			name: "monotonic",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithMonotonic(true),
+			},
+			keys: nil,
+			desc: "",
+			unit: "",
+			alt:  true,
+		},
+		{
+			name: "monotonic, but not really",
+			opts: []metric.ObserverOptionApplier{
+				metric.WithMonotonic(true),
+				metric.WithMonotonic(false),
+			},
+			keys: nil,
+			desc: "",
+			unit: "",
+			alt:  false,
+		},
+	}
+	for idx, tt := range testcases {
+		t.Logf("Testing observer case %s (%d)", tt.name, idx)
+		opts := &metric.Options{}
+		metric.ApplyObserverOptions(opts, tt.opts...)
+		checkOptions(t, opts, &metric.Options{
+			Description: tt.desc,
+			Unit:        tt.unit,
+			Keys:        tt.keys,
+			Alternate:   tt.alt,
+		})
+	}
+}
+
 func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 	if diff := cmp.Diff(got, expected); diff != "" {
 		t.Errorf("Compare options: -got +want %s", diff)
@@ -370,7 +482,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.NewFloat64Counter("ajwaj")
+		c := meter.NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -382,7 +494,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.NewInt64Counter("ajwaj")
+		c := meter.NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -397,7 +509,7 @@ func TestCounter(t *testing.T) {
 func TestGauge(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		g := meter.NewFloat64Gauge("ajwaj")
+		g := meter.NewFloat64Gauge("test.gauge.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -409,7 +521,7 @@ func TestGauge(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		g := meter.NewInt64Gauge("ajwaj")
+		g := meter.NewInt64Gauge("test.gauge.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -424,7 +536,7 @@ func TestGauge(t *testing.T) {
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.NewFloat64Measure("ajwaj")
+		m := meter.NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -436,7 +548,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.NewInt64Measure("ajwaj")
+		m := meter.NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -445,6 +557,29 @@ func TestMeasure(t *testing.T) {
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
 		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, m.Impl())
+	}
+}
+
+func TestObserver(t *testing.T) {
+	{
+		meter := mock.NewMeter()
+		labels := meter.Labels()
+		o := meter.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+			result.Observe(42, labels)
+		})
+		t.Log("Testing float observer")
+		meter.RunObservers()
+		checkObserverBatch(t, labels, meter, core.Float64NumberKind, o)
+	}
+	{
+		meter := mock.NewMeter()
+		labels := meter.Labels()
+		o := meter.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+			result.Observe(42, labels)
+		})
+		t.Log("Testing int observer")
+		meter.RunObservers()
+		checkObserverBatch(t, labels, meter, core.Int64NumberKind, o)
 	}
 }
 
@@ -496,7 +631,31 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, met
 	}
 }
 
+func checkObserverBatch(t *testing.T, labels metric.LabelSet, meter *mock.Meter, kind core.NumberKind, observer interface{}) {
+	t.Helper()
+	assert.Len(t, meter.MeasurementBatches, 1)
+	if len(meter.MeasurementBatches) < 1 {
+		return
+	}
+	o := observer.(*mock.Observer)
+	if !assert.NotNil(t, o) {
+		return
+	}
+	ourLabelSet := labels.(*mock.LabelSet)
+	got := meter.MeasurementBatches[0]
+	assert.Equal(t, ourLabelSet, got.LabelSet)
+	assert.Len(t, got.Measurements, 1)
+	if len(got.Measurements) < 1 {
+		return
+	}
+	measurement := got.Measurements[0]
+	assert.Equal(t, o.Instrument, measurement.Instrument)
+	ft := fortyTwo(t, kind)
+	assert.Equal(t, 0, measurement.Number.CompareNumber(kind, ft))
+}
+
 func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
+	t.Helper()
 	switch kind {
 	case core.Int64NumberKind:
 		return core.NewInt64Number(42)
