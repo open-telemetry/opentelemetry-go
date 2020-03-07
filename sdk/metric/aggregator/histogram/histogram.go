@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/lfw"
+	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 type (
@@ -39,7 +39,7 @@ type (
 
 		// states needs to be aligned for 64-bit atomic operations.
 		states     [2]state
-		lock       lfw.StateLocker
+		lock       internal.StateLocker
 		boundaries []core.Number
 		kind       core.NumberKind
 	}

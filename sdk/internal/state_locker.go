@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lfw // import "go.opentelemetry.io/otel/sdk/lfw"
+package internal
 
 import (
 	"runtime"
@@ -41,7 +41,6 @@ import (
 // 2.3 wait in-flight operations of the state 0 to end.
 // 3. State 1 is now active and every new operation are executed in it.
 //
-//
 // `SwitchState(fn)` are synchronized with a mutex that can be access with the `Lock()` and `Unlock()` methods.
 // Access to the cold state must also be synchronized to ensure the cold state is not in the middle of state switch
 // since that could represent an invalid state.
@@ -53,21 +52,29 @@ type StateLocker struct {
 	sync.Mutex
 }
 
-// TODO(paivagustavo): doc methods
-
+// Start an operation that will happen on a state. The current active state is returned.
+// A call to `End(idx int)` must happens for every `Start()` call.
 func (c *StateLocker) Start() int {
 	n := atomic.AddUint64(&c.countsAndActiveIdx, 1)
 	return int(n >> 63)
 }
 
+// End an operation that happened to the idx state.
 func (c *StateLocker) End(idx int) {
 	atomic.AddUint64(&c.finishedOperations[idx], 1)
 }
 
+// ColdIdx returns the index of the cold state.
 func (c *StateLocker) ColdIdx() int {
 	return int((^c.countsAndActiveIdx) >> 63)
 }
 
+// SwapActiveState swaps the cold and active states.
+//
+// This will wait all in-flight operations that are happening to the current
+// active state to end, this ensure that all access to this state will be consistent.
+//
+// This is a synchronized by a mutex.
 func (c *StateLocker) SwapActiveState(beforeFn func()) {
 	c.Lock()
 	defer c.Unlock()

@@ -1,4 +1,4 @@
-package lfw
+package internal
 
 import (
 	"testing"
@@ -57,7 +57,7 @@ func TestEnsureIndexIsConsistent(t *testing.T) {
 	require.Equal(t, 1, op2, "second index should be 1")
 }
 
-func TestTwoSwapsCanHappensWithoutOperationsInBetween(t *testing.T) {
+func TestTwoSwapsCanHappenWithoutOperationsInBetween(t *testing.T) {
 	l := StateLocker{}
 
 	require.Equal(t, 1, l.ColdIdx(), "first cold index should be 1")
