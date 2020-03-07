@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -206,7 +207,7 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 			ok = false
 		}
 		if !ok {
-			bsp.dropped++
+			atomic.AddUint32(&bsp.dropped, 1)
 		}
 	}
 }
