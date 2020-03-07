@@ -60,8 +60,9 @@ func TestExporter_ExportSpan(t *testing.T) {
 			{Name: "foo", Attributes: []core.KeyValue{key.String("key", keyValue)}, Time: now},
 			{Name: "bar", Attributes: []core.KeyValue{key.Float64("double", doubleValue)}, Time: now},
 		},
-		SpanKind: trace.SpanKindInternal,
-		Status:   codes.Unknown,
+		SpanKind:      trace.SpanKindInternal,
+		StatusCode:    codes.Unknown,
+		StatusMessage: "interesting",
 	}
 	ex.ExportSpan(context.Background(), testSpan)
 
@@ -109,7 +110,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`}` +
 		`],` +
 		`"Links":null,` +
-		`"Status":2,` +
+		`"StatusCode":2,` +
+		`"StatusMessage":"interesting",` +
 		`"HasRemoteParent":false,` +
 		`"DroppedAttributeCount":0,` +
 		`"DroppedMessageEventCount":0,` +

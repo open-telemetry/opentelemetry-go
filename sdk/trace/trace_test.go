@@ -559,7 +559,7 @@ func TestSetSpanStatus(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
-	span.SetStatus(codes.Canceled)
+	span.SetStatus(codes.Canceled, "canceled")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -573,7 +573,8 @@ func TestSetSpanStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Canceled,
+		StatusCode:      codes.Canceled,
+		StatusMessage:   "canceled",
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -957,7 +958,8 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Unknown,
+		StatusCode:      codes.Unknown,
+		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
@@ -996,7 +998,8 @@ func TestRecordErrorNil(t *testing.T) {
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Status:          codes.OK,
+		StatusCode:      codes.OK,
+		StatusMessage:   "",
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)

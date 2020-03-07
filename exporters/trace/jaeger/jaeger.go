@@ -157,14 +157,15 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		}
 	}
 
-	tags = append(tags, getInt64Tag("status.code", int64(data.Status)),
-		getStringTag("status.message", data.Status.String()),
+	tags = append(tags,
+		getInt64Tag("status.code", int64(data.StatusCode)),
+		getStringTag("status.message", data.StatusMessage),
 		getStringTag("span.kind", data.SpanKind.String()),
 	)
 
 	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
 	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
-	if data.Status != codes.OK {
+	if data.StatusCode != codes.OK {
 		tags = append(tags, getBoolTag("error", true))
 	}
 

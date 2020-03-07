@@ -17,6 +17,7 @@ package testtrace_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -164,7 +165,8 @@ func TestSpan(t *testing.T) {
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
-				e.Expect(subject.Status()).ToEqual(codes.OK)
+				e.Expect(subject.StatusCode()).ToEqual(codes.OK)
+				e.Expect(subject.StatusMessage()).ToEqual("")
 			}
 		})
 
@@ -182,8 +184,8 @@ func TestSpan(t *testing.T) {
 			errMsg := "test error message"
 			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
-			expStatus := codes.Unknown
-			subject.RecordError(ctx, testErr, trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatus))
+			expStatusCode := codes.Unknown
+			subject.RecordError(ctx, testErr, trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatusCode))
 
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
@@ -194,7 +196,7 @@ func TestSpan(t *testing.T) {
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
-			e.Expect(subject.Status()).ToEqual(expStatus)
+			e.Expect(subject.StatusCode()).ToEqual(expStatusCode)
 		})
 
 		t.Run("cannot be set after the span has ended", func(t *testing.T) {
@@ -527,11 +529,11 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.Status()).ToEqual(codes.OK)
+			e.Expect(subject.StatusCode()).ToEqual(codes.OK)
 
 			subject.End()
 
-			e.Expect(subject.Status()).ToEqual(codes.OK)
+			e.Expect(subject.StatusCode()).ToEqual(codes.OK)
 		})
 
 		statuses := []codes.Code{
@@ -566,10 +568,11 @@ func TestSpan(t *testing.T) {
 				subject, ok := span.(*testtrace.Span)
 				e.Expect(ok).ToBeTrue()
 
-				subject.SetStatus(codes.OK)
-				subject.SetStatus(status)
+				subject.SetStatus(codes.OK, "OK")
+				subject.SetStatus(status, "Yo!")
 
-				e.Expect(subject.Status()).ToEqual(status)
+				e.Expect(subject.StatusCode()).ToEqual(status)
+				e.Expect(subject.StatusMessage()).ToEqual("Yo!")
 			})
 
 			t.Run("cannot be changed after the span has been ended", func(t *testing.T) {
@@ -585,11 +588,12 @@ func TestSpan(t *testing.T) {
 
 				originalStatus := codes.OK
 
-				subject.SetStatus(originalStatus)
+				subject.SetStatus(originalStatus, "OK")
 				subject.End()
-				subject.SetStatus(status)
+				subject.SetStatus(status, fmt.Sprint(status))
 
-				e.Expect(subject.Status()).ToEqual(originalStatus)
+				e.Expect(subject.StatusCode()).ToEqual(originalStatus)
+				e.Expect(subject.StatusMessage()).ToEqual("OK")
 			})
 		}
 	})
