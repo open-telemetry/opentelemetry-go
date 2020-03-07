@@ -112,40 +112,115 @@ func (m Measurement) Number() core.Number {
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
+	MeterWithoutMust
+
+	MeasureConstructorsMust
+	ObserverConstructorsMust
+}
+
+// MeterWithoutMust is a partial Meter interface that does not support
+// the `Must*` instrument constructors.
+type MeterWithoutMust interface {
+	MeterMethods
+
+	MeasureConstructors
+	ObserverConstructors
+}
+
+// MeterMethods are all the non-constructor methods of the Meter interface.
+type MeterMethods interface {
 	// Labels returns a reference to a set of labels that cannot
 	// be read by the application.
 	Labels(...core.KeyValue) LabelSet
 
+	// RecordBatch atomically records a batch of measurements.
+	RecordBatch(context.Context, LabelSet, ...Measurement)
+}
+
+// MeasureConstructors is a Meter sub-interface containing a `New`
+// method for every supported Measure instrument.  These are the
+// standard synchronous instrument constructors, which may return an
+// error for conditions such as:
+//   `name` is an empty string
+//   `name` was previously registered as a different kind of instrument
+//          for a given named `Meter`.
+type MeasureConstructors interface {
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
-	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error)
 	// NewFloat64Counter creates a new floating point counter with
 	// a given name and customized with passed options.
-	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
+	NewFloat64Counter(name string, cos ...CounterOptionApplier) (Float64Counter, error)
 	// NewInt64Gauge creates a new integral gauge with a given
 	// name and customized with passed options.
-	NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
+	NewInt64Gauge(name string, gos ...GaugeOptionApplier) (Int64Gauge, error)
 	// NewFloat64Gauge creates a new floating point gauge with a
 	// given name and customized with passed options.
-	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
+	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) (Float64Gauge, error)
 	// NewInt64Measure creates a new integral measure with a given
 	// name and customized with passed options.
-	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	NewInt64Measure(name string, mos ...MeasureOptionApplier) (Int64Measure, error)
 	// NewFloat64Measure creates a new floating point measure with
 	// a given name and customized with passed options.
-	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
+	NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error)
+}
 
+// ObserverConstructors is a Meter sub-interface containing a `Register`
+// method for every supported Observer instrument.  These are the
+// standard asynchronous instrument constructors, which may return an
+// error for conditions such as:
+//   `name` is an empty string
+//   `name` was previously registered as a different kind of instrument
+//          for a given named `Meter`.
+type ObserverConstructors interface {
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
 	// options. Callback can be nil.
-	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
-	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
+	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) (Float64Observer, error)
+}
 
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+// MeasureConstructorsMust is a Meter sub-interface containing a
+// `MustNew` method for every supported Measure instrument.  These
+// synchronous instrument constructors panic instead of returning an
+// error, as the corresponding `New` method would do.
+type MeasureConstructorsMust interface {
+	// MustNewInt64Counter creates a new integral counter with a given
+	// name and customized with passed options.
+	MustNewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	// MustNewFloat64Counter creates a new floating point counter with
+	// a given name and customized with passed options.
+	MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
+	// MustNewInt64Gauge creates a new integral gauge with a given
+	// name and customized with passed options.
+	MustNewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
+	// MustNewFloat64Gauge creates a new floating point gauge with a
+	// given name and customized with passed options.
+	MustNewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
+	// MustNewInt64Measure creates a new integral measure with a given
+	// name and customized with passed options.
+	MustNewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	// MustNewFloat64Measure creates a new floating point measure with
+	// a given name and customized with passed options.
+	MustNewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
+}
+
+// MeasureConstructorsMust is a Meter sub-interface containing a
+// `MustRegister` method for every supported Measure instrument.  These
+// synchronous instrument constructors panic instead of returning an
+// error, as the corresponding `Register` method would do.
+type ObserverConstructorsMust interface {
+	// MustRegisterInt64Observer creates a new integral observer with a
+	// given name, running a given callback, and customized with passed
+	// options. Callback can be nil.
+	MustRegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	// MustRegisterFloat64Observer creates a new floating point observer
+	// with a given name, running a given callback, and customized with
+	// passed options. Callback can be nil.
+	MustRegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
 }
 
 // Int64ObserverResult is an interface for reporting integral

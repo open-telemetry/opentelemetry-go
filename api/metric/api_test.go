@@ -482,7 +482,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.NewFloat64Counter("test.counter.float")
+		c := meter.MustNewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -494,7 +494,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.NewInt64Counter("test.counter.int")
+		c := meter.MustNewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -509,7 +509,7 @@ func TestCounter(t *testing.T) {
 func TestGauge(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		g := meter.NewFloat64Gauge("test.gauge.float")
+		g := meter.MustNewFloat64Gauge("test.gauge.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -521,7 +521,7 @@ func TestGauge(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		g := meter.NewInt64Gauge("test.gauge.int")
+		g := meter.MustNewInt64Gauge("test.gauge.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		g.Set(ctx, 42, labels)
@@ -536,7 +536,7 @@ func TestGauge(t *testing.T) {
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.NewFloat64Measure("test.measure.float")
+		m := meter.MustNewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -548,7 +548,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.NewInt64Measure("test.measure.int")
+		m := meter.MustNewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -564,7 +564,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := meter.MustRegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing float observer")
@@ -574,7 +574,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := meter.MustRegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")
