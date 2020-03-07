@@ -37,7 +37,7 @@ func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 		TraceId:           sd.SpanContext.TraceID[:],
 		SpanId:            sd.SpanContext.SpanID[:],
 		ParentSpanId:      sd.ParentSpanID[:],
-		Status:            otStatusToProtoStatus(sd.Status),
+		Status:            otStatusToProtoStatus(sd.StatusCode, sd.StatusMessage),
 		StartTimeUnixnano: uint64(sd.StartTime.Nanosecond()),
 		EndTimeUnixnano:   uint64(sd.EndTime.Nanosecond()),
 		Links:             otLinksToProtoLinks(sd.Links),
@@ -52,10 +52,10 @@ func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 	}
 }
 
-func otStatusToProtoStatus(status codes.Code) *tracepb.Status {
+func otStatusToProtoStatus(status codes.Code, message string) *tracepb.Status {
 	return &tracepb.Status{
-		Code: tracepb.Status_StatusCode(status),
-		// TODO (rghetia) : Add Status Message: when supported.
+		Code:    tracepb.Status_StatusCode(status),
+		Message: message,
 	}
 }
 
