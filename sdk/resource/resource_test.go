@@ -16,6 +16,7 @@ package resource_test
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -55,7 +56,10 @@ func TestNew(t *testing.T) {
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.New(c.in...)
-			if diff := cmp.Diff(res.Attributes(), c.want, cmp.AllowUnexported(core.Value{})); diff != "" {
+			if diff := cmp.Diff(
+				sortedAttributes(res.Attributes()),
+				sortedAttributes(c.want),
+				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})
@@ -96,9 +100,19 @@ func TestMerge(t *testing.T) {
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.Merge(c.a, c.b)
-			if diff := cmp.Diff(res.Attributes(), c.want, cmp.AllowUnexported(core.Value{})); diff != "" {
+			if diff := cmp.Diff(
+				sortedAttributes(res.Attributes()),
+				sortedAttributes(c.want),
+				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})
 	}
+}
+
+func sortedAttributes(attrs []core.KeyValue) []core.KeyValue {
+	sort.Slice(attrs[:], func(i, j int) bool {
+		return attrs[i].Key < attrs[j].Key
+	})
+	return attrs
 }
