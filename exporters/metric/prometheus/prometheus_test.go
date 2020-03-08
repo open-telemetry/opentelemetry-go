@@ -32,7 +32,7 @@ func TestPrometheusExporter(t *testing.T) {
 	counter := export.NewDescriptor(
 		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
 	gauge := export.NewDescriptor(
-		"gauge", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+		"gauge", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
 	measure := export.NewDescriptor(
 		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 

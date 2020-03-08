@@ -43,9 +43,9 @@ type (
 var (
 	// GaugeADesc and GaugeBDesc group by "G"
 	GaugeADesc = export.NewDescriptor(
-		"gauge.a", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		"gauge.a", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
 	GaugeBDesc = export.NewDescriptor(
-		"gauge.b", export.GaugeKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		"gauge.b", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = export.NewDescriptor(
 		"counter.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
@@ -79,7 +79,7 @@ func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Ag
 	switch desc.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
-	case export.GaugeKind:
+	case export.ObserverKind:
 		return gauge.New()
 	default:
 		panic("Invalid descriptor MetricKind for this test")

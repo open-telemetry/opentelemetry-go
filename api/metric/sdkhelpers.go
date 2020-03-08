@@ -67,22 +67,6 @@ func WrapFloat64CounterInstrument(instrument InstrumentImpl) Float64Counter {
 	return Float64Counter{commonMetric: newCommonMetric(instrument)}
 }
 
-// WrapInt64GaugeInstrument wraps the instrument in the type-safe
-// wrapper as an integral gauge.
-//
-// It is mostly intended for SDKs.
-func WrapInt64GaugeInstrument(instrument InstrumentImpl) Int64Gauge {
-	return Int64Gauge{commonMetric: newCommonMetric(instrument)}
-}
-
-// WrapFloat64GaugeInstrument wraps the instrument in the type-safe
-// wrapper as an floating point gauge.
-//
-// It is mostly intended for SDKs.
-func WrapFloat64GaugeInstrument(instrument InstrumentImpl) Float64Gauge {
-	return Float64Gauge{commonMetric: newCommonMetric(instrument)}
-}
-
 // WrapInt64MeasureInstrument wraps the instrument in the type-safe
 // wrapper as an integral measure.
 //
@@ -104,14 +88,6 @@ func WrapFloat64MeasureInstrument(instrument InstrumentImpl) Float64Measure {
 func ApplyCounterOptions(opts *Options, cos ...CounterOptionApplier) {
 	for _, o := range cos {
 		o.ApplyCounterOption(opts)
-	}
-}
-
-// ApplyGaugeOptions is a helper that applies all the gauge options to
-// passed opts.
-func ApplyGaugeOptions(opts *Options, gos ...GaugeOptionApplier) {
-	for _, o := range gos {
-		o.ApplyGaugeOption(opts)
 	}
 }
 

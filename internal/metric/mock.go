@@ -103,7 +103,6 @@ var (
 
 const (
 	KindCounter Kind = iota
-	KindGauge
 	KindMeasure
 	KindObserver
 )
@@ -208,27 +207,6 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 	return &Instrument{
 		Name:       name,
 		Kind:       KindCounter,
-		NumberKind: numberKind,
-		Opts:       opts,
-	}
-}
-
-func (m *Meter) NewInt64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Int64Gauge {
-	instrument := m.newGaugeInstrument(name, core.Int64NumberKind, gos...)
-	return apimetric.WrapInt64GaugeInstrument(instrument)
-}
-
-func (m *Meter) NewFloat64Gauge(name string, gos ...apimetric.GaugeOptionApplier) apimetric.Float64Gauge {
-	instrument := m.newGaugeInstrument(name, core.Float64NumberKind, gos...)
-	return apimetric.WrapFloat64GaugeInstrument(instrument)
-}
-
-func (m *Meter) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...apimetric.GaugeOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyGaugeOptions(&opts, gos...)
-	return &Instrument{
-		Name:       name,
-		Kind:       KindGauge,
 		NumberKind: numberKind,
 		Opts:       opts,
 	}

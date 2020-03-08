@@ -82,7 +82,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	ctx := context.Background()
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Int64NumberKind, false)
 	gagg := gauge.New()
 	aggtest.CheckedUpdate(t, gagg, core.NewInt64Number(321), desc)
 	gagg.Checkpoint(ctx, desc)
@@ -144,7 +144,7 @@ func TestStdoutGaugeFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
 	gagg := gauge.New()
 	aggtest.CheckedUpdate(fix.t, gagg, core.NewFloat64Number(123.456), desc)
 	gagg.Checkpoint(fix.ctx, desc)
@@ -252,7 +252,7 @@ func TestStdoutGaugeNotSet(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
 	gagg := gauge.New()
 	gagg.Checkpoint(fix.ctx, desc)
 

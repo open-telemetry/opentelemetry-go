@@ -126,7 +126,7 @@ timer.B.D:%s|ms
 					cdesc := export.NewDescriptor(
 						"counter", export.CounterKind, nil, "", "", nkind, false)
 					gdesc := export.NewDescriptor(
-						"gauge", export.GaugeKind, nil, "", "", nkind, false)
+						"gauge", export.ObserverKind, nil, "", "", nkind, false)
 					mdesc := export.NewDescriptor(
 						"measure", export.MeasureKind, nil, "", "", nkind, false)
 					tdesc := export.NewDescriptor(

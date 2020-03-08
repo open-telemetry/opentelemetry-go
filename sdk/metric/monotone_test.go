@@ -51,7 +51,7 @@ func (*monotoneBatcher) FinishedCollection() {
 }
 
 func (m *monotoneBatcher) Process(_ context.Context, record export.Record) error {
-	require.Equal(m.t, "my.gauge.name", record.Descriptor().Name())
+	require.Equal(m.t, "my.observer.name", record.Descriptor().Name())
 	require.Equal(m.t, 1, record.Labels().Len())
 	require.Equal(m.t, "a", string(record.Labels().Ordered()[0].Key))
 	require.Equal(m.t, "b", record.Labels().Ordered()[0].Value.Emit())
@@ -75,16 +75,20 @@ func TestMonotoneGauge(t *testing.T) {
 
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
 
-	gauge := sdk.NewInt64Gauge("my.gauge.name", metric.WithMonotonic(true))
-
-	handle := gauge.Bind(sdk.Labels(key.String("a", "b")))
+	observerValue := new(int64)
+	labelset := sdk.Labels(key.String("a", "b"))
+	cb := func(result metric.Int64ObserverResult) {
+		result.Observe(*observerValue, labelset)
+	}
+	observer := sdk.RegisterInt64Observer("my.observer.name", cb, metric.WithMonotonic(true))
+	defer observer.Unregister()
 
 	require.Nil(t, batcher.currentTime)
 	require.Nil(t, batcher.currentValue)
 
 	before := time.Now()
 
-	handle.Set(ctx, 1)
+	*observerValue = 1
 
 	// Until collection, expect nil.
 	require.Nil(t, batcher.currentTime)
@@ -104,7 +108,7 @@ func TestMonotoneGauge(t *testing.T) {
 	require.Equal(t, 2, batcher.collections)
 
 	// Increase the value to 2.
-	handle.Set(ctx, 2)
+	*observerValue = 2
 
 	sdk.Collect(ctx)
 
@@ -122,11 +126,12 @@ func TestMonotoneGauge(t *testing.T) {
 	sdk.SetErrorHandler(func(sdkErr error) {
 		err = sdkErr
 	})
-	handle.Set(ctx, 1)
+	*observerValue = 1
+
+	before = *batcher.currentTime
+	sdk.Collect(ctx)
 	require.Equal(t, aggregator.ErrNonMonotoneInput, err)
 	sdk.SetErrorHandler(func(error) { t.Fatal("Unexpected") })
-
-	sdk.Collect(ctx)
 
 	// The value and timestamp are both unmodified
 	require.Equal(t, 5, batcher.collections)
@@ -134,7 +139,7 @@ func TestMonotoneGauge(t *testing.T) {
 	require.Equal(t, before, *batcher.currentTime)
 
 	// Update with the same value, update the timestamp.
-	handle.Set(ctx, 2)
+	*observerValue = 2
 	sdk.Collect(ctx)
 
 	require.Equal(t, 6, batcher.collections)

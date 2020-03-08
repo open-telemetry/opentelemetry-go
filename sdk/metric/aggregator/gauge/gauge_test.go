@@ -55,7 +55,7 @@ func TestGaugeNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
 
 		var last core.Number
 		for i := 0; i < count; i++ {
@@ -78,7 +78,7 @@ func TestGaugeMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, true)
 
 		small := profile.Random(+1)
 		last := small
@@ -102,7 +102,7 @@ func TestGaugeMonotonicDescending(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, true)
 
 		first := profile.Random(+1)
 		test.CheckedUpdate(t, agg, first, record)
@@ -131,7 +131,7 @@ func TestGaugeNormalMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -165,7 +165,7 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, true)
 
 		first1 := profile.Random(+1)
 		test.CheckedUpdate(t, agg1, first1, descriptor)
@@ -190,7 +190,7 @@ func TestGaugeMonotonicMerge(t *testing.T) {
 }
 
 func TestGaugeNotSet(t *testing.T) {
-	descriptor := test.NewAggregatorTest(export.GaugeKind, core.Int64NumberKind, true)
+	descriptor := test.NewAggregatorTest(export.ObserverKind, core.Int64NumberKind, true)
 
 	g := New()
 	g.Checkpoint(context.Background(), descriptor)

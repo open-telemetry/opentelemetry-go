@@ -49,11 +49,11 @@ type Options struct {
 	// - for Counter, true implies that the metric is an up-down
 	//   Counter
 	//
-	// - for Gauge, true implies that the metric is a
-	//   non-descending Gauge
-	//
 	// - for Measure, true implies that the metric supports
 	//   positive and negative values
+	//
+	// - for Observer, true implies that the metric is a
+	//   non-descending Observer
 	Alternate bool
 }
 
@@ -63,14 +63,6 @@ type CounterOptionApplier interface {
 	// ApplyCounterOption is used to make some general or
 	// counter-specific changes in the Options.
 	ApplyCounterOption(*Options)
-}
-
-// GaugeOptionApplier is an interface for applying metric options that
-// are valid only for gauge metrics.
-type GaugeOptionApplier interface {
-	// ApplyGaugeOption is used to make some general or
-	// gauge-specific changes in the Options.
-	ApplyGaugeOption(*Options)
 }
 
 // MeasureOptionApplier is an interface for applying metric options
@@ -122,12 +114,6 @@ type Meter interface {
 	// NewFloat64Counter creates a new floating point counter with
 	// a given name and customized with passed options.
 	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
-	// NewInt64Gauge creates a new integral gauge with a given
-	// name and customized with passed options.
-	NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
-	// NewFloat64Gauge creates a new floating point gauge with a
-	// given name and customized with passed options.
-	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
 	// NewInt64Measure creates a new integral measure with a given
 	// name and customized with passed options.
 	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
@@ -187,7 +173,6 @@ type Option func(*Options)
 // valid for all the kinds of metrics.
 type OptionApplier interface {
 	CounterOptionApplier
-	GaugeOptionApplier
 	MeasureOptionApplier
 	ObserverOptionApplier
 	// ApplyOption is used to make some general changes in the
@@ -195,12 +180,10 @@ type OptionApplier interface {
 	ApplyOption(*Options)
 }
 
-// CounterGaugeObserverOptionApplier is an interface for applying
-// metric options that are valid for counter, gauge or observer
-// metrics.
-type CounterGaugeObserverOptionApplier interface {
+// CounterObserverOptionApplier is an interface for applying metric
+// options that are valid for counter or observer metrics.
+type CounterObserverOptionApplier interface {
 	CounterOptionApplier
-	GaugeOptionApplier
 	ObserverOptionApplier
 }
 
@@ -212,10 +195,6 @@ type counterOptionWrapper struct {
 	F Option
 }
 
-type gaugeOptionWrapper struct {
-	F Option
-}
-
 type measureOptionWrapper struct {
 	F Option
 }
@@ -224,25 +203,19 @@ type observerOptionWrapper struct {
 	F Option
 }
 
-type counterGaugeObserverOptionWrapper struct {
+type counterObserverOptionWrapper struct {
 	FC Option
-	FG Option
 	FO Option
 }
 
 var (
 	_ OptionApplier         = optionWrapper{}
 	_ CounterOptionApplier  = counterOptionWrapper{}
-	_ GaugeOptionApplier    = gaugeOptionWrapper{}
 	_ MeasureOptionApplier  = measureOptionWrapper{}
 	_ ObserverOptionApplier = observerOptionWrapper{}
 )
 
 func (o optionWrapper) ApplyCounterOption(opts *Options) {
-	o.ApplyOption(opts)
-}
-
-func (o optionWrapper) ApplyGaugeOption(opts *Options) {
 	o.ApplyOption(opts)
 }
 
@@ -262,23 +235,15 @@ func (o counterOptionWrapper) ApplyCounterOption(opts *Options) {
 	o.F(opts)
 }
 
-func (o gaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
-	o.F(opts)
-}
-
 func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
 	o.F(opts)
 }
 
-func (o counterGaugeObserverOptionWrapper) ApplyCounterOption(opts *Options) {
+func (o counterObserverOptionWrapper) ApplyCounterOption(opts *Options) {
 	o.FC(opts)
 }
 
-func (o counterGaugeObserverOptionWrapper) ApplyGaugeOption(opts *Options) {
-	o.FG(opts)
-}
-
-func (o counterGaugeObserverOptionWrapper) ApplyObserverOption(opts *Options) {
+func (o counterObserverOptionWrapper) ApplyObserverOption(opts *Options) {
 	o.FO(opts)
 }
 
@@ -314,15 +279,12 @@ func WithKeys(keys ...core.Key) OptionApplier {
 	}
 }
 
-// WithMonotonic sets whether a counter, a gauge or an observer is not
+// WithMonotonic sets whether a counter or an observer is not
 // permitted to go down.
-func WithMonotonic(monotonic bool) CounterGaugeObserverOptionApplier {
-	return counterGaugeObserverOptionWrapper{
+func WithMonotonic(monotonic bool) CounterObserverOptionApplier {
+	return counterObserverOptionWrapper{
 		FC: func(opts *Options) {
 			opts.Alternate = !monotonic
-		},
-		FG: func(opts *Options) {
-			opts.Alternate = monotonic
 		},
 		FO: func(opts *Options) {
 			opts.Alternate = monotonic

@@ -28,7 +28,6 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
@@ -50,8 +49,6 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
 		return counter.New()
-	case export.GaugeKind:
-		return gauge.New()
 	case export.ObserverKind:
 		fallthrough
 	case export.MeasureKind:
@@ -244,62 +241,6 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		handle.Add(ctx, 1.1)
-	}
-}
-
-// Gauges
-
-func BenchmarkInt64GaugeAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewInt64Gauge("int64.gauge")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		gau.Set(ctx, int64(i), labs)
-	}
-}
-
-func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewInt64Gauge("int64.gauge")
-	handle := gau.Bind(labs)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Set(ctx, int64(i))
-	}
-}
-
-func BenchmarkFloat64GaugeAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		gau.Set(ctx, float64(i), labs)
-	}
-}
-
-func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
-	handle := gau.Bind(labs)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Set(ctx, float64(i))
 	}
 }
 
