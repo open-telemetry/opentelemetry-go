@@ -62,8 +62,8 @@ func WithEndTime(t time.Time) EndOption {
 
 // ErrorConfig provides options to set properties of an error event at the time it is recorded.
 type ErrorConfig struct {
-	Timestamp time.Time
-	Status    codes.Code
+	Timestamp  time.Time
+	StatusCode codes.Code
 }
 
 // ErrorOption applies changes to ErrorConfig that sets options when an error event is recorded.
@@ -79,7 +79,7 @@ func WithErrorTime(t time.Time) ErrorOption {
 // WithErrorStatus indicates the span status that should be set when recording an error event.
 func WithErrorStatus(s codes.Code) ErrorOption {
 	return func(c *ErrorConfig) {
-		c.Status = s
+		c.StatusCode = s
 	}
 }
 
@@ -107,9 +107,14 @@ type Span interface {
 	// even after the span ends.
 	SpanContext() core.SpanContext
 
-	// SetStatus sets the status of the span. The status of the span can be updated
-	// even after span ends.
-	SetStatus(codes.Code)
+	// SetStatus sets the status of the span in the form of a code
+	// and a message.  SetStatus overrides the value of previous
+	// calls to SetStatus on the Span.
+	//
+	// The default span status is OK, so it is not necessary to
+	// explicitly set an OK status on successful Spans unless it
+	// is to add an OK message or to override a previous status on the Span.
+	SetStatus(codes.Code, string)
 
 	// SetName sets the name of the span.
 	SetName(name string)

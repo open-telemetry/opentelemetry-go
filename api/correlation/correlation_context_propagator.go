@@ -10,9 +10,7 @@ import (
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
-// CorrelationContextHeader is specified by W3C.
-//nolint:golint
-var CorrelationContextHeader = "Correlation-Context"
+const correlationContextHeader = "Correlation-Context"
 
 // CorrelationContext propagates Key:Values in W3C CorrelationContext
 // format.
@@ -44,13 +42,13 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	})
 	if headerValueBuilder.Len() > 0 {
 		headerString := headerValueBuilder.String()
-		supplier.Set(CorrelationContextHeader, headerString)
+		supplier.Set(correlationContextHeader, headerString)
 	}
 }
 
 // Extract implements HTTPExtractor.
 func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	correlationContext := supplier.Get(CorrelationContextHeader)
+	correlationContext := supplier.Get(correlationContextHeader)
 	if correlationContext == "" {
 		return ContextWithMap(ctx, NewEmptyMap())
 	}
@@ -95,5 +93,5 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 
 // GetAllKeys implements HTTPPropagator.
 func (CorrelationContext) GetAllKeys() []string {
-	return []string{CorrelationContextHeader}
+	return []string{correlationContextHeader}
 }

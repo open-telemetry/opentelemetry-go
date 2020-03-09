@@ -35,7 +35,6 @@ var (
 	HTTPHeaderMIME = key.New("http.mime")
 	HTTPRemoteAddr = key.New("http.remote")
 	HTTPLocalAddr  = key.New("http.local")
-	MessageKey     = key.New("message")
 )
 
 type clientTracer struct {
@@ -97,8 +96,7 @@ func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 	defer ct.mtx.Unlock()
 	if span, ok := ct.activeHooks[hook]; ok {
 		if err != nil {
-			span.SetStatus(codes.Unknown)
-			span.SetAttributes(MessageKey.String(err.Error()))
+			span.SetStatus(codes.Unknown, err.Error())
 		}
 		span.SetAttributes(attrs...)
 		span.End()
@@ -172,8 +170,7 @@ func (ct *clientTracer) wroteHeaders() {
 
 func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 	if info.Err != nil {
-		ct.root.SetAttributes(MessageKey.String(info.Err.Error()))
-		ct.root.SetStatus(codes.Unknown)
+		ct.root.SetStatus(codes.Unknown, info.Err.Error())
 	}
 	ct.end("http.send", info.Err)
 }

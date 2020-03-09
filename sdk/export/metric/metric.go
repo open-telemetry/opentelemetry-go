@@ -295,6 +295,9 @@ const (
 
 	// Measure kind indicates a measure instrument.
 	MeasureKind
+
+	// Observer kind indicates an observer instrument
+	ObserverKind
 )
 
 // Descriptor describes a metric instrument to the exporter.

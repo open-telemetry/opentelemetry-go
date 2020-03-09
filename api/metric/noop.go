@@ -11,12 +11,16 @@ type NoopMeter struct{}
 type noopBoundInstrument struct{}
 type noopLabelSet struct{}
 type noopInstrument struct{}
+type noopInt64Observer struct{}
+type noopFloat64Observer struct{}
 
 var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
 var _ InstrumentImpl = noopInstrument{}
 var _ BoundInstrumentImpl = noopBoundInstrument{}
 var _ LabelSet = noopLabelSet{}
+var _ Int64Observer = noopInt64Observer{}
+var _ Float64Observer = noopFloat64Observer{}
 
 func (NoopProvider) Meter(name string) Meter {
 	return NoopMeter{}
@@ -37,6 +41,12 @@ func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
 
 func (noopInstrument) Meter() Meter {
 	return NoopMeter{}
+}
+
+func (noopInt64Observer) Unregister() {
+}
+
+func (noopFloat64Observer) Unregister() {
 }
 
 func (NoopMeter) Labels(...core.KeyValue) LabelSet {
@@ -68,4 +78,12 @@ func (NoopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Flo
 }
 
 func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
+}
+
+func (NoopMeter) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
+	return noopInt64Observer{}
+}
+
+func (NoopMeter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
+	return noopFloat64Observer{}
 }

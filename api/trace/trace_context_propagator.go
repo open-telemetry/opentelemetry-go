@@ -28,7 +28,7 @@ import (
 const (
 	supportedVersion  = 0
 	maxVersion        = 254
-	TraceparentHeader = "Traceparent"
+	traceparentHeader = "Traceparent"
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
@@ -45,14 +45,15 @@ func DefaultHTTPPropagator() propagation.HTTPPropagator {
 
 func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
-	if sc.IsValid() {
-		h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
-			supportedVersion,
-			sc.TraceIDString(),
-			sc.SpanID,
-			sc.TraceFlags&core.TraceFlagsSampled)
-		supplier.Set(TraceparentHeader, h)
+	if !sc.IsValid() {
+		return
 	}
+	h := fmt.Sprintf("%.2x-%s-%.16x-%.2x",
+		supportedVersion,
+		sc.TraceIDString(),
+		sc.SpanID,
+		sc.TraceFlags&core.TraceFlagsSampled)
+	supplier.Set(traceparentHeader, h)
 }
 
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
@@ -60,7 +61,7 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 }
 
 func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
-	h := supplier.Get(TraceparentHeader)
+	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return core.EmptySpanContext()
 	}
@@ -127,5 +128,5 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext 
 }
 
 func (TraceContext) GetAllKeys() []string {
-	return []string{TraceparentHeader}
+	return []string{traceparentHeader}
 }

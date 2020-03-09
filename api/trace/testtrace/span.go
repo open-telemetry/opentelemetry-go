@@ -36,18 +36,19 @@ const (
 var _ trace.Span = (*Span)(nil)
 
 type Span struct {
-	lock         *sync.RWMutex
-	tracer       *Tracer
-	spanContext  core.SpanContext
-	parentSpanID core.SpanID
-	ended        bool
-	name         string
-	startTime    time.Time
-	endTime      time.Time
-	status       codes.Code
-	attributes   map[core.Key]core.Value
-	events       []Event
-	links        map[core.SpanContext][]core.KeyValue
+	lock          *sync.RWMutex
+	tracer        *Tracer
+	spanContext   core.SpanContext
+	parentSpanID  core.SpanID
+	ended         bool
+	name          string
+	startTime     time.Time
+	endTime       time.Time
+	statusCode    codes.Code
+	statusMessage string
+	attributes    map[core.Key]core.Value
+	events        []Event
+	links         map[core.SpanContext][]core.KeyValue
 }
 
 func (s *Span) Tracer() trace.Tracer {
@@ -91,8 +92,8 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status)
+	if cfg.StatusCode != codes.OK {
+		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	errType := reflect.TypeOf(err)
@@ -140,7 +141,7 @@ func (s *Span) SpanContext() core.SpanContext {
 	return s.spanContext
 }
 
-func (s *Span) SetStatus(status codes.Code) {
+func (s *Span) SetStatus(code codes.Code, msg string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -148,7 +149,8 @@ func (s *Span) SetStatus(status codes.Code) {
 		return
 	}
 
-	s.status = status
+	s.statusCode = code
+	s.statusMessage = msg
 }
 
 func (s *Span) SetName(name string) {
@@ -245,6 +247,12 @@ func (s *Span) Ended() bool {
 // Status returns the status most recently set on the Span,
 // or codes.OK if no status has been explicitly set.
 // It cannot be changed after End has been called on the Span.
-func (s *Span) Status() codes.Code {
-	return s.status
+func (s *Span) StatusCode() codes.Code {
+	return s.statusCode
+}
+
+// StatusMessage returns the status message most recently set on the
+// Span or the empty string if no status mesaage was set.
+func (s *Span) StatusMessage() string {
+	return s.statusMessage
 }

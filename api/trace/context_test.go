@@ -68,7 +68,7 @@ func (mockSpan) IsRecording() bool {
 }
 
 // SetStatus does nothing.
-func (mockSpan) SetStatus(status codes.Code) {
+func (mockSpan) SetStatus(status codes.Code, msg string) {
 }
 
 // SetName does nothing.

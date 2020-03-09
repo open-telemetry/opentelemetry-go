@@ -128,12 +128,12 @@ func TestSetName(t *testing.T) {
 	}
 }
 
-func TestRecordingIsOff(t *testing.T) {
+func TestRecordingIsOn(t *testing.T) {
 	tp, _ := NewProvider()
-	_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
+	_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
 	defer span.End()
-	if span.IsRecording() == true {
-		t.Error("new span is recording events")
+	if span.IsRecording() == false {
+		t.Error("new span is not recording events")
 	}
 }
 
@@ -218,7 +218,7 @@ func TestStartSpanWithParent(t *testing.T) {
 	sc1 := core.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
-		TraceFlags: 0x0,
+		TraceFlags: 0x1,
 	}
 	_, s1 := tr.Start(apitrace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
 	if err := checkChild(sc1, s1); err != nil {
@@ -559,7 +559,7 @@ func TestSetSpanStatus(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
-	span.SetStatus(codes.Canceled)
+	span.SetStatus(codes.Canceled, "canceled")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -573,7 +573,8 @@ func TestSetSpanStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Canceled,
+		StatusCode:      codes.Canceled,
+		StatusMessage:   "canceled",
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -957,7 +958,8 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Unknown,
+		StatusCode:      codes.Unknown,
+		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
@@ -996,7 +998,8 @@ func TestRecordErrorNil(t *testing.T) {
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Status:          codes.OK,
+		StatusCode:      codes.OK,
+		StatusMessage:   "",
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
