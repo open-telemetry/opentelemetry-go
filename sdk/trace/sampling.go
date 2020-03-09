@@ -25,7 +25,7 @@ import (
 // Sampler decides whether a trace should be sampled and exported.
 type Sampler interface {
 	ShouldSample(SamplingParameters) SamplingResult
-	GetDescription() string
+	Description() string
 }
 
 // SamplingParameters contains the values passed to a Sampler.
@@ -73,7 +73,7 @@ func (ps probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: NotRecord}
 }
 
-func (ps probabilitySampler) GetDescription() string {
+func (ps probabilitySampler) Description() string {
 	return ps.description
 }
 
@@ -102,7 +102,7 @@ func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: RecordAndSampled}
 }
 
-func (as alwaysOnSampler) GetDescription() string {
+func (as alwaysOnSampler) Description() string {
 	return "AlwaysOnSampler"
 }
 
@@ -120,7 +120,7 @@ func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: NotRecord}
 }
 
-func (as alwaysOffSampler) GetDescription() string {
+func (as alwaysOffSampler) Description() string {
 	return "AlwaysOffSampler"
 }
 

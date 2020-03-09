@@ -83,7 +83,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{core.Key("callCount").Int(ts.callCount)}}
 }
 
-func (ts testSampler) GetDescription() string {
+func (ts testSampler) Description() string {
 	return "testSampler"
 }
 
