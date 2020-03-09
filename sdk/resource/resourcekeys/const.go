@@ -15,6 +15,23 @@
 // Package resourcekeys contains well known type and label keys for resources.
 package resourcekeys // import "go.opentelemetry.io/otel/sdk/resource/resourcekeys"
 
+// Constants for Service resources.
+const (
+	// A uniquely identifying name for a Service.
+	ServiceKeyName       = "service.name"
+	ServiceKeyNamespace  = "service.namespace"
+	ServiceKeyInstanceID = "service.instance.id"
+	ServiceKeyVersion    = "service.version"
+)
+
+// Constants for Library resources.
+const (
+	// A uniquely identifying name for a Library.
+	LibraryKeyName     = "library.name"
+	LibraryKeyLanguage = "library.language"
+	LibraryKeyVersion  = "library.version"
+)
+
 // Constants for Kubernetes resources.
 const (
 	// A uniquely identifying name for the Kubernetes cluster. Kubernetes
@@ -54,7 +71,10 @@ const (
 	HostKeyName = "host.name"
 
 	// A hostname as returned by the 'hostname' command on host machine.
-	HostKeyHostName = "host.hostname"
-	HostKeyID       = "host.id"
-	HostKeyType     = "host.type"
+	HostKeyHostName     = "host.hostname"
+	HostKeyID           = "host.id"
+	HostKeyType         = "host.type"
+	HostKeyImageName    = "host.image.name"
+	HostKeyImageID      = "host.image.id"
+	HostKeyImageVersion = "host.image.version"
 )

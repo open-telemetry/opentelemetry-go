@@ -29,6 +29,8 @@ var (
 	kv11 = core.Key("k1").String("v11")
 	kv12 = core.Key("k1").String("v12")
 	kv21 = core.Key("k2").String("v21")
+	kv31 = core.Key("k3").String("v31")
+	kv41 = core.Key("k4").String("v41")
 )
 
 func TestNew(t *testing.T) {
@@ -72,6 +74,12 @@ func TestMerge(t *testing.T) {
 		a, b *resource.Resource
 		want []core.KeyValue
 	}{
+		{
+			name: "Merge with no overlap, no nil",
+			a:    resource.New(kv11, kv31),
+			b:    resource.New(kv21, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
 		{
 			name: "Merge with common key order1",
 			a:    resource.New(kv11),
