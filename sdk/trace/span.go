@@ -222,6 +222,9 @@ func (s *span) SetName(name string) {
 		name:         name,
 		cfg:          s.tracer.provider.config.Load().(*Config),
 		span:         s,
+		attributes:   s.data.Attributes,
+		links:        s.data.Links,
+		kind:         s.data.SpanKind,
 	}
 	makeSamplingDecision(data)
 }
@@ -308,6 +311,9 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		name:         name,
 		cfg:          cfg,
 		span:         span,
+		attributes:   o.Attributes,
+		links:        o.Links,
+		kind:         o.SpanKind,
 	}
 	makeSamplingDecision(data)
 
@@ -354,6 +360,9 @@ type samplingData struct {
 	name         string
 	cfg          *Config
 	span         *span
+	attributes   []core.KeyValue
+	links        []apitrace.Link
+	kind         apitrace.SpanKind
 }
 
 func makeSamplingDecision(data samplingData) {
@@ -369,13 +378,17 @@ func makeSamplingDecision(data samplingData) {
 		//	sampler = o.Sampler
 		//}
 		spanContext := &data.span.spanContext
-		sampled := sampler(SamplingParameters{
+		sampled := sampler.ShouldSample(SamplingParameters{
 			ParentContext:   data.parent,
 			TraceID:         spanContext.TraceID,
 			SpanID:          spanContext.SpanID,
 			Name:            data.name,
-			HasRemoteParent: data.remoteParent}).Sample
-		if sampled {
+			HasRemoteParent: data.remoteParent,
+			Kind:            data.kind,
+			Attributes:      data.attributes,
+			Links:           data.links,
+		})
+		if sampled.Decision == RecordAndSampled {
 			spanContext.TraceFlags |= core.TraceFlagsSampled
 		} else {
 			spanContext.TraceFlags &^= core.TraceFlagsSampled
