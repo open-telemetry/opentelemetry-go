@@ -24,7 +24,7 @@ type Sampler interface {
 		sc core.SpanContext,
 		remote bool,
 		traceID core.TraceID,
-		spanID uint64,
+		spanID core.SpanID,
 		spanName string,
 		spanKind SpanKind,
 		attributes []core.KeyValue,

@@ -33,7 +33,7 @@ func (as alwaysSampleSampler) ShouldSample(
 	_ core.SpanContext,
 	_ bool,
 	_ core.TraceID,
-	_ uint64,
+	_ core.SpanID,
 	_ string,
 	_ SpanKind,
 	_ []core.KeyValue,
