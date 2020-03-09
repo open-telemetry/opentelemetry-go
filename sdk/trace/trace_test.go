@@ -80,7 +80,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSampled
 	}
-	return SamplingResult{Decision: decision}
+	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{core.Key("callCount").Int(ts.callCount)}}
 }
 
 func (ts testSampler) GetDescription() string {
