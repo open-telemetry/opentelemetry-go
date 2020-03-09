@@ -35,6 +35,9 @@ func (ns neverSampleSampler) ShouldSample(
 	_ core.TraceID,
 	_ uint64,
 	_ string,
+	_ SpanKind,
+	_ []core.KeyValue,
+	_ []Link,
 ) Decision {
 	return neverSampledecision
 }

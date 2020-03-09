@@ -26,6 +26,9 @@ type Sampler interface {
 		traceID core.TraceID,
 		spanID uint64,
 		spanName string,
+		spanKind SpanKind,
+		attributes []core.KeyValue,
+		links []Link,
 	) Decision
 
 	// Description returns of the sampler. It contains its name or short description
