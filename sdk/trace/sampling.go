@@ -92,11 +92,11 @@ func ProbabilitySampler(fraction float64) Sampler {
 
 	return &probabilitySampler{
 		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("ProbabilitySampler{%v}", fraction),
+		description:       fmt.Sprintf("ProbabilitySampler{%g}", fraction),
 	}
 }
 
-type alwaysOnSampler bool
+type alwaysOnSampler struct{}
 
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: RecordAndSampled}
@@ -111,10 +111,10 @@ func (as alwaysOnSampler) Description() string {
 // significant traffic: a new trace will be started and exported for every
 // request.
 func AlwaysSample() Sampler {
-	return alwaysOnSampler(true)
+	return alwaysOnSampler{}
 }
 
-type alwaysOffSampler bool
+type alwaysOffSampler struct{}
 
 func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: NotRecord}
@@ -126,7 +126,7 @@ func (as alwaysOffSampler) Description() string {
 
 // NeverSample returns a Sampler that samples no traces.
 func NeverSample() Sampler {
-	return alwaysOffSampler(false)
+	return alwaysOffSampler{}
 }
 
 // AlwaysParentSample returns a Sampler that samples a trace only
