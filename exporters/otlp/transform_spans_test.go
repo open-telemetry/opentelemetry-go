@@ -91,7 +91,8 @@ func TestOtSpanToOtlpSpan_Basic(t *testing.T) {
 							},
 						},
 					},
-					Status:          codes.Internal,
+					StatusCode:      codes.Internal,
+					StatusMessage:   "utterly unrecognized",
 					HasRemoteParent: true,
 					Attributes: []core.KeyValue{
 						core.Key("timeout_ns").Int64(12e9),
@@ -109,7 +110,8 @@ func TestOtSpanToOtlpSpan_Basic(t *testing.T) {
 					StartTimeUnixnano: uint64(startTime.Nanosecond()),
 					EndTimeUnixnano:   uint64(endTime.Nanosecond()),
 					Status: &tracepb.Status{
-						Code: 13,
+						Code:    13,
+						Message: "utterly unrecognized",
 					},
 					Events: []*tracepb.Span_Event{
 						{

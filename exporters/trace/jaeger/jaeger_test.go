@@ -157,7 +157,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	statusCodeValue := int64(2)
 	doubleValue := 123.456
 	boolTrue := true
-	statusMessage := "Unknown"
+	statusMessage := "this is a problem"
 	spanKind := "client"
 
 	tests := []struct {
@@ -192,8 +192,9 @@ func Test_spanDataToThrift(t *testing.T) {
 				MessageEvents: []export.Event{
 					{Name: eventNameValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
 				},
-				Status:   codes.Unknown,
-				SpanKind: apitrace.SpanKindClient,
+				StatusCode:    codes.Unknown,
+				StatusMessage: statusMessage,
+				SpanKind:      apitrace.SpanKindClient,
 			},
 			want: &gen.Span{
 				TraceIdLow:    651345242494996240,
