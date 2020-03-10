@@ -92,13 +92,13 @@ func TestBasicFormat(t *testing.T) {
 	for _, ao := range []adapterOutput{{
 		adapter: newWithTagsAdapter(),
 		expected: `counter:%s|c|#A:B,C:D
-gauge:%s|g|#A:B,C:D
+observer:%s|g|#A:B,C:D
 measure:%s|h|#A:B,C:D
 timer:%s|ms|#A:B,C:D
 `}, {
 		adapter: newNoTagsAdapter(),
 		expected: `counter.B.D:%s|c
-gauge.B.D:%s|g
+observer.B.D:%s|g
 measure.B.D:%s|h
 timer.B.D:%s|ms
 `},
@@ -126,7 +126,7 @@ timer.B.D:%s|ms
 					cdesc := export.NewDescriptor(
 						"counter", export.CounterKind, nil, "", "", nkind, false)
 					gdesc := export.NewDescriptor(
-						"gauge", export.GaugeKind, nil, "", "", nkind, false)
+						"observer", export.ObserverKind, nil, "", "", nkind, false)
 					mdesc := export.NewDescriptor(
 						"measure", export.MeasureKind, nil, "", "", nkind, false)
 					tdesc := export.NewDescriptor(
@@ -139,7 +139,7 @@ timer.B.D:%s|ms
 					const value = 123.456
 
 					checkpointSet.AddCounter(cdesc, value, labels...)
-					checkpointSet.AddGauge(gdesc, value, labels...)
+					checkpointSet.AddLastValue(gdesc, value, labels...)
 					checkpointSet.AddMeasure(mdesc, value, labels...)
 					checkpointSet.AddMeasure(tdesc, value, labels...)
 

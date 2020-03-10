@@ -28,7 +28,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
@@ -47,14 +47,13 @@ func newFixture(b *testing.B) *benchFixture {
 }
 
 func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	name := descriptor.Name()
+	switch {
+	case strings.HasSuffix(name, "counter"):
 		return counter.New()
-	case export.GaugeKind:
-		return gauge.New()
-	case export.ObserverKind:
-		fallthrough
-	case export.MeasureKind:
+	case strings.HasSuffix(name, "lastvalue"):
+		return lastvalue.New()
+	default:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
@@ -247,59 +246,59 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 	}
 }
 
-// Gauges
+// LastValue
 
-func BenchmarkInt64GaugeAdd(b *testing.B) {
+func BenchmarkInt64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewInt64Gauge("int64.gauge")
+	mea := fix.sdk.NewInt64Measure("int64.lastvalue")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		gau.Set(ctx, int64(i), labs)
+		mea.Record(ctx, int64(i), labs)
 	}
 }
 
-func BenchmarkInt64GaugeHandleAdd(b *testing.B) {
+func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewInt64Gauge("int64.gauge")
-	handle := gau.Bind(labs)
+	mea := fix.sdk.NewInt64Measure("int64.lastvalue")
+	handle := mea.Bind(labs)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle.Set(ctx, int64(i))
+		handle.Record(ctx, int64(i))
 	}
 }
 
-func BenchmarkFloat64GaugeAdd(b *testing.B) {
+func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
+	mea := fix.sdk.NewFloat64Measure("float64.lastvalue")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		gau.Set(ctx, float64(i), labs)
+		mea.Record(ctx, float64(i), labs)
 	}
 }
 
-func BenchmarkFloat64GaugeHandleAdd(b *testing.B) {
+func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := fix.sdk.Labels(makeLabels(1)...)
-	gau := fix.sdk.NewFloat64Gauge("float64.gauge")
-	handle := gau.Bind(labs)
+	mea := fix.sdk.NewFloat64Measure("float64.lastvalue")
+	handle := mea.Bind(labs)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handle.Set(ctx, float64(i))
+		handle.Record(ctx, float64(i))
 	}
 }
 

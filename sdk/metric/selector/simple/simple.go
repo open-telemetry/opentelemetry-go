@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
@@ -38,17 +37,17 @@ var (
 )
 
 // NewWithInexpensiveMeasure returns a simple aggregation selector
-// that uses counter, gauge, and minmaxsumcount aggregators for the
-// four kinds of metric.  This selector is faster and uses less memory
-// than the others because minmaxsumcount does not aggregate quantile
-// information.
+// that uses counter, minmaxsumcount and minmaxsumcount aggregators
+// for the three kinds of metric.  This selector is faster and uses
+// less memory than the others because minmaxsumcount does not
+// aggregate quantile information.
 func NewWithInexpensiveMeasure() export.AggregationSelector {
 	return selectorInexpensive{}
 }
 
 // NewWithSketchMeasure returns a simple aggregation selector that
-// uses counter, gauge, and ddsketch aggregators for the four kinds of
-// metric.  This selector uses more cpu and memory than the
+// uses counter, ddsketch, and ddsketch aggregators for the three
+// kinds of metric.  This selector uses more cpu and memory than the
 // NewWithInexpensiveMeasure because it uses one DDSketch per distinct
 // measure/observer and labelset.
 func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
@@ -58,7 +57,7 @@ func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
 }
 
 // NewWithExactMeasure returns a simple aggregation selector that uses
-// counter, gauge, and array aggregators for the four kinds of metric.
+// counter, array, and array aggregators for the three kinds of metric.
 // This selector uses more memory than the NewWithSketchMeasure
 // because it aggregates an array of all values, therefore is able to
 // compute exact quantiles.
@@ -68,8 +67,6 @@ func NewWithExactMeasure() export.AggregationSelector {
 
 func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.GaugeKind:
-		return gauge.New()
 	case export.ObserverKind:
 		fallthrough
 	case export.MeasureKind:
@@ -81,8 +78,6 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 
 func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.GaugeKind:
-		return gauge.New()
 	case export.ObserverKind:
 		fallthrough
 	case export.MeasureKind:
@@ -94,8 +89,6 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 
 func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.GaugeKind:
-		return gauge.New()
 	case export.ObserverKind:
 		fallthrough
 	case export.MeasureKind:

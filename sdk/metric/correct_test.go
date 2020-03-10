@@ -167,10 +167,10 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	g := sdk.NewFloat64Gauge("gauge.name")
+	c := sdk.NewFloat64Counter("counter.name")
 
 	require.Nil(t, sdkErr)
-	g.Set(ctx, math.NaN(), sdk.Labels())
+	c.Add(ctx, math.NaN(), sdk.Labels())
 	require.Error(t, sdkErr)
 }
 

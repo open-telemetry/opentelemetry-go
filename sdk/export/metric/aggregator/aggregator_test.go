@@ -26,14 +26,14 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
-	err := aggregator.NewInconsistentMergeError(counter.New(), gauge.New())
+	err := aggregator.NewInconsistentMergeError(counter.New(), lastvalue.New())
 	require.Equal(
 		t,
-		"cannot merge *counter.Aggregator with *gauge.Aggregator: inconsistent aggregator types",
+		"cannot merge *counter.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
 		err.Error(),
 	)
 	require.True(t, errors.Is(err, aggregator.ErrInconsistentType))
@@ -67,7 +67,7 @@ func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
 
 	require.Nil(t, posErr)
 
-	if desc.MetricKind() == export.GaugeKind {
+	if desc.MetricKind() == export.ObserverKind {
 		require.Nil(t, negErr)
 	} else {
 		require.Equal(t, negErr == nil, alt)
@@ -79,8 +79,8 @@ func TestRangeTest(t *testing.T) {
 		t.Run(nkind.String(), func(t *testing.T) {
 			for _, mkind := range []export.Kind{
 				export.CounterKind,
-				export.GaugeKind,
 				export.MeasureKind,
+				export.ObserverKind,
 			} {
 				t.Run(mkind.String(), func(t *testing.T) {
 					for _, alt := range []bool{true, false} {

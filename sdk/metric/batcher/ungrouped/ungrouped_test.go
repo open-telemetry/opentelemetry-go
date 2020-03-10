@@ -32,18 +32,18 @@ func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
 	b := ungrouped.New(test.NewAggregationSelector(), false)
 
-	// Set initial gauge values
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels3, 30))
+	// Set initial lastValue values
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels3, 30))
 
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels3, 30))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels3, 30))
 
-	// Another gauge Set for Labels1
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels1, 50))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels1, 50))
+	// Another lastValue Set for Labels1
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels1, 50))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels1, 50))
 
 	// Set initial counter values
 	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels1, 10))
@@ -64,21 +64,21 @@ func TestUngroupedStateless(t *testing.T) {
 	records := test.Output{}
 	checkpointSet.ForEach(records.AddTo)
 
-	// Output gauge should have only the "G=H" and "G=" keys.
+	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter.a/G~H&C~D": 60, // labels1
-		"counter.a/C~D&E~F": 20, // labels2
-		"counter.a/":        40, // labels3
-		"counter.b/G~H&C~D": 60, // labels1
-		"counter.b/C~D&E~F": 20, // labels2
-		"counter.b/":        40, // labels3
-		"gauge.a/G~H&C~D":   50, // labels1
-		"gauge.a/C~D&E~F":   20, // labels2
-		"gauge.a/":          30, // labels3
-		"gauge.b/G~H&C~D":   50, // labels1
-		"gauge.b/C~D&E~F":   20, // labels2
-		"gauge.b/":          30, // labels3
+		"counter.a/G~H&C~D":   60, // labels1
+		"counter.a/C~D&E~F":   20, // labels2
+		"counter.a/":          40, // labels3
+		"counter.b/G~H&C~D":   60, // labels1
+		"counter.b/C~D&E~F":   20, // labels2
+		"counter.b/":          40, // labels3
+		"lastvalue.a/G~H&C~D": 50, // labels1
+		"lastvalue.a/C~D&E~F": 20, // labels2
+		"lastvalue.a/":        30, // labels3
+		"lastvalue.b/G~H&C~D": 50, // labels1
+		"lastvalue.b/C~D&E~F": 20, // labels2
+		"lastvalue.b/":        30, // labels3
 	}, records)
 
 	// Verify that state was reset

@@ -37,7 +37,54 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-func TestNewExporter(t *testing.T) {
+func TestNewExporterPipelineWithRegistration(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		RegisterAsGlobal(),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.Same(t, tp, global.TraceProvider())
+}
+
+func TestNewExporterPipelineWithoutRegistration(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.NotEqual(t, tp, global.TraceProvider())
+}
+
+func TestNewExporterPipelineWithSDK(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		}),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	_, span := tp.Tracer("jaeger test").Start(context.Background(), "always-on")
+	spanCtx := span.SpanContext()
+	assert.True(t, spanCtx.IsSampled())
+	span.End()
+
+	tp2, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.NeverSample(),
+		}),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	_, span2 := tp2.Tracer("jaeger test").Start(context.Background(), "never")
+	span2Ctx := span2.SpanContext()
+	assert.False(t, span2Ctx.IsSampled())
+	span2.End()
+}
+
+func TestNewRawExporter(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
 		serviceName       = "test-service"
@@ -45,7 +92,7 @@ func TestNewExporter(t *testing.T) {
 		tagVal            = "val"
 	)
 	// Create Jaeger Exporter
-	exp, err := NewExporter(
+	exp, err := NewRawExporter(
 		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
@@ -60,8 +107,8 @@ func TestNewExporter(t *testing.T) {
 	assert.Len(t, exp.process.Tags, 1)
 }
 
-func TestNewExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
-	_, err := NewExporter(
+func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+	_, err := NewRawExporter(
 		WithCollectorEndpoint(""),
 	)
 
@@ -92,7 +139,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		tagVal      = "val"
 	)
 	// Create Jaeger Exporter
-	exp, err := NewExporter(
+	exp, err := NewRawExporter(
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
@@ -121,24 +168,24 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.True(t, len(tc.spansUploaded) == 1)
 }
 
-func TestNewExporterWithAgentEndpoint(t *testing.T) {
+func TestNewRawExporterWithAgentEndpoint(t *testing.T) {
 	const agentEndpoint = "localhost:6831"
 	// Create Jaeger Exporter
-	_, err := NewExporter(
+	_, err := NewRawExporter(
 		WithAgentEndpoint(agentEndpoint),
 	)
 	assert.NoError(t, err)
 }
 
-func TestNewExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
+func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 	//empty
-	_, err := NewExporter(
+	_, err := NewRawExporter(
 		WithAgentEndpoint(""),
 	)
 	assert.Error(t, err)
 
 	//invalid endpoint addr
-	_, err = NewExporter(
+	_, err = NewRawExporter(
 		WithAgentEndpoint("http://localhost"),
 	)
 	assert.Error(t, err)
