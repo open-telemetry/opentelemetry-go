@@ -113,14 +113,14 @@ type AggregationSelector interface {
 // several implementations are provided.
 //
 // Aggregators are meant to compute the change (i.e., delta) in state
-// from one checkpoint to the next, with the exception of gauge
-// aggregators.  Gauge aggregators are required to maintain the last
-// value across checkpoints to implement montonic change support.
+// from one checkpoint to the next, with the exception of LastValue
+// aggregators.  LastValue aggregators are required to maintain the last
+// value across checkpoints.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a counter aggregator to a measure instrument (to compute
-// a simple sum) or a gauge aggregator to a measure instrument (to
+// to attach a counter aggregator to a Measure instrument (to compute
+// a simple sum) or a LastValue aggregator to a measure instrument (to
 // compute the last value).
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it

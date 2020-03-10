@@ -63,7 +63,7 @@ func main() {
 	}
 	oneMetric := meter.RegisterFloat64Observer("ex.com.one", cb,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
-		metric.WithDescription("A gauge set to 1.0"),
+		metric.WithDescription("A measure set to 1.0"),
 	)
 	defer oneMetric.Unregister()
 

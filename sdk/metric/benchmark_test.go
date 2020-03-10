@@ -28,7 +28,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
@@ -52,7 +52,7 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	case strings.HasSuffix(name, "counter"):
 		return counter.New()
 	case strings.HasSuffix(name, "lastvalue"):
-		return gauge.New()
+		return lastvalue.New()
 	default:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)

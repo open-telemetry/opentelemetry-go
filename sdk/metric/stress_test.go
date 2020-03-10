@@ -39,7 +39,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
 const (
@@ -78,7 +78,7 @@ type (
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
-		// counters, different for gauges, to ensure we are
+		// counters, different for lastValues, to ensure we are
 		// testing the timestamps correctly.
 		storeCollect func(store interface{}, value core.Number, ts time.Time)
 		storeExpect  func(store interface{}, value core.Number)
@@ -90,10 +90,10 @@ type (
 		Impl() metric.InstrumentImpl
 	}
 
-	// gaugeState supports merging gauge values, for the case
+	// lastValueState supports merging lastValue values, for the case
 	// where a race condition causes duplicate records.  We always
 	// take the later timestamp.
-	gaugeState struct {
+	lastValueState struct {
 		// raw has to be aligned for 64-bit atomic operations.
 		raw core.Number
 		ts  time.Time
@@ -236,7 +236,7 @@ func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregat
 	case strings.HasSuffix(name, "counter"):
 		return counter.New()
 	case strings.HasSuffix(name, "lastvalue"):
-		return gauge.New()
+		return lastvalue.New()
 	default:
 		panic("Not implemented for this test")
 	}
@@ -272,8 +272,8 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.MeasureKind:
-		gauge := agg.(aggregator.LastValue)
-		lv, ts, err := gauge.LastValue()
+		lvagg := agg.(aggregator.LastValue)
+		lv, ts, err := lvagg.LastValue()
 		if err != nil && err != aggregator.ErrNoLastValue {
 			f.T.Fatal("Last value error: ", err)
 		}
@@ -444,12 +444,12 @@ func intLastValueTestImpl() testImpl {
 			measure.Record(ctx, value.AsInt64(), labels)
 		},
 		newStore: func() interface{} {
-			return &gaugeState{
+			return &lastValueState{
 				raw: core.NewInt64Number(0),
 			}
 		},
 		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
 				gs.ts = ts
@@ -457,11 +457,11 @@ func intLastValueTestImpl() testImpl {
 			}
 		},
 		storeExpect: func(store interface{}, value core.Number) {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 			gs.raw.SetInt64Atomic(value.AsInt64())
 		},
 		readStore: func(store interface{}) core.Number {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
@@ -485,12 +485,12 @@ func floatLastValueTestImpl() testImpl {
 			measure.Record(ctx, value.AsFloat64(), labels)
 		},
 		newStore: func() interface{} {
-			return &gaugeState{
+			return &lastValueState{
 				raw: core.NewFloat64Number(0),
 			}
 		},
 		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
 				gs.ts = ts
@@ -498,11 +498,11 @@ func floatLastValueTestImpl() testImpl {
 			}
 		},
 		storeExpect: func(store interface{}, value core.Number) {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 			gs.raw.SetFloat64Atomic(value.AsFloat64())
 		},
 		readStore: func(store interface{}) core.Number {
-			gs := store.(*gaugeState)
+			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},
 		equalValues: float64sEqual,

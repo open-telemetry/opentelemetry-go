@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gauge
+package lastvalue
 
 import (
 	"context"
@@ -38,8 +38,8 @@ var _ export.Aggregator = &Aggregator{}
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "gaugeData.value",
-			Offset: unsafe.Offsetof(gaugeData{}.value),
+			Name:   "lastValueData.value",
+			Offset: unsafe.Offsetof(lastValueData{}.value),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestGaugeUpdate(t *testing.T) {
+func TestLastValueUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
@@ -72,7 +72,7 @@ func TestGaugeUpdate(t *testing.T) {
 	})
 }
 
-func TestGaugeMerge(t *testing.T) {
+func TestLastValueMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
@@ -106,7 +106,7 @@ func TestGaugeMerge(t *testing.T) {
 	})
 }
 
-func TestGaugeNotSet(t *testing.T) {
+func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(export.ObserverKind, core.Int64NumberKind, true)
 
 	g := New()

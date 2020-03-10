@@ -30,7 +30,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
 type correctnessBatcher struct {
@@ -152,7 +152,7 @@ func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
 		t:   t,
-		agg: gauge.New(),
+		agg: lastvalue.New(),
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 

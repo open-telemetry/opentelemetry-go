@@ -30,13 +30,13 @@ func TestGroupingStateless(t *testing.T) {
 	ctx := context.Background()
 	b := defaultkeys.New(test.NewAggregationSelector(), test.GroupEncoder, false)
 
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeADesc, test.Labels3, 30))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels3, 30))
 
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewGaugeRecord(test.GaugeBDesc, test.Labels3, 30))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels3, 30))
 
 	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels1, 10))
 	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels2, 20))
@@ -52,18 +52,18 @@ func TestGroupingStateless(t *testing.T) {
 	records := test.Output{}
 	checkpointSet.ForEach(records.AddTo)
 
-	// Repeat for {counter,gauge}.{1,2}.
-	// Output gauge should have only the "G=H" and "G=" keys.
+	// Repeat for {counter,lastvalue}.{1,2}.
+	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C=D": 30, // labels1 + labels2
-		"counter.a/C=":  40, // labels3
-		"counter.b/C=D": 30, // labels1 + labels2
-		"counter.b/C=":  40, // labels3
-		"gauge.a/G=H":   10, // labels1
-		"gauge.a/G=":    30, // labels3 = last value
-		"gauge.b/G=H":   10, // labels1
-		"gauge.b/G=":    30, // labels3 = last value
+		"counter.a/C=D":   30, // labels1 + labels2
+		"counter.a/C=":    40, // labels3
+		"counter.b/C=D":   30, // labels1 + labels2
+		"counter.b/C=":    40, // labels3
+		"lastvalue.a/G=H": 10, // labels1
+		"lastvalue.a/G=":  30, // labels3 = last value
+		"lastvalue.b/G=H": 10, // labels1
+		"lastvalue.b/G=":  30, // labels3 = last value
 	}, records)
 
 	// Verify that state is reset by FinishedCollection()
