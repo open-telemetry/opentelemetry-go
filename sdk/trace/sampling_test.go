@@ -30,8 +30,8 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 		SpanID:     spanID,
 		TraceFlags: core.TraceFlagsSampled,
 	}
-	if !sampler(sdktrace.SamplingParameters{ParentContext: parentCtx}).Sample {
-		t.Error("Sampling decision should be true")
+	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
+		t.Error("Sampling decision should be RecordAndSampled")
 	}
 }
 
@@ -43,7 +43,7 @@ func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
-	if sampler(sdktrace.SamplingParameters{ParentContext: parentCtx}).Sample {
-		t.Error("Sampling decision should be false")
+	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.NotRecord {
+		t.Error("Sampling decision should be NotRecord")
 	}
 }
