@@ -16,3 +16,4 @@ coverage.*
 /example/jaeger/jaeger
 /example/namedtracer/namedtracer
 /example/prometheus/prometheus
+/example/zipkin/zipkin
