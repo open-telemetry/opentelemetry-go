@@ -383,7 +383,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	oi := 1
 	for i := 1; i < len(kvs); i++ {
 		if kvs[i-1].Key == kvs[i].Key {
-			kvs[oi-1] = kvs[i]
+			kvs[oi-1].Value = kvs[i].Value
 			continue
 		}
 		kvs[oi] = kvs[i]
