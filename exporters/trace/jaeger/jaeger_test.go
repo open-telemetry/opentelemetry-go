@@ -40,7 +40,7 @@ import (
 func TestNewExporterPipelineWithRegistration(t *testing.T) {
 	tp, fn, err := NewExportPipeline(
 		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		WithRegistration(),
+		RegisterAsGlobal(),
 	)
 	defer fn()
 	assert.NoError(t, err)

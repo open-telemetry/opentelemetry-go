@@ -40,7 +40,7 @@ func initTracer() func() {
 				key.Float64("float", 312.23),
 			},
 		}),
-		jaeger.WithRegistration(),
+		jaeger.RegisterAsGlobal(),
 		jaeger.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)
 	if err != nil {

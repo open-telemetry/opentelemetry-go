@@ -83,9 +83,9 @@ func WithSDK(config *sdktrace.Config) func(o *options) {
 	}
 }
 
-// WithRegistration enables the registration of the trace provider of the new pipeline
+// RegisterAsGlobal enables the registration of the trace provider of the new pipeline
 // as Global Trace Provider.
-func WithRegistration() func(o *options) {
+func RegisterAsGlobal() func(o *options) {
 	return func(o *options) {
 		o.RegisterGlobal = true
 	}
