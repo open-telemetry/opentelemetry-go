@@ -383,6 +383,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	oi := 1
 	for i := 1; i < len(kvs); i++ {
 		if kvs[i-1].Key == kvs[i].Key {
+			// Overwrite the value for "last-value wins".
 			kvs[oi-1].Value = kvs[i].Value
 			continue
 		}
