@@ -143,7 +143,7 @@ type (
 	observer struct {
 		meter      *SDK
 		descriptor *export.Descriptor
-		// recorders maps encoded labelset to the pair of
+		// recorders maps ordered labels to the pair of
 		// labelset and recorder
 		recorders map[orderedLabels]labeledRecorder
 		callback  observerCallback
@@ -368,6 +368,12 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// costs an allocation to yield a slice through
 	// `(reflect.Value).Interface()`.
 	//
+	// TODO: There is a possibility that the caller passes values
+	// without an allocation (e.g., `meter.Labels(kvs...)`), and
+	// that the user could later modify the slice, leading to
+	// incorrect results.  This is indeed a risk, one that should
+	// be quickly addressed via the following TODO.
+	//
 	// TODO: It would be better overall if the export.Labels interface
 	// did not expose a slice via `Ordered()`, if instead it exposed
 	// getter methods like `Len()` and `Order(i int)`.  Then we would
@@ -390,44 +396,44 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 }
 
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
-	switch {
-	case len(kvs) == 1:
+	switch len(kvs) {
+	case 1:
 		ptr := new([1]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 2:
+	case 2:
 		ptr := new([2]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 3:
+	case 3:
 		ptr := new([3]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 4:
+	case 4:
 		ptr := new([4]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 5:
+	case 5:
 		ptr := new([5]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 6:
+	case 6:
 		ptr := new([6]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 7:
+	case 7:
 		ptr := new([7]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 8:
+	case 8:
 		ptr := new([8]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 9:
+	case 9:
 		ptr := new([9]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
-	case len(kvs) == 10:
+	case 10:
 		ptr := new([10]core.KeyValue)
 		copy((*ptr)[:], kvs)
 		ls.ordered = *ptr
