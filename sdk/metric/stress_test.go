@@ -39,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 )
 
 const (
@@ -76,13 +77,26 @@ type (
 		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
 		newStore       func() interface{}
 
-		store       func(store interface{}, value core.Number)
-		readStore   func(store interface{}) core.Number
-		equalValues func(a, b core.Number) bool
+		// storeCollect and storeExpect are the same for
+		// counters, different for gauges, to ensure we are
+		// testing the timestamps correctly.
+		storeCollect func(store interface{}, value core.Number, ts time.Time)
+		storeExpect  func(store interface{}, value core.Number)
+		readStore    func(store interface{}) core.Number
+		equalValues  func(a, b core.Number) bool
 	}
 
 	withImpl interface {
 		Impl() metric.InstrumentImpl
+	}
+
+	// gaugeState supports merging gauge values, for the case
+	// where a race condition causes duplicate records.  We always
+	// take the later timestamp.
+	gaugeState struct {
+		// raw has to be aligned for 64-bit atomic operations.
+		raw core.Number
+		ts  time.Time
 	}
 )
 
@@ -163,7 +177,7 @@ func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
 
 		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
 
-		f.impl.store(actual, value)
+		f.impl.storeExpect(actual, value)
 
 		if atomic.LoadInt64(&f.stop) != 0 {
 			wg.Done()
@@ -217,9 +231,12 @@ func (f *testFixture) preCollect() {
 }
 
 func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	name := descriptor.Name()
+	switch {
+	case strings.HasSuffix(name, "counter"):
 		return counter.New()
+	case strings.HasSuffix(name, "lastvalue"):
+		return gauge.New()
 	default:
 		panic("Not implemented for this test")
 	}
@@ -253,7 +270,14 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
-		f.impl.store(actual, sum)
+		f.impl.storeCollect(actual, sum, time.Time{})
+	case export.MeasureKind:
+		gauge := agg.(aggregator.LastValue)
+		lv, ts, err := gauge.LastValue()
+		if err != nil && err != aggregator.ErrNoLastValue {
+			f.T.Fatal("Last value error: ", err)
+		}
+		f.impl.storeCollect(actual, lv, ts)
 	default:
 		panic("Not used in this test")
 	}
@@ -315,7 +339,7 @@ func float64sEqual(a, b core.Number) bool {
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Counter(name, api.WithMonotonic(!nonMonotonic))
+			return meter.NewInt64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset int64
@@ -337,7 +361,10 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 			n := core.NewInt64Number(0)
 			return &n
 		},
-		store: func(store interface{}, value core.Number) {
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		},
+		storeExpect: func(store interface{}, value core.Number) {
 			store.(*core.Number).AddInt64Atomic(value.AsInt64())
 		},
 		readStore: func(store interface{}) core.Number {
@@ -358,7 +385,7 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Counter(name, api.WithMonotonic(!nonMonotonic))
+			return meter.NewFloat64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset float64
@@ -380,7 +407,10 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 			n := core.NewFloat64Number(0.0)
 			return &n
 		},
-		store: func(store interface{}, value core.Number) {
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		},
+		storeExpect: func(store interface{}, value core.Number) {
 			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
 		},
 		readStore: func(store interface{}) core.Number {
@@ -396,4 +426,89 @@ func TestStressFloat64CounterNormal(t *testing.T) {
 
 func TestStressFloat64CounterNonMonotonic(t *testing.T) {
 	stressTest(t, floatCounterTestImpl(true))
+}
+
+// LastValue
+
+func intLastValueTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return meter.NewInt64Measure(name+".lastvalue", metric.WithAbsolute(false))
+		},
+		getUpdateValue: func() core.Number {
+			r1 := rand.Int63()
+			return core.NewInt64Number(rand.Int63() - r1)
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			measure := inst.(api.Int64Measure)
+			measure.Record(ctx, value.AsInt64(), labels)
+		},
+		newStore: func() interface{} {
+			return &gaugeState{
+				raw: core.NewInt64Number(0),
+			}
+		},
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+			gs := store.(*gaugeState)
+
+			if !ts.Before(gs.ts) {
+				gs.ts = ts
+				gs.raw.SetInt64Atomic(value.AsInt64())
+			}
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			gs := store.(*gaugeState)
+			gs.raw.SetInt64Atomic(value.AsInt64())
+		},
+		readStore: func(store interface{}) core.Number {
+			gs := store.(*gaugeState)
+			return gs.raw.AsNumberAtomic()
+		},
+		equalValues: int64sEqual,
+	}
+}
+
+func TestStressInt64LastValue(t *testing.T) {
+	stressTest(t, intLastValueTestImpl())
+}
+
+func floatLastValueTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return meter.NewFloat64Measure(name+".lastvalue", metric.WithAbsolute(false))
+		},
+		getUpdateValue: func() core.Number {
+			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			measure := inst.(api.Float64Measure)
+			measure.Record(ctx, value.AsFloat64(), labels)
+		},
+		newStore: func() interface{} {
+			return &gaugeState{
+				raw: core.NewFloat64Number(0),
+			}
+		},
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+			gs := store.(*gaugeState)
+
+			if !ts.Before(gs.ts) {
+				gs.ts = ts
+				gs.raw.SetFloat64Atomic(value.AsFloat64())
+			}
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			gs := store.(*gaugeState)
+			gs.raw.SetFloat64Atomic(value.AsFloat64())
+		},
+		readStore: func(store interface{}) core.Number {
+			gs := store.(*gaugeState)
+			return gs.raw.AsNumberAtomic()
+		},
+		equalValues: float64sEqual,
+	}
+}
+
+func TestStressFloat64LastValue(t *testing.T) {
+	stressTest(t, floatLastValueTestImpl())
 }

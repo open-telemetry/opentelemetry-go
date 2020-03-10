@@ -25,11 +25,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
-// Note: This aggregator enforces the behavior of monotonic gauges to
-// the best of its ability, but it will not retain any memory of
-// infrequently used gauges.  Exporters may wish to enforce this, or
-// they may simply treat monotonic as a semantic hint.
-
 type (
 
 	// Aggregator aggregates gauge events.
@@ -91,45 +86,16 @@ func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 
 // Update atomically sets the current "last" value.
 func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
-	if !desc.Alternate() {
-		g.updateNonMonotonic(number)
-		return nil
-	}
-	return g.updateMonotonic(number, desc)
-}
-
-func (g *Aggregator) updateNonMonotonic(number core.Number) {
 	ngd := &gaugeData{
 		value:     number,
 		timestamp: time.Now(),
 	}
 	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
+	return nil
 }
 
-func (g *Aggregator) updateMonotonic(number core.Number, desc *export.Descriptor) error {
-	ngd := &gaugeData{
-		timestamp: time.Now(),
-		value:     number,
-	}
-	kind := desc.NumberKind()
-
-	for {
-		gd := (*gaugeData)(atomic.LoadPointer(&g.current))
-
-		if gd.value.CompareNumber(kind, number) > 0 {
-			return aggregator.ErrNonMonotoneInput
-		}
-
-		if atomic.CompareAndSwapPointer(&g.current, unsafe.Pointer(gd), unsafe.Pointer(ngd)) {
-			return nil
-		}
-	}
-}
-
-// Merge combines state from two aggregators.  If the gauge is
-// declared as monotonic, the greater value is chosen.  If the gauge
-// is declared as non-monotonic, the most-recently set value is
-// chosen.
+// Merge combines state from two aggregators.  The most-recently set
+// value is chosen.
 func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
@@ -139,20 +105,6 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 	ggd := (*gaugeData)(atomic.LoadPointer(&g.checkpoint))
 	ogd := (*gaugeData)(atomic.LoadPointer(&o.checkpoint))
 
-	if desc.Alternate() {
-		// Monotonic: use the greater value
-		cmp := ggd.value.CompareNumber(desc.NumberKind(), ogd.value)
-
-		if cmp > 0 {
-			return nil
-		}
-
-		if cmp < 0 {
-			g.checkpoint = unsafe.Pointer(ogd)
-			return nil
-		}
-	}
-	// Non-monotonic gauge or equal values
 	if ggd.timestamp.After(ogd.timestamp) {
 		return nil
 	}

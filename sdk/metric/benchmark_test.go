@@ -28,6 +28,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
@@ -46,12 +47,13 @@ func newFixture(b *testing.B) *benchFixture {
 }
 
 func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	name := descriptor.Name()
+	switch {
+	case strings.HasSuffix(name, "counter"):
 		return counter.New()
-	case export.ObserverKind:
-		fallthrough
-	case export.MeasureKind:
+	case strings.HasSuffix(name, "lastvalue"):
+		return gauge.New()
+	default:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
@@ -241,6 +243,62 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		handle.Add(ctx, 1.1)
+	}
+}
+
+// LastValue
+
+func BenchmarkInt64LastValueAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	mea := fix.sdk.NewInt64Measure("int64.lastvalue")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mea.Record(ctx, int64(i), labs)
+	}
+}
+
+func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	mea := fix.sdk.NewInt64Measure("int64.lastvalue")
+	handle := mea.Bind(labs)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		handle.Record(ctx, int64(i))
+	}
+}
+
+func BenchmarkFloat64LastValueAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	mea := fix.sdk.NewFloat64Measure("float64.lastvalue")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mea.Record(ctx, float64(i), labs)
+	}
+}
+
+func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := fix.sdk.Labels(makeLabels(1)...)
+	mea := fix.sdk.NewFloat64Measure("float64.lastvalue")
+	handle := mea.Bind(labs)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		handle.Record(ctx, float64(i))
 	}
 }
 
