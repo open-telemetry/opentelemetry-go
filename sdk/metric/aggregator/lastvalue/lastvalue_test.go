@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gauge
+package lastvalue
 
 import (
 	"context"
@@ -38,8 +38,8 @@ var _ export.Aggregator = &Aggregator{}
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "gaugeData.value",
-			Offset: unsafe.Offsetof(gaugeData{}.value),
+			Name:   "lastValueData.value",
+			Offset: unsafe.Offsetof(lastValueData{}.value),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
@@ -49,13 +49,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestGaugeNonMonotonic(t *testing.T) {
+func TestLastValueUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
 
 		var last core.Number
 		for i := 0; i < count; i++ {
@@ -72,66 +72,14 @@ func TestGaugeNonMonotonic(t *testing.T) {
 	})
 }
 
-func TestGaugeMonotonic(t *testing.T) {
-	ctx := context.Background()
-
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
-
-		small := profile.Random(+1)
-		last := small
-		for i := 0; i < count; i++ {
-			x := profile.Random(+1)
-			last.AddNumber(profile.NumberKind, x)
-			test.CheckedUpdate(t, agg, last, record)
-		}
-
-		agg.Checkpoint(ctx, record)
-
-		lv, _, err := agg.LastValue()
-		require.Equal(t, last, lv, "Same last value - monotonic")
-		require.Nil(t, err)
-	})
-}
-
-func TestGaugeMonotonicDescending(t *testing.T) {
-	ctx := context.Background()
-
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-
-		record := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
-
-		first := profile.Random(+1)
-		test.CheckedUpdate(t, agg, first, record)
-
-		for i := 0; i < count; i++ {
-			x := profile.Random(-1)
-
-			err := agg.Update(ctx, x, record)
-			if err != aggregator.ErrNonMonotoneInput {
-				t.Error("Expected ErrNonMonotoneInput", err)
-			}
-		}
-
-		agg.Checkpoint(ctx, record)
-
-		lv, _, err := agg.LastValue()
-		require.Equal(t, first, lv, "Same last value - monotonic")
-		require.Nil(t, err)
-	})
-}
-
-func TestGaugeNormalMerge(t *testing.T) {
+func TestLastValueMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -158,39 +106,8 @@ func TestGaugeNormalMerge(t *testing.T) {
 	})
 }
 
-func TestGaugeMonotonicMerge(t *testing.T) {
-	ctx := context.Background()
-
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg1 := New()
-		agg2 := New()
-
-		descriptor := test.NewAggregatorTest(export.GaugeKind, profile.NumberKind, true)
-
-		first1 := profile.Random(+1)
-		test.CheckedUpdate(t, agg1, first1, descriptor)
-
-		first2 := profile.Random(+1)
-		first2.AddNumber(profile.NumberKind, first1)
-		test.CheckedUpdate(t, agg2, first2, descriptor)
-
-		agg1.Checkpoint(ctx, descriptor)
-		agg2.Checkpoint(ctx, descriptor)
-
-		test.CheckedMerge(t, agg1, agg2, descriptor)
-
-		_, ts2, err := agg1.LastValue()
-		require.Nil(t, err)
-
-		lv, ts1, err := agg1.LastValue()
-		require.Nil(t, err)
-		require.Equal(t, first2, lv, "Merged value - monotonic")
-		require.Equal(t, ts2, ts1, "Merged timestamp - monotonic")
-	})
-}
-
-func TestGaugeNotSet(t *testing.T) {
-	descriptor := test.NewAggregatorTest(export.GaugeKind, core.Int64NumberKind, true)
+func TestLastValueNotSet(t *testing.T) {
+	descriptor := test.NewAggregatorTest(export.ObserverKind, core.Int64NumberKind, true)
 
 	g := New()
 	g.Checkpoint(context.Background(), descriptor)

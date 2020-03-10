@@ -31,8 +31,8 @@ func TestPrometheusExporter(t *testing.T) {
 
 	counter := export.NewDescriptor(
 		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
-	gauge := export.NewDescriptor(
-		"gauge", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
+	lastValue := export.NewDescriptor(
+		"lastvalue", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
 	measure := export.NewDescriptor(
 		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
 
@@ -44,8 +44,8 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet.AddCounter(counter, 15.3, labels...)
 	expected = append(expected, `counter{A="B",C="D"} 15.3`)
 
-	checkpointSet.AddGauge(gauge, 13.2, labels...)
-	expected = append(expected, `gauge{A="B",C="D"} 13.2`)
+	checkpointSet.AddLastValue(lastValue, 13.2, labels...)
+	expected = append(expected, `lastvalue{A="B",C="D"} 13.2`)
 
 	checkpointSet.AddMeasure(measure, 13, labels...)
 	checkpointSet.AddMeasure(measure, 15, labels...)
@@ -64,8 +64,8 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet.AddCounter(counter, 12, missingLabels...)
 	expected = append(expected, `counter{A="E",C=""} 12`)
 
-	checkpointSet.AddGauge(gauge, 32, missingLabels...)
-	expected = append(expected, `gauge{A="E",C=""} 32`)
+	checkpointSet.AddLastValue(lastValue, 32, missingLabels...)
+	expected = append(expected, `lastvalue{A="E",C=""} 32`)
 
 	checkpointSet.AddMeasure(measure, 19, missingLabels...)
 	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)

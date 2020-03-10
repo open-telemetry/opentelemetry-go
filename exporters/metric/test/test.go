@@ -7,7 +7,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
 type CheckpointSet struct {
@@ -56,8 +56,8 @@ func createNumber(desc *export.Descriptor, v float64) core.Number {
 	return core.NewInt64Number(int64(v))
 }
 
-func (p *CheckpointSet) AddGauge(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
-	p.updateAggregator(desc, gauge.New(), v, labels...)
+func (p *CheckpointSet) AddLastValue(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
+	p.updateAggregator(desc, lastvalue.New(), v, labels...)
 }
 
 func (p *CheckpointSet) AddCounter(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
