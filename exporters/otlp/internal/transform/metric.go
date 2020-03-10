@@ -1,0 +1,150 @@
+// Copyright 2020, OpenTelemetry Authors //
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package transform provides translations for opentelemetry-go concepts and
+// structures to otlp structures.
+package transform
+
+import (
+	"errors"
+
+	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
+	"go.opentelemetry.io/otel/api/core"
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+)
+
+var UnimplementedAggErr = errors.New("unimplemented aggregator")
+
+func Record(r metricsdk.Record) (*metricpb.Metric, error) {
+	d := r.Descriptor()
+	l := r.Labels()
+	switch a := r.Aggregator().(type) {
+	case aggregator.MinMaxSumCount:
+		return minMaxSumCount(d, l, a)
+	case aggregator.Sum:
+		return sum(d, l, a)
+	case aggregator.Distribution:
+		// TODO (MrAlias): implement (and move higher in precedence).
+	case aggregator.Points:
+		// TODO (MrAlias): implement (and move higher in precedence).
+	}
+	return nil, UnimplementedAggErr
+}
+
+func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
+	sum, err := a.Sum()
+	if err != nil {
+		return nil, err
+	}
+
+	lv := values(labels.Ordered())
+	m := &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			LabelKeys:   keys(labels.Ordered()),
+		},
+	}
+
+	switch n := desc.NumberKind(); n {
+	case core.Int64NumberKind, core.Uint64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
+		m.Int64Datapoints = []*metricpb.Int64DataPoint{
+			{
+				LabelValues: lv,
+				Value:       &metricpb.Int64Value{Value: sum.CoerceToInt64(n)},
+			},
+		}
+	case core.Float64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
+		m.DoubleDatapoints = []*metricpb.DoubleDataPoint{
+			{
+				LabelValues: lv,
+				Value:       &metricpb.DoubleValue{Value: sum.CoerceToFloat64(n)},
+			},
+		}
+	}
+
+	return m, nil
+}
+
+func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Number, count int64, err error) {
+	if min, err = a.Min(); err != nil {
+		return
+	}
+	if max, err = a.Max(); err != nil {
+		return
+	}
+	if sum, err = a.Sum(); err != nil {
+		return
+	}
+	if count, err = a.Count(); err != nil {
+		return
+	}
+	return
+}
+
+func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+	min, max, sum, count, err := minMaxSumCountValues(a)
+	if err != nil {
+		return nil, err
+	}
+
+	numKind := desc.NumberKind()
+	return &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			Type:        metricpb.MetricDescriptor_SUMMARY,
+			LabelKeys:   keys(labels.Ordered()),
+		},
+		SummaryDatapoints: []*metricpb.SummaryDataPoint{
+			{
+				LabelValues: values(labels.Ordered()),
+				Value: &metricpb.SummaryValue{
+					Count: uint64(count),
+					Sum:   sum.CoerceToFloat64(numKind),
+					PercentileValues: []*metricpb.SummaryValue_ValueAtPercentile{
+						{
+							Percentile: 0.0,
+							Value:      min.CoerceToFloat64(numKind),
+						},
+						{
+							Percentile: 100.0,
+							Value:      max.CoerceToFloat64(numKind),
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func keys(kvs []core.KeyValue) []string {
+	result := make([]string, 0, len(kvs))
+	for _, kv := range kvs {
+		result = append(result, string(kv.Key))
+	}
+	return result
+}
+
+func values(kvs []core.KeyValue) []string {
+	result := make([]string, 0, len(kvs))
+	for _, kv := range kvs {
+		result = append(result, kv.Value.Emit())
+	}
+	return result
+}
