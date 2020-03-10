@@ -9,8 +9,8 @@ Thumbs.db
 coverage.*
 
 /example/basic/basic
-example/grpc/client/client
-example/grpc/server/server
+/example/grpc/client/client
+/example/grpc/server/server
 /example/http/client/client
 /example/http/server/server
 /example/jaeger/jaeger
