@@ -375,7 +375,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := metric.Must(meter).NewFloat64Counter("test.counter.float")
+		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)

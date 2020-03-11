@@ -106,8 +106,8 @@ func (m Measurement) Number() core.Number {
 type Meter interface {
 	MeterMethods
 
-	MeasureConstructors
-	ObserverConstructors
+	SyncMetricConstructors
+	AsyncMetricConstructors
 }
 
 // MeterMethods are all the non-constructor methods of the Meter interface.
@@ -120,14 +120,14 @@ type MeterMethods interface {
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 }
 
-// MeasureConstructors is a Meter sub-interface containing a `New`
+// SyncMetricConstructors is a Meter sub-interface containing a `New`
 // method for every supported Measure instrument.  These are the
 // standard synchronous instrument constructors, which may return an
 // error for conditions such as:
 //   `name` is an empty string
 //   `name` was previously registered as a different kind of instrument
 //          for a given named `Meter`.
-type MeasureConstructors interface {
+type SyncMetricConstructors interface {
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
 	NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error)
@@ -142,14 +142,14 @@ type MeasureConstructors interface {
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error)
 }
 
-// ObserverConstructors is a Meter sub-interface containing a `Register`
+// AsyncMetricConstructors is a Meter sub-interface containing a `Register`
 // method for every supported Observer instrument.  These are the
 // standard asynchronous instrument constructors, which may return an
 // error for conditions such as:
 //   `name` is an empty string
 //   `name` was previously registered as a different kind of instrument
 //          for a given named `Meter`.
-type ObserverConstructors interface {
+type AsyncMetricConstructors interface {
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
 	// options. Callback can be nil.

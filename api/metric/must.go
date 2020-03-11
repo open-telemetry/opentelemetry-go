@@ -20,13 +20,21 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-// MeterMust is a variation on Meter that panics when any instrument
-// constructor encounters an error.
-type MeterMust interface {
-	MeterMethods
+// MeterMust is a wrapper for Meter interfaces that panics when any
+// instrument constructor encounters an error.  It implements the
+// `MeterMethods` interface but the signature of the constructors is
+// different.
+type MeterMust struct {
+	meter Meter
+}
 
-	MeasureConstructorsMust
-	ObserverConstructorsMust
+var _ MeterMethods = MeterMust{}
+
+// Must constructs a MeterMust implementation from a Meter, allowing
+// the application to panic when any instrument constructor yields an
+// error.
+func Must(meter Meter) MeterMust {
+	return MeterMust{meter: meter}
 }
 
 // MeasureConstructorsMust are part of the `MeterMust` API, a Meter
@@ -59,23 +67,18 @@ type ObserverConstructorsMust interface {
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
 }
 
-type meterMust struct {
-	meter Meter
-}
-
-func Must(meter Meter) MeterMust {
-	return &meterMust{meter: meter}
-}
-
-func (mm *meterMust) Labels(kvs ...core.KeyValue) LabelSet {
+// Labels implements MeterMust.
+func (mm MeterMust) Labels(kvs ...core.KeyValue) LabelSet {
 	return mm.meter.Labels(kvs...)
 }
 
-func (mm *meterMust) RecordBatch(ctx context.Context, ls LabelSet, ms ...Measurement) {
+// RecordBatch implements MeterMust.
+func (mm MeterMust) RecordBatch(ctx context.Context, ls LabelSet, ms ...Measurement) {
 	mm.meter.RecordBatch(ctx, ls, ms...)
 }
 
-func (mm *meterMust) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
+// NewInt64Counter implements MeterMust.
+func (mm MeterMust) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
 	if inst, err := mm.meter.NewInt64Counter(name, cos...); err != nil {
 		panic(err)
 	} else {
@@ -83,7 +86,8 @@ func (mm *meterMust) NewInt64Counter(name string, cos ...CounterOptionApplier) I
 	}
 }
 
-func (mm *meterMust) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
+// NewFloat64Counter implements MeterMust.
+func (mm MeterMust) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
 	if inst, err := mm.meter.NewFloat64Counter(name, cos...); err != nil {
 		panic(err)
 	} else {
@@ -91,7 +95,8 @@ func (mm *meterMust) NewFloat64Counter(name string, cos ...CounterOptionApplier)
 	}
 }
 
-func (mm *meterMust) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
+// NewInt64Measure implements MeterMust.
+func (mm MeterMust) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
 	if inst, err := mm.meter.NewInt64Measure(name, mos...); err != nil {
 		panic(err)
 	} else {
@@ -99,7 +104,8 @@ func (mm *meterMust) NewInt64Measure(name string, mos ...MeasureOptionApplier) I
 	}
 }
 
-func (mm *meterMust) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
+// NewFloat64Measure implements MeterMust.
+func (mm MeterMust) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
 	if inst, err := mm.meter.NewFloat64Measure(name, mos...); err != nil {
 		panic(err)
 	} else {
@@ -107,7 +113,8 @@ func (mm *meterMust) NewFloat64Measure(name string, mos ...MeasureOptionApplier)
 	}
 }
 
-func (mm *meterMust) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
+// RegisterInt64Observer implements MeterMust.
+func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
 	if inst, err := mm.meter.RegisterInt64Observer(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -115,7 +122,8 @@ func (mm *meterMust) RegisterInt64Observer(name string, callback Int64ObserverCa
 	}
 }
 
-func (mm *meterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
+// RegisterFloat64Observer implements MeterMust.
+func (mm MeterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
 	if inst, err := mm.meter.RegisterFloat64Observer(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
