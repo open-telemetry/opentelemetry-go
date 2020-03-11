@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,19 +31,26 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
 type correctnessBatcher struct {
-	t       *testing.T
-	agg     export.Aggregator
+	t *testing.T
+
 	records []export.Record
 }
 
 type testLabelEncoder struct{}
 
-func (cb *correctnessBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
-	return cb.agg
+func (cb *correctnessBatcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+	name := descriptor.Name()
+	switch {
+	case strings.HasSuffix(name, ".counter"):
+		return counter.New()
+	case strings.HasSuffix(name, ".disabled"):
+		return nil
+	default:
+		return array.New()
+	}
 }
 
 func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
@@ -64,10 +72,8 @@ func (testLabelEncoder) Encode(labels []core.KeyValue) string {
 
 func TestInputRangeTestCounter(t *testing.T) {
 	ctx := context.Background()
-	cagg := counter.New()
 	batcher := &correctnessBatcher{
-		t:   t,
-		agg: cagg,
+		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
@@ -76,21 +82,22 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := sdk.NewInt64Counter("counter.name", metric.WithMonotonic(true))
+	counter := sdk.NewInt64Counter("name.counter", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
 	sdkErr = nil
 
-	sdk.Collect(ctx)
-	sum, err := cagg.Sum()
+	checkpointed := sdk.Collect(ctx)
+	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(0), sum.AsInt64())
+	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
 
+	batcher.records = nil
 	counter.Add(ctx, 1, sdk.Labels())
-	checkpointed := sdk.Collect(ctx)
-
-	sum, err = cagg.Sum()
+	checkpointed = sdk.Collect(ctx)
+	sum, err = batcher.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -99,10 +106,8 @@ func TestInputRangeTestCounter(t *testing.T) {
 
 func TestInputRangeTestMeasure(t *testing.T) {
 	ctx := context.Background()
-	magg := array.New()
 	batcher := &correctnessBatcher{
-		t:   t,
-		agg: magg,
+		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
@@ -111,22 +116,25 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := sdk.NewFloat64Measure("name.measure", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
 	sdkErr = nil
 
-	sdk.Collect(ctx)
-	count, err := magg.Count()
+	checkpointed := sdk.Collect(ctx)
+	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(0), count)
+	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
 
 	measure.Record(ctx, 1, sdk.Labels())
 	measure.Record(ctx, 2, sdk.Labels())
-	checkpointed := sdk.Collect(ctx)
 
-	count, err = magg.Count()
+	batcher.records = nil
+	checkpointed = sdk.Collect(ctx)
+
+	count, err = batcher.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, sdkErr)
@@ -136,23 +144,22 @@ func TestInputRangeTestMeasure(t *testing.T) {
 func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
-		t:   t,
-		agg: nil,
+		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := sdk.NewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := sdk.NewFloat64Measure("name.disabled", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
+	require.Equal(t, 0, len(batcher.records))
 }
 
 func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
-		t:   t,
-		agg: lastvalue.New(),
+		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
@@ -167,12 +174,10 @@ func TestRecordNaN(t *testing.T) {
 	require.Error(t, sdkErr)
 }
 
-func TestSDKLabelEncoder(t *testing.T) {
+func TestSDKAltLabelEncoder(t *testing.T) {
 	ctx := context.Background()
-	cagg := counter.New()
 	batcher := &correctnessBatcher{
-		t:   t,
-		agg: cagg,
+		t: t,
 	}
 	sdk := sdk.New(batcher, testLabelEncoder{})
 
@@ -185,6 +190,73 @@ func TestSDKLabelEncoder(t *testing.T) {
 
 	labels := batcher.records[0].Labels()
 	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
+}
+
+func TestSDKLabelsDeduplication(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+
+	counter := sdk.NewInt64Counter("counter")
+
+	const (
+		maxKeys = 21
+		keySets = 2
+		repeats = 3
+	)
+	var keysA []core.Key
+	var keysB []core.Key
+
+	for i := 0; i < maxKeys; i++ {
+		keysA = append(keysA, core.Key(fmt.Sprintf("A%03d", i)))
+		keysB = append(keysB, core.Key(fmt.Sprintf("B%03d", i)))
+	}
+
+	var allExpect [][]core.KeyValue
+	for numKeys := 0; numKeys < maxKeys; numKeys++ {
+
+		var kvsA []core.KeyValue
+		var kvsB []core.KeyValue
+		for r := 0; r < repeats; r++ {
+			for i := 0; i < numKeys; i++ {
+				kvsA = append(kvsA, keysA[i].Int(r))
+				kvsB = append(kvsB, keysB[i].Int(r))
+			}
+		}
+
+		var expectA []core.KeyValue
+		var expectB []core.KeyValue
+		for i := 0; i < numKeys; i++ {
+			expectA = append(expectA, keysA[i].Int(repeats-1))
+			expectB = append(expectB, keysB[i].Int(repeats-1))
+		}
+
+		counter.Add(ctx, 1, sdk.Labels(kvsA...))
+		counter.Add(ctx, 1, sdk.Labels(kvsA...))
+		allExpect = append(allExpect, expectA)
+
+		if numKeys != 0 {
+			// In this case A and B sets are the same.
+			counter.Add(ctx, 1, sdk.Labels(kvsB...))
+			counter.Add(ctx, 1, sdk.Labels(kvsB...))
+			allExpect = append(allExpect, expectB)
+		}
+
+	}
+
+	sdk.Collect(ctx)
+
+	var actual [][]core.KeyValue
+	for _, rec := range batcher.records {
+		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
+		require.Equal(t, sum, core.NewInt64Number(2))
+
+		actual = append(actual, rec.Labels().Ordered())
+	}
+
+	require.ElementsMatch(t, allExpect, actual)
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {

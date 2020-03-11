@@ -50,7 +50,7 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.MeterProvider().Meter("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelSetToReport := new(metric.LabelSet)

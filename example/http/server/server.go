@@ -47,7 +47,7 @@ func initTracer() {
 
 func main() {
 	initTracer()
-	tr := global.TraceProvider().Tracer("example/server")
+	tr := global.Tracer("example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, entries, spanCtx := httptrace.Extract(req.Context(), req)

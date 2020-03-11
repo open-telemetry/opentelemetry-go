@@ -21,11 +21,21 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
+// Tracer creates a named tracer that implements Tracer interface.
+// If the name is an empty string then provider uses default name.
+//
+// This is short for TraceProvider().Tracer(name)
+func Tracer(name string) trace.Tracer {
+	return TraceProvider().Tracer(name)
+}
+
 // TraceProvider returns the registered global trace provider.
 // If none is registered then an instance of trace.NoopProvider is returned.
 //
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TraceProvider().Tracer("example.com/foo")
+// or
+//     tracer := global.Tracer("example.com/foo")
 func TraceProvider() trace.Provider {
 	return internal.TraceProvider()
 }
@@ -35,12 +45,22 @@ func SetTraceProvider(tp trace.Provider) {
 	internal.SetTraceProvider(tp)
 }
 
+// Meter gets a named Meter interface.  If the name is an
+// empty string, the provider uses a default name.
+//
+// This is short for MeterProvider().Meter(name)
+func Meter(name string) metric.Meter {
+	return MeterProvider().Meter(name)
+}
+
 // MeterProvider returns the registered global meter provider.  If
 // none is registered then a default meter provider is returned that
 // forwards the Meter interface to the first registered Meter.
 //
 // Use the meter provider to create a named meter. E.g.
 //     meter := global.MeterProvider().Meter("example.com/foo")
+// or
+//     meter := global.Meter("example.com/foo")
 func MeterProvider() metric.Provider {
 	return internal.MeterProvider()
 }
