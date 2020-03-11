@@ -70,8 +70,8 @@ func main() {
 	// Note: Have to get the meter and tracer after the global is
 	// initialized.  See OTEP 0005.
 
-	tracer := global.TraceProvider().Tracer("ex.com/basic")
-	meter := global.MeterProvider().Meter("ex.com/basic")
+	tracer := global.Tracer("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 

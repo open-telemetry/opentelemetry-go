@@ -21,8 +21,8 @@ func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.MeterProvider().Meter("test1")
-	meter2 := global.MeterProvider().Meter("test2")
+	meter1 := global.Meter("test1")
+	meter2 := global.Meter("test2")
 	lvals1 := key.String("A", "B")
 	labels1 := meter1.Labels(lvals1)
 	lvals2 := key.String("C", "D")
@@ -141,7 +141,7 @@ func TestBound(t *testing.T) {
 	// Note: this test uses opposite Float64/Int64 number kinds
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
-	glob := global.MeterProvider().Meter("test")
+	glob := global.Meter("test")
 	lvals1 := key.String("A", "B")
 	labels1 := glob.Labels(lvals1)
 
@@ -191,7 +191,7 @@ func TestUnbind(t *testing.T) {
 	// Tests Unbind with SDK never installed.
 	internal.ResetForTest()
 
-	glob := global.MeterProvider().Meter("test")
+	glob := global.Meter("test")
 	lvals1 := key.New("A").String("B")
 	labels1 := glob.Labels(lvals1)
 
@@ -214,7 +214,7 @@ func TestDefaultSDK(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.MeterProvider().Meter("builtin")
+	meter1 := global.Meter("builtin")
 	lvals1 := key.String("A", "B")
 	labels1 := meter1.Labels(lvals1)
 
@@ -251,7 +251,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 
 	ctx := context.Background()
 	sdk := metrictest.NewProvider()
-	meter := global.MeterProvider().Meter("test")
+	meter := global.Meter("test")
 	counter := meter.NewInt64Counter("test.counter")
 	boundC := counter.Bind(meter.Labels())
 	global.SetMeterProvider(sdk)
@@ -260,6 +260,6 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	require.NotPanics(t, func() {
 		boundC.Add(ctx, 1)
 	})
-	mock := global.MeterProvider().Meter("test").(*metrictest.Meter)
+	mock := global.Meter("test").(*metrictest.Meter)
 	require.Equal(t, 0, len(mock.MeasurementBatches))
 }
