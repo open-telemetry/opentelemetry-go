@@ -67,13 +67,28 @@ func (t *testExporter) ExportSpan(ctx context.Context, d *export.SpanData) {
 	t.spans = append(t.spans, d)
 }
 
+type testSampler struct {
+	callCount int
+	prefix    string
+	t         *testing.T
+}
+
+func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	ts.callCount++
+	ts.t.Logf("called sampler for name %q", p.Name)
+	decision := NotRecord
+	if strings.HasPrefix(p.Name, ts.prefix) {
+		decision = RecordAndSampled
+	}
+	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{core.Key("callCount").Int(ts.callCount)}}
+}
+
+func (ts testSampler) Description() string {
+	return "testSampler"
+}
+
 func TestSetName(t *testing.T) {
-	samplerIsCalled := false
-	fooSampler := Sampler(func(p SamplingParameters) SamplingDecision {
-		samplerIsCalled = true
-		t.Logf("called sampler for name %q", p.Name)
-		return SamplingDecision{Sample: strings.HasPrefix(p.Name, "foo")}
-	})
+	fooSampler := &testSampler{prefix: "foo", t: t}
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
 
 	type testCase struct {
@@ -109,18 +124,18 @@ func TestSetName(t *testing.T) {
 		},
 	} {
 		span := startNamedSpan(tp, "SetName", tt.name)
-		if !samplerIsCalled {
+		if fooSampler.callCount == 0 {
 			t.Errorf("%d: the sampler was not even called during span creation", idx)
 		}
-		samplerIsCalled = false
+		fooSampler.callCount = 0
 		if gotSampledBefore := span.SpanContext().IsSampled(); tt.sampledBefore != gotSampledBefore {
 			t.Errorf("%d: invalid sampling decision before rename, expected %v, got %v", idx, tt.sampledBefore, gotSampledBefore)
 		}
 		span.SetName(tt.newName)
-		if !samplerIsCalled {
+		if fooSampler.callCount == 0 {
 			t.Errorf("%d: the sampler was not even called during span rename", idx)
 		}
-		samplerIsCalled = false
+		fooSampler.callCount = 0
 		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
 			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
 		}
@@ -559,7 +574,7 @@ func TestSetSpanStatus(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
-	span.SetStatus(codes.Canceled)
+	span.SetStatus(codes.Canceled, "canceled")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -573,7 +588,8 @@ func TestSetSpanStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Canceled,
+		StatusCode:      codes.Canceled,
+		StatusMessage:   "canceled",
 		HasRemoteParent: true,
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -957,7 +973,8 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		Status:          codes.Unknown,
+		StatusCode:      codes.Unknown,
+		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
 			{
@@ -996,7 +1013,8 @@ func TestRecordErrorNil(t *testing.T) {
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Status:          codes.OK,
+		StatusCode:      codes.OK,
+		StatusMessage:   "",
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)

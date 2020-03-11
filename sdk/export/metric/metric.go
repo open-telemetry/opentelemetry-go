@@ -106,21 +106,21 @@ type AggregationSelector interface {
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to a counter, a gauge, or a
-// measure instrument.  For the most part, counter and gauge semantics
-// are fixed and the provided implementations should be used.  Measure
-// metrics offer a wide range of potential tradeoffs and several
-// implementations are provided.
+// behavior to track a sequence of updates to a counter, a measure, or
+// an observer instrument.  For the most part, counter semantics are
+// fixed and the provided implementation should be used.  Measure and
+// observer metrics offer a wide range of potential tradeoffs and
+// several implementations are provided.
 //
 // Aggregators are meant to compute the change (i.e., delta) in state
-// from one checkpoint to the next, with the exception of gauge
-// aggregators.  Gauge aggregators are required to maintain the last
-// value across checkpoints to implement montonic gauge support.
+// from one checkpoint to the next, with the exception of LastValue
+// aggregators.  LastValue aggregators are required to maintain the last
+// value across checkpoints.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a counter aggregator to a measure instrument (to compute
-// a simple sum) or a gauge instrument to a measure instrument (to
+// to attach a counter aggregator to a Measure instrument (to compute
+// a simple sum) or a LastValue aggregator to a measure instrument (to
 // compute the last value).
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it
@@ -290,9 +290,6 @@ const (
 	// Counter kind indicates a counter instrument.
 	CounterKind Kind = iota
 
-	// Gauge kind indicates a gauge instrument.
-	GaugeKind
-
 	// Measure kind indicates a measure instrument.
 	MeasureKind
 
@@ -346,8 +343,8 @@ func (d *Descriptor) Name() string {
 	return d.name
 }
 
-// MetricKind returns the kind of instrument: counter, gauge, or
-// measure.
+// MetricKind returns the kind of instrument: counter, measure, or
+// observer.
 func (d *Descriptor) MetricKind() Kind {
 	return d.metricKind
 }
@@ -381,8 +378,8 @@ func (d *Descriptor) NumberKind() core.NumberKind {
 // instrument was selected.  It returns true if:
 //
 //   - A counter instrument is non-monotonic
-//   - A gauge instrument is monotonic
 //   - A measure instrument is non-absolute
+//   - An observer instrument is monotonic
 //
 // TODO: Consider renaming this method, or expanding to provide
 // kind-specific tests (e.g., Monotonic(), Absolute()).

@@ -219,20 +219,20 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			c.exportSummary(ch, dist, numberKind, desc, labels)
 		} else if sum, ok := agg.(aggregator.Sum); ok {
 			c.exportCounter(ch, sum, numberKind, desc, labels)
-		} else if gauge, ok := agg.(aggregator.LastValue); ok {
-			c.exportGauge(ch, gauge, numberKind, desc, labels)
+		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
+			c.exportLastValue(ch, lastValue, numberKind, desc, labels)
 		}
 	})
 }
 
-func (c *collector) exportGauge(ch chan<- prometheus.Metric, gauge aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
-	lastValue, _, err := gauge.LastValue()
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		c.exp.onError(err)
 		return
 	}
 
-	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lastValue.CoerceToFloat64(kind), labels...)
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), labels...)
 	if err != nil {
 		c.exp.onError(err)
 		return

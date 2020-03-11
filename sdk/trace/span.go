@@ -80,7 +80,7 @@ func (s *span) IsRecording() bool {
 	return s.data != nil
 }
 
-func (s *span) SetStatus(status codes.Code) {
+func (s *span) SetStatus(code codes.Code, msg string) {
 	if s == nil {
 		return
 	}
@@ -88,7 +88,8 @@ func (s *span) SetStatus(status codes.Code) {
 		return
 	}
 	s.mu.Lock()
-	s.data.Status = status
+	s.data.StatusCode = code
+	s.data.StatusMessage = msg
 	s.mu.Unlock()
 }
 
@@ -150,8 +151,8 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.Status != codes.OK {
-		s.SetStatus(cfg.Status)
+	if cfg.StatusCode != codes.OK {
+		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	errType := reflect.TypeOf(err)
@@ -221,8 +222,17 @@ func (s *span) SetName(name string) {
 		name:         name,
 		cfg:          s.tracer.provider.config.Load().(*Config),
 		span:         s,
+		attributes:   s.data.Attributes,
+		links:        s.data.Links,
+		kind:         s.data.SpanKind,
 	}
-	makeSamplingDecision(data)
+	sampled := makeSamplingDecision(data)
+
+	// Adding attributes directly rather than using s.SetAttributes()
+	// as s.mu is already locked and attempting to do so would deadlock.
+	for _, a := range sampled.Attributes {
+		s.attributes.add(a)
+	}
 }
 
 func (s *span) addLink(link apitrace.Link) {
@@ -307,8 +317,11 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		name:         name,
 		cfg:          cfg,
 		span:         span,
+		attributes:   o.Attributes,
+		links:        o.Links,
+		kind:         o.SpanKind,
 	}
-	makeSamplingDecision(data)
+	sampled := makeSamplingDecision(data)
 
 	// TODO: [rghetia] restore when spanstore is added.
 	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.Record {
@@ -330,6 +343,8 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
 	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)
 	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
+
+	span.SetAttributes(sampled.Attributes...)
 
 	if !noParent {
 		span.data.ParentSpanID = parent.SpanID
@@ -353,9 +368,12 @@ type samplingData struct {
 	name         string
 	cfg          *Config
 	span         *span
+	attributes   []core.KeyValue
+	links        []apitrace.Link
+	kind         apitrace.SpanKind
 }
 
-func makeSamplingDecision(data samplingData) {
+func makeSamplingDecision(data samplingData) SamplingResult {
 	if data.noParent || data.remoteParent {
 		// If this span is the child of a local span and no
 		// Sampler is set in the options, keep the parent's
@@ -368,16 +386,25 @@ func makeSamplingDecision(data samplingData) {
 		//	sampler = o.Sampler
 		//}
 		spanContext := &data.span.spanContext
-		sampled := sampler(SamplingParameters{
+		sampled := sampler.ShouldSample(SamplingParameters{
 			ParentContext:   data.parent,
 			TraceID:         spanContext.TraceID,
 			SpanID:          spanContext.SpanID,
 			Name:            data.name,
-			HasRemoteParent: data.remoteParent}).Sample
-		if sampled {
+			HasRemoteParent: data.remoteParent,
+			Kind:            data.kind,
+			Attributes:      data.attributes,
+			Links:           data.links,
+		})
+		if sampled.Decision == RecordAndSampled {
 			spanContext.TraceFlags |= core.TraceFlagsSampled
 		} else {
 			spanContext.TraceFlags &^= core.TraceFlagsSampled
 		}
+		return sampled
 	}
+	if data.parent.TraceFlags&core.TraceFlagsSampled != 0 {
+		return SamplingResult{Decision: RecordAndSampled}
+	}
+	return SamplingResult{Decision: NotRecord}
 }

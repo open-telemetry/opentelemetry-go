@@ -58,7 +58,8 @@ type SpanData struct {
 	Attributes               []core.KeyValue
 	MessageEvents            []Event
 	Links                    []apitrace.Link
-	Status                   codes.Code
+	StatusCode               codes.Code
+	StatusMessage            string
 	HasRemoteParent          bool
 	DroppedAttributeCount    int
 	DroppedMessageEventCount int

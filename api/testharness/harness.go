@@ -323,7 +323,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.AddEventWithTimestamp(context.Background(), time.Now(), "test event")
 		},
 		"#SetStatus": func(span trace.Span) {
-			span.SetStatus(codes.Internal)
+			span.SetStatus(codes.Internal, "internal")
 		},
 		"#SetName": func(span trace.Span) {
 			span.SetName("new name")

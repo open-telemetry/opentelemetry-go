@@ -17,11 +17,10 @@ Package metric implements the OpenTelemetry metric.Meter API.  The SDK
 supports configurable metrics export behavior through a collection of
 export interfaces that support various export strategies, described below.
 
-The metric.Meter API consists of methods for constructing each of the
-basic kinds of metric instrument.  There are eight types of instrument
-available to the end user, comprised of four basic kinds of metric
-instrument (Counter, Gauge, Measure, Observer) crossed with two kinds
-of number (int64, float64).
+The metric.Meter API consists of methods for constructing each of the basic
+kinds of metric instrument.  There are six types of instrument available to
+the end user, comprised of three basic kinds of metric instrument (Counter,
+Measure, Observer) crossed with two kinds of number (int64, float64).
 
 The API assists the SDK by consolidating the variety of metric instruments
 into a narrower interface, allowing the SDK to avoid repetition of
@@ -31,25 +30,25 @@ numerical value.
 
 To this end, the API uses a core.Number type to represent either an int64
 or a float64, depending on the instrument's definition.  A single
-implementation interface is used for counter, gauge and measure
-instruments, metric.InstrumentImpl, and a single implementation interface
-is used for their handles, metric.HandleImpl. For observers, the API
-defines interfaces, for which the SDK provides an implementation.
+implementation interface is used for counter and measure instruments,
+metric.InstrumentImpl, and a single implementation interface is used for
+their handles, metric.HandleImpl. For observers, the API defines
+interfaces, for which the SDK provides an implementation.
 
 There are four entry points for events in the Metrics API - three for
-synchronous instruments (counters, gauges and measures) and one for
-asynchronous instruments (observers). The entry points for synchronous
-instruments are: via instrument handles, via direct instrument calls, and
-via BatchRecord.  The SDK is designed with handles as the primary entry
-point, the other two entry points are implemented in terms of short-lived
-handles.  For example, the implementation of a direct call allocates a
-handle, operates on the handle, and releases the handle. Similarly, the
-implementation of RecordBatch uses a short-lived handle for each
-measurement in the batch.  The entry point for asynchronous instruments is
-via observer callbacks.  Observer callbacks behave like a set of instrument
-handles - one for each observation for a distinct label set.  The observer
-handles are alive as long as they are used.  If the callback stops
-reporting values for a certain label set, the associated handle is dropped.
+synchronous instruments (counters and measures) and one for asynchronous
+instruments (observers). The entry points for synchronous instruments are:
+via instrument handles, via direct instrument calls, and via BatchRecord.
+The SDK is designed with handles as the primary entry point, the other two
+entry points are implemented in terms of short-lived handles.  For example,
+the implementation of a direct call allocates a handle, operates on the
+handle, and releases the handle. Similarly, the implementation of
+RecordBatch uses a short-lived handle for each measurement in the batch.
+The entry point for asynchronous instruments is via observer callbacks.
+Observer callbacks behave like a set of instrument handles - one for each
+observation for a distinct label set.  The observer handles are alive as
+long as they are used.  If the callback stops reporting values for a
+certain label set, the associated handle is dropped.
 
 Internal Structure
 
@@ -98,22 +97,21 @@ enters the SDK resulting in a new record, and collection context,
 where a system-level thread performs a collection pass through the
 SDK.
 
-Descriptor is a struct that describes the metric instrument to the
-export pipeline, containing the name, recommended aggregation keys,
-units, description, metric kind (counter, gauge, or measure), number
-kind (int64 or float64), and whether the instrument has alternate
-semantics or not (i.e., monotonic=false counter, monotonic=true gauge,
-absolute=false measure).  A Descriptor accompanies metric data as it
-passes through the export pipeline.
+Descriptor is a struct that describes the metric instrument to the export
+pipeline, containing the name, recommended aggregation keys, units,
+description, metric kind (counter or measure), number kind (int64 or
+float64), and whether the instrument has alternate semantics or not (i.e.,
+monotonic=false counter, absolute=false measure).  A Descriptor accompanies
+metric data as it passes through the export pipeline.
 
 The AggregationSelector interface supports choosing the method of
-aggregation to apply to a particular instrument.  Given the
-Descriptor, this AggregatorFor method returns an implementation of
-Aggregator.  If this interface returns nil, the metric will be
-disabled.  The aggregator should be matched to the capabilities of the
-exporter.  Selecting the aggregator for counter and gauge instruments
-is relatively straightforward, but for measure instruments there are
-numerous choices with different cost and quality tradeoffs.
+aggregation to apply to a particular instrument.  Given the Descriptor,
+this AggregatorFor method returns an implementation of Aggregator.  If this
+interface returns nil, the metric will be disabled.  The aggregator should
+be matched to the capabilities of the exporter.  Selecting the aggregator
+for counter instruments is relatively straightforward, but for measure and
+observer instruments there are numerous choices with different cost and
+quality tradeoffs.
 
 Aggregator is an interface which implements a concrete strategy for
 aggregating metric updates.  Several Aggregator implementations are
