@@ -30,11 +30,11 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
 
 	counter := export.NewDescriptor(
-		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, false)
+		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind)
 	lastValue := export.NewDescriptor(
-		"lastvalue", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
+		"lastvalue", export.ObserverKind, nil, "", "", core.Float64NumberKind)
 	measure := export.NewDescriptor(
-		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind)
 
 	labels := []core.KeyValue{
 		key.New("A").String("B"),
