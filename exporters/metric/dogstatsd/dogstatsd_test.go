@@ -44,7 +44,7 @@ func TestDogstatsLabels(t *testing.T) {
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet(encoder)
 
-			desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
+			desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind)
 			cagg := counter.New()
 			_ = cagg.Update(ctx, core.NewInt64Number(123), desc)
 			cagg.Checkpoint(ctx, desc)

@@ -309,7 +309,6 @@ type Descriptor struct {
 	description string
 	unit        unit.Unit
 	numberKind  core.NumberKind
-	alternate   bool
 }
 
 // NewDescriptor builds a new descriptor, for use by `Meter`
@@ -325,7 +324,6 @@ func NewDescriptor(
 	description string,
 	unit unit.Unit,
 	numberKind core.NumberKind,
-	alternate bool,
 ) *Descriptor {
 	return &Descriptor{
 		name:        name,
@@ -334,7 +332,6 @@ func NewDescriptor(
 		description: description,
 		unit:        unit,
 		numberKind:  numberKind,
-		alternate:   alternate,
 	}
 }
 
@@ -372,17 +369,4 @@ func (d *Descriptor) Unit() unit.Unit {
 // or a float64 values.
 func (d *Descriptor) NumberKind() core.NumberKind {
 	return d.numberKind
-}
-
-// Alternate returns true when the non-default behavior of the
-// instrument was selected.  It returns true if:
-//
-//   - A counter instrument is non-monotonic
-//   - A measure instrument is non-absolute
-//   - An observer instrument is monotonic
-//
-// TODO: Consider renaming this method, or expanding to provide
-// kind-specific tests (e.g., Monotonic(), Absolute()).
-func (d *Descriptor) Alternate() bool {
-	return d.alternate
 }

@@ -55,7 +55,7 @@ func TestLastValueUpdate(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
+		record := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind)
 
 		var last core.Number
 		for i := 0; i < count; i++ {
@@ -79,7 +79,7 @@ func TestLastValueMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.ObserverKind, profile.NumberKind)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -107,7 +107,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := test.NewAggregatorTest(export.ObserverKind, core.Int64NumberKind, true)
+	descriptor := test.NewAggregatorTest(export.ObserverKind, core.Int64NumberKind)
 
 	g := New()
 	g.Checkpoint(context.Background(), descriptor)

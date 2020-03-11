@@ -55,7 +55,7 @@ func TestCounterMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -78,7 +78,7 @@ func TestCounterMonotonicNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		for i := 0; i < count; i++ {
 			test.CheckedUpdate(t, agg, profile.Random(-1), descriptor)
@@ -100,7 +100,7 @@ func TestCounterNonMonotonic(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -127,7 +127,7 @@ func TestCounterMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {

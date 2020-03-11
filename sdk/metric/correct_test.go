@@ -84,7 +84,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := Must(sdk).NewInt64Counter("name.counter", metric.WithMonotonic(true))
+	counter := Must(sdk).NewInt64Counter("name.counter")
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -118,10 +118,10 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(sdk).NewFloat64Measure("name.measure", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.measure")
 
-	measure.Record(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	measure.Record(ctx, math.NaN(), sdk.Labels())
+	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
@@ -149,7 +149,7 @@ func TestDisabledInstrument(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := Must(sdk).NewFloat64Measure("name.disabled", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.disabled")
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)

@@ -278,7 +278,7 @@ func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
 	return &meterWithConstructorError{m.Provider.Meter(name)}
 }
 
-func (m *meterWithConstructorError) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) (metric.Int64Counter, error) {
+func (m *meterWithConstructorError) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
 	return metric.Int64Counter{}, errors.New("constructor error")
 }
 

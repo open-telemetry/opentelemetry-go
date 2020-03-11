@@ -124,13 +124,13 @@ timer.B.D:%s|ms
 
 					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 					cdesc := export.NewDescriptor(
-						"counter", export.CounterKind, nil, "", "", nkind, false)
+						"counter", export.CounterKind, nil, "", "", nkind)
 					gdesc := export.NewDescriptor(
-						"observer", export.ObserverKind, nil, "", "", nkind, false)
+						"observer", export.ObserverKind, nil, "", "", nkind)
 					mdesc := export.NewDescriptor(
-						"measure", export.MeasureKind, nil, "", "", nkind, false)
+						"measure", export.MeasureKind, nil, "", "", nkind)
 					tdesc := export.NewDescriptor(
-						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind, false)
+						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind)
 
 					labels := []core.KeyValue{
 						key.New("A").String("B"),
@@ -285,7 +285,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
+			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind)
 
 			var expected []string
 
