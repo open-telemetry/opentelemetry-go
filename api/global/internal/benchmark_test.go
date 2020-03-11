@@ -72,7 +72,7 @@ func (fix *benchFixture) Meter(name string) metric.Meter {
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 	ctx := context.Background()
-	sdk := global.MeterProvider().Meter("test")
+	sdk := global.Meter("test")
 	labs := sdk.Labels(key.String("A", "B"))
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
@@ -88,7 +88,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 
-	sdk := global.MeterProvider().Meter("test")
+	sdk := global.Meter("test")
 
 	global.SetMeterProvider(fix)
 
@@ -105,7 +105,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 func BenchmarkStartEndSpan(b *testing.B) {
 	// Comapare with BenchmarkStartEndSpan() in ../../sdk/trace/benchmark_test.go
 	traceBenchmark(b, func(b *testing.B) {
-		t := global.TraceProvider().Tracer("Benchmark StartEndSpan")
+		t := global.Tracer("Benchmark StartEndSpan")
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

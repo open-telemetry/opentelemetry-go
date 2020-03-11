@@ -53,7 +53,7 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 		activeHooks: make(map[string]trace.Span),
 	}
 
-	ct.tr = global.TraceProvider().Tracer("go.opentelemetry.io/otel/plugin/httptrace")
+	ct.tr = global.Tracer("go.opentelemetry.io/otel/plugin/httptrace")
 
 	return &httptrace.ClientTrace{
 		GetConn:              ct.getConn,

@@ -128,7 +128,7 @@ func WithMessageEvents(events ...event) Option {
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{handler: handler, operation: operation}
 	defaultOpts := []Option{
-		WithTracer(global.TraceProvider().Tracer("go.opentelemetry.io/plugin/othttp")),
+		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
 		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}

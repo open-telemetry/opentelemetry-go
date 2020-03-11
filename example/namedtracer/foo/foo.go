@@ -32,7 +32,7 @@ func SubOperation(ctx context.Context) error {
 
 	// Using global provider. Alternative is to have application provide a getter
 	// for its component to get the instance of the provider.
-	tr := global.TraceProvider().Tracer("example/namedtracer/foo")
+	tr := global.Tracer("example/namedtracer/foo")
 	return tr.WithSpan(
 		ctx,
 		"Sub operation...",
