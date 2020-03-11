@@ -65,20 +65,6 @@ func TestOptions(t *testing.T) {
 			unit: "",
 		},
 		{
-			name: "keys overwrite",
-			opts: []metric.Option{
-				metric.WithKeys(key.New("foo"), key.New("hoho")),
-				metric.WithKeys(key.New("bar"), key.New("yaya")),
-				metric.WithKeys(key.New("foo"), key.New("lala")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("lala"),
-				key.New("bar"), key.New("yaya"),
-			},
-			desc: "",
-			unit: "",
-		},
-		{
 			name: "description",
 			opts: []metric.Option{
 				metric.WithDescription("stuff"),

@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 type (
@@ -43,14 +43,14 @@ type (
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = export.NewDescriptor(
-		"lastvalue.a", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		"lastvalue.a", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind)
 	LastValueBDesc = export.NewDescriptor(
-		"lastvalue.b", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, false)
+		"lastvalue.b", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = export.NewDescriptor(
-		"counter.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+		"sum.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind)
 	CounterBDesc = export.NewDescriptor(
-		"counter.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, false)
+		"sum.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
@@ -69,7 +69,7 @@ var (
 )
 
 // NewAggregationSelector returns a policy that is consistent with the
-// test descriptors above.  I.e., it returns counter.New() for counter
+// test descriptors above.  I.e., it returns sum.New() for counter
 // instruments and lastvalue.New for lastValue instruments.
 func NewAggregationSelector() export.AggregationSelector {
 	return &testAggregationSelector{}
@@ -78,7 +78,7 @@ func NewAggregationSelector() export.AggregationSelector {
 func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Aggregator {
 	switch desc.MetricKind() {
 	case export.CounterKind:
-		return counter.New()
+		return sum.New()
 	case export.ObserverKind:
 		return lastvalue.New()
 	default:
@@ -126,7 +126,7 @@ func NewCounterRecord(desc *export.Descriptor, labels export.Labels, value int64
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
 func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
-	cagg := counter.New()
+	cagg := sum.New()
 	_ = cagg.Update(ctx, core.NewInt64Number(v), desc)
 	cagg.Checkpoint(ctx, desc)
 	return cagg
@@ -139,7 +139,7 @@ func (o Output) AddTo(rec export.Record) {
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
 	var value int64
 	switch t := rec.Aggregator().(type) {
-	case *counter.Aggregator:
+	case *sum.Aggregator:
 		sum, _ := t.Sum()
 		value = sum.AsInt64()
 	case *lastvalue.Aggregator:

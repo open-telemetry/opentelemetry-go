@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 var Must = metric.Must
@@ -47,7 +47,7 @@ func (cb *correctnessBatcher) AggregatorFor(descriptor *export.Descriptor) expor
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, ".counter"):
-		return counter.New()
+		return sum.New()
 	case strings.HasSuffix(name, ".disabled"):
 		return nil
 	default:
@@ -169,7 +169,7 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	c := Must(sdk).NewFloat64Counter("counter.name")
+	c := Must(sdk).NewFloat64Counter("sum.name")
 
 	require.Nil(t, sdkErr)
 	c.Add(ctx, math.NaN(), sdk.Labels())

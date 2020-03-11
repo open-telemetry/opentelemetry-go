@@ -26,10 +26,10 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 type benchFixture struct {
@@ -52,7 +52,7 @@ func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, "counter"):
-		return counter.New()
+		return sum.New()
 	case strings.HasSuffix(name, "lastvalue"):
 		return lastvalue.New()
 	default:

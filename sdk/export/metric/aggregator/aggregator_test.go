@@ -24,15 +24,15 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
-	err := aggregator.NewInconsistentMergeError(counter.New(), lastvalue.New())
+	err := aggregator.NewInconsistentMergeError(sum.New(), lastvalue.New())
 	require.Equal(
 		t,
-		"cannot merge *counter.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
+		"cannot merge *sum.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
 		err.Error(),
 	)
 	require.True(t, errors.Is(err, aggregator.ErrInconsistentType))

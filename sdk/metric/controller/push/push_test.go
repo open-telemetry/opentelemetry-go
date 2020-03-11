@@ -30,7 +30,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
 
@@ -85,7 +85,7 @@ func newFixture(t *testing.T) testFixture {
 }
 
 func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
-	return counter.New()
+	return sum.New()
 }
 
 func (b *testBatcher) CheckpointSet() export.CheckpointSet {

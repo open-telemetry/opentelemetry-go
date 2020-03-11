@@ -18,10 +18,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -128,7 +128,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind)
-	cagg := counter.New()
+	cagg := sum.New()
 	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(123), desc)
 	cagg.Checkpoint(fix.ctx, desc)
 
@@ -271,7 +271,7 @@ func TestStdoutCounterWithUnspecifiedKeys(t *testing.T) {
 	keys := []core.Key{key.New("C"), key.New("D")}
 
 	desc := export.NewDescriptor("test.name", export.CounterKind, keys, "", "", core.Int64NumberKind)
-	cagg := counter.New()
+	cagg := sum.New()
 	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(10), desc)
 	cagg.Checkpoint(fix.ctx, desc)
 

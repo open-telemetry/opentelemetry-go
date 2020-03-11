@@ -174,5 +174,5 @@ func WithKeys(keys ...core.Key) Option {
 type keysOption []core.Key
 
 func (k keysOption) Apply(config *Config) {
-	config.Keys = []core.Key(k)
+	config.Keys = append(config.Keys, k...)
 }

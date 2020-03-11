@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -41,7 +41,7 @@ func newFixture(b *testing.B) *benchFixture {
 func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
-		return counter.New()
+		return sum.New()
 	case export.MeasureKind:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
