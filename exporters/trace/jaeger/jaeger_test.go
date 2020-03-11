@@ -158,7 +158,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.NoError(t, err)
 
 	global.SetTraceProvider(tp)
-	_, span := global.TraceProvider().Tracer("test-tracer").Start(context.Background(), "test-span")
+	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())
