@@ -1,0 +1,237 @@
+package zipkin
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
+
+	zkmodel "github.com/openzipkin/zipkin-go/model"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
+	export "go.opentelemetry.io/otel/sdk/export/trace"
+)
+
+type mockZipkinCollector struct {
+	t       *testing.T
+	url     string
+	closing bool
+	server  *http.Server
+	wg      *sync.WaitGroup
+
+	lock   sync.RWMutex
+	models []zkmodel.SpanModel
+}
+
+func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
+	collector := &mockZipkinCollector{
+		t:       t,
+		closing: false,
+	}
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	collector.url = fmt.Sprintf("http://%s", listener.Addr().String())
+	server := &http.Server{
+		Handler: http.HandlerFunc(collector.handler),
+	}
+	collector.server = server
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	collector.wg = wg
+	go func() {
+		err := server.Serve(listener)
+		require.True(t, collector.closing)
+		require.Equal(t, http.ErrServerClosed, err)
+		wg.Done()
+	}()
+
+	return collector
+}
+
+func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
+	jsonBytes, err := ioutil.ReadAll(r.Body)
+	require.NoError(c.t, err)
+	var models []zkmodel.SpanModel
+	err = json.Unmarshal(jsonBytes, &models)
+	require.NoError(c.t, err)
+	// for some reason we may get the nonUTC timestamps in models,
+	// fix that
+	for midx := range models {
+		models[midx].Timestamp = models[midx].Timestamp.UTC()
+		for aidx := range models[midx].Annotations {
+			models[midx].Annotations[aidx].Timestamp = models[midx].Annotations[aidx].Timestamp.UTC()
+		}
+	}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.models = append(c.models, models...)
+}
+
+func (c *mockZipkinCollector) Close() {
+	if c.closing {
+		return
+	}
+	c.closing = true
+	server := c.server
+	c.server = nil
+	require.NoError(c.t, server.Shutdown(context.Background()))
+	c.wg.Wait()
+}
+
+func (c *mockZipkinCollector) ModelsLen() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return len(c.models)
+}
+
+func (c *mockZipkinCollector) StealModels() []zkmodel.SpanModel {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	models := c.models
+	c.models = nil
+	return models
+}
+
+type logStore struct {
+	T        *testing.T
+	Messages []string
+}
+
+func (s *logStore) Write(p []byte) (n int, err error) {
+	msg := (string)(p)
+	if s.T != nil {
+		s.T.Logf("%s", msg)
+	}
+	s.Messages = append(s.Messages, msg)
+	return len(p), nil
+}
+
+func logStoreLogger(s *logStore) *log.Logger {
+	return log.New(s, "", 0)
+}
+
+func TestExportSpans(t *testing.T) {
+	spans := []*export.SpanData{
+		// parent
+		{
+			SpanContext: core.SpanContext{
+				TraceID: core.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  core.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			},
+			ParentSpanID:  core.SpanID{},
+			SpanKind:      trace.SpanKindServer,
+			Name:          "foo",
+			StartTime:     time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:       time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes:    nil,
+			MessageEvents: nil,
+			StatusCode:    codes.NotFound,
+			StatusMessage: "404, file not found",
+		},
+		// child
+		{
+			SpanContext: core.SpanContext{
+				TraceID: core.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  core.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
+			},
+			ParentSpanID:  core.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			SpanKind:      trace.SpanKindServer,
+			Name:          "bar",
+			StartTime:     time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
+			EndTime:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+			Attributes:    nil,
+			MessageEvents: nil,
+			StatusCode:    codes.PermissionDenied,
+			StatusMessage: "403, forbidden",
+		},
+	}
+	models := []zkmodel.SpanModel{
+		// model of parent
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xfffefdfcfbfaf9f8),
+				ParentID: nil,
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:           "foo",
+			Kind:           "SERVER",
+			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:       time.Minute,
+			Shared:         false,
+			LocalEndpoint:  nil,
+			RemoteEndpoint: nil,
+			Annotations:    nil,
+			Tags: map[string]string{
+				"ot.status_code":        "NotFound",
+				"ot.status_description": "404, file not found",
+			},
+		},
+		// model of child
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xdfdedddcdbdad9d8),
+				ParentID: zkmodelIDPtr(0xfffefdfcfbfaf9f8),
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:           "bar",
+			Kind:           "SERVER",
+			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
+			Duration:       30 * time.Second,
+			Shared:         false,
+			LocalEndpoint:  nil,
+			RemoteEndpoint: nil,
+			Annotations:    nil,
+			Tags: map[string]string{
+				"ot.status_code":        "PermissionDenied",
+				"ot.status_description": "403, forbidden",
+			},
+		},
+	}
+	require.Len(t, models, len(spans))
+	collector := startMockZipkinCollector(t)
+	defer collector.Close()
+	ls := &logStore{T: t}
+	logger := logStoreLogger(ls)
+	exporter, err := NewExporter(collector.url, WithLogger(logger))
+	require.NoError(t, err)
+	ctx := context.Background()
+	require.Len(t, ls.Messages, 0)
+	exporter.ExportSpans(ctx, spans[0:1])
+	require.Len(t, ls.Messages, 2)
+	require.Contains(t, ls.Messages[0], "send a POST request")
+	require.Contains(t, ls.Messages[1], "zipkin responded")
+	ls.Messages = nil
+	exporter.ExportSpans(ctx, nil)
+	require.Len(t, ls.Messages, 1)
+	require.Contains(t, ls.Messages[0], "no spans to export")
+	ls.Messages = nil
+	exporter.ExportSpans(ctx, spans[1:2])
+	require.Contains(t, ls.Messages[0], "send a POST request")
+	require.Contains(t, ls.Messages[1], "zipkin responded")
+	checkFunc := func() bool {
+		return collector.ModelsLen() == len(models)
+	}
+	require.Eventually(t, checkFunc, time.Second, 10*time.Millisecond)
+	require.Equal(t, models, collector.StealModels())
+}
