@@ -51,21 +51,6 @@ type BoundInstrumentImpl interface {
 	Unbind()
 }
 
-// MeasureConstructorsMustImpl adds support for the
-// MeasureConstructorsMust interface to a Meter implementation.
-type MeasureConstructorsMustImpl struct {
-	ctors MeasureConstructors
-}
-
-// ObserverConstructorsMustImpl adds support for the
-// ObserverConstructorsMust interface to a Meter implementation.
-type ObserverConstructorsMustImpl struct {
-	ctors ObserverConstructors
-}
-
-var _ MeasureConstructorsMust = MeasureConstructorsMustImpl{}
-var _ ObserverConstructorsMust = ObserverConstructorsMustImpl{}
-
 // WrapInt64CounterInstrument wraps the instrument in the type-safe
 // wrapper as an integral counter.
 //
@@ -123,73 +108,5 @@ func ApplyMeasureOptions(opts *Options, mos ...MeasureOptionApplier) {
 func ApplyObserverOptions(opts *Options, mos ...ObserverOptionApplier) {
 	for _, o := range mos {
 		o.ApplyObserverOption(opts)
-	}
-}
-
-// MakeMeasureConstructorsMust adds support for
-// MeasureConstructorsMust to a Meter.
-func MakeMeasureConstructorsMust(ctors MeasureConstructors) MeasureConstructorsMustImpl {
-	return MeasureConstructorsMustImpl{
-		ctors: ctors,
-	}
-}
-
-// MakeObserverConstructorsMust adds support for
-// ObserverConstructorsMust to a Meter.
-func MakeObserverConstructorsMust(ctors ObserverConstructors) ObserverConstructorsMustImpl {
-	return ObserverConstructorsMustImpl{
-		ctors: ctors,
-	}
-}
-
-// MeasureConstructorsMustImpl
-
-func (mm MeasureConstructorsMustImpl) MustNewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
-	if inst, err := mm.ctors.NewInt64Counter(name, cos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (mm MeasureConstructorsMustImpl) MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
-	if inst, err := mm.ctors.NewFloat64Counter(name, cos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (mm MeasureConstructorsMustImpl) MustNewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
-	if inst, err := mm.ctors.NewInt64Measure(name, mos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (mm MeasureConstructorsMustImpl) MustNewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
-	if inst, err := mm.ctors.NewFloat64Measure(name, mos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-// ObserverConstructorsMustImpl
-
-func (om ObserverConstructorsMustImpl) MustRegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
-	if inst, err := om.ctors.RegisterInt64Observer(name, callback, oos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (om ObserverConstructorsMustImpl) MustRegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
-	if inst, err := om.ctors.RegisterFloat64Observer(name, callback, oos...); err != nil {
-		panic(err)
-	} else {
-		return inst
 	}
 }

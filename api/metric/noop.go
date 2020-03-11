@@ -10,15 +10,11 @@ type NoopProvider struct{}
 
 type NoopMeter struct {
 	NoopMeasureConstructors
-	NoopMeasureConstructorsMust
 	NoopObserverConstructors
-	NoopObserverConstructorsMust
 }
 
 type NoopMeasureConstructors struct{}
-type NoopMeasureConstructorsMust struct{}
 type NoopObserverConstructors struct{}
-type NoopObserverConstructorsMust struct{}
 
 type noopBoundInstrument struct{}
 type noopLabelSet struct{}
@@ -30,9 +26,7 @@ var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
 
 var _ MeasureConstructors = NoopMeasureConstructors{}
-var _ MeasureConstructorsMust = NoopMeasureConstructorsMust{}
 var _ ObserverConstructors = NoopObserverConstructors{}
-var _ ObserverConstructorsMust = NoopObserverConstructorsMust{}
 
 var _ InstrumentImpl = noopInstrument{}
 var _ BoundInstrumentImpl = noopBoundInstrument{}
@@ -92,28 +86,6 @@ func (NoopMeasureConstructors) NewFloat64Measure(name string, mos ...MeasureOpti
 	return WrapFloat64MeasureInstrument(noopInstrument{}, nil)
 }
 
-// MeasureConstructorsMust
-
-func (NoopMeasureConstructorsMust) MustNewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
-	inst, _ := WrapInt64CounterInstrument(noopInstrument{}, nil)
-	return inst
-}
-
-func (NoopMeasureConstructorsMust) MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
-	inst, _ := WrapFloat64CounterInstrument(noopInstrument{}, nil)
-	return inst
-}
-
-func (NoopMeasureConstructorsMust) MustNewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
-	inst, _ := WrapInt64MeasureInstrument(noopInstrument{}, nil)
-	return inst
-}
-
-func (NoopMeasureConstructorsMust) MustNewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
-	inst, _ := WrapFloat64MeasureInstrument(noopInstrument{}, nil)
-	return inst
-}
-
 // ObserverConstructors
 
 func (NoopObserverConstructors) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) (Int64Observer, error) {
@@ -122,14 +94,4 @@ func (NoopObserverConstructors) RegisterInt64Observer(name string, callback Int6
 
 func (NoopObserverConstructors) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) (Float64Observer, error) {
 	return noopFloat64Observer{}, nil
-}
-
-// ObserverConstructorsMust
-
-func (NoopObserverConstructorsMust) MustRegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
-	return noopInt64Observer{}
-}
-
-func (NoopObserverConstructorsMust) MustRegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
-	return noopFloat64Observer{}
 }

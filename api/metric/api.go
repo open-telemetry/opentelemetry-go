@@ -104,15 +104,6 @@ func (m Measurement) Number() core.Number {
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	MeterWithoutMust
-
-	MeasureConstructorsMust
-	ObserverConstructorsMust
-}
-
-// MeterWithoutMust is a partial Meter interface that does not support
-// the `Must*` instrument constructors.
-type MeterWithoutMust interface {
 	MeterMethods
 
 	MeasureConstructors
@@ -167,40 +158,6 @@ type ObserverConstructors interface {
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) (Float64Observer, error)
-}
-
-// MeasureConstructorsMust is a Meter sub-interface containing a
-// `MustNew` method for every supported Measure instrument.  These
-// synchronous instrument constructors panic instead of returning an
-// error, as the corresponding `New` method would do.
-type MeasureConstructorsMust interface {
-	// MustNewInt64Counter creates a new integral counter with a given
-	// name and customized with passed options.
-	MustNewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
-	// MustNewFloat64Counter creates a new floating point counter with
-	// a given name and customized with passed options.
-	MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
-	// MustNewInt64Measure creates a new integral measure with a given
-	// name and customized with passed options.
-	MustNewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
-	// MustNewFloat64Measure creates a new floating point measure with
-	// a given name and customized with passed options.
-	MustNewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
-}
-
-// MeasureConstructorsMust is a Meter sub-interface containing a
-// `MustRegister` method for every supported Measure instrument.  These
-// synchronous instrument constructors panic instead of returning an
-// error, as the corresponding `Register` method would do.
-type ObserverConstructorsMust interface {
-	// MustRegisterInt64Observer creates a new integral observer with a
-	// given name, running a given callback, and customized with passed
-	// options. Callback can be nil.
-	MustRegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
-	// MustRegisterFloat64Observer creates a new floating point observer
-	// with a given name, running a given callback, and customized with
-	// passed options. Callback can be nil.
-	MustRegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
 }
 
 // Int64ObserverResult is an interface for reporting integral

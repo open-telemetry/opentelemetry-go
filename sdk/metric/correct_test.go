@@ -33,6 +33,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 )
 
+var Must = metric.Must
+
 type correctnessBatcher struct {
 	t       *testing.T
 	agg     export.Aggregator
@@ -76,7 +78,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := sdk.MustNewInt64Counter("counter.name", metric.WithMonotonic(true))
+	counter := Must(sdk).NewInt64Counter("counter.name", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -111,7 +113,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := sdk.MustNewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -140,7 +142,7 @@ func TestDisabledInstrument(t *testing.T) {
 		agg: nil,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := sdk.MustNewFloat64Measure("measure.name", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("measure.name", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
@@ -160,7 +162,7 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	c := sdk.MustNewFloat64Counter("counter.name")
+	c := Must(sdk).NewFloat64Counter("counter.name")
 
 	require.Nil(t, sdkErr)
 	c.Add(ctx, math.NaN(), sdk.Labels())
@@ -176,7 +178,7 @@ func TestSDKLabelEncoder(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, testLabelEncoder{})
 
-	measure := sdk.MustNewFloat64Measure("measure")
+	measure := Must(sdk).NewFloat64Measure("measure")
 	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
 
 	sdk.Collect(ctx)

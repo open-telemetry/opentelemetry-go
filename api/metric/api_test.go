@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var Must = metric.Must
+
 func TestCounterOptions(t *testing.T) {
 	type testcase struct {
 		name string
@@ -373,7 +375,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.MustNewFloat64Counter("test.counter.float")
+		c := metric.Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -385,7 +387,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.MustNewInt64Counter("test.counter.int")
+		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -400,7 +402,7 @@ func TestCounter(t *testing.T) {
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.MustNewFloat64Measure("test.measure.float")
+		m := Must(meter).NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -412,7 +414,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.MustNewInt64Measure("test.measure.int")
+		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -428,7 +430,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.MustRegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing float observer")
@@ -438,7 +440,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.MustRegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")

@@ -65,9 +65,6 @@ type (
 
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
-
-		api.MeasureConstructorsMustImpl
-		api.ObserverConstructorsMustImpl
 	}
 
 	instrument struct {
@@ -329,8 +326,6 @@ func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
 		errorHandler: DefaultErrorHandler,
 	}
 	m.empty.meter = m
-	m.MeasureConstructorsMustImpl = api.MakeMeasureConstructorsMust(m)
-	m.ObserverConstructorsMustImpl = api.MakeObserverConstructorsMust(m)
 	return m
 }
 

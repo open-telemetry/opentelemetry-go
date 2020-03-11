@@ -58,9 +58,6 @@ type (
 		// observers. Check the Dead field of the Observer to
 		// figure out its status.
 		Observers []*Observer
-
-		apimetric.MeasureConstructorsMustImpl
-		apimetric.ObserverConstructorsMustImpl
 	}
 
 	Kind int8
@@ -97,7 +94,7 @@ var (
 	_ apimetric.InstrumentImpl        = &Instrument{}
 	_ apimetric.BoundInstrumentImpl   = &Handle{}
 	_ apimetric.LabelSet              = &LabelSet{}
-	_ apimetric.MeterWithoutMust      = &Meter{}
+	_ apimetric.Meter                 = &Meter{}
 	_ apimetric.Int64Observer         = &Observer{}
 	_ apimetric.Float64Observer       = &Observer{}
 	_ apimetric.Int64ObserverResult   = int64ObserverResult{}
@@ -176,10 +173,7 @@ func (p *MeterProvider) Meter(name string) apimetric.Meter {
 }
 
 func NewMeter() *Meter {
-	meter := &Meter{}
-	meter.MeasureConstructorsMustImpl = apimetric.MakeMeasureConstructorsMust(meter)
-	meter.ObserverConstructorsMustImpl = apimetric.MakeObserverConstructorsMust(meter)
-	return meter
+	return &Meter{}
 }
 
 func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {

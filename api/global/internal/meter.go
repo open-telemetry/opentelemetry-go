@@ -60,9 +60,6 @@ type meter struct {
 	// observers. The liveObservers map should be consulted to
 	// check if the observer is registered or not.
 	orderedObservers []*obsImpl
-
-	metric.MeasureConstructorsMustImpl
-	metric.ObserverConstructorsMustImpl
 }
 
 type instImpl struct {
@@ -157,8 +154,6 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 		provider: p,
 		name:     name,
 	}
-	m.MeasureConstructorsMustImpl = metric.MakeMeasureConstructorsMust(m)
-	m.ObserverConstructorsMustImpl = metric.MakeObserverConstructorsMust(m)
 	p.meters = append(p.meters, m)
 	return m
 }

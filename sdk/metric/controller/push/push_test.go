@@ -25,6 +25,7 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -171,14 +172,14 @@ func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(fix.batcher, fix.exporter, time.Second)
-	meter := p.Meter("name")
+	meter := metric.Must(p.Meter("name"))
 
 	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
 
 	ctx := context.Background()
 
-	counter := meter.MustNewInt64Counter("counter")
+	counter := meter.NewInt64Counter("counter")
 
 	p.Start()
 
