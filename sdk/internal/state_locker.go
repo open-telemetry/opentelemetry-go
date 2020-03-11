@@ -24,6 +24,9 @@ import (
 // and a global lock for switching between states. At every time, only one state is active and one cold state.
 // States are represented by int numbers 0 and 1.
 //
+// This was inspired by the algorithm used on the prometheus client library that can be found at:
+// https://github.com/prometheus/client_golang/blob/e7776d2c54305c1b62fdb113b5a7e9b944c5c27e/prometheus/histogram.go#L227
+//
 // To execute operations within the same state, call `Start()` before the operation and call `End(idx)`
 // to end this operation. The `idx` argument of `End()` is the index of the active state when the operation
 // started and it is returned by the `Start()` method. It is recommended to defer the call to `End(idx)`.
@@ -71,10 +74,10 @@ func (c *StateLocker) ColdIdx() int {
 
 // SwapActiveState swaps the cold and active states.
 //
-// This will wait all in-flight operations that are happening to the current
+// This will wait all for in-flight operations that are happening to the current
 // active state to end, this ensure that all access to this state will be consistent.
 //
-// This is a synchronized by a mutex.
+// This is synchronized by a mutex.
 func (c *StateLocker) SwapActiveState(beforeFn func()) {
 	c.Lock()
 	defer c.Unlock()
@@ -88,15 +91,15 @@ func (c *StateLocker) SwapActiveState(beforeFn func()) {
 	// without touching the count bits.
 	n := atomic.AddUint64(&c.countsAndActiveIdx, 1<<63)
 
-	// count represents how many operations has started *before* the state change.
+	// count represents how many operations have started *before* the state change.
 	count := n & ((1 << 63) - 1)
 
 	activeFinishedOperations := &c.finishedOperations[n>>63]
-	// coldFinishedOperations are the number of operations that has *ended* on the previous state.
+	// coldFinishedOperations are the number of operations that have *ended* on the previous state.
 	coldFinishedOperations := &c.finishedOperations[(^n)>>63]
 
 	// Await all cold writers to finish writing, when coldFinishedOperations == count, all in-flight operations
-	// has finished and we can cleanly end the state change.
+	// have finished and we can cleanly end the state change.
 	for count != atomic.LoadUint64(coldFinishedOperations) {
 		runtime.Gosched() // Let observations get work done.
 	}

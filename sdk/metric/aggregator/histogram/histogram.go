@@ -167,7 +167,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 	return nil
 }
 
-// Merge combines two data sets into one.
+// Merge combines two histograms that have the same buckets into a single one.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
@@ -180,7 +180,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 	defer c.lock.Unlock()
 
 	current := c.checkpoint()
-	// We assume that the aggregator being merged is not being updated nor checkpoint or this could be inconsistent.
+	// We assume that the aggregator being merged is not being updated nor checkpointed or this could be inconsistent.
 	ocheckpoint := o.checkpoint()
 
 	current.sum.AddNumber(desc.NumberKind(), ocheckpoint.sum)
