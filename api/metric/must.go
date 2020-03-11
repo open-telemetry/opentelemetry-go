@@ -15,9 +15,7 @@
 package metric
 
 // MeterMust is a wrapper for Meter interfaces that panics when any
-// instrument constructor encounters an error.  It implements the
-// `MeterMethods` interface but the signature of the constructors is
-// different.
+// instrument constructor encounters an error.
 type MeterMust struct {
 	meter Meter
 }
