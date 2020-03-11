@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -82,12 +82,12 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	ctx := context.Background()
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Int64NumberKind, false)
-	gagg := gauge.New()
-	aggtest.CheckedUpdate(t, gagg, core.NewInt64Number(321), desc)
-	gagg.Checkpoint(ctx, desc)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Int64NumberKind, false)
+	lvagg := lastvalue.New()
+	aggtest.CheckedUpdate(t, lvagg, core.NewInt64Number(321), desc)
+	lvagg.Checkpoint(ctx, desc)
 
-	checkpointSet.Add(desc, gagg)
+	checkpointSet.Add(desc, lvagg)
 
 	if err := exporter.Export(ctx, checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
@@ -107,19 +107,19 @@ func TestStdoutTimestamp(t *testing.T) {
 		t.Fatal("JSON parse error: ", updateTS, ": ", err)
 	}
 
-	gaugeTS := printed["updates"].([]interface{})[0].(map[string]interface{})["time"].(string)
-	gaugeTimestamp, err := time.Parse(time.RFC3339Nano, gaugeTS)
+	lastValueTS := printed["updates"].([]interface{})[0].(map[string]interface{})["time"].(string)
+	lastValueTimestamp, err := time.Parse(time.RFC3339Nano, lastValueTS)
 	if err != nil {
-		t.Fatal("JSON parse error: ", gaugeTS, ": ", err)
+		t.Fatal("JSON parse error: ", lastValueTS, ": ", err)
 	}
 
 	require.True(t, updateTimestamp.After(before))
 	require.True(t, updateTimestamp.Before(after))
 
-	require.True(t, gaugeTimestamp.After(before))
-	require.True(t, gaugeTimestamp.Before(after))
+	require.True(t, lastValueTimestamp.After(before))
+	require.True(t, lastValueTimestamp.Before(after))
 
-	require.True(t, gaugeTimestamp.Before(updateTimestamp))
+	require.True(t, lastValueTimestamp.Before(updateTimestamp))
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
@@ -139,17 +139,17 @@ func TestStdoutCounterFormat(t *testing.T) {
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
 }
 
-func TestStdoutGaugeFormat(t *testing.T) {
+func TestStdoutLastValueFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
-	gagg := gauge.New()
-	aggtest.CheckedUpdate(fix.t, gagg, core.NewFloat64Number(123.456), desc)
-	gagg.Checkpoint(fix.ctx, desc)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
+	lvagg := lastvalue.New()
+	aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), desc)
+	lvagg.Checkpoint(fix.ctx, desc)
 
-	checkpointSet.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, lvagg, key.String("A", "B"), key.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -247,16 +247,16 @@ func TestStdoutEmptyDataSet(t *testing.T) {
 	}
 }
 
-func TestStdoutGaugeNotSet(t *testing.T) {
+func TestStdoutLastValueNotSet(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.GaugeKind, nil, "", "", core.Float64NumberKind, false)
-	gagg := gauge.New()
-	gagg.Checkpoint(fix.ctx, desc)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
+	lvagg := lastvalue.New()
+	lvagg.Checkpoint(fix.ctx, desc)
 
-	checkpointSet.Add(desc, gagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(desc, lvagg, key.String("A", "B"), key.String("C", "D"))
 
 	fix.Export(checkpointSet)
 

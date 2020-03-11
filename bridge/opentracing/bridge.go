@@ -28,16 +28,18 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	otelcore "go.opentelemetry.io/otel/api/core"
+	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
+	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkey "go.opentelemetry.io/otel/api/key"
+	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
-	// TODO: have a look at the java implementation of the shim to
-	// see what do they do with the baggage items
-	baggageItems    map[string]string
+	baggageItems    otelcorrelation.Map
 	otelSpanContext otelcore.SpanContext
 }
 
@@ -45,7 +47,7 @@ var _ ot.SpanContext = &bridgeSpanContext{}
 
 func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
 	bCtx := &bridgeSpanContext{
-		baggageItems:    nil,
+		baggageItems:    otelcorrelation.NewEmptyMap(),
 		otelSpanContext: otelSpanContext,
 	}
 	if parentOtSpanContext != nil {
@@ -58,34 +60,41 @@ func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanCont
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for k, v := range c.baggageItems {
-		if !handler(k, v) {
-			break
-		}
-	}
+	c.baggageItems.Foreach(func(kv otelcore.KeyValue) bool {
+		return handler(string(kv.Key), kv.Value.Emit())
+	})
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
-	if c.baggageItems == nil {
-		c.baggageItems = make(map[string]string)
-	}
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems[crk] = value
+	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelkey.New(crk).String(value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	return c.baggageItems[crk]
+	val, _ := c.baggageItems.Value(otelkey.New(crk))
+	return val.Emit()
 }
 
 type bridgeSpan struct {
-	otelSpan      oteltrace.Span
-	ctx           *bridgeSpanContext
-	tracer        *BridgeTracer
-	skipDeferHook bool
+	otelSpan          oteltrace.Span
+	ctx               *bridgeSpanContext
+	tracer            *BridgeTracer
+	skipDeferHook     bool
+	extraBaggageItems map[string]string
 }
 
 var _ ot.Span = &bridgeSpan{}
+
+func newBridgeSpan(otelSpan oteltrace.Span, bridgeSC *bridgeSpanContext, tracer *BridgeTracer) *bridgeSpan {
+	return &bridgeSpan{
+		otelSpan:          otelSpan,
+		ctx:               bridgeSC,
+		tracer:            tracer,
+		skipDeferHook:     false,
+		extraBaggageItems: nil,
+	}
+}
 
 func (s *bridgeSpan) Finish() {
 	s.otelSpan.End()
@@ -208,8 +217,20 @@ func (s *bridgeSpan) LogKV(alternatingKeyValues ...interface{}) {
 }
 
 func (s *bridgeSpan) SetBaggageItem(restrictedKey, value string) ot.Span {
-	s.ctx.setBaggageItem(restrictedKey, value)
+	s.updateOtelContext(restrictedKey, value)
+	s.setBaggageItemOnly(restrictedKey, value)
 	return s
+}
+
+func (s *bridgeSpan) setBaggageItemOnly(restrictedKey, value string) {
+	s.ctx.setBaggageItem(restrictedKey, value)
+}
+
+func (s *bridgeSpan) updateOtelContext(restrictedKey, value string) {
+	if s.extraBaggageItems == nil {
+		s.extraBaggageItems = make(map[string]string)
+	}
+	s.extraBaggageItems[restrictedKey] = value
 }
 
 func (s *bridgeSpan) BaggageItem(restrictedKey string) string {
@@ -266,6 +287,8 @@ type BridgeTracer struct {
 
 	warningHandler BridgeWarningHandler
 	warnOnce       sync.Once
+
+	propagators otelpropagation.Propagators
 }
 
 var _ ot.Tracer = &BridgeTracer{}
@@ -282,6 +305,7 @@ func NewBridgeTracer() *BridgeTracer {
 			otelTracer: oteltrace.NoopTracer{},
 		},
 		warningHandler: func(msg string) {},
+		propagators:    nil,
 	}
 }
 
@@ -297,6 +321,61 @@ func (t *BridgeTracer) SetWarningHandler(handler BridgeWarningHandler) {
 func (t *BridgeTracer) SetOpenTelemetryTracer(tracer oteltrace.Tracer) {
 	t.setTracer.otelTracer = tracer
 	t.setTracer.isSet = true
+}
+
+func (t *BridgeTracer) SetPropagators(propagators otelpropagation.Propagators) {
+	t.propagators = propagators
+}
+
+func (t *BridgeTracer) NewHookedContext(ctx context.Context) context.Context {
+	ctx = otelcorrelation.ContextWithSetHook(ctx, t.correlationSetHook)
+	ctx = otelcorrelation.ContextWithGetHook(ctx, t.correlationGetHook)
+	return ctx
+}
+
+func (t *BridgeTracer) correlationSetHook(ctx context.Context) context.Context {
+	span := ot.SpanFromContext(ctx)
+	if span == nil {
+		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTelemetry context\n")
+		return ctx
+	}
+	bSpan, ok := span.(*bridgeSpan)
+	if !ok {
+		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTelemetry context\n")
+		return ctx
+	}
+	// we clear the context only to avoid calling a get hook
+	// during MapFromContext, but otherwise we don't change the
+	// context, so we don't care about the old hooks.
+	clearCtx, _, _ := otelcorrelation.ContextWithNoHooks(ctx)
+	m := otelcorrelation.MapFromContext(clearCtx)
+	m.Foreach(func(kv otelcore.KeyValue) bool {
+		bSpan.setBaggageItemOnly(string(kv.Key), kv.Value.Emit())
+		return true
+	})
+	return ctx
+}
+
+func (t *BridgeTracer) correlationGetHook(ctx context.Context, m otelcorrelation.Map) otelcorrelation.Map {
+	span := ot.SpanFromContext(ctx)
+	if span == nil {
+		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTracing span context\n")
+		return m
+	}
+	bSpan, ok := span.(*bridgeSpan)
+	if !ok {
+		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span context\n")
+		return m
+	}
+	items := bSpan.extraBaggageItems
+	if len(items) == 0 {
+		return m
+	}
+	kv := make([]otelcore.KeyValue, 0, len(items))
+	for k, v := range items {
+		kv = append(kv, otelkey.String(k, v))
+	}
+	return m.Apply(otelcorrelation.MapUpdate{MultiKV: kv})
 }
 
 // StartSpan is a part of the implementation of the OpenTracing Tracer
@@ -339,11 +418,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		otSpanContext = parentBridgeSC
 	}
 	sctx := newBridgeSpanContext(otelSpan.SpanContext(), otSpanContext)
-	span := &bridgeSpan{
-		otelSpan: otelSpan,
-		ctx:      sctx,
-		tracer:   t,
-	}
+	span := newBridgeSpan(otelSpan, sctx, t)
 
 	return span
 }
@@ -360,12 +435,8 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span oteltrace
 		otSpanContext = parentSpan.Context()
 	}
 	bCtx := newBridgeSpanContext(span.SpanContext(), otSpanContext)
-	bSpan := &bridgeSpan{
-		otelSpan:      span,
-		ctx:           bCtx,
-		tracer:        t,
-		skipDeferHook: true,
-	}
+	bSpan := newBridgeSpan(span, bCtx, t)
+	bSpan.skipDeferHook = true
 	return ot.ContextWithSpan(ctx, bSpan)
 }
 
@@ -375,7 +446,11 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span oteltrace
 // DeferredContextSetupTracerExtension interface.
 func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) context.Context {
 	bSpan, ok := span.(*bridgeSpan)
-	if !ok || bSpan.skipDeferHook {
+	if !ok {
+		t.warningHandler("Encountered a foreign OpenTracing span, will not run a possible deferred context setup hook\n")
+		return ctx
+	}
+	if bSpan.skipDeferHook {
 		return ctx
 	}
 	if tracerWithExtension, ok := bSpan.tracer.setTracer.tracer().(migration.DeferredContextSetupTracerExtension); ok {
@@ -502,18 +577,22 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 	}
 }
 
-// TODO: these headers are most likely bogus
-var (
-	traceIDHeader       = http.CanonicalHeaderKey("x-otelbridge-trace-id")
-	spanIDHeader        = http.CanonicalHeaderKey("x-otelbridge-span-id")
-	traceFlagsHeader    = http.CanonicalHeaderKey("x-otelbridge-trace-flags")
-	baggageHeaderPrefix = http.CanonicalHeaderKey("x-otelbridge-baggage-")
-)
+// fakeSpan is just a holder of span context, nothing more. It's for
+// propagators, so they can get the span context from Go context.
+type fakeSpan struct {
+	oteltrace.NoopSpan
+
+	sc otelcore.SpanContext
+}
+
+func (s fakeSpan) SpanContext() otelcore.SpanContext {
+	return s.sc
+}
 
 // Inject is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is kinda sorta supported.
+// Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
@@ -529,29 +608,20 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !ok {
 		return ot.ErrInvalidCarrier
 	}
-	hhcarrier.Set(traceIDHeader, bridgeSC.otelSpanContext.TraceIDString())
-	hhcarrier.Set(spanIDHeader, bridgeSC.otelSpanContext.SpanIDString())
-	hhcarrier.Set(traceFlagsHeader, traceFlagsToString(bridgeSC.otelSpanContext.TraceFlags))
-	bridgeSC.ForeachBaggageItem(func(k, v string) bool {
-		// we assume that keys are already canonicalized
-		hhcarrier.Set(baggageHeaderPrefix+k, v)
-		return true
-	})
-	return nil
-}
-
-func traceFlagsToString(opts byte) string {
-	var parts []string
-	if opts&otelcore.TraceFlagsSampled == otelcore.TraceFlagsSampled {
-		parts = append(parts, "sampled")
+	header := http.Header(hhcarrier)
+	fs := fakeSpan{
+		sc: bridgeSC.otelSpanContext,
 	}
-	return strings.Join(parts, ",")
+	ctx := oteltrace.ContextWithSpan(context.Background(), fs)
+	ctx = otelcorrelation.ContextWithMap(ctx, bridgeSC.baggageItems)
+	otelpropagation.InjectHTTP(ctx, t.getPropagators(), header)
+	return nil
 }
 
 // Extract is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is kinda sorta supported.
+// Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
 		return nil, ot.ErrUnsupportedFormat
@@ -560,34 +630,13 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	if !ok {
 		return nil, ot.ErrInvalidCarrier
 	}
-	bridgeSC := &bridgeSpanContext{}
-	err := hhcarrier.ForeachKey(func(k, v string) error {
-		ck := http.CanonicalHeaderKey(k)
-		switch ck {
-		case traceIDHeader:
-			traceID, err := otelcore.TraceIDFromHex(v)
-			if err != nil {
-				return err
-			}
-			bridgeSC.otelSpanContext.TraceID = traceID
-		case spanIDHeader:
-			spanID, err := otelcore.SpanIDFromHex(v)
-			if err != nil {
-				return err
-			}
-			bridgeSC.otelSpanContext.SpanID = spanID
-		case traceFlagsHeader:
-			bridgeSC.otelSpanContext.TraceFlags = stringToTraceFlags(v)
-		default:
-			if strings.HasPrefix(ck, baggageHeaderPrefix) {
-				bk := strings.TrimPrefix(ck, baggageHeaderPrefix)
-				bridgeSC.setBaggageItem(bk, v)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	header := http.Header(hhcarrier)
+	ctx := otelpropagation.ExtractHTTP(context.Background(), t.getPropagators(), header)
+	baggage := otelcorrelation.MapFromContext(ctx)
+	otelSC, _, _ := otelparent.GetSpanContextAndLinks(ctx, false)
+	bridgeSC := &bridgeSpanContext{
+		baggageItems:    baggage,
+		otelSpanContext: otelSC,
 	}
 	if !bridgeSC.otelSpanContext.IsValid() {
 		return nil, ot.ErrSpanContextNotFound
@@ -595,13 +644,9 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	return bridgeSC, nil
 }
 
-func stringToTraceFlags(s string) byte {
-	var opts byte
-	for _, part := range strings.Split(s, ",") {
-		switch part {
-		case "sampled":
-			opts |= otelcore.TraceFlagsSampled
-		}
+func (t *BridgeTracer) getPropagators() otelpropagation.Propagators {
+	if t.propagators != nil {
+		return t.propagators
 	}
-	return opts
+	return otelglobal.Propagators()
 }

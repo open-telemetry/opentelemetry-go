@@ -23,8 +23,10 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const defaultServiceName = "OpenTelemetry"
@@ -43,6 +45,12 @@ type options struct {
 
 	//BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
+
+	Config *sdktrace.Config
+
+	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
+	// registered as Global Trace Provider
+	RegisterGlobal bool
 }
 
 // WithOnError sets the hook to be called when there is
@@ -68,9 +76,24 @@ func WithBufferMaxCount(bufferMaxCount int) func(o *options) {
 	}
 }
 
-// NewExporter returns a trace.Exporter implementation that exports
+// WithSDK sets the SDK config for the exporter pipeline.
+func WithSDK(config *sdktrace.Config) func(o *options) {
+	return func(o *options) {
+		o.Config = config
+	}
+}
+
+// RegisterAsGlobal enables the registration of the trace provider of the new pipeline
+// as Global Trace Provider.
+func RegisterAsGlobal() func(o *options) {
+	return func(o *options) {
+		o.RegisterGlobal = true
+	}
+}
+
+// NewRawExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
-func NewExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
+func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
 	uploader, err := endpointOption()
 	if err != nil {
 		return nil, err
@@ -105,6 +128,7 @@ func NewExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, erro
 			ServiceName: service,
 			Tags:        tags,
 		},
+		o: o,
 	}
 	bundler := bundler.NewBundler((*gen.Span)(nil), func(bundle interface{}) {
 		if err := e.upload(bundle.([]*gen.Span)); err != nil {
@@ -123,6 +147,28 @@ func NewExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, erro
 	return e, nil
 }
 
+// NewExportPipeline sets up a complete export pipeline
+// with the recommended setup for trace provider
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.Provider, func(), error) {
+	exporter, err := NewRawExporter(endpointOption, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	syncer := sdktrace.WithSyncer(exporter)
+	tp, err := sdktrace.NewProvider(syncer)
+	if err != nil {
+		return nil, nil, err
+	}
+	if exporter.o.Config != nil {
+		tp.ApplyConfig(*exporter.o.Config)
+	}
+	if exporter.o.RegisterGlobal {
+		global.SetTraceProvider(tp)
+	}
+
+	return tp, exporter.Flush, nil
+}
+
 // Process contains the information exported to jaeger about the source
 // of the trace data.
 type Process struct {
@@ -138,6 +184,7 @@ type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler
 	uploader batchUploader
+	o        options
 }
 
 var _ export.SpanSyncer = (*Exporter)(nil)

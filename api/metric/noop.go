@@ -84,14 +84,6 @@ func (NoopMeasureConstructors) NewFloat64Counter(name string, cos ...CounterOpti
 	return WrapFloat64CounterInstrument(noopInstrument{}, nil)
 }
 
-func (NoopMeasureConstructors) NewInt64Gauge(name string, gos ...GaugeOptionApplier) (Int64Gauge, error) {
-	return WrapInt64GaugeInstrument(noopInstrument{}, nil)
-}
-
-func (NoopMeasureConstructors) NewFloat64Gauge(name string, gos ...GaugeOptionApplier) (Float64Gauge, error) {
-	return WrapFloat64GaugeInstrument(noopInstrument{}, nil)
-}
-
 func (NoopMeasureConstructors) NewInt64Measure(name string, mos ...MeasureOptionApplier) (Int64Measure, error) {
 	return WrapInt64MeasureInstrument(noopInstrument{}, nil)
 }
@@ -109,16 +101,6 @@ func (NoopMeasureConstructorsMust) MustNewInt64Counter(name string, cos ...Count
 
 func (NoopMeasureConstructorsMust) MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
 	inst, _ := WrapFloat64CounterInstrument(noopInstrument{}, nil)
-	return inst
-}
-
-func (NoopMeasureConstructorsMust) MustNewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
-	inst, _ := WrapInt64GaugeInstrument(noopInstrument{}, nil)
-	return inst
-}
-
-func (NoopMeasureConstructorsMust) MustNewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
-	inst, _ := WrapFloat64GaugeInstrument(noopInstrument{}, nil)
 	return inst
 }
 

@@ -36,7 +36,6 @@ type metricKind int8
 
 const (
 	counterKind metricKind = iota
-	gaugeKind
 	measureKind
 )
 
@@ -222,11 +221,6 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 			return delegateCheck(m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...))
 		}
 		return delegateCheck(m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...))
-	case gaugeKind:
-		if nkind == core.Int64NumberKind {
-			return delegateCheck(m.NewInt64Gauge(name, opts.([]metric.GaugeOptionApplier)...))
-		}
-		return delegateCheck(m.NewFloat64Gauge(name, opts.([]metric.GaugeOptionApplier)...))
 	case measureKind:
 		if nkind == core.Int64NumberKind {
 			return delegateCheck(m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...))
@@ -436,14 +430,6 @@ func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier
 
 func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) (metric.Float64Counter, error) {
 	return metric.WrapFloat64CounterInstrument(m.newInst(name, counterKind, core.Float64NumberKind, opts))
-}
-
-func (m *meter) NewInt64Gauge(name string, opts ...metric.GaugeOptionApplier) (metric.Int64Gauge, error) {
-	return metric.WrapInt64GaugeInstrument(m.newInst(name, gaugeKind, core.Int64NumberKind, opts))
-}
-
-func (m *meter) NewFloat64Gauge(name string, opts ...metric.GaugeOptionApplier) (metric.Float64Gauge, error) {
-	return metric.WrapFloat64GaugeInstrument(m.newInst(name, gaugeKind, core.Float64NumberKind, opts))
 }
 
 func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) (metric.Int64Measure, error) {

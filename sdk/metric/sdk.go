@@ -413,12 +413,6 @@ func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos 
 	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
 }
 
-func (m *SDK) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyGaugeOptions(&opts, gos...)
-	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
-}
-
 func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
 	opts := api.Options{}
 	api.ApplyMeasureOptions(&opts, mos...)
@@ -431,14 +425,6 @@ func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) (api
 
 func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) (api.Float64Counter, error) {
 	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...), nil)
-}
-
-func (m *SDK) NewInt64Gauge(name string, gos ...api.GaugeOptionApplier) (api.Int64Gauge, error) {
-	return api.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, core.Int64NumberKind, gos...), nil)
-}
-
-func (m *SDK) NewFloat64Gauge(name string, gos ...api.GaugeOptionApplier) (api.Float64Gauge, error) {
-	return api.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, core.Float64NumberKind, gos...), nil)
 }
 
 func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) (api.Int64Measure, error) {

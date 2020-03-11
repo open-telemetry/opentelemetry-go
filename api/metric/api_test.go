@@ -142,117 +142,6 @@ func TestCounterOptions(t *testing.T) {
 	}
 }
 
-func TestGaugeOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.GaugeOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "monotonic",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "monotonic, but not really",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyGaugeOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
 func TestMeasureOptions(t *testing.T) {
 	type testcase struct {
 		name string
@@ -508,33 +397,6 @@ func TestCounter(t *testing.T) {
 	}
 }
 
-func TestGauge(t *testing.T) {
-	{
-		meter := mock.NewMeter()
-		g := meter.MustNewFloat64Gauge("test.gauge.float")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
-		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
-		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.Impl())
-	}
-	{
-		meter := mock.NewMeter()
-		g := meter.MustNewInt64Gauge("test.gauge.int")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
-		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
-		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.Impl())
-	}
-}
-
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
@@ -681,21 +543,21 @@ func (*testWrappedInst) RecordOne(ctx context.Context, number core.Number, label
 func TestWrappedInstrumentError(t *testing.T) {
 	i0 := &testWrappedInst{}
 	e0 := errors.New("Test wrap error")
-	inst, err := metric.WrapInt64GaugeInstrument(i0, e0)
+	inst, err := metric.WrapInt64MeasureInstrument(i0, e0)
 
 	// Check that error passes through w/o modifying instrument.
 	require.Equal(t, inst.Impl().(*testWrappedInst), i0)
 	require.Equal(t, err, e0)
 
 	// Check that nil instrument is handled.
-	inst, err = metric.WrapInt64GaugeInstrument(nil, e0)
+	inst, err = metric.WrapInt64MeasureInstrument(nil, e0)
 
 	require.Equal(t, err, e0)
 	require.NotNil(t, inst)
 	require.NotNil(t, inst.Impl())
 
 	// Check that nil instrument generates an error.
-	inst, err = metric.WrapInt64GaugeInstrument(nil, nil)
+	inst, err = metric.WrapInt64MeasureInstrument(nil, nil)
 
 	require.NotNil(t, err)
 	require.NotNil(t, inst)

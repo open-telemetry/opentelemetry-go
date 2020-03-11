@@ -84,24 +84,6 @@ func WrapFloat64CounterInstrument(instrument InstrumentImpl, err error) (Float64
 	return Float64Counter{commonMetric: common}, err
 }
 
-// WrapInt64GaugeInstrument wraps the instrument in the type-safe
-// wrapper as an integral gauge.
-//
-// It is mostly intended for SDKs.
-func WrapInt64GaugeInstrument(instrument InstrumentImpl, err error) (Int64Gauge, error) {
-	common, err := newCommonMetric(instrument, err)
-	return Int64Gauge{commonMetric: common}, err
-}
-
-// WrapFloat64GaugeInstrument wraps the instrument in the type-safe
-// wrapper as an floating point gauge.
-//
-// It is mostly intended for SDKs.
-func WrapFloat64GaugeInstrument(instrument InstrumentImpl, err error) (Float64Gauge, error) {
-	common, err := newCommonMetric(instrument, err)
-	return Float64Gauge{commonMetric: common}, err
-}
-
 // WrapInt64MeasureInstrument wraps the instrument in the type-safe
 // wrapper as an integral measure.
 //
@@ -125,14 +107,6 @@ func WrapFloat64MeasureInstrument(instrument InstrumentImpl, err error) (Float64
 func ApplyCounterOptions(opts *Options, cos ...CounterOptionApplier) {
 	for _, o := range cos {
 		o.ApplyCounterOption(opts)
-	}
-}
-
-// ApplyGaugeOptions is a helper that applies all the gauge options to
-// passed opts.
-func ApplyGaugeOptions(opts *Options, gos ...GaugeOptionApplier) {
-	for _, o := range gos {
-		o.ApplyGaugeOption(opts)
 	}
 }
 
@@ -180,22 +154,6 @@ func (mm MeasureConstructorsMustImpl) MustNewInt64Counter(name string, cos ...Co
 
 func (mm MeasureConstructorsMustImpl) MustNewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
 	if inst, err := mm.ctors.NewFloat64Counter(name, cos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (mm MeasureConstructorsMustImpl) MustNewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge {
-	if inst, err := mm.ctors.NewInt64Gauge(name, gos...); err != nil {
-		panic(err)
-	} else {
-		return inst
-	}
-}
-
-func (mm MeasureConstructorsMustImpl) MustNewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge {
-	if inst, err := mm.ctors.NewFloat64Gauge(name, gos...); err != nil {
 		panic(err)
 	} else {
 		return inst
