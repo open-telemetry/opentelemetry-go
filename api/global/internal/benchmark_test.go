@@ -18,6 +18,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+var Must = metric.Must
+
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
@@ -72,7 +74,7 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	ctx := context.Background()
 	sdk := global.Meter("test")
 	labs := sdk.Labels(key.String("A", "B"))
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -91,7 +93,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	global.SetMeterProvider(fix)
 
 	labs := sdk.Labels(key.String("A", "B"))
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 

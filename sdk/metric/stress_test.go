@@ -339,7 +339,7 @@ func float64sEqual(a, b core.Number) bool {
 func intCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
+			return Must(meter).NewInt64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset int64
@@ -385,7 +385,7 @@ func TestStressInt64CounterNonMonotonic(t *testing.T) {
 func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
+			return Must(meter).NewFloat64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
 		},
 		getUpdateValue: func() core.Number {
 			var offset float64
@@ -433,7 +433,7 @@ func TestStressFloat64CounterNonMonotonic(t *testing.T) {
 func intLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewInt64Measure(name+".lastvalue", metric.WithAbsolute(false))
+			return Must(meter).NewInt64Measure(name+".lastvalue", metric.WithAbsolute(false))
 		},
 		getUpdateValue: func() core.Number {
 			r1 := rand.Int63()
@@ -475,7 +475,7 @@ func TestStressInt64LastValue(t *testing.T) {
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return meter.NewFloat64Measure(name+".lastvalue", metric.WithAbsolute(false))
+			return Must(meter).NewFloat64Measure(name+".lastvalue", metric.WithAbsolute(false))
 		},
 		getUpdateValue: func() core.Number {
 			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)

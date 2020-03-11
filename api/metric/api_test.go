@@ -16,6 +16,7 @@ package metric_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -27,7 +28,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+var Must = metric.Must
 
 func TestCounterOptions(t *testing.T) {
 	type testcase struct {
@@ -371,7 +375,7 @@ func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.NewFloat64Counter("test.counter.float")
+		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -383,7 +387,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.NewInt64Counter("test.counter.int")
+		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -398,7 +402,7 @@ func TestCounter(t *testing.T) {
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.NewFloat64Measure("test.measure.float")
+		m := Must(meter).NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -410,7 +414,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.NewInt64Measure("test.measure.int")
+		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -426,7 +430,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing float observer")
@@ -436,7 +440,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")
@@ -526,4 +530,38 @@ func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
 	}
 	t.Errorf("Invalid value kind %q", kind)
 	return core.NewInt64Number(0)
+}
+
+type testWrappedInst struct{}
+
+func (*testWrappedInst) Bind(labels metric.LabelSet) metric.BoundInstrumentImpl {
+	panic("Not called")
+}
+
+func (*testWrappedInst) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+	panic("Not called")
+}
+
+func TestWrappedInstrumentError(t *testing.T) {
+	i0 := &testWrappedInst{}
+	e0 := errors.New("Test wrap error")
+	inst, err := metric.WrapInt64MeasureInstrument(i0, e0)
+
+	// Check that error passes through w/o modifying instrument.
+	require.Equal(t, inst.Impl().(*testWrappedInst), i0)
+	require.Equal(t, err, e0)
+
+	// Check that nil instrument is handled.
+	inst, err = metric.WrapInt64MeasureInstrument(nil, e0)
+
+	require.Equal(t, err, e0)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
+
+	// Check that nil instrument generates an error.
+	inst, err = metric.WrapInt64MeasureInstrument(nil, nil)
+
+	require.NotNil(t, err)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
 }

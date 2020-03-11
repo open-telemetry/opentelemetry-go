@@ -33,6 +33,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 )
 
+var Must = metric.Must
+
 type correctnessBatcher struct {
 	t *testing.T
 
@@ -82,7 +84,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := sdk.NewInt64Counter("name.counter", metric.WithMonotonic(true))
+	counter := Must(sdk).NewInt64Counter("name.counter", metric.WithMonotonic(true))
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -116,7 +118,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := sdk.NewFloat64Measure("name.measure", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.measure", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -147,7 +149,7 @@ func TestDisabledInstrument(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := sdk.NewFloat64Measure("name.disabled", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.disabled", metric.WithAbsolute(true))
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
@@ -167,7 +169,7 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	c := sdk.NewFloat64Counter("counter.name")
+	c := Must(sdk).NewFloat64Counter("counter.name")
 
 	require.Nil(t, sdkErr)
 	c.Add(ctx, math.NaN(), sdk.Labels())
@@ -181,7 +183,7 @@ func TestSDKAltLabelEncoder(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, testLabelEncoder{})
 
-	measure := sdk.NewFloat64Measure("measure")
+	measure := Must(sdk).NewFloat64Measure("measure")
 	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
 
 	sdk.Collect(ctx)
@@ -199,7 +201,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
 
-	counter := sdk.NewInt64Counter("counter")
+	counter := Must(sdk).NewInt64Counter("counter")
 
 	const (
 		maxKeys = 21

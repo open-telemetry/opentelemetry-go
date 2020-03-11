@@ -2,6 +2,7 @@ package internal_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -30,25 +31,25 @@ func TestDirect(t *testing.T) {
 	lvals3 := key.String("E", "F")
 	labels3 := meter2.Labels(lvals3)
 
-	counter := meter1.NewInt64Counter("test.counter")
+	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1)
 	counter.Add(ctx, 1, labels1)
 
-	measure := meter1.NewFloat64Measure("test.measure")
+	measure := Must(meter1).NewFloat64Measure("test.measure")
 	measure.Record(ctx, 1, labels1)
 	measure.Record(ctx, 2, labels1)
 
-	_ = meter1.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+	_ = Must(meter1).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 		result.Observe(1., labels1)
 		result.Observe(2., labels2)
 	})
 
-	_ = meter1.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+	_ = Must(meter1).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 		result.Observe(1, labels1)
 		result.Observe(2, labels2)
 	})
 
-	second := meter2.NewFloat64Measure("test.second")
+	second := Must(meter2).NewFloat64Measure("test.second")
 	second.Record(ctx, 1, labels3)
 	second.Record(ctx, 2, labels3)
 
@@ -145,12 +146,12 @@ func TestBound(t *testing.T) {
 	lvals1 := key.String("A", "B")
 	labels1 := glob.Labels(lvals1)
 
-	counter := glob.NewFloat64Counter("test.counter")
+	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1)
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
-	measure := glob.NewInt64Measure("test.measure")
+	measure := Must(glob).NewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
@@ -195,14 +196,14 @@ func TestUnbind(t *testing.T) {
 	lvals1 := key.New("A").String("B")
 	labels1 := glob.Labels(lvals1)
 
-	counter := glob.NewFloat64Counter("test.counter")
+	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1)
 
-	measure := glob.NewInt64Measure("test.measure")
+	measure := Must(glob).NewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 
-	observerInt := glob.RegisterInt64Observer("test.observer.int", nil)
-	observerFloat := glob.RegisterFloat64Observer("test.observer.float", nil)
+	observerInt := Must(glob).RegisterInt64Observer("test.observer.int", nil)
+	observerFloat := Must(glob).RegisterFloat64Observer("test.observer.float", nil)
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -218,7 +219,7 @@ func TestDefaultSDK(t *testing.T) {
 	lvals1 := key.String("A", "B")
 	labels1 := meter1.Labels(lvals1)
 
-	counter := meter1.NewInt64Counter("test.builtin")
+	counter := Must(meter1).NewInt64Counter("test.builtin")
 	counter.Add(ctx, 1, labels1)
 	counter.Add(ctx, 1, labels1)
 
@@ -251,8 +252,9 @@ func TestUnbindThenRecordOne(t *testing.T) {
 
 	ctx := context.Background()
 	sdk := metrictest.NewProvider()
+
 	meter := global.Meter("test")
-	counter := meter.NewInt64Counter("test.counter")
+	counter := Must(meter).NewInt64Counter("test.counter")
 	boundC := counter.Bind(meter.Labels())
 	global.SetMeterProvider(sdk)
 	boundC.Unbind()
@@ -262,4 +264,39 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	})
 	mock := global.Meter("test").(*metrictest.Meter)
 	require.Equal(t, 0, len(mock.MeasurementBatches))
+}
+
+type meterProviderWithConstructorError struct {
+	metric.Provider
+}
+
+type meterWithConstructorError struct {
+	metric.Meter
+}
+
+func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
+	return &meterWithConstructorError{m.Provider.Meter(name)}
+}
+
+func (m *meterWithConstructorError) NewInt64Counter(name string, cos ...metric.CounterOptionApplier) (metric.Int64Counter, error) {
+	return metric.Int64Counter{}, errors.New("constructor error")
+}
+
+func TestErrorInDeferredConstructor(t *testing.T) {
+	internal.ResetForTest()
+
+	ctx := context.Background()
+	meter := global.MeterProvider().Meter("builtin")
+
+	c1 := Must(meter).NewInt64Counter("test")
+	c2 := Must(meter).NewInt64Counter("test")
+
+	sdk := &meterProviderWithConstructorError{metrictest.NewProvider()}
+
+	require.Panics(t, func() {
+		global.SetMeterProvider(sdk)
+	})
+
+	c1.Add(ctx, 1, meter.Labels())
+	c2.Add(ctx, 2, meter.Labels())
 }

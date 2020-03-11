@@ -108,30 +108,36 @@ type Meter interface {
 	// be read by the application.
 	Labels(...core.KeyValue) LabelSet
 
+	// RecordBatch atomically records a batch of measurements.
+	RecordBatch(context.Context, LabelSet, ...Measurement)
+
+	// All instrument constructors may return an error for
+	// conditions such as:
+	//   `name` is an empty string
+	//   `name` was previously registered as a different kind of instrument
+	//          for a given named `Meter`.
+
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
-	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error)
 	// NewFloat64Counter creates a new floating point counter with
 	// a given name and customized with passed options.
-	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
+	NewFloat64Counter(name string, cos ...CounterOptionApplier) (Float64Counter, error)
 	// NewInt64Measure creates a new integral measure with a given
 	// name and customized with passed options.
-	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	NewInt64Measure(name string, mos ...MeasureOptionApplier) (Int64Measure, error)
 	// NewFloat64Measure creates a new floating point measure with
 	// a given name and customized with passed options.
-	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
+	NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error)
 
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
 	// options. Callback can be nil.
-	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
-	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
-
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) (Float64Observer, error)
 }
 
 // Int64ObserverResult is an interface for reporting integral

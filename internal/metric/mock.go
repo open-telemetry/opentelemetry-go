@@ -49,7 +49,7 @@ type (
 
 	MeterProvider struct {
 		lock       sync.Mutex
-		registered map[string]*Meter
+		registered map[string]apimetric.Meter
 	}
 
 	Meter struct {
@@ -154,13 +154,9 @@ func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrume
 	})
 }
 
-func (s *LabelSet) Meter() apimetric.Meter {
-	return s.TheMeter
-}
-
 func NewProvider() *MeterProvider {
 	return &MeterProvider{
-		registered: map[string]*Meter{},
+		registered: map[string]apimetric.Meter{},
 	}
 }
 
@@ -191,14 +187,14 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Int64Counter {
+func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Int64Counter, error) {
 	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
-	return apimetric.WrapInt64CounterInstrument(instrument)
+	return apimetric.WrapInt64CounterInstrument(instrument, nil)
 }
 
-func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) apimetric.Float64Counter {
+func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Float64Counter, error) {
 	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
-	return apimetric.WrapFloat64CounterInstrument(instrument)
+	return apimetric.WrapFloat64CounterInstrument(instrument, nil)
 }
 
 func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
@@ -212,14 +208,14 @@ func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, co
 	}
 }
 
-func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Int64Measure {
+func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Int64Measure, error) {
 	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
-	return apimetric.WrapInt64MeasureInstrument(instrument)
+	return apimetric.WrapInt64MeasureInstrument(instrument, nil)
 }
 
-func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) apimetric.Float64Measure {
+func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Float64Measure, error) {
 	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
-	return apimetric.WrapFloat64MeasureInstrument(instrument)
+	return apimetric.WrapFloat64MeasureInstrument(instrument, nil)
 }
 
 func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
@@ -233,9 +229,9 @@ func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mo
 	}
 }
 
-func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Int64Observer {
+func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, oos ...apimetric.ObserverOptionApplier) (apimetric.Int64Observer, error) {
 	wrappedCallback := wrapInt64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...)
+	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...), nil
 }
 
 func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observerCallback {
@@ -250,9 +246,9 @@ func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observe
 	}
 }
 
-func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, oos ...apimetric.ObserverOptionApplier) apimetric.Float64Observer {
+func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, oos ...apimetric.ObserverOptionApplier) (apimetric.Float64Observer, error) {
 	wrappedCallback := wrapFloat64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...)
+	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...), nil
 }
 
 func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) observerCallback {

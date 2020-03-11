@@ -61,14 +61,14 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labelset)
 	}
-	oneMetric := meter.RegisterFloat64Observer("ex.com.one", cb,
+	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A measure set to 1.0"),
 	)
 	defer oneMetric.Unregister()
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
-	measureThree := meter.NewFloat64Counter("ex.com.three")
+	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
+	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))

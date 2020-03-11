@@ -67,9 +67,6 @@ func main() {
 	defer initMeter().Stop()
 	initTracer()
 
-	// Note: Have to get the meter and tracer after the global is
-	// initialized.  See OTEP 0005.
-
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
@@ -78,13 +75,13 @@ func main() {
 	oneMetricCB := func(result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels)
 	}
-	oneMetric := meter.RegisterFloat64Observer("ex.com.one", oneMetricCB,
+	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("An observer set to 1.0"),
 	)
 	defer oneMetric.Unregister()
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two")
+	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
 
 	ctx := context.Background()
 

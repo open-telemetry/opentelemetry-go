@@ -492,23 +492,23 @@ func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos 
 	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
 }
 
-func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...))
+func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) (api.Int64Counter, error) {
+	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...), nil)
 }
 
-func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) api.Float64Counter {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...))
+func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) (api.Float64Counter, error) {
+	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...), nil)
 }
 
-func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) api.Int64Measure {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...))
+func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) (api.Int64Measure, error) {
+	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...), nil)
 }
 
-func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) api.Float64Measure {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
+func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) (api.Float64Measure, error) {
+	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...), nil)
 }
 
-func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) api.Int64Observer {
+func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) (api.Int64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterInt64Observer("", nil)
 	}
@@ -519,7 +519,7 @@ func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallb
 	obs := m.newObserver(descriptor, cb)
 	return int64Observer{
 		observer: obs,
-	}
+	}, nil
 }
 
 func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
@@ -531,7 +531,7 @@ func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallb
 	}
 }
 
-func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) api.Float64Observer {
+func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) (api.Float64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
@@ -542,7 +542,7 @@ func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverC
 	obs := m.newObserver(descriptor, cb)
 	return float64Observer{
 		observer: obs,
-	}
+	}, nil
 }
 
 func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {

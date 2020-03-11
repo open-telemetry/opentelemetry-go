@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -80,6 +81,10 @@ type obsImpl struct {
 	callback interface{}
 }
 
+type hasImpl interface {
+	Impl() metric.InstrumentImpl
+}
+
 type int64ObsImpl struct {
 	observer *obsImpl
 }
@@ -121,6 +126,8 @@ var _ metric.Int64Observer = int64ObsImpl{}
 var _ metric.Float64Observer = float64ObsImpl{}
 var _ observerUnregister = (metric.Int64Observer)(nil)
 var _ observerUnregister = (metric.Float64Observer)(nil)
+
+var errInvalidMetricKind = errors.New("Invalid Metric kind")
 
 // Provider interface and delegation
 
@@ -174,7 +181,7 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	m.orderedObservers = nil
 }
 
-func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) (metric.InstrumentImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -189,23 +196,33 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 		opts:  opts,
 	}
 	m.instruments = append(m.instruments, inst)
-	return inst
+	return inst, nil
 }
 
-func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) metric.InstrumentImpl {
+func delegateCheck(has hasImpl, err error) (metric.InstrumentImpl, error) {
+	if has != nil {
+		return has.Impl(), err
+	}
+	if err == nil {
+		err = metric.ErrSDKReturnedNilImpl
+	}
+	return nil, err
+}
+
+func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) (metric.InstrumentImpl, error) {
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {
-			return m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
+			return delegateCheck(m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...))
 		}
-		return m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...).Impl()
+		return delegateCheck(m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...))
 	case measureKind:
 		if nkind == core.Int64NumberKind {
-			return m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
+			return delegateCheck(m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...))
 		}
-		return m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...).Impl()
+		return delegateCheck(m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...))
 	}
-	return nil
+	return nil, errInvalidMetricKind
 }
 
 // Instrument delegation
@@ -213,7 +230,16 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 func (inst *instImpl) setDelegate(d metric.Meter) {
 	implPtr := new(metric.InstrumentImpl)
 
-	*implPtr = newInstDelegate(d, inst.name, inst.mkind, inst.nkind, inst.opts)
+	var err error
+	*implPtr, err = newInstDelegate(d, inst.name, inst.mkind, inst.nkind, inst.opts)
+
+	if err != nil {
+		// TODO: There is no standard way to deliver this error to the user.
+		// See https://github.com/open-telemetry/opentelemetry-go/issues/514
+		// Note that the default SDK will not generate any errors yet, this is
+		// only for added safety.
+		panic(err)
+	}
 
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
@@ -281,7 +307,18 @@ func (obs *obsImpl) getUnregister() observerUnregister {
 func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Int64Observer)
 	cb := obs.callback.(metric.Int64ObserverCallback)
-	*obsPtr = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
+
+	var err error
+	*obsPtr, err = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
+
+	if err != nil {
+		// TODO: There is no standard way to deliver this error to the user.
+		// See https://github.com/open-telemetry/opentelemetry-go/issues/514
+		// Note that the default SDK will not generate any errors yet, this is
+		// only for added safety.
+		panic(err)
+	}
+
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
@@ -294,7 +331,17 @@ func (obs int64ObsImpl) Unregister() {
 func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
 	obsPtr := new(metric.Float64Observer)
 	cb := obs.callback.(metric.Float64ObserverCallback)
-	*obsPtr = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
+
+	var err error
+	*obsPtr, err = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
+	if err != nil {
+		// TODO: There is no standard way to deliver this error to the user.
+		// See https://github.com/open-telemetry/opentelemetry-go/issues/514
+		// Note that the default SDK will not generate any errors yet, this is
+		// only for added safety.
+		panic(err)
+	}
+
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
 }
 
@@ -372,23 +419,23 @@ func (labels *labelSet) Delegate() metric.LabelSet {
 
 // Constructors
 
-func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier) metric.Int64Counter {
+func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier) (metric.Int64Counter, error) {
 	return metric.WrapInt64CounterInstrument(m.newInst(name, counterKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) metric.Float64Counter {
+func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) (metric.Float64Counter, error) {
 	return metric.WrapFloat64CounterInstrument(m.newInst(name, counterKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Int64Measure {
+func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) (metric.Int64Measure, error) {
 	return metric.WrapInt64MeasureInstrument(m.newInst(name, measureKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) metric.Float64Measure {
+func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) (metric.Float64Measure, error) {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Int64Observer {
+func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, oos ...metric.ObserverOptionApplier) (metric.Int64Observer, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -406,10 +453,10 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 	m.addObserver(obs)
 	return int64ObsImpl{
 		observer: obs,
-	}
+	}, nil
 }
 
-func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, oos ...metric.ObserverOptionApplier) metric.Float64Observer {
+func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, oos ...metric.ObserverOptionApplier) (metric.Float64Observer, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -427,7 +474,7 @@ func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64Obse
 	m.addObserver(obs)
 	return float64ObsImpl{
 		observer: obs,
-	}
+	}, nil
 }
 
 func (m *meter) addObserver(obs *obsImpl) {
