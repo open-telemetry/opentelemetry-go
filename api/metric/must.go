@@ -14,12 +14,6 @@
 
 package metric
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/api/core"
-)
-
 // MeterMust is a wrapper for Meter interfaces that panics when any
 // instrument constructor encounters an error.  It implements the
 // `MeterMethods` interface but the signature of the constructors is
@@ -27,8 +21,6 @@ import (
 type MeterMust struct {
 	meter Meter
 }
-
-var _ MeterMethods = MeterMust{}
 
 // Must constructs a MeterMust implementation from a Meter, allowing
 // the application to panic when any instrument constructor yields an
@@ -65,16 +57,6 @@ type ObserverConstructorsMust interface {
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
-}
-
-// Labels implements MeterMust.
-func (mm MeterMust) Labels(kvs ...core.KeyValue) LabelSet {
-	return mm.meter.Labels(kvs...)
-}
-
-// RecordBatch implements MeterMust.
-func (mm MeterMust) RecordBatch(ctx context.Context, ls LabelSet, ms ...Measurement) {
-	mm.meter.RecordBatch(ctx, ls, ms...)
 }
 
 // NewInt64Counter implements MeterMust.

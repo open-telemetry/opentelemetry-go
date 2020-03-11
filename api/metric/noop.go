@@ -24,10 +24,6 @@ type noopFloat64Observer struct{}
 
 var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
-
-var _ SyncMetricConstructors = NoopSyncMetricConstructors{}
-var _ AsyncMetricConstructors = NoopAsyncMetricConstructors{}
-
 var _ InstrumentImpl = noopInstrument{}
 var _ BoundInstrumentImpl = noopBoundInstrument{}
 var _ LabelSet = noopLabelSet{}

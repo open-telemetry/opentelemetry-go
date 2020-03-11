@@ -104,30 +104,19 @@ func (m Measurement) Number() core.Number {
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	MeterMethods
-
-	SyncMetricConstructors
-	AsyncMetricConstructors
-}
-
-// MeterMethods are all the non-constructor methods of the Meter interface.
-type MeterMethods interface {
 	// Labels returns a reference to a set of labels that cannot
 	// be read by the application.
 	Labels(...core.KeyValue) LabelSet
 
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
-}
 
-// SyncMetricConstructors is a Meter sub-interface containing a `New`
-// method for every supported Measure instrument.  These are the
-// standard synchronous instrument constructors, which may return an
-// error for conditions such as:
-//   `name` is an empty string
-//   `name` was previously registered as a different kind of instrument
-//          for a given named `Meter`.
-type SyncMetricConstructors interface {
+	// All instrument constructors may return an error for
+	// conditions such as:
+	//   `name` is an empty string
+	//   `name` was previously registered as a different kind of instrument
+	//          for a given named `Meter`.
+
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
 	NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error)
@@ -140,16 +129,7 @@ type SyncMetricConstructors interface {
 	// NewFloat64Measure creates a new floating point measure with
 	// a given name and customized with passed options.
 	NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error)
-}
 
-// AsyncMetricConstructors is a Meter sub-interface containing a `Register`
-// method for every supported Observer instrument.  These are the
-// standard asynchronous instrument constructors, which may return an
-// error for conditions such as:
-//   `name` is an empty string
-//   `name` was previously registered as a different kind of instrument
-//          for a given named `Meter`.
-type AsyncMetricConstructors interface {
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
 	// options. Callback can be nil.
