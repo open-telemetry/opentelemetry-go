@@ -284,3 +284,29 @@ func TestSumInt64Datapoints(t *testing.T) {
 	assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
 	assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
 }
+
+func TestSumFloat64Datapoints(t *testing.T) {
+	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Float64NumberKind)
+	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
+	s := sumAgg.New()
+
+	// test zero values.
+	m, err := sum(desc, labels, s)
+	assert.Nil(t, err)
+	expected := []*metricpb.DoubleDataPoint{{Value: 0}}
+	assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
+	assert.Equal(t, expected, m.DoubleDatapoints)
+	assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
+	assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+
+	// test with non-zero values.
+	s.Update(context.Background(), core.NewFloat64Number(1), &metricsdk.Descriptor{})
+	s.Checkpoint(context.Background(), &metricsdk.Descriptor{})
+	m, err = sum(desc, labels, s)
+	assert.Nil(t, err)
+	expected = []*metricpb.DoubleDataPoint{{Value: 1}}
+	assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
+	assert.Equal(t, expected, m.DoubleDatapoints)
+	assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
+	assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+}
