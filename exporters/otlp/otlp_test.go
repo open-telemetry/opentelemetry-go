@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
+
 	"go.opentelemetry.io/otel/api/core"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -124,18 +125,18 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		case metricsdk.CounterKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
-				meter.NewInt64Counter(name).Add(ctx, data.val, labels)
+				metricapi.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels)
 			case core.Float64NumberKind:
-				meter.NewFloat64Counter(name).Add(ctx, float64(data.val), labels)
+				metricapi.Must(meter).NewFloat64Counter(name).Add(ctx, float64(data.val), labels)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
 		case metricsdk.MeasureKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
-				meter.NewInt64Measure(name).Record(ctx, data.val, labels)
+				metricapi.Must(meter).NewInt64Measure(name).Record(ctx, data.val, labels)
 			case core.Float64NumberKind:
-				meter.NewFloat64Measure(name).Record(ctx, float64(data.val), labels)
+				metricapi.Must(meter).NewFloat64Measure(name).Record(ctx, float64(data.val), labels)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -145,12 +146,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 				callback := func(v int64) metricapi.Int64ObserverCallback {
 					return metricapi.Int64ObserverCallback(func(result metricapi.Int64ObserverResult) { result.Observe(v, labels) })
 				}(data.val)
-				meter.RegisterInt64Observer(name, callback)
+				metricapi.Must(meter).RegisterInt64Observer(name, callback)
 			case core.Float64NumberKind:
 				callback := func(v float64) metricapi.Float64ObserverCallback {
 					return metricapi.Float64ObserverCallback(func(result metricapi.Float64ObserverResult) { result.Observe(v, labels) })
 				}(float64(data.val))
-				meter.RegisterFloat64Observer(name, callback)
+				metricapi.Must(meter).RegisterFloat64Observer(name, callback)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -207,12 +208,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			case core.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
 				if dp := m.GetInt64Datapoints(); assert.Len(t, dp, 1) {
-					assert.Equal(t, data.val, dp[0].Value.GetValue(), "invalid value for %q", desc.Name)
+					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			case core.Float64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_DOUBLE.String(), desc.GetType().String())
 				if dp := m.GetDoubleDatapoints(); assert.Len(t, dp, 1) {
-					assert.Equal(t, float64(data.val), dp[0].Value.GetValue(), "invalid value for %q", desc.Name)
+					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
@@ -221,9 +222,9 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
 			m.GetSummaryDatapoints()
 			if dp := m.GetSummaryDatapoints(); assert.Len(t, dp, 1) {
-				count := dp[0].Value.GetCount()
+				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", desc.Name)
-				assert.Equal(t, float64(data.val*int64(count)), dp[0].Value.GetSum(), "invalid sum for %q (value %d)", desc.Name, data.val)
+				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", desc.Name, data.val)
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())

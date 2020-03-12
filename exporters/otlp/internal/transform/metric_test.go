@@ -17,25 +17,25 @@ import (
 	"context"
 	"testing"
 
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-func TestKeysValues(t *testing.T) {
+func TestStringKeyValues(t *testing.T) {
 	tests := []struct {
-		kvs          []core.KeyValue
-		expectedKeys []string
-		expectedVals []string
+		kvs      []core.KeyValue
+		expected []*commonpb.StringKeyValue
 	}{
 		{
 			[]core.KeyValue{},
-			[]string{},
-			[]string{},
+			[]*commonpb.StringKeyValue{},
 		},
 		{
 			[]core.KeyValue{
@@ -50,21 +50,30 @@ func TestKeysValues(t *testing.T) {
 				core.Key("eight").Uint(8),
 				core.Key("the").String("final word"),
 			},
-			[]string{"true", "one", "two", "three", "four", "five", "six", "seven", "eight", "the"},
-			[]string{"true", "1", "2", "3", "4", "5", "6", "7", "8", "final word"},
+			[]*commonpb.StringKeyValue{
+				{Key: "true", Value: "true"},
+				{Key: "one", Value: "1"},
+				{Key: "two", Value: "2"},
+				{Key: "three", Value: "3"},
+				{Key: "four", Value: "4"},
+				{Key: "five", Value: "5"},
+				{Key: "six", Value: "6"},
+				{Key: "seven", Value: "7"},
+				{Key: "eight", Value: "8"},
+				{Key: "the", Value: "final word"},
+			},
 		},
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, keys(test.kvs), test.expectedKeys)
-		assert.Equal(t, values(test.kvs), test.expectedVals)
+		assert.Equal(t, test.expected, stringKeyValues(test.kvs))
 	}
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
 	mmsc := minmaxsumcount.New(&metricsdk.Descriptor{})
-	mmsc.Update(context.Background(), 1, &metricsdk.Descriptor{})
-	mmsc.Update(context.Background(), 10, &metricsdk.Descriptor{})
+	assert.Nil(t, mmsc.Update(context.Background(), 1, &metricsdk.Descriptor{}))
+	assert.Nil(t, mmsc.Update(context.Background(), 10, &metricsdk.Descriptor{}))
 
 	// Prior to checkpointing everything should be zero.
 	min, max, sum, count, err := minMaxSumCountValues(mmsc)
@@ -108,7 +117,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				LabelKeys:   []string{},
+				Labels:      []*commonpb.StringKeyValue{},
 			},
 		},
 		{
@@ -124,13 +133,13 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-b-description",
 				Unit:        "By",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				LabelKeys:   []string{"A"},
+				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind, false)
+		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind)
 		labels := metricsdk.NewLabels(test.labels, "", nil)
 		mmsc := minmaxsumcount.New(&metricsdk.Descriptor{})
 		got, err := minMaxSumCount(desc, labels, mmsc)
@@ -140,7 +149,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind, false)
+	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind)
 	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
 	mmsc := minmaxsumcount.New(&metricsdk.Descriptor{})
 
@@ -149,19 +158,16 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	assert.Nil(t, err)
 	expected := []*metricpb.SummaryDataPoint{
 		{
-			LabelValues: []string{},
-			Value: &metricpb.SummaryValue{
-				Count: 0,
-				Sum:   0,
-				PercentileValues: []*metricpb.SummaryValue_ValueAtPercentile{
-					{
-						Percentile: 0.0,
-						Value:      0,
-					},
-					{
-						Percentile: 100.0,
-						Value:      0,
-					},
+			Count: 0,
+			Sum:   0,
+			PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
+				{
+					Percentile: 0.0,
+					Value:      0,
+				},
+				{
+					Percentile: 100.0,
+					Value:      0,
 				},
 			},
 		},
@@ -172,26 +178,23 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	assert.Equal(t, expected, m.SummaryDatapoints)
 
 	// test with non-zero values.
-	mmsc.Update(context.Background(), 1, &metricsdk.Descriptor{})
-	mmsc.Update(context.Background(), 10, &metricsdk.Descriptor{})
+	assert.Nil(t, mmsc.Update(context.Background(), 1, &metricsdk.Descriptor{}))
+	assert.Nil(t, mmsc.Update(context.Background(), 10, &metricsdk.Descriptor{}))
 	mmsc.Checkpoint(context.Background(), &metricsdk.Descriptor{})
 	m, err = minMaxSumCount(desc, labels, mmsc)
 	assert.Nil(t, err)
 	expected = []*metricpb.SummaryDataPoint{
 		{
-			LabelValues: []string{},
-			Value: &metricpb.SummaryValue{
-				Count: 2,
-				Sum:   11,
-				PercentileValues: []*metricpb.SummaryValue_ValueAtPercentile{
-					{
-						Percentile: 0.0,
-						Value:      1,
-					},
-					{
-						Percentile: 100.0,
-						Value:      10,
-					},
+			Count: 2,
+			Sum:   11,
+			PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
+				{
+					Percentile: 0.0,
+					Value:      1,
+				},
+				{
+					Percentile: 100.0,
+					Value:      10,
 				},
 			},
 		},
@@ -226,7 +229,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_COUNTER_INT64,
-				LabelKeys:   []string{},
+				Labels:      []*commonpb.StringKeyValue{},
 			},
 		},
 		{
@@ -242,50 +245,40 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Description: "test-b-description",
 				Unit:        "ms",
 				Type:        metricpb.MetricDescriptor_COUNTER_DOUBLE,
-				LabelKeys:   []string{"A"},
+				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind, false)
+		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind)
 		labels := metricsdk.NewLabels(test.labels, "", nil)
-		got, err := sum(desc, labels, counter.New())
+		got, err := sum(desc, labels, sumAgg.New())
 		assert.Nil(t, err)
 		assert.Equal(t, test.expected, got.MetricDescriptor)
 	}
 }
 
 func TestSumInt64Datapoints(t *testing.T) {
-	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind, false)
+	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind)
 	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
-	s := counter.New()
+	s := sumAgg.New()
 
 	// test zero values.
 	m, err := sum(desc, labels, s)
 	assert.Nil(t, err)
-	expected := []*metricpb.Int64DataPoint{
-		{
-			LabelValues: []string{},
-			Value:       &metricpb.Int64Value{Value: 0},
-		},
-	}
+	expected := []*metricpb.Int64DataPoint{{Value: 0}}
 	assert.Equal(t, expected, m.Int64Datapoints)
 	assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
 	assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
 	assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
 
 	// test with non-zero values.
-	s.Update(context.Background(), core.Number(1), &metricsdk.Descriptor{})
+	assert.Nil(t, s.Update(context.Background(), core.Number(1), &metricsdk.Descriptor{}))
 	s.Checkpoint(context.Background(), &metricsdk.Descriptor{})
 	m, err = sum(desc, labels, s)
 	assert.Nil(t, err)
-	expected = []*metricpb.Int64DataPoint{
-		{
-			LabelValues: []string{},
-			Value:       &metricpb.Int64Value{Value: 1},
-		},
-	}
+	expected = []*metricpb.Int64DataPoint{{Value: 1}}
 	assert.Equal(t, expected, m.Int64Datapoints)
 	assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
 	assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)

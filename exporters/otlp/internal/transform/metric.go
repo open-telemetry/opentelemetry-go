@@ -18,13 +18,15 @@ package transform
 import (
 	"errors"
 
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
+
 	"go.opentelemetry.io/otel/api/core"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
-var UnimplementedAggErr = errors.New("unimplemented aggregator")
+var ErrUnimplementedAgg = errors.New("unimplemented aggregator")
 
 func Record(r metricsdk.Record) (*metricpb.Metric, error) {
 	d := r.Descriptor()
@@ -34,12 +36,8 @@ func Record(r metricsdk.Record) (*metricpb.Metric, error) {
 		return minMaxSumCount(d, l, a)
 	case aggregator.Sum:
 		return sum(d, l, a)
-	case aggregator.Distribution:
-		// TODO (MrAlias): implement (and move higher in precedence).
-	case aggregator.Points:
-		// TODO (MrAlias): implement (and move higher in precedence).
 	}
-	return nil, UnimplementedAggErr
+	return nil, ErrUnimplementedAgg
 }
 
 func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
@@ -48,13 +46,12 @@ func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) 
 		return nil, err
 	}
 
-	lv := values(labels.Ordered())
 	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
-			LabelKeys:   keys(labels.Ordered()),
+			Labels:      stringKeyValues(labels.Ordered()),
 		},
 	}
 
@@ -62,18 +59,12 @@ func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) 
 	case core.Int64NumberKind, core.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64Datapoints = []*metricpb.Int64DataPoint{
-			{
-				LabelValues: lv,
-				Value:       &metricpb.Int64Value{Value: sum.CoerceToInt64(n)},
-			},
+			{Value: sum.CoerceToInt64(n)},
 		}
 	case core.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
 		m.DoubleDatapoints = []*metricpb.DoubleDataPoint{
-			{
-				LabelValues: lv,
-				Value:       &metricpb.DoubleValue{Value: sum.CoerceToFloat64(n)},
-			},
+			{Value: sum.CoerceToFloat64(n)},
 		}
 	}
 
@@ -109,23 +100,20 @@ func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggre
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
 			Type:        metricpb.MetricDescriptor_SUMMARY,
-			LabelKeys:   keys(labels.Ordered()),
+			Labels:      stringKeyValues(labels.Ordered()),
 		},
 		SummaryDatapoints: []*metricpb.SummaryDataPoint{
 			{
-				LabelValues: values(labels.Ordered()),
-				Value: &metricpb.SummaryValue{
-					Count: uint64(count),
-					Sum:   sum.CoerceToFloat64(numKind),
-					PercentileValues: []*metricpb.SummaryValue_ValueAtPercentile{
-						{
-							Percentile: 0.0,
-							Value:      min.CoerceToFloat64(numKind),
-						},
-						{
-							Percentile: 100.0,
-							Value:      max.CoerceToFloat64(numKind),
-						},
+				Count: uint64(count),
+				Sum:   sum.CoerceToFloat64(numKind),
+				PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
+					{
+						Percentile: 0.0,
+						Value:      min.CoerceToFloat64(numKind),
+					},
+					{
+						Percentile: 100.0,
+						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
 			},
@@ -133,18 +121,13 @@ func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggre
 	}, nil
 }
 
-func keys(kvs []core.KeyValue) []string {
-	result := make([]string, 0, len(kvs))
+func stringKeyValues(kvs []core.KeyValue) []*commonpb.StringKeyValue {
+	result := make([]*commonpb.StringKeyValue, 0, len(kvs))
 	for _, kv := range kvs {
-		result = append(result, string(kv.Key))
-	}
-	return result
-}
-
-func values(kvs []core.KeyValue) []string {
-	result := make([]string, 0, len(kvs))
-	for _, kv := range kvs {
-		result = append(result, kv.Value.Emit())
+		result = append(result, &commonpb.StringKeyValue{
+			Key:   string(kv.Key),
+			Value: kv.Value.Emit(),
+		})
 	}
 	return result
 }

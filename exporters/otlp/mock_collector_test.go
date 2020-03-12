@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
-	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/traces/v1"
+	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 )
@@ -114,14 +114,16 @@ func (mc *mockCol) stop() error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		// Getting the lock ensures the traceSvc is done flushing.
 		mc.traceSvc.mu.Lock()
-		mc.traceSvc.mu.Unlock()
+		defer mc.traceSvc.mu.Unlock()
 		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
+		// Getting the lock ensures the metricSvc is done flushing.
 		mc.metricSvc.mu.Lock()
-		mc.metricSvc.mu.Unlock()
+		defer mc.metricSvc.mu.Unlock()
 		wg.Done()
 	}()
 	wg.Wait()

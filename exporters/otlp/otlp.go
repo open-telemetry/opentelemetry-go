@@ -21,14 +21,13 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
-	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/traces/v1"
+	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
@@ -36,8 +35,6 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
-
-var defaultTimeout = time.Duration(60 * time.Second)
 
 type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
