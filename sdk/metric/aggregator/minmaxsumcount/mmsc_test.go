@@ -66,12 +66,8 @@ var (
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "Aggregator.current",
-			Offset: unsafe.Offsetof(Aggregator{}.current),
-		},
-		{
-			Name:   "Aggregator.checkpoint",
-			Offset: unsafe.Offsetof(Aggregator{}.checkpoint),
+			Name:   "Aggregator.states",
+			Offset: unsafe.Offsetof(Aggregator{}.states),
 		},
 		{
 			Name:   "state.count",
