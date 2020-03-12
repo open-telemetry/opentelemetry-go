@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,7 +39,12 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		v := rnd.Int63() % 103
 		for {
-			_ = mmsc.Update(ctx, core.NewInt64Number(v), desc)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_ = mmsc.Update(ctx, core.NewInt64Number(v), desc)
+			}
 			v++
 		}
 	}()
