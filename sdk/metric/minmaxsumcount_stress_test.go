@@ -33,11 +33,13 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind)
 	mmsc := minmaxsumcount.New(desc)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go func() {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		v := rnd.Int63() % 103
 		for {
-			_ = mmsc.Update(context.Background(), core.NewInt64Number(v), desc)
+			_ = mmsc.Update(ctx, core.NewInt64Number(v), desc)
 			v++
 		}
 	}()

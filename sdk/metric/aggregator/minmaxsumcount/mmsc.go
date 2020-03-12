@@ -27,7 +27,7 @@ type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		// current has to be aligned for 64-bit atomic operations.
+		// states has to be aligned for 64-bit atomic operations.
 		states [2]state
 		lock   internal.StateLocker
 		kind   core.NumberKind
