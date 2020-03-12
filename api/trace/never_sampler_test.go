@@ -24,7 +24,7 @@ import (
 
 func TestNeverSamperShouldSample(t *testing.T) {
 	gotD := NeverSampleSampler().ShouldSample(
-		core.SpanContext{}, false, core.TraceID{}, 0, "span")
+		core.SpanContext{}, false, core.TraceID{}, core.SpanID{}, "span", SpanKindClient, []core.KeyValue{}, []Link{})
 	wantD := Decision{Sampled: false}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
 		t.Errorf("Decision: +got, -want%v", diff)

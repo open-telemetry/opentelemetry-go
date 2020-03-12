@@ -12,12 +12,13 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+var Must = metric.Must
 
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
@@ -40,9 +41,7 @@ func newFixture(b *testing.B) *benchFixture {
 func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case export.CounterKind:
-		return counter.New()
-	case export.GaugeKind:
-		return gauge.New()
+		return sum.New()
 	case export.MeasureKind:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
@@ -73,9 +72,9 @@ func (fix *benchFixture) Meter(name string) metric.Meter {
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 	ctx := context.Background()
-	sdk := global.MeterProvider().Meter("test")
+	sdk := global.Meter("test")
 	labs := sdk.Labels(key.String("A", "B"))
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -89,12 +88,12 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 
-	sdk := global.MeterProvider().Meter("test")
+	sdk := global.Meter("test")
 
 	global.SetMeterProvider(fix)
 
 	labs := sdk.Labels(key.String("A", "B"))
-	cnt := sdk.NewInt64Counter("int64.counter")
+	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
@@ -106,7 +105,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 func BenchmarkStartEndSpan(b *testing.B) {
 	// Comapare with BenchmarkStartEndSpan() in ../../sdk/trace/benchmark_test.go
 	traceBenchmark(b, func(b *testing.B) {
-		t := global.TraceProvider().Tracer("Benchmark StartEndSpan")
+		t := global.Tracer("Benchmark StartEndSpan")
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

@@ -16,6 +16,7 @@ package metric_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -27,16 +28,18 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCounterOptions(t *testing.T) {
+var Must = metric.Must
+
+func TestOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.CounterOptionApplier
+		opts []metric.Option
 		keys []core.Key
 		desc string
 		unit unit.Unit
-		alt  bool
 	}
 	testcases := []testcase{
 		{
@@ -45,11 +48,10 @@ func TestCounterOptions(t *testing.T) {
 			keys: nil,
 			desc: "",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "keys keys keys",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithKeys(key.New("foo"), key.New("foo2")),
 				metric.WithKeys(key.New("bar"), key.New("bar2")),
 				metric.WithKeys(key.New("baz"), key.New("baz2")),
@@ -61,428 +63,62 @@ func TestCounterOptions(t *testing.T) {
 			},
 			desc: "",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "description",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "description override",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "unit",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
 			unit: "s",
-			alt:  false,
 		},
 		{
 			name: "unit override",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
 			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "nonmonotonic",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "nonmonotonic, but not really",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
 		},
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyCounterOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
+		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func TestGaugeOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.GaugeOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "monotonic",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "monotonic, but not really",
-			opts: []metric.GaugeOptionApplier{
-				metric.WithMonotonic(true),
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing gauge case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyGaugeOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func TestMeasureOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.MeasureOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "not absolute",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "not absolute, but not really",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
-				metric.WithAbsolute(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyMeasureOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func TestObserverOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.ObserverOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "monotonic",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "monotonic, but not really",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithMonotonic(true),
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing observer case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyObserverOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
-	if diff := cmp.Diff(got, expected); diff != "" {
-		t.Errorf("Compare options: -got +want %s", diff)
+		}); diff != "" {
+			t.Errorf("Compare options: -got +want %s", diff)
+		}
 	}
 }
 
 func TestCounter(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		c := meter.NewFloat64Counter("test.counter.float")
+		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -494,7 +130,7 @@ func TestCounter(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		c := meter.NewInt64Counter("test.counter.int")
+		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		c.Add(ctx, 42, labels)
@@ -506,37 +142,10 @@ func TestCounter(t *testing.T) {
 	}
 }
 
-func TestGauge(t *testing.T) {
-	{
-		meter := mock.NewMeter()
-		g := meter.NewFloat64Gauge("test.gauge.float")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
-		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
-		t.Log("Testing float gauge")
-		checkBatches(t, ctx, labels, meter, core.Float64NumberKind, g.Impl())
-	}
-	{
-		meter := mock.NewMeter()
-		g := meter.NewInt64Gauge("test.gauge.int")
-		ctx := context.Background()
-		labels := meter.Labels()
-		g.Set(ctx, 42, labels)
-		boundInstrument := g.Bind(labels)
-		boundInstrument.Set(ctx, 42)
-		meter.RecordBatch(ctx, labels, g.Measurement(42))
-		t.Log("Testing int gauge")
-		checkBatches(t, ctx, labels, meter, core.Int64NumberKind, g.Impl())
-	}
-}
-
 func TestMeasure(t *testing.T) {
 	{
 		meter := mock.NewMeter()
-		m := meter.NewFloat64Measure("test.measure.float")
+		m := Must(meter).NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -548,7 +157,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		meter := mock.NewMeter()
-		m := meter.NewInt64Measure("test.measure.int")
+		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
 		m.Record(ctx, 42, labels)
@@ -564,7 +173,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing float observer")
@@ -574,7 +183,7 @@ func TestObserver(t *testing.T) {
 	{
 		meter := mock.NewMeter()
 		labels := meter.Labels()
-		o := meter.RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")
@@ -664,4 +273,38 @@ func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
 	}
 	t.Errorf("Invalid value kind %q", kind)
 	return core.NewInt64Number(0)
+}
+
+type testWrappedInst struct{}
+
+func (*testWrappedInst) Bind(labels metric.LabelSet) metric.BoundInstrumentImpl {
+	panic("Not called")
+}
+
+func (*testWrappedInst) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+	panic("Not called")
+}
+
+func TestWrappedInstrumentError(t *testing.T) {
+	i0 := &testWrappedInst{}
+	e0 := errors.New("Test wrap error")
+	inst, err := metric.WrapInt64MeasureInstrument(i0, e0)
+
+	// Check that error passes through w/o modifying instrument.
+	require.Equal(t, inst.Impl().(*testWrappedInst), i0)
+	require.Equal(t, err, e0)
+
+	// Check that nil instrument is handled.
+	inst, err = metric.WrapInt64MeasureInstrument(nil, e0)
+
+	require.Equal(t, err, e0)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
+
+	// Check that nil instrument generates an error.
+	inst, err = metric.WrapInt64MeasureInstrument(nil, nil)
+
+	require.NotNil(t, err)
+	require.NotNil(t, inst)
+	require.NotNil(t, inst.Impl())
 }

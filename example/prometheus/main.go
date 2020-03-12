@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -49,43 +50,64 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.MeterProvider().Meter("ex.com/basic")
-
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+	meter := global.Meter("ex.com/basic")
+	observerLock := new(sync.RWMutex)
+	observerValueToReport := new(float64)
+	observerLabelSetToReport := new(metric.LabelSet)
+	cb := func(result metric.Float64ObserverResult) {
+		(*observerLock).RLock()
+		value := *observerValueToReport
+		labelset := *observerLabelSetToReport
+		(*observerLock).RUnlock()
+		result.Observe(value, labelset)
+	}
+	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
-		metric.WithDescription("A gauge set to 1.0"),
+		metric.WithDescription("A measure set to 1.0"),
 	)
+	defer oneMetric.Unregister()
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
-	measureThree := meter.NewFloat64Counter("ex.com.three")
+	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
+	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))
 
 	ctx := context.Background()
 
+	(*observerLock).Lock()
+	*observerValueToReport = 1.0
+	*observerLabelSetToReport = &commonLabels
+	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 		measureThree.Measurement(12.0),
 	)
 
+	time.Sleep(5 * time.Second)
+
+	(*observerLock).Lock()
+	*observerValueToReport = 1.0
+	*observerLabelSetToReport = &notSoCommonLabels
+	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,
 		notSoCommonLabels,
-		oneMetric.Measurement(1.0),
 		measureTwo.Measurement(2.0),
 		measureThree.Measurement(22.0),
 	)
 
 	time.Sleep(5 * time.Second)
 
+	(*observerLock).Lock()
+	*observerValueToReport = 13.0
+	*observerLabelSetToReport = &commonLabels
+	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		oneMetric.Measurement(13.0),
 		measureTwo.Measurement(12.0),
 		measureThree.Measurement(13.0),
 	)

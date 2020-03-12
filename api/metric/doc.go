@@ -15,10 +15,9 @@
 // metric package provides an API for reporting diagnostic
 // measurements using four basic kinds of instruments.
 //
-// The four basic kinds are:
+// The three basic kinds are:
 //
 // - counters
-// - gauges
 // - measures
 // - observers
 //
@@ -41,15 +40,6 @@
 // (passing false as a parameter) passed to the Meter.New*Counter
 // function - this allows reporting negative values. To report the new
 // value, use an Add function.
-//
-// Gauges are instruments that are reporting a current state of a
-// value. An example could be voltage or temperature. Gauges can be
-// created with either NewFloat64Gauge or NewInt64Gauge. Gauges by
-// default have no limitations about reported values - they can be
-// less or greater than the last reported value. This can be changed
-// with the WithMonotonic option passed to the New*Gauge function -
-// this permits the reported values only to go up. To report a new
-// value, use the Set function.
 //
 // Measures are instruments that are reporting values that are
 // recorded separately to figure out some statistical properties from
@@ -74,11 +64,11 @@
 // callback can report multiple values. To unregister the observer,
 // call Unregister on it.
 //
-// Counters, gauges and measures support creating bound instruments
-// for a potentially more efficient reporting. The bound instruments
-// have the same function names as the instruments (so a Counter bound
-// instrument has Add, a Gauge bound instrument has Set, and a Measure
-// bound instrument has Record).  Bound Instruments can be created
-// with the Bind function of the respective instrument. When done with
-// the bound instrument, call Unbind on it.
+// Counters and measures support creating bound instruments for a
+// potentially more efficient reporting. The bound instruments have
+// the same function names as the instruments (so a Counter bound
+// instrument has Add, and a Measure bound instrument has Record).
+// Bound Instruments can be created with the Bind function of the
+// respective instrument. When done with the bound instrument, call
+// Unbind on it.
 package metric // import "go.opentelemetry.io/otel/api/metric"

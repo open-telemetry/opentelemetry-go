@@ -28,13 +28,12 @@ import (
 const count = 1000
 
 type updateTest struct {
-	absolute bool
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 	agg := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
@@ -43,11 +42,9 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		all.Append(x)
 		test.CheckedUpdate(t, agg, x, descriptor)
 
-		if !ut.absolute {
-			y := profile.Random(-1)
-			all.Append(y)
-			test.CheckedUpdate(t, agg, y, descriptor)
-		}
+		y := profile.Random(-1)
+		all.Append(y)
+		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
 	agg.Checkpoint(ctx, descriptor)
@@ -61,10 +58,10 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		1,
-		"Same sum - absolute")
+		"Same sum")
 
 	count, err := agg.Count()
-	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
 	max, err := agg.Max()
@@ -72,7 +69,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	require.Equal(t,
 		all.Max(),
 		max,
-		"Same max - absolute")
+		"Same max")
 
 	median, err := agg.Quantile(0.5)
 	require.Nil(t, err)
@@ -81,20 +78,12 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		(&allMedian).CoerceToFloat64(profile.NumberKind),
 		median.CoerceToFloat64(profile.NumberKind),
 		10,
-		"Same median - absolute")
+		"Same median")
 }
 
 func TestDDSketchUpdate(t *testing.T) {
-	// Test absolute and non-absolute
-	for _, absolute := range []bool{false, true} {
-		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			ut := updateTest{
-				absolute: absolute,
-			}
-			// Test integer and floating point
-			test.RunProfiles(t, ut.run)
-		})
-	}
+	ut := updateTest{}
+	test.RunProfiles(t, ut.run)
 }
 
 type mergeTest struct {
@@ -103,7 +92,7 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 	agg1 := New(NewDefaultConfig(), descriptor)
 	agg2 := New(NewDefaultConfig(), descriptor)
@@ -147,10 +136,10 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		(&allSum).CoerceToFloat64(profile.NumberKind),
 		aggSum.CoerceToFloat64(profile.NumberKind),
 		1,
-		"Same sum - absolute")
+		"Same sum")
 
 	count, err := agg1.Count()
-	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
 	max, err := agg1.Max()
@@ -158,7 +147,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	require.Equal(t,
 		all.Max(),
 		max,
-		"Same max - absolute")
+		"Same max")
 
 	median, err := agg1.Quantile(0.5)
 	require.Nil(t, err)
@@ -167,7 +156,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		(&allMedian).CoerceToFloat64(profile.NumberKind),
 		median.CoerceToFloat64(profile.NumberKind),
 		10,
-		"Same median - absolute")
+		"Same median")
 }
 
 func TestDDSketchMerge(t *testing.T) {

@@ -21,16 +21,25 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 type (
 	// Aggregator observe events and counts them in pre-determined buckets.
 	// It also calculates the sum and count of all events.
 	Aggregator struct {
-		// state needs to be aligned for 64-bit atomic operations.
-		current state
-		// checkpoint needs to be aligned for 64-bit atomic operations.
-		checkpoint state
+		// This aggregator uses the StateLocker that enables a lock-free Update()
+		// in exchange of a blocking and consistent Checkpoint(). Since Checkpoint()
+		// is called by the sdk itself and it is not part of a hot path,
+		// the user is not impacted by these blocking calls.
+		//
+		// The algorithm keeps two states. At every instance of time there exist one current state,
+		// in which new updates are aggregated, and one checkpoint state, that represents the state
+		// since the last Checkpoint(). These states are swapped when a `Checkpoint()` occur.
+
+		// states needs to be aligned for 64-bit atomic operations.
+		states     [2]state
+		lock       internal.StateLocker
 		boundaries []core.Number
 		kind       core.NumberKind
 	}
@@ -74,16 +83,18 @@ func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
 	agg := Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: boundaries,
-		current: state{
-			buckets: aggregator.Buckets{
-				Boundaries: boundaries,
-				Counts:     make([]core.Number, len(boundaries)+1),
+		states: [2]state{
+			{
+				buckets: aggregator.Buckets{
+					Boundaries: boundaries,
+					Counts:     make([]core.Number, len(boundaries)+1),
+				},
 			},
-		},
-		checkpoint: state{
-			buckets: aggregator.Buckets{
-				Boundaries: boundaries,
-				Counts:     make([]core.Number, len(boundaries)+1),
+			{
+				buckets: aggregator.Buckets{
+					Boundaries: boundaries,
+					Counts:     make([]core.Number, len(boundaries)+1),
+				},
 			},
 		},
 	}
@@ -92,17 +103,23 @@ func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
 
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
-	return c.checkpoint.sum, nil
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.checkpoint().sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(c.checkpoint.count.AsUint64()), nil
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return int64(c.checkpoint().count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
-	return c.checkpoint.buckets, nil
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.checkpoint().buckets, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -110,55 +127,67 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
-	// N.B. There is no atomic operation that can update all three
-	// values at once without a memory allocation.
-	//
-	// This aggregator is intended to trade this correctness for
-	// speed.
-	//
-	// Therefore, atomically swap fields independently, knowing
-	// that individually the three parts of this aggregation could
-	// be spread across multiple collections in rare cases.
+	c.lock.SwapActiveState(c.resetCheckpoint)
+}
 
-	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
-	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
+// checkpoint returns the checkpoint state by inverting the lower bit of generationAndHotIdx.
+func (c *Aggregator) checkpoint() *state {
+	return &c.states[c.lock.ColdIdx()]
+}
 
-	for i := 0; i < len(c.checkpoint.buckets.Counts); i++ {
-		c.checkpoint.buckets.Counts[i].SetUint64(c.current.buckets.Counts[i].SwapUint64Atomic(0))
-	}
+func (c *Aggregator) resetCheckpoint() {
+	checkpoint := c.checkpoint()
+
+	checkpoint.count.SetUint64(0)
+	checkpoint.sum.SetNumber(core.Number(0))
+	checkpoint.buckets.Counts = make([]core.Number, len(checkpoint.buckets.Counts))
 }
 
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
 
-	c.current.count.AddUint64Atomic(1)
-	c.current.sum.AddNumberAtomic(kind, number)
+	cIdx := c.lock.Start()
+	defer c.lock.End(cIdx)
+
+	current := &c.states[cIdx]
+	current.count.AddUint64Atomic(1)
+	current.sum.AddNumberAtomic(kind, number)
 
 	for i, boundary := range c.boundaries {
 		if number.CompareNumber(kind, boundary) < 0 {
-			c.current.buckets.Counts[i].AddUint64Atomic(1)
+			current.buckets.Counts[i].AddUint64Atomic(1)
 			return nil
 		}
 	}
 
 	// Observed event is bigger than all defined boundaries.
-	c.current.buckets.Counts[len(c.boundaries)].AddUint64Atomic(1)
+	current.buckets.Counts[len(c.boundaries)].AddUint64Atomic(1)
+
 	return nil
 }
 
-// Merge combines two data sets into one.
+// Merge combines two histograms that have the same buckets into a single one.
 func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+	// Lock() synchronize Merge() and Checkpoint() to make sure all operations of
+	// Merge() is done to the same state.
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	for i := 0; i < len(c.current.buckets.Counts); i++ {
-		c.checkpoint.buckets.Counts[i].AddNumber(core.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
+	current := c.checkpoint()
+	// We assume that the aggregator being merged is not being updated nor checkpointed or this could be inconsistent.
+	ocheckpoint := o.checkpoint()
+
+	current.sum.AddNumber(desc.NumberKind(), ocheckpoint.sum)
+	current.count.AddNumber(core.Uint64NumberKind, ocheckpoint.count)
+
+	for i := 0; i < len(current.buckets.Counts); i++ {
+		current.buckets.Counts[i].AddNumber(core.Uint64NumberKind, ocheckpoint.buckets.Counts[i])
 	}
 	return nil
 }

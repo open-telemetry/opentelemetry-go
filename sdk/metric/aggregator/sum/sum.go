@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package counter // import "go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
 	"context"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package counter
+package sum
 
 import (
 	"context"
@@ -49,13 +49,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestCounterMonotonic(t *testing.T) {
+func TestCounterSum(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {
@@ -72,44 +72,23 @@ func TestCounterMonotonic(t *testing.T) {
 	})
 }
 
-func TestCounterMonotonicNegative(t *testing.T) {
+func TestMeasureSum(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
-
-		for i := 0; i < count; i++ {
-			test.CheckedUpdate(t, agg, profile.Random(-1), descriptor)
-		}
-
-		sum := profile.Random(+1)
-		test.CheckedUpdate(t, agg, sum, descriptor)
-		agg.Checkpoint(ctx, descriptor)
-
-		asum, err := agg.Sum()
-		require.Equal(t, sum, asum, "Same sum - monotonic")
-		require.Nil(t, err)
-	})
-}
-
-func TestCounterNonMonotonic(t *testing.T) {
-	ctx := context.Background()
-
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, true)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 		sum := core.Number(0)
+
 		for i := 0; i < count; i++ {
-			x := profile.Random(+1)
-			y := profile.Random(-1)
-			sum.AddNumber(profile.NumberKind, x)
-			sum.AddNumber(profile.NumberKind, y)
-			test.CheckedUpdate(t, agg, x, descriptor)
-			test.CheckedUpdate(t, agg, y, descriptor)
+			r1 := profile.Random(+1)
+			r2 := profile.Random(-1)
+			test.CheckedUpdate(t, agg, r1, descriptor)
+			test.CheckedUpdate(t, agg, r2, descriptor)
+			sum.AddNumber(profile.NumberKind, r1)
+			sum.AddNumber(profile.NumberKind, r2)
 		}
 
 		agg.Checkpoint(ctx, descriptor)
@@ -127,7 +106,7 @@ func TestCounterMerge(t *testing.T) {
 		agg1 := New()
 		agg2 := New()
 
-		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.CounterKind, profile.NumberKind)
 
 		sum := core.Number(0)
 		for i := 0; i < count; i++ {

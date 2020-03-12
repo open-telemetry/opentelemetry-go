@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"sync"
@@ -72,23 +73,30 @@ type (
 		meter      *SDK
 	}
 
-	// sortedLabels are used to de-duplicate and canonicalize labels.
-	sortedLabels []core.KeyValue
+	// orderedLabels is a variable-size array of core.KeyValue
+	// suitable for use as a map key.
+	orderedLabels interface{}
 
 	// labels implements the OpenTelemetry LabelSet API,
 	// represents an internalized set of labels that may be used
 	// repeatedly.
 	labels struct {
-		meter   *SDK
-		sorted  sortedLabels
-		encoded string
+		meter *SDK
+
+		// slice is a slice of `ordered`.
+		slice sortedLabels
+
+		// ordered is the output of sorting and deduplicating
+		// the labels, copied into an array of the correct
+		// size for use as a map key.
+		ordered orderedLabels
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
 		descriptor *export.Descriptor
-		encoded    string
+		ordered    orderedLabels
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -135,9 +143,9 @@ type (
 	observer struct {
 		meter      *SDK
 		descriptor *export.Descriptor
-		// recorders maps encoded labelset to the pair of
+		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[string]labeledRecorder
+		recorders map[orderedLabels]labeledRecorder
 		callback  observerCallback
 	}
 
@@ -167,6 +175,8 @@ var (
 	_ api.Float64Observer       = float64Observer{}
 	_ api.Int64ObserverResult   = int64ObserverResult{}
 	_ api.Float64ObserverResult = float64ObserverResult{}
+
+	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
 func (r observerResult) observe(number core.Number, ls api.LabelSet) {
@@ -192,20 +202,20 @@ func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
 
 func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
 	labels := o.meter.labsFor(ls)
-	lrec, ok := o.recorders[labels.encoded]
+	lrec, ok := o.recorders[labels.ordered]
 	if ok {
 		lrec.modifiedEpoch = o.meter.currentEpoch
-		o.recorders[labels.encoded] = lrec
+		o.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
 	rec := o.meter.batcher.AggregatorFor(o.descriptor)
 	if o.recorders == nil {
-		o.recorders = make(map[string]labeledRecorder)
+		o.recorders = make(map[orderedLabels]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// observer for the labelset for good. This is intentional,
 	// but will be revisited later.
-	o.recorders[labels.encoded] = labeledRecorder{
+	o.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
 		modifiedEpoch: o.meter.currentEpoch,
@@ -245,7 +255,7 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: i.descriptor,
-		encoded:    ls.encoded,
+		ordered:    ls.ordered,
 	}
 
 	if actual, ok := i.meter.current.Load(mk); ok {
@@ -336,39 +346,107 @@ func DefaultErrorHandler(err error) {
 // Labels returns a LabelSet corresponding to the arguments.  Passed
 // labels are de-duplicated, with last-value-wins semantics.
 func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
-	// Note: This computes a canonical encoding of the labels to
-	// use as a map key.  It happens to use the encoding used by
-	// statsd for labels, allowing an optimization for statsd
-	// batchers.  This could be made configurable in the
-	// constructor, to support the same optimization for different
-	// batchers.
-
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return &m.empty
 	}
 
-	ls := &labels{
-		meter:  m,
-		sorted: kvs,
+	ls := &labels{ // allocation
+		meter: m,
+		slice: kvs,
 	}
 
-	// Sort and de-duplicate.
-	sort.Stable(&ls.sorted)
+	// Sort and de-duplicate.  Note: this use of `ls.slice` avoids
+	// an allocation by using the address-able field rather than
+	// `kvs`.  Labels retains a copy of this slice, i.e., the
+	// initial allocation at the varargs call site.
+	//
+	// Note that `ls.slice` continues to refer to this memory,
+	// even though a new array is allocated for `ls.ordered`.  It
+	// is possible for the `slice` to refer to the same memory,
+	// although in the reflection code path of `computeOrdered` it
+	// costs an allocation to yield a slice through
+	// `(reflect.Value).Interface()`.
+	//
+	// TODO: There is a possibility that the caller passes values
+	// without an allocation (e.g., `meter.Labels(kvs...)`), and
+	// that the user could later modify the slice, leading to
+	// incorrect results.  This is indeed a risk, one that should
+	// be quickly addressed via the following TODO.
+	//
+	// TODO: It would be better overall if the export.Labels interface
+	// did not expose a slice via `Ordered()`, if instead it exposed
+	// getter methods like `Len()` and `Order(i int)`.  Then we would
+	// just implement the interface using the `orderedLabels` array.
+	sort.Stable(&ls.slice)
+
 	oi := 1
-	for i := 1; i < len(ls.sorted); i++ {
-		if ls.sorted[i-1].Key == ls.sorted[i].Key {
-			ls.sorted[oi-1] = ls.sorted[i]
+	for i := 1; i < len(kvs); i++ {
+		if kvs[i-1].Key == kvs[i].Key {
+			// Overwrite the value for "last-value wins".
+			kvs[oi-1].Value = kvs[i].Value
 			continue
 		}
-		ls.sorted[oi] = ls.sorted[i]
+		kvs[oi] = kvs[i]
 		oi++
 	}
-	ls.sorted = ls.sorted[0:oi]
-
-	ls.encoded = m.labelEncoder.Encode(ls.sorted)
-
+	kvs = kvs[0:oi]
+	ls.slice = kvs
+	ls.computeOrdered(kvs)
 	return ls
+}
+
+func (ls *labels) computeOrdered(kvs []core.KeyValue) {
+	switch len(kvs) {
+	case 1:
+		ptr := new([1]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 2:
+		ptr := new([2]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 3:
+		ptr := new([3]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 4:
+		ptr := new([4]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 5:
+		ptr := new([5]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 6:
+		ptr := new([6]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 7:
+		ptr := new([7]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 8:
+		ptr := new([8]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 9:
+		ptr := new([9]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	case 10:
+		ptr := new([10]core.KeyValue)
+		copy((*ptr)[:], kvs)
+		ls.ordered = *ptr
+	default:
+		at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
+
+		for i := 0; i < len(kvs); i++ {
+			*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kvs[i]
+		}
+
+		ls.ordered = at.Interface()
+	}
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -383,18 +461,18 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *export.Descriptor {
+func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
+	config := api.Configure(opts)
 	return export.NewDescriptor(
 		name,
 		metricKind,
-		opts.Keys,
-		opts.Description,
-		opts.Unit,
-		numberKind,
-		opts.Alternate)
+		config.Keys,
+		config.Description,
+		config.Unit,
+		numberKind)
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *instrument {
 	descriptor := newDescriptor(name, metricKind, numberKind, opts)
 	return &instrument{
 		descriptor: descriptor,
@@ -402,60 +480,40 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core
 	}
 }
 
-func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyCounterOptions(&opts, cos...)
-	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
+func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
+	return m.newInstrument(name, export.CounterKind, numberKind, opts)
 }
 
-func (m *SDK) newGaugeInstrument(name string, numberKind core.NumberKind, gos ...api.GaugeOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyGaugeOptions(&opts, gos...)
-	return m.newInstrument(name, export.GaugeKind, numberKind, &opts)
+func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
+	return m.newInstrument(name, export.MeasureKind, numberKind, opts)
 }
 
-func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyMeasureOptions(&opts, mos...)
-	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
+func (m *SDK) NewInt64Counter(name string, opts ...api.Option) (api.Int64Counter, error) {
+	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) api.Int64Counter {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...))
+func (m *SDK) NewFloat64Counter(name string, opts ...api.Option) (api.Float64Counter, error) {
+	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) api.Float64Counter {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...))
+func (m *SDK) NewInt64Measure(name string, opts ...api.Option) (api.Int64Measure, error) {
+	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewInt64Gauge(name string, gos ...api.GaugeOptionApplier) api.Int64Gauge {
-	return api.WrapInt64GaugeInstrument(m.newGaugeInstrument(name, core.Int64NumberKind, gos...))
+func (m *SDK) NewFloat64Measure(name string, opts ...api.Option) (api.Float64Measure, error) {
+	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewFloat64Gauge(name string, gos ...api.GaugeOptionApplier) api.Float64Gauge {
-	return api.WrapFloat64GaugeInstrument(m.newGaugeInstrument(name, core.Float64NumberKind, gos...))
-}
-
-func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) api.Int64Measure {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...))
-}
-
-func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) api.Float64Measure {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...))
-}
-
-func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) api.Int64Observer {
+func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, opts ...api.Option) (api.Int64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterInt64Observer("", nil)
 	}
-	opts := api.Options{}
-	api.ApplyObserverOptions(&opts, oos...)
-	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, &opts)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
 	cb := wrapInt64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return int64Observer{
 		observer: obs,
-	}
+	}, nil
 }
 
 func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
@@ -467,18 +525,16 @@ func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallb
 	}
 }
 
-func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) api.Float64Observer {
+func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, opts ...api.Option) (api.Float64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
-	opts := api.Options{}
-	api.ApplyObserverOptions(&opts, oos...)
-	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, &opts)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
 	cb := wrapFloat64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return float64Observer{
 		observer: obs,
-	}
+	}, nil
 }
 
 func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
@@ -592,7 +648,12 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, rec
 		return 0
 	}
 	recorder.Checkpoint(ctx, descriptor)
-	exportLabels := export.NewLabels(labels.sorted, labels.encoded, m.labelEncoder)
+
+	// TODO Labels are encoded once per collection interval,
+	// instead of once per bound instrument lifetime.  This can be
+	// addressed similarly to OTEP 78, see
+	// https://github.com/jmacd/opentelemetry-go/blob/8bed2e14df7f9f4688fbab141924bb786dc9a3a1/api/context/internal/set.go#L89
+	exportLabels := export.NewLabels(labels.slice, m.labelEncoder.Encode(labels.slice), m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
@@ -643,6 +704,6 @@ func (r *record) Unbind() {
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: r.descriptor,
-		encoded:    r.labels.encoded,
+		ordered:    r.labels.ordered,
 	}
 }

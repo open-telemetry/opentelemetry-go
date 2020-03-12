@@ -25,11 +25,12 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
 
@@ -84,7 +85,7 @@ func newFixture(t *testing.T) testFixture {
 }
 
 func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
-	return counter.New()
+	return sum.New()
 }
 
 func (b *testBatcher) CheckpointSet() export.CheckpointSet {
@@ -178,7 +179,7 @@ func TestPushTicker(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := meter.NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter")
 
 	p.Start()
 

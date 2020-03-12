@@ -67,18 +67,21 @@ func main() {
 	defer initMeter().Stop()
 	initTracer()
 
-	// Note: Have to get the meter and tracer after the global is
-	// initialized.  See OTEP 0005.
+	tracer := global.Tracer("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
 
-	tracer := global.TraceProvider().Tracer("ex.com/basic")
-	meter := global.MeterProvider().Meter("ex.com/basic")
+	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
 
-	oneMetric := meter.NewFloat64Gauge("ex.com.one",
+	oneMetricCB := func(result metric.Float64ObserverResult) {
+		result.Observe(1, commonLabels)
+	}
+	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
-		metric.WithDescription("A gauge set to 1.0"),
+		metric.WithDescription("An observer set to 1.0"),
 	)
+	defer oneMetric.Unregister()
 
-	measureTwo := meter.NewFloat64Measure("ex.com.two")
+	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
 
 	ctx := context.Background()
 
@@ -86,11 +89,6 @@ func main() {
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
-
-	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
-
-	gauge := oneMetric.Bind(commonLabels)
-	defer gauge.Unbind()
 
 	measure := measureTwo.Bind(commonLabels)
 	defer measure.Unbind()
@@ -101,14 +99,11 @@ func main() {
 
 		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
 
-		gauge.Set(ctx, 1)
-
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
 			correlation.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
-			oneMetric.Measurement(1.0),
 			measureTwo.Measurement(2.0),
 		)
 
