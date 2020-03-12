@@ -33,14 +33,13 @@ import (
 
 var Must = metric.Must
 
-func TestCounterOptions(t *testing.T) {
+func TestOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.CounterOptionApplier
+		opts []metric.Option
 		keys []core.Key
 		desc string
 		unit unit.Unit
-		alt  bool
 	}
 	testcases := []testcase{
 		{
@@ -49,11 +48,10 @@ func TestCounterOptions(t *testing.T) {
 			keys: nil,
 			desc: "",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "keys keys keys",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithKeys(key.New("foo"), key.New("foo2")),
 				metric.WithKeys(key.New("bar"), key.New("bar2")),
 				metric.WithKeys(key.New("baz"), key.New("baz2")),
@@ -65,310 +63,55 @@ func TestCounterOptions(t *testing.T) {
 			},
 			desc: "",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "description",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
 			keys: nil,
 			desc: "stuff",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "description override",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
 			keys: nil,
 			desc: "things",
 			unit: "",
-			alt:  false,
 		},
 		{
 			name: "unit",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
 			keys: nil,
 			desc: "",
 			unit: "s",
-			alt:  false,
 		},
 		{
 			name: "unit override",
-			opts: []metric.CounterOptionApplier{
+			opts: []metric.Option{
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
 			keys: nil,
 			desc: "",
 			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "nonmonotonic",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "nonmonotonic, but not really",
-			opts: []metric.CounterOptionApplier{
-				metric.WithMonotonic(false),
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
 		},
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyCounterOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
+		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func TestMeasureOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.MeasureOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "not absolute",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "not absolute, but not really",
-			opts: []metric.MeasureOptionApplier{
-				metric.WithAbsolute(false),
-				metric.WithAbsolute(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing measure case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyMeasureOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func TestObserverOptions(t *testing.T) {
-	type testcase struct {
-		name string
-		opts []metric.ObserverOptionApplier
-		keys []core.Key
-		desc string
-		unit unit.Unit
-		alt  bool
-	}
-	testcases := []testcase{
-		{
-			name: "no opts",
-			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithDescription("stuff"),
-			},
-			keys: nil,
-			desc: "stuff",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "description override",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithDescription("stuff"),
-				metric.WithDescription("things"),
-			},
-			keys: nil,
-			desc: "things",
-			unit: "",
-			alt:  false,
-		},
-		{
-			name: "unit",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithUnit("s"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "s",
-			alt:  false,
-		},
-		{
-			name: "unit override",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithUnit("s"),
-				metric.WithUnit("h"),
-			},
-			keys: nil,
-			desc: "",
-			unit: "h",
-			alt:  false,
-		},
-		{
-			name: "monotonic",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithMonotonic(true),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  true,
-		},
-		{
-			name: "monotonic, but not really",
-			opts: []metric.ObserverOptionApplier{
-				metric.WithMonotonic(true),
-				metric.WithMonotonic(false),
-			},
-			keys: nil,
-			desc: "",
-			unit: "",
-			alt:  false,
-		},
-	}
-	for idx, tt := range testcases {
-		t.Logf("Testing observer case %s (%d)", tt.name, idx)
-		opts := &metric.Options{}
-		metric.ApplyObserverOptions(opts, tt.opts...)
-		checkOptions(t, opts, &metric.Options{
-			Description: tt.desc,
-			Unit:        tt.unit,
-			Keys:        tt.keys,
-			Alternate:   tt.alt,
-		})
-	}
-}
-
-func checkOptions(t *testing.T, got *metric.Options, expected *metric.Options) {
-	if diff := cmp.Diff(got, expected); diff != "" {
-		t.Errorf("Compare options: -got +want %s", diff)
+		}); diff != "" {
+			t.Errorf("Compare options: -got +want %s", diff)
+		}
 	}
 }
 

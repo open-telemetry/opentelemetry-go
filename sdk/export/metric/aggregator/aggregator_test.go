@@ -16,7 +16,6 @@ package aggregator_test // import "go.opentelemetry.io/otel/sdk/export/metric/ag
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"testing"
 
@@ -25,15 +24,15 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
-	err := aggregator.NewInconsistentMergeError(counter.New(), lastvalue.New())
+	err := aggregator.NewInconsistentMergeError(sum.New(), lastvalue.New())
 	require.Equal(
 		t,
-		"cannot merge *counter.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
+		"cannot merge *sum.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
 		err.Error(),
 	)
 	require.True(t, errors.Is(err, aggregator.ErrInconsistentType))
@@ -51,7 +50,7 @@ func testRangeNaN(t *testing.T, desc *export.Descriptor) {
 	}
 }
 
-func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
+func testRangeNegative(t *testing.T, desc *export.Descriptor) {
 	var neg, pos core.Number
 
 	if desc.NumberKind() == core.Float64NumberKind {
@@ -66,15 +65,27 @@ func testRangeNegative(t *testing.T, alt bool, desc *export.Descriptor) {
 	negErr := aggregator.RangeTest(neg, desc)
 
 	require.Nil(t, posErr)
-
-	if desc.MetricKind() == export.ObserverKind {
-		require.Nil(t, negErr)
-	} else {
-		require.Equal(t, negErr == nil, alt)
-	}
+	require.Equal(t, negErr, aggregator.ErrNegativeInput)
 }
 
 func TestRangeTest(t *testing.T) {
+	// Only Counters implement a range test.
+	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
+		t.Run(nkind.String(), func(t *testing.T) {
+			desc := export.NewDescriptor(
+				"name",
+				export.CounterKind,
+				nil,
+				"",
+				"",
+				nkind,
+			)
+			testRangeNegative(t, desc)
+		})
+	}
+}
+
+func TestNaNTest(t *testing.T) {
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
 			for _, mkind := range []export.Kind{
@@ -82,23 +93,15 @@ func TestRangeTest(t *testing.T) {
 				export.MeasureKind,
 				export.ObserverKind,
 			} {
-				t.Run(mkind.String(), func(t *testing.T) {
-					for _, alt := range []bool{true, false} {
-						t.Run(fmt.Sprint(alt), func(t *testing.T) {
-							desc := export.NewDescriptor(
-								"name",
-								mkind,
-								nil,
-								"",
-								"",
-								nkind,
-								alt,
-							)
-							testRangeNaN(t, desc)
-							testRangeNegative(t, alt, desc)
-						})
-					}
-				})
+				desc := export.NewDescriptor(
+					"name",
+					mkind,
+					nil,
+					"",
+					"",
+					nkind,
+				)
+				testRangeNaN(t, desc)
 			}
 		})
 	}

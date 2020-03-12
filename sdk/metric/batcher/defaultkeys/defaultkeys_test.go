@@ -56,10 +56,10 @@ func TestGroupingStateless(t *testing.T) {
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C=D":   30, // labels1 + labels2
-		"counter.a/C=":    40, // labels3
-		"counter.b/C=D":   30, // labels1 + labels2
-		"counter.b/C=":    40, // labels3
+		"sum.a/C=D":       30, // labels1 + labels2
+		"sum.a/C=":        40, // labels3
+		"sum.b/C=D":       30, // labels1 + labels2
+		"sum.b/C=":        40, // labels3
 		"lastvalue.a/G=H": 10, // labels1
 		"lastvalue.a/G=":  30, // labels3 = last value
 		"lastvalue.b/G=H": 10, // labels1
@@ -93,8 +93,8 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C=D": 10, // labels1
-		"counter.b/C=D": 10, // labels1
+		"sum.a/C=D": 10, // labels1
+		"sum.b/C=D": 10, // labels1
 	}, records1)
 
 	// Test that state was NOT reset
@@ -133,7 +133,7 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
-		"counter.a/C=D": 30,
-		"counter.b/C=D": 30,
+		"sum.a/C=D": 30,
+		"sum.b/C=D": 30,
 	}, records4)
 }

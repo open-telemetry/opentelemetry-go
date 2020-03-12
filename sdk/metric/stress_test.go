@@ -38,8 +38,8 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 const (
@@ -234,7 +234,7 @@ func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregat
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, "counter"):
-		return counter.New()
+		return sum.New()
 	case strings.HasSuffix(name, "lastvalue"):
 		return lastvalue.New()
 	default:
@@ -265,15 +265,13 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 	agg := record.Aggregator()
 	switch record.Descriptor().MetricKind() {
 	case export.CounterKind:
-		counter := agg.(aggregator.Sum)
-		sum, err := counter.Sum()
+		sum, err := agg.(aggregator.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.MeasureKind:
-		lvagg := agg.(aggregator.LastValue)
-		lv, ts, err := lvagg.LastValue()
+		lv, ts, err := agg.(aggregator.LastValue).LastValue()
 		if err != nil && err != aggregator.ErrNoLastValue {
 			f.T.Fatal("Last value error: ", err)
 		}
@@ -336,18 +334,14 @@ func float64sEqual(a, b core.Number) bool {
 
 // Counters
 
-func intCounterTestImpl(nonMonotonic bool) testImpl {
+func intCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return Must(meter).NewInt64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
+			return Must(meter).NewInt64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
-			var offset int64
-			if nonMonotonic {
-				offset = -50
-			}
 			for {
-				x := offset + int64(rand.Intn(100))
+				x := int64(rand.Intn(100))
 				if x != 0 {
 					return core.NewInt64Number(x)
 				}
@@ -374,26 +368,18 @@ func intCounterTestImpl(nonMonotonic bool) testImpl {
 	}
 }
 
-func TestStressInt64CounterNormal(t *testing.T) {
-	stressTest(t, intCounterTestImpl(false))
+func TestStressInt64Counter(t *testing.T) {
+	stressTest(t, intCounterTestImpl())
 }
 
-func TestStressInt64CounterNonMonotonic(t *testing.T) {
-	stressTest(t, intCounterTestImpl(true))
-}
-
-func floatCounterTestImpl(nonMonotonic bool) testImpl {
+func floatCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return Must(meter).NewFloat64Counter(name+".counter", api.WithMonotonic(!nonMonotonic))
+			return Must(meter).NewFloat64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
-			var offset float64
-			if nonMonotonic {
-				offset = -0.5
-			}
 			for {
-				x := offset + rand.Float64()
+				x := rand.Float64()
 				if x != 0 {
 					return core.NewFloat64Number(x)
 				}
@@ -420,12 +406,8 @@ func floatCounterTestImpl(nonMonotonic bool) testImpl {
 	}
 }
 
-func TestStressFloat64CounterNormal(t *testing.T) {
-	stressTest(t, floatCounterTestImpl(false))
-}
-
-func TestStressFloat64CounterNonMonotonic(t *testing.T) {
-	stressTest(t, floatCounterTestImpl(true))
+func TestStressFloat64Counter(t *testing.T) {
+	stressTest(t, floatCounterTestImpl())
 }
 
 // LastValue
@@ -433,7 +415,7 @@ func TestStressFloat64CounterNonMonotonic(t *testing.T) {
 func intLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return Must(meter).NewInt64Measure(name+".lastvalue", metric.WithAbsolute(false))
+			return Must(meter).NewInt64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {
 			r1 := rand.Int63()
@@ -475,7 +457,7 @@ func TestStressInt64LastValue(t *testing.T) {
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) withImpl {
-			return Must(meter).NewFloat64Measure(name+".lastvalue", metric.WithAbsolute(false))
+			return Must(meter).NewFloat64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {
 			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)

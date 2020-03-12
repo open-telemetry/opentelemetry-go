@@ -29,7 +29,7 @@ func Must(meter Meter) MeterMust {
 
 // NewInt64Counter calls `Meter.NewInt64Counter` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter {
+func (mm MeterMust) NewInt64Counter(name string, cos ...Option) Int64Counter {
 	if inst, err := mm.meter.NewInt64Counter(name, cos...); err != nil {
 		panic(err)
 	} else {
@@ -39,7 +39,7 @@ func (mm MeterMust) NewInt64Counter(name string, cos ...CounterOptionApplier) In
 
 // NewFloat64Counter calls `Meter.NewFloat64Counter` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter {
+func (mm MeterMust) NewFloat64Counter(name string, cos ...Option) Float64Counter {
 	if inst, err := mm.meter.NewFloat64Counter(name, cos...); err != nil {
 		panic(err)
 	} else {
@@ -49,7 +49,7 @@ func (mm MeterMust) NewFloat64Counter(name string, cos ...CounterOptionApplier) 
 
 // NewInt64Measure calls `Meter.NewInt64Measure` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure {
+func (mm MeterMust) NewInt64Measure(name string, mos ...Option) Int64Measure {
 	if inst, err := mm.meter.NewInt64Measure(name, mos...); err != nil {
 		panic(err)
 	} else {
@@ -59,7 +59,7 @@ func (mm MeterMust) NewInt64Measure(name string, mos ...MeasureOptionApplier) In
 
 // NewFloat64Measure calls `Meter.NewFloat64Measure` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure {
+func (mm MeterMust) NewFloat64Measure(name string, mos ...Option) Float64Measure {
 	if inst, err := mm.meter.NewFloat64Measure(name, mos...); err != nil {
 		panic(err)
 	} else {
@@ -69,7 +69,7 @@ func (mm MeterMust) NewFloat64Measure(name string, mos ...MeasureOptionApplier) 
 
 // RegisterInt64Observer calls `Meter.RegisterInt64Observer` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer {
+func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...Option) Int64Observer {
 	if inst, err := mm.meter.RegisterInt64Observer(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -79,7 +79,7 @@ func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCal
 
 // RegisterFloat64Observer calls `Meter.RegisterFloat64Observer` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer {
+func (mm MeterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...Option) Float64Observer {
 	if inst, err := mm.meter.RegisterFloat64Observer(name, callback, oos...); err != nil {
 		panic(err)
 	} else {

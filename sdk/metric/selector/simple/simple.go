@@ -17,9 +17,9 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 type (
@@ -72,7 +72,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	case export.MeasureKind:
 		return minmaxsumcount.New(descriptor)
 	default:
-		return counter.New()
+		return sum.New()
 	}
 }
 
@@ -83,7 +83,7 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	case export.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
-		return counter.New()
+		return sum.New()
 	}
 }
 
@@ -94,6 +94,6 @@ func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggrega
 	case export.MeasureKind:
 		return array.New()
 	default:
-		return counter.New()
+		return sum.New()
 	}
 }

@@ -59,26 +59,26 @@ func (NoopMeter) Labels(...core.KeyValue) LabelSet {
 func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 }
 
-func (NoopMeter) NewInt64Counter(name string, cos ...CounterOptionApplier) (Int64Counter, error) {
+func (NoopMeter) NewInt64Counter(name string, cos ...Option) (Int64Counter, error) {
 	return WrapInt64CounterInstrument(noopInstrument{}, nil)
 }
 
-func (NoopMeter) NewFloat64Counter(name string, cos ...CounterOptionApplier) (Float64Counter, error) {
+func (NoopMeter) NewFloat64Counter(name string, cos ...Option) (Float64Counter, error) {
 	return WrapFloat64CounterInstrument(noopInstrument{}, nil)
 }
 
-func (NoopMeter) NewInt64Measure(name string, mos ...MeasureOptionApplier) (Int64Measure, error) {
+func (NoopMeter) NewInt64Measure(name string, mos ...Option) (Int64Measure, error) {
 	return WrapInt64MeasureInstrument(noopInstrument{}, nil)
 }
 
-func (NoopMeter) NewFloat64Measure(name string, mos ...MeasureOptionApplier) (Float64Measure, error) {
+func (NoopMeter) NewFloat64Measure(name string, mos ...Option) (Float64Measure, error) {
 	return WrapFloat64MeasureInstrument(noopInstrument{}, nil)
 }
 
-func (NoopMeter) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) (Int64Observer, error) {
+func (NoopMeter) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...Option) (Int64Observer, error) {
 	return noopInt64Observer{}, nil
 }
 
-func (NoopMeter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) (Float64Observer, error) {
+func (NoopMeter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...Option) (Float64Observer, error) {
 	return noopFloat64Observer{}, nil
 }

@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 var Must = metric.Must
@@ -47,7 +47,7 @@ func (cb *correctnessBatcher) AggregatorFor(descriptor *export.Descriptor) expor
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, ".counter"):
-		return counter.New()
+		return sum.New()
 	case strings.HasSuffix(name, ".disabled"):
 		return nil
 	default:
@@ -84,7 +84,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	counter := Must(sdk).NewInt64Counter("name.counter", metric.WithMonotonic(true))
+	counter := Must(sdk).NewInt64Counter("name.counter")
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -118,10 +118,10 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(sdk).NewFloat64Measure("name.measure", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.measure")
 
-	measure.Record(ctx, -1, sdk.Labels())
-	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
+	measure.Record(ctx, math.NaN(), sdk.Labels())
+	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
@@ -149,7 +149,7 @@ func TestDisabledInstrument(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := Must(sdk).NewFloat64Measure("name.disabled", metric.WithAbsolute(true))
+	measure := Must(sdk).NewFloat64Measure("name.disabled")
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
@@ -169,7 +169,7 @@ func TestRecordNaN(t *testing.T) {
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	c := Must(sdk).NewFloat64Counter("counter.name")
+	c := Must(sdk).NewFloat64Counter("sum.name")
 
 	require.Nil(t, sdkErr)
 	c.Add(ctx, math.NaN(), sdk.Labels())

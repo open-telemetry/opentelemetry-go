@@ -68,7 +68,7 @@ type instImpl struct {
 	name  string
 	mkind metricKind
 	nkind core.NumberKind
-	opts  interface{}
+	opts  []metric.Option
 }
 
 type obsImpl struct {
@@ -76,7 +76,7 @@ type obsImpl struct {
 
 	name     string
 	nkind    core.NumberKind
-	opts     []metric.ObserverOptionApplier
+	opts     []metric.Option
 	meter    *meter
 	callback interface{}
 }
@@ -181,7 +181,7 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	m.orderedObservers = nil
 }
 
-func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts interface{}) (metric.InstrumentImpl, error) {
+func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts []metric.Option) (metric.InstrumentImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -209,18 +209,18 @@ func delegateCheck(has hasImpl, err error) (metric.InstrumentImpl, error) {
 	return nil, err
 }
 
-func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts interface{}) (metric.InstrumentImpl, error) {
+func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts []metric.Option) (metric.InstrumentImpl, error) {
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {
-			return delegateCheck(m.NewInt64Counter(name, opts.([]metric.CounterOptionApplier)...))
+			return delegateCheck(m.NewInt64Counter(name, opts...))
 		}
-		return delegateCheck(m.NewFloat64Counter(name, opts.([]metric.CounterOptionApplier)...))
+		return delegateCheck(m.NewFloat64Counter(name, opts...))
 	case measureKind:
 		if nkind == core.Int64NumberKind {
-			return delegateCheck(m.NewInt64Measure(name, opts.([]metric.MeasureOptionApplier)...))
+			return delegateCheck(m.NewInt64Measure(name, opts...))
 		}
-		return delegateCheck(m.NewFloat64Measure(name, opts.([]metric.MeasureOptionApplier)...))
+		return delegateCheck(m.NewFloat64Measure(name, opts...))
 	}
 	return nil, errInvalidMetricKind
 }
@@ -419,34 +419,34 @@ func (labels *labelSet) Delegate() metric.LabelSet {
 
 // Constructors
 
-func (m *meter) NewInt64Counter(name string, opts ...metric.CounterOptionApplier) (metric.Int64Counter, error) {
+func (m *meter) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
 	return metric.WrapInt64CounterInstrument(m.newInst(name, counterKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Counter(name string, opts ...metric.CounterOptionApplier) (metric.Float64Counter, error) {
+func (m *meter) NewFloat64Counter(name string, opts ...metric.Option) (metric.Float64Counter, error) {
 	return metric.WrapFloat64CounterInstrument(m.newInst(name, counterKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) NewInt64Measure(name string, opts ...metric.MeasureOptionApplier) (metric.Int64Measure, error) {
+func (m *meter) NewInt64Measure(name string, opts ...metric.Option) (metric.Int64Measure, error) {
 	return metric.WrapInt64MeasureInstrument(m.newInst(name, measureKind, core.Int64NumberKind, opts))
 }
 
-func (m *meter) NewFloat64Measure(name string, opts ...metric.MeasureOptionApplier) (metric.Float64Measure, error) {
+func (m *meter) NewFloat64Measure(name string, opts ...metric.Option) (metric.Float64Measure, error) {
 	return metric.WrapFloat64MeasureInstrument(m.newInst(name, measureKind, core.Float64NumberKind, opts))
 }
 
-func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, oos ...metric.ObserverOptionApplier) (metric.Int64Observer, error) {
+func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, opts ...metric.Option) (metric.Int64Observer, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).RegisterInt64Observer(name, callback, oos...)
+		return (*meterPtr).RegisterInt64Observer(name, callback, opts...)
 	}
 
 	obs := &obsImpl{
 		name:     name,
 		nkind:    core.Int64NumberKind,
-		opts:     oos,
+		opts:     opts,
 		meter:    m,
 		callback: callback,
 	}
@@ -456,18 +456,18 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 	}, nil
 }
 
-func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, oos ...metric.ObserverOptionApplier) (metric.Float64Observer, error) {
+func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, opts ...metric.Option) (metric.Float64Observer, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).RegisterFloat64Observer(name, callback, oos...)
+		return (*meterPtr).RegisterFloat64Observer(name, callback, opts...)
 	}
 
 	obs := &obsImpl{
 		name:     name,
 		nkind:    core.Float64NumberKind,
-		opts:     oos,
+		opts:     opts,
 		meter:    m,
 		callback: callback,
 	}

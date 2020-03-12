@@ -6,8 +6,8 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 type CheckpointSet struct {
@@ -61,7 +61,7 @@ func (p *CheckpointSet) AddLastValue(desc *export.Descriptor, v float64, labels 
 }
 
 func (p *CheckpointSet) AddCounter(desc *export.Descriptor, v float64, labels ...core.KeyValue) {
-	p.updateAggregator(desc, counter.New(), v, labels...)
+	p.updateAggregator(desc, sum.New(), v, labels...)
 }
 
 func (p *CheckpointSet) AddMeasure(desc *export.Descriptor, v float64, labels ...core.KeyValue) {

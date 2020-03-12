@@ -18,10 +18,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -82,7 +82,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
 	ctx := context.Background()
-	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Int64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Int64NumberKind)
 	lvagg := lastvalue.New()
 	aggtest.CheckedUpdate(t, lvagg, core.NewInt64Number(321), desc)
 	lvagg.Checkpoint(ctx, desc)
@@ -127,8 +127,8 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
-	cagg := counter.New()
+	desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind)
+	cagg := sum.New()
 	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(123), desc)
 	cagg.Checkpoint(fix.ctx, desc)
 
@@ -144,7 +144,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind)
 	lvagg := lastvalue.New()
 	aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), desc)
 	lvagg.Checkpoint(fix.ctx, desc)
@@ -161,7 +161,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind)
 	magg := minmaxsumcount.New(desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), desc)
 	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), desc)
@@ -181,7 +181,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind)
 	magg := array.New()
 
 	for i := 0; i < 1000; i++ {
@@ -222,7 +222,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }
 
 func TestStdoutEmptyDataSet(t *testing.T) {
-	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
 		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), desc),
 		"minmaxsumcount": minmaxsumcount.New(desc),
@@ -252,7 +252,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind, false)
+	desc := export.NewDescriptor("test.name", export.ObserverKind, nil, "", "", core.Float64NumberKind)
 	lvagg := lastvalue.New()
 	lvagg.Checkpoint(fix.ctx, desc)
 
@@ -270,8 +270,8 @@ func TestStdoutCounterWithUnspecifiedKeys(t *testing.T) {
 
 	keys := []core.Key{key.New("C"), key.New("D")}
 
-	desc := export.NewDescriptor("test.name", export.CounterKind, keys, "", "", core.Int64NumberKind, false)
-	cagg := counter.New()
+	desc := export.NewDescriptor("test.name", export.CounterKind, keys, "", "", core.Int64NumberKind)
+	cagg := sum.New()
 	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(10), desc)
 	cagg.Checkpoint(fix.ctx, desc)
 

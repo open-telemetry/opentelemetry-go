@@ -87,26 +87,11 @@ func WrapFloat64MeasureInstrument(instrument InstrumentImpl, err error) (Float64
 	return Float64Measure{commonMetric: common}, err
 }
 
-// ApplyCounterOptions is a helper that applies all the counter
-// options to passed opts.
-func ApplyCounterOptions(opts *Options, cos ...CounterOptionApplier) {
-	for _, o := range cos {
-		o.ApplyCounterOption(opts)
+// Configure is a helper that applies all the options to a Config.
+func Configure(opts []Option) Config {
+	var config Config
+	for _, o := range opts {
+		o.Apply(&config)
 	}
-}
-
-// ApplyMeasureOptions is a helper that applies all the measure
-// options to passed opts.
-func ApplyMeasureOptions(opts *Options, mos ...MeasureOptionApplier) {
-	for _, o := range mos {
-		o.ApplyMeasureOption(opts)
-	}
-}
-
-// ApplyObserverOptions is a helper that applies all the observer
-// options to passed opts.
-func ApplyObserverOptions(opts *Options, mos ...ObserverOptionApplier) {
-	for _, o := range mos {
-		o.ApplyObserverOption(opts)
-	}
+	return config
 }

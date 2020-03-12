@@ -461,18 +461,18 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *export.Descriptor {
+func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
+	config := api.Configure(opts)
 	return export.NewDescriptor(
 		name,
 		metricKind,
-		opts.Keys,
-		opts.Description,
-		opts.Unit,
-		numberKind,
-		opts.Alternate)
+		config.Keys,
+		config.Description,
+		config.Unit,
+		numberKind)
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts *api.Options) *instrument {
+func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *instrument {
 	descriptor := newDescriptor(name, metricKind, numberKind, opts)
 	return &instrument{
 		descriptor: descriptor,
@@ -480,41 +480,35 @@ func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core
 	}
 }
 
-func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, cos ...api.CounterOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyCounterOptions(&opts, cos...)
-	return m.newInstrument(name, export.CounterKind, numberKind, &opts)
+func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
+	return m.newInstrument(name, export.CounterKind, numberKind, opts)
 }
 
-func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...api.MeasureOptionApplier) *instrument {
-	opts := api.Options{}
-	api.ApplyMeasureOptions(&opts, mos...)
-	return m.newInstrument(name, export.MeasureKind, numberKind, &opts)
+func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
+	return m.newInstrument(name, export.MeasureKind, numberKind, opts)
 }
 
-func (m *SDK) NewInt64Counter(name string, cos ...api.CounterOptionApplier) (api.Int64Counter, error) {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, cos...), nil)
+func (m *SDK) NewInt64Counter(name string, opts ...api.Option) (api.Int64Counter, error) {
+	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewFloat64Counter(name string, cos ...api.CounterOptionApplier) (api.Float64Counter, error) {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, cos...), nil)
+func (m *SDK) NewFloat64Counter(name string, opts ...api.Option) (api.Float64Counter, error) {
+	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewInt64Measure(name string, mos ...api.MeasureOptionApplier) (api.Int64Measure, error) {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, mos...), nil)
+func (m *SDK) NewInt64Measure(name string, opts ...api.Option) (api.Int64Measure, error) {
+	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, opts), nil)
 }
 
-func (m *SDK) NewFloat64Measure(name string, mos ...api.MeasureOptionApplier) (api.Float64Measure, error) {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, mos...), nil)
+func (m *SDK) NewFloat64Measure(name string, opts ...api.Option) (api.Float64Measure, error) {
+	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, opts), nil)
 }
 
-func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, oos ...api.ObserverOptionApplier) (api.Int64Observer, error) {
+func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, opts ...api.Option) (api.Int64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterInt64Observer("", nil)
 	}
-	opts := api.Options{}
-	api.ApplyObserverOptions(&opts, oos...)
-	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, &opts)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
 	cb := wrapInt64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return int64Observer{
@@ -531,13 +525,11 @@ func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallb
 	}
 }
 
-func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, oos ...api.ObserverOptionApplier) (api.Float64Observer, error) {
+func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, opts ...api.Option) (api.Float64Observer, error) {
 	if callback == nil {
 		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
-	opts := api.Options{}
-	api.ApplyObserverOptions(&opts, oos...)
-	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, &opts)
+	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
 	cb := wrapFloat64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return float64Observer{

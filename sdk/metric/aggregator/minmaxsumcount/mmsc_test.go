@@ -118,7 +118,7 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !policy.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 	agg := New(descriptor)
 
@@ -166,7 +166,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 		agg1 := New(descriptor)
 		agg2 := New(descriptor)
@@ -224,7 +224,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 		agg := New(descriptor)
 		agg.Checkpoint(ctx, descriptor)

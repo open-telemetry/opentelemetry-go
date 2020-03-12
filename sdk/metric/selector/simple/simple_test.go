@@ -22,35 +22,35 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/counter"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 var (
-	testCounterDesc  = export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
-	testMeasureDesc  = export.NewDescriptor("measure", export.MeasureKind, nil, "", "", core.Int64NumberKind, false)
-	testObserverDesc = export.NewDescriptor("observer", export.ObserverKind, nil, "", "", core.Int64NumberKind, false)
+	testCounterDesc  = export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind)
+	testMeasureDesc  = export.NewDescriptor("measure", export.MeasureKind, nil, "", "", core.Int64NumberKind)
+	testObserverDesc = export.NewDescriptor("observer", export.ObserverKind, nil, "", "", core.Int64NumberKind)
 )
 
 func TestInexpensiveMeasure(t *testing.T) {
 	inex := simple.NewWithInexpensiveMeasure()
-	require.NotPanics(t, func() { _ = inex.AggregatorFor(testCounterDesc).(*counter.Aggregator) })
+	require.NotPanics(t, func() { _ = inex.AggregatorFor(testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(testMeasureDesc).(*minmaxsumcount.Aggregator) })
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(testObserverDesc).(*minmaxsumcount.Aggregator) })
 }
 
 func TestSketchMeasure(t *testing.T) {
 	sk := simple.NewWithSketchMeasure(ddsketch.NewDefaultConfig())
-	require.NotPanics(t, func() { _ = sk.AggregatorFor(testCounterDesc).(*counter.Aggregator) })
+	require.NotPanics(t, func() { _ = sk.AggregatorFor(testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = sk.AggregatorFor(testMeasureDesc).(*ddsketch.Aggregator) })
 	require.NotPanics(t, func() { _ = sk.AggregatorFor(testObserverDesc).(*ddsketch.Aggregator) })
 }
 
 func TestExactMeasure(t *testing.T) {
 	ex := simple.NewWithExactMeasure()
-	require.NotPanics(t, func() { _ = ex.AggregatorFor(testCounterDesc).(*counter.Aggregator) })
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(testMeasureDesc).(*array.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(testObserverDesc).(*array.Aggregator) })
 }

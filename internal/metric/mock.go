@@ -32,7 +32,7 @@ type (
 		Name       string
 		Kind       Kind
 		NumberKind core.NumberKind
-		Opts       apimetric.Options
+		Config     apimetric.Config
 	}
 
 	LabelSet struct {
@@ -187,51 +187,47 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewInt64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Int64Counter, error) {
-	instrument := m.newCounterInstrument(name, core.Int64NumberKind, cos...)
+func (m *Meter) NewInt64Counter(name string, opts ...apimetric.Option) (apimetric.Int64Counter, error) {
+	instrument := m.newCounterInstrument(name, core.Int64NumberKind, opts)
 	return apimetric.WrapInt64CounterInstrument(instrument, nil)
 }
 
-func (m *Meter) NewFloat64Counter(name string, cos ...apimetric.CounterOptionApplier) (apimetric.Float64Counter, error) {
-	instrument := m.newCounterInstrument(name, core.Float64NumberKind, cos...)
+func (m *Meter) NewFloat64Counter(name string, opts ...apimetric.Option) (apimetric.Float64Counter, error) {
+	instrument := m.newCounterInstrument(name, core.Float64NumberKind, opts)
 	return apimetric.WrapFloat64CounterInstrument(instrument, nil)
 }
 
-func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, cos ...apimetric.CounterOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyCounterOptions(&opts, cos...)
+func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, opts []apimetric.Option) *Instrument {
 	return &Instrument{
 		Name:       name,
 		Kind:       KindCounter,
 		NumberKind: numberKind,
-		Opts:       opts,
+		Config:     apimetric.Configure(opts),
 	}
 }
 
-func (m *Meter) NewInt64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Int64Measure, error) {
-	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, mos...)
+func (m *Meter) NewInt64Measure(name string, opts ...apimetric.Option) (apimetric.Int64Measure, error) {
+	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, opts)
 	return apimetric.WrapInt64MeasureInstrument(instrument, nil)
 }
 
-func (m *Meter) NewFloat64Measure(name string, mos ...apimetric.MeasureOptionApplier) (apimetric.Float64Measure, error) {
-	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, mos...)
+func (m *Meter) NewFloat64Measure(name string, opts ...apimetric.Option) (apimetric.Float64Measure, error) {
+	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, opts)
 	return apimetric.WrapFloat64MeasureInstrument(instrument, nil)
 }
 
-func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, mos ...apimetric.MeasureOptionApplier) *Instrument {
-	opts := apimetric.Options{}
-	apimetric.ApplyMeasureOptions(&opts, mos...)
+func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, opts []apimetric.Option) *Instrument {
 	return &Instrument{
 		Name:       name,
 		Kind:       KindMeasure,
 		NumberKind: numberKind,
-		Opts:       opts,
+		Config:     apimetric.Configure(opts),
 	}
 }
 
-func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, oos ...apimetric.ObserverOptionApplier) (apimetric.Int64Observer, error) {
+func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, opts ...apimetric.Option) (apimetric.Int64Observer, error) {
 	wrappedCallback := wrapInt64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, oos...), nil
+	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, opts), nil
 }
 
 func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observerCallback {
@@ -246,9 +242,9 @@ func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observe
 	}
 }
 
-func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, oos ...apimetric.ObserverOptionApplier) (apimetric.Float64Observer, error) {
+func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, opts ...apimetric.Option) (apimetric.Float64Observer, error) {
 	wrappedCallback := wrapFloat64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, oos...), nil
+	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, opts), nil
 }
 
 func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) observerCallback {
@@ -263,15 +259,13 @@ func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) obs
 	}
 }
 
-func (m *Meter) newObserver(name string, callback observerCallback, numberKind core.NumberKind, oos ...apimetric.ObserverOptionApplier) *Observer {
-	opts := apimetric.Options{}
-	apimetric.ApplyObserverOptions(&opts, oos...)
+func (m *Meter) newObserver(name string, callback observerCallback, numberKind core.NumberKind, opts []apimetric.Option) *Observer {
 	obs := &Observer{
 		Instrument: &Instrument{
 			Name:       name,
 			Kind:       KindObserver,
 			NumberKind: numberKind,
-			Opts:       opts,
+			Config:     apimetric.Configure(opts),
 		},
 		Meter:    m,
 		Dead:     false,
