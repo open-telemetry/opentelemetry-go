@@ -106,7 +106,6 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	meter := pusher.Meter("test-meter")
 	labels := meter.Labels(core.Key("test").Bool(true))
 
-	// TODO: support observers
 	type data struct {
 		iKind metricsdk.Kind
 		nKind core.NumberKind

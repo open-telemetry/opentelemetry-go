@@ -1,4 +1,5 @@
-// Copyright 2020, OpenTelemetry Authors //
+// Copyright 2020, OpenTelemetry Authors
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -26,8 +27,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
+// ErrUnimplementedAgg is returned when a transformation of an unimplemented
+// aggregator is attempted.
 var ErrUnimplementedAgg = errors.New("unimplemented aggregator")
 
+// Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
+// error is returned if the Record Aggregator is not supported.
 func Record(r metricsdk.Record) (*metricpb.Metric, error) {
 	d := r.Descriptor()
 	l := r.Labels()
@@ -40,6 +45,7 @@ func Record(r metricsdk.Record) (*metricpb.Metric, error) {
 	return nil, ErrUnimplementedAgg
 }
 
+// sum transforms a Sum Aggregator into an OTLP Metric.
 func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
 	sum, err := a.Sum()
 	if err != nil {
@@ -71,6 +77,8 @@ func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) 
 	return m, nil
 }
 
+// minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
+// as discret values.
 func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
@@ -87,6 +95,7 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Numbe
 	return
 }
 
+// minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
 func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
@@ -121,6 +130,7 @@ func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggre
 	}, nil
 }
 
+// stringKeyValues transforms a KeyValues into an OTLP StringKeyValues.
 func stringKeyValues(kvs []core.KeyValue) []*commonpb.StringKeyValue {
 	result := make([]*commonpb.StringKeyValue, 0, len(kvs))
 	for _, kv := range kvs {
