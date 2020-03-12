@@ -87,7 +87,7 @@ func WrapFloat64MeasureInstrument(instrument InstrumentImpl, err error) (Float64
 	return Float64Measure{commonMetric: common}, err
 }
 
-// Apply is a helper that applies all the options to this Config.
+// Configure is a helper that applies all the options to a Config.
 func Configure(opts []Option) Config {
 	var config Config
 	for _, o := range opts {

@@ -45,10 +45,9 @@ type Config struct {
 	Keys []core.Key
 }
 
-// Option is an interface for applying metric options
-// that are valid only for counter metrics.
+// Option is an interface for applying metric options.
 type Option interface {
-	// Apply is used to make some general in the Config.
+	// Apply is used to set the Option value of a Config.
 	Apply(*Config)
 }
 
