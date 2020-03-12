@@ -209,7 +209,9 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		}
 
 		specifiedKeyMap := make(map[core.Key]core.Value)
-		for _, kv := range record.Labels().Ordered() {
+		iter := record.Labels().Iter()
+		for iter.Next() {
+			kv := iter.Label()
 			specifiedKeyMap[kv.Key] = kv.Value
 		}
 

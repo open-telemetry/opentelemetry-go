@@ -98,7 +98,9 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	// Note also the possibility to speed this computation of
 	// "encoded" via "outputLabels" in the form of a (Descriptor,
 	// LabelSet)->(Labels, Encoded) cache.
-	for _, kv := range record.Labels().Ordered() {
+	iter := record.Labels().Iter()
+	for iter.Next() {
+		kv := iter.Label()
 		pos, ok := ki[kv.Key]
 		if !ok {
 			continue
@@ -107,7 +109,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 
 	// Compute an encoded lookup key.
-	encoded := b.labelEncoder.Encode(outputLabels)
+	encoded := b.labelEncoder.Encode(export.NewSliceLabelIterator(outputLabels))
 
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.

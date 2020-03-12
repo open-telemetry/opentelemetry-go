@@ -58,7 +58,7 @@ func sum(desc *metric.Descriptor, labels export.Labels, a aggregator.Sum) (*metr
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
-			Labels:      stringKeyValues(labels.Ordered()),
+			Labels:      stringKeyValues(labels.Iter()),
 		},
 	}
 
@@ -110,7 +110,7 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
 			Type:        metricpb.MetricDescriptor_SUMMARY,
-			Labels:      stringKeyValues(labels.Ordered()),
+			Labels:      stringKeyValues(labels.Iter()),
 		},
 		SummaryDataPoints: []*metricpb.SummaryDataPoint{
 			{
@@ -131,10 +131,16 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 	}, nil
 }
 
-// stringKeyValues transforms a KeyValues into an OTLP StringKeyValues.
-func stringKeyValues(kvs []core.KeyValue) []*commonpb.StringKeyValue {
-	result := make([]*commonpb.StringKeyValue, 0, len(kvs))
-	for _, kv := range kvs {
+// stringKeyValues transforms a label iterator into an OTLP StringKeyValues.
+func stringKeyValues(iter export.LabelIterator) []*commonpb.StringKeyValue {
+	// TODO: That looks like a pointless allocation in case of no
+	// labels, but returning nil from this function makes the test
+	// fail. Would be better to use the following form:
+	//
+	// var result []*commonpb.StringKeyValue
+	result := []*commonpb.StringKeyValue{}
+	for iter.Next() {
+		kv := iter.Label()
 		result = append(result, &commonpb.StringKeyValue{
 			Key:   string(kv.Key),
 			Value: kv.Value.Emit(),

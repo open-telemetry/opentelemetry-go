@@ -69,7 +69,8 @@ func TestStringKeyValues(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.expected, stringKeyValues(test.kvs))
+		iter := metricsdk.NewSliceLabelIterator(test.kvs)
+		assert.Equal(t, test.expected, stringKeyValues(iter))
 	}
 }
 

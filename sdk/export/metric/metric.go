@@ -169,6 +169,66 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
+// LabelIterator allows iterating over ordered set of labels. The
+// typical use of the iterator is as follows:
+//
+//     iter := getIterator()
+//     for iter.Next() {
+//       label := iter.Label()
+//       // or, if we need an index:
+//       // idx, label := iter.IndexedLabel()
+//       // do something with label
+//     }
+type LabelIterator interface {
+	// Next moves the iterator to the next label. Returns false if
+	// there are no more labels.
+	Next() bool
+	// Label returns current label. Must be only called after Next
+	// returns true.
+	Label() core.KeyValue
+	// IndexedLabel returns current index and label. Must be only
+	// called after Next returns true.
+	IndexedLabel() (int, core.KeyValue)
+}
+
+// Convenience function that creates a slice of labels from the passed
+// iterator. The iterator is consumed, which means that after this
+// function, the iterator's Next() will return false.
+func IteratorToSlice(iter LabelIterator) []core.KeyValue {
+	var slice []core.KeyValue
+	for iter.Next() {
+		slice = append(slice, iter.Label())
+	}
+	return slice
+}
+
+type sliceLabelIterator struct {
+	slice []core.KeyValue
+	idx   int
+}
+
+var _ LabelIterator = &sliceLabelIterator{}
+
+func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {
+	return &sliceLabelIterator{
+		slice: s,
+		idx:   -1,
+	}
+}
+
+func (i *sliceLabelIterator) Next() bool {
+	i.idx++
+	return i.idx < len(i.slice)
+}
+
+func (i *sliceLabelIterator) Label() core.KeyValue {
+	return i.slice[i.idx]
+}
+
+func (i *sliceLabelIterator) IndexedLabel() (int, core.KeyValue) {
+	return i.idx, i.Label()
+}
+
 // LabelEncoder enables an optimization for export pipelines that use
 // text to encode their label sets.
 //
@@ -189,7 +249,7 @@ type LabelEncoder interface {
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
-	Encode([]core.KeyValue) string
+	Encode(LabelIterator) string
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -237,10 +297,9 @@ func NewLabels(ordered []core.KeyValue, encoded string, encoder LabelEncoder) La
 	}
 }
 
-// Ordered returns the labels in a specified order, according to the
-// Batcher.
-func (l Labels) Ordered() []core.KeyValue {
-	return l.ordered
+// Iter returns an iterator over ordered labels.
+func (l Labels) Iter() LabelIterator {
+	return NewSliceLabelIterator(l.ordered)
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
