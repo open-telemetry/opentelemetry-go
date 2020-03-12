@@ -92,13 +92,13 @@ func TestBasicFormat(t *testing.T) {
 	for _, ao := range []adapterOutput{{
 		adapter: newWithTagsAdapter(),
 		expected: `counter:%s|c|#A:B,C:D
-gauge:%s|g|#A:B,C:D
+observer:%s|g|#A:B,C:D
 measure:%s|h|#A:B,C:D
 timer:%s|ms|#A:B,C:D
 `}, {
 		adapter: newNoTagsAdapter(),
 		expected: `counter.B.D:%s|c
-gauge.B.D:%s|g
+observer.B.D:%s|g
 measure.B.D:%s|h
 timer.B.D:%s|ms
 `},
@@ -124,13 +124,13 @@ timer.B.D:%s|ms
 
 					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 					cdesc := export.NewDescriptor(
-						"counter", export.CounterKind, nil, "", "", nkind, false)
+						"counter", export.CounterKind, nil, "", "", nkind)
 					gdesc := export.NewDescriptor(
-						"gauge", export.GaugeKind, nil, "", "", nkind, false)
+						"observer", export.ObserverKind, nil, "", "", nkind)
 					mdesc := export.NewDescriptor(
-						"measure", export.MeasureKind, nil, "", "", nkind, false)
+						"measure", export.MeasureKind, nil, "", "", nkind)
 					tdesc := export.NewDescriptor(
-						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind, false)
+						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind)
 
 					labels := []core.KeyValue{
 						key.New("A").String("B"),
@@ -139,7 +139,7 @@ timer.B.D:%s|ms
 					const value = 123.456
 
 					checkpointSet.AddCounter(cdesc, value, labels...)
-					checkpointSet.AddGauge(gdesc, value, labels...)
+					checkpointSet.AddLastValue(gdesc, value, labels...)
 					checkpointSet.AddMeasure(mdesc, value, labels...)
 					checkpointSet.AddMeasure(tdesc, value, labels...)
 
@@ -285,7 +285,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, false)
+			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind)
 
 			var expected []string
 

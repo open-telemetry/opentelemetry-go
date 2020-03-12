@@ -67,13 +67,28 @@ func (t *testExporter) ExportSpan(ctx context.Context, d *export.SpanData) {
 	t.spans = append(t.spans, d)
 }
 
+type testSampler struct {
+	callCount int
+	prefix    string
+	t         *testing.T
+}
+
+func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	ts.callCount++
+	ts.t.Logf("called sampler for name %q", p.Name)
+	decision := NotRecord
+	if strings.HasPrefix(p.Name, ts.prefix) {
+		decision = RecordAndSampled
+	}
+	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{core.Key("callCount").Int(ts.callCount)}}
+}
+
+func (ts testSampler) Description() string {
+	return "testSampler"
+}
+
 func TestSetName(t *testing.T) {
-	samplerIsCalled := false
-	fooSampler := Sampler(func(p SamplingParameters) SamplingDecision {
-		samplerIsCalled = true
-		t.Logf("called sampler for name %q", p.Name)
-		return SamplingDecision{Sample: strings.HasPrefix(p.Name, "foo")}
-	})
+	fooSampler := &testSampler{prefix: "foo", t: t}
 	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
 
 	type testCase struct {
@@ -109,18 +124,18 @@ func TestSetName(t *testing.T) {
 		},
 	} {
 		span := startNamedSpan(tp, "SetName", tt.name)
-		if !samplerIsCalled {
+		if fooSampler.callCount == 0 {
 			t.Errorf("%d: the sampler was not even called during span creation", idx)
 		}
-		samplerIsCalled = false
+		fooSampler.callCount = 0
 		if gotSampledBefore := span.SpanContext().IsSampled(); tt.sampledBefore != gotSampledBefore {
 			t.Errorf("%d: invalid sampling decision before rename, expected %v, got %v", idx, tt.sampledBefore, gotSampledBefore)
 		}
 		span.SetName(tt.newName)
-		if !samplerIsCalled {
+		if fooSampler.callCount == 0 {
 			t.Errorf("%d: the sampler was not even called during span rename", idx)
 		}
-		samplerIsCalled = false
+		fooSampler.callCount = 0
 		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
 			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
 		}

@@ -47,12 +47,11 @@ func TestMain(m *testing.M) {
 }
 
 type updateTest struct {
-	count    int
-	absolute bool
+	count int
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !ut.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 	agg := New()
 
@@ -63,11 +62,9 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		all.Append(x)
 		test.CheckedUpdate(t, agg, x, descriptor)
 
-		if !ut.absolute {
-			y := profile.Random(-1)
-			all.Append(y)
-			test.CheckedUpdate(t, agg, y, descriptor)
-		}
+		y := profile.Random(-1)
+		all.Append(y)
+		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
 	ctx := context.Background()
@@ -82,40 +79,34 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
-		"Same sum - absolute")
+		"Same sum")
 	count, err := agg.Count()
 	require.Nil(t, err)
-	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Equal(t, all.Count(), count, "Same count")
 
 	min, err := agg.Min()
 	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min - absolute")
+	require.Equal(t, all.Min(), min, "Same min")
 
 	max, err := agg.Max()
 	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max - absolute")
+	require.Equal(t, all.Max(), max, "Same max")
 
 	qx, err := agg.Quantile(0.5)
 	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median - absolute")
+	require.Equal(t, all.Median(), qx, "Same median")
 }
 
 func TestArrayUpdate(t *testing.T) {
 	// Test with an odd an even number of measurements
 	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
-			// Test absolute and non-absolute
-			for _, absolute := range []bool{false, true} {
-				t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-					ut := updateTest{
-						count:    count,
-						absolute: absolute,
-					}
-
-					// Test integer and floating point
-					test.RunProfiles(t, ut.run)
-				})
+			ut := updateTest{
+				count: count,
 			}
+
+			// Test integer and floating point
+			test.RunProfiles(t, ut.run)
 		})
 	}
 }
@@ -128,7 +119,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, !mt.absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 	agg1 := New()
 	agg2 := New()
@@ -225,7 +216,7 @@ func TestArrayErrors(t *testing.T) {
 
 		ctx := context.Background()
 
-		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind, false)
+		descriptor := test.NewAggregatorTest(export.MeasureKind, profile.NumberKind)
 
 		test.CheckedUpdate(t, agg, core.Number(0), descriptor)
 
@@ -253,86 +244,80 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	for _, absolute := range []bool{false, true} {
-		t.Run(fmt.Sprint("Absolute=", absolute), func(t *testing.T) {
-			descriptor := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind, !absolute)
+	descriptor := test.NewAggregatorTest(export.MeasureKind, core.Float64NumberKind)
 
-			fpsf := func(sign int) []float64 {
-				// Check behavior of a bunch of odd floating
-				// points except for NaN, which is invalid.
-				return []float64{
-					0,
-					math.Inf(sign),
-					1 / math.Inf(sign),
-					1,
-					2,
-					1e100,
-					math.MaxFloat64,
-					math.SmallestNonzeroFloat64,
-					math.MaxFloat32,
-					math.SmallestNonzeroFloat32,
-					math.E,
-					math.Pi,
-					math.Phi,
-					math.Sqrt2,
-					math.SqrtE,
-					math.SqrtPi,
-					math.SqrtPhi,
-					math.Ln2,
-					math.Log2E,
-					math.Ln10,
-					math.Log10E,
-				}
-			}
+	fpsf := func(sign int) []float64 {
+		// Check behavior of a bunch of odd floating
+		// points except for NaN, which is invalid.
+		return []float64{
+			0,
+			math.Inf(sign),
+			1 / math.Inf(sign),
+			1,
+			2,
+			1e100,
+			math.MaxFloat64,
+			math.SmallestNonzeroFloat64,
+			math.MaxFloat32,
+			math.SmallestNonzeroFloat32,
+			math.E,
+			math.Pi,
+			math.Phi,
+			math.Sqrt2,
+			math.SqrtE,
+			math.SqrtPi,
+			math.SqrtPhi,
+			math.Ln2,
+			math.Log2E,
+			math.Ln10,
+			math.Log10E,
+		}
+	}
 
-			all := test.NewNumbers(core.Float64NumberKind)
+	all := test.NewNumbers(core.Float64NumberKind)
 
-			ctx := context.Background()
-			agg := New()
+	ctx := context.Background()
+	agg := New()
 
-			for _, f := range fpsf(1) {
-				all.Append(core.NewFloat64Number(f))
-				test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
-			}
+	for _, f := range fpsf(1) {
+		all.Append(core.NewFloat64Number(f))
+		test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
+	}
 
-			if !absolute {
-				for _, f := range fpsf(-1) {
-					all.Append(core.NewFloat64Number(f))
-					test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
-				}
-			}
+	for _, f := range fpsf(-1) {
+		all.Append(core.NewFloat64Number(f))
+		test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
+	}
 
-			agg.Checkpoint(ctx, descriptor)
+	agg.Checkpoint(ctx, descriptor)
 
-			all.Sort()
+	all.Sort()
 
-			sum, err := agg.Sum()
-			require.Nil(t, err)
-			allSum := all.Sum()
-			require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
+	sum, err := agg.Sum()
+	require.Nil(t, err)
+	allSum := all.Sum()
+	require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
-			count, err := agg.Count()
-			require.Equal(t, all.Count(), count, "Same count")
-			require.Nil(t, err)
+	count, err := agg.Count()
+	require.Equal(t, all.Count(), count, "Same count")
+	require.Nil(t, err)
 
-			min, err := agg.Min()
-			require.Nil(t, err)
-			require.Equal(t, all.Min(), min, "Same min")
+	min, err := agg.Min()
+	require.Nil(t, err)
+	require.Equal(t, all.Min(), min, "Same min")
 
-			max, err := agg.Max()
-			require.Nil(t, err)
-			require.Equal(t, all.Max(), max, "Same max")
+	max, err := agg.Max()
+	require.Nil(t, err)
+	require.Equal(t, all.Max(), max, "Same max")
 
-			qx, err := agg.Quantile(0.5)
-			require.Nil(t, err)
-			require.Equal(t, all.Median(), qx, "Same median")
+	qx, err := agg.Quantile(0.5)
+	require.Nil(t, err)
+	require.Equal(t, all.Median(), qx, "Same median")
 
-			po, err := agg.Points()
-			require.Nil(t, err)
-			require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
-			for i := 0; i < len(po); i++ {
-				require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
-			}
-		})
+	po, err := agg.Points()
+	require.Nil(t, err)
+	require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
+	for i := 0; i < len(po); i++ {
+		require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
 	}
 }

@@ -173,7 +173,7 @@ func WithSyncer(syncer export.SpanSyncer) ProviderOption {
 	}
 }
 
-// WithBatch options appends the batcher to the existing list of Batchers.
+// WithBatcher options appends the batcher to the existing list of Batchers.
 // This option can be used multiple times.
 // The Batchers are wrapped into BatchedSpanProcessors and registered
 // with the provider.

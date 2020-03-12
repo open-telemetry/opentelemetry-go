@@ -48,7 +48,7 @@ func Example_insecure() {
 
 	global.SetTraceProvider(tp)
 
-	tracer := global.TraceProvider().Tracer("test-tracer")
+	tracer := global.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
@@ -89,7 +89,7 @@ func Example_withTLS() {
 
 	global.SetTraceProvider(tp)
 
-	tracer := global.TraceProvider().Tracer("test-tracer")
+	tracer := global.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
 	ctx, span := tracer.Start(context.Background(), "Securely-Talking-To-Collector-Span")

@@ -54,7 +54,7 @@ func initTracer() {
 
 func main() {
 	initTracer()
-	tracer := global.TraceProvider().Tracer("ex.com/basic")
+	tracer := global.Tracer("ex.com/basic")
 
 	tracer.WithSpan(context.Background(), "foo",
 		func(ctx context.Context) error {

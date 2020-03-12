@@ -33,8 +33,8 @@ type Provider interface {
 type LabelSet interface {
 }
 
-// Options contains some options for metrics of any kind.
-type Options struct {
+// Config contains some options for metrics of any kind.
+type Config struct {
 	// Description is an optional field describing the metric
 	// instrument.
 	Description string
@@ -43,50 +43,12 @@ type Options struct {
 	// Keys are recommended keys determined in the handles
 	// obtained for the metric.
 	Keys []core.Key
-	// Alternate defines the property of metric value dependent on
-	// a metric type.
-	//
-	// - for Counter, true implies that the metric is an up-down
-	//   Counter
-	//
-	// - for Gauge, true implies that the metric is a
-	//   non-descending Gauge
-	//
-	// - for Measure, true implies that the metric supports
-	//   positive and negative values
-	Alternate bool
 }
 
-// CounterOptionApplier is an interface for applying metric options
-// that are valid only for counter metrics.
-type CounterOptionApplier interface {
-	// ApplyCounterOption is used to make some general or
-	// counter-specific changes in the Options.
-	ApplyCounterOption(*Options)
-}
-
-// GaugeOptionApplier is an interface for applying metric options that
-// are valid only for gauge metrics.
-type GaugeOptionApplier interface {
-	// ApplyGaugeOption is used to make some general or
-	// gauge-specific changes in the Options.
-	ApplyGaugeOption(*Options)
-}
-
-// MeasureOptionApplier is an interface for applying metric options
-// that are valid only for measure metrics.
-type MeasureOptionApplier interface {
-	// ApplyMeasureOption is used to make some general or
-	// measure-specific changes in the Options.
-	ApplyMeasureOption(*Options)
-}
-
-// ObserverOptionApplier is an interface for applying metric options
-// that are valid only for observer metrics.
-type ObserverOptionApplier interface {
-	// ApplyObserverOption is used to make some general or
-	// observer-specific changes in the Options.
-	ApplyObserverOption(*Options)
+// Option is an interface for applying metric options.
+type Option interface {
+	// Apply is used to set the Option value of a Config.
+	Apply(*Config)
 }
 
 // Measurement is used for reporting a batch of metric
@@ -116,36 +78,36 @@ type Meter interface {
 	// be read by the application.
 	Labels(...core.KeyValue) LabelSet
 
+	// RecordBatch atomically records a batch of measurements.
+	RecordBatch(context.Context, LabelSet, ...Measurement)
+
+	// All instrument constructors may return an error for
+	// conditions such as:
+	//   `name` is an empty string
+	//   `name` was previously registered as a different kind of instrument
+	//          for a given named `Meter`.
+
 	// NewInt64Counter creates a new integral counter with a given
 	// name and customized with passed options.
-	NewInt64Counter(name string, cos ...CounterOptionApplier) Int64Counter
+	NewInt64Counter(name string, opts ...Option) (Int64Counter, error)
 	// NewFloat64Counter creates a new floating point counter with
 	// a given name and customized with passed options.
-	NewFloat64Counter(name string, cos ...CounterOptionApplier) Float64Counter
-	// NewInt64Gauge creates a new integral gauge with a given
-	// name and customized with passed options.
-	NewInt64Gauge(name string, gos ...GaugeOptionApplier) Int64Gauge
-	// NewFloat64Gauge creates a new floating point gauge with a
-	// given name and customized with passed options.
-	NewFloat64Gauge(name string, gos ...GaugeOptionApplier) Float64Gauge
+	NewFloat64Counter(name string, opts ...Option) (Float64Counter, error)
 	// NewInt64Measure creates a new integral measure with a given
 	// name and customized with passed options.
-	NewInt64Measure(name string, mos ...MeasureOptionApplier) Int64Measure
+	NewInt64Measure(name string, opts ...Option) (Int64Measure, error)
 	// NewFloat64Measure creates a new floating point measure with
 	// a given name and customized with passed options.
-	NewFloat64Measure(name string, mos ...MeasureOptionApplier) Float64Measure
+	NewFloat64Measure(name string, opts ...Option) (Float64Measure, error)
 
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
 	// options. Callback can be nil.
-	RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...ObserverOptionApplier) Int64Observer
+	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
-	RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...ObserverOptionApplier) Float64Observer
-
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
 }
 
 // Int64ObserverResult is an interface for reporting integral
@@ -180,162 +142,36 @@ type Float64Observer interface {
 	Unregister()
 }
 
-// Option supports specifying the various metric options.
-type Option func(*Options)
-
-// OptionApplier is an interface for applying metric options that are
-// valid for all the kinds of metrics.
-type OptionApplier interface {
-	CounterOptionApplier
-	GaugeOptionApplier
-	MeasureOptionApplier
-	ObserverOptionApplier
-	// ApplyOption is used to make some general changes in the
-	// Options.
-	ApplyOption(*Options)
-}
-
-// CounterGaugeObserverOptionApplier is an interface for applying
-// metric options that are valid for counter, gauge or observer
-// metrics.
-type CounterGaugeObserverOptionApplier interface {
-	CounterOptionApplier
-	GaugeOptionApplier
-	ObserverOptionApplier
-}
-
-type optionWrapper struct {
-	F Option
-}
-
-type counterOptionWrapper struct {
-	F Option
-}
-
-type gaugeOptionWrapper struct {
-	F Option
-}
-
-type measureOptionWrapper struct {
-	F Option
-}
-
-type observerOptionWrapper struct {
-	F Option
-}
-
-type counterGaugeObserverOptionWrapper struct {
-	FC Option
-	FG Option
-	FO Option
-}
-
-var (
-	_ OptionApplier         = optionWrapper{}
-	_ CounterOptionApplier  = counterOptionWrapper{}
-	_ GaugeOptionApplier    = gaugeOptionWrapper{}
-	_ MeasureOptionApplier  = measureOptionWrapper{}
-	_ ObserverOptionApplier = observerOptionWrapper{}
-)
-
-func (o optionWrapper) ApplyCounterOption(opts *Options) {
-	o.ApplyOption(opts)
-}
-
-func (o optionWrapper) ApplyGaugeOption(opts *Options) {
-	o.ApplyOption(opts)
-}
-
-func (o optionWrapper) ApplyMeasureOption(opts *Options) {
-	o.ApplyOption(opts)
-}
-
-func (o optionWrapper) ApplyObserverOption(opts *Options) {
-	o.ApplyOption(opts)
-}
-
-func (o optionWrapper) ApplyOption(opts *Options) {
-	o.F(opts)
-}
-
-func (o counterOptionWrapper) ApplyCounterOption(opts *Options) {
-	o.F(opts)
-}
-
-func (o gaugeOptionWrapper) ApplyGaugeOption(opts *Options) {
-	o.F(opts)
-}
-
-func (o measureOptionWrapper) ApplyMeasureOption(opts *Options) {
-	o.F(opts)
-}
-
-func (o counterGaugeObserverOptionWrapper) ApplyCounterOption(opts *Options) {
-	o.FC(opts)
-}
-
-func (o counterGaugeObserverOptionWrapper) ApplyGaugeOption(opts *Options) {
-	o.FG(opts)
-}
-
-func (o counterGaugeObserverOptionWrapper) ApplyObserverOption(opts *Options) {
-	o.FO(opts)
-}
-
-func (o observerOptionWrapper) ApplyObserverOption(opts *Options) {
-	o.F(opts)
-}
-
 // WithDescription applies provided description.
-func WithDescription(desc string) OptionApplier {
-	return optionWrapper{
-		F: func(opts *Options) {
-			opts.Description = desc
-		},
-	}
+func WithDescription(desc string) Option {
+	return descriptionOption(desc)
+}
+
+type descriptionOption string
+
+func (d descriptionOption) Apply(config *Config) {
+	config.Description = string(d)
 }
 
 // WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) OptionApplier {
-	return optionWrapper{
-		F: func(opts *Options) {
-			opts.Unit = unit
-		},
-	}
+func WithUnit(unit unit.Unit) Option {
+	return unitOption(unit)
+}
+
+type unitOption unit.Unit
+
+func (u unitOption) Apply(config *Config) {
+	config.Unit = unit.Unit(u)
 }
 
 // WithKeys applies recommended label keys. Multiple `WithKeys`
 // options accumulate.
-func WithKeys(keys ...core.Key) OptionApplier {
-	return optionWrapper{
-		F: func(opts *Options) {
-			opts.Keys = append(opts.Keys, keys...)
-		},
-	}
+func WithKeys(keys ...core.Key) Option {
+	return keysOption(keys)
 }
 
-// WithMonotonic sets whether a counter, a gauge or an observer is not
-// permitted to go down.
-func WithMonotonic(monotonic bool) CounterGaugeObserverOptionApplier {
-	return counterGaugeObserverOptionWrapper{
-		FC: func(opts *Options) {
-			opts.Alternate = !monotonic
-		},
-		FG: func(opts *Options) {
-			opts.Alternate = monotonic
-		},
-		FO: func(opts *Options) {
-			opts.Alternate = monotonic
-		},
-	}
-}
+type keysOption []core.Key
 
-// WithAbsolute sets whether a measure is not permitted to be
-// negative.
-func WithAbsolute(absolute bool) MeasureOptionApplier {
-	return measureOptionWrapper{
-		F: func(opts *Options) {
-			opts.Alternate = !absolute
-		},
-	}
+func (k keysOption) Apply(config *Config) {
+	config.Keys = append(config.Keys, k...)
 }

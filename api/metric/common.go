@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/api/core"
 )
@@ -27,6 +28,8 @@ type commonMetric struct {
 type commonBoundInstrument struct {
 	boundInstrument BoundInstrumentImpl
 }
+
+var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 func (m commonMetric) bind(labels LabelSet) commonBoundInstrument {
 	return newCommonBoundInstrument(m.instrument.Bind(labels))
@@ -56,10 +59,21 @@ func (h commonBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
 }
 
-func newCommonMetric(instrument InstrumentImpl) commonMetric {
+func newCommonMetric(instrument InstrumentImpl, err error) (commonMetric, error) {
+	if instrument == nil {
+		if err == nil {
+			err = ErrSDKReturnedNilImpl
+		}
+		// Note: an alternate behavior would be to synthesize a new name
+		// or group all duplicately-named instruments of a certain type
+		// together and use a tag for the original name, e.g.,
+		//   name = 'invalid.counter.int64'
+		//   label = 'original-name=duplicate-counter-name'
+		instrument = noopInstrument{}
+	}
 	return commonMetric{
 		instrument: instrument,
-	}
+	}, err
 }
 
 func newCommonBoundInstrument(boundInstrument BoundInstrumentImpl) commonBoundInstrument {

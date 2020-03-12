@@ -14,6 +14,10 @@
 
 package metric
 
+import "go.opentelemetry.io/otel/api/core"
+
+type sortedLabels []core.KeyValue
+
 func (l *sortedLabels) Len() int {
 	return len(*l)
 }

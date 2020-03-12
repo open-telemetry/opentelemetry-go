@@ -16,12 +16,17 @@ package trace
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"go.opentelemetry.io/otel/api/core"
+	api "go.opentelemetry.io/otel/api/trace"
 )
 
 // Sampler decides whether a trace should be sampled and exported.
-type Sampler func(SamplingParameters) SamplingDecision
+type Sampler interface {
+	ShouldSample(SamplingParameters) SamplingResult
+	Description() string
+}
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
@@ -30,11 +35,46 @@ type SamplingParameters struct {
 	SpanID          core.SpanID
 	Name            string
 	HasRemoteParent bool
+	Kind            api.SpanKind
+	Attributes      []core.KeyValue
+	Links           []api.Link
 }
 
-// SamplingDecision is the value returned by a Sampler.
-type SamplingDecision struct {
-	Sample bool
+// SamplingDecision indicates whether a span is recorded and sampled.
+type SamplingDecision uint8
+
+// Valid sampling decisions
+const (
+	NotRecord SamplingDecision = iota
+	Record
+	RecordAndSampled
+)
+
+// SamplingResult conveys a SamplingDecision and a set of Attributes.
+type SamplingResult struct {
+	Decision   SamplingDecision
+	Attributes []core.KeyValue
+}
+
+type probabilitySampler struct {
+	traceIDUpperBound uint64
+	description       string
+}
+
+func (ps probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
+	if p.ParentContext.IsSampled() {
+		return SamplingResult{Decision: RecordAndSampled}
+	}
+
+	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
+	if x < ps.traceIDUpperBound {
+		return SamplingResult{Decision: RecordAndSampled}
+	}
+	return SamplingResult{Decision: NotRecord}
+}
+
+func (ps probabilitySampler) Description() string {
+	return ps.description
 }
 
 // ProbabilitySampler samples a given fraction of traces. Fractions >= 1 will
@@ -49,14 +89,21 @@ func ProbabilitySampler(fraction float64) Sampler {
 	if fraction <= 0 {
 		fraction = 0
 	}
-	traceIDUpperBound := uint64(fraction * (1 << 63))
-	return func(p SamplingParameters) SamplingDecision {
-		if p.ParentContext.IsSampled() {
-			return SamplingDecision{Sample: true}
-		}
-		x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
-		return SamplingDecision{Sample: x < traceIDUpperBound}
+
+	return &probabilitySampler{
+		traceIDUpperBound: uint64(fraction * (1 << 63)),
+		description:       fmt.Sprintf("ProbabilitySampler{%g}", fraction),
 	}
+}
+
+type alwaysOnSampler struct{}
+
+func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	return SamplingResult{Decision: RecordAndSampled}
+}
+
+func (as alwaysOnSampler) Description() string {
+	return "AlwaysOnSampler"
 }
 
 // AlwaysSample returns a Sampler that samples every trace.
@@ -64,16 +111,22 @@ func ProbabilitySampler(fraction float64) Sampler {
 // significant traffic: a new trace will be started and exported for every
 // request.
 func AlwaysSample() Sampler {
-	return func(p SamplingParameters) SamplingDecision {
-		return SamplingDecision{Sample: true}
-	}
+	return alwaysOnSampler{}
+}
+
+type alwaysOffSampler struct{}
+
+func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	return SamplingResult{Decision: NotRecord}
+}
+
+func (as alwaysOffSampler) Description() string {
+	return "AlwaysOffSampler"
 }
 
 // NeverSample returns a Sampler that samples no traces.
 func NeverSample() Sampler {
-	return func(p SamplingParameters) SamplingDecision {
-		return SamplingDecision{Sample: false}
-	}
+	return alwaysOffSampler{}
 }
 
 // AlwaysParentSample returns a Sampler that samples a trace only
@@ -81,5 +134,8 @@ func NeverSample() Sampler {
 // This Sampler is a passthrough to the ProbabilitySampler with
 // a fraction of value 0.
 func AlwaysParentSample() Sampler {
-	return ProbabilitySampler(0)
+	return &probabilitySampler{
+		traceIDUpperBound: 0,
+		description:       "AlwaysParentSampler",
+	}
 }

@@ -132,8 +132,8 @@ func RangeTest(number core.Number, descriptor *export.Descriptor) error {
 	}
 
 	switch descriptor.MetricKind() {
-	case export.CounterKind, export.MeasureKind:
-		if !descriptor.Alternate() && number.IsNegative(numberKind) {
+	case export.CounterKind:
+		if number.IsNegative(numberKind) {
 			return ErrNegativeInput
 		}
 	}
