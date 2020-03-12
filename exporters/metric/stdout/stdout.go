@@ -217,8 +217,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		var materializedKeys []string
 
-		if labels := record.Labels(); labels.Len() > 0 {
-			materializedKeys = append(materializedKeys, labels.Encoded())
+		if iter.Len() > 0 {
+			materializedKeys = append(materializedKeys, record.Labels().Encoded())
 		}
 
 		for _, k := range desc.Keys() {

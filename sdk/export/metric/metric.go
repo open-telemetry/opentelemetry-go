@@ -189,13 +189,19 @@ type LabelIterator interface {
 	// IndexedLabel returns current index and label. Must be only
 	// called after Next returns true.
 	IndexedLabel() (int, core.KeyValue)
+	// Len returns a size of the collection the iterator goes over.
+	Len() int
 }
 
 // Convenience function that creates a slice of labels from the passed
 // iterator. The iterator is consumed, which means that after this
 // function, the iterator's Next() will return false.
 func IteratorToSlice(iter LabelIterator) []core.KeyValue {
-	var slice []core.KeyValue
+	l := iter.Len()
+	if l == 0 {
+		return nil
+	}
+	slice := make([]core.KeyValue, 0, l)
 	for iter.Next() {
 		slice = append(slice, iter.Label())
 	}
@@ -227,6 +233,10 @@ func (i *sliceLabelIterator) Label() core.KeyValue {
 
 func (i *sliceLabelIterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
+}
+
+func (i *sliceLabelIterator) Len() int {
+	return len(i.slice)
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
@@ -310,11 +320,6 @@ func (l Labels) Encoded() string {
 // Encoder is the encoder that computed the Encoded() representation.
 func (l Labels) Encoder() LabelEncoder {
 	return l.encoder
-}
-
-// Len returns the number of labels.
-func (l Labels) Len() int {
-	return len(l.ordered)
 }
 
 // NewRecord allows Batcher implementations to construct export

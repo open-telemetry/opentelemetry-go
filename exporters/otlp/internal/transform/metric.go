@@ -133,12 +133,14 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 
 // stringKeyValues transforms a label iterator into an OTLP StringKeyValues.
 func stringKeyValues(iter export.LabelIterator) []*commonpb.StringKeyValue {
-	// TODO: That looks like a pointless allocation in case of no
-	// labels, but returning nil from this function makes the test
-	// fail. Would be better to use the following form:
-	//
-	// var result []*commonpb.StringKeyValue
-	result := []*commonpb.StringKeyValue{}
+	l := iter.Len()
+	if l == 0 {
+		// TODO: That looks like a pointless allocation in case of
+		// no labels, but returning nil from this function makes
+		// the test fail.
+		return []*commonpb.StringKeyValue{}
+	}
+	result := make([]*commonpb.StringKeyValue, 0, l)
 	for iter.Next() {
 		kv := iter.Label()
 		result = append(result, &commonpb.StringKeyValue{

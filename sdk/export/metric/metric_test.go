@@ -29,25 +29,31 @@ func TestSliceLabelIterator(t *testing.T) {
 		key.Int("foo", 42),
 	}
 	iter := NewSliceLabelIterator(slice)
+	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
 	require.Equal(t, key.String("bar", "baz"), iter.Label())
 	idx, label := iter.IndexedLabel()
 	require.Equal(t, 0, idx)
 	require.Equal(t, key.String("bar", "baz"), label)
+	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
 	require.Equal(t, key.Int("foo", 42), iter.Label())
 	idx, label = iter.IndexedLabel()
 	require.Equal(t, 1, idx)
 	require.Equal(t, key.Int("foo", 42), label)
+	require.Equal(t, 2, iter.Len())
 
 	require.False(t, iter.Next())
+	require.Equal(t, 2, iter.Len())
 
 	iter = NewSliceLabelIterator(nil)
+	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 
 	iter = NewSliceLabelIterator([]core.KeyValue{})
+	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 }
 
