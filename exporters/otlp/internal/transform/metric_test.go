@@ -300,7 +300,7 @@ func TestSumFloat64Datapoints(t *testing.T) {
 	assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
 
 	// test with non-zero values.
-	s.Update(context.Background(), core.NewFloat64Number(1), &metricsdk.Descriptor{})
+	assert.Nil(t, s.Update(context.Background(), core.NewFloat64Number(1), &metricsdk.Descriptor{}))
 	s.Checkpoint(context.Background(), &metricsdk.Descriptor{})
 	m, err = sum(desc, labels, s)
 	assert.Nil(t, err)
