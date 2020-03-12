@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,10 +33,17 @@ func TestStressInt64Histogram(t *testing.T) {
 	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind)
 	h := histogram.New(desc, []core.Number{core.NewInt64Number(25), core.NewInt64Number(50), core.NewInt64Number(75)})
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 	go func() {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		for {
-			_ = h.Update(context.Background(), core.NewInt64Number(rnd.Int63()), desc)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_ = h.Update(ctx, core.NewInt64Number(rnd.Int63()%100), desc)
+			}
 		}
 	}()
 
