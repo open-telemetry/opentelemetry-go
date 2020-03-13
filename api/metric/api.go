@@ -65,7 +65,7 @@ type Measurement struct {
 // SynchronousImpl returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (m Measurement) InstrumentImpl() InstrumentImpl {
+func (m Measurement) SynchronousImpl() SynchronousImpl {
 	return m.instrument
 }
 

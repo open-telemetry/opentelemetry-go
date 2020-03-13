@@ -67,8 +67,8 @@ func (a asynchronousInstrument) AsynchronousImpl() AsynchronousImpl {
 	return a.instrument
 }
 
-func (w *wrappedMeterImpl) makeSynchronous(name string, kind Kind, numberKind core.NumberKind, opts []Option) (synchronousInstrument, error) {
-	instrument, err := w.impl.NewSynchronousInstrument(name, kind, numberKind, Configure(opts))
+func (w *wrappedMeterImpl) makeSynchronous(descriptor Descriptor) (synchronousInstrument, error) {
+	instrument, err := w.impl.NewSynchronousInstrument(descriptor)
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
@@ -98,8 +98,8 @@ func newMeasurement(instrument SynchronousImpl, number core.Number) Measurement 
 	}
 }
 
-func (m *wrappedMeterImpl) makeAsynchronous(name string, kind Kind, numberKind core.NumberKind, observe func(func(core.Number, LabelSet)), opts []Option) (asynchronousInstrument, error) {
-	instrument, err := m.impl.NewAsynchronousInstrument(name, kind, numberKind, observe, Configure(opts))
+func (m *wrappedMeterImpl) makeAsynchronous(descriptor Descriptor, callback func(func(core.Number, LabelSet))) (asynchronousInstrument, error) {
+	instrument, err := m.impl.NewAsynchronousInstrument(descriptor, callback)
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl

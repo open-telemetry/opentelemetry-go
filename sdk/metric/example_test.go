@@ -14,43 +14,43 @@
 
 package metric_test
 
-import (
-	"context"
-	"fmt"
-	"time"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"time"
 
-	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
-)
+// 	"go.opentelemetry.io/otel/api/key"
+// 	"go.opentelemetry.io/otel/api/metric"
+// 	"go.opentelemetry.io/otel/exporters/metric/stdout"
+// )
 
-func ExampleNew() {
-	pusher, err := stdout.NewExportPipeline(stdout.Config{
-		PrettyPrint:    true,
-		DoNotPrintTime: true, // This makes the output deterministic
-	}, time.Minute)
-	if err != nil {
-		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
-	}
-	defer pusher.Stop()
+// func ExampleNew() {
+// 	pusher, err := stdout.NewExportPipeline(stdout.Config{
+// 		PrettyPrint:    true,
+// 		DoNotPrintTime: true, // This makes the output deterministic
+// 	}, time.Minute)
+// 	if err != nil {
+// 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
+// 	}
+// 	defer pusher.Stop()
 
-	ctx := context.Background()
+// 	ctx := context.Background()
 
-	key := key.New("key")
-	meter := pusher.Meter("example")
+// 	key := key.New("key")
+// 	meter := pusher.Meter("example")
 
-	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
+// 	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
+// 	labels := meter.Labels(key.String("value"))
 
-	counter.Add(ctx, 100, labels)
+// 	counter.Add(ctx, 100, labels)
 
-	// Output:
-	// {
-	// 	"updates": [
-	// 		{
-	// 			"name": "a.counter{key=value}",
-	// 			"sum": 100
-	// 		}
-	// 	]
-	// }
-}
+// 	// Output:
+// 	// {
+// 	// 	"updates": [
+// 	// 		{
+// 	// 			"name": "a.counter{key=value}",
+// 	// 			"sum": 100
+// 	// 		}
+// 	// 	]
+// 	// }
+// }

@@ -288,12 +288,7 @@ func (r Record) Labels() Labels {
 // descriptor may be used to uniquely identify the instrument in an
 // exporter.
 type Descriptor struct {
-	name        string
-	metricKind  metric.Kind
-	keys        []core.Key
-	description string
-	unit        unit.Unit
-	numberKind  core.NumberKind
+	descriptor metric.Descriptor
 }
 
 // NewDescriptor builds a new descriptor, for use by `Meter`
@@ -303,55 +298,49 @@ type Descriptor struct {
 // descriptor may be used to uniquely identify the instrument in an
 // exporter.
 func NewDescriptor(
-	name string,
-	metricKind metric.Kind,
-	keys []core.Key,
-	description string,
-	unit unit.Unit,
-	numberKind core.NumberKind,
+	descriptor metric.Descriptor,
 ) *Descriptor {
 	return &Descriptor{
-		name:        name,
-		metricKind:  metricKind,
-		keys:        keys,
-		description: description,
-		unit:        unit,
-		numberKind:  numberKind,
+		descriptor: descriptor,
 	}
 }
 
 // Name returns the metric instrument's name.
 func (d *Descriptor) Name() string {
-	return d.name
+	return d.descriptor.Name
 }
 
 // MetricKind returns the kind of instrument: counter, measure, or
 // observer.
 func (d *Descriptor) MetricKind() metric.Kind {
-	return d.metricKind
+	return d.descriptor.Kind
 }
 
 // Keys returns the recommended keys included in the metric
 // definition.  These keys may be used by a Batcher as a default set
 // of grouping keys for the metric instrument.
 func (d *Descriptor) Keys() []core.Key {
-	return d.keys
+	return d.descriptor.Config.Keys
 }
 
 // Description provides a human-readable description of the metric
 // instrument.
 func (d *Descriptor) Description() string {
-	return d.description
+	return d.descriptor.Config.Description
 }
 
 // Unit describes the units of the metric instrument.  Unitless
 // metrics return the empty string.
 func (d *Descriptor) Unit() unit.Unit {
-	return d.unit
+	return d.descriptor.Config.Unit
 }
 
 // NumberKind returns whether this instrument is declared over int64
 // or a float64 values.
 func (d *Descriptor) NumberKind() core.NumberKind {
-	return d.numberKind
+	return d.descriptor.NumberKind
+}
+
+func (d *Descriptor) Descriptor() metric.Descriptor {
+	return d.descriptor
 }

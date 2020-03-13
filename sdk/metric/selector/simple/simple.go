@@ -79,9 +79,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 
 func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric..ObserverKind:
+	case metric.ObserverKind:
 		fallthrough
-	case metric..MeasureKind:
+	case metric.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
 		return sum.New()
@@ -90,9 +90,9 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 
 func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.ObserverKind:
+	case metric.ObserverKind:
 		fallthrough
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		return array.New()
 	default:
 		return sum.New()

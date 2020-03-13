@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 )
 
@@ -168,30 +169,20 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewSynchronousInstrument(name string, metricKind apimetric.Kind, numberKind core.NumberKind, config apimetric.Config) (apimetric.SynchronousImpl, error) {
+func (m *Meter) NewSynchronousInstrument(descriptor metric.Descriptor) (apimetric.SynchronousImpl, error) {
 	return &Synchronous{
 		Instrument{
-			descriptor: apimetric.Descriptor{
-				Name:       name,
-				Kind:       metricKind,
-				NumberKind: numberKind,
-				Config:     config,
-			},
-			meter: m,
+			descriptor: descriptor,
+			meter:      m,
 		},
 	}, nil
 }
 
-func (m *Meter) NewAsynchronousInstrument(name string, metricKind apimetric.Kind, numberKind core.NumberKind, callback func(func(core.Number, apimetric.LabelSet)), config apimetric.Config) (apimetric.AsynchronousImpl, error) {
+func (m *Meter) NewAsynchronousInstrument(descriptor metric.Descriptor, callback func(func(core.Number, apimetric.LabelSet))) (apimetric.AsynchronousImpl, error) {
 	a := &Asynchronous{
 		Instrument: Instrument{
-			descriptor: apimetric.Descriptor{
-				Name:       name,
-				Kind:       metricKind,
-				NumberKind: numberKind,
-				Config:     config,
-			},
-			meter: m,
+			descriptor: descriptor,
+			meter:      m,
 		},
 		callback: callback,
 	}
@@ -205,7 +196,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, meas
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = Measurement{
-			Instrument: m.InstrumentImpl().Interface().(*Synchronous),
+			Instrument: m.SynchronousImpl().(*Synchronous),
 			Number:     m.Number(),
 		}
 	}

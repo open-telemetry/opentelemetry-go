@@ -289,11 +289,11 @@ func (testWrappedMeter) Labels(...core.KeyValue) metric.LabelSet {
 func (testWrappedMeter) RecordBatch(context.Context, metric.LabelSet, ...metric.Measurement) {
 }
 
-func (testWrappedMeter) NewSynchronousInstrument(name string, metricKind metric.Kind, numberKind core.NumberKind, config metric.Config) (metric.SynchronousImpl, error) {
+func (testWrappedMeter) NewSynchronousInstrument(_ metric.Descriptor) (metric.SynchronousImpl, error) {
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsynchronousInstrument(name string, metricKind metric.Kind, numberKind core.NumberKind, callback func(func(core.Number, metric.LabelSet)), config metric.Config) (metric.AsynchronousImpl, error) {
+func (testWrappedMeter) NewAsynchronousInstrument(_ metric.Descriptor, _ func(func(core.Number, metric.LabelSet))) (metric.AsynchronousImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 

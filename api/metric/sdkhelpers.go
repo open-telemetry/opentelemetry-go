@@ -28,12 +28,9 @@ type MeterImpl interface {
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(context.Context, LabelSet, ...Measurement)
 
-	// TODO A cleanup that I want.
-	// Introduce a descriptor in this package.  (Not an API change.)
+	NewSynchronousInstrument(descriptor Descriptor) (SynchronousImpl, error)
 
-	NewSynchronousInstrument(name string, metricKind Kind, numberKind core.NumberKind, config Config) (SynchronousImpl, error)
-
-	NewAsynchronousInstrument(name string, metricKind Kind, numberKind core.NumberKind, callback func(func(core.Number, LabelSet)), config Config) (AsynchronousImpl, error)
+	NewAsynchronousInstrument(descriptor Descriptor, callback func(func(core.Number, LabelSet))) (AsynchronousImpl, error)
 }
 
 // LabelSetDelegate is a general-purpose delegating implementation of
@@ -127,23 +124,32 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...M
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
+func makeDescriptor(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) Descriptor {
+	return Descriptor{
+		Name:       name,
+		Kind:       metricKind,
+		NumberKind: numberKind,
+		Config:     Configure(opts),
+	}
+}
+
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
-	common, err := m.makeSynchronous(name, CounterKind, core.Int64NumberKind, opts)
+	common, err := m.makeSynchronous(makeDescriptor(name, CounterKind, core.Int64NumberKind, opts))
 	return Int64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
-	common, err := m.makeSynchronous(name, CounterKind, core.Float64NumberKind, opts)
+	common, err := m.makeSynchronous(makeDescriptor(name, CounterKind, core.Float64NumberKind, opts))
 	return Float64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
-	common, err := m.makeSynchronous(name, MeasureKind, core.Int64NumberKind, opts)
+	common, err := m.makeSynchronous(makeDescriptor(name, MeasureKind, core.Int64NumberKind, opts))
 	return Int64Measure{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
-	common, err := m.makeSynchronous(name, MeasureKind, core.Float64NumberKind, opts)
+	common, err := m.makeSynchronous(makeDescriptor(name, MeasureKind, core.Float64NumberKind, opts))
 	return Float64Measure{synchronousInstrument: common}, err
 }
 
@@ -151,9 +157,12 @@ func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64Obse
 	if callback == nil {
 		return NoopMeter{}.RegisterInt64Observer(name, callback, opts...)
 	}
-	common, err := m.makeAsynchronous(name, ObserverKind, core.Int64NumberKind, func(observe func(core.Number, LabelSet)) {
-		callback(int64ObserverResult{observe})
-	}, opts)
+	common, err := m.makeAsynchronous(
+		makeDescriptor(name, ObserverKind, core.Int64NumberKind, opts),
+		func(observe func(core.Number, LabelSet)) {
+			callback(int64ObserverResult{observe})
+		},
+	)
 	return Int64Observer{asynchronousInstrument: common}, err
 }
 
@@ -161,9 +170,12 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 	if callback == nil {
 		return NoopMeter{}.RegisterFloat64Observer(name, callback, opts...)
 	}
-	common, err := m.makeAsynchronous(name, ObserverKind, core.Float64NumberKind, func(observe func(core.Number, LabelSet)) {
-		callback(float64ObserverResult{observe})
-	}, opts)
+	common, err := m.makeAsynchronous(
+		makeDescriptor(name, ObserverKind, core.Float64NumberKind, opts),
+		func(observe func(core.Number, LabelSet)) {
+			callback(float64ObserverResult{observe})
+		},
+	)
 	return Float64Observer{asynchronousInstrument: common}, err
 }
 
