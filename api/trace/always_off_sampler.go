@@ -19,17 +19,17 @@ import (
 )
 
 const (
-	alwaysSamplerDescription = "AlwaysOnSampler"
+	alwaysOffSamplerDescription = "AlwaysOffSampler"
 )
 
-var alwaysSampleDecision = Decision{Sampled: true}
+var alwaysOffSamplerDecision = Decision{Sampled: false}
 
-type alwaysSampleSampler struct{}
+type alwaysOffSampler struct{}
 
 // ShouldSample implements Sampler interface.
-// It always returns a Decision with Sampled value set to true
+// It always returns a Decision with Sampled value set to false
 // and with Attributes set to an empty slice.
-func (as alwaysSampleSampler) ShouldSample(
+func (ns alwaysOffSampler) ShouldSample(
 	_ core.SpanContext,
 	_ bool,
 	_ core.TraceID,
@@ -39,17 +39,17 @@ func (as alwaysSampleSampler) ShouldSample(
 	_ []core.KeyValue,
 	_ []Link,
 ) Decision {
-	return alwaysSampleDecision
+	return alwaysOffSamplerDecision
 }
 
 // Description implements Sampler interface.
 // It returns the description of this sampler.
-func (as alwaysSampleSampler) Description() string {
-	return alwaysSamplerDescription
+func (ns alwaysOffSampler) Description() string {
+	return alwaysOffSamplerDescription
 }
 
-var _ Sampler = alwaysSampleSampler{}
+var _ Sampler = alwaysOffSampler{}
 
-func AlwaysSampleSampler() Sampler {
-	return alwaysSampleSampler{}
+func AlwaysOffSampler() Sampler {
+	return alwaysOffSampler{}
 }

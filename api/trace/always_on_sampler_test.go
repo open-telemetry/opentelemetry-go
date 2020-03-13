@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-func TestShouldSample(t *testing.T) {
-	gotD := AlwaysSampleSampler().ShouldSample(
+func TestAlwaysOnSamplerShouldSample(t *testing.T) {
+	gotD := AlwaysOnSampler().ShouldSample(
 		core.SpanContext{}, false, core.TraceID{}, core.SpanID{}, "span", SpanKindClient, []core.KeyValue{}, []Link{})
 	wantD := Decision{Sampled: true}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
@@ -31,9 +31,9 @@ func TestShouldSample(t *testing.T) {
 	}
 }
 
-func TestDescription(t *testing.T) {
-	gotDesc := AlwaysSampleSampler().Description()
-	wantDesc := alwaysSamplerDescription
+func TestAlwaysOnSamplerDescription(t *testing.T) {
+	gotDesc := AlwaysOnSampler().Description()
+	wantDesc := alwaysOnSamplerDescription
 	if diff := cmp.Diff(wantDesc, gotDesc); diff != "" {
 		t.Errorf("Description: +got, -want%v", diff)
 	}
