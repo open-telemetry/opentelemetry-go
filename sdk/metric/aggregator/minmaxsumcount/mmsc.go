@@ -20,17 +20,17 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 type (
 	// Aggregator aggregates measure events, keeping only the max,
 	// sum, and count.
 	Aggregator struct {
-		// current has to be aligned for 64-bit atomic operations.
-		current state
-		// checkpoint has to be aligned for 64-bit atomic operations.
-		checkpoint state
-		kind       core.NumberKind
+		// states has to be aligned for 64-bit atomic operations.
+		states [2]state
+		lock   internal.StateLocker
+		kind   core.NumberKind
 	}
 
 	state struct {
@@ -48,104 +48,116 @@ var _ aggregator.MinMaxSumCount = &Aggregator{}
 // New returns a new measure aggregator for computing min, max, sum, and
 // count.  It does not compute quantile information other than Max.
 //
-// Note that this aggregator maintains each value using independent
-// atomic operations, which introduces the possibility that
-// checkpoints are inconsistent.  For greater consistency and lower
-// performance, consider using Array or DDSketch aggregators.
+// This aggregator uses the StateLocker pattern to guarantee
+// the count, sum, min and max are consistent within a checkpoint
 func New(desc *export.Descriptor) *Aggregator {
+	kind := desc.NumberKind()
 	return &Aggregator{
-		kind:    desc.NumberKind(),
-		current: unsetMinMaxSumCount(desc.NumberKind()),
+		kind: kind,
+		states: [2]state{
+			{
+				count: core.NewUint64Number(0),
+				sum:   kind.Zero(),
+				min:   kind.Maximum(),
+				max:   kind.Minimum(),
+			},
+			{
+				count: core.NewUint64Number(0),
+				sum:   kind.Zero(),
+				min:   kind.Maximum(),
+				max:   kind.Minimum(),
+			},
+		},
 	}
-}
-
-func unsetMinMaxSumCount(kind core.NumberKind) state {
-	return state{min: kind.Maximum(), max: kind.Minimum()}
 }
 
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (core.Number, error) {
-	return c.checkpoint.sum, nil
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.checkpoint().sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(c.checkpoint.count.AsUint64()), nil
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.checkpoint().count.CoerceToInt64(core.Uint64NumberKind), nil
 }
 
 // Min returns the minimum value in the checkpoint.
-// The error value aggregator.ErrEmptyDataSet will be returned if
-// (due to a race condition) the checkpoint was set prior to
-// current.min being computed in Update().
-//
-// Note: If a measure's recorded values for a given checkpoint are
-// all equal to NumberKind.Maximum(), Min() will return ErrEmptyDataSet
+// The error value aggregator.ErrEmptyDataSet will be returned
+// if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
-	if c.checkpoint.min == c.kind.Maximum() {
-		return core.Number(0), aggregator.ErrEmptyDataSet
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.checkpoint().count.IsZero(core.Uint64NumberKind) {
+		return c.kind.Zero(), aggregator.ErrEmptyDataSet
 	}
-	return c.checkpoint.min, nil
+	return c.checkpoint().min, nil
 }
 
 // Max returns the maximum value in the checkpoint.
-// The error value aggregator.ErrEmptyDataSet will be returned if
-// (due to a race condition) the checkpoint was set prior to
-// current.max being computed in Update().
-//
-// Note: If a measure's recorded values for a given checkpoint are
-// all equal to NumberKind.Minimum(), Max() will return ErrEmptyDataSet
+// The error value aggregator.ErrEmptyDataSet will be returned
+// if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
-	if c.checkpoint.max == c.kind.Minimum() {
-		return core.Number(0), aggregator.ErrEmptyDataSet
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.checkpoint().count.IsZero(core.Uint64NumberKind) {
+		return c.kind.Zero(), aggregator.ErrEmptyDataSet
 	}
-	return c.checkpoint.max, nil
+	return c.checkpoint().max, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
-// the empty set.  Since no locks are taken, there is a chance that
-// the independent Min, Max, Sum, and Count are not consistent with each
-// other.
+// the empty set.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
-	// N.B. There is no atomic operation that can update all three
-	// values at once without a memory allocation.
-	//
-	// This aggregator is intended to trade this correctness for
-	// speed.
-	//
-	// Therefore, atomically swap fields independently, knowing
-	// that individually the three parts of this aggregation could
-	// be spread across multiple collections in rare cases.
+	c.lock.SwapActiveState(c.resetCheckpoint)
+}
 
-	c.checkpoint.count.SetUint64(c.current.count.SwapUint64Atomic(0))
-	c.checkpoint.sum = c.current.sum.SwapNumberAtomic(core.Number(0))
-	c.checkpoint.max = c.current.max.SwapNumberAtomic(c.kind.Minimum())
-	c.checkpoint.min = c.current.min.SwapNumberAtomic(c.kind.Maximum())
+// checkpoint returns the "cold" state, i.e. state collected prior to the
+// most recent Checkpoint() call
+func (c *Aggregator) checkpoint() *state {
+	return &c.states[c.lock.ColdIdx()]
+}
+
+func (c *Aggregator) resetCheckpoint() {
+	checkpoint := c.checkpoint()
+
+	checkpoint.count.SetUint64(0)
+	checkpoint.sum.SetNumber(c.kind.Zero())
+	checkpoint.min.SetNumber(c.kind.Maximum())
+	checkpoint.max.SetNumber(c.kind.Minimum())
 }
 
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
 	kind := desc.NumberKind()
 
-	c.current.count.AddUint64Atomic(1)
-	c.current.sum.AddNumberAtomic(kind, number)
+	cIdx := c.lock.Start()
+	defer c.lock.End(cIdx)
+
+	current := &c.states[cIdx]
+	current.count.AddUint64Atomic(1)
+	current.sum.AddNumberAtomic(kind, number)
 
 	for {
-		current := c.current.min.AsNumberAtomic()
+		cmin := current.min.AsNumberAtomic()
 
-		if number.CompareNumber(kind, current) >= 0 {
+		if number.CompareNumber(kind, cmin) >= 0 {
 			break
 		}
-		if c.current.min.CompareAndSwapNumber(current, number) {
+		if current.min.CompareAndSwapNumber(cmin, number) {
 			break
 		}
 	}
 	for {
-		current := c.current.max.AsNumberAtomic()
+		cmax := current.max.AsNumberAtomic()
 
-		if number.CompareNumber(kind, current) <= 0 {
+		if number.CompareNumber(kind, cmax) <= 0 {
 			break
 		}
-		if c.current.max.CompareAndSwapNumber(current, number) {
+		if current.max.CompareAndSwapNumber(cmax, number) {
 			break
 		}
 	}
@@ -159,14 +171,22 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+	// Lock() synchronizes Merge() and Checkpoint() to ensure all operations of
+	// Merge() are performed on the same state.
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	if c.checkpoint.min.CompareNumber(desc.NumberKind(), o.checkpoint.min) > 0 {
-		c.checkpoint.min.SetNumber(o.checkpoint.min)
+	current := c.checkpoint()
+	ocheckpoint := o.checkpoint()
+
+	current.count.AddNumber(core.Uint64NumberKind, ocheckpoint.count)
+	current.sum.AddNumber(desc.NumberKind(), ocheckpoint.sum)
+
+	if current.min.CompareNumber(desc.NumberKind(), ocheckpoint.min) > 0 {
+		current.min.SetNumber(ocheckpoint.min)
 	}
-	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
-		c.checkpoint.max.SetNumber(o.checkpoint.max)
+	if current.max.CompareNumber(desc.NumberKind(), ocheckpoint.max) < 0 {
+		current.max.SetNumber(ocheckpoint.max)
 	}
 	return nil
 }

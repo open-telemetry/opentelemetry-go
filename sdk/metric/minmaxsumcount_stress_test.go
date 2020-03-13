@@ -26,42 +26,58 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
-func TestStressInt64Histogram(t *testing.T) {
+func TestStressInt64MinMaxSumCount(t *testing.T) {
 	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind)
-	h := histogram.New(desc, []core.Number{core.NewInt64Number(25), core.NewInt64Number(50), core.NewInt64Number(75)})
+	mmsc := minmaxsumcount.New(desc)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go func() {
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
+		v := rnd.Int63() % 103
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				_ = h.Update(ctx, core.NewInt64Number(rnd.Int63()%100), desc)
+				_ = mmsc.Update(ctx, core.NewInt64Number(v), desc)
 			}
+			v++
 		}
 	}()
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		h.Checkpoint(context.Background(), desc)
+		mmsc.Checkpoint(context.Background(), desc)
 
-		b, _ := h.Histogram()
-		c, _ := h.Count()
-
-		var realCount int64
-		for _, c := range b.Counts {
-			v := c.AsInt64()
-			realCount += v
-		}
-
-		if realCount != c {
+		s, _ := mmsc.Sum()
+		c, _ := mmsc.Count()
+		min, e1 := mmsc.Min()
+		max, e2 := mmsc.Max()
+		if c == 0 && (e1 == nil || e2 == nil || s.AsInt64() != 0) {
 			t.Fail()
+		}
+		if c != 0 {
+			if e1 != nil || e2 != nil {
+				t.Fail()
+			}
+			lo, hi, sum := min.AsInt64(), max.AsInt64(), s.AsInt64()
+
+			if hi-lo+1 != c {
+				t.Fail()
+			}
+			if c == 1 {
+				if lo != hi || lo != sum {
+					t.Fail()
+				}
+			} else {
+				if hi*(hi+1)/2-(lo-1)*lo/2 != sum {
+					t.Fail()
+				}
+			}
 		}
 	}
 }
