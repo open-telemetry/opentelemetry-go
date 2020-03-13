@@ -23,7 +23,7 @@ import (
 )
 
 func TestNeverSamperShouldSample(t *testing.T) {
-	gotD := NeverSampleSampler().ShouldSample(
+	gotD := AlwaysOffSampler().ShouldSample(
 		core.SpanContext{}, false, core.TraceID{}, core.SpanID{}, "span", SpanKindClient, []core.KeyValue{}, []Link{})
 	wantD := Decision{Sampled: false}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
@@ -31,9 +31,9 @@ func TestNeverSamperShouldSample(t *testing.T) {
 	}
 }
 
-func TestNeverSamplerDescription(t *testing.T) {
-	gotDesc := NeverSampleSampler().Description()
-	wantDesc := neverSamplerDescription
+func TestAlwaysOffSamplerDescription(t *testing.T) {
+	gotDesc := AlwaysOffSampler().Description()
+	wantDesc := alwaysOffSamplerDescription
 	if diff := cmp.Diff(wantDesc, gotDesc); diff != "" {
 		t.Errorf("Description: +got, -want%v", diff)
 	}
