@@ -24,6 +24,7 @@ import (
 const (
 	DefaultCollectorPort uint16 = 55678
 	DefaultCollectorHost string = "localhost"
+	DefaultNumWorkers    uint   = 1
 )
 
 type ExporterOption func(*Config)
@@ -36,6 +37,17 @@ type Config struct {
 	grpcDialOptions    []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
+	numWorkers         uint
+}
+
+// WorkerCount sets the number of Goroutines to use when processing telemetry.
+func WorkerCount(n uint) ExporterOption {
+	if n == 0 {
+		n = DefaultNumWorkers
+	}
+	return func(cfg *Config) {
+		cfg.numWorkers = n
+	}
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection

@@ -1,4 +1,4 @@
-module go.opentelemetry.go/otel/exporters/trace/zipkin
+module go.opentelemetry.io/otel/exporters/trace/zipkin
 
 go 1.13
 

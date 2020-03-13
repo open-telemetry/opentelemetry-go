@@ -24,36 +24,79 @@ import (
 
 	"google.golang.org/grpc"
 
+	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
+	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 )
 
 func makeMockCollector(t *testing.T) *mockCol {
-	return &mockCol{t: t, wg: new(sync.WaitGroup)}
+	return &mockCol{
+		t:         t,
+		traceSvc:  &mockTraceService{},
+		metricSvc: &mockMetricService{},
+	}
+}
+
+type mockTraceService struct {
+	mu    sync.RWMutex
+	spans []*tracepb.Span
+}
+
+func (mts *mockTraceService) getSpans() []*tracepb.Span {
+	mts.mu.RLock()
+	spans := append([]*tracepb.Span{}, mts.spans...)
+	mts.mu.RUnlock()
+
+	return spans
+}
+
+func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
+	resourceSpans := exp.GetResourceSpans()
+	// TODO (rghetia): handle Resources
+	mts.mu.Lock()
+	for _, rs := range resourceSpans {
+		mts.spans = append(mts.spans, rs.Spans...)
+	}
+	mts.mu.Unlock()
+	return &coltracepb.ExportTraceServiceResponse{}, nil
+}
+
+type mockMetricService struct {
+	mu      sync.RWMutex
+	metrics []*metricpb.Metric
+}
+
+func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
+	// copy in order to not change.
+	m := make([]*metricpb.Metric, 0, len(mms.metrics))
+	mms.mu.RLock()
+	defer mms.mu.RUnlock()
+	return append(m, mms.metrics...)
+}
+
+func (mms *mockMetricService) Export(ctx context.Context, exp *colmetricpb.ExportMetricsServiceRequest) (*colmetricpb.ExportMetricsServiceResponse, error) {
+	mms.mu.Lock()
+	for _, rm := range exp.GetResourceMetrics() {
+		mms.metrics = append(mms.metrics, rm.Metrics...)
+	}
+	mms.mu.Unlock()
+	return &colmetricpb.ExportMetricsServiceResponse{}, nil
 }
 
 type mockCol struct {
 	t *testing.T
 
-	spans []*tracepb.Span
-	mu    sync.Mutex
-	wg    *sync.WaitGroup
+	traceSvc  *mockTraceService
+	metricSvc *mockMetricService
 
 	address  string
 	stopFunc func() error
 	stopOnce sync.Once
 }
 
-var _ coltracepb.TraceServiceServer = (*mockCol)(nil)
-
-func (mc *mockCol) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
-	resourceSpans := exp.GetResourceSpans()
-	// TODO (rghetia): handle Resources
-	for _, rs := range resourceSpans {
-		mc.spans = append(mc.spans, rs.Spans...)
-	}
-	return &coltracepb.ExportTraceServiceResponse{}, nil
-}
+var _ coltracepb.TraceServiceServer = (*mockTraceService)(nil)
+var _ colmetricpb.MetricsServiceServer = (*mockMetricService)(nil)
 
 var errAlreadyStopped = fmt.Errorf("already stopped")
 
@@ -66,10 +109,33 @@ func (mc *mockCol) stop() error {
 	})
 	// Give it sometime to shutdown.
 	<-time.After(160 * time.Millisecond)
-	mc.mu.Lock()
-	mc.wg.Wait()
-	mc.mu.Unlock()
+
+	// Wait for services to finish reading/writing.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		// Getting the lock ensures the traceSvc is done flushing.
+		mc.traceSvc.mu.Lock()
+		defer mc.traceSvc.mu.Unlock()
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		// Getting the lock ensures the metricSvc is done flushing.
+		mc.metricSvc.mu.Lock()
+		defer mc.metricSvc.mu.Unlock()
+		wg.Done()
+	}()
+	wg.Wait()
 	return err
+}
+
+func (mc *mockCol) getSpans() []*tracepb.Span {
+	return mc.traceSvc.getSpans()
+}
+
+func (mc *mockCol) getMetrics() []*metricpb.Metric {
+	return mc.metricSvc.getMetrics()
 }
 
 // runMockCol is a helper function to create a mockCol
@@ -85,7 +151,8 @@ func runMockColAtAddr(t *testing.T, addr string) *mockCol {
 
 	srv := grpc.NewServer()
 	mc := makeMockCollector(t)
-	coltracepb.RegisterTraceServiceServer(srv, mc)
+	coltracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
+	colmetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
 	go func() {
 		_ = srv.Serve(ln)
 	}()
@@ -101,12 +168,4 @@ func runMockColAtAddr(t *testing.T, addr string) *mockCol {
 	mc.stopFunc = deferFunc
 
 	return mc
-}
-
-func (mc *mockCol) getSpans() []*tracepb.Span {
-	mc.mu.Lock()
-	spans := append([]*tracepb.Span{}, mc.spans...)
-	mc.mu.Unlock()
-
-	return spans
 }
