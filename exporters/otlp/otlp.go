@@ -33,6 +33,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -265,6 +266,11 @@ func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metr
 	for r := range in {
 		m, err := transform.Record(r)
 		if err != nil {
+			if err == aggregator.ErrEmptyDataSet {
+				// The Aggregator was checkpointed before the first value
+				// was set, skipping.
+				continue
+			}
 			select {
 			case <-e.stopCh:
 				return
