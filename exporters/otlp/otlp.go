@@ -19,25 +19,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"unsafe"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
+	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
+	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
-	// senderMu protects the concurrent unsafe send on traceExporter client
+	// senderMu protects the concurrent unsafe sends on the shared gRPC client connection.
 	senderMu          sync.Mutex
 	started           bool
 	traceExporter     coltracepb.TraceServiceClient
+	metricExporter    colmetricpb.MetricsServiceClient
 	grpcClientConn    *grpc.ClientConn
 	lastConnectErrPtr unsafe.Pointer
 
@@ -50,7 +57,8 @@ type Exporter struct {
 	c Config
 }
 
-var _ export.SpanBatcher = (*Exporter)(nil)
+var _ tracesdk.SpanBatcher = (*Exporter)(nil)
+var _ metricsdk.Exporter = (*Exporter)(nil)
 
 func configureOptions(cfg *Config, opts ...ExporterOption) {
 	for _, opt := range opts {
@@ -68,7 +76,7 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
-	e.c = Config{}
+	e.c = Config{numWorkers: DefaultNumWorkers}
 	configureOptions(&e.c, opts...)
 
 	// TODO (rghetia): add resources
@@ -142,6 +150,7 @@ func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
 	}
 	e.grpcClientConn = cc
 	e.traceExporter = coltracepb.NewTraceServiceClient(cc)
+	e.metricExporter = colmetricpb.NewMetricsServiceClient(cc)
 	e.mu.Unlock()
 
 	return nil
@@ -200,11 +209,140 @@ func (e *Exporter) Stop() error {
 	return err
 }
 
-func (e *Exporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
+// Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
+// interface. It transforms metric Records into OTLP Metrics and transmits them.
+func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) error {
+	// Seed records into the work processing pool.
+	records := make(chan metricsdk.Record)
+	go func() {
+		cps.ForEach(func(record metricsdk.Record) {
+			select {
+			case <-e.stopCh:
+			case <-ctx.Done():
+			case records <- record:
+			}
+		})
+		close(records)
+	}()
+
+	// Allow all errors to be collected and returned singularly.
+	errCh := make(chan error)
+	var errStrings []string
+	go func() {
+		for err := range errCh {
+			if err != nil {
+				errStrings = append(errStrings, err.Error())
+			}
+		}
+	}()
+
+	// Start the work processing pool.
+	processed := make(chan *metricpb.Metric)
+	var wg sync.WaitGroup
+	for i := uint(0); i < e.c.numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			e.processMetrics(ctx, processed, errCh, records)
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(processed)
+	}()
+
+	// Synchronosly collected the processed records and transmit.
+	e.uploadMetrics(ctx, processed, errCh)
+
+	// Now that all processing is done, handle any errors seen.
+	close(errCh)
+	if len(errStrings) > 0 {
+		return fmt.Errorf("errors exporting:\n -%s", strings.Join(errStrings, "\n -"))
+	}
+	return nil
+}
+
+func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metric, errCh chan<- error, in <-chan metricsdk.Record) {
+	for r := range in {
+		m, err := transform.Record(r)
+		if err != nil {
+			if err == aggregator.ErrEmptyDataSet {
+				// The Aggregator was checkpointed before the first value
+				// was set, skipping.
+				continue
+			}
+			select {
+			case <-e.stopCh:
+				return
+			case <-ctx.Done():
+				return
+			case errCh <- err:
+				continue
+			}
+		}
+
+		select {
+		case <-e.stopCh:
+			return
+		case <-ctx.Done():
+			return
+		case out <- m:
+		}
+	}
+}
+
+func (e *Exporter) uploadMetrics(ctx context.Context, in <-chan *metricpb.Metric, errCh chan<- error) {
+	var protoMetrics []*metricpb.Metric
+	for m := range in {
+		protoMetrics = append(protoMetrics, m)
+	}
+
+	if len(protoMetrics) == 0 {
+		return
+	}
+	if !e.connected() {
+		return
+	}
+
+	rm := []*metricpb.ResourceMetrics{
+		{
+			Resource: nil,
+			Metrics:  protoMetrics,
+		},
+	}
+
+	select {
+	case <-e.stopCh:
+		return
+	case <-ctx.Done():
+		return
+	default:
+		e.senderMu.Lock()
+		_, err := e.metricExporter.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
+			ResourceMetrics: rm,
+		})
+		e.senderMu.Unlock()
+		if err != nil {
+			select {
+			case <-e.stopCh:
+				return
+			case <-ctx.Done():
+				return
+			case errCh <- err:
+			}
+		}
+	}
+}
+
+func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {
+	e.uploadTraces(ctx, []*tracesdk.SpanData{sd})
+}
+
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) {
 	e.uploadTraces(ctx, sds)
 }
 
-func otSpanDataToPbSpans(sdl []*export.SpanData) []*tracepb.ResourceSpans {
+func otSpanDataToPbSpans(sdl []*tracesdk.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
@@ -222,7 +360,7 @@ func otSpanDataToPbSpans(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	}
 }
 
-func (e *Exporter) uploadTraces(ctx context.Context, sdl []*export.SpanData) {
+func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 	select {
 	case <-e.stopCh:
 		return
