@@ -19,7 +19,9 @@ import (
 	"sync/atomic"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 
+	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -160,6 +162,9 @@ func (p *Provider) ApplyConfig(cfg Config) {
 	if cfg.MaxLinksPerSpan > 0 {
 		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
 	}
+	if cfg.Resource != nil {
+		c.Resource = resource.New(cfg.Resource.Attributes()...)
+	}
 	p.config.Store(&c)
 }
 
@@ -187,5 +192,13 @@ func WithBatcher(b export.SpanBatcher, bopts ...BatchSpanProcessorOption) Provid
 func WithConfig(config Config) ProviderOption {
 	return func(opts *ProviderOptions) {
 		opts.config = config
+	}
+}
+
+// WithResourceAttributes option sets the resource attributes to the provider.
+// Resource is added to the span when it is started.
+func WithResourceAttributes(attrs ...core.KeyValue) ProviderOption {
+	return func(opts *ProviderOptions) {
+		opts.config.Resource = resource.New(attrs...)
 	}
 }

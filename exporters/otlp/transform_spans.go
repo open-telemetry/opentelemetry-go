@@ -17,7 +17,10 @@ package otlp
 import (
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
+	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -28,6 +31,16 @@ import (
 const (
 	maxMessageEventsPerSpan = 128
 )
+
+func otResourceToProtoResource(res *resource.Resource) *resourcepb.Resource {
+	if res == nil {
+		return nil
+	}
+	resProto := &resourcepb.Resource{
+		Attributes: otAttributesToProtoAttributes(res.Attributes()),
+	}
+	return resProto
+}
 
 func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 	if sd == nil {
