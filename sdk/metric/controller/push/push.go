@@ -107,7 +107,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 }
 
 // Meter returns a named Meter, satisifying the metric.Provider
-// interface.
+// interface.  @@@
 func (c *Controller) Meter(_ string) metric.Meter {
 	return c.sdk
 }

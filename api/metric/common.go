@@ -21,45 +21,54 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type commonMetric struct {
-	instrument InstrumentImpl
+type synchronousInstrument struct {
+	instrument SynchronousImpl
 }
 
-type commonBoundInstrument struct {
-	boundInstrument BoundInstrumentImpl
+type synchronousBoundInstrument struct {
+	boundInstrument BoundSynchronousImpl
+}
+
+type asynchronousInstrument struct {
+	instrument AsynchronousImpl
 }
 
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
-func (m commonMetric) bind(labels LabelSet) commonBoundInstrument {
-	return newCommonBoundInstrument(m.instrument.Bind(labels))
+func (s synchronousInstrument) bind(labels LabelSet) synchronousBoundInstrument {
+	return newSynchronousBoundInstrument(s.instrument.Bind(labels))
 }
 
-func (m commonMetric) float64Measurement(value float64) Measurement {
-	return newMeasurement(m.instrument, core.NewFloat64Number(value))
+func (s synchronousInstrument) float64Measurement(value float64) Measurement {
+	return newMeasurement(s.instrument, core.NewFloat64Number(value))
 }
 
-func (m commonMetric) int64Measurement(value int64) Measurement {
-	return newMeasurement(m.instrument, core.NewInt64Number(value))
+func (s synchronousInstrument) int64Measurement(value int64) Measurement {
+	return newMeasurement(s.instrument, core.NewInt64Number(value))
 }
 
-func (m commonMetric) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
-	m.instrument.RecordOne(ctx, number, labels)
+func (s synchronousInstrument) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
+	s.instrument.RecordOne(ctx, number, labels)
 }
 
-func (m commonMetric) Impl() InstrumentImpl {
-	return m.instrument
+func (s synchronousInstrument) SynchronousImpl() SynchronousImpl {
+	return s.instrument
 }
 
-func (h commonBoundInstrument) directRecord(ctx context.Context, number core.Number) {
+func (h synchronousBoundInstrument) directRecord(ctx context.Context, number core.Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
-func (h commonBoundInstrument) Unbind() {
+func (h synchronousBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
 }
 
-func newCommonMetric(instrument InstrumentImpl, err error) (commonMetric, error) {
+func (a asynchronousInstrument) AsynchronousImpl() AsynchronousImpl {
+	return a.instrument
+}
+
+func (w *wrappedMeterImpl) makeSynchronous(name string, kind Kind, numberKind core.NumberKind, opts []Option) (synchronousInstrument, error) {
+	instrument, err := w.impl.NewSynchronousInstrument(name, kind, numberKind, Configure(opts))
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
@@ -69,22 +78,35 @@ func newCommonMetric(instrument InstrumentImpl, err error) (commonMetric, error)
 		// together and use a tag for the original name, e.g.,
 		//   name = 'invalid.counter.int64'
 		//   label = 'original-name=duplicate-counter-name'
-		instrument = noopInstrument{}
+		instrument = noopSynchronous{}
 	}
-	return commonMetric{
+	return synchronousInstrument{
 		instrument: instrument,
 	}, err
 }
 
-func newCommonBoundInstrument(boundInstrument BoundInstrumentImpl) commonBoundInstrument {
-	return commonBoundInstrument{
+func newSynchronousBoundInstrument(boundInstrument BoundSynchronousImpl) synchronousBoundInstrument {
+	return synchronousBoundInstrument{
 		boundInstrument: boundInstrument,
 	}
 }
 
-func newMeasurement(instrument InstrumentImpl, number core.Number) Measurement {
+func newMeasurement(instrument SynchronousImpl, number core.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,
 	}
+}
+
+func (m *wrappedMeterImpl) makeAsynchronous(name string, kind Kind, numberKind core.NumberKind, observe func(func(core.Number, LabelSet)), opts []Option) (asynchronousInstrument, error) {
+	instrument, err := m.impl.NewAsynchronousInstrument(name, kind, numberKind, observe, Configure(opts))
+	if instrument == nil {
+		if err == nil {
+			err = ErrSDKReturnedNilImpl
+		}
+		instrument = noopAsynchronous{}
+	}
+	return asynchronousInstrument{
+		instrument: instrument,
+	}, err
 }

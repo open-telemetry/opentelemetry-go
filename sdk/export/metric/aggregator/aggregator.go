@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -132,7 +133,7 @@ func RangeTest(number core.Number, descriptor *export.Descriptor) error {
 	}
 
 	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	case metric.CounterKind:
 		if number.IsNegative(numberKind) {
 			return ErrNegativeInput
 		}

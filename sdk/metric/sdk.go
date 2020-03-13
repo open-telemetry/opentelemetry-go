@@ -68,7 +68,7 @@ type (
 		errorHandler ErrorHandler
 	}
 
-	instrument struct {
+	synchronousInstrument struct {
 		descriptor *export.Descriptor
 		meter      *SDK
 	}
@@ -127,20 +127,12 @@ type (
 	}
 
 	observerResult struct {
-		observer *observer
-	}
-
-	int64ObserverResult struct {
-		result observerResult
-	}
-
-	float64ObserverResult struct {
-		result observerResult
+		observer *asynchronousInstrument
 	}
 
 	observerCallback func(result observerResult)
 
-	observer struct {
+	asynchronousInstrument struct {
 		meter      *SDK
 		descriptor *export.Descriptor
 		// recorders maps ordered labels to the pair of
@@ -155,26 +147,14 @@ type (
 		modifiedEpoch int64
 	}
 
-	int64Observer struct {
-		observer *observer
-	}
-
-	float64Observer struct {
-		observer *observer
-	}
-
 	ErrorHandler func(error)
 )
 
 var (
-	_ api.Meter                 = &SDK{}
-	_ api.LabelSet              = &labels{}
-	_ api.InstrumentImpl        = &instrument{}
-	_ api.BoundInstrumentImpl   = &record{}
-	_ api.Int64Observer         = int64Observer{}
-	_ api.Float64Observer       = float64Observer{}
-	_ api.Int64ObserverResult   = int64ObserverResult{}
-	_ api.Float64ObserverResult = float64ObserverResult{}
+	_ api.MeterImpl           = &SDK{}
+	_ api.LabelSet            = &labels{}
+	_ api.InstrumentImpl      = &synchronousInstrument{}
+	_ api.BoundInstrumentImpl = &record{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
@@ -243,15 +223,11 @@ func (o float64Observer) Unregister() {
 	o.observer.unregister()
 }
 
-func (i *instrument) Meter() api.Meter {
-	return i.meter
-}
-
 func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
-func (i *instrument) acquireHandle(ls *labels) *record {
+func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: i.descriptor,
@@ -308,12 +284,12 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	}
 }
 
-func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
+func (i *synchronousInstrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
 	labs := i.meter.labsFor(ls)
 	return i.acquireHandle(labs)
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+func (i *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Unbind()
@@ -461,8 +437,7 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
-	config := api.Configure(opts)
+func newDescriptor(name string, metricKind metric.Kind, numberKind core.NumberKind, config api.Config) *export.Descriptor {
 	return export.NewDescriptor(
 		name,
 		metricKind,
@@ -472,89 +447,18 @@ func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKi
 		numberKind)
 }
 
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *instrument {
-	descriptor := newDescriptor(name, metricKind, numberKind, opts)
-	return &instrument{
-		descriptor: descriptor,
+func (m *SDK) NewSynchronousInstrument(name string, metricKind api.Kind, numberKind core.NumberKind, config api.Config) api.InstrumentImpl {
+	return &synchronousInstrument{
+		descriptor: newDescriptor(name, metricKind, numberKind, config),
 		meter:      m,
 	}
 }
 
-func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
-	return m.newInstrument(name, export.CounterKind, numberKind, opts)
-}
-
-func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
-	return m.newInstrument(name, export.MeasureKind, numberKind, opts)
-}
-
-func (m *SDK) NewInt64Counter(name string, opts ...api.Option) (api.Int64Counter, error) {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewFloat64Counter(name string, opts ...api.Option) (api.Float64Counter, error) {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewInt64Measure(name string, opts ...api.Option) (api.Int64Measure, error) {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewFloat64Measure(name string, opts ...api.Option) (api.Float64Measure, error) {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, opts), nil)
-}
-
-func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, opts ...api.Option) (api.Int64Observer, error) {
-	if callback == nil {
-		return api.NoopMeter{}.RegisterInt64Observer("", nil)
-	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
-	cb := wrapInt64ObserverCallback(callback)
-	obs := m.newObserver(descriptor, cb)
-	return int64Observer{
-		observer: obs,
-	}, nil
-}
-
-func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
-	return func(result observerResult) {
-		typeSafeResult := int64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
-	}
-}
-
-func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, opts ...api.Option) (api.Float64Observer, error) {
-	if callback == nil {
-		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
-	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
-	cb := wrapFloat64ObserverCallback(callback)
-	obs := m.newObserver(descriptor, cb)
-	return float64Observer{
-		observer: obs,
-	}, nil
-}
-
-func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
-	return func(result observerResult) {
-		typeSafeResult := float64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
-	}
-}
-
-func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
-	obs := &observer{
+func (m *SDK) NewAsynchronousInstrument(name string, metricKind api.Kind, numberKind core.NumberKind, config api.Config) api.InstrumentImpl {
+	return &asynchronousInstrument{
+		descriptor: newDescriptor(name, metricKind, numberKind, config),
 		meter:      m,
-		descriptor: descriptor,
-		recorders:  nil,
-		callback:   callback,
 	}
-	m.observers.Store(obs, nil)
-	return obs
 }
 
 // Collect traverses the list of active records and observers and

@@ -24,15 +24,8 @@ import (
 
 type (
 	Handle struct {
-		Instrument *Instrument
+		Instrument *Synchronous
 		LabelSet   *LabelSet
-	}
-
-	Instrument struct {
-		Name       string
-		Kind       Kind
-		NumberKind core.NumberKind
-		Config     apimetric.Config
 	}
 
 	LabelSet struct {
@@ -53,102 +46,89 @@ type (
 	}
 
 	Meter struct {
+		// TODO add synchronization
+
 		MeasurementBatches []Batch
 		// Observers contains also unregistered
 		// observers. Check the Dead field of the Observer to
 		// figure out its status.
-		Observers []*Observer
+		Observers []*Asynchronous
 	}
-
-	Kind int8
 
 	Measurement struct {
 		// Number needs to be aligned for 64-bit atomic operations.
 		Number     core.Number
-		Instrument *Instrument
+		Instrument apimetric.InstrumentImpl
 	}
 
-	observerResult struct {
-		instrument *Instrument
+	Instrument struct {
+		meter      *Meter
+		descriptor apimetric.Descriptor
 	}
 
-	int64ObserverResult struct {
-		result observerResult
+	Asynchronous struct {
+		Instrument
+
+		Dead bool
+
+		callback func(func(core.Number, apimetric.LabelSet))
 	}
 
-	float64ObserverResult struct {
-		result observerResult
-	}
-
-	observerCallback func(observerResult)
-
-	Observer struct {
-		Instrument *Instrument
-		Meter      *Meter
-		Dead       bool
-		callback   observerCallback
+	Synchronous struct {
+		Instrument
 	}
 )
 
 var (
-	_ apimetric.InstrumentImpl        = &Instrument{}
-	_ apimetric.BoundInstrumentImpl   = &Handle{}
-	_ apimetric.LabelSet              = &LabelSet{}
-	_ apimetric.Meter                 = &Meter{}
-	_ apimetric.Int64Observer         = &Observer{}
-	_ apimetric.Float64Observer       = &Observer{}
-	_ apimetric.Int64ObserverResult   = int64ObserverResult{}
-	_ apimetric.Float64ObserverResult = float64ObserverResult{}
+	_ apimetric.SynchronousImpl      = &Synchronous{}
+	_ apimetric.BoundSynchronousImpl = &Handle{}
+	_ apimetric.LabelSet             = &LabelSet{}
+	_ apimetric.MeterImpl            = &Meter{}
+	_ apimetric.AsynchronousImpl     = &Asynchronous{}
 )
 
-const (
-	KindCounter Kind = iota
-	KindMeasure
-	KindObserver
-)
-
-func (o *Observer) Unregister() {
-	o.Dead = true
+func (i Instrument) Descriptor() apimetric.Descriptor {
+	return i.descriptor
 }
 
-func (r int64ObserverResult) Observe(value int64, labels apimetric.LabelSet) {
-	r.result.observe(core.NewInt64Number(value), labels)
+func (a *Asynchronous) Interface() interface{} {
+	return a
 }
 
-func (r float64ObserverResult) Observe(value float64, labels apimetric.LabelSet) {
-	r.result.observe(core.NewFloat64Number(value), labels)
+func (s *Synchronous) Interface() interface{} {
+	return s
 }
 
-func (r observerResult) observe(number core.Number, labels apimetric.LabelSet) {
-	r.instrument.RecordOne(context.Background(), number, labels)
+func (a *Asynchronous) Unregister() {
+	a.Dead = true
 }
 
-func (i *Instrument) Bind(labels apimetric.LabelSet) apimetric.BoundInstrumentImpl {
+func (s *Synchronous) Bind(labels apimetric.LabelSet) apimetric.BoundSynchronousImpl {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
 		labels = ld.Delegate()
 	}
 	return &Handle{
-		Instrument: i,
+		Instrument: s,
 		LabelSet:   labels.(*LabelSet),
 	}
 }
 
-func (i *Instrument) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+func (i *Synchronous) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
 		labels = ld.Delegate()
 	}
-	doRecordBatch(ctx, labels.(*LabelSet), i, number)
+	i.meter.doRecordSingle(ctx, labels.(*LabelSet), i, number)
 }
 
 func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
-	doRecordBatch(ctx, h.LabelSet, h.Instrument, number)
+	h.Instrument.meter.doRecordSingle(ctx, h.LabelSet, h.Instrument, number)
 }
 
 func (h *Handle) Unbind() {
 }
 
-func doRecordBatch(ctx context.Context, labelSet *LabelSet, instrument *Instrument, number core.Number) {
-	labelSet.TheMeter.recordMockBatch(ctx, labelSet, Measurement{
+func (m *Meter) doRecordSingle(ctx context.Context, labelSet *LabelSet, instrument apimetric.InstrumentImpl, number core.Number) {
+	m.recordMockBatch(ctx, labelSet, Measurement{
 		Instrument: instrument,
 		Number:     number,
 	})
@@ -167,13 +147,14 @@ func (p *MeterProvider) Meter(name string) apimetric.Meter {
 	if lookup, ok := p.registered[name]; ok {
 		return lookup
 	}
-	m := NewMeter()
+	_, m := NewMeter()
 	p.registered[name] = m
 	return m
 }
 
-func NewMeter() *Meter {
-	return &Meter{}
+func NewMeter() (*Meter, apimetric.Meter) {
+	mock := &Meter{}
+	return mock, apimetric.WrapMeterImpl(mock)
 }
 
 func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
@@ -187,92 +168,35 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewInt64Counter(name string, opts ...apimetric.Option) (apimetric.Int64Counter, error) {
-	instrument := m.newCounterInstrument(name, core.Int64NumberKind, opts)
-	return apimetric.WrapInt64CounterInstrument(instrument, nil)
-}
-
-func (m *Meter) NewFloat64Counter(name string, opts ...apimetric.Option) (apimetric.Float64Counter, error) {
-	instrument := m.newCounterInstrument(name, core.Float64NumberKind, opts)
-	return apimetric.WrapFloat64CounterInstrument(instrument, nil)
-}
-
-func (m *Meter) newCounterInstrument(name string, numberKind core.NumberKind, opts []apimetric.Option) *Instrument {
-	return &Instrument{
-		Name:       name,
-		Kind:       KindCounter,
-		NumberKind: numberKind,
-		Config:     apimetric.Configure(opts),
-	}
-}
-
-func (m *Meter) NewInt64Measure(name string, opts ...apimetric.Option) (apimetric.Int64Measure, error) {
-	instrument := m.newMeasureInstrument(name, core.Int64NumberKind, opts)
-	return apimetric.WrapInt64MeasureInstrument(instrument, nil)
-}
-
-func (m *Meter) NewFloat64Measure(name string, opts ...apimetric.Option) (apimetric.Float64Measure, error) {
-	instrument := m.newMeasureInstrument(name, core.Float64NumberKind, opts)
-	return apimetric.WrapFloat64MeasureInstrument(instrument, nil)
-}
-
-func (m *Meter) newMeasureInstrument(name string, numberKind core.NumberKind, opts []apimetric.Option) *Instrument {
-	return &Instrument{
-		Name:       name,
-		Kind:       KindMeasure,
-		NumberKind: numberKind,
-		Config:     apimetric.Configure(opts),
-	}
-}
-
-func (m *Meter) RegisterInt64Observer(name string, callback apimetric.Int64ObserverCallback, opts ...apimetric.Option) (apimetric.Int64Observer, error) {
-	wrappedCallback := wrapInt64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Int64NumberKind, opts), nil
-}
-
-func wrapInt64ObserverCallback(callback apimetric.Int64ObserverCallback) observerCallback {
-	if callback == nil {
-		return func(result observerResult) {}
-	}
-	return func(result observerResult) {
-		typeSafeResult := int64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
-	}
-}
-
-func (m *Meter) RegisterFloat64Observer(name string, callback apimetric.Float64ObserverCallback, opts ...apimetric.Option) (apimetric.Float64Observer, error) {
-	wrappedCallback := wrapFloat64ObserverCallback(callback)
-	return m.newObserver(name, wrappedCallback, core.Float64NumberKind, opts), nil
-}
-
-func wrapFloat64ObserverCallback(callback apimetric.Float64ObserverCallback) observerCallback {
-	if callback == nil {
-		return func(result observerResult) {}
-	}
-	return func(result observerResult) {
-		typeSafeResult := float64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
-	}
-}
-
-func (m *Meter) newObserver(name string, callback observerCallback, numberKind core.NumberKind, opts []apimetric.Option) *Observer {
-	obs := &Observer{
-		Instrument: &Instrument{
-			Name:       name,
-			Kind:       KindObserver,
-			NumberKind: numberKind,
-			Config:     apimetric.Configure(opts),
+func (m *Meter) NewSynchronousInstrument(name string, metricKind apimetric.Kind, numberKind core.NumberKind, config apimetric.Config) (apimetric.SynchronousImpl, error) {
+	return &Synchronous{
+		Instrument{
+			descriptor: apimetric.Descriptor{
+				Name:       name,
+				Kind:       metricKind,
+				NumberKind: numberKind,
+				Config:     config,
+			},
+			meter: m,
 		},
-		Meter:    m,
-		Dead:     false,
+	}, nil
+}
+
+func (m *Meter) NewAsynchronousInstrument(name string, metricKind apimetric.Kind, numberKind core.NumberKind, callback func(func(core.Number, apimetric.LabelSet)), config apimetric.Config) (apimetric.AsynchronousImpl, error) {
+	a := &Asynchronous{
+		Instrument: Instrument{
+			descriptor: apimetric.Descriptor{
+				Name:       name,
+				Kind:       metricKind,
+				NumberKind: numberKind,
+				Config:     config,
+			},
+			meter: m,
+		},
 		callback: callback,
 	}
-	m.Observers = append(m.Observers, obs)
-	return obs
+	m.Observers = append(m.Observers, a)
+	return a, nil
 }
 
 func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
@@ -281,7 +205,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, meas
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = Measurement{
-			Instrument: m.InstrumentImpl().(*Instrument),
+			Instrument: m.InstrumentImpl().Interface().(*Synchronous),
 			Number:     m.Number(),
 		}
 	}
@@ -301,8 +225,8 @@ func (m *Meter) RunObservers() {
 		if observer.Dead {
 			continue
 		}
-		observer.callback(observerResult{
-			instrument: observer.Instrument,
+		observer.callback(func(n core.Number, ls apimetric.LabelSet) {
+			m.doRecordSingle(context.Background(), ls.(*LabelSet), observer, n)
 		})
 	}
 }

@@ -81,8 +81,8 @@ type obsImpl struct {
 	callback interface{}
 }
 
-type hasImpl interface {
-	Impl() metric.InstrumentImpl
+type hasSynchronousImpl interface {
+	Impl() metric.SynchronousImpl
 }
 
 type int64ObsImpl struct {
@@ -199,7 +199,7 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 	return inst, nil
 }
 
-func delegateCheck(has hasImpl, err error) (metric.InstrumentImpl, error) {
+func synchronousCheck(has hasSynchronousImpl, err error) (metric.InstrumentImpl, error) {
 	if has != nil {
 		return has.Impl(), err
 	}
@@ -213,14 +213,14 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 	switch mkind {
 	case counterKind:
 		if nkind == core.Int64NumberKind {
-			return delegateCheck(m.NewInt64Counter(name, opts...))
+			return synchronousCheck(m.NewInt64Counter(name, opts...))
 		}
-		return delegateCheck(m.NewFloat64Counter(name, opts...))
+		return synchronousCheck(m.NewFloat64Counter(name, opts...))
 	case measureKind:
 		if nkind == core.Int64NumberKind {
-			return delegateCheck(m.NewInt64Measure(name, opts...))
+			return synchronousCheck(m.NewInt64Measure(name, opts...))
 		}
-		return delegateCheck(m.NewFloat64Measure(name, opts...))
+		return synchronousCheck(m.NewFloat64Measure(name, opts...))
 	}
 	return nil, errInvalidMetricKind
 }

@@ -14,12 +14,11 @@
 
 package metric
 
-//go:generate stringer -type=Kind
-
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 )
 
@@ -283,20 +282,6 @@ func (r Record) Labels() Labels {
 	return r.labels
 }
 
-// Kind describes the kind of instrument.
-type Kind int8
-
-const (
-	// Counter kind indicates a counter instrument.
-	CounterKind Kind = iota
-
-	// Measure kind indicates a measure instrument.
-	MeasureKind
-
-	// Observer kind indicates an observer instrument
-	ObserverKind
-)
-
 // Descriptor describes a metric instrument to the exporter.
 //
 // Descriptors are created once per instrument and a pointer to the
@@ -304,7 +289,7 @@ const (
 // exporter.
 type Descriptor struct {
 	name        string
-	metricKind  Kind
+	metricKind  metric.Kind
 	keys        []core.Key
 	description string
 	unit        unit.Unit
@@ -319,7 +304,7 @@ type Descriptor struct {
 // exporter.
 func NewDescriptor(
 	name string,
-	metricKind Kind,
+	metricKind metric.Kind,
 	keys []core.Key,
 	description string,
 	unit unit.Unit,
@@ -342,7 +327,7 @@ func (d *Descriptor) Name() string {
 
 // MetricKind returns the kind of instrument: counter, measure, or
 // observer.
-func (d *Descriptor) MetricKind() Kind {
+func (d *Descriptor) MetricKind() metric.Kind {
 	return d.metricKind
 }
 
