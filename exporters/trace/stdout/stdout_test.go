@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
@@ -43,6 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	spanID, _ := core.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
+	resource := resource.New(core.Key("rk1").String("rv11"))
 
 	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{
@@ -63,13 +65,16 @@ func TestExporter_ExportSpan(t *testing.T) {
 		SpanKind:      trace.SpanKindInternal,
 		StatusCode:    codes.Unknown,
 		StatusMessage: "interesting",
+		Resource:      resource,
 	}
 	ex.ExportSpan(context.Background(), testSpan)
 
 	expectedSerializedNow, _ := json.Marshal(now)
 
 	got := b.String()
-	expectedOutput := `{"SpanContext":{` +
+	expectedOutput := `{"Resource":[{"Key":"rk1","Value":{"Type":"STRING","Value":"rv11"}}],` +
+		`"SpanData":{` +
+		`"SpanContext":{` +
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
 		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":"0000000000000000",` +
@@ -117,7 +122,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
 		`"ChildSpanCount":0,` +
-		`"Resource":null}` + "\n"
+		`"Resource":{}}}` + "\n"
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)

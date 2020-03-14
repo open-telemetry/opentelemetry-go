@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 
+	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -49,14 +50,23 @@ func NewExporter(o Options) (*Exporter, error) {
 	}, nil
 }
 
+type _SpanData struct {
+	Resource []core.KeyValue
+	SpanData *export.SpanData
+}
+
 // ExportSpan writes a SpanData in json format to stdout.
 func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	var jsonSpan []byte
 	var err error
+	d := _SpanData{SpanData: data}
+	if data.Resource != nil {
+		d.Resource = data.Resource.Attributes()
+	}
 	if e.pretty {
-		jsonSpan, err = json.MarshalIndent(data, "", "\t")
+		jsonSpan, err = json.MarshalIndent(d, "", "\t")
 	} else {
-		jsonSpan, err = json.Marshal(data)
+		jsonSpan, err = json.Marshal(d)
 	}
 	if err != nil {
 		// ignore writer failures for now
