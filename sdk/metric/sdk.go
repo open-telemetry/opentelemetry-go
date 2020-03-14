@@ -94,7 +94,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		descriptor *export.Descriptor
+		descriptor export.Descriptor // @@@ avoid the allocation here.
 		ordered    orderedLabels
 	}
 

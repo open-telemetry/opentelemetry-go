@@ -133,23 +133,48 @@ func makeDescriptor(name string, metricKind Kind, numberKind core.NumberKind, op
 	}
 }
 
+func (m *wrappedMeterImpl) makeSynchronous(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SynchronousImpl, error) {
+	return m.impl.NewSynchronousInstrument(makeDescriptor(name, metricKind, numberKind, opts))
+
+}
+
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
-	common, err := m.makeSynchronous(makeDescriptor(name, CounterKind, core.Int64NumberKind, opts))
+	return WrapNewInt64CounterInstrument(
+		m.makeSynchronous(name, CounterKind, core.Int64NumberKind, opts))
+}
+
+func WrapNewInt64CounterInstrument(syncInst SynchronousImpl, err error) (Int64Counter, error) {
+	common, err := checkSynchronous(syncInst, err)
 	return Int64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
-	common, err := m.makeSynchronous(makeDescriptor(name, CounterKind, core.Float64NumberKind, opts))
+	return WrapNewFloat64CounterInstrument(
+		m.makeSynchronous(name, CounterKind, core.Float64NumberKind, opts))
+}
+
+func WrapNewFloat64CounterInstrument(syncInst SynchronousImpl, err error) (Float64Counter, error) {
+	common, err := checkSynchronous(syncInst, err)
 	return Float64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
-	common, err := m.makeSynchronous(makeDescriptor(name, MeasureKind, core.Int64NumberKind, opts))
+	return WrapNewInt64MeasureInstrument(
+		m.makeSynchronous(name, MeasureKind, core.Int64NumberKind, opts))
+}
+
+func WrapNewInt64MeasureInstrument(syncInst SynchronousImpl, err error) (Int64Measure, error) {
+	common, err := checkSynchronous(syncInst, err)
 	return Int64Measure{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
-	common, err := m.makeSynchronous(makeDescriptor(name, MeasureKind, core.Float64NumberKind, opts))
+	return WrapNewFloat64MeasureInstrument(
+		m.makeSynchronous(name, MeasureKind, core.Float64NumberKind, opts))
+}
+
+func WrapNewFloat64MeasureInstrument(syncInst SynchronousImpl, err error) (Float64Measure, error) {
+	common, err := checkSynchronous(syncInst, err)
 	return Float64Measure{synchronousInstrument: common}, err
 }
 

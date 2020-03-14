@@ -1,4 +1,4 @@
-package internal
+package internal // import "go.opentelemetry.io/otel/api/global/internal"
 
 import (
 	"context"
@@ -32,13 +32,6 @@ import (
 // instrument after it is registered, with a sync.Once initializer to
 // protect against races with Release().
 
-type metricKind int8
-
-const (
-	counterKind metricKind = iota
-	measureKind
-)
-
 type meterProvider struct {
 	delegate metric.Provider
 
@@ -53,7 +46,7 @@ type meter struct {
 	name     string
 
 	lock          sync.Mutex
-	instruments   []*instImpl
+	instruments   []*syncImpl
 	liveObservers map[*obsImpl]struct{}
 	// orderedObservers slice contains observers in their order of
 	// registration. It may also contain unregistered
@@ -62,40 +55,30 @@ type meter struct {
 	orderedObservers []*obsImpl
 }
 
-type instImpl struct {
-	delegate unsafe.Pointer // (*metric.InstrumentImpl)
-
+type instrument struct {
 	name  string
-	mkind metricKind
+	mkind metric.Kind
 	nkind core.NumberKind
 	opts  []metric.Option
 }
 
-type obsImpl struct {
-	delegate unsafe.Pointer // (*metric.Int64Observer or *metric.Float64Observer)
+type syncImpl struct {
+	delegate unsafe.Pointer // (*metric.SynchronousImpl)
 
-	name     string
-	nkind    core.NumberKind
-	opts     []metric.Option
+	instrument
+}
+
+type obsImpl struct {
+	delegate unsafe.Pointer // (*metric.AsynchronousImpl)
+
+	instrument
+
 	meter    *meter
-	callback interface{}
+	callback func(func(core.Number, metric.LabelSet))
 }
 
 type hasSynchronousImpl interface {
-	Impl() metric.SynchronousImpl
-}
-
-type int64ObsImpl struct {
-	observer *obsImpl
-}
-
-type float64ObsImpl struct {
-	observer *obsImpl
-}
-
-// this is a common subset of the metric observers interfaces
-type observerUnregister interface {
-	Unregister()
+	SynchronousImpl() metric.SynchronousImpl
 }
 
 type labelSet struct {
@@ -107,10 +90,10 @@ type labelSet struct {
 	initialize sync.Once
 }
 
-type instHandle struct {
+type syncHandle struct {
 	delegate unsafe.Pointer // (*metric.HandleImpl)
 
-	inst   *instImpl
+	inst   *syncImpl
 	labels metric.LabelSet
 
 	initialize sync.Once
@@ -120,14 +103,24 @@ var _ metric.Provider = &meterProvider{}
 var _ metric.Meter = &meter{}
 var _ metric.LabelSet = &labelSet{}
 var _ metric.LabelSetDelegate = &labelSet{}
-var _ metric.InstrumentImpl = &instImpl{}
-var _ metric.BoundInstrumentImpl = &instHandle{}
-var _ metric.Int64Observer = int64ObsImpl{}
-var _ metric.Float64Observer = float64ObsImpl{}
-var _ observerUnregister = (metric.Int64Observer)(nil)
-var _ observerUnregister = (metric.Float64Observer)(nil)
+var _ metric.InstrumentImpl = &syncImpl{}
+var _ metric.BoundSynchronousImpl = &syncHandle{}
+var _ metric.AsynchronousImpl = &obsImpl{}
 
 var errInvalidMetricKind = errors.New("Invalid Metric kind")
+
+func (inst *instrument) Descriptor() metric.Descriptor {
+	// @@@ Take this out
+	return metric.Descriptor{}
+}
+
+func (s *syncImpl) Interface() interface{} {
+	return s
+}
+
+func (s *obsImpl) Interface() interface{} {
+	return s
+}
 
 // Provider interface and delegation
 
@@ -181,7 +174,7 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	m.orderedObservers = nil
 }
 
-func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, opts []metric.Option) (metric.InstrumentImpl, error) {
+func (m *meter) newInst(name string, mkind metric.Kind, nkind core.NumberKind, opts []metric.Option) (metric.SynchronousImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -189,19 +182,21 @@ func (m *meter) newInst(name string, mkind metricKind, nkind core.NumberKind, op
 		return newInstDelegate(*meterPtr, name, mkind, nkind, opts)
 	}
 
-	inst := &instImpl{
-		name:  name,
-		mkind: mkind,
-		nkind: nkind,
-		opts:  opts,
+	inst := &syncImpl{
+		instrument: instrument{
+			name:  name,
+			mkind: mkind,
+			nkind: nkind,
+			opts:  opts,
+		},
 	}
 	m.instruments = append(m.instruments, inst)
 	return inst, nil
 }
 
-func synchronousCheck(has hasSynchronousImpl, err error) (metric.InstrumentImpl, error) {
+func synchronousCheck(has hasSynchronousImpl, err error) (metric.SynchronousImpl, error) {
 	if has != nil {
-		return has.Impl(), err
+		return has.SynchronousImpl(), err
 	}
 	if err == nil {
 		err = metric.ErrSDKReturnedNilImpl
@@ -209,14 +204,14 @@ func synchronousCheck(has hasSynchronousImpl, err error) (metric.InstrumentImpl,
 	return nil, err
 }
 
-func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.NumberKind, opts []metric.Option) (metric.InstrumentImpl, error) {
+func newInstDelegate(m metric.Meter, name string, mkind metric.Kind, nkind core.NumberKind, opts []metric.Option) (metric.SynchronousImpl, error) {
 	switch mkind {
-	case counterKind:
+	case metric.CounterKind:
 		if nkind == core.Int64NumberKind {
 			return synchronousCheck(m.NewInt64Counter(name, opts...))
 		}
 		return synchronousCheck(m.NewFloat64Counter(name, opts...))
-	case measureKind:
+	case metric.MeasureKind:
 		if nkind == core.Int64NumberKind {
 			return synchronousCheck(m.NewInt64Measure(name, opts...))
 		}
@@ -227,7 +222,7 @@ func newInstDelegate(m metric.Meter, name string, mkind metricKind, nkind core.N
 
 // Instrument delegation
 
-func (inst *instImpl) setDelegate(d metric.Meter) {
+func (inst *syncImpl) setDelegate(d metric.Meter) {
 	implPtr := new(metric.InstrumentImpl)
 
 	var err error
@@ -244,20 +239,20 @@ func (inst *instImpl) setDelegate(d metric.Meter) {
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
-func (inst *instImpl) Bind(labels metric.LabelSet) metric.BoundInstrumentImpl {
-	if implPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+func (inst *syncImpl) Bind(labels metric.LabelSet) metric.BoundSynchronousImpl {
+	if implPtr := (*metric.SynchronousImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
 	}
-	return &instHandle{
+	return &syncHandle{
 		inst:   inst,
 		labels: labels,
 	}
 }
 
-func (bound *instHandle) Unbind() {
+func (bound *syncHandle) Unbind() {
 	bound.initialize.Do(func() {})
 
-	implPtr := (*metric.BoundInstrumentImpl)(atomic.LoadPointer(&bound.delegate))
+	implPtr := (*metric.BoundSynchronousImpl)(atomic.LoadPointer(&bound.delegate))
 
 	if implPtr == nil {
 		return
@@ -266,18 +261,10 @@ func (bound *instHandle) Unbind() {
 	(*implPtr).Unbind()
 }
 
-// Any Observer delegation
+// Observer delegation
 
-func (obs *obsImpl) setDelegate(d metric.Meter) {
-	if obs.nkind == core.Int64NumberKind {
-		obs.setInt64Delegate(d)
-	} else {
-		obs.setFloat64Delegate(d)
-	}
-}
-
-func (obs *obsImpl) unregister() {
-	unreg := obs.getUnregister()
+func (obs *obsImpl) Unregister() {
+	unreg := obs.getAsyncImpl()
 	if unreg != nil {
 		unreg.Unregister()
 		return
@@ -291,25 +278,23 @@ func (obs *obsImpl) unregister() {
 	}
 }
 
-func (obs *obsImpl) getUnregister() observerUnregister {
-	ptr := atomic.LoadPointer(&obs.delegate)
-	if ptr == nil {
-		return nil
+func (obs *obsImpl) getAsyncImpl() metric.AsynchronousImpl {
+	if ptr := atomic.LoadPointer(&obs.delegate); ptr != nil {
+		return *(*metric.AsynchronousImpl)(ptr)
 	}
+	return nil
+}
+
+func (obs *obsImpl) setDelegate(d metric.Meter) {
+	obsPtr := new(metric.AsynchronousImpl)
+
+	var err error
 	if obs.nkind == core.Int64NumberKind {
-		return *(*metric.Int64Observer)(ptr)
+		// @@@
+		*obsPtr, err = d.RegisterInt64Observer(obs.name, cb, obs.opts...).AsynchronousImpl()
+	} else {
+
 	}
-	return *(*metric.Float64Observer)(ptr)
-}
-
-// Int64Observer delegation
-
-func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
-	obsPtr := new(metric.Int64Observer)
-	cb := obs.callback.(metric.Int64ObserverCallback)
-
-	var err error
-	*obsPtr, err = d.RegisterInt64Observer(obs.name, cb, obs.opts...)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -320,33 +305,6 @@ func (obs *obsImpl) setInt64Delegate(d metric.Meter) {
 	}
 
 	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
-}
-
-func (obs int64ObsImpl) Unregister() {
-	obs.observer.unregister()
-}
-
-// Float64Observer delegation
-
-func (obs *obsImpl) setFloat64Delegate(d metric.Meter) {
-	obsPtr := new(metric.Float64Observer)
-	cb := obs.callback.(metric.Float64ObserverCallback)
-
-	var err error
-	*obsPtr, err = d.RegisterFloat64Observer(obs.name, cb, obs.opts...)
-	if err != nil {
-		// TODO: There is no standard way to deliver this error to the user.
-		// See https://github.com/open-telemetry/opentelemetry-go/issues/514
-		// Note that the default SDK will not generate any errors yet, this is
-		// only for added safety.
-		panic(err)
-	}
-
-	atomic.StorePointer(&obs.delegate, unsafe.Pointer(obsPtr))
-}
-
-func (obs float64ObsImpl) Unregister() {
-	obs.observer.unregister()
 }
 
 // Metric updates
@@ -357,7 +315,7 @@ func (m *meter) RecordBatch(ctx context.Context, labels metric.LabelSet, measure
 	}
 }
 
-func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
 	if instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
@@ -365,7 +323,7 @@ func (inst *instImpl) RecordOne(ctx context.Context, number core.Number, labels 
 
 // Bound instrument initialization
 
-func (bound *instHandle) RecordOne(ctx context.Context, number core.Number) {
+func (bound *syncHandle) RecordOne(ctx context.Context, number core.Number) {
 	instPtr := (*metric.InstrumentImpl)(atomic.LoadPointer(&bound.inst.delegate))
 	if instPtr == nil {
 		return
@@ -444,9 +402,12 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 	}
 
 	obs := &obsImpl{
-		name:     name,
-		nkind:    core.Int64NumberKind,
-		opts:     opts,
+		instrument: instrument{
+			name:  name,
+			mkind: core.ObserverKind,
+			nkind: core.Int64NumberKind,
+			opts:  opts,
+		},
 		meter:    m,
 		callback: callback,
 	}
@@ -489,9 +450,9 @@ func AtomicFieldOffsets() map[string]uintptr {
 	return map[string]uintptr{
 		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
 		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
-		"instImpl.delegate":      unsafe.Offsetof(instImpl{}.delegate),
+		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
 		"obsImpl.delegate":       unsafe.Offsetof(obsImpl{}.delegate),
 		"labelSet.delegate":      unsafe.Offsetof(labelSet{}.delegate),
-		"instHandle.delegate":    unsafe.Offsetof(instHandle{}.delegate),
+		"syncHandle.delegate":    unsafe.Offsetof(syncHandle{}.delegate),
 	}
 }
