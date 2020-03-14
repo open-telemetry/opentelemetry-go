@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -309,6 +310,7 @@ type Descriptor struct {
 	description string
 	unit        unit.Unit
 	numberKind  core.NumberKind
+	resource    resource.Resource
 }
 
 // NewDescriptor builds a new descriptor, for use by `Meter`
@@ -324,6 +326,7 @@ func NewDescriptor(
 	description string,
 	unit unit.Unit,
 	numberKind core.NumberKind,
+	resource resource.Resource,
 ) *Descriptor {
 	return &Descriptor{
 		name:        name,
@@ -332,6 +335,7 @@ func NewDescriptor(
 		description: description,
 		unit:        unit,
 		numberKind:  numberKind,
+		resource:    resource,
 	}
 }
 
@@ -369,4 +373,10 @@ func (d *Descriptor) Unit() unit.Unit {
 // or a float64 values.
 func (d *Descriptor) NumberKind() core.NumberKind {
 	return d.numberKind
+}
+
+// Resource returns the Resource describing the entity for whom the metric
+// instrument measures.
+func (d *Descriptor) Resource() resource.Resource {
+	return d.resource
 }

@@ -73,16 +73,21 @@ var _ Ticker = realTicker{}
 // exporter will be used as the label encoder for the SDK itself,
 // otherwise the SDK will be configured with the default label
 // encoder.
-func New(batcher export.Batcher, exporter export.Exporter, period time.Duration) *Controller {
+func New(batcher export.Batcher, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
 	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
 		lencoder = sdk.NewDefaultLabelEncoder()
 	}
 
+	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
+	for _, opt := range opts {
+		opt.Apply(c)
+	}
+
 	return &Controller{
-		sdk:          sdk.New(batcher, lencoder),
-		errorHandler: sdk.DefaultErrorHandler,
+		sdk:          sdk.New(batcher, lencoder, sdk.WithResource(c.Resource)),
+		errorHandler: c.ErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
 		ch:           make(chan struct{}),

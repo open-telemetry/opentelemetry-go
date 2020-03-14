@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
@@ -79,6 +80,7 @@ func TestRangeTest(t *testing.T) {
 				"",
 				"",
 				nkind,
+				resource.Resource{},
 			)
 			testRangeNegative(t, desc)
 		})
@@ -100,6 +102,7 @@ func TestNaNTest(t *testing.T) {
 					"",
 					"",
 					nkind,
+					resource.Resource{},
 				)
 				testRangeNaN(t, desc)
 			}

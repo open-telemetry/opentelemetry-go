@@ -26,12 +26,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
-	testCounterDesc  = export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind)
-	testMeasureDesc  = export.NewDescriptor("measure", export.MeasureKind, nil, "", "", core.Int64NumberKind)
-	testObserverDesc = export.NewDescriptor("observer", export.ObserverKind, nil, "", "", core.Int64NumberKind)
+	testCounterDesc  = export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
+	testMeasureDesc  = export.NewDescriptor("measure", export.MeasureKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
+	testObserverDesc = export.NewDescriptor("observer", export.ObserverKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
 )
 
 func TestInexpensiveMeasure(t *testing.T) {

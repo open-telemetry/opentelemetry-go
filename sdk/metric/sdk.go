@@ -29,6 +29,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -66,6 +67,9 @@ type (
 
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
+
+		// resource represents the entity producing telemetry.
+		resource resource.Resource
 	}
 
 	instrument struct {
@@ -329,11 +333,17 @@ func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.L
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
+func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Option) *SDK {
+	c := &Config{ErrorHandler: DefaultErrorHandler}
+	for _, opt := range opts {
+		opt.Apply(c)
+	}
+
 	m := &SDK{
 		batcher:      batcher,
 		labelEncoder: labelEncoder,
-		errorHandler: DefaultErrorHandler,
+		errorHandler: c.ErrorHandler,
+		resource:     c.Resource,
 	}
 	m.empty.meter = m
 	return m
@@ -461,7 +471,7 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
+func (m *SDK) newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
 	config := api.Configure(opts)
 	return export.NewDescriptor(
 		name,
@@ -469,11 +479,13 @@ func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKi
 		config.Keys,
 		config.Description,
 		config.Unit,
-		numberKind)
+		numberKind,
+		m.resource,
+	)
 }
 
 func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *instrument {
-	descriptor := newDescriptor(name, metricKind, numberKind, opts)
+	descriptor := m.newDescriptor(name, metricKind, numberKind, opts)
 	return &instrument{
 		descriptor: descriptor,
 		meter:      m,
@@ -508,7 +520,7 @@ func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallb
 	if callback == nil {
 		return api.NoopMeter{}.RegisterInt64Observer("", nil)
 	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
+	descriptor := m.newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
 	cb := wrapInt64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return int64Observer{
@@ -529,7 +541,7 @@ func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverC
 	if callback == nil {
 		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
+	descriptor := m.newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
 	cb := wrapFloat64ObserverCallback(callback)
 	obs := m.newObserver(descriptor, cb)
 	return float64Observer{
