@@ -139,15 +139,13 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	// N.B. Only return one aggError, if any occur. They're likely
-	// to be duplicates of the same error.
 	var aggError error
 	var batch expoBatch
 	if !e.config.DoNotPrintTime {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	checkpointSet.ForEach(func(record export.Record) {
+	aggError = checkpointSet.ForEach(func(record export.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()
@@ -155,47 +153,31 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		var expose expoLine
 
 		if sum, ok := agg.(aggregator.Sum); ok {
-			if value, err := sum.Sum(); err != nil {
-				aggError = err
-				expose.Sum = "NaN"
-			} else {
-				expose.Sum = value.AsInterface(kind)
+			value, err := sum.Sum()
+			if err != nil {
+				return err
 			}
+			expose.Sum = value.AsInterface(kind)
 		}
 
 		if mmsc, ok := agg.(aggregator.MinMaxSumCount); ok {
-			if count, err := mmsc.Count(); err != nil {
-				aggError = err
-				expose.Count = "NaN"
-			} else {
-				expose.Count = count
+			count, err := mmsc.Count()
+			if err != nil {
+				return err
 			}
+			expose.Count = count
 
-			if max, err := mmsc.Max(); err != nil {
-				if err == aggregator.ErrEmptyDataSet {
-					// This is a special case, indicates an aggregator that
-					// was checkpointed before its first value was set.
-					return
-				}
-
-				aggError = err
-				expose.Max = "NaN"
-			} else {
-				expose.Max = max.AsInterface(kind)
+			max, err := mmsc.Max()
+			if err != nil {
+				return err
 			}
+			expose.Max = max.AsInterface(kind)
 
-			if min, err := mmsc.Min(); err != nil {
-				if err == aggregator.ErrEmptyDataSet {
-					// This is a special case, indicates an aggregator that
-					// was checkpointed before its first value was set.
-					return
-				}
-
-				aggError = err
-				expose.Min = "NaN"
-			} else {
-				expose.Min = min.AsInterface(kind)
+			min, err := mmsc.Min()
+			if err != nil {
+				return err
 			}
+			expose.Min = min.AsInterface(kind)
 
 			if dist, ok := agg.(aggregator.Distribution); ok && len(e.config.Quantiles) != 0 {
 				summary := make([]expoQuantile, len(e.config.Quantiles))
@@ -203,12 +185,11 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 				for i, q := range e.config.Quantiles {
 					var vstr interface{}
-					if value, err := dist.Quantile(q); err != nil {
-						aggError = err
-						vstr = "NaN"
-					} else {
-						vstr = value.AsInterface(kind)
+					value, err := dist.Quantile(q)
+					if err != nil {
+						return err
 					}
+					vstr = value.AsInterface(kind)
 					summary[i] = expoQuantile{
 						Q: q,
 						V: vstr,
@@ -216,21 +197,14 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				}
 			}
 		} else if lv, ok := agg.(aggregator.LastValue); ok {
-			if value, timestamp, err := lv.LastValue(); err != nil {
-				if err == aggregator.ErrNoLastValue {
-					// This is a special case, indicates an aggregator that
-					// was checkpointed before its first value was set.
-					return
-				}
+			value, timestamp, err := lv.LastValue()
+			if err != nil {
+				return err
+			}
+			expose.LastValue = value.AsInterface(kind)
 
-				aggError = err
-				expose.LastValue = "NaN"
-			} else {
-				expose.LastValue = value.AsInterface(kind)
-
-				if !e.config.DoNotPrintTime {
-					expose.Timestamp = &timestamp
-				}
+			if !e.config.DoNotPrintTime {
+				expose.Timestamp = &timestamp
 			}
 		}
 
@@ -264,6 +238,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		expose.Name = sb.String()
 
 		batch.Updates = append(batch.Updates, expose)
+		return nil
 	})
 
 	var data []byte

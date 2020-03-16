@@ -201,8 +201,13 @@ type LabelEncoder interface {
 type CheckpointSet interface {
 	// ForEach iterates over aggregated checkpoints for all
 	// metrics that were updated during the last collection
-	// period.
-	ForEach(func(Record))
+	// period. Each aggregated checkpoint returned by the
+	// function parameter may return an error.
+	// ForEach tolerates ErrNoData silently, as this is
+	// expected from the Meter implementation. Any other kind
+	// of error will immediately halt ForEach and return
+	// the error to the caller.
+	ForEach(func(Record) error) error
 }
 
 // Record contains the exported data for a single metric instrument

@@ -134,7 +134,7 @@ func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
 
 // AddTo adds a name/label-encoding entry with the lastValue or counter
 // value to the output map.
-func (o Output) AddTo(rec export.Record) {
+func (o Output) AddTo(rec export.Record) error {
 	labels := rec.Labels()
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
 	var value int64
@@ -147,4 +147,5 @@ func (o Output) AddTo(rec export.Record) {
 		value = lv.AsInt64()
 	}
 	o[key] = value
+	return nil
 }

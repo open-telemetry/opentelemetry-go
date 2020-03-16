@@ -163,16 +163,15 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var aggErr error
 	var sendErr error
 
-	checkpointSet.ForEach(func(rec export.Record) {
+	aggErr = checkpointSet.ForEach(func(rec export.Record) error {
 		before := buf.Len()
 
-		if err := e.formatMetric(rec, buf); err != nil && aggErr == nil {
-			aggErr = err
-			return
+		if err := e.formatMetric(rec, buf); err != nil {
+			return err
 		}
 
 		if buf.Len() < e.config.MaxPacketSize {
-			return
+			return nil
 		}
 		if before == 0 {
 			// A single metric >= packet size
@@ -180,7 +179,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 				sendErr = err
 			}
 			buf.Reset()
-			return
+			return nil
 		}
 
 		// Send and copy the leftover
@@ -193,6 +192,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
 
 		buf.Truncate(leftover)
+		return nil
 	})
 	if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
 		sendErr = err

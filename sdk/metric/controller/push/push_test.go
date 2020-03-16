@@ -43,11 +43,11 @@ type testBatcher struct {
 }
 
 type testExporter struct {
-	t       *testing.T
-	lock    sync.Mutex
-	exports int
-	records []export.Record
-	retErr  error
+	t         *testing.T
+	lock      sync.Mutex
+	exports   int
+	records   []export.Record
+	injectErr func(r export.Record) error
 }
 
 type testFixture struct {
@@ -118,10 +118,20 @@ func (e *testExporter) Export(_ context.Context, checkpointSet export.Checkpoint
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
-	checkpointSet.ForEach(func(r export.Record) {
-		e.records = append(e.records, r)
-	})
-	return e.retErr
+	var records []export.Record
+	if err := checkpointSet.ForEach(func(r export.Record) error {
+		if e.injectErr != nil {
+			if err := e.injectErr(r); err != nil {
+				return err
+			}
+		}
+		records = append(records, r)
+		return nil
+	}); err != nil {
+		return err
+	}
+	e.records = records
+	return nil
 }
 
 func (e *testExporter) resetRecords() ([]export.Record, int) {
@@ -230,37 +240,81 @@ func TestPushTicker(t *testing.T) {
 }
 
 func TestPushExportError(t *testing.T) {
-	fix := newFixture(t)
-	fix.exporter.retErr = fmt.Errorf("test export error")
+	injector := func(name string, e error) func(r export.Record) error {
+		return func(r export.Record) error {
+			if r.Descriptor().Name() == name {
+				return e
+			}
+			return nil
+		}
+	}
+	var errAggregator = fmt.Errorf("unexpected error")
+	var tests = []struct {
+		name                string
+		injectedError       error
+		expectedDescriptors []string
+		expectedError       error
+	}{
+		{"errNone", nil, []string{"counter1", "counter2"}, nil},
+		{"errNoData", aggregator.ErrNoData, []string{"counter2"}, nil},
+		{"errUnexpected", errAggregator, []string{}, errAggregator},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fix := newFixture(t)
+			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-	p := push.New(fix.batcher, fix.exporter, time.Second)
+			p := push.New(fix.batcher, fix.exporter, time.Second)
 
-	var err error
-	var lock sync.Mutex
-	p.SetErrorHandler(func(sdkErr error) {
-		lock.Lock()
-		defer lock.Unlock()
-		err = sdkErr
-	})
+			var err error
+			var lock sync.Mutex
+			p.SetErrorHandler(func(sdkErr error) {
+				lock.Lock()
+				defer lock.Unlock()
+				err = sdkErr
+			})
 
-	mock := mockClock{clock.NewMock()}
-	p.SetClock(mock)
+			mock := mockClock{clock.NewMock()}
+			p.SetClock(mock)
 
-	p.Start()
-	runtime.Gosched()
+			ctx := context.Background()
 
-	require.Equal(t, 0, fix.exporter.exports)
-	require.Nil(t, err)
+			meter := p.Meter("name")
+			counter1 := metric.Must(meter).NewInt64Counter("counter1")
+			counter2 := metric.Must(meter).NewInt64Counter("counter2")
 
-	mock.Add(time.Second)
-	runtime.Gosched()
+			p.Start()
+			runtime.Gosched()
 
-	lock.Lock()
-	_, exports := fix.batcher.getCounts()
-	require.Equal(t, 1, exports)
-	require.Error(t, err)
-	require.Equal(t, fix.exporter.retErr, err)
-	lock.Unlock()
+			counter1.Add(ctx, 3, meter.Labels())
+			counter2.Add(ctx, 5, meter.Labels())
 
-	p.Stop()
+			require.Equal(t, 0, fix.exporter.exports)
+			require.Nil(t, err)
+
+			mock.Add(time.Second)
+			runtime.Gosched()
+
+			records, exports := fix.exporter.resetRecords()
+			checkpoints, finishes := fix.batcher.getCounts()
+			require.Equal(t, 1, exports)
+			require.Equal(t, 1, checkpoints)
+			require.Equal(t, 1, finishes)
+			lock.Lock()
+			if tt.expectedError == nil {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.Equal(t, tt.expectedError, err)
+			}
+			lock.Unlock()
+			require.Equal(t, len(tt.expectedDescriptors), len(records))
+			for _, r := range records {
+				require.Contains(t, tt.expectedDescriptors, r.Descriptor().Name())
+			}
+
+			p.Stop()
+
+		})
+	}
 }

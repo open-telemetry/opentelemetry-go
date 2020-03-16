@@ -77,9 +77,9 @@ func TestMinMaxSumCountValue(t *testing.T) {
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &metricsdk.Descriptor{}))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &metricsdk.Descriptor{}))
 
-	// Prior to checkpointing ErrEmptyDataSet should be returned.
+	// Prior to checkpointing ErrNoData should be returned.
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
-	assert.Error(t, err, aggregator.ErrEmptyDataSet)
+	assert.EqualError(t, err, aggregator.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
 	mmsc.Checkpoint(context.Background(), &metricsdk.Descriptor{})
@@ -178,21 +178,21 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	}
 	m, err := minMaxSumCount(desc, labels, mmsc)
 	if assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, expected, m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, expected, m.SummaryDataPoints)
 	}
 }
 
 func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
-	// ErrEmptyDataSet should be returned by both the Min and Max values of
+	// ErrNoData should be returned by both the Min and Max values of
 	// a MinMaxSumCount Aggregator. Use this fact to check the error is
 	// correctly returned.
 	mmsc := minmaxsumcount.New(&metricsdk.Descriptor{})
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
 	assert.Error(t, err)
-	assert.Equal(t, aggregator.ErrEmptyDataSet, err)
+	assert.Equal(t, aggregator.ErrNoData, err)
 }
 
 func TestSumMetricDescriptor(t *testing.T) {
@@ -257,10 +257,10 @@ func TestSumInt64Datapoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), desc))
 	s.Checkpoint(context.Background(), desc)
 	if m, err := sum(desc, labels, s); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
 }
 
@@ -271,9 +271,9 @@ func TestSumFloat64Datapoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), desc))
 	s.Checkpoint(context.Background(), desc)
 	if m, err := sum(desc, labels, s); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
 }

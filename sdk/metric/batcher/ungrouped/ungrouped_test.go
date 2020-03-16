@@ -62,7 +62,7 @@ func TestUngroupedStateless(t *testing.T) {
 	b.FinishedCollection()
 
 	records := test.Output{}
-	checkpointSet.ForEach(records.AddTo)
+	_ = checkpointSet.ForEach(records.AddTo)
 
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -84,8 +84,9 @@ func TestUngroupedStateless(t *testing.T) {
 	// Verify that state was reset
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
-	checkpointSet.ForEach(func(rec export.Record) {
+	_ = checkpointSet.ForEach(func(rec export.Record) error {
 		t.Fatal("Unexpected call")
+		return nil
 	})
 }
 
@@ -105,7 +106,7 @@ func TestUngroupedStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records1 := test.Output{}
-	checkpointSet.ForEach(records1.AddTo)
+	_ = checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"sum.a/G~H&C~D": 10, // labels1
@@ -117,7 +118,7 @@ func TestUngroupedStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records2 := test.Output{}
-	checkpointSet.ForEach(records2.AddTo)
+	_ = checkpointSet.ForEach(records2.AddTo)
 
 	require.EqualValues(t, records1, records2)
 
@@ -133,7 +134,7 @@ func TestUngroupedStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records3 := test.Output{}
-	checkpointSet.ForEach(records3.AddTo)
+	_ = checkpointSet.ForEach(records3.AddTo)
 
 	require.EqualValues(t, records1, records3)
 
@@ -145,7 +146,7 @@ func TestUngroupedStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records4 := test.Output{}
-	checkpointSet.ForEach(records4.AddTo)
+	_ = checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]int64{
 		"sum.a/G~H&C~D": 30,

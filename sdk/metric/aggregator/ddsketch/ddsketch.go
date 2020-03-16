@@ -85,7 +85,7 @@ func (c *Aggregator) Min() (core.Number, error) {
 // It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (core.Number, error) {
 	if c.checkpoint.Count() == 0 {
-		return core.Number(0), aggregator.ErrEmptyDataSet
+		return core.Number(0), aggregator.ErrNoData
 	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
