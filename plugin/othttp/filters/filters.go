@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package filters provides a set of filters useful with the
+// othttp.WithFilter() option to control which inbound requests are traced.
 package filters
 
 import (
