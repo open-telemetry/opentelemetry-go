@@ -232,12 +232,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			switch data.nKind {
 			case core.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
-				if dp := m.GetInt64Datapoints(); assert.Len(t, dp, 1) {
+				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			case core.Float64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_DOUBLE.String(), desc.GetType().String())
-				if dp := m.GetDoubleDatapoints(); assert.Len(t, dp, 1) {
+				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			default:
@@ -245,8 +245,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			}
 		case metricsdk.MeasureKind, metricsdk.ObserverKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
-			m.GetSummaryDatapoints()
-			if dp := m.GetSummaryDatapoints(); assert.Len(t, dp, 1) {
+			m.GetSummaryDataPoints()
+			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {
 				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", desc.Name)
 				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", desc.Name, data.val)

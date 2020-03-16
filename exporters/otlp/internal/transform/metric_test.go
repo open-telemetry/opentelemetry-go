@@ -178,10 +178,10 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	}
 	m, err := minMaxSumCount(desc, labels, mmsc)
 	if assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, expected, m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, expected, m.SummaryDataPoints)
 	}
 }
 
@@ -257,10 +257,10 @@ func TestSumInt64Datapoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), desc))
 	s.Checkpoint(context.Background(), desc)
 	if m, err := sum(desc, labels, s); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
 }
 
@@ -271,9 +271,9 @@ func TestSumFloat64Datapoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), desc))
 	s.Checkpoint(context.Background(), desc)
 	if m, err := sum(desc, labels, s); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64Datapoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDatapoints)
-		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDatapoints)
-		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDatapoints)
+		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
 }
