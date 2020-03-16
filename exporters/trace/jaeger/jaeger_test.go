@@ -21,20 +21,18 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
-
-	apitrace "go.opentelemetry.io/otel/api/trace"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/key"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestNewExporterPipelineWithRegistration(t *testing.T) {
@@ -206,6 +204,8 @@ func Test_spanDataToThrift(t *testing.T) {
 	boolTrue := true
 	statusMessage := "this is a problem"
 	spanKind := "client"
+	rv1 := "rv11"
+	rv2 := int64(5)
 
 	tests := []struct {
 		name string
@@ -242,6 +242,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,
 				SpanKind:      apitrace.SpanKindClient,
+				Resource:      resource.New(core.Key("rk1").String(rv1), core.Key("rk2").Int64(rv2)),
 			},
 			want: &gen.Span{
 				TraceIdLow:    651345242494996240,
@@ -257,6 +258,8 @@ func Test_spanDataToThrift(t *testing.T) {
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+					{Key: "rk1", VType: gen.TagType_STRING, VStr: &rv1},
+					{Key: "rk2", VType: gen.TagType_LONG, VLong: &rv2},
 				},
 				References: []*gen.SpanRef{
 					{
