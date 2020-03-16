@@ -65,9 +65,9 @@ var _ Clock = realClock{}
 var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided batcher, exporter, and collection period to
-// configure an SDK with periodic collection.  The batcher itself is
-// configured with the aggregation selector policy.
+// using the provided batcher, exporter, collection period, and SDK
+// configuration options to configure an SDK with periodic collection.
+// The batcher itself is configured with the aggregation selector policy.
 //
 // If the Exporter implements the export.LabelEncoder interface, the
 // exporter will be used as the label encoder for the SDK itself,
