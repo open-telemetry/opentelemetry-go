@@ -50,7 +50,8 @@ func TestGroupingStateless(t *testing.T) {
 	b.FinishedCollection()
 
 	records := test.Output{}
-	checkpointSet.ForEach(records.AddTo)
+	err := checkpointSet.ForEach(records.AddTo)
+	require.NoError(t, err)
 
 	// Repeat for {counter,lastvalue}.{1,2}.
 	// Output lastvalue should have only the "G=H" and "G=" keys.
@@ -69,8 +70,9 @@ func TestGroupingStateless(t *testing.T) {
 	// Verify that state is reset by FinishedCollection()
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
-	checkpointSet.ForEach(func(rec export.Record) {
+	_ = checkpointSet.ForEach(func(rec export.Record) error {
 		t.Fatal("Unexpected call")
+		return nil
 	})
 }
 
@@ -90,7 +92,8 @@ func TestGroupingStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records1 := test.Output{}
-	checkpointSet.ForEach(records1.AddTo)
+	err := checkpointSet.ForEach(records1.AddTo)
+	require.NoError(t, err)
 
 	require.EqualValues(t, map[string]int64{
 		"sum.a/C=D": 10, // labels1
@@ -102,7 +105,8 @@ func TestGroupingStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records2 := test.Output{}
-	checkpointSet.ForEach(records2.AddTo)
+	err = checkpointSet.ForEach(records2.AddTo)
+	require.NoError(t, err)
 
 	require.EqualValues(t, records1, records2)
 
@@ -118,7 +122,8 @@ func TestGroupingStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records3 := test.Output{}
-	checkpointSet.ForEach(records3.AddTo)
+	err = checkpointSet.ForEach(records3.AddTo)
+	require.NoError(t, err)
 
 	require.EqualValues(t, records1, records3)
 
@@ -130,7 +135,8 @@ func TestGroupingStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records4 := test.Output{}
-	checkpointSet.ForEach(records4.AddTo)
+	err = checkpointSet.ForEach(records4.AddTo)
+	require.NoError(t, err)
 
 	require.EqualValues(t, map[string]int64{
 		"sum.a/C=D": 30,
