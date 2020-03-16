@@ -47,9 +47,6 @@ func (noopSynchronous) Bind(LabelSet) BoundSynchronousImpl {
 func (noopSynchronous) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
-func (noopAsynchronous) Unregister() {
-}
-
 func (NoopMeter) Labels(...core.KeyValue) LabelSet {
 	return noopLabelSet{}
 }

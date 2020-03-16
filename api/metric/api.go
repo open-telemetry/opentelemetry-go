@@ -93,6 +93,15 @@ type Descriptor struct {
 	Config     Config
 }
 
+func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
+	return Descriptor{
+		Name:       name,
+		Kind:       mkind,
+		NumberKind: nkind,
+		Config:     Configure(opts),
+	}
+}
+
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
 	// Labels returns a reference to a set of labels that cannot

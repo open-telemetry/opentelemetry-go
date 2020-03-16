@@ -67,10 +67,6 @@ func (a asynchronousInstrument) AsynchronousImpl() AsynchronousImpl {
 	return a.instrument
 }
 
-// func (w *wrappedMeterImpl) makeSynchronous(descriptor Descriptor) (synchronousInstrument, error) {
-// 	return checkSynchronous(w.impl.NewSynchronousInstrument(descriptor))
-// }
-
 func checkSynchronous(instrument SynchronousImpl, err error) (synchronousInstrument, error) {
 	if instrument == nil {
 		if err == nil {
@@ -101,8 +97,7 @@ func newMeasurement(instrument SynchronousImpl, number core.Number) Measurement 
 	}
 }
 
-func (m *wrappedMeterImpl) makeAsynchronous(descriptor Descriptor, callback func(func(core.Number, LabelSet))) (asynchronousInstrument, error) {
-	instrument, err := m.impl.NewAsynchronousInstrument(descriptor, callback)
+func checkAsynchronous(instrument AsynchronousImpl, err error) (asynchronousInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl

@@ -94,7 +94,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		descriptor export.Descriptor // @@@ avoid the allocation here.
+		descriptor *export.Descriptor
 		ordered    orderedLabels
 	}
 
@@ -116,9 +116,8 @@ type (
 		// labels is the LabelSet passed by the user.
 		labels *labels
 
-		// descriptor describes the metric instrument.
-		// @@@ replace with *instrument
-		descriptor *export.Descriptor
+		//
+		inst *synchronousInstrument
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
@@ -128,7 +127,7 @@ type (
 
 	instrument struct {
 		meter      *SDK
-		descriptor *export.Descriptor
+		descriptor export.Descriptor
 	}
 
 	asynchronousInstrument struct {
@@ -172,7 +171,7 @@ func (s *synchronousInstrument) Interface() interface{} {
 }
 
 func (a *asynchronousInstrument) observe(number core.Number, ls api.LabelSet) {
-	if err := aggregator.RangeTest(number, a.descriptor); err != nil {
+	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
 	}
@@ -182,7 +181,7 @@ func (a *asynchronousInstrument) observe(number core.Number, ls api.LabelSet) {
 		// AggregationSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, a.descriptor); err != nil {
+	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
 	}
@@ -196,7 +195,7 @@ func (o *asynchronousInstrument) getRecorder(ls api.LabelSet) export.Aggregator 
 		o.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
-	rec := o.meter.batcher.AggregatorFor(o.descriptor)
+	rec := o.meter.batcher.AggregatorFor(&o.descriptor)
 	if o.recorders == nil {
 		o.recorders = make(map[orderedLabels]labeledRecorder)
 	}
@@ -222,7 +221,7 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
-		descriptor: i.descriptor,
+		descriptor: &i.descriptor,
 		ordered:    ls.ordered,
 	}
 
@@ -239,11 +238,11 @@ func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
 
 	// There's a memory allocation here.
 	rec := &record{
-		labels:     ls,
-		descriptor: i.descriptor,
-		refMapped:  refcountMapped{value: 2},
-		modified:   0,
-		recorder:   i.meter.batcher.AggregatorFor(i.descriptor),
+		labels:    ls,
+		inst:      i,
+		refMapped: refcountMapped{value: 2},
+		modified:  0,
+		recorder:  i.meter.batcher.AggregatorFor(&i.descriptor),
 	}
 
 	for {
@@ -506,7 +505,7 @@ func (m *SDK) collectObservers(ctx context.Context) int {
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
-	return m.checkpoint(ctx, r.descriptor, r.recorder, r.labels)
+	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
 func (m *SDK) checkpointObserver(ctx context.Context, a *asynchronousInstrument) int {
@@ -517,7 +516,7 @@ func (m *SDK) checkpointObserver(ctx context.Context, a *asynchronousInstrument)
 	for encodedLabels, lrec := range a.recorders {
 		epochDiff := m.currentEpoch - lrec.modifiedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, a.descriptor, lrec.recorder, lrec.labels)
+			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -571,11 +570,11 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		// The instrument is disabled according to the AggregationSelector.
 		return
 	}
-	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
+	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
 		r.labels.meter.errorHandler(err)
 		return
 	}
-	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
+	if err := r.recorder.Update(ctx, number, &r.inst.descriptor); err != nil {
 		r.labels.meter.errorHandler(err)
 		return
 	}
@@ -591,7 +590,7 @@ func (r *record) Unbind() {
 
 func (r *record) mapkey() mapkey {
 	return mapkey{
-		descriptor: r.descriptor,
+		descriptor: &r.inst.descriptor,
 		ordered:    r.labels.ordered,
 	}
 }

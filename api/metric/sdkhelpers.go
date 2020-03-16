@@ -44,6 +44,8 @@ type LabelSetDelegate interface {
 
 type InstrumentImpl interface {
 	Interface() interface{}
+
+	// Is this _really_ needed?
 	Descriptor() Descriptor
 }
 
@@ -74,8 +76,6 @@ type BoundSynchronousImpl interface {
 
 type AsynchronousImpl interface {
 	InstrumentImpl
-
-	Unregister()
 }
 
 type wrappedMeterImpl struct {
@@ -90,9 +90,11 @@ type float64ObserverResult struct {
 	observe func(core.Number, LabelSet)
 }
 
-var _ Int64ObserverResult = int64ObserverResult{}
-var _ Float64ObserverResult = float64ObserverResult{}
-var _ Meter = (*wrappedMeterImpl)(nil)
+var (
+	_ Meter                 = (*wrappedMeterImpl)(nil)
+	_ Int64ObserverResult   = (*int64ObserverResult)(nil)
+	_ Float64ObserverResult = (*float64ObserverResult)(nil)
+)
 
 // Configure is a helper that applies all the options to a Config.
 func Configure(opts []Option) Config {
@@ -133,81 +135,96 @@ func makeDescriptor(name string, metricKind Kind, numberKind core.NumberKind, op
 	}
 }
 
-func (m *wrappedMeterImpl) makeSynchronous(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SynchronousImpl, error) {
+func (m *wrappedMeterImpl) newSynchronous(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SynchronousImpl, error) {
 	return m.impl.NewSynchronousInstrument(makeDescriptor(name, metricKind, numberKind, opts))
-
 }
 
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
-	return WrapNewInt64CounterInstrument(
-		m.makeSynchronous(name, CounterKind, core.Int64NumberKind, opts))
+	return WrapInt64CounterInstrument(
+		m.newSynchronous(name, CounterKind, core.Int64NumberKind, opts))
 }
 
-func WrapNewInt64CounterInstrument(syncInst SynchronousImpl, err error) (Int64Counter, error) {
+func WrapInt64CounterInstrument(syncInst SynchronousImpl, err error) (Int64Counter, error) {
 	common, err := checkSynchronous(syncInst, err)
 	return Int64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
-	return WrapNewFloat64CounterInstrument(
-		m.makeSynchronous(name, CounterKind, core.Float64NumberKind, opts))
+	return WrapFloat64CounterInstrument(
+		m.newSynchronous(name, CounterKind, core.Float64NumberKind, opts))
 }
 
-func WrapNewFloat64CounterInstrument(syncInst SynchronousImpl, err error) (Float64Counter, error) {
+func WrapFloat64CounterInstrument(syncInst SynchronousImpl, err error) (Float64Counter, error) {
 	common, err := checkSynchronous(syncInst, err)
 	return Float64Counter{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
-	return WrapNewInt64MeasureInstrument(
-		m.makeSynchronous(name, MeasureKind, core.Int64NumberKind, opts))
+	return WrapInt64MeasureInstrument(
+		m.newSynchronous(name, MeasureKind, core.Int64NumberKind, opts))
 }
 
-func WrapNewInt64MeasureInstrument(syncInst SynchronousImpl, err error) (Int64Measure, error) {
+func WrapInt64MeasureInstrument(syncInst SynchronousImpl, err error) (Int64Measure, error) {
 	common, err := checkSynchronous(syncInst, err)
 	return Int64Measure{synchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
-	return WrapNewFloat64MeasureInstrument(
-		m.makeSynchronous(name, MeasureKind, core.Float64NumberKind, opts))
+	return WrapFloat64MeasureInstrument(
+		m.newSynchronous(name, MeasureKind, core.Float64NumberKind, opts))
 }
 
-func WrapNewFloat64MeasureInstrument(syncInst SynchronousImpl, err error) (Float64Measure, error) {
+func WrapFloat64MeasureInstrument(syncInst SynchronousImpl, err error) (Float64Measure, error) {
 	common, err := checkSynchronous(syncInst, err)
 	return Float64Measure{synchronousInstrument: common}, err
 }
 
+func (m *wrappedMeterImpl) newAsynchronous(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsynchronousImpl, error) {
+	return m.impl.NewAsynchronousInstrument(
+		makeDescriptor(name, mkind, nkind, opts),
+		callback)
+}
+
 func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
 	if callback == nil {
-		return NoopMeter{}.RegisterInt64Observer(name, callback, opts...)
+		return NoopMeter{}.RegisterInt64Observer("", nil)
 	}
-	common, err := m.makeAsynchronous(
-		makeDescriptor(name, ObserverKind, core.Int64NumberKind, opts),
-		func(observe func(core.Number, LabelSet)) {
-			callback(int64ObserverResult{observe})
-		},
-	)
+	result := &int64ObserverResult{}
+	return WrapInt64ObserverInstrument(
+		m.newAsynchronous(name, ObserverKind, core.Int64NumberKind, opts,
+			func(observe func(core.Number, LabelSet)) {
+				result.observe = observe
+				callback(result)
+			}))
+}
+
+func WrapInt64ObserverInstrument(asyncInst AsynchronousImpl, err error) (Int64Observer, error) {
+	common, err := checkAsynchronous(asyncInst, err)
 	return Int64Observer{asynchronousInstrument: common}, err
 }
 
 func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error) {
 	if callback == nil {
-		return NoopMeter{}.RegisterFloat64Observer(name, callback, opts...)
+		return NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
-	common, err := m.makeAsynchronous(
-		makeDescriptor(name, ObserverKind, core.Float64NumberKind, opts),
-		func(observe func(core.Number, LabelSet)) {
-			callback(float64ObserverResult{observe})
-		},
-	)
+	result := &float64ObserverResult{}
+	return WrapFloat64ObserverInstrument(
+		m.newAsynchronous(name, ObserverKind, core.Float64NumberKind, opts,
+			func(observe func(core.Number, LabelSet)) {
+				result.observe = observe
+				callback(result)
+			}))
+}
+
+func WrapFloat64ObserverInstrument(asyncInst AsynchronousImpl, err error) (Float64Observer, error) {
+	common, err := checkAsynchronous(asyncInst, err)
 	return Float64Observer{asynchronousInstrument: common}, err
 }
 
-func (io int64ObserverResult) Observe(value int64, labels LabelSet) {
+func (io *int64ObserverResult) Observe(value int64, labels LabelSet) {
 	io.observe(core.NewInt64Number(value), labels)
 }
 
-func (fo float64ObserverResult) Observe(value float64, labels LabelSet) {
+func (fo *float64ObserverResult) Observe(value float64, labels LabelSet) {
 	fo.observe(core.NewFloat64Number(value), labels)
 }

@@ -299,8 +299,8 @@ type Descriptor struct {
 // exporter.
 func NewDescriptor(
 	descriptor metric.Descriptor,
-) *Descriptor {
-	return &Descriptor{
+) Descriptor {
+	return Descriptor{
 		descriptor: descriptor,
 	}
 }

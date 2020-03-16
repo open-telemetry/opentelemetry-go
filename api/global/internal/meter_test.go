@@ -60,7 +60,8 @@ func TestDirect(t *testing.T) {
 	measure.Record(ctx, 3, labels1)
 	second.Record(ctx, 3, labels3)
 
-	mock := sdk.Meter("test1").(*metrictest.Meter)
+	mockImpl, _ := metric.UnwrapImpl(sdk.Meter("test1"))
+	mock := mockImpl.(*metrictest.Meter)
 	mock.RunObservers()
 	require.Len(t, mock.MeasurementBatches, 6)
 
@@ -71,7 +72,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(1),
 		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -81,7 +82,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[1].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -91,7 +92,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[2].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[2].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[2].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals2.Key: lvals2.Value,
@@ -101,7 +102,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[3].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[3].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[3].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -110,7 +111,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(1),
 		mock.MeasurementBatches[4].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[4].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[4].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals2.Key: lvals2.Value,
@@ -119,10 +120,11 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(2),
 		mock.MeasurementBatches[5].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[5].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[5].Measurements[0].Instrument.Descriptor().Name)
 
 	// This tests the second Meter instance
-	mock = sdk.Meter("test2").(*metrictest.Meter)
+	mockImpl, _ = metric.UnwrapImpl(sdk.Meter("test2"))
+	mock = mockImpl.(*metrictest.Meter)
 	require.Len(t, mock.MeasurementBatches, 1)
 
 	require.Equal(t, map[core.Key]core.Value{
@@ -133,7 +135,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.second",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
 }
 
 func TestBound(t *testing.T) {
@@ -162,7 +164,8 @@ func TestBound(t *testing.T) {
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
 
-	mock := sdk.Meter("test").(*metrictest.Meter)
+	mockImpl, _ := metric.UnwrapImpl(sdk.Meter("test"))
+	mock := mockImpl.(*metrictest.Meter)
 	require.Len(t, mock.MeasurementBatches, 2)
 
 	require.Equal(t, map[core.Key]core.Value{
@@ -173,7 +176,7 @@ func TestBound(t *testing.T) {
 		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -182,7 +185,7 @@ func TestBound(t *testing.T) {
 	require.Equal(t, int64(3),
 		mock.MeasurementBatches[1].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Name)
+		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name)
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -202,13 +205,8 @@ func TestUnbind(t *testing.T) {
 	measure := Must(glob).NewInt64Measure("test.measure")
 	boundM := measure.Bind(labels1)
 
-	observerInt := Must(glob).RegisterInt64Observer("test.observer.int", nil)
-	observerFloat := Must(glob).RegisterFloat64Observer("test.observer.float", nil)
-
 	boundC.Unbind()
 	boundM.Unbind()
-	observerInt.Unregister()
-	observerFloat.Unregister()
 }
 
 func TestDefaultSDK(t *testing.T) {
@@ -262,7 +260,8 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	require.NotPanics(t, func() {
 		boundC.Add(ctx, 1)
 	})
-	mock := global.Meter("test").(*metrictest.Meter)
+	mockImpl, _ := metric.UnwrapImpl(global.Meter("test"))
+	mock := mockImpl.(*metrictest.Meter)
 	require.Equal(t, 0, len(mock.MeasurementBatches))
 }
 
