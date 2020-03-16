@@ -199,7 +199,7 @@ func synchronousCheck(has hasSynchronousImpl, err error) (metric.SynchronousImpl
 // Synchronous delegation
 
 func (inst *syncImpl) setDelegate(d metric.Meter) {
-	implPtr := new(metric.InstrumentImpl)
+	implPtr := new(metric.SynchronousImpl)
 
 	var err error
 	*implPtr, err = inst.ctor(d)

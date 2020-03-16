@@ -23,6 +23,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -53,7 +54,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind export.Kind, nkind core.NumberKind) *export.Descriptor {
+func NewAggregatorTest(mkind metric.Kind, nkind core.NumberKind) *export.Descriptor {
 	return export.NewDescriptor("test.name", mkind, nil, "", "", nkind)
 }
 

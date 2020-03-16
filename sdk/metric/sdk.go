@@ -281,6 +281,8 @@ func (i *synchronousInstrument) Bind(ls api.LabelSet) api.BoundSynchronousImpl {
 }
 
 func (i *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+	fmt.Println("WHAT", i)
+	fmt.Println("WHATTTT", i.meter)
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Unbind()

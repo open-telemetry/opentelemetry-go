@@ -216,8 +216,13 @@ func (m *Meter) RunObservers() {
 		if observer.Dead {
 			continue
 		}
-		observer.callback(func(n core.Number, ls apimetric.LabelSet) {
-			m.doRecordSingle(context.Background(), ls.(*LabelSet), observer, n)
+		observer.callback(func(n core.Number, labels apimetric.LabelSet) {
+
+			if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
+				labels = ld.Delegate()
+			}
+
+			m.doRecordSingle(context.Background(), labels.(*LabelSet), observer, n)
 		})
 	}
 }
