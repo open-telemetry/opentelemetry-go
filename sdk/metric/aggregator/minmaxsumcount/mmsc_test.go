@@ -234,7 +234,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		require.Nil(t, err)
 
 		max, err := agg.Max()
-		require.Equal(t, aggregator.ErrEmptyDataSet, err)
+		require.Equal(t, aggregator.ErrNoData, err)
 		require.Equal(t, core.Number(0), max)
 	})
 }

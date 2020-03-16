@@ -16,9 +16,11 @@ package defaultkeys // import "go.opentelemetry.io/otel/sdk/metric/batcher/defau
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type (
@@ -153,8 +155,11 @@ func (b *Batcher) FinishedCollection() {
 	}
 }
 
-func (p *checkpointSet) ForEach(f func(export.Record)) {
+func (p *checkpointSet) ForEach(f func(export.Record) error) error {
 	for _, entry := range p.aggCheckpointMap {
-		f(entry)
+		if err := f(entry); err != nil && !errors.Is(err, aggregator.ErrNoData) {
+			return err
+		}
 	}
+	return nil
 }

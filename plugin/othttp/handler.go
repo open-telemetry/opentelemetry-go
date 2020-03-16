@@ -41,6 +41,10 @@ const (
 	WriteErrorKey = core.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
 )
 
+// Filter is a predicate used to determine whether a given http.request should
+// be traced. A Filter must return true if the request should be traced.
+type Filter func(*http.Request) bool
+
 // Handler is http middleware that corresponds to the http.Handler interface and
 // is designed to wrap a http.Mux (or equivalent), while individual routes on
 // the mux are wrapped with WithRouteTag. A Handler will add various attributes
@@ -54,6 +58,7 @@ type Handler struct {
 	spanStartOptions []trace.StartOption
 	readEvent        bool
 	writeEvent       bool
+	filters          []Filter
 }
 
 // Option function used for setting *optional* Handler properties
@@ -90,6 +95,18 @@ func WithPropagators(ps propagation.Propagators) Option {
 func WithSpanOptions(opts ...trace.StartOption) Option {
 	return func(h *Handler) {
 		h.spanStartOptions = append(h.spanStartOptions, opts...)
+	}
+}
+
+// WithFilter adds a filter to the list of filters used by the handler.
+// If any filter indicates to exclude a request then the request will not be
+// traced. All filters must allow a request to be traced for a Span to be created.
+// If no filters are provided then all requests are traced.
+// Filters will be invoked for each processed request, it is advised to make them
+// simple and fast.
+func WithFilter(f Filter) Option {
+	return func(h *Handler) {
+		h.filters = append(h.filters, f)
 	}
 }
 
@@ -141,6 +158,14 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 
 // ServeHTTP serves HTTP requests (http.Handler)
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	for _, f := range h.filters {
+		if !f(r) {
+			// Simply pass through to the handler if a filter rejects the request
+			h.handler.ServeHTTP(w, r)
+			return
+		}
+	}
+
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)

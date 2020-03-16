@@ -190,10 +190,10 @@ type syncCheckpointSet struct {
 
 var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
 
-func (c syncCheckpointSet) ForEach(fn func(export.Record)) {
+func (c syncCheckpointSet) ForEach(fn func(export.Record) error) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.delegate.ForEach(fn)
+	return c.delegate.ForEach(fn)
 }
 
 func (realClock) Now() time.Time {

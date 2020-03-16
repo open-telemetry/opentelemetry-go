@@ -86,25 +86,25 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Min returns the minimum value in the checkpoint.
-// The error value aggregator.ErrEmptyDataSet will be returned
+// The error value aggregator.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Min() (core.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.checkpoint().count.IsZero(core.Uint64NumberKind) {
-		return c.kind.Zero(), aggregator.ErrEmptyDataSet
+		return c.kind.Zero(), aggregator.ErrNoData
 	}
 	return c.checkpoint().min, nil
 }
 
 // Max returns the maximum value in the checkpoint.
-// The error value aggregator.ErrEmptyDataSet will be returned
+// The error value aggregator.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Max() (core.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.checkpoint().count.IsZero(core.Uint64NumberKind) {
-		return c.kind.Zero(), aggregator.ErrEmptyDataSet
+		return c.kind.Zero(), aggregator.ErrNoData
 	}
 	return c.checkpoint().max, nil
 }
