@@ -82,14 +82,18 @@ type (
 	// repeatedly.
 	labels struct {
 		meter *SDK
-
-		// slice is a slice of `ordered`.
-		slice sortedLabels
-
 		// ordered is the output of sorting and deduplicating
 		// the labels, copied into an array of the correct
 		// size for use as a map key.
 		ordered orderedLabels
+
+		// cachedSlice has dual purpose - as a temporary place for
+		// sorting during labels creation and as a slice to be
+		// iterated.
+		cachedSlice sortedLabels
+		// cachedValue contains a `reflect.Value` of the `ordered`
+		// member
+		cachedValue reflect.Value
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -307,8 +311,10 @@ func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 
-// Labels returns a LabelSet corresponding to the arguments.  Passed
-// labels are de-duplicated, with last-value-wins semantics.
+// Labels returns a LabelSet corresponding to the arguments.  Passed labels
+// are sorted and de-duplicated, with last-value-wins semantics.  Note that
+// sorting and deduplicating happens in-place to avoid allocation, so the
+// passed slice will be modified.
 func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -316,33 +322,15 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	}
 
 	ls := &labels{ // allocation
-		meter: m,
-		slice: kvs,
+		meter:       m,
+		cachedSlice: kvs,
 	}
 
-	// Sort and de-duplicate.  Note: this use of `ls.slice` avoids
-	// an allocation by using the address-able field rather than
-	// `kvs`.  Labels retains a copy of this slice, i.e., the
-	// initial allocation at the varargs call site.
-	//
-	// Note that `ls.slice` continues to refer to this memory,
-	// even though a new array is allocated for `ls.ordered`.  It
-	// is possible for the `slice` to refer to the same memory,
-	// although in the reflection code path of `computeOrdered` it
-	// costs an allocation to yield a slice through
-	// `(reflect.Value).Interface()`.
-	//
-	// TODO: There is a possibility that the caller passes values
-	// without an allocation (e.g., `meter.Labels(kvs...)`), and
-	// that the user could later modify the slice, leading to
-	// incorrect results.  This is indeed a risk, one that should
-	// be quickly addressed via the following TODO.
-	//
-	// TODO: It would be better overall if the export.Labels interface
-	// did not expose a slice via `Ordered()`, if instead it exposed
-	// getter methods like `Len()` and `Order(i int)`.  Then we would
-	// just implement the interface using the `orderedLabels` array.
-	sort.Stable(&ls.slice)
+	// Sort and de-duplicate.  Note: this use of `ls.cachedSlice`
+	// avoids an allocation by using the address-able field rather
+	// than `kvs`.
+	sort.Stable(&ls.cachedSlice)
+	ls.cachedSlice = nil
 
 	oi := 1
 	for i := 1; i < len(kvs); i++ {
@@ -355,62 +343,107 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 		oi++
 	}
 	kvs = kvs[0:oi]
-	ls.slice = kvs
 	ls.computeOrdered(kvs)
 	return ls
 }
 
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
+	ls.ordered = computeOrderedFixed(kvs)
+	if ls.ordered == nil {
+		// This makes `cachedValue` addressable, so we can do a
+		// one-time slice allocation at the checkpoint time to use
+		// slice for iterating, instead of using `reflect.Value`.
+		ls.cachedValue = computeOrderedReflect(kvs)
+		ls.ordered = ls.cachedValue.Interface()
+	}
+}
+
+func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
 	switch len(kvs) {
 	case 1:
 		ptr := new([1]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 2:
 		ptr := new([2]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 3:
 		ptr := new([3]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 4:
 		ptr := new([4]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 5:
 		ptr := new([5]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 6:
 		ptr := new([6]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 7:
 		ptr := new([7]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 8:
 		ptr := new([8]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 9:
 		ptr := new([9]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	case 10:
 		ptr := new([10]core.KeyValue)
 		copy((*ptr)[:], kvs)
-		ls.ordered = *ptr
+		return *ptr
 	default:
-		at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
-
-		for i := 0; i < len(kvs); i++ {
-			*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kvs[i]
-		}
-
-		ls.ordered = at.Interface()
+		return nil
 	}
+}
+
+func computeOrderedReflect(kvs []core.KeyValue) reflect.Value {
+	at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
+	for i, kv := range kvs {
+		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
+	}
+	return at
+}
+
+func (ls *labels) getIterator() export.LabelIterator {
+	if ls.ordered == nil {
+		// it's an empty labelset
+		return zeroIter
+	}
+	if !ls.cachedValue.IsValid() {
+		ls.cachedValue = reflect.ValueOf(ls.ordered)
+	}
+	// We create a `reflect.Value` iterator or a slice iterator,
+	// depending on how the `ls.ordered` member was created. This is
+	// because getting an element from array-like `reflect.Value` using
+	// reflection may result in allocation (which means N allocations
+	// for iterating an array with N elements). Whether an allocation
+	// happens or not depends on if the array-like `reflect.Value` is
+	// addressable or not. We create the `ls.ordered` member in one of
+	// two ways - either with an array of an hardcoded length or with
+	// reflection (see the `computeOrdered` function). The former way
+	// results in an non-addressable array. The latter creates an
+	// addressable array, so we incur the one-time cost of an
+	// allocation to create a slice - fortunately, we don't need to do
+	// a deep copy of the array, so the cost is fixed, not linear.
+	//
+	// For the former case, we also could create a slice, but this
+	// would need a deep copy of the array.
+	if ls.cachedSlice == nil && ls.cachedValue.CanAddr() {
+		ls.cachedSlice = ls.cachedValue.Slice(0, ls.cachedValue.Len()).Interface().([]core.KeyValue)
+	}
+	if ls.cachedSlice == nil {
+		return newReflectValueLabelIterator(ls.cachedValue)
+	}
+	return export.NewSliceLabelIterator(ls.cachedSlice)
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -529,6 +562,89 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
+type zeroLabelIterator struct{}
+
+var zeroIter export.LabelIterator = zeroLabelIterator{}
+
+func (zeroLabelIterator) Next() bool {
+	return false
+}
+
+func (zeroLabelIterator) Label() core.KeyValue {
+	panic("shouldn't be called")
+}
+
+func (zeroLabelIterator) IndexedLabel() (int, core.KeyValue) {
+	panic("shouldn't be called")
+}
+
+func (zeroLabelIterator) Len() int {
+	return 0
+}
+
+func (zeroLabelIterator) Clone() export.LabelIterator {
+	return zeroIter
+}
+
+type reflectValueLabelIterator struct {
+	value reflect.Value
+	idx   int
+	len   int
+}
+
+func newReflectValueLabelIterator(value reflect.Value) export.LabelIterator {
+	return &reflectValueLabelIterator{
+		value: value,
+		idx:   -1,
+		len:   value.Len(),
+	}
+}
+
+func (i *reflectValueLabelIterator) Next() bool {
+	i.idx++
+	return i.idx < i.len
+}
+
+func (i *reflectValueLabelIterator) Label() core.KeyValue {
+	return i.value.Index(i.idx).Interface().(core.KeyValue)
+}
+
+func (i *reflectValueLabelIterator) IndexedLabel() (int, core.KeyValue) {
+	return i.idx, i.Label()
+}
+
+func (i *reflectValueLabelIterator) Len() int {
+	return i.len
+}
+
+func (i *reflectValueLabelIterator) Clone() export.LabelIterator {
+	return &reflectValueLabelIterator{
+		value: i.value,
+		idx:   i.idx,
+		len:   i.len,
+	}
+}
+
+// GetIteratorsForTesting returns iterators for testing.
+func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
+	var iterators []export.LabelIterator
+
+	if iface := computeOrderedFixed(labels); iface != nil {
+		iter := newReflectValueLabelIterator(reflect.ValueOf(iface))
+		iterators = append(iterators, iter)
+	}
+	iter := newReflectValueLabelIterator(computeOrderedReflect(labels))
+	iterators = append(iterators, iter)
+
+	return iterators
+}
+
+// GetEmptyIteratorsForTesting returns empty iterators for testing.
+func GetEmptyIteratorsForTesting() []export.LabelIterator {
+	iter := newReflectValueLabelIterator(computeOrderedReflect(nil))
+	return []export.LabelIterator{zeroIter, iter}
+}
+
 func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
 	if recorder == nil {
 		return 0
@@ -539,7 +655,9 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	// instead of once per bound instrument lifetime.  This can be
 	// addressed similarly to OTEP 78, see
 	// https://github.com/jmacd/opentelemetry-go/blob/8bed2e14df7f9f4688fbab141924bb786dc9a3a1/api/context/internal/set.go#L89
-	exportLabels := export.NewLabels(export.NewSliceLabelIterator(labels.slice), m.labelEncoder.Encode(export.NewSliceLabelIterator(labels.slice)), m.labelEncoder)
+	iter := labels.getIterator()
+	iter2 := iter.Clone()
+	exportLabels := export.NewLabels(iter, m.labelEncoder.Encode(iter2), m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
