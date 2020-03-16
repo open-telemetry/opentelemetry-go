@@ -8,17 +8,17 @@ import (
 
 // DescriptorConfig contains configuration for a metric Descriptor
 type DescriptorConfig struct {
-	// keys are the common keys related to all measurements.
+	// Keys are the common keys related to all measurements.
 	Keys []core.Key
 
-	// description describes the metric in human readable terms.
+	// Description describes the metric in human readable terms.
 	Description string
 
-	// unit is the determinate quantity used as a standard of all
+	// Unit is the determinate quantity used as a standard of all
 	// measurements for the metric.
 	Unit unit.Unit
 
-	// resource descrbes the entity for which this metric makes measurements.
+	// Resource describes the entity for which this metric makes measurements.
 	Resource resource.Resource
 }
 
