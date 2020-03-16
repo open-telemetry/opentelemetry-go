@@ -272,7 +272,7 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case export.MeasureKind:
 		lv, ts, err := agg.(aggregator.LastValue).LastValue()
-		if err != nil && err != aggregator.ErrNoLastValue {
+		if err != nil && err != aggregator.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
 		}
 		f.impl.storeCollect(actual, lv, ts)

@@ -184,8 +184,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 		return
 	}
 
-	c.exp.snapshot.ForEach(func(record export.Record) {
+	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
 		ch <- c.toDesc(&record)
+		return nil
 	})
 }
 
@@ -198,7 +199,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	c.exp.snapshot.ForEach(func(record export.Record) {
+	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
 		labels := labelValues(record.Labels())
@@ -222,6 +223,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
 			c.exportLastValue(ch, lastValue, numberKind, desc, labels)
 		}
+		return nil
 	})
 }
 
