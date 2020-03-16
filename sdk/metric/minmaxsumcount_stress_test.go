@@ -27,11 +27,10 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestStressInt64MinMaxSumCount(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
+	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, core.Int64NumberKind)
 	mmsc := minmaxsumcount.New(desc)
 
 	ctx, cancel := context.WithCancel(context.Background())

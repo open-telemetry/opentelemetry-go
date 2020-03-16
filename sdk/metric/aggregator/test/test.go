@@ -26,7 +26,6 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const Magnitude = 1000
@@ -55,7 +54,7 @@ func newProfiles() []Profile {
 }
 
 func NewAggregatorTest(mkind export.Kind, nkind core.NumberKind) *export.Descriptor {
-	return export.NewDescriptor("test.name", mkind, nil, "", "", nkind, resource.Resource{})
+	return export.NewDescriptor("test.name", mkind, nkind)
 }
 
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {

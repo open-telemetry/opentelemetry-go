@@ -25,7 +25,6 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -43,15 +42,11 @@ type (
 
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
-	LastValueADesc = export.NewDescriptor(
-		"lastvalue.a", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, resource.Resource{})
-	LastValueBDesc = export.NewDescriptor(
-		"lastvalue.b", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind, resource.Resource{})
+	LastValueADesc = export.NewDescriptor("lastvalue.a", export.ObserverKind, core.Int64NumberKind, export.WithKeys(key.New("G")))
+	LastValueBDesc = export.NewDescriptor("lastvalue.b", export.ObserverKind, core.Int64NumberKind, export.WithKeys(key.New("G")))
 	// CounterADesc and CounterBDesc group by "C"
-	CounterADesc = export.NewDescriptor(
-		"sum.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, resource.Resource{})
-	CounterBDesc = export.NewDescriptor(
-		"sum.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind, resource.Resource{})
+	CounterADesc = export.NewDescriptor("sum.a", export.CounterKind, core.Int64NumberKind, export.WithKeys(key.New("C")))
+	CounterBDesc = export.NewDescriptor("sum.b", export.CounterKind, core.Int64NumberKind, export.WithKeys(key.New("C")))
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}

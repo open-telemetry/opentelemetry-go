@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestStringKeyValues(t *testing.T) {
@@ -145,7 +144,12 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	}
 	mmsc.Checkpoint(ctx, &metricsdk.Descriptor{})
 	for _, test := range tests {
-		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind, resource.Resource{})
+		opts := []metricsdk.DescriptorOption{
+			metricsdk.WithUnit(test.unit),
+			metricsdk.WithDescription(test.description),
+			metricsdk.WithKeys(test.keys...),
+		}
+		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.numberKind, opts...)
 		labels := metricsdk.NewLabels(test.labels, "", nil)
 		got, err := minMaxSumCount(desc, labels, mmsc)
 		if assert.NoError(t, err) {
@@ -155,7 +159,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind, resource.Resource{})
+	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, core.Int64NumberKind)
 	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
 	mmsc := minmaxsumcount.New(desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, desc))
@@ -242,7 +246,12 @@ func TestSumMetricDescriptor(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.keys, test.description, test.unit, test.numberKind, resource.Resource{})
+		opts := []metricsdk.DescriptorOption{
+			metricsdk.WithUnit(test.unit),
+			metricsdk.WithDescription(test.description),
+			metricsdk.WithKeys(test.keys...),
+		}
+		desc := metricsdk.NewDescriptor(test.name, test.metricKind, test.numberKind, opts...)
 		labels := metricsdk.NewLabels(test.labels, "", nil)
 		got, err := sum(desc, labels, sumAgg.New())
 		if assert.NoError(t, err) {
@@ -252,7 +261,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 }
 
 func TestSumInt64DataPoints(t *testing.T) {
-	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Int64NumberKind, resource.Resource{})
+	desc := metricsdk.NewDescriptor("", metricsdk.CounterKind, core.Int64NumberKind)
 	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), desc))
@@ -266,7 +275,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 }
 
 func TestSumFloat64Datapoints(t *testing.T) {
-	desc := metricsdk.NewDescriptor("", metricsdk.MeasureKind, []core.Key{}, "", unit.Dimensionless, core.Float64NumberKind, resource.Resource{})
+	desc := metricsdk.NewDescriptor("", metricsdk.CounterKind, core.Float64NumberKind)
 	labels := metricsdk.NewLabels([]core.KeyValue{}, "", nil)
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), desc))

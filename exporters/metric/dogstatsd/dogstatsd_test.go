@@ -30,7 +30,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // TestDogstatsLabels that labels are formatted in the correct style,
@@ -45,7 +44,7 @@ func TestDogstatsLabels(t *testing.T) {
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet(encoder)
 
-			desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
+			desc := export.NewDescriptor("test.name", export.CounterKind, core.Int64NumberKind)
 			cagg := sum.New()
 			_ = cagg.Update(ctx, core.NewInt64Number(123), desc)
 			cagg.Checkpoint(ctx, desc)

@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
@@ -124,14 +123,10 @@ timer.B.D:%s|ms
 					}
 
 					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
-					cdesc := export.NewDescriptor(
-						"counter", export.CounterKind, nil, "", "", nkind, resource.Resource{})
-					gdesc := export.NewDescriptor(
-						"observer", export.ObserverKind, nil, "", "", nkind, resource.Resource{})
-					mdesc := export.NewDescriptor(
-						"measure", export.MeasureKind, nil, "", "", nkind, resource.Resource{})
-					tdesc := export.NewDescriptor(
-						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind, resource.Resource{})
+					cdesc := export.NewDescriptor("counter", export.CounterKind, nkind)
+					gdesc := export.NewDescriptor("observer", export.ObserverKind, nkind)
+					mdesc := export.NewDescriptor("measure", export.MeasureKind, nkind)
+					tdesc := export.NewDescriptor("timer", export.MeasureKind, nkind, export.WithUnit(unit.Milliseconds))
 
 					labels := []core.KeyValue{
 						key.New("A").String("B"),
@@ -286,7 +281,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind, resource.Resource{})
+			desc := export.NewDescriptor("counter", export.CounterKind, core.Int64NumberKind)
 
 			var expected []string
 

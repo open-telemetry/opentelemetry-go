@@ -476,11 +476,11 @@ func (m *SDK) newDescriptor(name string, metricKind export.Kind, numberKind core
 	return export.NewDescriptor(
 		name,
 		metricKind,
-		config.Keys,
-		config.Description,
-		config.Unit,
 		numberKind,
-		m.resource,
+		export.WithKeys(config.Keys...),
+		export.WithDescription(config.Description),
+		export.WithUnit(config.Unit),
+		export.WithResource(m.resource),
 	)
 }
 

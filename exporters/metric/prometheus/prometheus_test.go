@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -30,12 +29,9 @@ func TestPrometheusExporter(t *testing.T) {
 	var expected []string
 	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
 
-	counter := export.NewDescriptor(
-		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind, resource.Resource{})
-	lastValue := export.NewDescriptor(
-		"lastvalue", export.ObserverKind, nil, "", "", core.Float64NumberKind, resource.Resource{})
-	measure := export.NewDescriptor(
-		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind, resource.Resource{})
+	counter := export.NewDescriptor("counter", export.CounterKind, core.Float64NumberKind)
+	lastValue := export.NewDescriptor("lastvalue", export.ObserverKind, core.Float64NumberKind)
+	measure := export.NewDescriptor("measure", export.MeasureKind, core.Float64NumberKind)
 
 	labels := []core.KeyValue{
 		key.New("A").String("B"),

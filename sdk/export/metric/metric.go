@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -297,86 +295,3 @@ const (
 	// Observer kind indicates an observer instrument
 	ObserverKind
 )
-
-// Descriptor describes a metric instrument to the exporter.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-type Descriptor struct {
-	name        string
-	metricKind  Kind
-	keys        []core.Key
-	description string
-	unit        unit.Unit
-	numberKind  core.NumberKind
-	resource    resource.Resource
-}
-
-// NewDescriptor builds a new descriptor, for use by `Meter`
-// implementations in constructing new metric instruments.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-func NewDescriptor(
-	name string,
-	metricKind Kind,
-	keys []core.Key,
-	description string,
-	unit unit.Unit,
-	numberKind core.NumberKind,
-	resource resource.Resource,
-) *Descriptor {
-	return &Descriptor{
-		name:        name,
-		metricKind:  metricKind,
-		keys:        keys,
-		description: description,
-		unit:        unit,
-		numberKind:  numberKind,
-		resource:    resource,
-	}
-}
-
-// Name returns the metric instrument's name.
-func (d *Descriptor) Name() string {
-	return d.name
-}
-
-// MetricKind returns the kind of instrument: counter, measure, or
-// observer.
-func (d *Descriptor) MetricKind() Kind {
-	return d.metricKind
-}
-
-// Keys returns the recommended keys included in the metric
-// definition.  These keys may be used by a Batcher as a default set
-// of grouping keys for the metric instrument.
-func (d *Descriptor) Keys() []core.Key {
-	return d.keys
-}
-
-// Description provides a human-readable description of the metric
-// instrument.
-func (d *Descriptor) Description() string {
-	return d.description
-}
-
-// Unit describes the units of the metric instrument.  Unitless
-// metrics return the empty string.
-func (d *Descriptor) Unit() unit.Unit {
-	return d.unit
-}
-
-// NumberKind returns whether this instrument is declared over int64
-// or a float64 values.
-func (d *Descriptor) NumberKind() core.NumberKind {
-	return d.numberKind
-}
-
-// Resource returns the Resource describing the entity for whom the metric
-// instrument measures.
-func (d *Descriptor) Resource() resource.Resource {
-	return d.resource
-}

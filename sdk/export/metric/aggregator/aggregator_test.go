@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
@@ -73,16 +72,7 @@ func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			desc := export.NewDescriptor(
-				"name",
-				export.CounterKind,
-				nil,
-				"",
-				"",
-				nkind,
-				resource.Resource{},
-			)
-			testRangeNegative(t, desc)
+			testRangeNegative(t, export.NewDescriptor("name", export.CounterKind, nkind))
 		})
 	}
 }
@@ -95,16 +85,7 @@ func TestNaNTest(t *testing.T) {
 				export.MeasureKind,
 				export.ObserverKind,
 			} {
-				desc := export.NewDescriptor(
-					"name",
-					mkind,
-					nil,
-					"",
-					"",
-					nkind,
-					resource.Resource{},
-				)
-				testRangeNaN(t, desc)
+				testRangeNaN(t, export.NewDescriptor("name", mkind, nkind))
 			}
 		})
 	}
