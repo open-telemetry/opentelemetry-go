@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
@@ -43,6 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	spanID, _ := core.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
+	resource := resource.New(core.Key("rk1").String("rv11"))
 
 	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{
@@ -63,6 +65,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		SpanKind:      trace.SpanKindInternal,
 		StatusCode:    codes.Unknown,
 		StatusMessage: "interesting",
+		Resource:      resource,
 	}
 	ex.ExportSpan(context.Background(), testSpan)
 
@@ -85,6 +88,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`{` +
 		`"Key":"double",` +
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
+		`},` +
+		`{` +
+		`"Key":"rk1",` +
+		`"Value":{"Type":"STRING","Value":"rv11"}` +
 		`}` +
 		`],` +
 		`"MessageEvents":[` +
