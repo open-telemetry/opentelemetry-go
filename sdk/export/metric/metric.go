@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -101,7 +100,7 @@ type AggregationSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*Descriptor) Aggregator
+	AggregatorFor(*metric.Descriptor) Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -131,7 +130,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for distributed or span context.
-	Update(context.Context, core.Number, *Descriptor) error
+	Update(context.Context, core.Number, *metric.Descriptor) error
 
 	// Checkpoint is called during collection to finish one period
 	// of aggregation by atomically saving the current value.
@@ -146,13 +145,13 @@ type Aggregator interface {
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
-	Checkpoint(context.Context, *Descriptor)
+	Checkpoint(context.Context, *metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's checkpointed state.
 	// Merge() is called in a single-threaded context, no locking
 	// is required.
-	Merge(Aggregator, *Descriptor) error
+	Merge(Aggregator, *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -207,7 +206,7 @@ type CheckpointSet interface {
 // Record contains the exported data for a single metric instrument
 // and label set.
 type Record struct {
-	descriptor *Descriptor
+	descriptor *metric.Descriptor
 	labels     Labels
 	aggregator Aggregator
 }
@@ -257,7 +256,7 @@ func (l Labels) Len() int {
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels Labels, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -272,7 +271,7 @@ func (r Record) Aggregator() Aggregator {
 }
 
 // Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *Descriptor {
+func (r Record) Descriptor() *metric.Descriptor {
 	return r.descriptor
 }
 
@@ -280,67 +279,4 @@ func (r Record) Descriptor() *Descriptor {
 // aggregated data.
 func (r Record) Labels() Labels {
 	return r.labels
-}
-
-// Descriptor describes a metric instrument to the exporter.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-type Descriptor struct {
-	descriptor metric.Descriptor
-}
-
-// NewDescriptor builds a new descriptor, for use by `Meter`
-// implementations in constructing new metric instruments.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-func NewDescriptor(
-	descriptor metric.Descriptor,
-) Descriptor {
-	return Descriptor{
-		descriptor: descriptor,
-	}
-}
-
-// Name returns the metric instrument's name.
-func (d *Descriptor) Name() string {
-	return d.descriptor.Name
-}
-
-// MetricKind returns the kind of instrument: counter, measure, or
-// observer.
-func (d *Descriptor) MetricKind() metric.Kind {
-	return d.descriptor.Kind
-}
-
-// Keys returns the recommended keys included in the metric
-// definition.  These keys may be used by a Batcher as a default set
-// of grouping keys for the metric instrument.
-func (d *Descriptor) Keys() []core.Key {
-	return d.descriptor.Config.Keys
-}
-
-// Description provides a human-readable description of the metric
-// instrument.
-func (d *Descriptor) Description() string {
-	return d.descriptor.Config.Description
-}
-
-// Unit describes the units of the metric instrument.  Unitless
-// metrics return the empty string.
-func (d *Descriptor) Unit() unit.Unit {
-	return d.descriptor.Config.Unit
-}
-
-// NumberKind returns whether this instrument is declared over int64
-// or a float64 values.
-func (d *Descriptor) NumberKind() core.NumberKind {
-	return d.descriptor.NumberKind
-}
-
-func (d *Descriptor) Descriptor() metric.Descriptor {
-	return d.descriptor
 }

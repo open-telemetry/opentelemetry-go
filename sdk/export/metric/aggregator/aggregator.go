@@ -125,7 +125,7 @@ func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute measure metrics.
-func RangeTest(number core.Number, descriptor *export.Descriptor) error {
+func RangeTest(number core.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
 	if numberKind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {

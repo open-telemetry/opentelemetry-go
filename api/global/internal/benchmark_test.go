@@ -40,7 +40,7 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.CounterKind:
 		return sum.New()

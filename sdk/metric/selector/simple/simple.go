@@ -66,7 +66,7 @@ func NewWithExactMeasure() export.AggregationSelector {
 	return selectorExact{}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
@@ -77,7 +77,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.A
 	}
 }
 
-func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
@@ -88,7 +88,7 @@ func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggr
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough

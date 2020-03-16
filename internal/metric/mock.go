@@ -88,8 +88,8 @@ var (
 	_ apimetric.AsynchronousImpl     = &Asynchronous{}
 )
 
-func (i Instrument) Descriptor() apimetric.Descriptor {
-	return i.descriptor
+func (i Instrument) Descriptor() *apimetric.Descriptor {
+	return &i.descriptor
 }
 
 func (a *Asynchronous) Interface() interface{} {

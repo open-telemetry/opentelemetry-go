@@ -106,9 +106,8 @@ var _ metric.AsynchronousImpl = &obsImpl{}
 
 var errInvalidMetricKind = errors.New("Invalid Metric kind")
 
-func (inst *instrument) Descriptor() metric.Descriptor {
-	// @@@ Take this out
-	return metric.Descriptor{}
+func (inst *instrument) Descriptor() *metric.Descriptor {
+	return &inst.descriptor
 }
 
 func (s *syncImpl) Interface() interface{} {

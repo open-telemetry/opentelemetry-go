@@ -72,7 +72,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(1),
 		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -82,7 +82,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[1].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -92,7 +92,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[2].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[2].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[2].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals2.Key: lvals2.Value,
@@ -102,7 +102,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[3].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[3].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[3].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -111,7 +111,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(1),
 		mock.MeasurementBatches[4].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[4].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[4].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals2.Key: lvals2.Value,
@@ -120,7 +120,7 @@ func TestDirect(t *testing.T) {
 	require.Equal(t, int64(2),
 		mock.MeasurementBatches[5].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[5].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[5].Measurements[0].Instrument.Descriptor().Name())
 
 	// This tests the second Meter instance
 	mockImpl, _ = metric.UnwrapImpl(sdk.Meter("test2"))
@@ -135,7 +135,7 @@ func TestDirect(t *testing.T) {
 		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.second",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
 }
 
 func TestBound(t *testing.T) {
@@ -176,7 +176,7 @@ func TestBound(t *testing.T) {
 		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
 		0.01)
 	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
 
 	require.Equal(t, map[core.Key]core.Value{
 		lvals1.Key: lvals1.Value,
@@ -185,7 +185,7 @@ func TestBound(t *testing.T) {
 	require.Equal(t, int64(3),
 		mock.MeasurementBatches[1].Measurements[0].Number.AsInt64())
 	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name)
+		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
 
 	boundC.Unbind()
 	boundM.Unbind()

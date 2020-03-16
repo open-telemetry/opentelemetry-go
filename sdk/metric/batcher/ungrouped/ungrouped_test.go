@@ -33,30 +33,30 @@ func TestUngroupedStateless(t *testing.T) {
 	b := ungrouped.New(test.NewAggregationSelector(), false)
 
 	// Set initial lastValue values
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels3, 30))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels3, 30))
 
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels3, 30))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels3, 30))
 
 	// Another lastValue Set for Labels1
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueADesc, test.Labels1, 50))
-	_ = b.Process(ctx, test.NewLastValueRecord(test.LastValueBDesc, test.Labels1, 50))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 50))
+	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 50))
 
 	// Set initial counter values
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels3, 40))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels3, 40))
 
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterBDesc, test.Labels3, 40))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 10))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels2, 20))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels3, 40))
 
 	// Another counter Add for Labels1
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterADesc, test.Labels1, 50))
-	_ = b.Process(ctx, test.NewCounterRecord(test.CounterBDesc, test.Labels1, 50))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels1, 50))
+	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 50))
 
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
@@ -93,11 +93,11 @@ func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
 	b := ungrouped.New(test.NewAggregationSelector(), true)
 
-	counterA := test.NewCounterRecord(test.CounterADesc, test.Labels1, 10)
+	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
 	_ = b.Process(ctx, counterA)
 
-	counterB := test.NewCounterRecord(test.CounterBDesc, test.Labels1, 10)
+	counterB := test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 10)
 	caggB := counterB.Aggregator()
 	_ = b.Process(ctx, counterB)
 
@@ -122,10 +122,10 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1, records2)
 
 	// Update and re-checkpoint the original record.
-	_ = caggA.Update(ctx, core.NewInt64Number(20), test.CounterADesc)
-	_ = caggB.Update(ctx, core.NewInt64Number(20), test.CounterBDesc)
-	caggA.Checkpoint(ctx, test.CounterADesc)
-	caggB.Checkpoint(ctx, test.CounterBDesc)
+	_ = caggA.Update(ctx, core.NewInt64Number(20), &test.CounterADesc)
+	_ = caggB.Update(ctx, core.NewInt64Number(20), &test.CounterBDesc)
+	caggA.Checkpoint(ctx, &test.CounterADesc)
+	caggB.Checkpoint(ctx, &test.CounterBDesc)
 
 	// As yet cagg has not been passed to Batcher.Process.  Should
 	// not see an update.
@@ -138,8 +138,8 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1, records3)
 
 	// Now process the second update
-	_ = b.Process(ctx, export.NewRecord(test.CounterADesc, test.Labels1, caggA))
-	_ = b.Process(ctx, export.NewRecord(test.CounterBDesc, test.Labels1, caggB))
+	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, caggA))
+	_ = b.Process(ctx, export.NewRecord(&test.CounterBDesc, test.Labels1, caggB))
 
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()

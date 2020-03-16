@@ -84,7 +84,7 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
-func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
+func (b *testBatcher) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 

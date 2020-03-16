@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -94,7 +95,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		descriptor *export.Descriptor
+		descriptor *metric.Descriptor
 		ordered    orderedLabels
 	}
 
@@ -127,7 +128,7 @@ type (
 
 	instrument struct {
 		meter      *SDK
-		descriptor export.Descriptor
+		descriptor metric.Descriptor
 	}
 
 	asynchronousInstrument struct {
@@ -158,8 +159,8 @@ var (
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
-func (inst *instrument) Descriptor() api.Descriptor {
-	return inst.descriptor.Descriptor()
+func (inst *instrument) Descriptor() *api.Descriptor {
+	return &inst.descriptor
 }
 
 func (a *asynchronousInstrument) Interface() interface{} {
@@ -281,8 +282,6 @@ func (i *synchronousInstrument) Bind(ls api.LabelSet) api.BoundSynchronousImpl {
 }
 
 func (i *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
-	fmt.Println("WHAT", i)
-	fmt.Println("WHATTTT", i.meter)
 	ourLs := i.meter.labsFor(ls)
 	h := i.acquireHandle(ourLs)
 	defer h.Unbind()
@@ -433,7 +432,7 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 func (m *SDK) NewSynchronousInstrument(descriptor api.Descriptor) (api.SynchronousImpl, error) {
 	return &synchronousInstrument{
 		instrument: instrument{
-			descriptor: export.NewDescriptor(descriptor),
+			descriptor: descriptor,
 			meter:      m,
 		},
 	}, nil
@@ -442,7 +441,7 @@ func (m *SDK) NewSynchronousInstrument(descriptor api.Descriptor) (api.Synchrono
 func (m *SDK) NewAsynchronousInstrument(descriptor api.Descriptor, callback func(func(core.Number, api.LabelSet))) (api.AsynchronousImpl, error) {
 	return &asynchronousInstrument{
 		instrument: instrument{
-			descriptor: export.NewDescriptor(descriptor),
+			descriptor: descriptor,
 			meter:      m,
 		},
 		callback: callback,
@@ -532,7 +531,7 @@ func (m *SDK) checkpointObserver(ctx context.Context, a *asynchronousInstrument)
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, recorder export.Aggregator, labels *labels) int {
+func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
 	if recorder == nil {
 		return 0
 	}
@@ -560,7 +559,7 @@ func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...
 
 // GetDescriptor returns the descriptor of an instrument, which is not
 // part of the public metric API.
-// func (m *SDK) GetDescriptor(inst api.InstrumentImpl) *export.Descriptor {
+// func (m *SDK) GetDescriptor(inst api.InstrumentImpl) *metric.Descriptor {
 // 	if ii, ok := inst.(*instrument); ok {
 // 		return ii.descriptor
 // 	}

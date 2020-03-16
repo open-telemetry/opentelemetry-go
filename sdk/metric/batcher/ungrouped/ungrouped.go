@@ -17,6 +17,7 @@ package ungrouped // import "go.opentelemetry.io/otel/sdk/metric/batcher/ungroup
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -28,7 +29,7 @@ type (
 	}
 
 	batchKey struct {
-		descriptor *export.Descriptor
+		descriptor *metric.Descriptor
 		encoded    string
 	}
 
@@ -51,7 +52,7 @@ func New(selector export.AggregationSelector, stateful bool) *Batcher {
 	}
 }
 
-func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	return b.selector.AggregatorFor(descriptor)
 }
 

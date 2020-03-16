@@ -21,6 +21,7 @@ var _ SynchronousImpl = noopSynchronous{}
 var _ BoundSynchronousImpl = noopBoundInstrument{}
 var _ LabelSet = noopLabelSet{}
 var _ AsynchronousImpl = noopAsynchronous{}
+var emptyDesriptor Descriptor
 
 func (NoopProvider) Meter(name string) Meter {
 	return NoopMeter{}
@@ -30,8 +31,8 @@ func (noopInstrument) Interface() interface{} {
 	return nil
 }
 
-func (noopInstrument) Descriptor() Descriptor {
-	return Descriptor{}
+func (noopInstrument) Descriptor() *Descriptor {
+	return &emptyDesriptor
 }
 
 func (noopBoundInstrument) RecordOne(context.Context, core.Number) {

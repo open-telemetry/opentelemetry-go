@@ -87,19 +87,55 @@ const (
 )
 
 type Descriptor struct {
-	Name       string
-	Kind       Kind
-	NumberKind core.NumberKind
-	Config     Config
+	name       string
+	kind       Kind
+	numberKind core.NumberKind
+	config     Config
 }
 
 func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
 	return Descriptor{
-		Name:       name,
-		Kind:       mkind,
-		NumberKind: nkind,
-		Config:     Configure(opts),
+		name:       name,
+		kind:       mkind,
+		numberKind: nkind,
+		config:     Configure(opts),
 	}
+}
+
+// Name returns the metric instrument's name.
+func (d *Descriptor) Name() string {
+	return d.name
+}
+
+// MetricKind returns the kind of instrument: counter, measure, or
+// observer.
+func (d *Descriptor) MetricKind() Kind {
+	return d.kind
+}
+
+// Keys returns the recommended keys included in the metric
+// definition.  These keys may be used by a Batcher as a default set
+// of grouping keys for the metric instrument.
+func (d *Descriptor) Keys() []core.Key {
+	return d.config.Keys
+}
+
+// Description provides a human-readable description of the metric
+// instrument.
+func (d *Descriptor) Description() string {
+	return d.config.Description
+}
+
+// Unit describes the units of the metric instrument.  Unitless
+// metrics return the empty string.
+func (d *Descriptor) Unit() unit.Unit {
+	return d.config.Unit
+}
+
+// NumberKind returns whether this instrument is declared over int64
+// or a float64 values.
+func (d *Descriptor) NumberKind() core.NumberKind {
+	return d.numberKind
 }
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.

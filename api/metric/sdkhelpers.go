@@ -46,7 +46,7 @@ type InstrumentImpl interface {
 	Interface() interface{}
 
 	// Is this _really_ needed?
-	Descriptor() Descriptor
+	Descriptor() *Descriptor
 }
 
 // SynchronousImpl is the implementation-level interface Set/Add/Record
@@ -126,17 +126,8 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...M
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
-func makeDescriptor(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) Descriptor {
-	return Descriptor{
-		Name:       name,
-		Kind:       metricKind,
-		NumberKind: numberKind,
-		Config:     Configure(opts),
-	}
-}
-
 func (m *wrappedMeterImpl) newSynchronous(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SynchronousImpl, error) {
-	return m.impl.NewSynchronousInstrument(makeDescriptor(name, metricKind, numberKind, opts))
+	return m.impl.NewSynchronousInstrument(NewDescriptor(name, metricKind, numberKind, opts...))
 }
 
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
@@ -181,7 +172,7 @@ func WrapFloat64MeasureInstrument(syncInst SynchronousImpl, err error) (Float64M
 
 func (m *wrappedMeterImpl) newAsynchronous(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsynchronousImpl, error) {
 	return m.impl.NewAsynchronousInstrument(
-		makeDescriptor(name, mkind, nkind, opts),
+		NewDescriptor(name, mkind, nkind, opts...),
 		callback)
 }
 
