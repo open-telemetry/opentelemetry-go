@@ -101,6 +101,7 @@ func WithSpanOptions(opts ...trace.StartOption) Option {
 // WithFilter adds a filter to the list of filters used by the handler.
 // If any filter indicates to exclude a request then the request will not be
 // traced. All filters must allow a request to be traced for a Span to be created.
+// If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
 func WithFilter(f Filter) Option {
