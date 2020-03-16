@@ -59,7 +59,6 @@ type InstrumentImpl interface {
 	// Interface returns the underlying implementation of the
 	// instrument, which allows the implementation to gain access
 	// to its own representation especially from a `Measurement`.
-	// This cannot return nil.
 	Interface() interface{}
 
 	// Descriptor returns a copy of the instrument's Descriptor.

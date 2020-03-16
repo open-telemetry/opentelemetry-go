@@ -1,8 +1,7 @@
-package internal // import "go.opentelemetry.io/otel/api/global/internal"
+package internal
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -57,9 +56,9 @@ type instrument struct {
 type syncImpl struct {
 	delegate unsafe.Pointer // (*metric.SynchronousImpl)
 
-	ctor func(metric.Meter) (metric.SynchronousImpl, error)
-
 	instrument
+
+	ctor func(metric.Meter) (metric.SynchronousImpl, error)
 }
 
 type obsImpl struct {
@@ -70,10 +69,14 @@ type obsImpl struct {
 	ctor func(metric.Meter) (metric.AsynchronousImpl, error)
 }
 
+// hasSynchronousImpl is implemented by all of the synchronous metric
+// instruments.
 type hasSynchronousImpl interface {
 	SynchronousImpl() metric.SynchronousImpl
 }
 
+// hasAsynchronousImpl is implemented by all of the asynchronous
+// metric instruments.
 type hasAsynchronousImpl interface {
 	AsynchronousImpl() metric.AsynchronousImpl
 }
@@ -103,8 +106,6 @@ var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSynchronousImpl = &syncHandle{}
 var _ metric.AsynchronousImpl = &obsImpl{}
-
-var errInvalidMetricKind = errors.New("Invalid Metric kind")
 
 func (inst *instrument) Descriptor() metric.Descriptor {
 	return inst.descriptor

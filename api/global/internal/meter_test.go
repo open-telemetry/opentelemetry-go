@@ -299,3 +299,54 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1.Add(ctx, 1, meter.Labels())
 	c2.Add(ctx, 2, meter.Labels())
 }
+
+func TestInterfaceIndirection(t *testing.T) {
+	internal.ResetForTest()
+
+	// Test that Interface() does the proper indirection, i.e.,
+	// returns the implementation interface not the global, after
+	// registered.
+
+	meter1 := global.Meter("test1")
+
+	// Sync: no SDK yet
+	counter := Must(meter1).NewInt64Counter("interface.counter")
+
+	ival := counter.Measurement(1).SynchronousImpl().Interface()
+	require.NotNil(t, ival)
+
+	_, ok := ival.(*metrictest.Synchronous)
+	require.False(t, ok)
+
+	// Async: no SDK yet
+	observer := Must(meter1).RegisterFloat64Observer(
+		"interface.observer",
+		func(result metric.Float64ObserverResult) {},
+	)
+
+	ival = observer.AsynchronousImpl().Interface()
+	require.NotNil(t, ival)
+
+	_, ok = ival.(*metrictest.Asynchronous)
+	require.False(t, ok)
+
+	// Register the SDK
+	sdk := metrictest.NewProvider()
+	global.SetMeterProvider(sdk)
+
+	// Repeat the above tests
+
+	// Sync
+	ival = counter.Measurement(1).SynchronousImpl().Interface()
+	require.NotNil(t, ival)
+
+	_, ok = ival.(*metrictest.Synchronous)
+	require.True(t, ok)
+
+	// Async
+	ival = observer.AsynchronousImpl().Interface()
+	require.NotNil(t, ival)
+
+	_, ok = ival.(*metrictest.Asynchronous)
+	require.True(t, ok)
+}

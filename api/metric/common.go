@@ -77,7 +77,7 @@ func checkSynchronous(instrument SynchronousImpl, err error) (synchronousInstrum
 		// together and use a tag for the original name, e.g.,
 		//   name = 'invalid.counter.int64'
 		//   label = 'original-name=duplicate-counter-name'
-		instrument = noopSynchronous{}
+		instrument = NoopSynchronous{}
 	}
 	return synchronousInstrument{
 		instrument: instrument,
@@ -102,7 +102,7 @@ func checkAsynchronous(instrument AsynchronousImpl, err error) (asynchronousInst
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
 		}
-		instrument = noopAsynchronous{}
+		instrument = NoopAsynchronous{}
 	}
 	return asynchronousInstrument{
 		instrument: instrument,

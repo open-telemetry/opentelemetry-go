@@ -304,12 +304,20 @@ func TestWrappedInstrumentError(t *testing.T) {
 	measure, err := meter.NewInt64Measure("test.measure")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
-	require.NotNil(t, measure)
 	require.NotNil(t, measure.SynchronousImpl())
 
 	observer, err := meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
-	require.NotNil(t, observer)
 	require.NotNil(t, observer.AsynchronousImpl())
+}
+
+func TestNilCallbackObserverNoop(t *testing.T) {
+	// Tests that a nil callback yields a no-op observer without error.
+	_, meter := mockTest.NewMeter()
+
+	observer := Must(meter).RegisterInt64Observer("test.observer", nil)
+
+	_, ok := observer.AsynchronousImpl().(metric.NoopAsynchronous)
+	require.True(t, ok)
 }
