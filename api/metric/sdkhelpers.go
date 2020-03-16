@@ -55,6 +55,8 @@ type LabelSetDelegate interface {
 	Delegate() LabelSet
 }
 
+// InstrumentImpl is a common interface for synchronous and
+// asynchronous instruments.
 type InstrumentImpl interface {
 	// Interface returns the underlying implementation of the
 	// instrument, which allows the implementation to gain access

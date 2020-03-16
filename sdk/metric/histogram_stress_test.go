@@ -18,50 +18,50 @@
 
 package metric_test
 
-// import (
-// 	"context"
-// 	"math/rand"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"math/rand"
+	"testing"
+	"time"
 
-// 	"go.opentelemetry.io/otel/api/core"
-// 	"go.opentelemetry.io/otel/sdk/export/metric"
-// 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-// )
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+)
 
-// func TestStressInt64Histogram(t *testing.T) {
-// 	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind)
-// 	h := histogram.New(desc, []core.Number{core.NewInt64Number(25), core.NewInt64Number(50), core.NewInt64Number(75)})
+func TestStressInt64Histogram(t *testing.T) {
+	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, core.Int64NumberKind)
+	h := histogram.New(&desc, []core.Number{core.NewInt64Number(25), core.NewInt64Number(50), core.NewInt64Number(75)})
 
-// 	ctx, cancelFunc := context.WithCancel(context.Background())
-// 	defer cancelFunc()
-// 	go func() {
-// 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
-// 		for {
-// 			select {
-// 			case <-ctx.Done():
-// 				return
-// 			default:
-// 				_ = h.Update(ctx, core.NewInt64Number(rnd.Int63()%100), desc)
-// 			}
-// 		}
-// 	}()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	go func() {
+		rnd := rand.New(rand.NewSource(time.Now().Unix()))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_ = h.Update(ctx, core.NewInt64Number(rnd.Int63()%100), &desc)
+			}
+		}
+	}()
 
-// 	startTime := time.Now()
-// 	for time.Since(startTime) < time.Second {
-// 		h.Checkpoint(context.Background(), desc)
+	startTime := time.Now()
+	for time.Since(startTime) < time.Second {
+		h.Checkpoint(context.Background(), &desc)
 
-// 		b, _ := h.Histogram()
-// 		c, _ := h.Count()
+		b, _ := h.Histogram()
+		c, _ := h.Count()
 
-// 		var realCount int64
-// 		for _, c := range b.Counts {
-// 			v := c.AsInt64()
-// 			realCount += v
-// 		}
+		var realCount int64
+		for _, c := range b.Counts {
+			v := c.AsInt64()
+			realCount += v
+		}
 
-// 		if realCount != c {
-// 			t.Fail()
-// 		}
-// 	}
-// }
+		if realCount != c {
+			t.Fail()
+		}
+	}
+}

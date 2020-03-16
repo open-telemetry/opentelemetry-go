@@ -18,66 +18,66 @@
 
 package metric_test
 
-// import (
-// 	"context"
-// 	"math/rand"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"math/rand"
+	"testing"
+	"time"
 
-// 	"go.opentelemetry.io/otel/api/core"
-// 	"go.opentelemetry.io/otel/sdk/export/metric"
-// 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
-// )
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+)
 
-// func TestStressInt64MinMaxSumCount(t *testing.T) {
-// 	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, nil, "", "", core.Int64NumberKind)
-// 	mmsc := minmaxsumcount.New(desc)
+func TestStressInt64MinMaxSumCount(t *testing.T) {
+	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, core.Int64NumberKind)
+	mmsc := minmaxsumcount.New(&desc)
 
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	go func() {
-// 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
-// 		v := rnd.Int63() % 103
-// 		for {
-// 			select {
-// 			case <-ctx.Done():
-// 				return
-// 			default:
-// 				_ = mmsc.Update(ctx, core.NewInt64Number(v), desc)
-// 			}
-// 			v++
-// 		}
-// 	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		rnd := rand.New(rand.NewSource(time.Now().Unix()))
+		v := rnd.Int63() % 103
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_ = mmsc.Update(ctx, core.NewInt64Number(v), &desc)
+			}
+			v++
+		}
+	}()
 
-// 	startTime := time.Now()
-// 	for time.Since(startTime) < time.Second {
-// 		mmsc.Checkpoint(context.Background(), desc)
+	startTime := time.Now()
+	for time.Since(startTime) < time.Second {
+		mmsc.Checkpoint(context.Background(), &desc)
 
-// 		s, _ := mmsc.Sum()
-// 		c, _ := mmsc.Count()
-// 		min, e1 := mmsc.Min()
-// 		max, e2 := mmsc.Max()
-// 		if c == 0 && (e1 == nil || e2 == nil || s.AsInt64() != 0) {
-// 			t.Fail()
-// 		}
-// 		if c != 0 {
-// 			if e1 != nil || e2 != nil {
-// 				t.Fail()
-// 			}
-// 			lo, hi, sum := min.AsInt64(), max.AsInt64(), s.AsInt64()
+		s, _ := mmsc.Sum()
+		c, _ := mmsc.Count()
+		min, e1 := mmsc.Min()
+		max, e2 := mmsc.Max()
+		if c == 0 && (e1 == nil || e2 == nil || s.AsInt64() != 0) {
+			t.Fail()
+		}
+		if c != 0 {
+			if e1 != nil || e2 != nil {
+				t.Fail()
+			}
+			lo, hi, sum := min.AsInt64(), max.AsInt64(), s.AsInt64()
 
-// 			if hi-lo+1 != c {
-// 				t.Fail()
-// 			}
-// 			if c == 1 {
-// 				if lo != hi || lo != sum {
-// 					t.Fail()
-// 				}
-// 			} else {
-// 				if hi*(hi+1)/2-(lo-1)*lo/2 != sum {
-// 					t.Fail()
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+			if hi-lo+1 != c {
+				t.Fail()
+			}
+			if c == 1 {
+				if lo != hi || lo != sum {
+					t.Fail()
+				}
+			} else {
+				if hi*(hi+1)/2-(lo-1)*lo/2 != sum {
+					t.Fail()
+				}
+			}
+		}
+	}
+}

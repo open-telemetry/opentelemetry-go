@@ -557,14 +557,15 @@ func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...
 	}
 }
 
-// GetDescriptor returns the descriptor of an instrument, which is not
-// part of the public metric API.
-// func (m *SDK) GetDescriptor(inst api.InstrumentImpl) *metric.Descriptor {
-// 	if ii, ok := inst.(*instrument); ok {
-// 		return ii.descriptor
-// 	}
-// 	return nil
-// }
+// GetDescriptor returns a pointer to the descriptor of an instrument,
+// which is not part of the public metric API.  This is for testing.  Use
+// SynchronousImpl().Descriptor() to get a copy of the descriptor.
+func (m *SDK) GetDescriptor(inst api.SynchronousImpl) *metric.Descriptor {
+	if ii, ok := inst.(*synchronousInstrument); ok {
+		return &ii.descriptor
+	}
+	return nil
+}
 
 func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	if r.recorder == nil {

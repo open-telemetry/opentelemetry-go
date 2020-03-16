@@ -18,479 +18,480 @@
 
 package metric_test
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"math"
-// 	"math/rand"
-// 	"runtime"
-// 	"sort"
-// 	"strings"
-// 	"sync"
-// 	"sync/atomic"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"fmt"
+	"math"
+	"math/rand"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
 
-// 	"go.opentelemetry.io/otel/api/core"
-// 	"go.opentelemetry.io/otel/api/key"
-// 	"go.opentelemetry.io/otel/api/metric"
-// 	api "go.opentelemetry.io/otel/api/metric"
-// 	export "go.opentelemetry.io/otel/sdk/export/metric"
-// 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-// 	sdk "go.opentelemetry.io/otel/sdk/metric"
-// 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-// 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-// )
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
+	api "go.opentelemetry.io/otel/api/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+)
 
-// const (
-// 	concurrencyPerCPU = 100
-// 	reclaimPeriod     = time.Millisecond * 100
-// 	testRun           = time.Second
-// 	epsilon           = 1e-10
-// )
+const (
+	concurrencyPerCPU = 100
+	reclaimPeriod     = time.Millisecond * 100
+	testRun           = time.Second
+	epsilon           = 1e-10
+)
 
-// type (
-// 	testFixture struct {
-// 		// stop has to be aligned for 64-bit atomic operations.
-// 		stop     int64
-// 		expected sync.Map
-// 		received sync.Map // Note: doesn't require synchronization
-// 		wg       sync.WaitGroup
-// 		impl     testImpl
-// 		T        *testing.T
+type (
+	testFixture struct {
+		// stop has to be aligned for 64-bit atomic operations.
+		stop     int64
+		expected sync.Map
+		received sync.Map // Note: doesn't require synchronization
+		wg       sync.WaitGroup
+		impl     testImpl
+		T        *testing.T
 
-// 		lock  sync.Mutex
-// 		lused map[string]bool
+		lock  sync.Mutex
+		lused map[string]bool
 
-// 		dupCheck  map[testKey]int
-// 		totalDups int64
-// 	}
+		dupCheck  map[testKey]int
+		totalDups int64
+	}
 
-// 	testKey struct {
-// 		labels     string
-// 		descriptor *export.Descriptor
-// 	}
+	testKey struct {
+		labels     string
+		descriptor *metric.Descriptor
+	}
 
-// 	testImpl struct {
-// 		newInstrument  func(meter api.Meter, name string) withImpl
-// 		getUpdateValue func() core.Number
-// 		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
-// 		newStore       func() interface{}
+	testImpl struct {
+		newInstrument  func(meter api.Meter, name string) withImpl
+		getUpdateValue func() core.Number
+		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
+		newStore       func() interface{}
 
-// 		// storeCollect and storeExpect are the same for
-// 		// counters, different for lastValues, to ensure we are
-// 		// testing the timestamps correctly.
-// 		storeCollect func(store interface{}, value core.Number, ts time.Time)
-// 		storeExpect  func(store interface{}, value core.Number)
-// 		readStore    func(store interface{}) core.Number
-// 		equalValues  func(a, b core.Number) bool
-// 	}
+		// storeCollect and storeExpect are the same for
+		// counters, different for lastValues, to ensure we are
+		// testing the timestamps correctly.
+		storeCollect func(store interface{}, value core.Number, ts time.Time)
+		storeExpect  func(store interface{}, value core.Number)
+		readStore    func(store interface{}) core.Number
+		equalValues  func(a, b core.Number) bool
+	}
 
-// 	withImpl interface {
-// 		Impl() metric.InstrumentImpl
-// 	}
+	withImpl interface {
+		SynchronousImpl() metric.SynchronousImpl
+	}
 
-// 	// lastValueState supports merging lastValue values, for the case
-// 	// where a race condition causes duplicate records.  We always
-// 	// take the later timestamp.
-// 	lastValueState struct {
-// 		// raw has to be aligned for 64-bit atomic operations.
-// 		raw core.Number
-// 		ts  time.Time
-// 	}
-// )
+	// lastValueState supports merging lastValue values, for the case
+	// where a race condition causes duplicate records.  We always
+	// take the later timestamp.
+	lastValueState struct {
+		// raw has to be aligned for 64-bit atomic operations.
+		raw core.Number
+		ts  time.Time
+	}
+)
 
-// func concurrency() int {
-// 	return concurrencyPerCPU * runtime.NumCPU()
-// }
+func concurrency() int {
+	return concurrencyPerCPU * runtime.NumCPU()
+}
 
-// func canonicalizeLabels(ls []core.KeyValue) string {
-// 	copy := append(ls[0:0:0], ls...)
-// 	sort.SliceStable(copy, func(i, j int) bool {
-// 		return copy[i].Key < copy[j].Key
-// 	})
-// 	var b strings.Builder
-// 	for _, kv := range copy {
-// 		b.WriteString(string(kv.Key))
-// 		b.WriteString("=")
-// 		b.WriteString(kv.Value.Emit())
-// 		b.WriteString("$")
-// 	}
-// 	return b.String()
-// }
+func canonicalizeLabels(ls []core.KeyValue) string {
+	copy := append(ls[0:0:0], ls...)
+	sort.SliceStable(copy, func(i, j int) bool {
+		return copy[i].Key < copy[j].Key
+	})
+	var b strings.Builder
+	for _, kv := range copy {
+		b.WriteString(string(kv.Key))
+		b.WriteString("=")
+		b.WriteString(kv.Value.Emit())
+		b.WriteString("$")
+	}
+	return b.String()
+}
 
-// func getPeriod() time.Duration {
-// 	dur := math.Max(
-// 		float64(reclaimPeriod)/10,
-// 		float64(reclaimPeriod)*(1+0.1*rand.NormFloat64()),
-// 	)
-// 	return time.Duration(dur)
-// }
+func getPeriod() time.Duration {
+	dur := math.Max(
+		float64(reclaimPeriod)/10,
+		float64(reclaimPeriod)*(1+0.1*rand.NormFloat64()),
+	)
+	return time.Duration(dur)
+}
 
-// func (f *testFixture) someLabels() []core.KeyValue {
-// 	n := 1 + rand.Intn(3)
-// 	l := make([]core.KeyValue, n)
+func (f *testFixture) someLabels() []core.KeyValue {
+	n := 1 + rand.Intn(3)
+	l := make([]core.KeyValue, n)
 
-// 	for {
-// 		oused := map[string]bool{}
-// 		for i := 0; i < n; i++ {
-// 			var k string
-// 			for {
-// 				k = fmt.Sprint("k", rand.Intn(1000000000))
-// 				if !oused[k] {
-// 					oused[k] = true
-// 					break
-// 				}
-// 			}
-// 			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
-// 		}
-// 		lc := canonicalizeLabels(l)
-// 		f.lock.Lock()
-// 		avail := !f.lused[lc]
-// 		if avail {
-// 			f.lused[lc] = true
-// 			f.lock.Unlock()
-// 			return l
-// 		}
-// 		f.lock.Unlock()
-// 	}
-// }
+	for {
+		oused := map[string]bool{}
+		for i := 0; i < n; i++ {
+			var k string
+			for {
+				k = fmt.Sprint("k", rand.Intn(1000000000))
+				if !oused[k] {
+					oused[k] = true
+					break
+				}
+			}
+			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		}
+		lc := canonicalizeLabels(l)
+		f.lock.Lock()
+		avail := !f.lused[lc]
+		if avail {
+			f.lused[lc] = true
+			f.lock.Unlock()
+			return l
+		}
+		f.lock.Unlock()
+	}
+}
 
-// func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
-// 	ctx := context.Background()
-// 	name := fmt.Sprint("test_", i)
-// 	instrument := f.impl.newInstrument(sdk, name)
-// 	descriptor := sdk.GetDescriptor(instrument.Impl())
-// 	kvs := f.someLabels()
-// 	clabs := canonicalizeLabels(kvs)
-// 	labs := sdk.Labels(kvs...)
-// 	dur := getPeriod()
-// 	key := testKey{
-// 		labels:     clabs,
-// 		descriptor: descriptor,
-// 	}
-// 	for {
-// 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
-// 		time.Sleep(sleep)
-// 		value := f.impl.getUpdateValue()
-// 		f.impl.operate(instrument, ctx, value, labs)
+func (f *testFixture) startWorker(impl *sdk.SDK, meter api.Meter, wg *sync.WaitGroup, i int) {
+	ctx := context.Background()
+	name := fmt.Sprint("test_", i)
+	instrument := f.impl.newInstrument(meter, name)
+	descriptor := impl.GetDescriptor(instrument.SynchronousImpl())
+	kvs := f.someLabels()
+	clabs := canonicalizeLabels(kvs)
+	labs := meter.Labels(kvs...)
+	dur := getPeriod()
+	key := testKey{
+		labels:     clabs,
+		descriptor: descriptor,
+	}
+	for {
+		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
+		time.Sleep(sleep)
+		value := f.impl.getUpdateValue()
+		f.impl.operate(instrument, ctx, value, labs)
 
-// 		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
+		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
 
-// 		f.impl.storeExpect(actual, value)
+		f.impl.storeExpect(actual, value)
 
-// 		if atomic.LoadInt64(&f.stop) != 0 {
-// 			wg.Done()
-// 			return
-// 		}
-// 	}
-// }
+		if atomic.LoadInt64(&f.stop) != 0 {
+			wg.Done()
+			return
+		}
+	}
+}
 
-// func (f *testFixture) assertTest(numCollect int) {
-// 	csize := 0
-// 	f.received.Range(func(key, gstore interface{}) bool {
-// 		csize++
-// 		gvalue := f.impl.readStore(gstore)
+func (f *testFixture) assertTest(numCollect int) {
+	csize := 0
+	f.received.Range(func(key, gstore interface{}) bool {
+		csize++
+		gvalue := f.impl.readStore(gstore)
 
-// 		estore, loaded := f.expected.Load(key)
-// 		if !loaded {
-// 			f.T.Error("Could not locate expected key: ", key)
-// 		}
-// 		evalue := f.impl.readStore(estore)
+		estore, loaded := f.expected.Load(key)
+		if !loaded {
+			f.T.Error("Could not locate expected key: ", key)
+		}
+		evalue := f.impl.readStore(estore)
 
-// 		if !f.impl.equalValues(evalue, gvalue) {
-// 			f.T.Error("Expected value mismatch: ",
-// 				evalue, "!=", gvalue, " for ", key)
-// 		}
-// 		return true
-// 	})
-// 	rsize := 0
-// 	f.expected.Range(func(key, value interface{}) bool {
-// 		rsize++
-// 		if _, loaded := f.received.Load(key); !loaded {
-// 			f.T.Error("Did not receive expected key: ", key)
-// 		}
-// 		return true
-// 	})
-// 	if rsize != csize {
-// 		f.T.Error("Did not receive the correct set of metrics: Received != Expected", rsize, csize)
-// 	}
+		if !f.impl.equalValues(evalue, gvalue) {
+			f.T.Error("Expected value mismatch: ",
+				evalue, "!=", gvalue, " for ", key)
+		}
+		return true
+	})
+	rsize := 0
+	f.expected.Range(func(key, value interface{}) bool {
+		rsize++
+		if _, loaded := f.received.Load(key); !loaded {
+			f.T.Error("Did not receive expected key: ", key)
+		}
+		return true
+	})
+	if rsize != csize {
+		f.T.Error("Did not receive the correct set of metrics: Received != Expected", rsize, csize)
+	}
 
-// 	// Note: It's useful to know the test triggers this condition,
-// 	// but we can't assert it.  Infrequently no duplicates are
-// 	// found, and we can't really force a race to happen.
-// 	//
-// 	// fmt.Printf("Test duplicate records seen: %.1f%%\n",
-// 	// 	float64(100*f.totalDups/int64(numCollect*concurrency())))
-// }
+	// Note: It's useful to know the test triggers this condition,
+	// but we can't assert it.  Infrequently no duplicates are
+	// found, and we can't really force a race to happen.
+	//
+	// fmt.Printf("Test duplicate records seen: %.1f%%\n",
+	// 	float64(100*f.totalDups/int64(numCollect*concurrency())))
+}
 
-// func (f *testFixture) preCollect() {
-// 	// Collect calls Process in a single-threaded context. No need
-// 	// to lock this struct.
-// 	f.dupCheck = map[testKey]int{}
-// }
+func (f *testFixture) preCollect() {
+	// Collect calls Process in a single-threaded context. No need
+	// to lock this struct.
+	f.dupCheck = map[testKey]int{}
+}
 
-// func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
-// 	name := descriptor.Name()
-// 	switch {
-// 	case strings.HasSuffix(name, "counter"):
-// 		return sum.New()
-// 	case strings.HasSuffix(name, "lastvalue"):
-// 		return lastvalue.New()
-// 	default:
-// 		panic("Not implemented for this test")
-// 	}
-// }
+func (*testFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+	name := descriptor.Name()
+	switch {
+	case strings.HasSuffix(name, "counter"):
+		return sum.New()
+	case strings.HasSuffix(name, "lastvalue"):
+		return lastvalue.New()
+	default:
+		panic("Not implemented for this test")
+	}
+}
 
-// func (*testFixture) CheckpointSet() export.CheckpointSet {
-// 	return nil
-// }
+func (*testFixture) CheckpointSet() export.CheckpointSet {
+	return nil
+}
 
-// func (*testFixture) FinishedCollection() {
-// }
+func (*testFixture) FinishedCollection() {
+}
 
-// func (f *testFixture) Process(_ context.Context, record export.Record) error {
-// 	key := testKey{
-// 		labels:     canonicalizeLabels(record.Labels().Ordered()),
-// 		descriptor: record.Descriptor(),
-// 	}
-// 	if f.dupCheck[key] == 0 {
-// 		f.dupCheck[key]++
-// 	} else {
-// 		f.totalDups++
-// 	}
+func (f *testFixture) Process(_ context.Context, record export.Record) error {
+	key := testKey{
+		labels:     canonicalizeLabels(record.Labels().Ordered()),
+		descriptor: record.Descriptor(),
+	}
+	if f.dupCheck[key] == 0 {
+		f.dupCheck[key]++
+	} else {
+		f.totalDups++
+	}
 
-// 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
+	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-// 	agg := record.Aggregator()
-// 	switch record.Descriptor().MetricKind() {
-// 	case export.CounterKind:
-// 		sum, err := agg.(aggregator.Sum).Sum()
-// 		if err != nil {
-// 			f.T.Fatal("Sum error: ", err)
-// 		}
-// 		f.impl.storeCollect(actual, sum, time.Time{})
-// 	case export.MeasureKind:
-// 		lv, ts, err := agg.(aggregator.LastValue).LastValue()
-// 		if err != nil && err != aggregator.ErrNoLastValue {
-// 			f.T.Fatal("Last value error: ", err)
-// 		}
-// 		f.impl.storeCollect(actual, lv, ts)
-// 	default:
-// 		panic("Not used in this test")
-// 	}
-// 	return nil
-// }
+	agg := record.Aggregator()
+	switch record.Descriptor().MetricKind() {
+	case metric.CounterKind:
+		sum, err := agg.(aggregator.Sum).Sum()
+		if err != nil {
+			f.T.Fatal("Sum error: ", err)
+		}
+		f.impl.storeCollect(actual, sum, time.Time{})
+	case metric.MeasureKind:
+		lv, ts, err := agg.(aggregator.LastValue).LastValue()
+		if err != nil && err != aggregator.ErrNoLastValue {
+			f.T.Fatal("Last value error: ", err)
+		}
+		f.impl.storeCollect(actual, lv, ts)
+	default:
+		panic("Not used in this test")
+	}
+	return nil
+}
 
-// func stressTest(t *testing.T, impl testImpl) {
-// 	ctx := context.Background()
-// 	t.Parallel()
-// 	fixture := &testFixture{
-// 		T:     t,
-// 		impl:  impl,
-// 		lused: map[string]bool{},
-// 	}
-// 	cc := concurrency()
-// 	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
-// 	fixture.wg.Add(cc + 1)
+func stressTest(t *testing.T, impl testImpl) {
+	ctx := context.Background()
+	t.Parallel()
+	fixture := &testFixture{
+		T:     t,
+		impl:  impl,
+		lused: map[string]bool{},
+	}
+	cc := concurrency()
+	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
+	fixture.wg.Add(cc + 1)
 
-// 	for i := 0; i < cc; i++ {
-// 		go fixture.startWorker(sdk, &fixture.wg, i)
-// 	}
+	for i := 0; i < cc; i++ {
+		go fixture.startWorker(sdk, meter, &fixture.wg, i)
+	}
 
-// 	numCollect := 0
+	numCollect := 0
 
-// 	go func() {
-// 		for {
-// 			time.Sleep(reclaimPeriod)
-// 			fixture.preCollect()
-// 			sdk.Collect(ctx)
-// 			numCollect++
-// 			if atomic.LoadInt64(&fixture.stop) != 0 {
-// 				fixture.wg.Done()
-// 				return
-// 			}
-// 		}
-// 	}()
+	go func() {
+		for {
+			time.Sleep(reclaimPeriod)
+			fixture.preCollect()
+			sdk.Collect(ctx)
+			numCollect++
+			if atomic.LoadInt64(&fixture.stop) != 0 {
+				fixture.wg.Done()
+				return
+			}
+		}
+	}()
 
-// 	time.Sleep(testRun)
-// 	atomic.StoreInt64(&fixture.stop, 1)
-// 	fixture.wg.Wait()
-// 	fixture.preCollect()
-// 	sdk.Collect(ctx)
-// 	numCollect++
+	time.Sleep(testRun)
+	atomic.StoreInt64(&fixture.stop, 1)
+	fixture.wg.Wait()
+	fixture.preCollect()
+	sdk.Collect(ctx)
+	numCollect++
 
-// 	fixture.assertTest(numCollect)
-// }
+	fixture.assertTest(numCollect)
+}
 
-// func int64sEqual(a, b core.Number) bool {
-// 	return a.AsInt64() == b.AsInt64()
-// }
+func int64sEqual(a, b core.Number) bool {
+	return a.AsInt64() == b.AsInt64()
+}
 
-// func float64sEqual(a, b core.Number) bool {
-// 	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
-// 	return diff < math.Abs(a.AsFloat64())*epsilon
-// }
+func float64sEqual(a, b core.Number) bool {
+	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
+	return diff < math.Abs(a.AsFloat64())*epsilon
+}
 
-// // Counters
+// Counters
 
-// func intCounterTestImpl() testImpl {
-// 	return testImpl{
-// 		newInstrument: func(meter api.Meter, name string) withImpl {
-// 			return Must(meter).NewInt64Counter(name + ".counter")
-// 		},
-// 		getUpdateValue: func() core.Number {
-// 			for {
-// 				x := int64(rand.Intn(100))
-// 				if x != 0 {
-// 					return core.NewInt64Number(x)
-// 				}
-// 			}
-// 		},
-// 		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
-// 			counter := inst.(api.Int64Counter)
-// 			counter.Add(ctx, value.AsInt64(), labels)
-// 		},
-// 		newStore: func() interface{} {
-// 			n := core.NewInt64Number(0)
-// 			return &n
-// 		},
-// 		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-// 			store.(*core.Number).AddInt64Atomic(value.AsInt64())
-// 		},
-// 		storeExpect: func(store interface{}, value core.Number) {
-// 			store.(*core.Number).AddInt64Atomic(value.AsInt64())
-// 		},
-// 		readStore: func(store interface{}) core.Number {
-// 			return store.(*core.Number).AsNumberAtomic()
-// 		},
-// 		equalValues: int64sEqual,
-// 	}
-// }
+func intCounterTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return Must(meter).NewInt64Counter(name + ".counter")
+		},
+		getUpdateValue: func() core.Number {
+			for {
+				x := int64(rand.Intn(100))
+				if x != 0 {
+					return core.NewInt64Number(x)
+				}
+			}
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			counter := inst.(api.Int64Counter)
+			counter.Add(ctx, value.AsInt64(), labels)
+		},
+		newStore: func() interface{} {
+			n := core.NewInt64Number(0)
+			return &n
+		},
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		},
+		readStore: func(store interface{}) core.Number {
+			return store.(*core.Number).AsNumberAtomic()
+		},
+		equalValues: int64sEqual,
+	}
+}
 
-// func TestStressInt64Counter(t *testing.T) {
-// 	stressTest(t, intCounterTestImpl())
-// }
+func TestStressInt64Counter(t *testing.T) {
+	stressTest(t, intCounterTestImpl())
+}
 
-// func floatCounterTestImpl() testImpl {
-// 	return testImpl{
-// 		newInstrument: func(meter api.Meter, name string) withImpl {
-// 			return Must(meter).NewFloat64Counter(name + ".counter")
-// 		},
-// 		getUpdateValue: func() core.Number {
-// 			for {
-// 				x := rand.Float64()
-// 				if x != 0 {
-// 					return core.NewFloat64Number(x)
-// 				}
-// 			}
-// 		},
-// 		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
-// 			counter := inst.(api.Float64Counter)
-// 			counter.Add(ctx, value.AsFloat64(), labels)
-// 		},
-// 		newStore: func() interface{} {
-// 			n := core.NewFloat64Number(0.0)
-// 			return &n
-// 		},
-// 		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-// 			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
-// 		},
-// 		storeExpect: func(store interface{}, value core.Number) {
-// 			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
-// 		},
-// 		readStore: func(store interface{}) core.Number {
-// 			return store.(*core.Number).AsNumberAtomic()
-// 		},
-// 		equalValues: float64sEqual,
-// 	}
-// }
+func floatCounterTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return Must(meter).NewFloat64Counter(name + ".counter")
+		},
+		getUpdateValue: func() core.Number {
+			for {
+				x := rand.Float64()
+				if x != 0 {
+					return core.NewFloat64Number(x)
+				}
+			}
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			counter := inst.(api.Float64Counter)
+			counter.Add(ctx, value.AsFloat64(), labels)
+		},
+		newStore: func() interface{} {
+			n := core.NewFloat64Number(0.0)
+			return &n
+		},
+		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
+			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		},
+		readStore: func(store interface{}) core.Number {
+			return store.(*core.Number).AsNumberAtomic()
+		},
+		equalValues: float64sEqual,
+	}
+}
 
-// func TestStressFloat64Counter(t *testing.T) {
-// 	stressTest(t, floatCounterTestImpl())
-// }
+func TestStressFloat64Counter(t *testing.T) {
+	stressTest(t, floatCounterTestImpl())
+}
 
-// // LastValue
+// LastValue
 
-// func intLastValueTestImpl() testImpl {
-// 	return testImpl{
-// 		newInstrument: func(meter api.Meter, name string) withImpl {
-// 			return Must(meter).NewInt64Measure(name + ".lastvalue")
-// 		},
-// 		getUpdateValue: func() core.Number {
-// 			r1 := rand.Int63()
-// 			return core.NewInt64Number(rand.Int63() - r1)
-// 		},
-// 		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
-// 			measure := inst.(api.Int64Measure)
-// 			measure.Record(ctx, value.AsInt64(), labels)
-// 		},
-// 		newStore: func() interface{} {
-// 			return &lastValueState{
-// 				raw: core.NewInt64Number(0),
-// 			}
-// 		},
-// 		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
-// 			gs := store.(*lastValueState)
+func intLastValueTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return Must(meter).NewInt64Measure(name + ".lastvalue")
+		},
+		getUpdateValue: func() core.Number {
+			r1 := rand.Int63()
+			return core.NewInt64Number(rand.Int63() - r1)
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			measure := inst.(api.Int64Measure)
+			measure.Record(ctx, value.AsInt64(), labels)
+		},
+		newStore: func() interface{} {
+			return &lastValueState{
+				raw: core.NewInt64Number(0),
+			}
+		},
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+			gs := store.(*lastValueState)
 
-// 			if !ts.Before(gs.ts) {
-// 				gs.ts = ts
-// 				gs.raw.SetInt64Atomic(value.AsInt64())
-// 			}
-// 		},
-// 		storeExpect: func(store interface{}, value core.Number) {
-// 			gs := store.(*lastValueState)
-// 			gs.raw.SetInt64Atomic(value.AsInt64())
-// 		},
-// 		readStore: func(store interface{}) core.Number {
-// 			gs := store.(*lastValueState)
-// 			return gs.raw.AsNumberAtomic()
-// 		},
-// 		equalValues: int64sEqual,
-// 	}
-// }
+			if !ts.Before(gs.ts) {
+				gs.ts = ts
+				gs.raw.SetInt64Atomic(value.AsInt64())
+			}
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			gs := store.(*lastValueState)
+			gs.raw.SetInt64Atomic(value.AsInt64())
+		},
+		readStore: func(store interface{}) core.Number {
+			gs := store.(*lastValueState)
+			return gs.raw.AsNumberAtomic()
+		},
+		equalValues: int64sEqual,
+	}
+}
 
-// func TestStressInt64LastValue(t *testing.T) {
-// 	stressTest(t, intLastValueTestImpl())
-// }
+func TestStressInt64LastValue(t *testing.T) {
+	stressTest(t, intLastValueTestImpl())
+}
 
-// func floatLastValueTestImpl() testImpl {
-// 	return testImpl{
-// 		newInstrument: func(meter api.Meter, name string) withImpl {
-// 			return Must(meter).NewFloat64Measure(name + ".lastvalue")
-// 		},
-// 		getUpdateValue: func() core.Number {
-// 			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
-// 		},
-// 		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
-// 			measure := inst.(api.Float64Measure)
-// 			measure.Record(ctx, value.AsFloat64(), labels)
-// 		},
-// 		newStore: func() interface{} {
-// 			return &lastValueState{
-// 				raw: core.NewFloat64Number(0),
-// 			}
-// 		},
-// 		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
-// 			gs := store.(*lastValueState)
+func floatLastValueTestImpl() testImpl {
+	return testImpl{
+		newInstrument: func(meter api.Meter, name string) withImpl {
+			return Must(meter).NewFloat64Measure(name + ".lastvalue")
+		},
+		getUpdateValue: func() core.Number {
+			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
+		},
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+			measure := inst.(api.Float64Measure)
+			measure.Record(ctx, value.AsFloat64(), labels)
+		},
+		newStore: func() interface{} {
+			return &lastValueState{
+				raw: core.NewFloat64Number(0),
+			}
+		},
+		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+			gs := store.(*lastValueState)
 
-// 			if !ts.Before(gs.ts) {
-// 				gs.ts = ts
-// 				gs.raw.SetFloat64Atomic(value.AsFloat64())
-// 			}
-// 		},
-// 		storeExpect: func(store interface{}, value core.Number) {
-// 			gs := store.(*lastValueState)
-// 			gs.raw.SetFloat64Atomic(value.AsFloat64())
-// 		},
-// 		readStore: func(store interface{}) core.Number {
-// 			gs := store.(*lastValueState)
-// 			return gs.raw.AsNumberAtomic()
-// 		},
-// 		equalValues: float64sEqual,
-// 	}
-// }
+			if !ts.Before(gs.ts) {
+				gs.ts = ts
+				gs.raw.SetFloat64Atomic(value.AsFloat64())
+			}
+		},
+		storeExpect: func(store interface{}, value core.Number) {
+			gs := store.(*lastValueState)
+			gs.raw.SetFloat64Atomic(value.AsFloat64())
+		},
+		readStore: func(store interface{}) core.Number {
+			gs := store.(*lastValueState)
+			return gs.raw.AsNumberAtomic()
+		},
+		equalValues: float64sEqual,
+	}
+}
 
-// func TestStressFloat64LastValue(t *testing.T) {
-// 	stressTest(t, floatLastValueTestImpl())
-// }
+func TestStressFloat64LastValue(t *testing.T) {
+	stressTest(t, floatLastValueTestImpl())
+}

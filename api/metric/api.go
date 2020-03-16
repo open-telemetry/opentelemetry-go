@@ -86,6 +86,9 @@ const (
 	CounterKind
 )
 
+// Descriptor contains all the settings that describe an instrument,
+// including its name, metric kind, number kind, and the configurable
+// options.
 type Descriptor struct {
 	name       string
 	kind       Kind
@@ -93,6 +96,7 @@ type Descriptor struct {
 	config     Config
 }
 
+// NewDescriptor returns a Descriptor with the given contents.
 func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
 	return Descriptor{
 		name:       name,
