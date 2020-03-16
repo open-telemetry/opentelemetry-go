@@ -54,6 +54,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	if data.Resource != nil {
 		dataCopy := *data
 		dataCopy.Attributes = append(data.Attributes, data.Resource.Attributes()...)
+		dataCopy.Resource = nil
 		e.exportSpan(ctx, &dataCopy)
 	} else {
 		e.exportSpan(ctx, data)
