@@ -106,16 +106,8 @@ var _ metric.AsynchronousImpl = &obsImpl{}
 
 var errInvalidMetricKind = errors.New("Invalid Metric kind")
 
-func (inst *instrument) Descriptor() *metric.Descriptor {
-	return &inst.descriptor
-}
-
-func (s *syncImpl) Interface() interface{} {
-	return s
-}
-
-func (s *obsImpl) Interface() interface{} {
-	return s
+func (inst *instrument) Descriptor() metric.Descriptor {
+	return inst.descriptor
 }
 
 // Provider interface and delegation
@@ -214,6 +206,13 @@ func (inst *syncImpl) setDelegate(d metric.Meter) {
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
+func (inst *syncImpl) Interface() interface{} {
+	if implPtr := (*metric.SynchronousImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+		return (*implPtr).Interface()
+	}
+	return inst
+}
+
 func (inst *syncImpl) Bind(labels metric.LabelSet) metric.BoundSynchronousImpl {
 	if implPtr := (*metric.SynchronousImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
@@ -254,6 +253,13 @@ func (m *meter) newAsynchronous(desc metric.Descriptor, ctor func(metric.Meter) 
 	}
 	m.asyncInsts = append(m.asyncInsts, inst)
 	return inst, nil
+}
+
+func (obs *obsImpl) Interface() interface{} {
+	if implPtr := (*metric.AsynchronousImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
+		return (*implPtr).Interface()
+	}
+	return obs
 }
 
 func asynchronousCheck(has hasAsynchronousImpl, err error) (metric.AsynchronousImpl, error) {

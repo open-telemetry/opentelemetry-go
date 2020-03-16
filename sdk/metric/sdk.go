@@ -159,8 +159,8 @@ var (
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
-func (inst *instrument) Descriptor() *api.Descriptor {
-	return &inst.descriptor
+func (inst *instrument) Descriptor() api.Descriptor {
+	return inst.descriptor
 }
 
 func (a *asynchronousInstrument) Interface() interface{} {
