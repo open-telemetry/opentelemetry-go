@@ -97,20 +97,12 @@ var (
 	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
-	ErrNonMonotoneInput = fmt.Errorf("the new value is not monotone")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
 
-	// ErrNoLastValue is returned by the LastValue interface when
-	// (due to a race with collection) the Aggregator is
-	// checkpointed before the first value is set.  The aggregator
-	// should simply be skipped in this case.
-	ErrNoLastValue = fmt.Errorf("no value has been set")
-
-	// ErrEmptyDataSet is returned by Max and Quantile interfaces
-	// when (due to a race with collection) the Aggregator is
-	// checkpointed before the first value is set.  The aggregator
-	// should simply be skipped in this case.
-	ErrEmptyDataSet = fmt.Errorf("the result is not defined on an empty data set")
+	// ErrNoData is returned when (due to a race with collection)
+	// the Aggregator is check-pointed before the first value is set.
+	// The aggregator should simply be skipped in this case.
+	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
 
 // NewInconsistentMergeError formats an error describing an attempt to

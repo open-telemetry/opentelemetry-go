@@ -221,7 +221,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }`, fix.Output())
 }
 
-func TestStdoutEmptyDataSet(t *testing.T) {
+func TestStdoutNoData(t *testing.T) {
 	desc := export.NewDescriptor("test.name", export.MeasureKind, nil, "", "", core.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
 		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), desc),

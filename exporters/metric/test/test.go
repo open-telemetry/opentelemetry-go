@@ -2,9 +2,11 @@ package test
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -82,8 +84,11 @@ func (p *CheckpointSet) updateAggregator(desc *export.Descriptor, newAgg export.
 	}
 }
 
-func (p *CheckpointSet) ForEach(f func(export.Record)) {
+func (p *CheckpointSet) ForEach(f func(export.Record) error) error {
 	for _, r := range p.updates {
-		f(r)
+		if err := f(r); err != nil && !errors.Is(err, aggregator.ErrNoData) {
+			return err
+		}
 	}
+	return nil
 }
