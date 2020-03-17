@@ -328,7 +328,7 @@ func TestObserverCollection(t *testing.T) {
 
 	out := batchTest.Output{}
 	for _, rec := range batcher.records {
-		out.AddTo(rec)
+		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.observer/A=B": -1,
