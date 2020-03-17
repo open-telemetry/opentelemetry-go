@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
 
@@ -34,6 +35,9 @@ type Config struct {
 
 	// MaxLinksPerSpan is max number of links per span
 	MaxLinksPerSpan int
+
+	// Resource contains attributes representing an entity that produces telemetry.
+	Resource *resource.Resource
 }
 
 const (

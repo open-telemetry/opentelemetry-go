@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // SpanSyncer is a type for functions that receive a single sampled trace span.
@@ -67,6 +68,9 @@ type SpanData struct {
 
 	// ChildSpanCount holds the number of child span created for this span.
 	ChildSpanCount int
+
+	// Resource contains attributes representing an entity that produced this span.
+	Resource *resource.Resource
 }
 
 // Event is used to describe an Event with a message string and set of

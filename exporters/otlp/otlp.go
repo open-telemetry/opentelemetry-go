@@ -23,6 +23,8 @@ import (
 	"sync"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -215,12 +217,13 @@ func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) erro
 	// Seed records into the work processing pool.
 	records := make(chan metricsdk.Record)
 	go func() {
-		cps.ForEach(func(record metricsdk.Record) {
+		_ = cps.ForEach(func(record metricsdk.Record) (err error) {
 			select {
 			case <-e.stopCh:
 			case <-ctx.Done():
 			case records <- record:
 			}
+			return
 		})
 		close(records)
 	}()
@@ -266,7 +269,7 @@ func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metr
 	for r := range in {
 		m, err := transform.Record(r)
 		if err != nil {
-			if err == aggregator.ErrEmptyDataSet {
+			if err == aggregator.ErrNoData {
 				// The Aggregator was checkpointed before the first value
 				// was set, skipping.
 				continue
@@ -346,18 +349,26 @@ func otSpanDataToPbSpans(sdl []*tracesdk.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
-	protoSpans := make([]*tracepb.Span, 0, len(sdl))
+	rsm := make(map[*resource.Resource]*tracepb.ResourceSpans)
+
 	for _, sd := range sdl {
 		if sd != nil {
-			protoSpans = append(protoSpans, otSpanToProtoSpan(sd))
+			rs, ok := rsm[sd.Resource]
+			if !ok {
+				rs = &tracepb.ResourceSpans{
+					Resource: otResourceToProtoResource(sd.Resource),
+					Spans:    []*tracepb.Span{},
+				}
+				rsm[sd.Resource] = rs
+			}
+			rs.Spans = append(rs.Spans, otSpanToProtoSpan(sd))
 		}
 	}
-	return []*tracepb.ResourceSpans{
-		{
-			Resource: nil,
-			Spans:    protoSpans,
-		},
+	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))
+	for _, rs := range rsm {
+		rss = append(rss, rs)
 	}
+	return rss
 }
 
 func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {

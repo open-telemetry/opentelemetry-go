@@ -65,12 +65,12 @@ func sum(desc *metric.Descriptor, labels export.Labels, a aggregator.Sum) (*metr
 	switch n := desc.NumberKind(); n {
 	case core.Int64NumberKind, core.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
-		m.Int64Datapoints = []*metricpb.Int64DataPoint{
+		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{Value: sum.CoerceToInt64(n)},
 		}
 	case core.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
-		m.DoubleDatapoints = []*metricpb.DoubleDataPoint{
+		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{Value: sum.CoerceToFloat64(n)},
 		}
 	}
@@ -112,7 +112,7 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 			Type:        metricpb.MetricDescriptor_SUMMARY,
 			Labels:      stringKeyValues(labels.Ordered()),
 		},
-		SummaryDatapoints: []*metricpb.SummaryDataPoint{
+		SummaryDataPoints: []*metricpb.SummaryDataPoint{
 			{
 				Count: uint64(count),
 				Sum:   sum.CoerceToFloat64(numKind),

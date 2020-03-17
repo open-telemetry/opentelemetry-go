@@ -339,6 +339,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
 		Name:            name,
 		HasRemoteParent: remoteParent,
+		Resource:        cfg.Resource,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
 	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)

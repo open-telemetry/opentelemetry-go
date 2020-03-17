@@ -34,6 +34,7 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
@@ -598,7 +599,10 @@ func TestSetSpanStatus(t *testing.T) {
 }
 
 func cmpDiff(x, y interface{}) string {
-	return cmp.Diff(x, y, cmp.AllowUnexported(core.Value{}), cmp.AllowUnexported(export.Event{}))
+	return cmp.Diff(x, y,
+		cmp.AllowUnexported(core.Value{}),
+		cmp.AllowUnexported(export.Event{}),
+		cmp.AllowUnexported(resource.Resource{}))
 }
 
 func remoteSpanContext() core.SpanContext {
@@ -1056,5 +1060,36 @@ func TestWithSpanKind(t *testing.T) {
 		if spanData.SpanKind != sk {
 			t.Errorf("WithSpanKind check: got %+v, want %+v\n", spanData.SpanKind, sks)
 		}
+	}
+}
+
+func TestWithResource(t *testing.T) {
+	var te testExporter
+	tp, _ := NewProvider(WithSyncer(&te),
+		WithConfig(Config{DefaultSampler: AlwaysSample()}),
+		WithResourceAttributes(key.String("rk1", "rv1"), key.Int64("rk2", 5)))
+	span := startSpan(tp, "WithResource")
+	span.SetAttributes(core.Key("key1").String("value1"))
+	got, err := endSpan(&te, span)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	want := &export.SpanData{
+		SpanContext: core.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []core.KeyValue{
+			key.String("key1", "value1"),
+		},
+		SpanKind:        apitrace.SpanKindInternal,
+		HasRemoteParent: true,
+		Resource:        resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5)),
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("WithResource:\n  -got +want %s", diff)
 	}
 }

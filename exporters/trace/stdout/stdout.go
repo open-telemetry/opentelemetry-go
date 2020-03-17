@@ -51,6 +51,18 @@ func NewExporter(o Options) (*Exporter, error) {
 
 // ExportSpan writes a SpanData in json format to stdout.
 func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
+	if data.Resource != nil {
+		dataCopy := *data
+		dataCopy.Attributes = append(data.Attributes, data.Resource.Attributes()...)
+		dataCopy.Resource = nil
+		e.exportSpan(ctx, &dataCopy)
+	} else {
+		e.exportSpan(ctx, data)
+	}
+}
+
+// ExportSpan writes a SpanData in json format to stdout.
+func (e *Exporter) exportSpan(ctx context.Context, data *export.SpanData) {
 	var jsonSpan []byte
 	var err error
 	if e.pretty {

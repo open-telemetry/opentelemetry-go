@@ -16,9 +16,11 @@ package ungrouped // import "go.opentelemetry.io/otel/sdk/metric/batcher/ungroup
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
 type (
@@ -102,12 +104,15 @@ func (b *Batcher) FinishedCollection() {
 	}
 }
 
-func (c batchMap) ForEach(f func(export.Record)) {
+func (c batchMap) ForEach(f func(export.Record) error) error {
 	for key, value := range c {
-		f(export.NewRecord(
+		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
 			value.aggregator,
-		))
+		)); err != nil && !errors.Is(err, aggregator.ErrNoData) {
+			return err
+		}
 	}
+	return nil
 }

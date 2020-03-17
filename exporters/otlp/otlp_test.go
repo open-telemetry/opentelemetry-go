@@ -78,21 +78,33 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		_ = exp.Stop()
 	}()
 
-	tp, err := sdktrace.NewProvider(
+	pOpts := []sdktrace.ProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
 			sdktrace.WithScheduleDelayMillis(15),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
+		),
+	}
+	tp1, err := sdktrace.NewProvider(append(pOpts,
+		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv11)"),
+			core.Key("rk2").Int64(5)))...)
 	assert.NoError(t, err)
 
-	//global.SetTraceProvider(tp)
+	tp2, err := sdktrace.NewProvider(append(pOpts,
+		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv12)"),
+			core.Key("rk3").Float32(6.5)))...)
+	assert.NoError(t, err)
 
-	tr := tp.Tracer("test-tracer")
+	tr1 := tp1.Tracer("test-tracer1")
+	tr2 := tp2.Tracer("test-tracer2")
 	// Now create few spans
 	m := 4
 	for i := 0; i < m; i++ {
-		_, span := tr.Start(context.Background(), "AlwaysSample")
+		_, span := tr1.Start(context.Background(), "AlwaysSample")
+		span.SetAttributes(core.Key("i").Int64(int64(i)))
+		span.End()
+
+		_, span = tr2.Start(context.Background(), "AlwaysSample")
 		span.SetAttributes(core.Key("i").Int64(int64(i)))
 		span.End()
 	}
@@ -174,18 +186,32 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	// verification checks of expected data back.
 	_ = mc.stop()
 
-	spans := mc.getSpans()
-
-	// Now verify that we received all spans.
-	if got, want := len(spans), m; got != want {
-		t.Fatalf("span counts: got %d, want %d", got, want)
+	// Now verify that we only got two resources
+	rss := mc.getResourceSpans()
+	if got, want := len(rss), 2; got != want {
+		t.Fatalf("resource span count: got %d, want %d\n", got, want)
 	}
-	for i := 0; i < 4; i++ {
-		if gotName, want := spans[i].Name, "AlwaysSample"; gotName != want {
-			t.Fatalf("span name: got %s, want %s", gotName, want)
+
+	// Now verify spans and attributes for each resource span.
+	for _, rs := range rss {
+		if got, want := len(rs.Spans), m; got != want {
+			t.Fatalf("span counts: got %d, want %d", got, want)
 		}
-		if got, want := spans[i].Attributes[0].IntValue, int64(i); got != want {
-			t.Fatalf("span attribute value: got %d, want %d", got, want)
+		attrMap := map[int64]bool{}
+		for _, s := range rs.Spans {
+			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
+				t.Fatalf("span name: got %s, want %s", gotName, want)
+			}
+			attrMap[s.Attributes[0].IntValue] = true
+		}
+		if got, want := len(attrMap), m; got != want {
+			t.Fatalf("span attribute unique values: got %d  want %d", got, want)
+		}
+		for i := 0; i < m; i++ {
+			_, ok := attrMap[int64(i)]
+			if !ok {
+				t.Fatalf("span with attribute %d missing", i)
+			}
 		}
 	}
 
@@ -206,12 +232,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			switch data.nKind {
 			case core.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
-				if dp := m.GetInt64Datapoints(); assert.Len(t, dp, 1) {
+				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			case core.Float64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_DOUBLE.String(), desc.GetType().String())
-				if dp := m.GetDoubleDatapoints(); assert.Len(t, dp, 1) {
+				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			default:
@@ -219,8 +245,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			}
 		case metric.MeasureKind, metric.ObserverKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
-			m.GetSummaryDatapoints()
-			if dp := m.GetSummaryDatapoints(); assert.Len(t, dp, 1) {
+			m.GetSummaryDataPoints()
+			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {
 				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", desc.Name)
 				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", desc.Name, data.val)
