@@ -44,7 +44,7 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
-		// asynchronousInstrumentsobservers is a set of
+		// asynchronousInstruments is a set of
 		// `*asynchronousInstrument` instances
 		asynchronousInstruments sync.Map
 
@@ -188,45 +188,41 @@ func (a *asynchronousInstrument) observe(number core.Number, ls api.LabelSet) {
 	}
 }
 
-func (o *asynchronousInstrument) getRecorder(ls api.LabelSet) export.Aggregator {
-	labels := o.meter.labsFor(ls)
-	lrec, ok := o.recorders[labels.ordered]
+func (a *asynchronousInstrument) getRecorder(ls api.LabelSet) export.Aggregator {
+	labels := a.meter.labsFor(ls)
+	lrec, ok := a.recorders[labels.ordered]
 	if ok {
-		lrec.modifiedEpoch = o.meter.currentEpoch
-		o.recorders[labels.ordered] = lrec
+		lrec.modifiedEpoch = a.meter.currentEpoch
+		a.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
-	rec := o.meter.batcher.AggregatorFor(&o.descriptor)
-	if o.recorders == nil {
-		o.recorders = make(map[orderedLabels]labeledRecorder)
+	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
+	if a.recorders == nil {
+		a.recorders = make(map[orderedLabels]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asynchronousInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	o.recorders[labels.ordered] = labeledRecorder{
+	a.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
-		modifiedEpoch: o.meter.currentEpoch,
+		modifiedEpoch: a.meter.currentEpoch,
 	}
 	return rec
-}
-
-func (o *asynchronousInstrument) Unregister() {
-	o.meter.asynchronousInstruments.Delete(o)
 }
 
 func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
-func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
+func (s *synchronousInstrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
-		descriptor: &i.descriptor,
+		descriptor: &s.descriptor,
 		ordered:    ls.ordered,
 	}
 
-	if actual, ok := i.meter.current.Load(mk); ok {
+	if actual, ok := s.meter.current.Load(mk); ok {
 		// Existing record case, only one allocation so far.
 		rec := actual.(*record)
 		if rec.refMapped.ref() {
@@ -240,16 +236,16 @@ func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
 	// There's a memory allocation here.
 	rec := &record{
 		labels:    ls,
-		inst:      i,
+		inst:      s,
 		refMapped: refcountMapped{value: 2},
 		modified:  0,
-		recorder:  i.meter.batcher.AggregatorFor(&i.descriptor),
+		recorder:  s.meter.batcher.AggregatorFor(&s.descriptor),
 	}
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
 		// an interface here.
-		if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
+		if actual, loaded := s.meter.current.LoadOrStore(mk, rec); loaded {
 			// Existing record case. Cannot change rec here because if fail
 			// will try to add rec again to avoid new allocations.
 			oldRec := actual.(*record)
@@ -276,14 +272,14 @@ func (i *synchronousInstrument) acquireHandle(ls *labels) *record {
 	}
 }
 
-func (i *synchronousInstrument) Bind(ls api.LabelSet) api.BoundSynchronousImpl {
-	labs := i.meter.labsFor(ls)
-	return i.acquireHandle(labs)
+func (s *synchronousInstrument) Bind(ls api.LabelSet) api.BoundSynchronousImpl {
+	labs := s.meter.labsFor(ls)
+	return s.acquireHandle(labs)
 }
 
-func (i *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
-	ourLs := i.meter.labsFor(ls)
-	h := i.acquireHandle(ourLs)
+func (s *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+	ourLs := s.meter.labsFor(ls)
+	h := s.acquireHandle(ourLs)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
@@ -439,13 +435,15 @@ func (m *SDK) NewSynchronousInstrument(descriptor api.Descriptor) (api.Synchrono
 }
 
 func (m *SDK) NewAsynchronousInstrument(descriptor api.Descriptor, callback func(func(core.Number, api.LabelSet))) (api.AsynchronousImpl, error) {
-	return &asynchronousInstrument{
+	a := &asynchronousInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
 		callback: callback,
-	}, nil
+	}
+	m.asynchronousInstruments.Store(a, nil)
+	return a, nil
 }
 
 // Collect traverses the list of active records and observers and
@@ -461,7 +459,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectObservers(ctx)
+	checkpointed += m.collectAsynchronous(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
@@ -492,13 +490,13 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectObservers(ctx context.Context) int {
+func (m *SDK) collectAsynchronous(ctx context.Context) int {
 	checkpointed := 0
 
 	m.asynchronousInstruments.Range(func(key, value interface{}) bool {
 		a := key.(*asynchronousInstrument)
 		a.callback(a.observe)
-		checkpointed += m.checkpointObserver(ctx, a)
+		checkpointed += m.checkpointAsynchronous(ctx, a)
 		return true
 	})
 
@@ -509,7 +507,7 @@ func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *SDK) checkpointObserver(ctx context.Context, a *asynchronousInstrument) int {
+func (m *SDK) checkpointAsynchronous(ctx context.Context, a *asynchronousInstrument) int {
 	if len(a.recorders) == 0 {
 		return 0
 	}

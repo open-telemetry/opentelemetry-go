@@ -114,11 +114,11 @@ func (s *Synchronous) Bind(labels apimetric.LabelSet) apimetric.BoundSynchronous
 	}
 }
 
-func (i *Synchronous) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+func (s *Synchronous) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
 		labels = ld.Delegate()
 	}
-	i.meter.doRecordSingle(ctx, labels.(*LabelSet), i, number)
+	s.meter.doRecordSingle(ctx, labels.(*LabelSet), s, number)
 }
 
 func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
