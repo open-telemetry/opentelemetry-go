@@ -41,8 +41,8 @@ type meterProvider struct {
 type meter struct {
 	delegate unsafe.Pointer // (*metric.Meter)
 
-	provider *meterProvider
-	name     string
+	provider    *meterProvider
+	libraryName string
 
 	lock       sync.Mutex
 	syncInsts  []*syncImpl
@@ -133,8 +133,8 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 	}
 
 	m := &meter{
-		provider: p,
-		name:     name,
+		provider:    p,
+		libraryName: name,
 	}
 	p.meters = append(p.meters, m)
 	return m
@@ -147,7 +147,7 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	defer m.lock.Unlock()
 
 	d := new(metric.Meter)
-	*d = provider.Meter(m.name)
+	*d = provider.Meter(m.libraryName)
 	m.delegate = unsafe.Pointer(d)
 
 	for _, inst := range m.syncInsts {
@@ -362,7 +362,7 @@ func (labels *labelSet) Delegate() metric.LabelSet {
 
 func (m *meter) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
 	return metric.WrapInt64CounterInstrument(m.newSynchronous(
-		metric.NewDescriptor(name, metric.CounterKind, core.Int64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.CounterKind, core.Int64NumberKind, opts...),
 		func(other metric.Meter) (metric.SynchronousImpl, error) {
 			return synchronousCheck(other.NewInt64Counter(name, opts...))
 		}))
@@ -370,7 +370,7 @@ func (m *meter) NewInt64Counter(name string, opts ...metric.Option) (metric.Int6
 
 func (m *meter) NewFloat64Counter(name string, opts ...metric.Option) (metric.Float64Counter, error) {
 	return metric.WrapFloat64CounterInstrument(m.newSynchronous(
-		metric.NewDescriptor(name, metric.CounterKind, core.Float64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.CounterKind, core.Float64NumberKind, opts...),
 		func(other metric.Meter) (metric.SynchronousImpl, error) {
 			return synchronousCheck(other.NewFloat64Counter(name, opts...))
 		}))
@@ -378,7 +378,7 @@ func (m *meter) NewFloat64Counter(name string, opts ...metric.Option) (metric.Fl
 
 func (m *meter) NewInt64Measure(name string, opts ...metric.Option) (metric.Int64Measure, error) {
 	return metric.WrapInt64MeasureInstrument(m.newSynchronous(
-		metric.NewDescriptor(name, metric.MeasureKind, core.Int64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.MeasureKind, core.Int64NumberKind, opts...),
 		func(other metric.Meter) (metric.SynchronousImpl, error) {
 			return synchronousCheck(other.NewInt64Measure(name, opts...))
 		}))
@@ -386,7 +386,7 @@ func (m *meter) NewInt64Measure(name string, opts ...metric.Option) (metric.Int6
 
 func (m *meter) NewFloat64Measure(name string, opts ...metric.Option) (metric.Float64Measure, error) {
 	return metric.WrapFloat64MeasureInstrument(m.newSynchronous(
-		metric.NewDescriptor(name, metric.MeasureKind, core.Float64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.MeasureKind, core.Float64NumberKind, opts...),
 		func(other metric.Meter) (metric.SynchronousImpl, error) {
 			return synchronousCheck(other.NewFloat64Measure(name, opts...))
 		}))
@@ -394,7 +394,7 @@ func (m *meter) NewFloat64Measure(name string, opts ...metric.Option) (metric.Fl
 
 func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, opts ...metric.Option) (metric.Int64Observer, error) {
 	return metric.WrapInt64ObserverInstrument(m.newAsynchronous(
-		metric.NewDescriptor(name, metric.ObserverKind, core.Int64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.ObserverKind, core.Int64NumberKind, opts...),
 		func(other metric.Meter) (metric.AsynchronousImpl, error) {
 			return asynchronousCheck(other.RegisterInt64Observer(name, callback, opts...))
 		}))
@@ -402,7 +402,7 @@ func (m *meter) RegisterInt64Observer(name string, callback metric.Int64Observer
 
 func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, opts ...metric.Option) (metric.Float64Observer, error) {
 	return metric.WrapFloat64ObserverInstrument(m.newAsynchronous(
-		metric.NewDescriptor(name, metric.ObserverKind, core.Float64NumberKind, opts...),
+		metric.NewDescriptor(name, m.libraryName, metric.ObserverKind, core.Float64NumberKind, opts...),
 		func(other metric.Meter) (metric.AsynchronousImpl, error) {
 			return asynchronousCheck(other.RegisterFloat64Observer(name, callback, opts...))
 		}))

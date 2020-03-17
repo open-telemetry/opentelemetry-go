@@ -103,7 +103,8 @@ type AsynchronousImpl interface {
 // wrappedMeterImpl implements the `Meter` interface given a
 // `MeterImpl` implementation.
 type wrappedMeterImpl struct {
-	impl MeterImpl
+	impl        MeterImpl
+	libraryName string
 }
 
 // int64ObserverResult is an adapter for int64-valued asynchronous
@@ -134,10 +135,13 @@ func Configure(opts []Option) Config {
 }
 
 // WrapMeterImpl constructs a `Meter` implementation from a
-// `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl) Meter {
+// `MeterImpl` implementation.  The `libraryName` parameter indicates
+// the name of the implementation, that will be entered into the
+// corresponding Descriptor{}.
+func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
 	return &wrappedMeterImpl{
-		impl: impl,
+		impl:        impl,
+		libraryName: libraryName,
 	}
 }
 
@@ -159,7 +163,7 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...M
 }
 
 func (m *wrappedMeterImpl) newSynchronous(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SynchronousImpl, error) {
-	return m.impl.NewSynchronousInstrument(NewDescriptor(name, metricKind, numberKind, opts...))
+	return m.impl.NewSynchronousInstrument(NewDescriptor(name, m.libraryName, metricKind, numberKind, opts...))
 }
 
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
@@ -220,7 +224,7 @@ func WrapFloat64MeasureInstrument(syncInst SynchronousImpl, err error) (Float64M
 
 func (m *wrappedMeterImpl) newAsynchronous(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsynchronousImpl, error) {
 	return m.impl.NewAsynchronousInstrument(
-		NewDescriptor(name, mkind, nkind, opts...),
+		NewDescriptor(name, m.libraryName, mkind, nkind, opts...),
 		callback)
 }
 

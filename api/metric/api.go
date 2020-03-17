@@ -90,25 +90,32 @@ const (
 // including its name, metric kind, number kind, and the configurable
 // options.
 type Descriptor struct {
-	name       string
-	kind       Kind
-	numberKind core.NumberKind
-	config     Config
+	name        string
+	libraryName string
+	kind        Kind
+	numberKind  core.NumberKind
+	config      Config
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
+func NewDescriptor(name, libraryName string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
 	return Descriptor{
-		name:       name,
-		kind:       mkind,
-		numberKind: nkind,
-		config:     Configure(opts),
+		name:        name,
+		libraryName: libraryName,
+		kind:        mkind,
+		numberKind:  nkind,
+		config:      Configure(opts),
 	}
 }
 
 // Name returns the metric instrument's name.
 func (d Descriptor) Name() string {
 	return d.name
+}
+
+// LibraryName returns the metric instrument library's name.
+func (d Descriptor) LibraryName() string {
+	return d.libraryName
 }
 
 // MetricKind returns the kind of instrument: counter, measure, or

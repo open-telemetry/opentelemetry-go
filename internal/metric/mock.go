@@ -150,7 +150,7 @@ func (p *MeterProvider) Meter(name string) apimetric.Meter {
 
 func NewMeter() (*Meter, apimetric.Meter) {
 	mock := &Meter{}
-	return mock, apimetric.WrapMeterImpl(mock)
+	return mock, apimetric.WrapMeterImpl(mock, "unnamed")
 }
 
 func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
