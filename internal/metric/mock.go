@@ -65,8 +65,6 @@ type (
 	Asynchronous struct {
 		Instrument
 
-		Dead bool
-
 		callback func(func(core.Number, apimetric.LabelSet))
 	}
 
@@ -93,10 +91,6 @@ func (a *Asynchronous) Implementation() interface{} {
 
 func (s *Synchronous) Implementation() interface{} {
 	return s
-}
-
-func (a *Asynchronous) Unregister() {
-	a.Dead = true
 }
 
 func (s *Synchronous) Bind(labels apimetric.LabelSet) apimetric.BoundSynchronousImpl {
@@ -208,9 +202,6 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 
 func (m *Meter) RunAsyncInstruments() {
 	for _, observer := range m.AsyncInstruments {
-		if observer.Dead {
-			continue
-		}
 		observer.callback(func(n core.Number, labels apimetric.LabelSet) {
 
 			if ld, ok := labels.(apimetric.LabelSetDelegate); ok {

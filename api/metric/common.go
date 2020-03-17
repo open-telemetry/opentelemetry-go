@@ -67,7 +67,10 @@ func (a asynchronousInstrument) AsynchronousImpl() AsynchronousImpl {
 	return a.instrument
 }
 
-func checkSynchronous(instrument SynchronousImpl, err error) (synchronousInstrument, error) {
+// checkNewSynchronous receives an SynchronousImpl and potential
+// error, and returns the same types, checking for and ensuring that
+// the returned interface is not nil.
+func checkNewSynchronous(instrument SynchronousImpl, err error) (synchronousInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
@@ -97,7 +100,10 @@ func newMeasurement(instrument SynchronousImpl, number core.Number) Measurement 
 	}
 }
 
-func checkAsynchronous(instrument AsynchronousImpl, err error) (asynchronousInstrument, error) {
+// checkNewAsynchronous receives an AsynchronousImpl and potential
+// error, and returns the same types, checking for and ensuring that
+// the returned interface is not nil.
+func checkNewAsynchronous(instrument AsynchronousImpl, err error) (asynchronousInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl

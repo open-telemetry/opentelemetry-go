@@ -58,7 +58,7 @@ type syncImpl struct {
 
 	instrument
 
-	ctor func(metric.Meter) (metric.SynchronousImpl, error)
+	constructor func(metric.Meter) (metric.SynchronousImpl, error)
 }
 
 type obsImpl struct {
@@ -66,18 +66,18 @@ type obsImpl struct {
 
 	instrument
 
-	ctor func(metric.Meter) (metric.AsynchronousImpl, error)
+	constructor func(metric.Meter) (metric.AsynchronousImpl, error)
 }
 
-// hasSynchronousImpl is implemented by all of the synchronous metric
+// SynchronousImpler is implemented by all of the synchronous metric
 // instruments.
-type hasSynchronousImpl interface {
+type SynchronousImpler interface {
 	SynchronousImpl() metric.SynchronousImpl
 }
 
-// hasAsynchronousImpl is implemented by all of the asynchronous
+// AsynchronousImpler is implemented by all of the asynchronous
 // metric instruments.
-type hasAsynchronousImpl interface {
+type AsynchronousImpler interface {
 	AsynchronousImpl() metric.AsynchronousImpl
 }
 
@@ -160,25 +160,25 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	m.asyncInsts = nil
 }
 
-func (m *meter) newSynchronous(desc metric.Descriptor, ctor func(metric.Meter) (metric.SynchronousImpl, error)) (metric.SynchronousImpl, error) {
+func (m *meter) newSynchronous(desc metric.Descriptor, constructor func(metric.Meter) (metric.SynchronousImpl, error)) (metric.SynchronousImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return ctor(*meterPtr)
+		return constructor(*meterPtr)
 	}
 
 	inst := &syncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		ctor: ctor,
+		constructor: constructor,
 	}
 	m.syncInsts = append(m.syncInsts, inst)
 	return inst, nil
 }
 
-func synchronousCheck(has hasSynchronousImpl, err error) (metric.SynchronousImpl, error) {
+func synchronousCheck(has SynchronousImpler, err error) (metric.SynchronousImpl, error) {
 	if has != nil {
 		return has.SynchronousImpl(), err
 	}
@@ -194,7 +194,7 @@ func (inst *syncImpl) setDelegate(d metric.Meter) {
 	implPtr := new(metric.SynchronousImpl)
 
 	var err error
-	*implPtr, err = inst.ctor(d)
+	*implPtr, err = inst.constructor(d)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -238,19 +238,19 @@ func (bound *syncHandle) Unbind() {
 
 // Asynchronous delegation
 
-func (m *meter) newAsynchronous(desc metric.Descriptor, ctor func(metric.Meter) (metric.AsynchronousImpl, error)) (metric.AsynchronousImpl, error) {
+func (m *meter) newAsynchronous(desc metric.Descriptor, constructor func(metric.Meter) (metric.AsynchronousImpl, error)) (metric.AsynchronousImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return ctor(*meterPtr)
+		return constructor(*meterPtr)
 	}
 
 	inst := &obsImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		ctor: ctor,
+		constructor: constructor,
 	}
 	m.asyncInsts = append(m.asyncInsts, inst)
 	return inst, nil
@@ -263,7 +263,7 @@ func (obs *obsImpl) Implementation() interface{} {
 	return obs
 }
 
-func asynchronousCheck(has hasAsynchronousImpl, err error) (metric.AsynchronousImpl, error) {
+func asynchronousCheck(has AsynchronousImpler, err error) (metric.AsynchronousImpl, error) {
 	if has != nil {
 		return has.AsynchronousImpl(), err
 	}
@@ -277,7 +277,7 @@ func (obs *obsImpl) setDelegate(d metric.Meter) {
 	implPtr := new(metric.AsynchronousImpl)
 
 	var err error
-	*implPtr, err = obs.ctor(d)
+	*implPtr, err = obs.constructor(d)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.

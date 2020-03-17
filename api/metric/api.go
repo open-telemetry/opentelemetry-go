@@ -111,8 +111,7 @@ func (d Descriptor) Name() string {
 	return d.name
 }
 
-// MetricKind returns the kind of instrument: counter, measure, or
-// observer.
+// MetricKind returns the specific kind of instrument.
 func (d Descriptor) MetricKind() Kind {
 	return d.kind
 }
@@ -136,8 +135,8 @@ func (d Descriptor) Unit() unit.Unit {
 	return d.config.Unit
 }
 
-// NumberKind returns whether this instrument is declared over int64
-// or a float64 values.
+// NumberKind returns whether this instrument is declared over int64,
+// float64, or uint64 values.
 func (d Descriptor) NumberKind() core.NumberKind {
 	return d.numberKind
 }
