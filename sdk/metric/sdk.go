@@ -163,11 +163,11 @@ func (inst *instrument) Descriptor() api.Descriptor {
 	return inst.descriptor
 }
 
-func (a *asynchronousInstrument) Interface() interface{} {
+func (a *asynchronousInstrument) Implementation() interface{} {
 	return a
 }
 
-func (s *synchronousInstrument) Interface() interface{} {
+func (s *synchronousInstrument) Implementation() interface{} {
 	return s
 }
 

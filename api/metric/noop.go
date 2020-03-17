@@ -26,7 +26,7 @@ func (NoopProvider) Meter(name string) Meter {
 	return NoopMeter{}
 }
 
-func (noopInstrument) Interface() interface{} {
+func (noopInstrument) Implementation() interface{} {
 	return nil
 }
 

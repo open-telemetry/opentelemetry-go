@@ -87,11 +87,11 @@ func (i Instrument) Descriptor() apimetric.Descriptor {
 	return i.descriptor
 }
 
-func (a *Asynchronous) Interface() interface{} {
+func (a *Asynchronous) Implementation() interface{} {
 	return a
 }
 
-func (s *Synchronous) Interface() interface{} {
+func (s *Synchronous) Implementation() interface{} {
 	return s
 }
 

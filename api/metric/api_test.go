@@ -198,7 +198,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, moc
 	if len(mock.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))
 	}
-	ourInstrument := instrument.Interface().(*mockTest.Synchronous)
+	ourInstrument := instrument.Implementation().(*mockTest.Synchronous)
 	ourLabelSet := labels.(*mockTest.LabelSet)
 	minLen := 3
 	if minLen > len(mock.MeasurementBatches) {
@@ -227,12 +227,12 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, moc
 		}
 		for j := 0; j < minMLen; j++ {
 			measurement := got.Measurements[j]
-			if measurement.Instrument.Interface() != ourInstrument {
+			if measurement.Instrument.Implementation() != ourInstrument {
 				d := func(iface interface{}) string {
 					i := iface.(*mockTest.Instrument)
 					return fmt.Sprintf("(ptr: %p, instrument %#v)", i, i)
 				}
-				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.Instrument.Interface()))
+				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.Instrument.Implementation()))
 			}
 			ft := fortyTwo(t, kind)
 			if measurement.Number.CompareNumber(kind, ft) != 0 {
@@ -248,7 +248,7 @@ func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Met
 	if len(mock.MeasurementBatches) < 1 {
 		return
 	}
-	o := observer.Interface().(*mockTest.Asynchronous)
+	o := observer.Implementation().(*mockTest.Asynchronous)
 	if !assert.NotNil(t, o) {
 		return
 	}
@@ -260,7 +260,7 @@ func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Met
 		return
 	}
 	measurement := got.Measurements[0]
-	assert.Equal(t, o, measurement.Instrument.Interface().(*mockTest.Asynchronous))
+	assert.Equal(t, o, measurement.Instrument.Implementation().(*mockTest.Asynchronous))
 	ft := fortyTwo(t, kind)
 	assert.Equal(t, 0, measurement.Number.CompareNumber(kind, ft))
 }

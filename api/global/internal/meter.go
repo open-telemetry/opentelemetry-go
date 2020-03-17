@@ -207,9 +207,9 @@ func (inst *syncImpl) setDelegate(d metric.Meter) {
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
-func (inst *syncImpl) Interface() interface{} {
+func (inst *syncImpl) Implementation() interface{} {
 	if implPtr := (*metric.SynchronousImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
-		return (*implPtr).Interface()
+		return (*implPtr).Implementation()
 	}
 	return inst
 }
@@ -256,9 +256,9 @@ func (m *meter) newAsynchronous(desc metric.Descriptor, ctor func(metric.Meter) 
 	return inst, nil
 }
 
-func (obs *obsImpl) Interface() interface{} {
+func (obs *obsImpl) Implementation() interface{} {
 	if implPtr := (*metric.AsynchronousImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
-		return (*implPtr).Interface()
+		return (*implPtr).Implementation()
 	}
 	return obs
 }

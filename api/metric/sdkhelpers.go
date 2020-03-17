@@ -58,10 +58,10 @@ type LabelSetDelegate interface {
 // InstrumentImpl is a common interface for synchronous and
 // asynchronous instruments.
 type InstrumentImpl interface {
-	// Interface returns the underlying implementation of the
+	// Implementation returns the underlying implementation of the
 	// instrument, which allows the implementation to gain access
 	// to its own representation especially from a `Measurement`.
-	Interface() interface{}
+	Implementation() interface{}
 
 	// Descriptor returns a copy of the instrument's Descriptor.
 	Descriptor() Descriptor
