@@ -49,8 +49,8 @@ func TestLabelForceEncode(t *testing.T) {
 	defaultLabelEncoder := sdk.NewDefaultLabelEncoder()
 	statsdLabelEncoder := statsd.NewLabelEncoder()
 
-	exportLabelsDefault := export.NewLabels(testLabels, defaultLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), defaultLabelEncoder)
-	exportLabelsStatsd := export.NewLabels(testLabels, statsdLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), statsdLabelEncoder)
+	exportLabelsDefault := export.NewLabels(export.NewSliceLabelIterator(testLabels), defaultLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), defaultLabelEncoder)
+	exportLabelsStatsd := export.NewLabels(export.NewSliceLabelIterator(testLabels), statsdLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), statsdLabelEncoder)
 
 	statsdEncoding := exportLabelsStatsd.Encoded()
 	require.NotEqual(t, statsdEncoding, exportLabelsDefault.Encoded())
@@ -64,7 +64,7 @@ func TestLabelForceEncode(t *testing.T) {
 	require.False(t, repeat)
 
 	// Check that this works for an embedded implementation.
-	exportLabelsEmbed := export.NewLabels(testLabels, statsdEncoding, struct {
+	exportLabelsEmbed := export.NewLabels(export.NewSliceLabelIterator(testLabels), statsdEncoding, struct {
 		*statsd.LabelEncoder
 	}{LabelEncoder: statsdLabelEncoder})
 
