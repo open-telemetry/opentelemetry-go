@@ -62,7 +62,7 @@ func TestDirect(t *testing.T) {
 
 	mockImpl, _ := metric.UnwrapImpl(sdk.Meter("test1"))
 	mock := mockImpl.(*metrictest.Meter)
-	mock.RunObservers()
+	mock.RunAsyncInstruments()
 	require.Len(t, mock.MeasurementBatches, 6)
 
 	require.Equal(t, map[core.Key]core.Value{

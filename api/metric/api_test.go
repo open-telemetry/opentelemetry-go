@@ -178,7 +178,7 @@ func TestObserver(t *testing.T) {
 		})
 		t.Log("Testing float observer")
 
-		mock.RunObservers()
+		mock.RunAsyncInstruments()
 		checkObserverBatch(t, labels, mock, core.Float64NumberKind, o.AsynchronousImpl())
 	}
 	{
@@ -188,7 +188,7 @@ func TestObserver(t *testing.T) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")
-		mock.RunObservers()
+		mock.RunAsyncInstruments()
 		checkObserverBatch(t, labels, mock, core.Int64NumberKind, o.AsynchronousImpl())
 	}
 }

@@ -47,13 +47,8 @@ type (
 	}
 
 	Meter struct {
-		// TODO add synchronization
-
 		MeasurementBatches []Batch
-		// Observers contains also unregistered
-		// observers. Check the Dead field of the Observer to
-		// figure out its status.
-		Observers []*Asynchronous
+		AsyncInstruments   []*Asynchronous
 	}
 
 	Measurement struct {
@@ -186,7 +181,7 @@ func (m *Meter) NewAsynchronousInstrument(descriptor metric.Descriptor, callback
 		},
 		callback: callback,
 	}
-	m.Observers = append(m.Observers, a)
+	m.AsyncInstruments = append(m.AsyncInstruments, a)
 	return a, nil
 }
 
@@ -211,8 +206,8 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 	})
 }
 
-func (m *Meter) RunObservers() {
-	for _, observer := range m.Observers {
+func (m *Meter) RunAsyncInstruments() {
+	for _, observer := range m.AsyncInstruments {
 		if observer.Dead {
 			continue
 		}
