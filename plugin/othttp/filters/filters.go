@@ -126,29 +126,3 @@ func Method(m string) othttp.Filter {
 		return m == r.Method
 	}
 }
-
-// Header returns a Filter that returns true if the request
-// includes a header k with a value equal to v.
-func Header(k, v string) othttp.Filter {
-	return func(r *http.Request) bool {
-		for _, hv := range r.Header.Values(k) {
-			if v == hv {
-				return true
-			}
-		}
-		return false
-	}
-}
-
-// HeaderContains returns a Filter that returns true if the request
-// includes a header k with a value that contains v.
-func HeaderContains(k, v string) othttp.Filter {
-	return func(r *http.Request) bool {
-		for _, hv := range r.Header.Values(k) {
-			if strings.Contains(hv, v) {
-				return true
-			}
-		}
-		return false
-	}
-}
