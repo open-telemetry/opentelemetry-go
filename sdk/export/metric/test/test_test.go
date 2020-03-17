@@ -12,27 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package test
 
 import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
-
-	"github.com/stretchr/testify/require"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-func TestIteratorToSlice(t *testing.T) {
-	slice := []core.KeyValue{
-		key.String("bar", "baz"),
-		key.Int("foo", 42),
-	}
-	iter := NewSliceLabelIterator(slice)
-	got := IteratorToSlice(iter)
-	require.Equal(t, slice, got)
+type sliceLabelIteratorProvider struct{}
 
-	iter = NewSliceLabelIterator(nil)
-	got = IteratorToSlice(iter)
-	require.Nil(t, got)
+var _ IteratorProvider = sliceLabelIteratorProvider{}
+
+func (sliceLabelIteratorProvider) Iterators(labels []core.KeyValue) []export.LabelIterator {
+	return []export.LabelIterator{
+		export.NewSliceLabelIterator(labels),
+	}
+}
+
+func (sliceLabelIteratorProvider) EmptyIterators() []export.LabelIterator {
+	return []export.LabelIterator{
+		export.NewSliceLabelIterator(nil),
+		export.NewSliceLabelIterator([]core.KeyValue{}),
+	}
+}
+
+func TestSliceLabelIterator(t *testing.T) {
+	RunLabelIteratorTests(t, sliceLabelIteratorProvider{})
 }
