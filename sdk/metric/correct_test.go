@@ -31,6 +31,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	batchTest "go.opentelemetry.io/otel/sdk/metric/batcher/test"
 )
 
 var Must = metric.Must
@@ -294,4 +295,46 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Bool("B", true),
 	})
 	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
+}
+
+func TestObserverCollection(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
+
+	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+		// TODO: The spec says the last-value wins in observer
+		// instruments, but it is not implemented yet, i.e., with the
+		// following line we get 1-1==0 instead of -1:
+		// result.Observe(1, meter.Labels(key.String("A", "B")))
+
+		result.Observe(-1, meter.Labels(key.String("A", "B")))
+		result.Observe(-1, meter.Labels(key.String("C", "D")))
+	})
+	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+		result.Observe(1, meter.Labels(key.String("A", "B")))
+		result.Observe(1, meter.Labels())
+	})
+	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
+	})
+
+	collected := sdk.Collect(ctx)
+
+	require.Equal(t, 4, collected)
+	require.Equal(t, 4, len(batcher.records))
+
+	out := batchTest.Output{}
+	for _, rec := range batcher.records {
+		out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"float.observer/A=B": -1,
+		"float.observer/C=D": -1,
+		"int.observer/":      1,
+		"int.observer/A=B":   1,
+	}, out)
+
 }

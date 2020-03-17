@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -33,7 +34,7 @@ type (
 	Encoder struct{}
 
 	// Output collects distinct metric/label set outputs.
-	Output map[string]int64
+	Output map[string]float64
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
@@ -138,14 +139,16 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 func (o Output) AddTo(rec export.Record) {
 	labels := rec.Labels()
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
-	var value int64
-	switch t := rec.Aggregator().(type) {
-	case *sum.Aggregator:
-		sum, _ := t.Sum()
-		value = sum.AsInt64()
-	case *lastvalue.Aggregator:
-		lv, _, _ := t.LastValue()
-		value = lv.AsInt64()
+	var value float64
+
+	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
+		sum, _ := s.Sum()
+		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
+	} else if l, ok := rec.Aggregator().(aggregator.LastValue); ok {
+		last, _, _ := l.LastValue()
+		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
+	} else {
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
 	}
 	o[key] = value
 }
