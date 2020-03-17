@@ -191,11 +191,15 @@ type LabelIterator interface {
 	IndexedLabel() (int, core.KeyValue)
 	// Len returns a size of the collection the iterator goes over.
 	Len() int
+	// Clone clones the iterator.
+	Clone() LabelIterator
 }
 
 // Convenience function that creates a slice of labels from the passed
 // iterator. The iterator is consumed, which means that after this
-// function, the iterator's Next() will return false.
+// function, the iterator's Next() will return false. If you need the
+// iterator also after the call to this function, pass a cloned
+// iterator here instead.
 func IteratorToSlice(iter LabelIterator) []core.KeyValue {
 	l := iter.Len()
 	if l == 0 {
@@ -237,6 +241,13 @@ func (i *sliceLabelIterator) IndexedLabel() (int, core.KeyValue) {
 
 func (i *sliceLabelIterator) Len() int {
 	return len(i.slice)
+}
+
+func (i *sliceLabelIterator) Clone() LabelIterator {
+	return &sliceLabelIterator{
+		slice: i.slice,
+		idx:   i.idx,
+	}
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
