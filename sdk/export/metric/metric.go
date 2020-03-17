@@ -193,18 +193,23 @@ type LabelIterator interface {
 	Len() int
 	// Clone clones the iterator.
 	Clone() LabelIterator
+	// Reset resets the iterator, so it will iterate from the
+	// beginning again.
+	Reset()
 }
 
 // Convenience function that creates a slice of labels from the passed
-// iterator. The iterator is consumed, which means that after this
-// function, the iterator's Next() will return false. If you need the
-// iterator also after the call to this function, pass a cloned
-// iterator here instead.
+// iterator. The iterator is reset and consumed, which means that
+// after this function, the iterator's Next() will return false. If
+// you need the iterator also after the call to this function, pass a
+// cloned iterator here instead or call reset on the iterator after
+// the function finishes.
 func IteratorToSlice(iter LabelIterator) []core.KeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil
 	}
+	iter.Reset()
 	slice := make([]core.KeyValue, 0, l)
 	for iter.Next() {
 		slice = append(slice, iter.Label())
@@ -248,6 +253,10 @@ func (i *sliceLabelIterator) Clone() LabelIterator {
 		slice: i.slice,
 		idx:   i.idx,
 	}
+}
+
+func (i *sliceLabelIterator) Reset() {
+	i.idx = -1
 }
 
 // LabelEncoder enables an optimization for export pipelines that use

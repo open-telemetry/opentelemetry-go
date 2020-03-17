@@ -586,6 +586,9 @@ func (zeroLabelIterator) Clone() export.LabelIterator {
 	return zeroIter
 }
 
+func (zeroLabelIterator) Reset() {
+}
+
 type reflectValueLabelIterator struct {
 	value reflect.Value
 	idx   int
@@ -623,6 +626,10 @@ func (i *reflectValueLabelIterator) Clone() export.LabelIterator {
 		idx:   i.idx,
 		len:   i.len,
 	}
+}
+
+func (i *reflectValueLabelIterator) Reset() {
+	i.idx = -1
 }
 
 // GetIteratorsForTesting returns iterators for testing.
