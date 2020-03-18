@@ -87,10 +87,10 @@ type (
 		// size for use as a map key.
 		ordered orderedLabels
 
-		// cachedSlice has dual purpose - as a temporary place for
-		// sorting during labels creation and as a slice to be
-		// iterated.
-		cachedSlice sortedLabels
+		// sortSlice has a single purpose - as a temporary
+		// place for sorting during labels creation to avoid
+		// allocation
+		sortSlice sortedLabels
 		// cachedValue contains a `reflect.Value` of the `ordered`
 		// member
 		cachedValue reflect.Value
@@ -322,15 +322,15 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	}
 
 	ls := &labels{ // allocation
-		meter:       m,
-		cachedSlice: kvs,
+		meter:     m,
+		sortSlice: kvs,
 	}
 
-	// Sort and de-duplicate.  Note: this use of `ls.cachedSlice`
+	// Sort and de-duplicate.  Note: this use of `ls.sortSlice`
 	// avoids an allocation by using the address-able field rather
 	// than `kvs`.
-	sort.Stable(&ls.cachedSlice)
-	ls.cachedSlice = nil
+	sort.Stable(&ls.sortSlice)
+	ls.sortSlice = nil
 
 	oi := 1
 	for i := 1; i < len(kvs); i++ {
@@ -350,11 +350,7 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	ls.ordered = computeOrderedFixed(kvs)
 	if ls.ordered == nil {
-		// This makes `cachedValue` addressable, so we can do a
-		// one-time slice allocation at the checkpoint time to use
-		// slice for iterating, instead of using `reflect.Value`.
-		ls.cachedValue = computeOrderedReflect(kvs)
-		ls.ordered = ls.cachedValue.Interface()
+		ls.ordered = computeOrderedReflect(kvs)
 	}
 }
 
@@ -405,12 +401,12 @@ func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
 	}
 }
 
-func computeOrderedReflect(kvs []core.KeyValue) reflect.Value {
+func computeOrderedReflect(kvs []core.KeyValue) interface{} {
 	at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
 	for i, kv := range kvs {
 		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
 	}
-	return at
+	return at.Interface()
 }
 
 func (ls *labels) getIterator() export.LabelIterator {
@@ -421,29 +417,7 @@ func (ls *labels) getIterator() export.LabelIterator {
 	if !ls.cachedValue.IsValid() {
 		ls.cachedValue = reflect.ValueOf(ls.ordered)
 	}
-	// We create a `reflect.Value` iterator or a slice iterator,
-	// depending on how the `ls.ordered` member was created. This is
-	// because getting an element from array-like `reflect.Value` using
-	// reflection may result in allocation (which means N allocations
-	// for iterating an array with N elements). Whether an allocation
-	// happens or not depends on if the array-like `reflect.Value` is
-	// addressable or not. We create the `ls.ordered` member in one of
-	// two ways - either with an array of an hardcoded length or with
-	// reflection (see the `computeOrdered` function). The former way
-	// results in an non-addressable array. The latter creates an
-	// addressable array, so we incur the one-time cost of an
-	// allocation to create a slice - fortunately, we don't need to do
-	// a deep copy of the array, so the cost is fixed, not linear.
-	//
-	// For the former case, we also could create a slice, but this
-	// would need a deep copy of the array.
-	if ls.cachedSlice == nil && ls.cachedValue.CanAddr() {
-		ls.cachedSlice = ls.cachedValue.Slice(0, ls.cachedValue.Len()).Interface().([]core.KeyValue)
-	}
-	if ls.cachedSlice == nil {
-		return newReflectValueLabelIterator(ls.cachedValue)
-	}
-	return export.NewSliceLabelIterator(ls.cachedSlice)
+	return newReflectValueLabelIterator(ls.cachedValue)
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -640,7 +614,7 @@ func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
 		iter := newReflectValueLabelIterator(reflect.ValueOf(iface))
 		iterators = append(iterators, iter)
 	}
-	iter := newReflectValueLabelIterator(computeOrderedReflect(labels))
+	iter := newReflectValueLabelIterator(reflect.ValueOf(computeOrderedReflect(labels)))
 	iterators = append(iterators, iter)
 
 	return iterators
@@ -648,7 +622,7 @@ func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
 
 // GetEmptyIteratorsForTesting returns empty iterators for testing.
 func GetEmptyIteratorsForTesting() []export.LabelIterator {
-	iter := newReflectValueLabelIterator(computeOrderedReflect(nil))
+	iter := newReflectValueLabelIterator(reflect.ValueOf(computeOrderedReflect(nil)))
 	return []export.LabelIterator{zeroIter, iter}
 }
 
