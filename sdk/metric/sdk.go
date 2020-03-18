@@ -154,11 +154,12 @@ type (
 )
 
 var (
-	_ api.MeterImpl     = &SDK{}
-	_ api.LabelSet      = &labels{}
-	_ api.AsyncImpl     = &asyncInstrument{}
-	_ api.SyncImpl      = &syncInstrument{}
-	_ api.BoundSyncImpl = &record{}
+	_ api.MeterImpl       = &SDK{}
+	_ api.LabelSet        = &labels{}
+	_ api.AsyncImpl       = &asyncInstrument{}
+	_ api.SyncImpl        = &syncInstrument{}
+	_ api.BoundSyncImpl   = &record{}
+	_ export.LabelStorage = &labels{}
 
 	kvType          = reflect.TypeOf(core.KeyValue{})
 	emptyArrayValue = reflect.ValueOf([0]core.KeyValue{})
@@ -348,6 +349,27 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	return ls
 }
 
+func (ls *labels) ensureCachedValue() {
+	if !ls.cachedValue.IsValid() {
+		if ls.ordered == nil {
+			// it's an empty labelset
+			ls.cachedValue = emptyArrayValue
+		} else {
+			ls.cachedValue = reflect.ValueOf(ls.ordered)
+		}
+	}
+}
+
+func (ls *labels) NumLabels() int {
+	ls.ensureCachedValue()
+	return ls.cachedValue.Len()
+}
+
+func (ls *labels) GetLabel(idx int) core.KeyValue {
+	ls.ensureCachedValue()
+	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
+}
+
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	ls.ordered = computeOrderedFixed(kvs)
 	if ls.ordered == nil {
@@ -408,18 +430,6 @@ func computeOrderedReflect(kvs []core.KeyValue) interface{} {
 		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
 	}
 	return at.Interface()
-}
-
-func (ls *labels) getIterator() export.LabelIterator {
-	if !ls.cachedValue.IsValid() {
-		if ls.ordered == nil {
-			// it's an empty labelset
-			ls.cachedValue = emptyArrayValue
-		} else {
-			ls.cachedValue = reflect.ValueOf(ls.ordered)
-		}
-	}
-	return newReflectValueLabelIterator(ls.cachedValue)
 }
 
 // labsFor sanitizes the input LabelSet.  The input will be rejected
@@ -538,67 +548,16 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-type reflectValueLabelIterator struct {
-	value reflect.Value
-	idx   int
-	len   int
-}
-
-func newReflectValueLabelIterator(value reflect.Value) export.LabelIterator {
-	return &reflectValueLabelIterator{
-		value: value,
-		idx:   -1,
-		len:   value.Len(),
-	}
-}
-
-func (i *reflectValueLabelIterator) Next() bool {
-	i.idx++
-	return i.idx < i.len
-}
-
-func (i *reflectValueLabelIterator) Label() core.KeyValue {
-	return i.value.Index(i.idx).Interface().(core.KeyValue)
-}
-
-func (i *reflectValueLabelIterator) IndexedLabel() (int, core.KeyValue) {
-	return i.idx, i.Label()
-}
-
-func (i *reflectValueLabelIterator) Len() int {
-	return i.len
-}
-
-func (i *reflectValueLabelIterator) Clone() export.LabelIterator {
-	return &reflectValueLabelIterator{
-		value: i.value,
-		idx:   i.idx,
-		len:   i.len,
-	}
-}
-
-func (i *reflectValueLabelIterator) Reset() {
-	i.idx = -1
-}
-
 // GetIteratorsForTesting returns iterators for testing.
 func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
 	var iterators []export.LabelIterator
-
-	if iface := computeOrderedFixed(labels); iface != nil {
-		iter := newReflectValueLabelIterator(reflect.ValueOf(iface))
-		iterators = append(iterators, iter)
-	}
-	iter := newReflectValueLabelIterator(reflect.ValueOf(computeOrderedReflect(labels)))
-	iterators = append(iterators, iter)
-
 	return iterators
 }
 
 // GetEmptyIteratorsForTesting returns empty iterators for testing.
 func GetEmptyIteratorsForTesting() []export.LabelIterator {
-	iter := newReflectValueLabelIterator(emptyArrayValue)
-	return []export.LabelIterator{iter}
+	var iterators []export.LabelIterator
+	return iterators
 }
 
 func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
@@ -611,9 +570,9 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	// instead of once per bound instrument lifetime.  This can be
 	// addressed similarly to OTEP 78, see
 	// https://github.com/jmacd/opentelemetry-go/blob/8bed2e14df7f9f4688fbab141924bb786dc9a3a1/api/context/internal/set.go#L89
-	iter := labels.getIterator()
-	iter2 := iter.Clone()
-	exportLabels := export.NewLabels(iter, m.labelEncoder.Encode(iter2), m.labelEncoder)
+	iter := export.NewLabelStorageIter(labels)
+	iter2 := export.NewLabelStorageIter(labels)
+	exportLabels := export.NewLabels(&iter, m.labelEncoder.Encode(&iter2), m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
