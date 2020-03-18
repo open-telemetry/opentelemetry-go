@@ -333,7 +333,7 @@ type Record struct {
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.
 type Labels struct {
-	iter    LabelIterator
+	storage LabelStorage
 	encoded string
 	encoder LabelEncoder
 }
@@ -341,9 +341,9 @@ type Labels struct {
 // NewLabels builds a Labels object, consisting of an ordered set of
 // labels, a unique encoded representation, and the encoder that
 // produced it.
-func NewLabels(iter LabelIterator, encoded string, encoder LabelEncoder) Labels {
+func NewLabels(storage LabelStorage, encoded string, encoder LabelEncoder) Labels {
 	return Labels{
-		iter:    iter,
+		storage: storage,
 		encoded: encoded,
 		encoder: encoder,
 	}
@@ -351,7 +351,8 @@ func NewLabels(iter LabelIterator, encoded string, encoder LabelEncoder) Labels 
 
 // Iter returns an iterator over ordered labels.
 func (l Labels) Iter() LabelIterator {
-	return l.iter.Clone()
+	i := NewLabelStorageIter(l.storage)
+	return &i
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
