@@ -23,14 +23,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testSlice = []core.KeyValue{
+	key.String("bar", "baz"),
+	key.Int("foo", 42),
+}
+
+func TestLabelIterator(t *testing.T) {
+	iter := NewSliceLabelIterator(testSlice)
+	require.Equal(t, 2, iter.Len())
+
+	require.True(t, iter.Next())
+	require.Equal(t, key.String("bar", "baz"), iter.Label())
+	idx, label := iter.IndexedLabel()
+	require.Equal(t, 0, idx)
+	require.Equal(t, key.String("bar", "baz"), label)
+	require.Equal(t, 2, iter.Len())
+
+	require.True(t, iter.Next())
+	require.Equal(t, key.Int("foo", 42), iter.Label())
+	idx, label = iter.IndexedLabel()
+	require.Equal(t, 1, idx)
+	require.Equal(t, key.Int("foo", 42), label)
+	require.Equal(t, 2, iter.Len())
+
+	require.False(t, iter.Next())
+	require.Equal(t, 2, iter.Len())
+}
+
+func TestEmptyLabelIterator(t *testing.T) {
+	iter := NewSliceLabelIterator(nil)
+	require.Equal(t, 0, iter.Len())
+	require.False(t, iter.Next())
+}
+
 func TestIteratorToSlice(t *testing.T) {
-	slice := []core.KeyValue{
-		key.String("bar", "baz"),
-		key.Int("foo", 42),
-	}
-	iter := NewSliceLabelIterator(slice)
+	iter := NewSliceLabelIterator(testSlice)
 	got := IteratorToSlice(iter)
-	require.Equal(t, slice, got)
+	require.Equal(t, testSlice, got)
 
 	iter = NewSliceLabelIterator(nil)
 	got = IteratorToSlice(iter)
