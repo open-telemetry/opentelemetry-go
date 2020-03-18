@@ -548,18 +548,6 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-// GetIteratorsForTesting returns iterators for testing.
-func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
-	var iterators []export.LabelIterator
-	return iterators
-}
-
-// GetEmptyIteratorsForTesting returns empty iterators for testing.
-func GetEmptyIteratorsForTesting() []export.LabelIterator {
-	var iterators []export.LabelIterator
-	return iterators
-}
-
 func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
 	if recorder == nil {
 		return 0
