@@ -16,6 +16,7 @@ package registry // import "go.opentelemetry.io/otel/sdk/metric/registry"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -32,6 +33,8 @@ type mapKey struct {
 	name        string
 	libraryName string
 }
+
+var ErrMetricTypeMismatch = fmt.Errorf("A metric was already registered by this name with another kind or number type")
 
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
@@ -50,34 +53,71 @@ func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels metr
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
-func (u *uniqueInstrumentMeterImpl) uniqCheck(desc metric.Descriptor) (error, mapKey, metric.InstrumentImpl) {
-	key := mapKey{
-		desc.Name(),
-		desc.LibraryName(),
+func keyOf(descriptor metric.Descriptor) mapKey {
+	return mapKey{
+		descriptor.Name(),
+		descriptor.LibraryName(),
 	}
-	// TODO: Finish this. @@@
-	return nil, key, nil
+}
+
+func (u *uniqueInstrumentMeterImpl) uniqCheck(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
+	impl, ok := u.state[keyOf(descriptor)]
+	if !ok {
+		return nil, nil
+	}
+
+	if impl.Descriptor().MetricKind() != descriptor.MetricKind() ||
+		impl.Descriptor().NumberKind() != descriptor.NumberKind() {
+		return nil, fmt.Errorf("Metric %s registered as a %s %s: %w",
+			impl.Descriptor().Name(),
+			impl.Descriptor().NumberKind(),
+			impl.Descriptor().MetricKind(),
+			ErrMetricTypeMismatch,
+		)
+	}
+
+	return impl, nil
 }
 
 func (u *uniqueInstrumentMeterImpl) NewSynchronousInstrument(descriptor metric.Descriptor) (metric.SynchronousImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	// TODO: Finish this.  This is not really implemented.
-	err, key, value := u.uniqCheck(descriptor)
+	impl, err := u.uniqCheck(descriptor)
 
 	if err != nil {
 		return nil, err
+	} else if impl != nil {
+		return impl.(metric.SynchronousImpl), nil
 	}
 
-	u.state[key] = value
-
-	return u.impl.NewSynchronousInstrument(descriptor)
+	syncInst, err := u.impl.NewSynchronousInstrument(descriptor)
+	if err != nil {
+		return nil, err
+	}
+	u.state[keyOf(descriptor)] = syncInst
+	return syncInst, nil
 }
 
 func (u *uniqueInstrumentMeterImpl) NewAsynchronousInstrument(
 	descriptor metric.Descriptor,
 	callback func(func(core.Number, metric.LabelSet)),
 ) (metric.AsynchronousImpl, error) {
-	return u.impl.NewAsynchronousInstrument(descriptor, callback)
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
+	impl, err := u.uniqCheck(descriptor)
+
+	if err != nil {
+		return nil, err
+	} else if impl != nil {
+		return impl.(metric.AsynchronousImpl), nil
+	}
+
+	asyncInst, err := u.impl.NewAsynchronousInstrument(descriptor, callback)
+	if err != nil {
+		return nil, err
+	}
+	u.state[keyOf(descriptor)] = asyncInst
+	return asyncInst, nil
 }

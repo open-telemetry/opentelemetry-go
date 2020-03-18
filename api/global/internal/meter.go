@@ -44,7 +44,19 @@ type meter struct {
 	provider    *meterProvider
 	libraryName string
 
-	lock       sync.Mutex
+	lock sync.Mutex
+
+	// TODO: create a map key:
+	//
+	//   type instType struct {
+	//      mkind metric.Kind
+	//      nkind core.NumberKind
+	//   }
+	//
+	// Build a map from metric name to type.  Check it in both newSynchronous
+	// and newAsynchronous:
+	//   map[string]instType
+
 	syncInsts  []*syncImpl
 	asyncInsts []*obsImpl
 }
