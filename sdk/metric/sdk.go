@@ -570,8 +570,8 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	// instead of once per bound instrument lifetime.  This can be
 	// addressed similarly to OTEP 78, see
 	// https://github.com/jmacd/opentelemetry-go/blob/8bed2e14df7f9f4688fbab141924bb786dc9a3a1/api/context/internal/set.go#L89
-	iter := export.NewLabelStorageIter(labels)
-	exportLabels := export.NewLabels(labels, m.labelEncoder.Encode(&iter), m.labelEncoder)
+	iter := export.NewLabelIterator(labels)
+	exportLabels := export.NewLabels(labels, m.labelEncoder.Encode(iter), m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {

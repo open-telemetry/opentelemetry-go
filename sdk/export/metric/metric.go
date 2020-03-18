@@ -169,35 +169,6 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
-// LabelIterator allows iterating over ordered set of labels. The
-// typical use of the iterator is as follows:
-//
-//     iter := getIterator()
-//     for iter.Next() {
-//       label := iter.Label()
-//       // or, if we need an index:
-//       // idx, label := iter.IndexedLabel()
-//       // do something with label
-//     }
-type LabelIterator interface {
-	// Next moves the iterator to the next label. Returns false if
-	// there are no more labels.
-	Next() bool
-	// Label returns current label. Must be only called after Next
-	// returns true.
-	Label() core.KeyValue
-	// IndexedLabel returns current index and label. Must be only
-	// called after Next returns true.
-	IndexedLabel() (int, core.KeyValue)
-	// Len returns a size of the collection the iterator goes over.
-	Len() int
-	// Clone clones the iterator.
-	Clone() LabelIterator
-	// Reset resets the iterator, so it will iterate from the
-	// beginning again.
-	Reset()
-}
-
 // Convenience function that creates a slice of labels from the passed
 // iterator. The iterator is reset and consumed, which means that
 // after this function, the iterator's Next() will return false. If
@@ -234,51 +205,55 @@ func (s LabelSlice) GetLabel(idx int) core.KeyValue {
 	return s[idx]
 }
 
-type LabelStorageIter struct {
+// LabelIterator allows iterating over ordered set of labels. The
+// typical use of the iterator is as follows:
+//
+//     iter := export.NewLabelIterator(getStorage())
+//     for iter.Next() {
+//       label := iter.Label()
+//       // or, if we need an index:
+//       // idx, label := iter.IndexedLabel()
+//       // do something with label
+//     }
+type LabelIterator struct {
 	storage LabelStorage
 	idx     int
 }
 
-func NewLabelStorageIter(storage LabelStorage) LabelStorageIter {
-	return LabelStorageIter{
+func NewLabelIterator(storage LabelStorage) LabelIterator {
+	return LabelIterator{
 		storage: storage,
 		idx:     -1,
 	}
 }
 
-var _ LabelIterator = &LabelStorageIter{}
-
-func (i *LabelStorageIter) Next() bool {
+func (i *LabelIterator) Next() bool {
 	i.idx++
 	return i.idx < i.Len()
 }
 
-func (i *LabelStorageIter) Label() core.KeyValue {
+func (i *LabelIterator) Label() core.KeyValue {
 	return i.storage.GetLabel(i.idx)
 }
 
-func (i *LabelStorageIter) IndexedLabel() (int, core.KeyValue) {
+func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
 }
 
-func (i *LabelStorageIter) Len() int {
+func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
 
-func (i *LabelStorageIter) Clone() LabelIterator {
-	return &LabelStorageIter{
-		storage: i.storage,
-		idx:     i.idx,
-	}
+func (i *LabelIterator) Clone() LabelIterator {
+	return *i
 }
 
-func (i *LabelStorageIter) Reset() {
+func (i *LabelIterator) Reset() {
 	i.idx = -1
 }
 
 func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {
-	i := NewLabelStorageIter(LabelSlice(s))
-	return &i
+	return NewLabelIterator(LabelSlice(s))
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
@@ -351,8 +326,7 @@ func NewLabels(storage LabelStorage, encoded string, encoder LabelEncoder) Label
 
 // Iter returns an iterator over ordered labels.
 func (l Labels) Iter() LabelIterator {
-	i := NewLabelStorageIter(l.storage)
-	return &i
+	return NewLabelIterator(l.storage)
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
