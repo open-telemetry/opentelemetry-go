@@ -53,7 +53,6 @@ func RunLabelIteratorTests(t *testing.T, provider IteratorProvider) {
 	}
 	iteratorFuncs := []iteratorTestFunc{
 		testLabelIterator,
-		testLabelIteratorClone,
 		testLabelIteratorReset,
 	}
 	for _, f := range iteratorFuncs {
@@ -63,7 +62,6 @@ func RunLabelIteratorTests(t *testing.T, provider IteratorProvider) {
 	}
 	emptyIteratorFuncs := []iteratorTestFunc{
 		testEmptyLabelIterator,
-		testEmptyLabelIteratorClone,
 		testEmptyLabelIteratorReset,
 	}
 	for _, f := range emptyIteratorFuncs {
@@ -94,27 +92,6 @@ func testLabelIterator(t *testing.T, iter export.LabelIterator) {
 	require.Equal(t, 2, iter.Len())
 }
 
-func testLabelIteratorClone(t *testing.T, iter1 export.LabelIterator) {
-	iter2 := iter1.Clone()
-
-	require.Equal(t, iter1.Len(), iter2.Len())
-	require.True(t, iter1.Next())
-	require.True(t, iter2.Next())
-	require.Equal(t, iter1.Label(), iter2.Label())
-
-	iter3 := iter1.Clone()
-	require.Equal(t, iter1.Len(), iter3.Len())
-	require.True(t, iter1.Next())
-	require.True(t, iter2.Next())
-	require.True(t, iter3.Next())
-	require.Equal(t, iter1.Label(), iter2.Label())
-	require.Equal(t, iter1.Label(), iter3.Label())
-
-	require.False(t, iter1.Next())
-	require.False(t, iter2.Next())
-	require.False(t, iter3.Next())
-}
-
 func testLabelIteratorReset(t *testing.T, iter export.LabelIterator) {
 	require.True(t, iter.Next())
 	require.Equal(t, key.String("bar", "baz"), iter.Label())
@@ -138,14 +115,6 @@ func testLabelIteratorReset(t *testing.T, iter export.LabelIterator) {
 func testEmptyLabelIterator(t *testing.T, iter export.LabelIterator) {
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
-}
-
-func testEmptyLabelIteratorClone(t *testing.T, iter1 export.LabelIterator) {
-	iter2 := iter1.Clone()
-
-	require.Equal(t, iter1.Len(), iter2.Len())
-	require.False(t, iter1.Next())
-	require.False(t, iter2.Next())
 }
 
 func testEmptyLabelIteratorReset(t *testing.T, iter export.LabelIterator) {

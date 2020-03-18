@@ -244,10 +244,6 @@ func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
 
-func (i *LabelIterator) Clone() LabelIterator {
-	return *i
-}
-
 func (i *LabelIterator) Reset() {
 	i.idx = -1
 }
