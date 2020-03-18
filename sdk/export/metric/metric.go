@@ -217,46 +217,68 @@ func IteratorToSlice(iter LabelIterator) []core.KeyValue {
 	return slice
 }
 
-type sliceLabelIterator struct {
-	slice []core.KeyValue
-	idx   int
+type LabelStorage interface {
+	NumLabels() int
+	GetLabel(int) core.KeyValue
 }
 
-var _ LabelIterator = &sliceLabelIterator{}
+type LabelSlice []core.KeyValue
 
-func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {
-	return &sliceLabelIterator{
-		slice: s,
-		idx:   -1,
+var _ LabelStorage = LabelSlice{}
+
+func (s LabelSlice) NumLabels() int {
+	return len(s)
+}
+
+func (s LabelSlice) GetLabel(idx int) core.KeyValue {
+	return s[idx]
+}
+
+type LabelStorageIter struct {
+	storage LabelStorage
+	idx     int
+}
+
+func NewLabelStorageIter(storage LabelStorage) LabelStorageIter {
+	return LabelStorageIter{
+		storage: storage,
+		idx:     -1,
 	}
 }
 
-func (i *sliceLabelIterator) Next() bool {
+var _ LabelIterator = &LabelStorageIter{}
+
+func (i *LabelStorageIter) Next() bool {
 	i.idx++
-	return i.idx < len(i.slice)
+	return i.idx < i.Len()
 }
 
-func (i *sliceLabelIterator) Label() core.KeyValue {
-	return i.slice[i.idx]
+func (i *LabelStorageIter) Label() core.KeyValue {
+	return i.storage.GetLabel(i.idx)
 }
 
-func (i *sliceLabelIterator) IndexedLabel() (int, core.KeyValue) {
+func (i *LabelStorageIter) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
 }
 
-func (i *sliceLabelIterator) Len() int {
-	return len(i.slice)
+func (i *LabelStorageIter) Len() int {
+	return i.storage.NumLabels()
 }
 
-func (i *sliceLabelIterator) Clone() LabelIterator {
-	return &sliceLabelIterator{
-		slice: i.slice,
-		idx:   i.idx,
+func (i *LabelStorageIter) Clone() LabelIterator {
+	return &LabelStorageIter{
+		storage: i.storage,
+		idx:     i.idx,
 	}
 }
 
-func (i *sliceLabelIterator) Reset() {
+func (i *LabelStorageIter) Reset() {
 	i.idx = -1
+}
+
+func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {
+	i := NewLabelStorageIter(LabelSlice(s))
+	return &i
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
