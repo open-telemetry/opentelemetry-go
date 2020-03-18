@@ -170,17 +170,14 @@ type Exporter interface {
 }
 
 // Convenience function that creates a slice of labels from the passed
-// iterator. The iterator is reset and consumed, which means that
-// after this function, the iterator's Next() will return false. If
-// you need the iterator also after the call to this function, pass a
-// cloned iterator here instead or call reset on the iterator after
-// the function finishes.
+// iterator. The iterator is set up to start from the beginning before
+// creating the slice.
 func IteratorToSlice(iter LabelIterator) []core.KeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil
 	}
-	iter.Reset()
+	iter.idx = -1
 	slice := make([]core.KeyValue, 0, l)
 	for iter.Next() {
 		slice = append(slice, iter.Label())
@@ -242,10 +239,6 @@ func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
 
 func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
-}
-
-func (i *LabelIterator) Reset() {
-	i.idx = -1
 }
 
 func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {

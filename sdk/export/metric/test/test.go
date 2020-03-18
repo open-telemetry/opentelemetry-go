@@ -92,33 +92,7 @@ func testLabelIterator(t *testing.T, iter export.LabelIterator) {
 	require.Equal(t, 2, iter.Len())
 }
 
-func testLabelIteratorReset(t *testing.T, iter export.LabelIterator) {
-	require.True(t, iter.Next())
-	require.Equal(t, key.String("bar", "baz"), iter.Label())
-	iter.Reset()
-	require.True(t, iter.Next())
-	require.Equal(t, key.String("bar", "baz"), iter.Label())
-
-	require.True(t, iter.Next())
-	require.Equal(t, key.Int("foo", 42), iter.Label())
-	iter.Reset()
-	require.True(t, iter.Next())
-	require.Equal(t, key.String("bar", "baz"), iter.Label())
-
-	for iter.Next() {
-	}
-	iter.Reset()
-	require.True(t, iter.Next())
-	require.Equal(t, key.String("bar", "baz"), iter.Label())
-}
-
 func testEmptyLabelIterator(t *testing.T, iter export.LabelIterator) {
 	require.Equal(t, 0, iter.Len())
-	require.False(t, iter.Next())
-}
-
-func testEmptyLabelIteratorReset(t *testing.T, iter export.LabelIterator) {
-	require.False(t, iter.Next())
-	iter.Reset()
 	require.False(t, iter.Next())
 }

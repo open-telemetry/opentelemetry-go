@@ -210,11 +210,11 @@ func (e benchmarkEncoder) Encode(li export.LabelIterator) string {
 	var kv core.KeyValue
 	e.b.StartTimer()
 	for i := 0; i < e.b.N; i++ {
+		iter := li
 		// test getting only the first element
-		if li.Next() {
-			kv = li.Label()
+		if iter.Next() {
+			kv = iter.Label()
 		}
-		li.Reset()
 	}
 	e.b.StopTimer()
 	benchmarkEncoderVar = kv
