@@ -160,7 +160,8 @@ var (
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
 
-	kvType = reflect.TypeOf(core.KeyValue{})
+	kvType          = reflect.TypeOf(core.KeyValue{})
+	emptyArrayValue = reflect.ValueOf([0]core.KeyValue{})
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -410,12 +411,13 @@ func computeOrderedReflect(kvs []core.KeyValue) interface{} {
 }
 
 func (ls *labels) getIterator() export.LabelIterator {
-	if ls.ordered == nil {
-		// it's an empty labelset
-		return zeroIter
-	}
 	if !ls.cachedValue.IsValid() {
-		ls.cachedValue = reflect.ValueOf(ls.ordered)
+		if ls.ordered == nil {
+			// it's an empty labelset
+			ls.cachedValue = emptyArrayValue
+		} else {
+			ls.cachedValue = reflect.ValueOf(ls.ordered)
+		}
 	}
 	return newReflectValueLabelIterator(ls.cachedValue)
 }
@@ -536,33 +538,6 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-type zeroLabelIterator struct{}
-
-var zeroIter export.LabelIterator = zeroLabelIterator{}
-
-func (zeroLabelIterator) Next() bool {
-	return false
-}
-
-func (zeroLabelIterator) Label() core.KeyValue {
-	panic("shouldn't be called")
-}
-
-func (zeroLabelIterator) IndexedLabel() (int, core.KeyValue) {
-	panic("shouldn't be called")
-}
-
-func (zeroLabelIterator) Len() int {
-	return 0
-}
-
-func (zeroLabelIterator) Clone() export.LabelIterator {
-	return zeroIter
-}
-
-func (zeroLabelIterator) Reset() {
-}
-
 type reflectValueLabelIterator struct {
 	value reflect.Value
 	idx   int
@@ -622,8 +597,8 @@ func GetIteratorsForTesting(labels []core.KeyValue) []export.LabelIterator {
 
 // GetEmptyIteratorsForTesting returns empty iterators for testing.
 func GetEmptyIteratorsForTesting() []export.LabelIterator {
-	iter := newReflectValueLabelIterator(reflect.ValueOf(computeOrderedReflect(nil)))
-	return []export.LabelIterator{zeroIter, iter}
+	iter := newReflectValueLabelIterator(emptyArrayValue)
+	return []export.LabelIterator{iter}
 }
 
 func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
