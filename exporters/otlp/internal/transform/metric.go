@@ -23,7 +23,8 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/core"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/api/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
@@ -33,7 +34,7 @@ var ErrUnimplementedAgg = errors.New("unimplemented aggregator")
 
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
-func Record(r metricsdk.Record) (*metricpb.Metric, error) {
+func Record(r export.Record) (*metricpb.Metric, error) {
 	d := r.Descriptor()
 	l := r.Labels()
 	switch a := r.Aggregator().(type) {
@@ -46,7 +47,7 @@ func Record(r metricsdk.Record) (*metricpb.Metric, error) {
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
+func sum(desc *metric.Descriptor, labels export.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
 	sum, err := a.Sum()
 	if err != nil {
 		return nil, err
@@ -64,12 +65,12 @@ func sum(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.Sum) 
 	switch n := desc.NumberKind(); n {
 	case core.Int64NumberKind, core.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
-		m.Int64Datapoints = []*metricpb.Int64DataPoint{
+		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{Value: sum.CoerceToInt64(n)},
 		}
 	case core.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
-		m.DoubleDatapoints = []*metricpb.DoubleDataPoint{
+		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{Value: sum.CoerceToFloat64(n)},
 		}
 	}
@@ -96,7 +97,7 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Numbe
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
@@ -111,7 +112,7 @@ func minMaxSumCount(desc *metricsdk.Descriptor, labels metricsdk.Labels, a aggre
 			Type:        metricpb.MetricDescriptor_SUMMARY,
 			Labels:      stringKeyValues(labels.Ordered()),
 		},
-		SummaryDatapoints: []*metricpb.SummaryDataPoint{
+		SummaryDataPoints: []*metricpb.SummaryDataPoint{
 			{
 				Count: uint64(count),
 				Sum:   sum.CoerceToFloat64(numKind),

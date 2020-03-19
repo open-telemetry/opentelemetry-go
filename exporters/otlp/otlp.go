@@ -217,12 +217,13 @@ func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) erro
 	// Seed records into the work processing pool.
 	records := make(chan metricsdk.Record)
 	go func() {
-		cps.ForEach(func(record metricsdk.Record) {
+		_ = cps.ForEach(func(record metricsdk.Record) (err error) {
 			select {
 			case <-e.stopCh:
 			case <-ctx.Done():
 			case records <- record:
 			}
+			return
 		})
 		close(records)
 	}()
@@ -268,7 +269,7 @@ func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metr
 	for r := range in {
 		m, err := transform.Record(r)
 		if err != nil {
-			if err == aggregator.ErrEmptyDataSet {
+			if err == aggregator.ErrNoData {
 				// The Aggregator was checkpointed before the first value
 				// was set, skipping.
 				continue

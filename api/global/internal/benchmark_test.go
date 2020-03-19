@@ -23,8 +23,9 @@ var Must = metric.Must
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
-	sdk *sdk.SDK
-	B   *testing.B
+	sdk   *sdk.SDK
+	meter metric.Meter
+	B     *testing.B
 }
 
 var _ metric.Provider = &benchFixture{}
@@ -35,14 +36,15 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 	bf.sdk = sdk.New(bf, sdk.NewDefaultLabelEncoder())
+	bf.meter = metric.WrapMeterImpl(bf.sdk)
 	return bf
 }
 
-func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	case metric.CounterKind:
 		return sum.New()
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
@@ -66,7 +68,7 @@ func (*benchFixture) FinishedCollection() {
 }
 
 func (fix *benchFixture) Meter(name string) metric.Meter {
-	return fix.sdk
+	return fix.meter
 }
 
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {

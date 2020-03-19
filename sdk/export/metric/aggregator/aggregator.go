@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -97,20 +98,12 @@ var (
 	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
-	ErrNonMonotoneInput = fmt.Errorf("the new value is not monotone")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
 
-	// ErrNoLastValue is returned by the LastValue interface when
-	// (due to a race with collection) the Aggregator is
-	// checkpointed before the first value is set.  The aggregator
-	// should simply be skipped in this case.
-	ErrNoLastValue = fmt.Errorf("no value has been set")
-
-	// ErrEmptyDataSet is returned by Max and Quantile interfaces
-	// when (due to a race with collection) the Aggregator is
-	// checkpointed before the first value is set.  The aggregator
-	// should simply be skipped in this case.
-	ErrEmptyDataSet = fmt.Errorf("the result is not defined on an empty data set")
+	// ErrNoData is returned when (due to a race with collection)
+	// the Aggregator is check-pointed before the first value is set.
+	// The aggregator should simply be skipped in this case.
+	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
 
 // NewInconsistentMergeError formats an error describing an attempt to
@@ -124,7 +117,7 @@ func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute measure metrics.
-func RangeTest(number core.Number, descriptor *export.Descriptor) error {
+func RangeTest(number core.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
 	if numberKind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
@@ -132,7 +125,7 @@ func RangeTest(number core.Number, descriptor *export.Descriptor) error {
 	}
 
 	switch descriptor.MetricKind() {
-	case export.CounterKind:
+	case metric.CounterKind:
 		if number.IsNegative(numberKind) {
 			return ErrNegativeInput
 		}

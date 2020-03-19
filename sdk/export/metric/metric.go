@@ -14,12 +14,11 @@
 
 package metric
 
-//go:generate stringer -type=Kind
-
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -101,7 +100,7 @@ type AggregationSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*Descriptor) Aggregator
+	AggregatorFor(*metric.Descriptor) Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -131,7 +130,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for distributed or span context.
-	Update(context.Context, core.Number, *Descriptor) error
+	Update(context.Context, core.Number, *metric.Descriptor) error
 
 	// Checkpoint is called during collection to finish one period
 	// of aggregation by atomically saving the current value.
@@ -146,13 +145,13 @@ type Aggregator interface {
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
-	Checkpoint(context.Context, *Descriptor)
+	Checkpoint(context.Context, *metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's checkpointed state.
 	// Merge() is called in a single-threaded context, no locking
 	// is required.
-	Merge(Aggregator, *Descriptor) error
+	Merge(Aggregator, *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -200,14 +199,19 @@ type LabelEncoder interface {
 type CheckpointSet interface {
 	// ForEach iterates over aggregated checkpoints for all
 	// metrics that were updated during the last collection
-	// period.
-	ForEach(func(Record))
+	// period. Each aggregated checkpoint returned by the
+	// function parameter may return an error.
+	// ForEach tolerates ErrNoData silently, as this is
+	// expected from the Meter implementation. Any other kind
+	// of error will immediately halt ForEach and return
+	// the error to the caller.
+	ForEach(func(Record) error) error
 }
 
 // Record contains the exported data for a single metric instrument
 // and label set.
 type Record struct {
-	descriptor *Descriptor
+	descriptor *metric.Descriptor
 	labels     Labels
 	aggregator Aggregator
 }
@@ -257,7 +261,7 @@ func (l Labels) Len() int {
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels Labels, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -272,7 +276,7 @@ func (r Record) Aggregator() Aggregator {
 }
 
 // Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *Descriptor {
+func (r Record) Descriptor() *metric.Descriptor {
 	return r.descriptor
 }
 
@@ -281,17 +285,3 @@ func (r Record) Descriptor() *Descriptor {
 func (r Record) Labels() Labels {
 	return r.labels
 }
-
-// Kind describes the kind of instrument.
-type Kind int8
-
-const (
-	// Counter kind indicates a counter instrument.
-	CounterKind Kind = iota
-
-	// Measure kind indicates a measure instrument.
-	MeasureKind
-
-	// Observer kind indicates an observer instrument
-	ObserverKind
-)

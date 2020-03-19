@@ -44,11 +44,11 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 	bf.sdk = sdk.New(bf, sdk.NewDefaultLabelEncoder())
-	bf.meter = metric.Must(bf.sdk)
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
 	return bf
 }
 
-func (*benchFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, "counter"):
@@ -374,40 +374,6 @@ func BenchmarkObserverRegistration(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		fix.meter.RegisterInt64Observer(names[i], cb)
-	}
-}
-
-func BenchmarkObserverRegistrationUnregistration(b *testing.B) {
-	fix := newFixture(b)
-	names := make([]string, 0, b.N)
-	for i := 0; i < b.N; i++ {
-		names = append(names, fmt.Sprintf("test.observer.%d", i))
-	}
-	cb := func(result metric.Int64ObserverResult) {}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		fix.meter.RegisterInt64Observer(names[i], cb).Unregister()
-	}
-}
-
-func BenchmarkObserverRegistrationUnregistrationBatched(b *testing.B) {
-	fix := newFixture(b)
-	names := make([]string, 0, b.N)
-	for i := 0; i < b.N; i++ {
-		names = append(names, fmt.Sprintf("test.observer.%d", i))
-	}
-	observers := make([]metric.Int64Observer, 0, b.N)
-	cb := func(result metric.Int64ObserverResult) {}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		observers = append(observers, fix.meter.RegisterInt64Observer(names[i], cb))
-	}
-	for i := 0; i < b.N; i++ {
-		observers[i].Unregister()
 	}
 }
 

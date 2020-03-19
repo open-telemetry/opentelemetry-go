@@ -15,6 +15,7 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -65,33 +66,33 @@ func NewWithExactMeasure() export.AggregationSelector {
 	return selectorExact{}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.ObserverKind:
+	case metric.ObserverKind:
 		fallthrough
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		return minmaxsumcount.New(descriptor)
 	default:
 		return sum.New()
 	}
 }
 
-func (s selectorSketch) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.ObserverKind:
+	case metric.ObserverKind:
 		fallthrough
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
 		return sum.New()
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case export.ObserverKind:
+	case metric.ObserverKind:
 		fallthrough
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		return array.New()
 	default:
 		return sum.New()

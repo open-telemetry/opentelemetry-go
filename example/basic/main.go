@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
@@ -45,7 +46,8 @@ func initTracer() {
 		return
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv11"), core.Key("rk2").Int64(5)))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
@@ -75,11 +77,10 @@ func main() {
 	oneMetricCB := func(result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels)
 	}
-	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
+	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("An observer set to 1.0"),
 	)
-	defer oneMetric.Unregister()
 
 	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
 

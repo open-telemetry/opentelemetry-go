@@ -21,6 +21,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -68,24 +69,24 @@ func New() *Aggregator {
 }
 
 // LastValue returns the last-recorded lastValue value and the
-// corresponding timestamp.  The error value aggregator.ErrNoLastValue
+// corresponding timestamp.  The error value aggregator.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
 func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
 	gd := (*lastValueData)(g.checkpoint)
 	if gd == unsetLastValue {
-		return core.Number(0), time.Time{}, aggregator.ErrNoLastValue
+		return core.Number(0), time.Time{}, aggregator.ErrNoData
 	}
 	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
 // Checkpoint atomically saves the current value.
-func (g *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
+func (g *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (g *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	ngd := &lastValueData{
 		value:     number,
 		timestamp: time.Now(),
@@ -96,7 +97,7 @@ func (g *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 
 // Merge combines state from two aggregators.  The most-recently set
 // value is chosen.
-func (g *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
+func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(g, oa)

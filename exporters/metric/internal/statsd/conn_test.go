@@ -26,6 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/exporters/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -123,10 +124,14 @@ timer.B.D:%s|ms
 					}
 
 					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
-					cdesc := export.NewDescriptor("counter", export.CounterKind, nkind)
-					gdesc := export.NewDescriptor("observer", export.ObserverKind, nkind)
-					mdesc := export.NewDescriptor("measure", export.MeasureKind, nkind)
-					tdesc := export.NewDescriptor("timer", export.MeasureKind, nkind, export.WithUnit(unit.Milliseconds))
+					cdesc := metric.NewDescriptor(
+						"counter", metric.CounterKind, nkind)
+					gdesc := metric.NewDescriptor(
+						"observer", metric.ObserverKind, nkind)
+					mdesc := metric.NewDescriptor(
+						"measure", metric.MeasureKind, nkind)
+					tdesc := metric.NewDescriptor(
+						"timer", metric.MeasureKind, nkind, metric.WithUnit(unit.Milliseconds))
 
 					labels := []core.KeyValue{
 						key.New("A").String("B"),
@@ -134,10 +139,10 @@ timer.B.D:%s|ms
 					}
 					const value = 123.456
 
-					checkpointSet.AddCounter(cdesc, value, labels...)
-					checkpointSet.AddLastValue(gdesc, value, labels...)
-					checkpointSet.AddMeasure(mdesc, value, labels...)
-					checkpointSet.AddMeasure(tdesc, value, labels...)
+					checkpointSet.AddCounter(&cdesc, value, labels...)
+					checkpointSet.AddLastValue(&gdesc, value, labels...)
+					checkpointSet.AddMeasure(&mdesc, value, labels...)
+					checkpointSet.AddMeasure(&tdesc, value, labels...)
 
 					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
@@ -281,7 +286,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			desc := export.NewDescriptor("counter", export.CounterKind, core.Int64NumberKind)
+			desc := metric.NewDescriptor("counter", metric.CounterKind, core.Int64NumberKind)
 
 			var expected []string
 
@@ -291,7 +296,7 @@ func TestPacketSplit(t *testing.T) {
 				offset += nkeys
 				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
 				expected = append(expected, expect)
-				checkpointSet.AddCounter(desc, 100, labels...)
+				checkpointSet.AddCounter(&desc, 100, labels...)
 			})
 
 			err = exp.Export(ctx, checkpointSet)

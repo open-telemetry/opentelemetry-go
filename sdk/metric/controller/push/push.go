@@ -29,6 +29,7 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	sdk          *sdk.SDK
+	meter        metric.Meter
 	errorHandler sdk.ErrorHandler
 	batcher      export.Batcher
 	exporter     export.Exporter
@@ -85,8 +86,10 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration,
 		opt.Apply(c)
 	}
 
+	impl := sdk.New(batcher, lencoder, sdk.WithResource(c.Resource))
 	return &Controller{
-		sdk:          sdk.New(batcher, lencoder, sdk.WithResource(c.Resource)),
+		sdk:          impl,
+		meter:        metric.WrapMeterImpl(impl),
 		errorHandler: c.ErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
@@ -114,7 +117,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
 func (c *Controller) Meter(_ string) metric.Meter {
-	return c.sdk
+	return c.meter
 }
 
 // Start begins a ticker that periodically collects and exports
@@ -195,10 +198,10 @@ type syncCheckpointSet struct {
 
 var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
 
-func (c syncCheckpointSet) ForEach(fn func(export.Record)) {
+func (c syncCheckpointSet) ForEach(fn func(export.Record) error) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.delegate.ForEach(fn)
+	return c.delegate.ForEach(fn)
 }
 
 func (realClock) Now() time.Time {

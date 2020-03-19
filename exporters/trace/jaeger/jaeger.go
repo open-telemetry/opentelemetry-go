@@ -204,6 +204,17 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		}
 	}
 
+	// TODO (rghetia): what to do if a resource key is the same as one of the attribute's key
+	// TODO (rghetia): is there a need for prefixing keys with "resource-"?
+	if data.Resource != nil {
+		for _, kv := range data.Resource.Attributes() {
+			tag := keyValueToTag(kv)
+			if tag != nil {
+				tags = append(tags, tag)
+			}
+		}
+	}
+
 	tags = append(tags,
 		getInt64Tag("status.code", int64(data.StatusCode)),
 		getStringTag("status.message", data.StatusMessage),

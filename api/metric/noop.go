@@ -7,26 +7,31 @@ import (
 )
 
 type NoopProvider struct{}
+type NoopMeter struct{}
 
-type NoopMeter struct {
-}
-
-type noopBoundInstrument struct{}
 type noopLabelSet struct{}
 type noopInstrument struct{}
-type noopInt64Observer struct{}
-type noopFloat64Observer struct{}
+type noopBoundInstrument struct{}
+type NoopSync struct{ noopInstrument }
+type NoopAsync struct{ noopInstrument }
 
 var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
-var _ InstrumentImpl = noopInstrument{}
-var _ BoundInstrumentImpl = noopBoundInstrument{}
+var _ SyncImpl = NoopSync{}
+var _ BoundSyncImpl = noopBoundInstrument{}
 var _ LabelSet = noopLabelSet{}
-var _ Int64Observer = noopInt64Observer{}
-var _ Float64Observer = noopFloat64Observer{}
+var _ AsyncImpl = NoopAsync{}
 
 func (NoopProvider) Meter(name string) Meter {
 	return NoopMeter{}
+}
+
+func (noopInstrument) Implementation() interface{} {
+	return nil
+}
+
+func (noopInstrument) Descriptor() Descriptor {
+	return Descriptor{}
 }
 
 func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
@@ -35,21 +40,11 @@ func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 func (noopBoundInstrument) Unbind() {
 }
 
-func (noopInstrument) Bind(LabelSet) BoundInstrumentImpl {
+func (NoopSync) Bind(LabelSet) BoundSyncImpl {
 	return noopBoundInstrument{}
 }
 
-func (noopInstrument) RecordOne(context.Context, core.Number, LabelSet) {
-}
-
-func (noopInstrument) Meter() Meter {
-	return NoopMeter{}
-}
-
-func (noopInt64Observer) Unregister() {
-}
-
-func (noopFloat64Observer) Unregister() {
+func (NoopSync) RecordOne(context.Context, core.Number, LabelSet) {
 }
 
 func (NoopMeter) Labels(...core.KeyValue) LabelSet {
@@ -59,26 +54,26 @@ func (NoopMeter) Labels(...core.KeyValue) LabelSet {
 func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
 }
 
-func (NoopMeter) NewInt64Counter(name string, cos ...Option) (Int64Counter, error) {
-	return WrapInt64CounterInstrument(noopInstrument{}, nil)
+func (NoopMeter) NewInt64Counter(string, ...Option) (Int64Counter, error) {
+	return Int64Counter{syncInstrument{NoopSync{}}}, nil
 }
 
-func (NoopMeter) NewFloat64Counter(name string, cos ...Option) (Float64Counter, error) {
-	return WrapFloat64CounterInstrument(noopInstrument{}, nil)
+func (NoopMeter) NewFloat64Counter(string, ...Option) (Float64Counter, error) {
+	return Float64Counter{syncInstrument{NoopSync{}}}, nil
 }
 
-func (NoopMeter) NewInt64Measure(name string, mos ...Option) (Int64Measure, error) {
-	return WrapInt64MeasureInstrument(noopInstrument{}, nil)
+func (NoopMeter) NewInt64Measure(string, ...Option) (Int64Measure, error) {
+	return Int64Measure{syncInstrument{NoopSync{}}}, nil
 }
 
-func (NoopMeter) NewFloat64Measure(name string, mos ...Option) (Float64Measure, error) {
-	return WrapFloat64MeasureInstrument(noopInstrument{}, nil)
+func (NoopMeter) NewFloat64Measure(string, ...Option) (Float64Measure, error) {
+	return Float64Measure{syncInstrument{NoopSync{}}}, nil
 }
 
-func (NoopMeter) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...Option) (Int64Observer, error) {
-	return noopInt64Observer{}, nil
+func (NoopMeter) RegisterInt64Observer(string, Int64ObserverCallback, ...Option) (Int64Observer, error) {
+	return Int64Observer{asyncInstrument{NoopAsync{}}}, nil
 }
 
-func (NoopMeter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...Option) (Float64Observer, error) {
-	return noopFloat64Observer{}, nil
+func (NoopMeter) RegisterFloat64Observer(string, Float64ObserverCallback, ...Option) (Float64Observer, error) {
+	return Float64Observer{asyncInstrument{NoopAsync{}}}, nil
 }
