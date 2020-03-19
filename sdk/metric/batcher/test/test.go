@@ -89,13 +89,14 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 }
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	encoded := encoder.Encode(labels)
-	return export.NewLabels(labels, encoded, encoder)
+	ls := export.LabelSlice(labels)
+	return export.NewLabels(ls, encoder.Encode(ls.Iter()), encoder)
 }
 
-func (Encoder) Encode(labels []core.KeyValue) string {
+func (Encoder) Encode(iter export.LabelIterator) string {
 	var sb strings.Builder
-	for i, l := range labels {
+	for iter.Next() {
+		i, l := iter.IndexedLabel()
 		if i > 0 {
 			sb.WriteString("&")
 		}

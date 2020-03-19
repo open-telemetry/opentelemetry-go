@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -52,14 +51,15 @@ func NewLabelEncoder() *LabelEncoder {
 }
 
 // Encode emits a string like "|#key1:value1,key2:value2".
-func (e *LabelEncoder) Encode(labels []core.KeyValue) string {
+func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 	buf := e.pool.Get().(*bytes.Buffer)
 	defer e.pool.Put(buf)
 	buf.Reset()
 
 	delimiter := "|#"
 
-	for _, kv := range labels {
+	for iter.Next() {
+		kv := iter.Label()
 		_, _ = buf.WriteString(delimiter)
 		_, _ = buf.WriteString(string(kv.Key))
 		_, _ = buf.WriteRune(':')
@@ -80,5 +80,5 @@ func (e *LabelEncoder) ForceEncode(labels export.Labels) (string, bool) {
 		return labels.Encoded(), false
 	}
 
-	return e.Encode(labels.Ordered()), true
+	return e.Encode(labels.Iter()), true
 }

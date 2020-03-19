@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
@@ -169,6 +169,97 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
+// Convenience function that creates a slice of labels from the passed
+// iterator. The iterator is set up to start from the beginning before
+// creating the slice.
+func IteratorToSlice(iter LabelIterator) []core.KeyValue {
+	l := iter.Len()
+	if l == 0 {
+		return nil
+	}
+	iter.idx = -1
+	slice := make([]core.KeyValue, 0, l)
+	for iter.Next() {
+		slice = append(slice, iter.Label())
+	}
+	return slice
+}
+
+// LabelStorage provides an access to the ordered labels.
+type LabelStorage interface {
+	// NumLabels returns a number of labels in the storage.
+	NumLabels() int
+	// GetLabels gets a label from a passed index.
+	GetLabel(int) core.KeyValue
+}
+
+// LabelSlice implements LabelStorage in terms of a slice.
+type LabelSlice []core.KeyValue
+
+var _ LabelStorage = LabelSlice{}
+
+// NumLabels is a part of LabelStorage implementation.
+func (s LabelSlice) NumLabels() int {
+	return len(s)
+}
+
+// GetLabel is a part of LabelStorage implementation.
+func (s LabelSlice) GetLabel(idx int) core.KeyValue {
+	return s[idx]
+}
+
+// Iter returns an iterator going over the slice.
+func (s LabelSlice) Iter() LabelIterator {
+	return NewLabelIterator(s)
+}
+
+// LabelIterator allows iterating over an ordered set of labels. The
+// typical use of the iterator is as follows:
+//
+//     iter := export.NewLabelIterator(getStorage())
+//     for iter.Next() {
+//       label := iter.Label()
+//       // or, if we need an index:
+//       // idx, label := iter.IndexedLabel()
+//       // do something with label
+//     }
+type LabelIterator struct {
+	storage LabelStorage
+	idx     int
+}
+
+// NewLabelIterator creates an iterator going over a passed storage.
+func NewLabelIterator(storage LabelStorage) LabelIterator {
+	return LabelIterator{
+		storage: storage,
+		idx:     -1,
+	}
+}
+
+// Next moves the iterator to the next label. Returns false if there
+// are no more labels.
+func (i *LabelIterator) Next() bool {
+	i.idx++
+	return i.idx < i.Len()
+}
+
+// Label returns current label. Must be called only after Next returns
+// true.
+func (i *LabelIterator) Label() core.KeyValue {
+	return i.storage.GetLabel(i.idx)
+}
+
+// IndexedLabel returns current index and label. Must be called only
+// after Next returns true.
+func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
+	return i.idx, i.Label()
+}
+
+// Len returns a number of labels in the iterator's label storage.
+func (i *LabelIterator) Len() int {
+	return i.storage.NumLabels()
+}
+
 // LabelEncoder enables an optimization for export pipelines that use
 // text to encode their label sets.
 //
@@ -189,7 +280,7 @@ type LabelEncoder interface {
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
-	Encode([]core.KeyValue) string
+	Encode(LabelIterator) string
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -221,7 +312,7 @@ type Record struct {
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.
 type Labels struct {
-	ordered []core.KeyValue
+	storage LabelStorage
 	encoded string
 	encoder LabelEncoder
 }
@@ -229,18 +320,17 @@ type Labels struct {
 // NewLabels builds a Labels object, consisting of an ordered set of
 // labels, a unique encoded representation, and the encoder that
 // produced it.
-func NewLabels(ordered []core.KeyValue, encoded string, encoder LabelEncoder) Labels {
+func NewLabels(storage LabelStorage, encoded string, encoder LabelEncoder) Labels {
 	return Labels{
-		ordered: ordered,
+		storage: storage,
 		encoded: encoded,
 		encoder: encoder,
 	}
 }
 
-// Ordered returns the labels in a specified order, according to the
-// Batcher.
-func (l Labels) Ordered() []core.KeyValue {
-	return l.ordered
+// Iter returns an iterator over ordered labels.
+func (l Labels) Iter() LabelIterator {
+	return NewLabelIterator(l.storage)
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
@@ -251,11 +341,6 @@ func (l Labels) Encoded() string {
 // Encoder is the encoder that computed the Encoded() representation.
 func (l Labels) Encoder() LabelEncoder {
 	return l.encoder
-}
-
-// Len returns the number of labels.
-func (l Labels) Len() int {
-	return len(l.ordered)
 }
 
 // NewRecord allows Batcher implementations to construct export

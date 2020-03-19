@@ -62,7 +62,9 @@ type noTagsAdapter struct {
 func (*noTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	_, _ = buf.WriteString(rec.Descriptor().Name())
 
-	for _, tag := range rec.Labels().Ordered() {
+	iter := rec.Labels().Iter()
+	for iter.Next() {
+		tag := iter.Label()
 		_, _ = buf.WriteString(".")
 		_, _ = buf.WriteString(tag.Value.Emit())
 	}
@@ -294,7 +296,9 @@ func TestPacketSplit(t *testing.T) {
 			tcase.setup(func(nkeys int) {
 				labels := makeLabels(offset, nkeys)
 				offset += nkeys
-				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
+				iter := export.LabelSlice(labels).Iter()
+				encoded := adapter.LabelEncoder.Encode(iter)
+				expect := fmt.Sprint("counter:100|c", encoded, "\n")
 				expected = append(expected, expect)
 				checkpointSet.AddCounter(&desc, 100, labels...)
 			})

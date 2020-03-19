@@ -38,14 +38,18 @@ type benchFixture struct {
 	B     *testing.B
 }
 
-func newFixture(b *testing.B) *benchFixture {
+func newFixtureWithEncoder(b *testing.B, encoder export.LabelEncoder) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
 		B: b,
 	}
-	bf.sdk = sdk.New(bf, sdk.NewDefaultLabelEncoder())
+	bf.sdk = sdk.New(bf, encoder)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
 	return bf
+}
+
+func newFixture(b *testing.B) *benchFixture {
+	return newFixtureWithEncoder(b, sdk.NewDefaultLabelEncoder())
 }
 
 func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
@@ -190,6 +194,68 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cnt.Bind(labels[i]).Unbind()
 	}
+}
+
+// Iterators
+
+type benchmarkEncoder struct {
+	b *testing.B
+}
+
+var _ export.LabelEncoder = benchmarkEncoder{}
+
+var benchmarkEncoderVar core.KeyValue
+
+func (e benchmarkEncoder) Encode(li export.LabelIterator) string {
+	var kv core.KeyValue
+	e.b.StartTimer()
+	for i := 0; i < e.b.N; i++ {
+		iter := li
+		// test getting only the first element
+		if iter.Next() {
+			kv = iter.Label()
+		}
+	}
+	e.b.StopTimer()
+	benchmarkEncoderVar = kv
+	return "foo=bar"
+}
+
+func benchmarkIterator(b *testing.B, n int) {
+	encoder := benchmarkEncoder{b: b}
+	fix := newFixtureWithEncoder(b, encoder)
+	labs := fix.sdk.Labels(makeLabels(n)...)
+	cnt := fix.meter.NewInt64Counter("int64.counter")
+	ctx := context.Background()
+	cnt.Add(ctx, 1, labs)
+
+	b.StopTimer()
+	b.ResetTimer()
+	fix.sdk.Collect(ctx)
+}
+
+func BenchmarkIterator_0(b *testing.B) {
+	benchmarkIterator(b, 0)
+}
+
+func BenchmarkIterator_1(b *testing.B) {
+	benchmarkIterator(b, 1)
+}
+
+func BenchmarkIterator_2(b *testing.B) {
+	benchmarkIterator(b, 2)
+}
+
+func BenchmarkIterator_4(b *testing.B) {
+	benchmarkIterator(b, 4)
+}
+
+func BenchmarkIterator_8(b *testing.B) {
+	benchmarkIterator(b, 8)
+}
+
+func BenchmarkIterator_16(b *testing.B) {
+	benchmarkIterator(b, 16)
 }
 
 // Counters
