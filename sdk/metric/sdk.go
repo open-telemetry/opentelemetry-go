@@ -117,7 +117,7 @@ type (
 		// labels is the LabelSet passed by the user.
 		labels *labels
 
-		//
+		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
 
 		// recorder implements the actual RecordOne() API,
