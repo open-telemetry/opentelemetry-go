@@ -46,18 +46,9 @@ jobs:
     executor: prior-go
     <<: *build-template
 
-  build:
-    executor: current-go
-    steps:
-      - run: echo "Builds complete"
-
 workflows:
   version: 2
-  default:
+  build:
     jobs:
       - current-go
       - prior-go
-      - build:
-          requires:
-            - current-go
-            - prior-go
