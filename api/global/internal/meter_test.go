@@ -312,10 +312,10 @@ func TestImplementationIndirection(t *testing.T) {
 	// Sync: no SDK yet
 	counter := Must(meter1).NewInt64Counter("interface.counter")
 
-	ival := counter.Measurement(1).SynchronousImpl().Implementation()
+	ival := counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok := ival.(*metrictest.Synchronous)
+	_, ok := ival.(*metrictest.Sync)
 	require.False(t, ok)
 
 	// Async: no SDK yet
@@ -324,10 +324,10 @@ func TestImplementationIndirection(t *testing.T) {
 		func(result metric.Float64ObserverResult) {},
 	)
 
-	ival = observer.AsynchronousImpl().Implementation()
+	ival = observer.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Asynchronous)
+	_, ok = ival.(*metrictest.Async)
 	require.False(t, ok)
 
 	// Register the SDK
@@ -337,16 +337,16 @@ func TestImplementationIndirection(t *testing.T) {
 	// Repeat the above tests
 
 	// Sync
-	ival = counter.Measurement(1).SynchronousImpl().Implementation()
+	ival = counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Synchronous)
+	_, ok = ival.(*metrictest.Sync)
 	require.True(t, ok)
 
 	// Async
-	ival = observer.AsynchronousImpl().Implementation()
+	ival = observer.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Asynchronous)
+	_, ok = ival.(*metrictest.Async)
 	require.True(t, ok)
 }

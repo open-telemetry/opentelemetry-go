@@ -21,56 +21,56 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type synchronousInstrument struct {
-	instrument SynchronousImpl
+type syncInstrument struct {
+	instrument SyncImpl
 }
 
-type synchronousBoundInstrument struct {
-	boundInstrument BoundSynchronousImpl
+type syncBoundInstrument struct {
+	boundInstrument BoundSyncImpl
 }
 
-type asynchronousInstrument struct {
-	instrument AsynchronousImpl
+type asyncInstrument struct {
+	instrument AsyncImpl
 }
 
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
-func (s synchronousInstrument) bind(labels LabelSet) synchronousBoundInstrument {
-	return newSynchronousBoundInstrument(s.instrument.Bind(labels))
+func (s syncInstrument) bind(labels LabelSet) syncBoundInstrument {
+	return newSyncBoundInstrument(s.instrument.Bind(labels))
 }
 
-func (s synchronousInstrument) float64Measurement(value float64) Measurement {
+func (s syncInstrument) float64Measurement(value float64) Measurement {
 	return newMeasurement(s.instrument, core.NewFloat64Number(value))
 }
 
-func (s synchronousInstrument) int64Measurement(value int64) Measurement {
+func (s syncInstrument) int64Measurement(value int64) Measurement {
 	return newMeasurement(s.instrument, core.NewInt64Number(value))
 }
 
-func (s synchronousInstrument) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
+func (s syncInstrument) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
 
-func (s synchronousInstrument) SynchronousImpl() SynchronousImpl {
+func (s syncInstrument) SyncImpl() SyncImpl {
 	return s.instrument
 }
 
-func (h synchronousBoundInstrument) directRecord(ctx context.Context, number core.Number) {
+func (h syncBoundInstrument) directRecord(ctx context.Context, number core.Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
-func (h synchronousBoundInstrument) Unbind() {
+func (h syncBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
 }
 
-func (a asynchronousInstrument) AsynchronousImpl() AsynchronousImpl {
+func (a asyncInstrument) AsyncImpl() AsyncImpl {
 	return a.instrument
 }
 
-// checkNewSynchronous receives an SynchronousImpl and potential
+// checkNewSync receives an SyncImpl and potential
 // error, and returns the same types, checking for and ensuring that
 // the returned interface is not nil.
-func checkNewSynchronous(instrument SynchronousImpl, err error) (synchronousInstrument, error) {
+func checkNewSync(instrument SyncImpl, err error) (syncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
@@ -80,37 +80,37 @@ func checkNewSynchronous(instrument SynchronousImpl, err error) (synchronousInst
 		// together and use a tag for the original name, e.g.,
 		//   name = 'invalid.counter.int64'
 		//   label = 'original-name=duplicate-counter-name'
-		instrument = NoopSynchronous{}
+		instrument = NoopSync{}
 	}
-	return synchronousInstrument{
+	return syncInstrument{
 		instrument: instrument,
 	}, err
 }
 
-func newSynchronousBoundInstrument(boundInstrument BoundSynchronousImpl) synchronousBoundInstrument {
-	return synchronousBoundInstrument{
+func newSyncBoundInstrument(boundInstrument BoundSyncImpl) syncBoundInstrument {
+	return syncBoundInstrument{
 		boundInstrument: boundInstrument,
 	}
 }
 
-func newMeasurement(instrument SynchronousImpl, number core.Number) Measurement {
+func newMeasurement(instrument SyncImpl, number core.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,
 	}
 }
 
-// checkNewAsynchronous receives an AsynchronousImpl and potential
+// checkNewAsync receives an AsyncImpl and potential
 // error, and returns the same types, checking for and ensuring that
 // the returned interface is not nil.
-func checkNewAsynchronous(instrument AsynchronousImpl, err error) (asynchronousInstrument, error) {
+func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
 		}
-		instrument = NoopAsynchronous{}
+		instrument = NoopAsync{}
 	}
-	return asynchronousInstrument{
+	return asyncInstrument{
 		instrument: instrument,
 	}, err
 }

@@ -72,7 +72,7 @@ type (
 	}
 
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) withImpl
+		newInstrument  func(meter api.Meter, name string) SyncImpler
 		getUpdateValue func() core.Number
 		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
 		newStore       func() interface{}
@@ -86,8 +86,8 @@ type (
 		equalValues  func(a, b core.Number) bool
 	}
 
-	withImpl interface {
-		SynchronousImpl() metric.SynchronousImpl
+	SyncImpler interface {
+		SyncImpl() metric.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -160,7 +160,7 @@ func (f *testFixture) startWorker(impl *sdk.SDK, meter api.Meter, wg *sync.WaitG
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	descriptor := impl.GetDescriptor(instrument.SynchronousImpl())
+	descriptor := impl.GetDescriptor(instrument.SyncImpl())
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
 	labs := meter.Labels(kvs...)
@@ -337,7 +337,7 @@ func float64sEqual(a, b core.Number) bool {
 
 func intCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
@@ -375,7 +375,7 @@ func TestStressInt64Counter(t *testing.T) {
 
 func floatCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
@@ -415,7 +415,7 @@ func TestStressFloat64Counter(t *testing.T) {
 
 func intLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {
@@ -457,7 +457,7 @@ func TestStressInt64LastValue(t *testing.T) {
 
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {

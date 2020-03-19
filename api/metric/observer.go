@@ -37,11 +37,11 @@ type Float64ObserverCallback func(result Float64ObserverResult)
 // Int64Observer is a metric that captures a set of int64 values at a
 // point in time.
 type Int64Observer struct {
-	asynchronousInstrument
+	asyncInstrument
 }
 
 // Float64Observer is a metric that captures a set of float64 values
 // at a point in time.
 type Float64Observer struct {
-	asynchronousInstrument
+	asyncInstrument
 }

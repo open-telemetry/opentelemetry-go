@@ -25,7 +25,7 @@ import (
 
 type (
 	Handle struct {
-		Instrument *Synchronous
+		Instrument *Sync
 		LabelSet   *LabelSet
 	}
 
@@ -48,7 +48,7 @@ type (
 
 	Meter struct {
 		MeasurementBatches []Batch
-		AsyncInstruments   []*Asynchronous
+		AsyncInstruments   []*Async
 	}
 
 	Measurement struct {
@@ -62,38 +62,38 @@ type (
 		descriptor apimetric.Descriptor
 	}
 
-	Asynchronous struct {
+	Async struct {
 		Instrument
 
 		callback func(func(core.Number, apimetric.LabelSet))
 	}
 
-	Synchronous struct {
+	Sync struct {
 		Instrument
 	}
 )
 
 var (
-	_ apimetric.SynchronousImpl      = &Synchronous{}
-	_ apimetric.BoundSynchronousImpl = &Handle{}
-	_ apimetric.LabelSet             = &LabelSet{}
-	_ apimetric.MeterImpl            = &Meter{}
-	_ apimetric.AsynchronousImpl     = &Asynchronous{}
+	_ apimetric.SyncImpl      = &Sync{}
+	_ apimetric.BoundSyncImpl = &Handle{}
+	_ apimetric.LabelSet      = &LabelSet{}
+	_ apimetric.MeterImpl     = &Meter{}
+	_ apimetric.AsyncImpl     = &Async{}
 )
 
 func (i Instrument) Descriptor() apimetric.Descriptor {
 	return i.descriptor
 }
 
-func (a *Asynchronous) Implementation() interface{} {
+func (a *Async) Implementation() interface{} {
 	return a
 }
 
-func (s *Synchronous) Implementation() interface{} {
+func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Synchronous) Bind(labels apimetric.LabelSet) apimetric.BoundSynchronousImpl {
+func (s *Sync) Bind(labels apimetric.LabelSet) apimetric.BoundSyncImpl {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
 		labels = ld.Delegate()
 	}
@@ -103,7 +103,7 @@ func (s *Synchronous) Bind(labels apimetric.LabelSet) apimetric.BoundSynchronous
 	}
 }
 
-func (s *Synchronous) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
+func (s *Sync) RecordOne(ctx context.Context, number core.Number, labels apimetric.LabelSet) {
 	if ld, ok := labels.(apimetric.LabelSetDelegate); ok {
 		labels = ld.Delegate()
 	}
@@ -158,8 +158,8 @@ func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	}
 }
 
-func (m *Meter) NewSynchronousInstrument(descriptor metric.Descriptor) (apimetric.SynchronousImpl, error) {
-	return &Synchronous{
+func (m *Meter) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
+	return &Sync{
 		Instrument{
 			descriptor: descriptor,
 			meter:      m,
@@ -167,8 +167,8 @@ func (m *Meter) NewSynchronousInstrument(descriptor metric.Descriptor) (apimetri
 	}, nil
 }
 
-func (m *Meter) NewAsynchronousInstrument(descriptor metric.Descriptor, callback func(func(core.Number, apimetric.LabelSet))) (apimetric.AsynchronousImpl, error) {
-	a := &Asynchronous{
+func (m *Meter) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(core.Number, apimetric.LabelSet))) (apimetric.AsyncImpl, error) {
+	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
 			meter:      m,
@@ -185,7 +185,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, meas
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = Measurement{
-			Instrument: m.SynchronousImpl().(*Synchronous),
+			Instrument: m.SyncImpl().(*Sync),
 			Number:     m.Number(),
 		}
 	}

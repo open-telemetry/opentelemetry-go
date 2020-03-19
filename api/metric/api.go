@@ -59,13 +59,13 @@ type Option interface {
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     core.Number
-	instrument SynchronousImpl
+	instrument SyncImpl
 }
 
-// SynchronousImpl returns the instrument that created this measurement.
+// SyncImpl returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (m Measurement) SynchronousImpl() SynchronousImpl {
+func (m Measurement) SyncImpl() SyncImpl {
 	return m.instrument
 }
 

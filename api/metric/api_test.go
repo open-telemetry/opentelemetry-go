@@ -126,7 +126,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, c.SynchronousImpl())
+		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, c.SyncImpl())
 	}
 	{
 		mock, meter := mockTest.NewMeter()
@@ -138,7 +138,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, c.SynchronousImpl())
+		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, c.SyncImpl())
 	}
 }
 
@@ -153,7 +153,7 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, m.SynchronousImpl())
+		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, m.SyncImpl())
 	}
 	{
 		mock, meter := mockTest.NewMeter()
@@ -165,7 +165,7 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, m.SynchronousImpl())
+		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, m.SyncImpl())
 	}
 }
 
@@ -179,7 +179,7 @@ func TestObserver(t *testing.T) {
 		t.Log("Testing float observer")
 
 		mock.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mock, core.Float64NumberKind, o.AsynchronousImpl())
+		checkObserverBatch(t, labels, mock, core.Float64NumberKind, o.AsyncImpl())
 	}
 	{
 		mock, meter := mockTest.NewMeter()
@@ -189,7 +189,7 @@ func TestObserver(t *testing.T) {
 		})
 		t.Log("Testing int observer")
 		mock.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mock, core.Int64NumberKind, o.AsynchronousImpl())
+		checkObserverBatch(t, labels, mock, core.Int64NumberKind, o.AsyncImpl())
 	}
 }
 
@@ -198,7 +198,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, moc
 	if len(mock.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))
 	}
-	ourInstrument := instrument.Implementation().(*mockTest.Synchronous)
+	ourInstrument := instrument.Implementation().(*mockTest.Sync)
 	ourLabelSet := labels.(*mockTest.LabelSet)
 	minLen := 3
 	if minLen > len(mock.MeasurementBatches) {
@@ -242,13 +242,13 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, moc
 	}
 }
 
-func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Meter, kind core.NumberKind, observer metric.AsynchronousImpl) {
+func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Meter, kind core.NumberKind, observer metric.AsyncImpl) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {
 		return
 	}
-	o := observer.Implementation().(*mockTest.Asynchronous)
+	o := observer.Implementation().(*mockTest.Async)
 	if !assert.NotNil(t, o) {
 		return
 	}
@@ -260,7 +260,7 @@ func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Met
 		return
 	}
 	measurement := got.Measurements[0]
-	assert.Equal(t, o, measurement.Instrument.Implementation().(*mockTest.Asynchronous))
+	assert.Equal(t, o, measurement.Instrument.Implementation().(*mockTest.Async))
 	ft := fortyTwo(t, kind)
 	assert.Equal(t, 0, measurement.Number.CompareNumber(kind, ft))
 }
@@ -289,11 +289,11 @@ func (testWrappedMeter) Labels(...core.KeyValue) metric.LabelSet {
 func (testWrappedMeter) RecordBatch(context.Context, metric.LabelSet, ...metric.Measurement) {
 }
 
-func (testWrappedMeter) NewSynchronousInstrument(_ metric.Descriptor) (metric.SynchronousImpl, error) {
+func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsynchronousInstrument(_ metric.Descriptor, _ func(func(core.Number, metric.LabelSet))) (metric.AsynchronousImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(core.Number, metric.LabelSet))) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 
@@ -304,12 +304,12 @@ func TestWrappedInstrumentError(t *testing.T) {
 	measure, err := meter.NewInt64Measure("test.measure")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
-	require.NotNil(t, measure.SynchronousImpl())
+	require.NotNil(t, measure.SyncImpl())
 
 	observer, err := meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
-	require.NotNil(t, observer.AsynchronousImpl())
+	require.NotNil(t, observer.AsyncImpl())
 }
 
 func TestNilCallbackObserverNoop(t *testing.T) {
@@ -318,6 +318,6 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 
 	observer := Must(meter).RegisterInt64Observer("test.observer", nil)
 
-	_, ok := observer.AsynchronousImpl().(metric.NoopAsynchronous)
+	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)
 }

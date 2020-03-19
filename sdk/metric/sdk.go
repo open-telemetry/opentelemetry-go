@@ -44,9 +44,9 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
-		// asynchronousInstruments is a set of
-		// `*asynchronousInstrument` instances
-		asynchronousInstruments sync.Map
+		// asyncInstruments is a set of
+		// `*asyncInstrument` instances
+		asyncInstruments sync.Map
 
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
@@ -69,7 +69,7 @@ type (
 		errorHandler ErrorHandler
 	}
 
-	synchronousInstrument struct {
+	syncInstrument struct {
 		instrument
 	}
 
@@ -118,7 +118,7 @@ type (
 		labels *labels
 
 		//
-		inst *synchronousInstrument
+		inst *syncInstrument
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
@@ -131,7 +131,7 @@ type (
 		descriptor metric.Descriptor
 	}
 
-	asynchronousInstrument struct {
+	asyncInstrument struct {
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
@@ -150,11 +150,11 @@ type (
 )
 
 var (
-	_ api.MeterImpl            = &SDK{}
-	_ api.LabelSet             = &labels{}
-	_ api.AsynchronousImpl     = &asynchronousInstrument{}
-	_ api.SynchronousImpl      = &synchronousInstrument{}
-	_ api.BoundSynchronousImpl = &record{}
+	_ api.MeterImpl     = &SDK{}
+	_ api.LabelSet      = &labels{}
+	_ api.AsyncImpl     = &asyncInstrument{}
+	_ api.SyncImpl      = &syncInstrument{}
+	_ api.BoundSyncImpl = &record{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
@@ -163,15 +163,15 @@ func (inst *instrument) Descriptor() api.Descriptor {
 	return inst.descriptor
 }
 
-func (a *asynchronousInstrument) Implementation() interface{} {
+func (a *asyncInstrument) Implementation() interface{} {
 	return a
 }
 
-func (s *synchronousInstrument) Implementation() interface{} {
+func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asynchronousInstrument) observe(number core.Number, ls api.LabelSet) {
+func (a *asyncInstrument) observe(number core.Number, ls api.LabelSet) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -188,7 +188,7 @@ func (a *asynchronousInstrument) observe(number core.Number, ls api.LabelSet) {
 	}
 }
 
-func (a *asynchronousInstrument) getRecorder(ls api.LabelSet) export.Aggregator {
+func (a *asyncInstrument) getRecorder(ls api.LabelSet) export.Aggregator {
 	labels := a.meter.labsFor(ls)
 	lrec, ok := a.recorders[labels.ordered]
 	if ok {
@@ -201,7 +201,7 @@ func (a *asynchronousInstrument) getRecorder(ls api.LabelSet) export.Aggregator 
 		a.recorders = make(map[orderedLabels]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
-	// asynchronousInstrument for the labelset for good. This is intentional,
+	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
 	a.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
@@ -215,7 +215,7 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
-func (s *synchronousInstrument) acquireHandle(ls *labels) *record {
+func (s *syncInstrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
 		descriptor: &s.descriptor,
@@ -272,12 +272,12 @@ func (s *synchronousInstrument) acquireHandle(ls *labels) *record {
 	}
 }
 
-func (s *synchronousInstrument) Bind(ls api.LabelSet) api.BoundSynchronousImpl {
+func (s *syncInstrument) Bind(ls api.LabelSet) api.BoundSyncImpl {
 	labs := s.meter.labsFor(ls)
 	return s.acquireHandle(labs)
 }
 
-func (s *synchronousInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
 	ourLs := s.meter.labsFor(ls)
 	h := s.acquireHandle(ourLs)
 	defer h.Unbind()
@@ -425,8 +425,8 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func (m *SDK) NewSynchronousInstrument(descriptor api.Descriptor) (api.SynchronousImpl, error) {
-	return &synchronousInstrument{
+func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
+	return &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
@@ -434,15 +434,15 @@ func (m *SDK) NewSynchronousInstrument(descriptor api.Descriptor) (api.Synchrono
 	}, nil
 }
 
-func (m *SDK) NewAsynchronousInstrument(descriptor api.Descriptor, callback func(func(core.Number, api.LabelSet))) (api.AsynchronousImpl, error) {
-	a := &asynchronousInstrument{
+func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(core.Number, api.LabelSet))) (api.AsyncImpl, error) {
+	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
 		callback: callback,
 	}
-	m.asynchronousInstruments.Store(a, nil)
+	m.asyncInstruments.Store(a, nil)
 	return a, nil
 }
 
@@ -459,7 +459,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectAsynchronous(ctx)
+	checkpointed += m.collectAsync(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
@@ -490,13 +490,13 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectAsynchronous(ctx context.Context) int {
+func (m *SDK) collectAsync(ctx context.Context) int {
 	checkpointed := 0
 
-	m.asynchronousInstruments.Range(func(key, value interface{}) bool {
-		a := key.(*asynchronousInstrument)
+	m.asyncInstruments.Range(func(key, value interface{}) bool {
+		a := key.(*asyncInstrument)
 		a.callback(a.observe)
-		checkpointed += m.checkpointAsynchronous(ctx, a)
+		checkpointed += m.checkpointAsync(ctx, a)
 		return true
 	})
 
@@ -507,7 +507,7 @@ func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *SDK) checkpointAsynchronous(ctx context.Context, a *asynchronousInstrument) int {
+func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	if len(a.recorders) == 0 {
 		return 0
 	}
@@ -551,15 +551,15 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		meas.SynchronousImpl().RecordOne(ctx, meas.Number(), ls)
+		meas.SyncImpl().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
 // GetDescriptor returns a pointer to the descriptor of an instrument,
 // which is not part of the public metric API.  This is for testing.  Use
-// SynchronousImpl().Descriptor() to get a copy of the descriptor.
-func (m *SDK) GetDescriptor(inst api.SynchronousImpl) *metric.Descriptor {
-	if ii, ok := inst.(*synchronousInstrument); ok {
+// SyncImpl().Descriptor() to get a copy of the descriptor.
+func (m *SDK) GetDescriptor(inst api.SyncImpl) *metric.Descriptor {
+	if ii, ok := inst.(*syncInstrument); ok {
 		return &ii.descriptor
 	}
 	return nil
