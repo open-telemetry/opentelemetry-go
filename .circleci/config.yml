@@ -47,7 +47,7 @@ jobs:
 
 workflows:
   version: 2
-  matrix-build:
+  "matrix-build":
     jobs:
       - "go-1.14"
       - "go-1.13"
