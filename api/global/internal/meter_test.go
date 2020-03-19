@@ -300,10 +300,10 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c2.Add(ctx, 2, meter.Labels())
 }
 
-func TestInterfaceIndirection(t *testing.T) {
+func TestImplementationIndirection(t *testing.T) {
 	internal.ResetForTest()
 
-	// Test that Interface() does the proper indirection, i.e.,
+	// Test that Implementation() does the proper indirection, i.e.,
 	// returns the implementation interface not the global, after
 	// registered.
 
