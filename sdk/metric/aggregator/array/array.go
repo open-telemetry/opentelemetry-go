@@ -22,6 +22,7 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -83,7 +84,7 @@ func (c *Aggregator) Points() ([]core.Number, error) {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()
@@ -106,7 +107,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
 	c.current = append(c.current, number)
 	c.lock.Unlock()
@@ -114,7 +115,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)

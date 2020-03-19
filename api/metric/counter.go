@@ -22,26 +22,26 @@ import (
 
 // Float64Counter is a metric that accumulates float64 values.
 type Float64Counter struct {
-	commonMetric
+	syncInstrument
 }
 
 // Int64Counter is a metric that accumulates int64 values.
 type Int64Counter struct {
-	commonMetric
+	syncInstrument
 }
 
 // BoundFloat64Counter is a bound instrument for Float64Counter.
 //
-// It inherits the Unbind function from commonBoundInstrument.
+// It inherits the Unbind function from syncBoundInstrument.
 type BoundFloat64Counter struct {
-	commonBoundInstrument
+	syncBoundInstrument
 }
 
 // BoundInt64Counter is a boundInstrument for Int64Counter.
 //
-// It inherits the Unbind function from commonBoundInstrument.
+// It inherits the Unbind function from syncBoundInstrument.
 type BoundInt64Counter struct {
-	commonBoundInstrument
+	syncBoundInstrument
 }
 
 // Bind creates a bound instrument for this counter. The labels should
@@ -52,7 +52,7 @@ type BoundInt64Counter struct {
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
-	h.commonBoundInstrument = c.bind(labels)
+	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
@@ -64,7 +64,7 @@ func (c Float64Counter) Bind(labels LabelSet) (h BoundFloat64Counter) {
 // counter with the WithKeys option, then the missing value will be
 // treated as unspecified.
 func (c Int64Counter) Bind(labels LabelSet) (h BoundInt64Counter) {
-	h.commonBoundInstrument = c.bind(labels)
+	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 

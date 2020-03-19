@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -34,11 +35,11 @@ type (
 
 	// descKeyIndexMap is a mapping, for each Descriptor, from the
 	// Key to the position in the descriptor's recommended keys.
-	descKeyIndexMap map[*export.Descriptor]map[core.Key]int
+	descKeyIndexMap map[*metric.Descriptor]map[core.Key]int
 
 	// batchKey describes a unique metric descriptor and encoded label set.
 	batchKey struct {
-		descriptor *export.Descriptor
+		descriptor *metric.Descriptor
 		encoded    string
 	}
 
@@ -66,7 +67,7 @@ func New(selector export.AggregationSelector, labelEncoder export.LabelEncoder, 
 	}
 }
 
-func (b *Batcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	return b.selector.AggregatorFor(descriptor)
 }
 

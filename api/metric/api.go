@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=Kind
+
 package metric
 
 import (
@@ -57,19 +59,86 @@ type Option interface {
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     core.Number
-	instrument InstrumentImpl
+	instrument SyncImpl
 }
 
-// Instrument returns the instrument that created this measurement.
+// SyncImpl returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (m Measurement) InstrumentImpl() InstrumentImpl {
+func (m Measurement) SyncImpl() SyncImpl {
 	return m.instrument
 }
 
 // Number returns a number recorded in this measurement.
 func (m Measurement) Number() core.Number {
 	return m.number
+}
+
+// Kind describes the kind of instrument.
+type Kind int8
+
+const (
+	// MeasureKind indicates a Measure instrument.
+	MeasureKind Kind = iota
+	// ObserverKind indicates an Observer instrument.
+	ObserverKind
+	// CounterKind indicates a Counter instrument.
+	CounterKind
+)
+
+// Descriptor contains all the settings that describe an instrument,
+// including its name, metric kind, number kind, and the configurable
+// options.
+type Descriptor struct {
+	name       string
+	kind       Kind
+	numberKind core.NumberKind
+	config     Config
+}
+
+// NewDescriptor returns a Descriptor with the given contents.
+func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
+	return Descriptor{
+		name:       name,
+		kind:       mkind,
+		numberKind: nkind,
+		config:     Configure(opts),
+	}
+}
+
+// Name returns the metric instrument's name.
+func (d Descriptor) Name() string {
+	return d.name
+}
+
+// MetricKind returns the specific kind of instrument.
+func (d Descriptor) MetricKind() Kind {
+	return d.kind
+}
+
+// Keys returns the recommended keys included in the metric
+// definition.  These keys may be used by a Batcher as a default set
+// of grouping keys for the metric instrument.
+func (d Descriptor) Keys() []core.Key {
+	return d.config.Keys
+}
+
+// Description provides a human-readable description of the metric
+// instrument.
+func (d Descriptor) Description() string {
+	return d.config.Description
+}
+
+// Unit describes the units of the metric instrument.  Unitless
+// metrics return the empty string.
+func (d Descriptor) Unit() unit.Unit {
+	return d.config.Unit
+}
+
+// NumberKind returns whether this instrument is declared over int64,
+// float64, or uint64 values.
+func (d Descriptor) NumberKind() core.NumberKind {
+	return d.numberKind
 }
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
@@ -108,38 +177,6 @@ type Meter interface {
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
-}
-
-// Int64ObserverResult is an interface for reporting integral
-// observations.
-type Int64ObserverResult interface {
-	Observe(value int64, labels LabelSet)
-}
-
-// Float64ObserverResult is an interface for reporting floating point
-// observations.
-type Float64ObserverResult interface {
-	Observe(value float64, labels LabelSet)
-}
-
-// Int64ObserverCallback is a type of callback that integral
-// observers run.
-type Int64ObserverCallback func(result Int64ObserverResult)
-
-// Float64ObserverCallback is a type of callback that floating point
-// observers run.
-type Float64ObserverCallback func(result Float64ObserverResult)
-
-// Int64Observer is a metric that captures a set of int64 values at a
-// point in time.
-type Int64Observer interface {
-	Unregister()
-}
-
-// Float64Observer is a metric that captures a set of float64 values
-// at a point in time.
-type Float64Observer interface {
-	Unregister()
 }
 
 // WithDescription applies provided description.

@@ -31,6 +31,7 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	batchTest "go.opentelemetry.io/otel/sdk/metric/batcher/test"
 )
 
 var Must = metric.Must
@@ -43,7 +44,7 @@ type correctnessBatcher struct {
 
 type testLabelEncoder struct{}
 
-func (cb *correctnessBatcher) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, ".counter"):
@@ -78,13 +79,14 @@ func TestInputRangeTestCounter(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
 
-	counter := Must(sdk).NewInt64Counter("name.counter")
+	counter := Must(meter).NewInt64Counter("name.counter")
 
 	counter.Add(ctx, -1, sdk.Labels())
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
@@ -112,13 +114,14 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(sdk).NewFloat64Measure("name.measure")
+	measure := Must(meter).NewFloat64Measure("name.measure")
 
 	measure.Record(ctx, math.NaN(), sdk.Labels())
 	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
@@ -149,7 +152,8 @@ func TestDisabledInstrument(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
-	measure := Must(sdk).NewFloat64Measure("name.disabled")
+	meter := metric.WrapMeterImpl(sdk)
+	measure := Must(meter).NewFloat64Measure("name.disabled")
 
 	measure.Record(ctx, -1, sdk.Labels())
 	checkpointed := sdk.Collect(ctx)
@@ -164,12 +168,13 @@ func TestRecordNaN(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
 		sdkErr = handleErr
 	})
-	c := Must(sdk).NewFloat64Counter("sum.name")
+	c := Must(meter).NewFloat64Counter("sum.name")
 
 	require.Nil(t, sdkErr)
 	c.Add(ctx, math.NaN(), sdk.Labels())
@@ -182,8 +187,9 @@ func TestSDKAltLabelEncoder(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, testLabelEncoder{})
+	meter := metric.WrapMeterImpl(sdk)
 
-	measure := Must(sdk).NewFloat64Measure("measure")
+	measure := Must(meter).NewFloat64Measure("measure")
 	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
 
 	sdk.Collect(ctx)
@@ -200,8 +206,9 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		t: t,
 	}
 	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
 
-	counter := Must(sdk).NewInt64Counter("counter")
+	counter := Must(meter).NewInt64Counter("counter")
 
 	const (
 		maxKeys = 21
@@ -288,4 +295,46 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Bool("B", true),
 	})
 	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
+}
+
+func TestObserverCollection(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
+
+	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+		// TODO: The spec says the last-value wins in observer
+		// instruments, but it is not implemented yet, i.e., with the
+		// following line we get 1-1==0 instead of -1:
+		// result.Observe(1, meter.Labels(key.String("A", "B")))
+
+		result.Observe(-1, meter.Labels(key.String("A", "B")))
+		result.Observe(-1, meter.Labels(key.String("C", "D")))
+	})
+	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+		result.Observe(1, meter.Labels(key.String("A", "B")))
+		result.Observe(1, meter.Labels())
+	})
+	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
+	})
+
+	collected := sdk.Collect(ctx)
+
+	require.Equal(t, 4, collected)
+	require.Equal(t, 4, len(batcher.records))
+
+	out := batchTest.Output{}
+	for _, rec := range batcher.records {
+		_ = out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"float.observer/A=B": -1,
+		"float.observer/C=D": -1,
+		"int.observer/":      1,
+		"int.observer/A=B":   1,
+	}, out)
+
 }

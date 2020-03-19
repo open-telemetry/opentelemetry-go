@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -38,7 +38,7 @@ func TestInconsistentMergeErr(t *testing.T) {
 	require.True(t, errors.Is(err, aggregator.ErrInconsistentType))
 }
 
-func testRangeNaN(t *testing.T, desc *export.Descriptor) {
+func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
 	nan := core.NewFloat64Number(math.NaN())
 	err := aggregator.RangeTest(nan, desc)
@@ -50,7 +50,7 @@ func testRangeNaN(t *testing.T, desc *export.Descriptor) {
 	}
 }
 
-func testRangeNegative(t *testing.T, desc *export.Descriptor) {
+func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
 	var neg, pos core.Number
 
 	if desc.NumberKind() == core.Float64NumberKind {
@@ -72,15 +72,12 @@ func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			desc := export.NewDescriptor(
+			desc := metric.NewDescriptor(
 				"name",
-				export.CounterKind,
-				nil,
-				"",
-				"",
+				metric.CounterKind,
 				nkind,
 			)
-			testRangeNegative(t, desc)
+			testRangeNegative(t, &desc)
 		})
 	}
 }
@@ -88,20 +85,17 @@ func TestRangeTest(t *testing.T) {
 func TestNaNTest(t *testing.T) {
 	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []export.Kind{
-				export.CounterKind,
-				export.MeasureKind,
-				export.ObserverKind,
+			for _, mkind := range []metric.Kind{
+				metric.CounterKind,
+				metric.MeasureKind,
+				metric.ObserverKind,
 			} {
-				desc := export.NewDescriptor(
+				desc := metric.NewDescriptor(
 					"name",
 					mkind,
-					nil,
-					"",
-					"",
 					nkind,
 				)
-				testRangeNaN(t, desc)
+				testRangeNaN(t, &desc)
 			}
 		})
 	}

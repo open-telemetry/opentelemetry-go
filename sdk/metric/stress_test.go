@@ -68,11 +68,11 @@ type (
 
 	testKey struct {
 		labels     string
-		descriptor *export.Descriptor
+		descriptor *metric.Descriptor
 	}
 
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) withImpl
+		newInstrument  func(meter api.Meter, name string) SyncImpler
 		getUpdateValue func() core.Number
 		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
 		newStore       func() interface{}
@@ -86,8 +86,8 @@ type (
 		equalValues  func(a, b core.Number) bool
 	}
 
-	withImpl interface {
-		Impl() metric.InstrumentImpl
+	SyncImpler interface {
+		SyncImpl() metric.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -156,14 +156,14 @@ func (f *testFixture) someLabels() []core.KeyValue {
 	}
 }
 
-func (f *testFixture) startWorker(sdk *sdk.SDK, wg *sync.WaitGroup, i int) {
+func (f *testFixture) startWorker(impl *sdk.SDK, meter api.Meter, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
-	instrument := f.impl.newInstrument(sdk, name)
-	descriptor := sdk.GetDescriptor(instrument.Impl())
+	instrument := f.impl.newInstrument(meter, name)
+	descriptor := impl.GetDescriptor(instrument.SyncImpl())
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
-	labs := sdk.Labels(kvs...)
+	labs := meter.Labels(kvs...)
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,
@@ -230,7 +230,7 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) AggregatorFor(descriptor *export.Descriptor) export.Aggregator {
+func (*testFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, "counter"):
@@ -264,13 +264,13 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 
 	agg := record.Aggregator()
 	switch record.Descriptor().MetricKind() {
-	case export.CounterKind:
+	case metric.CounterKind:
 		sum, err := agg.(aggregator.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case export.MeasureKind:
+	case metric.MeasureKind:
 		lv, ts, err := agg.(aggregator.LastValue).LastValue()
 		if err != nil && err != aggregator.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
@@ -292,10 +292,11 @@ func stressTest(t *testing.T, impl testImpl) {
 	}
 	cc := concurrency()
 	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
+	meter := metric.WrapMeterImpl(sdk)
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {
-		go fixture.startWorker(sdk, &fixture.wg, i)
+		go fixture.startWorker(sdk, meter, &fixture.wg, i)
 	}
 
 	numCollect := 0
@@ -336,7 +337,7 @@ func float64sEqual(a, b core.Number) bool {
 
 func intCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
@@ -374,7 +375,7 @@ func TestStressInt64Counter(t *testing.T) {
 
 func floatCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Counter(name + ".counter")
 		},
 		getUpdateValue: func() core.Number {
@@ -414,7 +415,7 @@ func TestStressFloat64Counter(t *testing.T) {
 
 func intLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {
@@ -456,7 +457,7 @@ func TestStressInt64LastValue(t *testing.T) {
 
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) withImpl {
+		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Measure(name + ".lastvalue")
 		},
 		getUpdateValue: func() core.Number {

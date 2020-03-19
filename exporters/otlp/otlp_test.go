@@ -27,9 +27,9 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
@@ -119,21 +119,21 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	labels := meter.Labels(core.Key("test").Bool(true))
 
 	type data struct {
-		iKind metricsdk.Kind
+		iKind metric.Kind
 		nKind core.NumberKind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":    {metricsdk.CounterKind, core.Int64NumberKind, 1},
-		"test-float64-counter":  {metricsdk.CounterKind, core.Float64NumberKind, 1},
-		"test-int64-measure":    {metricsdk.MeasureKind, core.Int64NumberKind, 2},
-		"test-float64-measure":  {metricsdk.MeasureKind, core.Float64NumberKind, 2},
-		"test-int64-observer":   {metricsdk.ObserverKind, core.Int64NumberKind, 3},
-		"test-float64-observer": {metricsdk.ObserverKind, core.Float64NumberKind, 3},
+		"test-int64-counter":    {metric.CounterKind, core.Int64NumberKind, 1},
+		"test-float64-counter":  {metric.CounterKind, core.Float64NumberKind, 1},
+		"test-int64-measure":    {metric.MeasureKind, core.Int64NumberKind, 2},
+		"test-float64-measure":  {metric.MeasureKind, core.Float64NumberKind, 2},
+		"test-int64-observer":   {metric.ObserverKind, core.Int64NumberKind, 3},
+		"test-float64-observer": {metric.ObserverKind, core.Float64NumberKind, 3},
 	}
 	for name, data := range instruments {
 		switch data.iKind {
-		case metricsdk.CounterKind:
+		case metric.CounterKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
 				metricapi.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels)
@@ -142,7 +142,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metricsdk.MeasureKind:
+		case metric.MeasureKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
 				metricapi.Must(meter).NewInt64Measure(name).Record(ctx, data.val, labels)
@@ -151,7 +151,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metricsdk.ObserverKind:
+		case metric.ObserverKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
 				callback := func(v int64) metricapi.Int64ObserverCallback {
@@ -228,7 +228,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		seen[desc.Name] = struct{}{}
 
 		switch data.iKind {
-		case metricsdk.CounterKind:
+		case metric.CounterKind:
 			switch data.nKind {
 			case core.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
@@ -243,7 +243,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metricsdk.MeasureKind, metricsdk.ObserverKind:
+		case metric.MeasureKind, metric.ObserverKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
 			m.GetSummaryDataPoints()
 			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {

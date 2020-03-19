@@ -21,7 +21,9 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -32,7 +34,7 @@ type (
 	Encoder struct{}
 
 	// Output collects distinct metric/label set outputs.
-	Output map[string]int64
+	Output map[string]float64
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
@@ -42,15 +44,15 @@ type (
 
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
-	LastValueADesc = export.NewDescriptor(
-		"lastvalue.a", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind)
-	LastValueBDesc = export.NewDescriptor(
-		"lastvalue.b", export.ObserverKind, []core.Key{key.New("G")}, "", "", core.Int64NumberKind)
+	LastValueADesc = metric.NewDescriptor(
+		"lastvalue.a", metric.ObserverKind, core.Int64NumberKind, metric.WithKeys(key.New("G")))
+	LastValueBDesc = metric.NewDescriptor(
+		"lastvalue.b", metric.ObserverKind, core.Int64NumberKind, metric.WithKeys(key.New("G")))
 	// CounterADesc and CounterBDesc group by "C"
-	CounterADesc = export.NewDescriptor(
-		"sum.a", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind)
-	CounterBDesc = export.NewDescriptor(
-		"sum.b", export.CounterKind, []core.Key{key.New("C")}, "", "", core.Int64NumberKind)
+	CounterADesc = metric.NewDescriptor(
+		"sum.a", metric.CounterKind, core.Int64NumberKind, metric.WithKeys(key.New("C")))
+	CounterBDesc = metric.NewDescriptor(
+		"sum.b", metric.CounterKind, core.Int64NumberKind, metric.WithKeys(key.New("C")))
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
@@ -75,11 +77,11 @@ func NewAggregationSelector() export.AggregationSelector {
 	return &testAggregationSelector{}
 }
 
-func (*testAggregationSelector) AggregatorFor(desc *export.Descriptor) export.Aggregator {
+func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
 	switch desc.MetricKind() {
-	case export.CounterKind:
+	case metric.CounterKind:
 		return sum.New()
-	case export.ObserverKind:
+	case metric.ObserverKind:
 		return lastvalue.New()
 	default:
 		panic("Invalid descriptor MetricKind for this test")
@@ -105,7 +107,7 @@ func (Encoder) Encode(labels []core.KeyValue) string {
 }
 
 // LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.
-func LastValueAgg(desc *export.Descriptor, v int64) export.Aggregator {
+func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := lastvalue.New()
 	_ = gagg.Update(ctx, core.NewInt64Number(v), desc)
@@ -114,17 +116,17 @@ func LastValueAgg(desc *export.Descriptor, v int64) export.Aggregator {
 }
 
 // Convenience method for building a test exported lastValue record.
-func NewLastValueRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+func NewLastValueRecord(desc *metric.Descriptor, labels export.Labels, value int64) export.Record {
 	return export.NewRecord(desc, labels, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
-func NewCounterRecord(desc *export.Descriptor, labels export.Labels, value int64) export.Record {
+func NewCounterRecord(desc *metric.Descriptor, labels export.Labels, value int64) export.Record {
 	return export.NewRecord(desc, labels, CounterAgg(desc, value))
 }
 
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
-func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
+func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := sum.New()
 	_ = cagg.Update(ctx, core.NewInt64Number(v), desc)
@@ -137,14 +139,16 @@ func CounterAgg(desc *export.Descriptor, v int64) export.Aggregator {
 func (o Output) AddTo(rec export.Record) error {
 	labels := rec.Labels()
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
-	var value int64
-	switch t := rec.Aggregator().(type) {
-	case *sum.Aggregator:
-		sum, _ := t.Sum()
-		value = sum.AsInt64()
-	case *lastvalue.Aggregator:
-		lv, _, _ := t.LastValue()
-		value = lv.AsInt64()
+	var value float64
+
+	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
+		sum, _ := s.Sum()
+		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
+	} else if l, ok := rec.Aggregator().(aggregator.LastValue); ok {
+		last, _, _ := l.LastValue()
+		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
+	} else {
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
 	}
 	o[key] = value
 	return nil

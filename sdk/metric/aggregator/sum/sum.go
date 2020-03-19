@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -51,18 +52,18 @@ func (c *Aggregator) Sum() (core.Number, error) {
 
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
 	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
 }
 
 // Update atomically adds to the current value.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	c.current.AddNumberAtomic(desc.NumberKind(), number)
 	return nil
 }
 
 // Merge combines two counters by adding their sums.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)

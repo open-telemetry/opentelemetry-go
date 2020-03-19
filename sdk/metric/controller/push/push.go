@@ -29,6 +29,7 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	sdk          *sdk.SDK
+	meter        metric.Meter
 	errorHandler sdk.ErrorHandler
 	batcher      export.Batcher
 	exporter     export.Exporter
@@ -80,8 +81,10 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration)
 		lencoder = sdk.NewDefaultLabelEncoder()
 	}
 
+	impl := sdk.New(batcher, lencoder)
 	return &Controller{
-		sdk:          sdk.New(batcher, lencoder),
+		sdk:          impl,
+		meter:        metric.WrapMeterImpl(impl),
 		errorHandler: sdk.DefaultErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
@@ -109,7 +112,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
 func (c *Controller) Meter(_ string) metric.Meter {
-	return c.sdk
+	return c.meter
 }
 
 // Start begins a ticker that periodically collects and exports

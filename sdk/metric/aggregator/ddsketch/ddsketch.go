@@ -21,6 +21,7 @@ import (
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -43,7 +44,7 @@ var _ aggregator.MinMaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(cfg *Config, desc *export.Descriptor) *Aggregator {
+func New(cfg *Config, desc *metric.Descriptor) *Aggregator {
 	return &Aggregator{
 		cfg:        cfg,
 		kind:       desc.NumberKind(),
@@ -103,7 +104,7 @@ func (c *Aggregator) toNumber(f float64) core.Number {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
@@ -115,7 +116,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *export.Descriptor) {
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
@@ -123,7 +124,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 }
 
 // Merge combines two sketches into one.
-func (c *Aggregator) Merge(oa export.Aggregator, d *export.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, d *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)

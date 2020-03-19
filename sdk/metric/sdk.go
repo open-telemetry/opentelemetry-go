@@ -44,8 +44,9 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
-		// observers is a set of `*observer` instances
-		observers sync.Map
+		// asyncInstruments is a set of
+		// `*asyncInstrument` instances
+		asyncInstruments sync.Map
 
 		// empty is the (singleton) result of Labels()
 		// w/ zero arguments.
@@ -68,9 +69,8 @@ type (
 		errorHandler ErrorHandler
 	}
 
-	instrument struct {
-		descriptor *export.Descriptor
-		meter      *SDK
+	syncInstrument struct {
+		instrument
 	}
 
 	// orderedLabels is a variable-size array of core.KeyValue
@@ -95,7 +95,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its LabelSet.
 	mapkey struct {
-		descriptor *export.Descriptor
+		descriptor *metric.Descriptor
 		ordered    orderedLabels
 	}
 
@@ -117,8 +117,8 @@ type (
 		// labels is the LabelSet passed by the user.
 		labels *labels
 
-		// descriptor describes the metric instrument.
-		descriptor *export.Descriptor
+		// inst is a pointer to the corresponding instrument.
+		inst *syncInstrument
 
 		// recorder implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
@@ -126,27 +126,18 @@ type (
 		recorder export.Aggregator
 	}
 
-	observerResult struct {
-		observer *observer
-	}
-
-	int64ObserverResult struct {
-		result observerResult
-	}
-
-	float64ObserverResult struct {
-		result observerResult
-	}
-
-	observerCallback func(result observerResult)
-
-	observer struct {
+	instrument struct {
 		meter      *SDK
-		descriptor *export.Descriptor
+		descriptor metric.Descriptor
+	}
+
+	asyncInstrument struct {
+		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
 		recorders map[orderedLabels]labeledRecorder
-		callback  observerCallback
+
+		callback func(func(core.Number, api.LabelSet))
 	}
 
 	labeledRecorder struct {
@@ -155,110 +146,83 @@ type (
 		modifiedEpoch int64
 	}
 
-	int64Observer struct {
-		observer *observer
-	}
-
-	float64Observer struct {
-		observer *observer
-	}
-
 	ErrorHandler func(error)
 )
 
 var (
-	_ api.Meter                 = &SDK{}
-	_ api.LabelSet              = &labels{}
-	_ api.InstrumentImpl        = &instrument{}
-	_ api.BoundInstrumentImpl   = &record{}
-	_ api.Int64Observer         = int64Observer{}
-	_ api.Float64Observer       = float64Observer{}
-	_ api.Int64ObserverResult   = int64ObserverResult{}
-	_ api.Float64ObserverResult = float64ObserverResult{}
+	_ api.MeterImpl     = &SDK{}
+	_ api.LabelSet      = &labels{}
+	_ api.AsyncImpl     = &asyncInstrument{}
+	_ api.SyncImpl      = &syncInstrument{}
+	_ api.BoundSyncImpl = &record{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
-func (r observerResult) observe(number core.Number, ls api.LabelSet) {
-	r.observer.recordOne(number, ls)
+func (inst *instrument) Descriptor() api.Descriptor {
+	return inst.descriptor
 }
 
-func (o *observer) recordOne(number core.Number, ls api.LabelSet) {
-	if err := aggregator.RangeTest(number, o.descriptor); err != nil {
-		o.meter.errorHandler(err)
+func (a *asyncInstrument) Implementation() interface{} {
+	return a
+}
+
+func (s *syncInstrument) Implementation() interface{} {
+	return s
+}
+
+func (a *asyncInstrument) observe(number core.Number, ls api.LabelSet) {
+	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
+		a.meter.errorHandler(err)
 		return
 	}
-	recorder := o.getRecorder(ls)
+	recorder := a.getRecorder(ls)
 	if recorder == nil {
 		// The instrument is disabled according to the
 		// AggregationSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, o.descriptor); err != nil {
-		o.meter.errorHandler(err)
+	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
+		a.meter.errorHandler(err)
 		return
 	}
 }
 
-func (o *observer) getRecorder(ls api.LabelSet) export.Aggregator {
-	labels := o.meter.labsFor(ls)
-	lrec, ok := o.recorders[labels.ordered]
+func (a *asyncInstrument) getRecorder(ls api.LabelSet) export.Aggregator {
+	labels := a.meter.labsFor(ls)
+	lrec, ok := a.recorders[labels.ordered]
 	if ok {
-		lrec.modifiedEpoch = o.meter.currentEpoch
-		o.recorders[labels.ordered] = lrec
+		lrec.modifiedEpoch = a.meter.currentEpoch
+		a.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
-	rec := o.meter.batcher.AggregatorFor(o.descriptor)
-	if o.recorders == nil {
-		o.recorders = make(map[orderedLabels]labeledRecorder)
+	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
+	if a.recorders == nil {
+		a.recorders = make(map[orderedLabels]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
-	// observer for the labelset for good. This is intentional,
+	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	o.recorders[labels.ordered] = labeledRecorder{
+	a.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
-		modifiedEpoch: o.meter.currentEpoch,
+		modifiedEpoch: a.meter.currentEpoch,
 	}
 	return rec
-}
-
-func (o *observer) unregister() {
-	o.meter.observers.Delete(o)
-}
-
-func (r int64ObserverResult) Observe(value int64, labels api.LabelSet) {
-	r.result.observe(core.NewInt64Number(value), labels)
-}
-
-func (r float64ObserverResult) Observe(value float64, labels api.LabelSet) {
-	r.result.observe(core.NewFloat64Number(value), labels)
-}
-
-func (o int64Observer) Unregister() {
-	o.observer.unregister()
-}
-
-func (o float64Observer) Unregister() {
-	o.observer.unregister()
-}
-
-func (i *instrument) Meter() api.Meter {
-	return i.meter
 }
 
 func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
-func (i *instrument) acquireHandle(ls *labels) *record {
+func (s *syncInstrument) acquireHandle(ls *labels) *record {
 	// Create lookup key for sync.Map (one allocation)
 	mk := mapkey{
-		descriptor: i.descriptor,
+		descriptor: &s.descriptor,
 		ordered:    ls.ordered,
 	}
 
-	if actual, ok := i.meter.current.Load(mk); ok {
+	if actual, ok := s.meter.current.Load(mk); ok {
 		// Existing record case, only one allocation so far.
 		rec := actual.(*record)
 		if rec.refMapped.ref() {
@@ -271,17 +235,17 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 
 	// There's a memory allocation here.
 	rec := &record{
-		labels:     ls,
-		descriptor: i.descriptor,
-		refMapped:  refcountMapped{value: 2},
-		modified:   0,
-		recorder:   i.meter.batcher.AggregatorFor(i.descriptor),
+		labels:    ls,
+		inst:      s,
+		refMapped: refcountMapped{value: 2},
+		modified:  0,
+		recorder:  s.meter.batcher.AggregatorFor(&s.descriptor),
 	}
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
 		// an interface here.
-		if actual, loaded := i.meter.current.LoadOrStore(mk, rec); loaded {
+		if actual, loaded := s.meter.current.LoadOrStore(mk, rec); loaded {
 			// Existing record case. Cannot change rec here because if fail
 			// will try to add rec again to avoid new allocations.
 			oldRec := actual.(*record)
@@ -308,14 +272,14 @@ func (i *instrument) acquireHandle(ls *labels) *record {
 	}
 }
 
-func (i *instrument) Bind(ls api.LabelSet) api.BoundInstrumentImpl {
-	labs := i.meter.labsFor(ls)
-	return i.acquireHandle(labs)
+func (s *syncInstrument) Bind(ls api.LabelSet) api.BoundSyncImpl {
+	labs := s.meter.labsFor(ls)
+	return s.acquireHandle(labs)
 }
 
-func (i *instrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
-	ourLs := i.meter.labsFor(ls)
-	h := i.acquireHandle(ourLs)
+func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls api.LabelSet) {
+	ourLs := s.meter.labsFor(ls)
+	h := s.acquireHandle(ourLs)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
@@ -461,100 +425,25 @@ func (m *SDK) labsFor(ls api.LabelSet) *labels {
 	return &m.empty
 }
 
-func newDescriptor(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *export.Descriptor {
-	config := api.Configure(opts)
-	return export.NewDescriptor(
-		name,
-		metricKind,
-		config.Keys,
-		config.Description,
-		config.Unit,
-		numberKind)
-}
-
-func (m *SDK) newInstrument(name string, metricKind export.Kind, numberKind core.NumberKind, opts []api.Option) *instrument {
-	descriptor := newDescriptor(name, metricKind, numberKind, opts)
-	return &instrument{
-		descriptor: descriptor,
-		meter:      m,
-	}
-}
-
-func (m *SDK) newCounterInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
-	return m.newInstrument(name, export.CounterKind, numberKind, opts)
-}
-
-func (m *SDK) newMeasureInstrument(name string, numberKind core.NumberKind, opts []api.Option) *instrument {
-	return m.newInstrument(name, export.MeasureKind, numberKind, opts)
-}
-
-func (m *SDK) NewInt64Counter(name string, opts ...api.Option) (api.Int64Counter, error) {
-	return api.WrapInt64CounterInstrument(m.newCounterInstrument(name, core.Int64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewFloat64Counter(name string, opts ...api.Option) (api.Float64Counter, error) {
-	return api.WrapFloat64CounterInstrument(m.newCounterInstrument(name, core.Float64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewInt64Measure(name string, opts ...api.Option) (api.Int64Measure, error) {
-	return api.WrapInt64MeasureInstrument(m.newMeasureInstrument(name, core.Int64NumberKind, opts), nil)
-}
-
-func (m *SDK) NewFloat64Measure(name string, opts ...api.Option) (api.Float64Measure, error) {
-	return api.WrapFloat64MeasureInstrument(m.newMeasureInstrument(name, core.Float64NumberKind, opts), nil)
-}
-
-func (m *SDK) RegisterInt64Observer(name string, callback api.Int64ObserverCallback, opts ...api.Option) (api.Int64Observer, error) {
-	if callback == nil {
-		return api.NoopMeter{}.RegisterInt64Observer("", nil)
-	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Int64NumberKind, opts)
-	cb := wrapInt64ObserverCallback(callback)
-	obs := m.newObserver(descriptor, cb)
-	return int64Observer{
-		observer: obs,
+func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
+	return &syncInstrument{
+		instrument: instrument{
+			descriptor: descriptor,
+			meter:      m,
+		},
 	}, nil
 }
 
-func wrapInt64ObserverCallback(callback api.Int64ObserverCallback) observerCallback {
-	return func(result observerResult) {
-		typeSafeResult := int64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
+func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(core.Number, api.LabelSet))) (api.AsyncImpl, error) {
+	a := &asyncInstrument{
+		instrument: instrument{
+			descriptor: descriptor,
+			meter:      m,
+		},
+		callback: callback,
 	}
-}
-
-func (m *SDK) RegisterFloat64Observer(name string, callback api.Float64ObserverCallback, opts ...api.Option) (api.Float64Observer, error) {
-	if callback == nil {
-		return api.NoopMeter{}.RegisterFloat64Observer("", nil)
-	}
-	descriptor := newDescriptor(name, export.ObserverKind, core.Float64NumberKind, opts)
-	cb := wrapFloat64ObserverCallback(callback)
-	obs := m.newObserver(descriptor, cb)
-	return float64Observer{
-		observer: obs,
-	}, nil
-}
-
-func wrapFloat64ObserverCallback(callback api.Float64ObserverCallback) observerCallback {
-	return func(result observerResult) {
-		typeSafeResult := float64ObserverResult{
-			result: result,
-		}
-		callback(typeSafeResult)
-	}
-}
-
-func (m *SDK) newObserver(descriptor *export.Descriptor, callback observerCallback) *observer {
-	obs := &observer{
-		meter:      m,
-		descriptor: descriptor,
-		recorders:  nil,
-		callback:   callback,
-	}
-	m.observers.Store(obs, nil)
-	return obs
+	m.asyncInstruments.Store(a, nil)
+	return a, nil
 }
 
 // Collect traverses the list of active records and observers and
@@ -570,7 +459,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectObservers(ctx)
+	checkpointed += m.collectAsync(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
@@ -601,16 +490,13 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectObservers(ctx context.Context) int {
+func (m *SDK) collectAsync(ctx context.Context) int {
 	checkpointed := 0
 
-	m.observers.Range(func(key, value interface{}) bool {
-		obs := key.(*observer)
-		result := observerResult{
-			observer: obs,
-		}
-		obs.callback(result)
-		checkpointed += m.checkpointObserver(ctx, obs)
+	m.asyncInstruments.Range(func(key, value interface{}) bool {
+		a := key.(*asyncInstrument)
+		a.callback(a.observe)
+		checkpointed += m.checkpointAsync(ctx, a)
 		return true
 	})
 
@@ -618,32 +504,32 @@ func (m *SDK) collectObservers(ctx context.Context) int {
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
-	return m.checkpoint(ctx, r.descriptor, r.recorder, r.labels)
+	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *SDK) checkpointObserver(ctx context.Context, obs *observer) int {
-	if len(obs.recorders) == 0 {
+func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
+	if len(a.recorders) == 0 {
 		return 0
 	}
 	checkpointed := 0
-	for encodedLabels, lrec := range obs.recorders {
+	for encodedLabels, lrec := range a.recorders {
 		epochDiff := m.currentEpoch - lrec.modifiedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, obs.descriptor, lrec.recorder, lrec.labels)
+			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
 			// recorder.
-			delete(obs.recorders, encodedLabels)
+			delete(a.recorders, encodedLabels)
 		}
 	}
-	if len(obs.recorders) == 0 {
-		obs.recorders = nil
+	if len(a.recorders) == 0 {
+		a.recorders = nil
 	}
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, recorder export.Aggregator, labels *labels) int {
+func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
 	if recorder == nil {
 		return 0
 	}
@@ -665,15 +551,16 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *export.Descriptor, rec
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...api.Measurement) {
 	for _, meas := range measurements {
-		meas.InstrumentImpl().RecordOne(ctx, meas.Number(), ls)
+		meas.SyncImpl().RecordOne(ctx, meas.Number(), ls)
 	}
 }
 
-// GetDescriptor returns the descriptor of an instrument, which is not
-// part of the public metric API.
-func (m *SDK) GetDescriptor(inst metric.InstrumentImpl) *export.Descriptor {
-	if ii, ok := inst.(*instrument); ok {
-		return ii.descriptor
+// GetDescriptor returns a pointer to the descriptor of an instrument,
+// which is not part of the public metric API.  This is for testing.  Use
+// SyncImpl().Descriptor() to get a copy of the descriptor.
+func (m *SDK) GetDescriptor(inst api.SyncImpl) *metric.Descriptor {
+	if ii, ok := inst.(*syncInstrument); ok {
+		return &ii.descriptor
 	}
 	return nil
 }
@@ -683,11 +570,11 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		// The instrument is disabled according to the AggregationSelector.
 		return
 	}
-	if err := aggregator.RangeTest(number, r.descriptor); err != nil {
+	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
 		r.labels.meter.errorHandler(err)
 		return
 	}
-	if err := r.recorder.Update(ctx, number, r.descriptor); err != nil {
+	if err := r.recorder.Update(ctx, number, &r.inst.descriptor); err != nil {
 		r.labels.meter.errorHandler(err)
 		return
 	}
@@ -703,7 +590,7 @@ func (r *record) Unbind() {
 
 func (r *record) mapkey() mapkey {
 	return mapkey{
-		descriptor: r.descriptor,
+		descriptor: &r.inst.descriptor,
 		ordered:    r.labels.ordered,
 	}
 }

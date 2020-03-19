@@ -12,10 +12,10 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/exporters/metric/test"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -27,29 +27,29 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet(metric.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
 
-	counter := export.NewDescriptor(
-		"counter", export.CounterKind, nil, "", "", core.Float64NumberKind)
-	lastValue := export.NewDescriptor(
-		"lastvalue", export.ObserverKind, nil, "", "", core.Float64NumberKind)
-	measure := export.NewDescriptor(
-		"measure", export.MeasureKind, nil, "", "", core.Float64NumberKind)
+	counter := metric.NewDescriptor(
+		"counter", metric.CounterKind, core.Float64NumberKind)
+	lastValue := metric.NewDescriptor(
+		"lastvalue", metric.ObserverKind, core.Float64NumberKind)
+	measure := metric.NewDescriptor(
+		"measure", metric.MeasureKind, core.Float64NumberKind)
 
 	labels := []core.KeyValue{
 		key.New("A").String("B"),
 		key.New("C").String("D"),
 	}
 
-	checkpointSet.AddCounter(counter, 15.3, labels...)
+	checkpointSet.AddCounter(&counter, 15.3, labels...)
 	expected = append(expected, `counter{A="B",C="D"} 15.3`)
 
-	checkpointSet.AddLastValue(lastValue, 13.2, labels...)
+	checkpointSet.AddLastValue(&lastValue, 13.2, labels...)
 	expected = append(expected, `lastvalue{A="B",C="D"} 13.2`)
 
-	checkpointSet.AddMeasure(measure, 13, labels...)
-	checkpointSet.AddMeasure(measure, 15, labels...)
-	checkpointSet.AddMeasure(measure, 17, labels...)
+	checkpointSet.AddMeasure(&measure, 13, labels...)
+	checkpointSet.AddMeasure(&measure, 15, labels...)
+	checkpointSet.AddMeasure(&measure, 17, labels...)
 	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
 	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
 	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
@@ -61,13 +61,13 @@ func TestPrometheusExporter(t *testing.T) {
 		key.New("C").String(""),
 	}
 
-	checkpointSet.AddCounter(counter, 12, missingLabels...)
+	checkpointSet.AddCounter(&counter, 12, missingLabels...)
 	expected = append(expected, `counter{A="E",C=""} 12`)
 
-	checkpointSet.AddLastValue(lastValue, 32, missingLabels...)
+	checkpointSet.AddLastValue(&lastValue, 32, missingLabels...)
 	expected = append(expected, `lastvalue{A="E",C=""} 32`)
 
-	checkpointSet.AddMeasure(measure, 19, missingLabels...)
+	checkpointSet.AddMeasure(&measure, 19, missingLabels...)
 	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)
 	expected = append(expected, `measure{A="E",C="",quantile="0.9"} 19`)
 	expected = append(expected, `measure{A="E",C="",quantile="0.99"} 19`)

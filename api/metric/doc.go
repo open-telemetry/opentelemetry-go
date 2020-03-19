@@ -61,8 +61,7 @@
 // function - this permits the reported values only to go
 // up. Reporting of the new values happens asynchronously, with the
 // use of a callback passed to the Register*Observer function. The
-// callback can report multiple values. To unregister the observer,
-// call Unregister on it.
+// callback can report multiple values. There is no unregister function.
 //
 // Counters and measures support creating bound instruments for a
 // potentially more efficient reporting. The bound instruments have

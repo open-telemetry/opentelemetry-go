@@ -61,11 +61,10 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labelset)
 	}
-	oneMetric := metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
+	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A measure set to 1.0"),
 	)
-	defer oneMetric.Unregister()
 
 	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
 	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
