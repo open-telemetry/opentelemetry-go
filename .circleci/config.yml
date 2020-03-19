@@ -41,9 +41,17 @@ jobs:
       - image: circleci/golang:1.13
     <<: *build-template
 
+  build:
+    steps:
+      run: echo "Builds complete"
+
 workflows:
   version: 2
-  build:
+  matrix-build:
     jobs:
       - "go-1.14"
       - "go-1.13"
+      - build:
+        - requires:
+            - "go-1.13"
+            - "go-1.14"
