@@ -161,8 +161,7 @@ var (
 	_ api.BoundSyncImpl   = &record{}
 	_ export.LabelStorage = &labels{}
 
-	kvType          = reflect.TypeOf(core.KeyValue{})
-	emptyArrayValue = reflect.ValueOf([0]core.KeyValue{})
+	kvType = reflect.TypeOf(core.KeyValue{})
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -301,11 +300,15 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls a
 // own periodic collection.
 func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
 	m := &SDK{
+		empty: labels{
+			ordered: [0]core.KeyValue{},
+		},
 		batcher:      batcher,
 		labelEncoder: labelEncoder,
 		errorHandler: DefaultErrorHandler,
 	}
 	m.empty.meter = m
+	m.empty.cachedValue = reflect.ValueOf(m.empty.ordered)
 	return m
 }
 
@@ -349,24 +352,11 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	return ls
 }
 
-func (ls *labels) ensureCachedValue() {
-	if !ls.cachedValue.IsValid() {
-		if ls.ordered == nil {
-			// it's an empty labelset
-			ls.cachedValue = emptyArrayValue
-		} else {
-			ls.cachedValue = reflect.ValueOf(ls.ordered)
-		}
-	}
-}
-
 func (ls *labels) NumLabels() int {
-	ls.ensureCachedValue()
 	return ls.cachedValue.Len()
 }
 
 func (ls *labels) GetLabel(idx int) core.KeyValue {
-	ls.ensureCachedValue()
 	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
 }
 
@@ -375,6 +365,7 @@ func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	if ls.ordered == nil {
 		ls.ordered = computeOrderedReflect(kvs)
 	}
+	ls.cachedValue = reflect.ValueOf(ls.ordered)
 }
 
 func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
