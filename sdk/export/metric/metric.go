@@ -213,7 +213,7 @@ func (s LabelSlice) Iter() LabelIterator {
 	return NewLabelIterator(s)
 }
 
-// LabelIterator allows iterating over ordered set of labels. The
+// LabelIterator allows iterating over an ordered set of labels. The
 // typical use of the iterator is as follows:
 //
 //     iter := export.NewLabelIterator(getStorage())
@@ -243,19 +243,19 @@ func (i *LabelIterator) Next() bool {
 	return i.idx < i.Len()
 }
 
-// Label returns current label. Must be only called after Next returns
+// Label returns current label. Must be called only after Next returns
 // true.
 func (i *LabelIterator) Label() core.KeyValue {
 	return i.storage.GetLabel(i.idx)
 }
 
-// IndexedLabel returns current index and label. Must be only called
+// IndexedLabel returns current index and label. Must be called only
 // after Next returns true.
 func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
 }
 
-// Len returns a number of labels in iterator's label storage.
+// Len returns a number of labels in the iterator's label storage.
 func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
