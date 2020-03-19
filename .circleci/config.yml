@@ -45,7 +45,7 @@ jobs:
     docker:
       - image: circleci/golang:1.14
     steps:
-      run: echo "Builds complete"
+      - run: echo "Builds complete"
 
 workflows:
   version: 2
