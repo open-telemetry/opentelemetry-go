@@ -117,7 +117,7 @@ func TestOptions(t *testing.T) {
 
 func TestCounter(t *testing.T) {
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -126,10 +126,10 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, c.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, core.Float64NumberKind, c.SyncImpl())
 	}
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -138,13 +138,13 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, c.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, core.Int64NumberKind, c.SyncImpl())
 	}
 }
 
 func TestMeasure(t *testing.T) {
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -153,10 +153,10 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, mock, core.Float64NumberKind, m.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, core.Float64NumberKind, m.SyncImpl())
 	}
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
 		labels := meter.Labels()
@@ -165,31 +165,31 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, mock, core.Int64NumberKind, m.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, core.Int64NumberKind, m.SyncImpl())
 	}
 }
 
 func TestObserver(t *testing.T) {
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		labels := meter.Labels()
 		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing float observer")
 
-		mock.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mock, core.Float64NumberKind, o.AsyncImpl())
+		mockSDK.RunAsyncInstruments()
+		checkObserverBatch(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
 	}
 	{
-		mock, meter := mockTest.NewMeter()
+		mockSDK, meter := mockTest.NewMeter()
 		labels := meter.Labels()
 		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels)
 		})
 		t.Log("Testing int observer")
-		mock.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mock, core.Int64NumberKind, o.AsyncImpl())
+		mockSDK.RunAsyncInstruments()
+		checkObserverBatch(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
 	}
 }
 
