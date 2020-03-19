@@ -1,4 +1,11 @@
-version: 2
+version: 2.1
+executors:
+  current-go:
+    docker:
+      - image: circleci/golang:1.14
+  prior-go:
+    docker:
+      - image: circleci/golang:1.13
 
 build-template: &build-template
   environment:
@@ -31,19 +38,16 @@ build-template: &build-template
         path: /tmp/test-results
 
 jobs:
-  "go-1.14":
-    docker:
-      - image: circleci/golang:1.14
+  current-go:
+    executor: current-go
     <<: *build-template
 
-  "go-1.13":
-    docker:
-      - image: circleci/golang:1.13
+  prior-go:
+    executor: prior-go
     <<: *build-template
 
   build:
-    docker:
-      - image: circleci/golang:1.14
+    executor: current-go
     steps:
       - run: echo "Builds complete"
 
@@ -51,9 +55,9 @@ workflows:
   version: 2
   default:
     jobs:
-      - "go-1.14"
-      - "go-1.13"
+      - current-go
+      - prior-go
       - build:
           requires:
-            - "go-1.13"
-            - "go-1.14"
+            - current-go
+            - prior-go
