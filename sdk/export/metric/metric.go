@@ -202,6 +202,10 @@ func (s LabelSlice) GetLabel(idx int) core.KeyValue {
 	return s[idx]
 }
 
+func (s LabelSlice) Iter() LabelIterator {
+	return NewLabelIterator(s)
+}
+
 // LabelIterator allows iterating over ordered set of labels. The
 // typical use of the iterator is as follows:
 //
@@ -239,10 +243,6 @@ func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
 
 func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
-}
-
-func NewSliceLabelIterator(s []core.KeyValue) LabelIterator {
-	return NewLabelIterator(LabelSlice(s))
 }
 
 // LabelEncoder enables an optimization for export pipelines that use

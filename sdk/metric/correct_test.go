@@ -272,18 +272,18 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.NewDefaultLabelEncoder()
 
-	encoded := encoder.Encode(export.NewSliceLabelIterator([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}))
+	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(export.NewSliceLabelIterator([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")}))
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")}).Iter())
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(export.NewSliceLabelIterator([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)}))
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)}).Iter())
 	require.Equal(t, `\\=\=,\,=\\`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	encoded = encoder.Encode(export.NewSliceLabelIterator([]core.KeyValue{
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -294,7 +294,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	}))
+	}).Iter())
 	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
 }
 

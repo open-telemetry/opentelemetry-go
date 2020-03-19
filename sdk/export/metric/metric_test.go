@@ -29,7 +29,7 @@ var testSlice = []core.KeyValue{
 }
 
 func TestLabelIterator(t *testing.T) {
-	iter := NewSliceLabelIterator(testSlice)
+	iter := LabelSlice(testSlice).Iter()
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
@@ -51,17 +51,17 @@ func TestLabelIterator(t *testing.T) {
 }
 
 func TestEmptyLabelIterator(t *testing.T) {
-	iter := NewSliceLabelIterator(nil)
+	iter := LabelSlice(nil).Iter()
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 }
 
 func TestIteratorToSlice(t *testing.T) {
-	iter := NewSliceLabelIterator(testSlice)
+	iter := LabelSlice(testSlice).Iter()
 	got := IteratorToSlice(iter)
 	require.Equal(t, testSlice, got)
 
-	iter = NewSliceLabelIterator(nil)
+	iter = LabelSlice(nil).Iter()
 	got = IteratorToSlice(iter)
 	require.Nil(t, got)
 }

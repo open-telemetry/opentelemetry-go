@@ -35,22 +35,23 @@ var testLabels = []core.KeyValue{
 func TestLabelSyntax(t *testing.T) {
 	encoder := statsd.NewLabelEncoder()
 
-	require.Equal(t, `|#A:B,C:D,E:1.5`, encoder.Encode(export.NewSliceLabelIterator(testLabels)))
+	require.Equal(t, `|#A:B,C:D,E:1.5`, encoder.Encode(export.LabelSlice(testLabels).Iter()))
 
 	kvs := []core.KeyValue{
 		key.New("A").String("B"),
 	}
-	require.Equal(t, `|#A:B`, encoder.Encode(export.NewSliceLabelIterator(kvs)))
+	require.Equal(t, `|#A:B`, encoder.Encode(export.LabelSlice(kvs).Iter()))
 
-	require.Equal(t, "", encoder.Encode(export.NewSliceLabelIterator(nil)))
+	require.Equal(t, "", encoder.Encode(export.LabelSlice(nil).Iter()))
 }
 
 func TestLabelForceEncode(t *testing.T) {
 	defaultLabelEncoder := sdk.NewDefaultLabelEncoder()
 	statsdLabelEncoder := statsd.NewLabelEncoder()
 
-	exportLabelsDefault := export.NewLabels(export.LabelSlice(testLabels), defaultLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), defaultLabelEncoder)
-	exportLabelsStatsd := export.NewLabels(export.LabelSlice(testLabels), statsdLabelEncoder.Encode(export.NewSliceLabelIterator(testLabels)), statsdLabelEncoder)
+	ls := export.LabelSlice(testLabels)
+	exportLabelsDefault := export.NewLabels(ls, defaultLabelEncoder.Encode(ls.Iter()), defaultLabelEncoder)
+	exportLabelsStatsd := export.NewLabels(ls, statsdLabelEncoder.Encode(ls.Iter()), statsdLabelEncoder)
 
 	statsdEncoding := exportLabelsStatsd.Encoded()
 	require.NotEqual(t, statsdEncoding, exportLabelsDefault.Encoded())
