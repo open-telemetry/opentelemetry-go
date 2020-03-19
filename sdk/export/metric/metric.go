@@ -185,23 +185,30 @@ func IteratorToSlice(iter LabelIterator) []core.KeyValue {
 	return slice
 }
 
+// LabelStorage provides an access to the ordered labels.
 type LabelStorage interface {
+	// NumLabels returns a number of labels in the storage.
 	NumLabels() int
+	// GetLabels gets a label from a passed index.
 	GetLabel(int) core.KeyValue
 }
 
+// LabelSlice implements LabelStorage in terms of a slice.
 type LabelSlice []core.KeyValue
 
 var _ LabelStorage = LabelSlice{}
 
+// NumLabels is a part of LabelStorage implementation.
 func (s LabelSlice) NumLabels() int {
 	return len(s)
 }
 
+// GetLabel is a part of LabelStorage implementation.
 func (s LabelSlice) GetLabel(idx int) core.KeyValue {
 	return s[idx]
 }
 
+// Iter returns an iterator going over the slice.
 func (s LabelSlice) Iter() LabelIterator {
 	return NewLabelIterator(s)
 }
@@ -221,6 +228,7 @@ type LabelIterator struct {
 	idx     int
 }
 
+// NewLabelIterator creates an iterator going over a passed storage.
 func NewLabelIterator(storage LabelStorage) LabelIterator {
 	return LabelIterator{
 		storage: storage,
@@ -228,19 +236,26 @@ func NewLabelIterator(storage LabelStorage) LabelIterator {
 	}
 }
 
+// Next moves the iterator to the next label. Returns false if there
+// are no more labels.
 func (i *LabelIterator) Next() bool {
 	i.idx++
 	return i.idx < i.Len()
 }
 
+// Label returns current label. Must be only called after Next returns
+// true.
 func (i *LabelIterator) Label() core.KeyValue {
 	return i.storage.GetLabel(i.idx)
 }
 
+// IndexedLabel returns current index and label. Must be only called
+// after Next returns true.
 func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
 }
 
+// Len returns a number of labels in iterator's label storage.
 func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
