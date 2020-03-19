@@ -167,7 +167,7 @@ func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Co
 		m.newSync(name, CounterKind, core.Int64NumberKind, opts))
 }
 
-// WrapInt64CounterInstrument returns an `Int64Counter` from from a
+// WrapInt64CounterInstrument returns an `Int64Counter` from a
 // `SyncImpl`.  An error will be generated if the
 // `SyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
@@ -181,7 +181,7 @@ func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float
 		m.newSync(name, CounterKind, core.Float64NumberKind, opts))
 }
 
-// WrapFloat64CounterInstrument returns an `Float64Counter` from from a
+// WrapFloat64CounterInstrument returns an `Float64Counter` from a
 // `SyncImpl`.  An error will be generated if the
 // `SyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
@@ -195,7 +195,7 @@ func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Me
 		m.newSync(name, MeasureKind, core.Int64NumberKind, opts))
 }
 
-// WrapInt64MeasureInstrument returns an `Int64Measure` from from a
+// WrapInt64MeasureInstrument returns an `Int64Measure` from a
 // `SyncImpl`.  An error will be generated if the
 // `SyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
@@ -209,7 +209,7 @@ func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float
 		m.newSync(name, MeasureKind, core.Float64NumberKind, opts))
 }
 
-// WrapFloat64MeasureInstrument returns an `Float64Measure` from from a
+// WrapFloat64MeasureInstrument returns an `Float64Measure` from a
 // `SyncImpl`.  An error will be generated if the
 // `SyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
@@ -238,7 +238,7 @@ func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64Obse
 			}))
 }
 
-// WrapInt64ObserverInstrument returns an `Int64Observer` from from a
+// WrapInt64ObserverInstrument returns an `Int64Observer` from a
 // `AsyncImpl`.  An error will be generated if the
 // `AsyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
@@ -258,7 +258,7 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 			}))
 }
 
-// WrapFloat64ObserverInstrument returns an `Float64Observer` from from a
+// WrapFloat64ObserverInstrument returns an `Float64Observer` from a
 // `AsyncImpl`.  An error will be generated if the
 // `AsyncImpl` is nil (in which case a No-op is substituted),
 // otherwise the error passes through.
