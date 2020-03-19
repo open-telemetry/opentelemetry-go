@@ -49,11 +49,11 @@ jobs:
 
 workflows:
   version: 2
-  "matrix-build":
+  default:
     jobs:
       - "go-1.14"
       - "go-1.13"
       - build:
-        - requires:
+          requires:
             - "go-1.13"
             - "go-1.14"
