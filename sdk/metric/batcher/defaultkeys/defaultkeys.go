@@ -109,7 +109,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 
 	// Compute an encoded lookup key.
-	elabels := export.NewLabels(export.LabelSlice(outputLabels)),
+	elabels := export.NewSimpleLabels(export.LabelSlice(outputLabels), b.labelEncoder)
 	encoded := elabels.Encoded(b.labelEncoder)
 
 	// Merge this aggregator with all preceding aggregators that

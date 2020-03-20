@@ -66,11 +66,11 @@ var (
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(key.String("G", "H"), key.String("C", "D"))
+	Labels1 = makeLabels(SdkEncoder, key.String("G", "H"), key.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
+	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
-	Labels3 = makeLabels()
+	Labels3 = makeLabels(SdkEncoder)
 
 	leID = export.NewLabelExporterID()
 )
@@ -100,8 +100,8 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(labels ...core.KeyValue) export.Labels {
-	return export.NewLabels(export.LabelSlice(labels))
+func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
+	return export.NewSimpleLabels(export.LabelSlice(labels), encoder)
 }
 
 func (Encoder) Encode(iter export.LabelIterator) string {
@@ -153,7 +153,6 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 // AddTo adds a name/label-encoding entry with the lastValue or counter
 // value to the output map.
 func (o Output) AddTo(rec export.Record) error {
-	labels := rec.Labels()
 	encoded := rec.Labels().Encoded(o.labelEncoder)
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded)
 	var value float64
