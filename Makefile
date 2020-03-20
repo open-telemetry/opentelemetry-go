@@ -19,7 +19,7 @@ endif
 
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...
 
 .DEFAULT_GOAL := precommit
 
