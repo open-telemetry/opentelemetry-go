@@ -16,7 +16,6 @@ package metric
 
 import (
 	"context"
-	"fmt"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -151,7 +150,6 @@ type Resourcer interface {
 //
 // The returned []Option may uses the same underlying array as opts.
 func insertResource(impl MeterImpl, opts []Option) []Option {
-	fmt.Stringer
 	if r, ok := impl.(Resourcer); ok {
 		// default to the impl resource and override if passed in opts.
 		return append([]Option{WithResource(r.Resource())}, opts...)
