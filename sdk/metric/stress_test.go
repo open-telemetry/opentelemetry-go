@@ -296,7 +296,7 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := New(fixture, NewDefaultLabelEncoder())
+	sdk := New(fixture)
 	meter := metric.WrapMeterImpl(sdk)
 	fixture.wg.Add(cc + 1)
 

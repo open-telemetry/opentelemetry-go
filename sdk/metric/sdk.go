@@ -60,9 +60,6 @@ type (
 		// batcher is the configured batcher+configuration.
 		batcher export.Batcher
 
-		// lencoder determines how labels are uniquely encoded.
-		labelEncoder export.LabelEncoder
-
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
 
@@ -98,9 +95,6 @@ type (
 		// cachedValue contains a `reflect.Value` of the `ordered`
 		// member
 		cachedValue reflect.Value
-		// cachedEncoded contains an encoded version of the
-		// `ordered` member
-		cachedEncoded string
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -306,7 +300,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls a
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Option) *SDK {
+func New(batcher export.Batcher, opts ...Option) *SDK {
 	c := &Config{ErrorHandler: DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
@@ -317,7 +311,6 @@ func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Optio
 			ordered: [0]core.KeyValue{},
 		},
 		batcher:      batcher,
-		labelEncoder: labelEncoder,
 		errorHandler: c.ErrorHandler,
 		resource:     c.Resource,
 	}
@@ -380,14 +373,6 @@ func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 		ls.ordered = computeOrderedReflect(kvs)
 	}
 	ls.cachedValue = reflect.ValueOf(ls.ordered)
-}
-
-func (ls *labels) ensureEncoded(encoder export.LabelEncoder) {
-	if ls.cachedEncoded != "" {
-		return
-	}
-	iter := export.NewLabelIterator(ls)
-	ls.cachedEncoded = encoder.Encode(iter)
 }
 
 func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
@@ -567,7 +552,6 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
-	labels.ensureEncoded(m.labelEncoder)
 	exportLabels := export.NewLabels(labels)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
