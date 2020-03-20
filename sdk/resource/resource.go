@@ -73,7 +73,7 @@ func (r Resource) Attributes() []core.KeyValue {
 	return attrs
 }
 
-// Equal returns if other Resource is the equal to r.
+// Equal returns true if other Resource is the equal to r.
 func (r Resource) Equal(other Resource) bool {
 	return reflect.DeepEqual(r.labels, other.labels)
 }
