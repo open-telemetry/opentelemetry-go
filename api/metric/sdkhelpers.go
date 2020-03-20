@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -134,16 +135,25 @@ func Configure(opts []Option) Config {
 	return config
 }
 
+// Resourcer is implemented by any value that has a Resource method,
+// which returns the Resource associated with the value.
+// The Resource method is used to set the Resource for Descriptors of new
+// metric instruments.
+type Resourcer interface {
+	Resource() resource.Resource
+}
+
 // insertResource inserts a WithResource option at the beginning of opts
-// using the resource defined by impl if impl implements resource.Provider.
+// using the resource defined by impl if impl implements Resourcer.
 //
 // If opts contains a WithResource option already, that Option will take
-// precidence and overwrite the Resource set from impl.
+// precedence and overwrite the Resource set from impl.
 //
 // The returned []Option may uses the same underlying array as opts.
 func insertResource(impl MeterImpl, opts []Option) []Option {
-	if r, ok := impl.(resource.Provider); ok {
-		// default to the impl resrouce and override if passed in opts.
+	fmt.Stringer
+	if r, ok := impl.(Resourcer); ok {
+		// default to the impl resource and override if passed in opts.
 		return append([]Option{WithResource(r.Resource())}, opts...)
 	}
 	return opts

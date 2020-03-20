@@ -562,9 +562,9 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 // Resource returns the Resource this SDK was created with describing the
 // entity for which it creates instruments for.
 //
-// Resource means that the SDK implements the resource.Provider iterface,
-// which means that all metric instruments it creates will inherited its
-// Resource by default unles explicitly overwriten.
+// Resource means that the SDK implements the Resourcer interface and
+// therefore all metric instruments it creates will inherited its
+// Resource by default unless explicitly overwritten.
 func (m *SDK) Resource() resource.Resource {
 	return m.resource
 }
