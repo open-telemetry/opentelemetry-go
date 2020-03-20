@@ -86,7 +86,7 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration,
 		opt.Apply(c)
 	}
 
-	impl := sdk.New(batcher, lencoder, sdk.WithResource(c.Resource))
+	impl := sdk.New(batcher, lencoder, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
 		meter:        metric.WrapMeterImpl(impl),
