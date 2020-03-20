@@ -29,6 +29,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -67,6 +68,9 @@ type (
 
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
+
+		// resource represents the entity producing telemetry.
+		resource resource.Resource
 	}
 
 	syncInstrument struct {
@@ -159,6 +163,7 @@ var (
 	_ api.AsyncImpl       = &asyncInstrument{}
 	_ api.SyncImpl        = &syncInstrument{}
 	_ api.BoundSyncImpl   = &record{}
+	_ api.Resourcer       = &SDK{}
 	_ export.LabelStorage = &labels{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
@@ -298,14 +303,20 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls a
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.Batcher, labelEncoder export.LabelEncoder) *SDK {
+func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Option) *SDK {
+	c := &Config{ErrorHandler: DefaultErrorHandler}
+	for _, opt := range opts {
+		opt.Apply(c)
+	}
+
 	m := &SDK{
 		empty: labels{
 			ordered: [0]core.KeyValue{},
 		},
 		batcher:      batcher,
 		labelEncoder: labelEncoder,
-		errorHandler: DefaultErrorHandler,
+		errorHandler: c.ErrorHandler,
+		resource:     c.Resource,
 	}
 	m.empty.meter = m
 	m.empty.cachedValue = reflect.ValueOf(m.empty.ordered)
@@ -557,6 +568,16 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 		m.errorHandler(err)
 	}
 	return 1
+}
+
+// Resource returns the Resource this SDK was created with describing the
+// entity for which it creates instruments for.
+//
+// Resource means that the SDK implements the Resourcer interface and
+// therefore all metric instruments it creates will inherit its
+// Resource by default unless explicitly overwritten.
+func (m *SDK) Resource() resource.Resource {
+	return m.resource
 }
 
 // RecordBatch enters a batch of metric events.

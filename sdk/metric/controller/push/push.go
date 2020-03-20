@@ -66,26 +66,31 @@ var _ Clock = realClock{}
 var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided batcher, exporter, and collection period to
-// configure an SDK with periodic collection.  The batcher itself is
-// configured with the aggregation selector policy.
+// using the provided batcher, exporter, collection period, and SDK
+// configuration options to configure an SDK with periodic collection.
+// The batcher itself is configured with the aggregation selector policy.
 //
 // If the Exporter implements the export.LabelEncoder interface, the
 // exporter will be used as the label encoder for the SDK itself,
 // otherwise the SDK will be configured with the default label
 // encoder.
-func New(batcher export.Batcher, exporter export.Exporter, period time.Duration) *Controller {
+func New(batcher export.Batcher, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
 	lencoder, _ := exporter.(export.LabelEncoder)
 
 	if lencoder == nil {
 		lencoder = sdk.NewDefaultLabelEncoder()
 	}
 
-	impl := sdk.New(batcher, lencoder)
+	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
+	for _, opt := range opts {
+		opt.Apply(c)
+	}
+
+	impl := sdk.New(batcher, lencoder, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
 		meter:        metric.WrapMeterImpl(impl),
-		errorHandler: sdk.DefaultErrorHandler,
+		errorHandler: c.ErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
 		ch:           make(chan struct{}),
