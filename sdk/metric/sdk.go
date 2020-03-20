@@ -82,6 +82,12 @@ type (
 	// represents an internalized set of labels that may be used
 	// repeatedly.
 	labels struct {
+		// cachedEncoderID needs to be aligned for atomic access
+		cachedEncoderID int64
+		// cachedEncoded is an encoded version of ordered
+		// labels
+		cachedEncoded string
+
 		meter *SDK
 		// ordered is the output of sorting and deduplicating
 		// the labels, copied into an array of the correct
@@ -162,6 +168,7 @@ var (
 	_ api.BoundSyncImpl   = &record{}
 	_ api.Resourcer       = &SDK{}
 	_ export.LabelStorage = &labels{}
+	_ export.Labels       = &labels{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
@@ -367,6 +374,54 @@ func (ls *labels) GetLabel(idx int) core.KeyValue {
 	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
 }
 
+func (ls *labels) Iter() export.LabelIterator {
+	return export.NewLabelIterator(ls)
+}
+
+func (ls *labels) Encoded(encoder export.LabelEncoder) string {
+	id := encoder.ID()
+	if id <= 0 {
+		// punish misbehaving encoders by not even trying to
+		// cache them
+		return encoder.Encode(ls.Iter())
+	}
+	cachedID := atomic.LoadInt64(&ls.cachedEncoderID)
+	// If cached ID is less below zero, it means that other
+	// goroutine is currently caching the encoded labels and the
+	// ID of the encoder. Wait until it's done - it's a
+	// nonblocking op.
+	for cachedID < 0 {
+		// Let other goroutine finish its work.
+		runtime.Gosched()
+		cachedID = atomic.LoadInt64(&ls.cachedEncoderID)
+	}
+	// At this point, cachedID is either 0 (nothing cached) or
+	// some other number.
+	//
+	// If cached ID is the same as ID of the passed encoder, we've
+	// got the fast path.
+	if cachedID == id {
+		return ls.cachedEncoded
+	}
+	// If we are here, either some other encoder cached its
+	// encoded labels or the cache is still for the taking. Either
+	// way, we need to compute the encoded labels anyway.
+	encoded := encoder.Encode(ls.Iter())
+	// If some other encoder took the cache, then we just return
+	// our encoded labels. That's a slow path.
+	if cachedID > 0 {
+		return encoded
+	}
+	// Try to take the cache for ourselves. This is the place
+	// where other encoders may be "blocked".
+	if atomic.CompareAndSwapInt64(&ls.cachedEncoderID, 0, -1) {
+		// The cache is ours.
+		ls.cachedEncoded = encoded
+		atomic.StoreInt64(&ls.cachedEncoderID, id)
+	}
+	return encoded
+}
+
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	ls.ordered = computeOrderedFixed(kvs)
 	if ls.ordered == nil {
@@ -552,8 +607,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
-	exportLabels := export.NewLabels(labels)
-	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
+	exportRecord := export.NewRecord(descriptor, labels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)
