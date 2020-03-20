@@ -71,6 +71,8 @@ var (
 	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
 	Labels3 = makeLabels()
+
+	leID = export.NewLabelExporterID()
 )
 
 func NewOutput(labelEncoder export.LabelEncoder) Output {
@@ -114,6 +116,10 @@ func (Encoder) Encode(iter export.LabelIterator) string {
 		sb.WriteString(l.Value.Emit())
 	}
 	return sb.String()
+}
+
+func (Encoder) ID() int64 {
+	return leID
 }
 
 // LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.

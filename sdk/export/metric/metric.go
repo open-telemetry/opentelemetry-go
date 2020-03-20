@@ -16,10 +16,19 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 )
+
+var labelExporterIDCounter int64 = 0
+
+// NewLabelExporterID returns a unique label exporter ID. It should be
+// called once per each type of label exporter. Preferably in init().
+func NewLabelExporterID() int64 {
+	return atomic.AddInt64(&labelExporterIDCounter, 1)
+}
 
 // Batcher is responsible for deciding which kind of aggregation to
 // use (via AggregationSelector), gathering exported results from the
@@ -276,11 +285,17 @@ type LabelEncoder interface {
 	// The exported Labels object retains a reference to its
 	// LabelEncoder to determine which encoding was used.
 	//
-	// The expectation is that Exporters with a pre-determined to
+	// The expectation is that Exporters with a pre-determined
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
 	Encode(LabelIterator) string
+
+	// ID should return a unique positive number associated with
+	// the label encoder. Stateless label encoders could return
+	// the same number regardless of an instance, stateful label
+	// encoders should return a number depending on their state.
+	ID() int64
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -307,26 +322,46 @@ type Record struct {
 	aggregator Aggregator
 }
 
+type Labels interface {
+	Iter() LabelIterator
+	Encoded(LabelEncoder) string
+}
+
 // Labels stores complete information about a computed label set,
 // including the labels in an appropriate order (as defined by the
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.
-type Labels struct {
-	storage LabelStorage
+type labels struct {
+	encoderID int64
+	encoded   string
+	storage   LabelStorage
 }
 
-// NewLabels builds a Labels object, consisting of an ordered set of
-// labels, a unique encoded representation, and the encoder that
-// produced it.
+var _ Labels = &labels{}
+
 func NewLabels(storage LabelStorage) Labels {
-	return Labels{
+	l := &labels{
 		storage: storage,
 	}
+	return l
 }
 
 // Iter returns an iterator over ordered labels.
-func (l Labels) Iter() LabelIterator {
+func (l *labels) Iter() LabelIterator {
 	return NewLabelIterator(l.storage)
+}
+
+func (l *labels) Encoded(encoder LabelEncoder) string {
+	id := encoder.ID()
+	if l.encoderID == id {
+		return l.encoded
+	}
+	encoded := encoder.Encode(l.Iter())
+	if l.encoderID == 0 {
+		l.encoded = encoded
+		l.encoderID = id
+	}
+	return encoded
 }
 
 // NewRecord allows Batcher implementations to construct export

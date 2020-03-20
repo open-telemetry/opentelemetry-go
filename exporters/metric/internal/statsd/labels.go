@@ -32,6 +32,7 @@ type LabelEncoder struct {
 }
 
 var _ export.LabelEncoder = &LabelEncoder{}
+var leID = export.NewLabelExporterID()
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.
@@ -62,6 +63,10 @@ func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 		delimiter = ","
 	}
 	return buf.String()
+}
+
+func (*LabelEncoder) ID() int64 {
+	return leID
 }
 
 // ForceEncode returns a statsd label encoding, even if the exported

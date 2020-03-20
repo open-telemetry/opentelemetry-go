@@ -41,6 +41,7 @@ type defaultLabelEncoder struct {
 }
 
 var _ export.LabelEncoder = &defaultLabelEncoder{}
+var leID = export.NewLabelExporterID()
 
 func NewDefaultLabelEncoder() export.LabelEncoder {
 	return &defaultLabelEncoder{
@@ -73,6 +74,10 @@ func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
 		}
 	}
 	return buf.String()
+}
+
+func (*defaultLabelEncoder) ID() int64 {
+	return leID
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {
