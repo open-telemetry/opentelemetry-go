@@ -4,10 +4,10 @@ set -e
 
 help()
 {
-   echo ""
-   echo "Usage: $0 -t tag -c commit-hash"
-   echo "\t-t New tag that you would like to create"
-   echo "\t-c Commit hash to associate with the new tag"
+   printf "\n"
+   printf "Usage: $0 -t tag -c commit-hash\n"
+   printf "\t-t New tag that you would like to create\n"
+   printf "\t-c Commit hash to associate with the new tag\n"
    exit 1 # Exit script after printing help
 }
 
@@ -23,8 +23,19 @@ done
 # Print help in case parameters are empty
 if [ -z "$TAG" ] || [ -z "${COMMIT_HASH}" ]
 then
-   echo "Some or all of the parameters are missing";
+   printf "Some or all of the parameters are missing\n";
    help
+fi
+
+# Validate semver
+SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+
+
+if [[ "${TAG}" =~ ${SEMVER_REGEX} ]]; then
+        printf "${TAG} is valid semver tag.\n"
+else
+        printf "${TAG} is not a valid semver tag.\n"
+        exit -1
 fi
 
 cd $(dirname $0)
@@ -32,14 +43,14 @@ cd $(dirname $0)
 # Check if the commit-hash is valid
 COMMIT_FOUND=`git log -50 --pretty=format:"%H" | grep ${COMMIT_HASH}`
 if [ "${COMMIT_FOUND}" != "${COMMIT_HASH}" ] ; then
-	echo "Commit ${COMMIT_HASH} not found"
+	printf "Commit ${COMMIT_HASH} not found\n"
 	exit -1
 fi
 
 # Check if the tag doesn't alread exists.
 TAG_FOUND=`git tag --list ${TAG}`
 if [ "${TAG_FOUND}" = "${TAG}" ] ; then
-	echo "Tag ${TAG} already exists"
+	printf "Tag ${TAG} already exists\n"
 	exit -1
 fi
 
@@ -57,9 +68,8 @@ for dir in $PACKAGE_DIRS; do
 done
 
 # Generate commit logs
-git log --pretty=oneline ${TAG_CURRENT}..${TAG}
-echo -e "New tag ${TAG} created"
-echo -e "\n\n\nChange log since previous tag ${TAG_CURRENT}"
-echo -e "======================================\n"
+printf "New tag ${TAG} created.\n"
+printf "\n\n\nChange log since previous tag ${TAG_CURRENT}\n"
+printf "======================================\n"
 git --no-pager log --pretty=oneline ${TAG_CURRENT}..${TAG}
 

@@ -1,16 +1,16 @@
 #!/bin/sh
 
-set -xe
+set -e
 
 help()
 {
-   echo ""
-   echo "Usage: $0 -t tag"
-   echo "\t-t Unreleased tag. Update all go.mod with this tag."
+   printf "\n"
+   printf "Usage: $0 -t tag\n"
+   printf "\t-t Unreleased tag. Update all go.mod with this tag.\n"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:c:" opt
+while getopts "t:" opt
 do
    case "$opt" in
       t ) TAG="$OPTARG" ;;
@@ -21,14 +21,22 @@ done
 # Print help in case parameters are empty
 if [ -z "$TAG" ]
 then
-   echo "Tag is missing";
+   printf "Tag is missing\n";
    help
 fi
 
+# Validate semver
+SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+if [[ "${TAG}" =~ ${SEMVER_REGEX} ]]; then
+	printf "${TAG} is valid semver tag.\n"
+else
+	printf "${TAG} is not a valid semver tag.\n"
+	exit -1
+fi
+
 TAG_FOUND=`git tag --list ${TAG}`
-echo "TAG found $TAG_FOUND"
 if [ ${TAG_FOUND} = ${TAG} ] ; then
-        echo "Tag ${TAG} already exists"
+        printf "Tag ${TAG} already exists\n"
         exit -1
 fi
 
@@ -36,6 +44,7 @@ fi
 cd $(dirname $0)
 
 # Update go.mod
+git checkout -b pre_release_${TAG} master
 PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; | egrep -v 'tools' | sed 's/^\.\///' | sort)
 
 for dir in $PACKAGE_DIRS; do
@@ -51,5 +60,5 @@ git add .
 make ci
 git commit -m "Prepare for releasing $TAG"
 
-echo "Now run following to verify the changes.\ngit diff master"
-echo "\nThen push the changes to upstream"
+printf "Now run following to verify the changes.\ngit diff master\n"
+printf "\nThen push the changes to upstream\n"

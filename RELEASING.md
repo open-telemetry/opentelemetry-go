@@ -6,37 +6,31 @@ in the next step. This will create build failure for those who depend
 on the master branch instead or released version. But they shouldn't be
 depending on the master. So it is not a concern.
 
-- Run
-```
-./pre-release.sh -t <new tag>
-```
+1. Run the pre-release script. It creates a branch pre_release_<tag> to make the changes.
+2. Verify the changes.
+3. Push the changes to upstream.
+4. Create a PR on github and merge the PR once approved.
 
-- Verify the changes
-```
-git diff master
-```
+    ```
+    ./pre-release.sh -t <new tag>
+    git diff master
+    git push
+    ```
 
-- Push changes to upstream
-```
-git push
-```
-
-- Create PR on github and merge it once approved.
 
 ## Tag
 Now create a new Tag on the commit hash of the changes made in pre-release step.
 Use the same tag as used in the pre-release step.
 
-- Run
-```
-./tag.sh -t <new tag> -c <commit-hash>
-```
+1. Run the tag.sh script.
+2. Push tags upstream. Make sure you run this for all sub-modules as well.
 
-- Push tags upstream. Make sure you run this for all sub-modules as well.
-```
-git push upstream <new tag>
-git push upstream <submodules-path/new tag>
-```
+    ```
+    ./tag.sh -t <new tag> -c <commit-hash>
+    git push upstream <new tag>
+    git push upstream <submodules-path/new tag>
+    ```
 
 ## Release
-Now create a release for the new tag on github.
+Now create a release for the new tag on github. tag.sh script generates commit logs since
+last release. Use that to draft the new release.
