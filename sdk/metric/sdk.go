@@ -159,6 +159,7 @@ var (
 	_ api.AsyncImpl     = &asyncInstrument{}
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
+	_ resource.Provider = &SDK{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
@@ -556,6 +557,16 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 		m.errorHandler(err)
 	}
 	return 1
+}
+
+// Resource returns the Resource this SDK was created with describing the
+// entity for which it creates instruments for.
+//
+// Resource means that the SDK implements the resource.Provider iterface,
+// which means that all metric instruments it creates will inherited its
+// Resource by default unles explicitly overwriten.
+func (m *SDK) Resource() resource.Resource {
+	return m.resource
 }
 
 // RecordBatch enters a batch of metric events.
