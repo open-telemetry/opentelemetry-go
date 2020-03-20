@@ -299,8 +299,10 @@ func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func labelsKeys(labels export.Labels) []string {
-	keys := make([]string, 0, labels.Len())
-	for _, kv := range labels.Ordered() {
+	iter := labels.Iter()
+	keys := make([]string, 0, iter.Len())
+	for iter.Next() {
+		kv := iter.Label()
 		keys = append(keys, sanitize(string(kv.Key)))
 	}
 	return keys
@@ -309,8 +311,10 @@ func labelsKeys(labels export.Labels) []string {
 func labelValues(labels export.Labels) []string {
 	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
 	//  this would avoid unnecessary allocations.
-	values := make([]string, 0, labels.Len())
-	for _, label := range labels.Ordered() {
+	iter := labels.Iter()
+	values := make([]string, 0, iter.Len())
+	for iter.Next() {
+		label := iter.Label()
 		values = append(values, label.Value.Emit())
 	}
 	return values

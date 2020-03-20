@@ -250,8 +250,9 @@ func (*testFixture) FinishedCollection() {
 }
 
 func (f *testFixture) Process(_ context.Context, record export.Record) error {
+	labels := export.IteratorToSlice(record.Labels().Iter())
 	key := testKey{
-		labels:     canonicalizeLabels(record.Labels().Ordered()),
+		labels:     canonicalizeLabels(labels),
 		descriptor: record.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {

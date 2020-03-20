@@ -69,8 +69,8 @@ func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) e
 	return nil
 }
 
-func (testLabelEncoder) Encode(labels []core.KeyValue) string {
-	return fmt.Sprint(labels)
+func (testLabelEncoder) Encode(iter export.LabelIterator) string {
+	return fmt.Sprint(export.IteratorToSlice(iter))
 }
 
 func TestInputRangeTestCounter(t *testing.T) {
@@ -262,7 +262,8 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, core.NewInt64Number(2))
 
-		actual = append(actual, rec.Labels().Ordered())
+		kvs := export.IteratorToSlice(rec.Labels().Iter())
+		actual = append(actual, kvs)
 	}
 
 	require.ElementsMatch(t, allExpect, actual)
@@ -271,18 +272,18 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := sdk.NewDefaultLabelEncoder()
 
-	encoded := encoder.Encode([]core.KeyValue{key.String("A", "B"), key.String("C", "D")})
+	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")})
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")}).Iter())
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)})
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)}).Iter())
 	require.Equal(t, `\\=\=,\,=\\`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	encoded = encoder.Encode([]core.KeyValue{
+	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -293,7 +294,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	})
+	}).Iter())
 	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
 }
 

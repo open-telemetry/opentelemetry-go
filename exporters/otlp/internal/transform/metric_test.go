@@ -69,7 +69,8 @@ func TestStringKeyValues(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.expected, stringKeyValues(test.kvs))
+		iter := export.LabelSlice(test.kvs).Iter()
+		assert.Equal(t, test.expected, stringKeyValues(iter))
 	}
 }
 
@@ -149,7 +150,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.WithKeys(test.keys...),
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
-		labels := export.NewLabels(test.labels, "", nil)
+		labels := export.NewLabels(export.LabelSlice(test.labels), "", nil)
 		got, err := minMaxSumCount(&desc, labels, mmsc)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
@@ -159,7 +160,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewLabels([]core.KeyValue{}, "", nil)
+	labels := export.NewLabels(export.LabelSlice(nil), "", nil)
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
@@ -250,7 +251,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit),
 		)
-		labels := export.NewLabels(test.labels, "", nil)
+		labels := export.NewLabels(export.LabelSlice(test.labels), "", nil)
 		got, err := sum(&desc, labels, sumAgg.New())
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
@@ -260,7 +261,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 
 func TestSumInt64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewLabels([]core.KeyValue{}, "", nil)
+	labels := export.NewLabels(export.LabelSlice(nil), "", nil)
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
@@ -274,7 +275,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 
 func TestSumFloat64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Float64NumberKind)
-	labels := export.NewLabels([]core.KeyValue{}, "", nil)
+	labels := export.NewLabels(export.LabelSlice(nil), "", nil)
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)

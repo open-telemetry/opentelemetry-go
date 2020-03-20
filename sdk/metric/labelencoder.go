@@ -52,12 +52,13 @@ func NewDefaultLabelEncoder() export.LabelEncoder {
 	}
 }
 
-func (d *defaultLabelEncoder) Encode(labels []core.KeyValue) string {
+func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
 	buf := d.pool.Get().(*bytes.Buffer)
 	defer d.pool.Put(buf)
 	buf.Reset()
 
-	for i, kv := range labels {
+	for iter.Next() {
+		i, kv := iter.IndexedLabel()
 		if i > 0 {
 			_, _ = buf.WriteRune(',')
 		}
