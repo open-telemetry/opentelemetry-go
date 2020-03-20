@@ -43,13 +43,3 @@ func TestLabelSyntax(t *testing.T) {
 
 	require.Equal(t, "", encoder.Encode(export.LabelSlice(nil).Iter()))
 }
-
-func TestLabelForceEncode(t *testing.T) {
-	statsdLabelEncoder := statsd.NewLabelEncoder()
-	ls := export.LabelSlice(testLabels)
-	statsdEncoding := statsdLabelEncoder.Encode(ls.Iter())
-	exportLabelsStatsd := export.NewLabels(ls)
-	forced, repeat := statsdLabelEncoder.ForceEncode(exportLabelsStatsd)
-	require.Equal(t, statsdEncoding, forced)
-	require.True(t, repeat)
-}

@@ -68,11 +68,3 @@ func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 func (*LabelEncoder) ID() int64 {
 	return leID
 }
-
-// ForceEncode returns a statsd label encoding, even if the exported
-// labels were encoded by a different type of encoder.  Returns a
-// boolean to indicate whether the labels were in fact re-encoded, to
-// test for (and warn about) efficiency.
-func (e *LabelEncoder) ForceEncode(labels export.Labels) (string, bool) {
-	return e.Encode(labels.Iter()), true
-}

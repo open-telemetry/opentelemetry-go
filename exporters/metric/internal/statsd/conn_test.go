@@ -44,7 +44,7 @@ func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 }
 
 func (ta *withTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	encoded, _ := ta.LabelEncoder.ForceEncode(rec.Labels())
+	encoded := rec.Labels().Encoded(ta.LabelEncoder)
 	_, _ = buf.WriteString(encoded)
 }
 
