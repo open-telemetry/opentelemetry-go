@@ -17,7 +17,6 @@ package dogstatsd_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,8 +27,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/exporters/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporters/metric/test"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
@@ -53,7 +50,6 @@ func TestDogstatsLabels(t *testing.T) {
 		Writer: &buf,
 	})
 	require.Nil(t, err)
-	require.Equal(t, 0, exp.ReencodedLabelsCount)
 
 	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
