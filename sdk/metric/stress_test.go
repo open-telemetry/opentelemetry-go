@@ -48,6 +48,8 @@ const (
 	epsilon           = 1e-10
 )
 
+var Must = api.Must
+
 type (
 	testFixture struct {
 		// stop has to be aligned for 64-bit atomic operations.
