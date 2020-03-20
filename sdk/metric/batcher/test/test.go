@@ -66,11 +66,11 @@ var (
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(SdkEncoder, key.String("G", "H"), key.String("C", "D"))
+	Labels1 = makeLabels(key.String("G", "H"), key.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
+	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
-	Labels3 = makeLabels(SdkEncoder)
+	Labels3 = makeLabels()
 )
 
 func NewOutput(labelEncoder export.LabelEncoder) Output {
@@ -98,9 +98,8 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	ls := export.LabelSlice(labels)
-	return export.NewLabels(ls, encoder.Encode(ls.Iter()), encoder)
+func makeLabels(labels ...core.KeyValue) export.Labels {
+	return export.NewLabels(export.LabelSlice(labels))
 }
 
 func (Encoder) Encode(iter export.LabelIterator) string {

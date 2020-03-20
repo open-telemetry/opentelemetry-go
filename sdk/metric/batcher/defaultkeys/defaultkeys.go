@@ -139,7 +139,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 	b.aggCheckpoint[key] = export.NewRecord(
 		desc,
-		export.NewLabels(export.LabelSlice(outputLabels), encoded, b.labelEncoder),
+		export.NewLabels(export.LabelSlice(outputLabels)),
 		agg,
 	)
 	return nil

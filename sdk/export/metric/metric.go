@@ -313,18 +313,14 @@ type Record struct {
 // presented in sorted order by the SDK.
 type Labels struct {
 	storage LabelStorage
-	encoded string
-	encoder LabelEncoder
 }
 
 // NewLabels builds a Labels object, consisting of an ordered set of
 // labels, a unique encoded representation, and the encoder that
 // produced it.
-func NewLabels(storage LabelStorage, encoded string, encoder LabelEncoder) Labels {
+func NewLabels(storage LabelStorage) Labels {
 	return Labels{
 		storage: storage,
-		encoded: encoded,
-		encoder: encoder,
 	}
 }
 

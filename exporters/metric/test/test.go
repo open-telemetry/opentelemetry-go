@@ -54,7 +54,7 @@ func (p *CheckpointSet) Reset() {
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
 	ls := export.LabelSlice(labels)
 	encoded := p.encoder.Encode(ls.Iter())
-	elabels := export.NewLabels(ls, encoded, p.encoder)
+	elabels := export.NewLabels(ls)
 
 	key := desc.Name() + "_" + encoded
 	if record, ok := p.records[key]; ok {

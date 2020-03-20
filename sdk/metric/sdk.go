@@ -568,7 +568,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	recorder.Checkpoint(ctx, descriptor)
 
 	labels.ensureEncoded(m.labelEncoder)
-	exportLabels := export.NewLabels(labels, labels.cachedEncoded, m.labelEncoder)
+	exportLabels := export.NewLabels(labels)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {

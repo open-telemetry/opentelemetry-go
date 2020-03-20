@@ -48,17 +48,8 @@ func TestLabelForceEncode(t *testing.T) {
 	statsdLabelEncoder := statsd.NewLabelEncoder()
 	ls := export.LabelSlice(testLabels)
 	statsdEncoding := statsdLabelEncoder.Encode(ls.Iter())
-	exportLabelsStatsd := export.NewLabels(ls, statsdEncoding, statsdLabelEncoder)
+	exportLabelsStatsd := export.NewLabels(ls)
 	forced, repeat := statsdLabelEncoder.ForceEncode(exportLabelsStatsd)
-	require.Equal(t, statsdEncoding, forced)
-	require.True(t, repeat)
-
-	// Check that this works for an embedded implementation.
-	exportLabelsEmbed := export.NewLabels(export.LabelSlice(testLabels), statsdEncoding, struct {
-		*statsd.LabelEncoder
-	}{LabelEncoder: statsdLabelEncoder})
-
-	forced, repeat = statsdLabelEncoder.ForceEncode(exportLabelsEmbed)
 	require.Equal(t, statsdEncoding, forced)
 	require.True(t, repeat)
 }
