@@ -53,9 +53,10 @@ func (p *CheckpointSet) Reset() {
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
 	ls := export.LabelSlice(labels)
-	elabels := export.NewLabels(ls, p.encoder.Encode(ls.Iter()), p.encoder)
+	encoded := p.encoder.Encode(ls.Iter())
+	elabels := export.NewLabels(ls, encoded, p.encoder)
 
-	key := desc.Name() + "_" + elabels.Encoded()
+	key := desc.Name() + "_" + encoded
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}

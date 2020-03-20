@@ -333,16 +333,6 @@ func (l Labels) Iter() LabelIterator {
 	return NewLabelIterator(l.storage)
 }
 
-// Encoded is a pre-encoded form of the ordered labels.
-func (l Labels) Encoded() string {
-	return l.encoded
-}
-
-// Encoder is the encoder that computed the Encoded() representation.
-func (l Labels) Encoder() LabelEncoder {
-	return l.encoder
-}
-
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.

@@ -28,6 +28,7 @@ import (
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -60,6 +61,9 @@ type Config struct {
 	// exporter may wish to configure quantiles on a per-metric
 	// basis.
 	Quantiles []float64
+
+	// LabelEncoder encodes the labels
+	LabelEncoder export.LabelEncoder
 }
 
 type expoBatch struct {
@@ -100,6 +104,9 @@ func NewRawExporter(config Config) (*Exporter, error) {
 			}
 		}
 	}
+	if config.LabelEncoder == nil {
+		config.LabelEncoder = sdk.NewDefaultLabelEncoder()
+	}
 	return &Exporter{
 		config: config,
 	}, nil
@@ -131,7 +138,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 	if err != nil {
 		return nil, err
 	}
-	batcher := ungrouped.New(selector, true)
+	batcher := ungrouped.New(selector, exporter.config.LabelEncoder, true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
@@ -218,7 +225,8 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		var materializedKeys []string
 
 		if iter.Len() > 0 {
-			materializedKeys = append(materializedKeys, record.Labels().Encoded())
+			encoded := e.config.LabelEncoder.Encode(record.Labels().Iter())
+			materializedKeys = append(materializedKeys, encoded)
 		}
 
 		for _, k := range desc.Keys() {

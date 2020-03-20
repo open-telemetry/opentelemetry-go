@@ -49,7 +49,7 @@ func TestGroupingStateless(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
-	records := test.Output{}
+	records := test.NewOutput(test.GroupEncoder)
 	err := checkpointSet.ForEach(records.AddTo)
 	require.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestGroupingStateless(t *testing.T) {
 		"lastvalue.a/G=":  30, // labels3 = last value
 		"lastvalue.b/G=H": 10, // labels1
 		"lastvalue.b/G=":  30, // labels3 = last value
-	}, records)
+	}, records.Map)
 
 	// Verify that state is reset by FinishedCollection()
 	checkpointSet = b.CheckpointSet()
@@ -91,24 +91,24 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
-	records1 := test.Output{}
+	records1 := test.NewOutput(test.GroupEncoder)
 	err := checkpointSet.ForEach(records1.AddTo)
 	require.NoError(t, err)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C=D": 10, // labels1
 		"sum.b/C=D": 10, // labels1
-	}, records1)
+	}, records1.Map)
 
 	// Test that state was NOT reset
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records2 := test.Output{}
+	records2 := test.NewOutput(test.GroupEncoder)
 	err = checkpointSet.ForEach(records2.AddTo)
 	require.NoError(t, err)
 
-	require.EqualValues(t, records1, records2)
+	require.EqualValues(t, records1.Map, records2.Map)
 
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, core.NewInt64Number(20), &test.CounterADesc)
@@ -121,11 +121,11 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records3 := test.Output{}
+	records3 := test.NewOutput(test.GroupEncoder)
 	err = checkpointSet.ForEach(records3.AddTo)
 	require.NoError(t, err)
 
-	require.EqualValues(t, records1, records3)
+	require.EqualValues(t, records1.Map, records3.Map)
 
 	// Now process the second update
 	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, caggA))
@@ -134,12 +134,12 @@ func TestGroupingStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records4 := test.Output{}
+	records4 := test.NewOutput(test.GroupEncoder)
 	err = checkpointSet.ForEach(records4.AddTo)
 	require.NoError(t, err)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C=D": 30,
 		"sum.b/C=D": 30,
-	}, records4)
+	}, records4.Map)
 }

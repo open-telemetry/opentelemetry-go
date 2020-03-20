@@ -37,11 +37,12 @@ import (
 // whether or not the provided labels were encoded by a statsd label
 // encoder.
 func TestDogstatsLabels(t *testing.T) {
-	for inefficientCount, encoder := range []export.LabelEncoder{
+	for _, encoder := range []export.LabelEncoder{
 		statsd.NewLabelEncoder(),     // inefficientCount == 0
 		sdk.NewDefaultLabelEncoder(), // inefficientCount == 1
 	} {
 		t.Run(fmt.Sprintf("%T", encoder), func(t *testing.T) {
+			inefficientCount := 1
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet(encoder)
 

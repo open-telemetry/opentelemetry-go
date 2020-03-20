@@ -34,7 +34,10 @@ type (
 	Encoder struct{}
 
 	// Output collects distinct metric/label set outputs.
-	Output map[string]float64
+	Output struct {
+		Map          map[string]float64
+		labelEncoder export.LabelEncoder
+	}
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
@@ -69,6 +72,13 @@ var (
 	// Labels3 is the empty set
 	Labels3 = makeLabels(SdkEncoder)
 )
+
+func NewOutput(labelEncoder export.LabelEncoder) Output {
+	return Output{
+		Map:          make(map[string]float64),
+		labelEncoder: labelEncoder,
+	}
+}
 
 // NewAggregationSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
@@ -139,7 +149,8 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 // value to the output map.
 func (o Output) AddTo(rec export.Record) error {
 	labels := rec.Labels()
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
+	encoded := o.labelEncoder.Encode(labels.Iter())
+	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded)
 	var value float64
 
 	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
@@ -151,6 +162,6 @@ func (o Output) AddTo(rec export.Record) error {
 	} else {
 		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
 	}
-	o[key] = value
+	o.Map[key] = value
 	return nil
 }

@@ -47,8 +47,7 @@ type (
 )
 
 var (
-	_ export.Exporter     = &Exporter{}
-	_ export.LabelEncoder = &Exporter{}
+	_ export.Exporter = &Exporter{}
 )
 
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
@@ -94,7 +93,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 
 	// The ungrouped batcher ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(selector, false)
+	batcher := ungrouped.New(selector, exporter, false)
 
 	// The pusher automatically recognizes that the exporter
 	// implements the LabelEncoder interface, which ensures the
@@ -112,6 +111,9 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
+	// TODO: This encodes the labels every time we append the
+	// tags. This can be optimized when SDK gets out of the
+	// encoding business.
 	encoded, inefficient := e.LabelEncoder.ForceEncode(rec.Labels())
 	_, _ = buf.WriteString(encoded)
 

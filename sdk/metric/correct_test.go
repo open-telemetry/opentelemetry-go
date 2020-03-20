@@ -182,11 +182,14 @@ func TestRecordNaN(t *testing.T) {
 }
 
 func TestSDKAltLabelEncoder(t *testing.T) {
+	// TODO: This tests won't make any sense, when SDK stops
+	// caring about label encoding.
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, testLabelEncoder{})
+	encoder := testLabelEncoder{}
+	sdk := sdk.New(batcher, encoder)
 	meter := metric.WrapMeterImpl(sdk)
 
 	measure := Must(meter).NewFloat64Measure("measure")
@@ -197,7 +200,8 @@ func TestSDKAltLabelEncoder(t *testing.T) {
 	require.Equal(t, 1, len(batcher.records))
 
 	labels := batcher.records[0].Labels()
-	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
+	encoded := encoder.Encode(labels.Iter())
+	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, encoded)
 }
 
 func TestSDKLabelsDeduplication(t *testing.T) {
@@ -303,7 +307,8 @@ func TestObserverCollection(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	encoder := sdk.NewDefaultLabelEncoder()
+	sdk := sdk.New(batcher, encoder)
 	meter := metric.WrapMeterImpl(sdk)
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
@@ -327,7 +332,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.Output{}
+	out := batchTest.NewOutput(encoder)
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -336,6 +341,6 @@ func TestObserverCollection(t *testing.T) {
 		"float.observer/C=D": -1,
 		"int.observer/":      1,
 		"int.observer/A=B":   1,
-	}, out)
+	}, out.Map)
 
 }
