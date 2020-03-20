@@ -98,6 +98,9 @@ type (
 		// cachedValue contains a `reflect.Value` of the `ordered`
 		// member
 		cachedValue reflect.Value
+		// cachedEncoded contains an encoded version of the
+		// `ordered` member
+		cachedEncoded string
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -379,6 +382,14 @@ func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 	ls.cachedValue = reflect.ValueOf(ls.ordered)
 }
 
+func (ls *labels) ensureEncoded(encoder export.LabelEncoder) {
+	if ls.cachedEncoded != "" {
+		return
+	}
+	iter := export.NewLabelIterator(ls)
+	ls.cachedEncoded = encoder.Encode(iter)
+}
+
 func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
 	switch len(kvs) {
 	case 1:
@@ -556,12 +567,8 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
-	// TODO Labels are encoded once per collection interval,
-	// instead of once per bound instrument lifetime.  This can be
-	// addressed similarly to OTEP 78, see
-	// https://github.com/jmacd/opentelemetry-go/blob/8bed2e14df7f9f4688fbab141924bb786dc9a3a1/api/context/internal/set.go#L89
-	iter := export.NewLabelIterator(labels)
-	exportLabels := export.NewLabels(labels, m.labelEncoder.Encode(iter), m.labelEncoder)
+	labels.ensureEncoded(m.labelEncoder)
+	exportLabels := export.NewLabels(labels, labels.cachedEncoded, m.labelEncoder)
 	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
