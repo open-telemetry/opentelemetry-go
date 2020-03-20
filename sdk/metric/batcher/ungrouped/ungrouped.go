@@ -62,9 +62,7 @@ func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator
 
 func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	desc := record.Descriptor()
-	// TODO: This encodes the labels on every process instead of
-	// getting a possibly cached encoding from labels.
-	encoded := b.labelEncoder.Encode(record.Labels().Iter())
+	encoded := record.Labels().Encoded(b.labelEncoder)
 	key := batchKey{
 		descriptor: desc,
 		encoded:    encoded,

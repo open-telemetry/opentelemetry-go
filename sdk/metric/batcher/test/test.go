@@ -154,7 +154,7 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 // value to the output map.
 func (o Output) AddTo(rec export.Record) error {
 	labels := rec.Labels()
-	encoded := o.labelEncoder.Encode(labels.Iter())
+	encoded := rec.Labels().Encoded(o.labelEncoder)
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded)
 	var value float64
 

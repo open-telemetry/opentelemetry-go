@@ -104,9 +104,6 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	// TODO: This encodes the labels every time we append the
-	// tags. This can be optimized when labels start caching
-	// encodings.
-	encoded := e.labelEncoder.Encode(rec.Labels().Iter())
+	encoded := rec.Labels().Encoded(e.labelEncoder)
 	_, _ = buf.WriteString(encoded)
 }

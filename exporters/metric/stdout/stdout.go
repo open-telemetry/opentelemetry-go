@@ -225,7 +225,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		var materializedKeys []string
 
 		if iter.Len() > 0 {
-			encoded := e.config.LabelEncoder.Encode(record.Labels().Iter())
+			encoded := record.Labels().Encoded(e.config.LabelEncoder)
 			materializedKeys = append(materializedKeys, encoded)
 		}
 
