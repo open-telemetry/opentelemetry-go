@@ -29,9 +29,6 @@ func WithErrorHandler(fn ErrorHandler) Option {
 type errorHandlerOption ErrorHandler
 
 func (o errorHandlerOption) Apply(config *Config) {
-	if config == nil {
-		return
-	}
 	config.ErrorHandler = ErrorHandler(o)
 }
 
@@ -43,8 +40,5 @@ func WithResource(r resource.Resource) Option {
 type resourceOption resource.Resource
 
 func (o resourceOption) Apply(config *Config) {
-	if config == nil {
-		return
-	}
 	config.Resource = resource.Resource(o)
 }
