@@ -17,6 +17,8 @@
 package resource
 
 import (
+	"reflect"
+
 	"go.opentelemetry.io/otel/api/core"
 )
 
@@ -69,4 +71,9 @@ func (r Resource) Attributes() []core.KeyValue {
 		attrs = append(attrs, core.KeyValue{Key: k, Value: v})
 	}
 	return attrs
+}
+
+// Equal returns true if other Resource is the equal to r.
+func (r Resource) Equal(other Resource) bool {
+	return reflect.DeepEqual(r.labels, other.labels)
 }

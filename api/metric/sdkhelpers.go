@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterImpl is a convenient interface for SDK and test
@@ -133,6 +134,29 @@ func Configure(opts []Option) Config {
 	return config
 }
 
+// Resourcer is implemented by any value that has a Resource method,
+// which returns the Resource associated with the value.
+// The Resource method is used to set the Resource for Descriptors of new
+// metric instruments.
+type Resourcer interface {
+	Resource() resource.Resource
+}
+
+// insertResource inserts a WithResource option at the beginning of opts
+// using the resource defined by impl if impl implements Resourcer.
+//
+// If opts contains a WithResource option already, that Option will take
+// precedence and overwrite the Resource set from impl.
+//
+// The returned []Option may uses the same underlying array as opts.
+func insertResource(impl MeterImpl, opts []Option) []Option {
+	if r, ok := impl.(Resourcer); ok {
+		// default to the impl resource and override if passed in opts.
+		return append([]Option{WithResource(r.Resource())}, opts...)
+	}
+	return opts
+}
+
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
 func WrapMeterImpl(impl MeterImpl) Meter {
@@ -159,6 +183,7 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...M
 }
 
 func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
+	opts = insertResource(m.impl, opts)
 	return m.impl.NewSyncInstrument(NewDescriptor(name, metricKind, numberKind, opts...))
 }
 
@@ -219,6 +244,7 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 }
 
 func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsyncImpl, error) {
+	opts = insertResource(m.impl, opts)
 	return m.impl.NewAsyncInstrument(
 		NewDescriptor(name, mkind, nkind, opts...),
 		callback)
