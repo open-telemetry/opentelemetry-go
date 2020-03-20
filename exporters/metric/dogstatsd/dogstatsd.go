@@ -40,9 +40,8 @@ type (
 	// https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
 	Exporter struct {
 		*statsd.Exporter
-		*statsd.LabelEncoder
 
-		ReencodedLabelsCount int
+		labelEncoder *statsd.LabelEncoder
 	}
 )
 
@@ -51,12 +50,9 @@ var (
 )
 
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
-// This type implements the metric.LabelEncoder interface,
-// allowing the SDK's unique label encoding to be pre-computed
-// for the exporter and stored in the LabelSet.
 func NewRawExporter(config Config) (*Exporter, error) {
 	exp := &Exporter{
-		LabelEncoder: statsd.NewLabelEncoder(),
+		labelEncoder: statsd.NewLabelEncoder(),
 	}
 
 	var err error
@@ -93,11 +89,8 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 
 	// The ungrouped batcher ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(selector, exporter, false)
+	batcher := ungrouped.New(selector, exporter.labelEncoder, false)
 
-	// The pusher automatically recognizes that the exporter
-	// implements the LabelEncoder interface, which ensures the
-	// export encoding for labels is encoded in the LabelSet.
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
@@ -112,12 +105,8 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
 	// TODO: This encodes the labels every time we append the
-	// tags. This can be optimized when SDK gets out of the
-	// encoding business.
-	encoded, inefficient := e.LabelEncoder.ForceEncode(rec.Labels())
+	// tags. This can be optimized when labels start caching
+	// encodings.
+	encoded := e.labelEncoder.Encode(rec.Labels().Iter())
 	_, _ = buf.WriteString(encoded)
-
-	if inefficient {
-		e.ReencodedLabelsCount++
-	}
 }
