@@ -159,7 +159,7 @@ var (
 	_ api.AsyncImpl     = &asyncInstrument{}
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
-	_ resource.Provider = &SDK{}
+	_ api.Resourcer     = &SDK{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
