@@ -594,16 +594,6 @@ func (m *SDK) RecordBatch(ctx context.Context, ls api.LabelSet, measurements ...
 	}
 }
 
-// GetDescriptor returns a pointer to the descriptor of an instrument,
-// which is not part of the public metric API.  This is for testing.  Use
-// SyncImpl().Descriptor() to get a copy of the descriptor.
-func (m *SDK) GetDescriptor(inst api.SyncImpl) *metric.Descriptor {
-	if ii, ok := inst.(*syncInstrument); ok {
-		return &ii.descriptor
-	}
-	return nil
-}
-
 func (r *record) RecordOne(ctx context.Context, number core.Number) {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
