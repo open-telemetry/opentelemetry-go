@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/internal"
@@ -50,7 +51,7 @@ var _ aggregator.MinMaxSumCount = &Aggregator{}
 //
 // This aggregator uses the StateLocker pattern to guarantee
 // the count, sum, min and max are consistent within a checkpoint
-func New(desc *export.Descriptor) *Aggregator {
+func New(desc *metric.Descriptor) *Aggregator {
 	kind := desc.NumberKind()
 	return &Aggregator{
 		kind: kind,
@@ -111,7 +112,7 @@ func (c *Aggregator) Max() (core.Number, error) {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set.
-func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.SwapActiveState(c.resetCheckpoint)
 }
 
@@ -131,7 +132,7 @@ func (c *Aggregator) resetCheckpoint() {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
 	cIdx := c.lock.Start()
@@ -165,7 +166,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)

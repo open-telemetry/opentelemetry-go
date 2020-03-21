@@ -21,45 +21,56 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-type commonMetric struct {
-	instrument InstrumentImpl
+type syncInstrument struct {
+	instrument SyncImpl
 }
 
-type commonBoundInstrument struct {
-	boundInstrument BoundInstrumentImpl
+type syncBoundInstrument struct {
+	boundInstrument BoundSyncImpl
+}
+
+type asyncInstrument struct {
+	instrument AsyncImpl
 }
 
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
-func (m commonMetric) bind(labels LabelSet) commonBoundInstrument {
-	return newCommonBoundInstrument(m.instrument.Bind(labels))
+func (s syncInstrument) bind(labels LabelSet) syncBoundInstrument {
+	return newSyncBoundInstrument(s.instrument.Bind(labels))
 }
 
-func (m commonMetric) float64Measurement(value float64) Measurement {
-	return newMeasurement(m.instrument, core.NewFloat64Number(value))
+func (s syncInstrument) float64Measurement(value float64) Measurement {
+	return newMeasurement(s.instrument, core.NewFloat64Number(value))
 }
 
-func (m commonMetric) int64Measurement(value int64) Measurement {
-	return newMeasurement(m.instrument, core.NewInt64Number(value))
+func (s syncInstrument) int64Measurement(value int64) Measurement {
+	return newMeasurement(s.instrument, core.NewInt64Number(value))
 }
 
-func (m commonMetric) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
-	m.instrument.RecordOne(ctx, number, labels)
+func (s syncInstrument) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
+	s.instrument.RecordOne(ctx, number, labels)
 }
 
-func (m commonMetric) Impl() InstrumentImpl {
-	return m.instrument
+func (s syncInstrument) SyncImpl() SyncImpl {
+	return s.instrument
 }
 
-func (h commonBoundInstrument) directRecord(ctx context.Context, number core.Number) {
+func (h syncBoundInstrument) directRecord(ctx context.Context, number core.Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
-func (h commonBoundInstrument) Unbind() {
+func (h syncBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
 }
 
-func newCommonMetric(instrument InstrumentImpl, err error) (commonMetric, error) {
+func (a asyncInstrument) AsyncImpl() AsyncImpl {
+	return a.instrument
+}
+
+// checkNewSync receives an SyncImpl and potential
+// error, and returns the same types, checking for and ensuring that
+// the returned interface is not nil.
+func checkNewSync(instrument SyncImpl, err error) (syncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
 			err = ErrSDKReturnedNilImpl
@@ -69,22 +80,37 @@ func newCommonMetric(instrument InstrumentImpl, err error) (commonMetric, error)
 		// together and use a tag for the original name, e.g.,
 		//   name = 'invalid.counter.int64'
 		//   label = 'original-name=duplicate-counter-name'
-		instrument = noopInstrument{}
+		instrument = NoopSync{}
 	}
-	return commonMetric{
+	return syncInstrument{
 		instrument: instrument,
 	}, err
 }
 
-func newCommonBoundInstrument(boundInstrument BoundInstrumentImpl) commonBoundInstrument {
-	return commonBoundInstrument{
+func newSyncBoundInstrument(boundInstrument BoundSyncImpl) syncBoundInstrument {
+	return syncBoundInstrument{
 		boundInstrument: boundInstrument,
 	}
 }
 
-func newMeasurement(instrument InstrumentImpl, number core.Number) Measurement {
+func newMeasurement(instrument SyncImpl, number core.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,
 	}
+}
+
+// checkNewAsync receives an AsyncImpl and potential
+// error, and returns the same types, checking for and ensuring that
+// the returned interface is not nil.
+func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
+	if instrument == nil {
+		if err == nil {
+			err = ErrSDKReturnedNilImpl
+		}
+		instrument = NoopAsync{}
+	}
+	return asyncInstrument{
+		instrument: instrument,
+	}, err
 }

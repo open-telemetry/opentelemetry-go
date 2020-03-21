@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright 2020, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
-
-//go:generate stringer -type=Kind
+package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/api/metric"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -102,7 +100,7 @@ type AggregationSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*Descriptor) Aggregator
+	AggregatorFor(*metric.Descriptor) Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -132,7 +130,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for distributed or span context.
-	Update(context.Context, core.Number, *Descriptor) error
+	Update(context.Context, core.Number, *metric.Descriptor) error
 
 	// Checkpoint is called during collection to finish one period
 	// of aggregation by atomically saving the current value.
@@ -147,13 +145,13 @@ type Aggregator interface {
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
-	Checkpoint(context.Context, *Descriptor)
+	Checkpoint(context.Context, *metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's checkpointed state.
 	// Merge() is called in a single-threaded context, no locking
 	// is required.
-	Merge(Aggregator, *Descriptor) error
+	Merge(Aggregator, *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -169,6 +167,97 @@ type Exporter interface {
 	// The CheckpointSet interface refers to the Batcher that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+}
+
+// Convenience function that creates a slice of labels from the passed
+// iterator. The iterator is set up to start from the beginning before
+// creating the slice.
+func IteratorToSlice(iter LabelIterator) []core.KeyValue {
+	l := iter.Len()
+	if l == 0 {
+		return nil
+	}
+	iter.idx = -1
+	slice := make([]core.KeyValue, 0, l)
+	for iter.Next() {
+		slice = append(slice, iter.Label())
+	}
+	return slice
+}
+
+// LabelStorage provides an access to the ordered labels.
+type LabelStorage interface {
+	// NumLabels returns a number of labels in the storage.
+	NumLabels() int
+	// GetLabels gets a label from a passed index.
+	GetLabel(int) core.KeyValue
+}
+
+// LabelSlice implements LabelStorage in terms of a slice.
+type LabelSlice []core.KeyValue
+
+var _ LabelStorage = LabelSlice{}
+
+// NumLabels is a part of LabelStorage implementation.
+func (s LabelSlice) NumLabels() int {
+	return len(s)
+}
+
+// GetLabel is a part of LabelStorage implementation.
+func (s LabelSlice) GetLabel(idx int) core.KeyValue {
+	return s[idx]
+}
+
+// Iter returns an iterator going over the slice.
+func (s LabelSlice) Iter() LabelIterator {
+	return NewLabelIterator(s)
+}
+
+// LabelIterator allows iterating over an ordered set of labels. The
+// typical use of the iterator is as follows:
+//
+//     iter := export.NewLabelIterator(getStorage())
+//     for iter.Next() {
+//       label := iter.Label()
+//       // or, if we need an index:
+//       // idx, label := iter.IndexedLabel()
+//       // do something with label
+//     }
+type LabelIterator struct {
+	storage LabelStorage
+	idx     int
+}
+
+// NewLabelIterator creates an iterator going over a passed storage.
+func NewLabelIterator(storage LabelStorage) LabelIterator {
+	return LabelIterator{
+		storage: storage,
+		idx:     -1,
+	}
+}
+
+// Next moves the iterator to the next label. Returns false if there
+// are no more labels.
+func (i *LabelIterator) Next() bool {
+	i.idx++
+	return i.idx < i.Len()
+}
+
+// Label returns current label. Must be called only after Next returns
+// true.
+func (i *LabelIterator) Label() core.KeyValue {
+	return i.storage.GetLabel(i.idx)
+}
+
+// IndexedLabel returns current index and label. Must be called only
+// after Next returns true.
+func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
+	return i.idx, i.Label()
+}
+
+// Len returns a number of labels in the iterator's label storage.
+func (i *LabelIterator) Len() int {
+	return i.storage.NumLabels()
 }
 
 // LabelEncoder enables an optimization for export pipelines that use
@@ -191,7 +280,7 @@ type LabelEncoder interface {
 	// syntax for serialized label sets should implement
 	// LabelEncoder, thus avoiding duplicate computation in the
 	// export path.
-	Encode([]core.KeyValue) string
+	Encode(LabelIterator) string
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -213,7 +302,7 @@ type CheckpointSet interface {
 // Record contains the exported data for a single metric instrument
 // and label set.
 type Record struct {
-	descriptor *Descriptor
+	descriptor *metric.Descriptor
 	labels     Labels
 	aggregator Aggregator
 }
@@ -223,7 +312,7 @@ type Record struct {
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.
 type Labels struct {
-	ordered []core.KeyValue
+	storage LabelStorage
 	encoded string
 	encoder LabelEncoder
 }
@@ -231,18 +320,17 @@ type Labels struct {
 // NewLabels builds a Labels object, consisting of an ordered set of
 // labels, a unique encoded representation, and the encoder that
 // produced it.
-func NewLabels(ordered []core.KeyValue, encoded string, encoder LabelEncoder) Labels {
+func NewLabels(storage LabelStorage, encoded string, encoder LabelEncoder) Labels {
 	return Labels{
-		ordered: ordered,
+		storage: storage,
 		encoded: encoded,
 		encoder: encoder,
 	}
 }
 
-// Ordered returns the labels in a specified order, according to the
-// Batcher.
-func (l Labels) Ordered() []core.KeyValue {
-	return l.ordered
+// Iter returns an iterator over ordered labels.
+func (l Labels) Iter() LabelIterator {
+	return NewLabelIterator(l.storage)
 }
 
 // Encoded is a pre-encoded form of the ordered labels.
@@ -255,15 +343,10 @@ func (l Labels) Encoder() LabelEncoder {
 	return l.encoder
 }
 
-// Len returns the number of labels.
-func (l Labels) Len() int {
-	return len(l.ordered)
-}
-
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *Descriptor, labels Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels Labels, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -278,7 +361,7 @@ func (r Record) Aggregator() Aggregator {
 }
 
 // Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *Descriptor {
+func (r Record) Descriptor() *metric.Descriptor {
 	return r.descriptor
 }
 
@@ -286,92 +369,4 @@ func (r Record) Descriptor() *Descriptor {
 // aggregated data.
 func (r Record) Labels() Labels {
 	return r.labels
-}
-
-// Kind describes the kind of instrument.
-type Kind int8
-
-const (
-	// Counter kind indicates a counter instrument.
-	CounterKind Kind = iota
-
-	// Measure kind indicates a measure instrument.
-	MeasureKind
-
-	// Observer kind indicates an observer instrument
-	ObserverKind
-)
-
-// Descriptor describes a metric instrument to the exporter.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-type Descriptor struct {
-	name        string
-	metricKind  Kind
-	keys        []core.Key
-	description string
-	unit        unit.Unit
-	numberKind  core.NumberKind
-}
-
-// NewDescriptor builds a new descriptor, for use by `Meter`
-// implementations in constructing new metric instruments.
-//
-// Descriptors are created once per instrument and a pointer to the
-// descriptor may be used to uniquely identify the instrument in an
-// exporter.
-func NewDescriptor(
-	name string,
-	metricKind Kind,
-	keys []core.Key,
-	description string,
-	unit unit.Unit,
-	numberKind core.NumberKind,
-) *Descriptor {
-	return &Descriptor{
-		name:        name,
-		metricKind:  metricKind,
-		keys:        keys,
-		description: description,
-		unit:        unit,
-		numberKind:  numberKind,
-	}
-}
-
-// Name returns the metric instrument's name.
-func (d *Descriptor) Name() string {
-	return d.name
-}
-
-// MetricKind returns the kind of instrument: counter, measure, or
-// observer.
-func (d *Descriptor) MetricKind() Kind {
-	return d.metricKind
-}
-
-// Keys returns the recommended keys included in the metric
-// definition.  These keys may be used by a Batcher as a default set
-// of grouping keys for the metric instrument.
-func (d *Descriptor) Keys() []core.Key {
-	return d.keys
-}
-
-// Description provides a human-readable description of the metric
-// instrument.
-func (d *Descriptor) Description() string {
-	return d.description
-}
-
-// Unit describes the units of the metric instrument.  Unitless
-// metrics return the empty string.
-func (d *Descriptor) Unit() unit.Unit {
-	return d.unit
-}
-
-// NumberKind returns whether this instrument is declared over int64
-// or a float64 values.
-func (d *Descriptor) NumberKind() core.NumberKind {
-	return d.numberKind
 }

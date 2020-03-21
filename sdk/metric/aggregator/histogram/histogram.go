@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/internal"
@@ -68,7 +69,7 @@ var _ aggregator.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *export.Descriptor, boundaries []core.Number) *Aggregator {
+func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := numbers{
@@ -126,7 +127,7 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(ctx context.Context, desc *export.Descriptor) {
+func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.SwapActiveState(c.resetCheckpoint)
 }
 
@@ -144,7 +145,7 @@ func (c *Aggregator) resetCheckpoint() {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
 	cIdx := c.lock.Start()
@@ -168,7 +169,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *export.
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *export.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)

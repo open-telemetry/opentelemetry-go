@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/exporters/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -44,12 +45,12 @@ func TestDogstatsLabels(t *testing.T) {
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet(encoder)
 
-			desc := export.NewDescriptor("test.name", export.CounterKind, nil, "", "", core.Int64NumberKind)
+			desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
 			cagg := sum.New()
-			_ = cagg.Update(ctx, core.NewInt64Number(123), desc)
-			cagg.Checkpoint(ctx, desc)
+			_ = cagg.Update(ctx, core.NewInt64Number(123), &desc)
+			cagg.Checkpoint(ctx, &desc)
 
-			checkpointSet.Add(desc, cagg, key.New("A").String("B"))
+			checkpointSet.Add(&desc, cagg, key.New("A").String("B"))
 
 			var buf bytes.Buffer
 			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{

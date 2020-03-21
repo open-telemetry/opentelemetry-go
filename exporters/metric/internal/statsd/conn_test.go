@@ -26,6 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/exporters/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -61,7 +62,9 @@ type noTagsAdapter struct {
 func (*noTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	_, _ = buf.WriteString(rec.Descriptor().Name())
 
-	for _, tag := range rec.Labels().Ordered() {
+	iter := rec.Labels().Iter()
+	for iter.Next() {
+		tag := iter.Label()
 		_, _ = buf.WriteString(".")
 		_, _ = buf.WriteString(tag.Value.Emit())
 	}
@@ -123,14 +126,14 @@ timer.B.D:%s|ms
 					}
 
 					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
-					cdesc := export.NewDescriptor(
-						"counter", export.CounterKind, nil, "", "", nkind)
-					gdesc := export.NewDescriptor(
-						"observer", export.ObserverKind, nil, "", "", nkind)
-					mdesc := export.NewDescriptor(
-						"measure", export.MeasureKind, nil, "", "", nkind)
-					tdesc := export.NewDescriptor(
-						"timer", export.MeasureKind, nil, "", unit.Milliseconds, nkind)
+					cdesc := metric.NewDescriptor(
+						"counter", metric.CounterKind, nkind)
+					gdesc := metric.NewDescriptor(
+						"observer", metric.ObserverKind, nkind)
+					mdesc := metric.NewDescriptor(
+						"measure", metric.MeasureKind, nkind)
+					tdesc := metric.NewDescriptor(
+						"timer", metric.MeasureKind, nkind, metric.WithUnit(unit.Milliseconds))
 
 					labels := []core.KeyValue{
 						key.New("A").String("B"),
@@ -138,10 +141,10 @@ timer.B.D:%s|ms
 					}
 					const value = 123.456
 
-					checkpointSet.AddCounter(cdesc, value, labels...)
-					checkpointSet.AddLastValue(gdesc, value, labels...)
-					checkpointSet.AddMeasure(mdesc, value, labels...)
-					checkpointSet.AddMeasure(tdesc, value, labels...)
+					checkpointSet.AddCounter(&cdesc, value, labels...)
+					checkpointSet.AddLastValue(&gdesc, value, labels...)
+					checkpointSet.AddMeasure(&mdesc, value, labels...)
+					checkpointSet.AddMeasure(&tdesc, value, labels...)
 
 					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
@@ -285,7 +288,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
-			desc := export.NewDescriptor("counter", export.CounterKind, nil, "", "", core.Int64NumberKind)
+			desc := metric.NewDescriptor("counter", metric.CounterKind, core.Int64NumberKind)
 
 			var expected []string
 
@@ -293,9 +296,11 @@ func TestPacketSplit(t *testing.T) {
 			tcase.setup(func(nkeys int) {
 				labels := makeLabels(offset, nkeys)
 				offset += nkeys
-				expect := fmt.Sprint("counter:100|c", adapter.LabelEncoder.Encode(labels), "\n")
+				iter := export.LabelSlice(labels).Iter()
+				encoded := adapter.LabelEncoder.Encode(iter)
+				expect := fmt.Sprint("counter:100|c", encoded, "\n")
 				expected = append(expected, expect)
-				checkpointSet.AddCounter(desc, 100, labels...)
+				checkpointSet.AddCounter(&desc, 100, labels...)
 			})
 
 			err = exp.Export(ctx, checkpointSet)

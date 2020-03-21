@@ -84,7 +84,7 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
-func (b *testBatcher) AggregatorFor(*export.Descriptor) export.Aggregator {
+func (b *testBatcher) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
@@ -104,7 +104,8 @@ func (b *testBatcher) FinishedCollection() {
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), record.Labels().Ordered()...)
+	labels := export.IteratorToSlice(record.Labels().Iter())
+	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
 	return nil
 }
 
