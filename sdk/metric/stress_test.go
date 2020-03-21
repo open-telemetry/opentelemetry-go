@@ -16,7 +16,7 @@
 // that the race detector would help with, anyway.
 // +build !race
 
-package metric_test
+package metric
 
 import (
 	"context"
@@ -37,7 +37,6 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -48,6 +47,8 @@ const (
 	testRun           = time.Second
 	epsilon           = 1e-10
 )
+
+var Must = api.Must
 
 type (
 	testFixture struct {
@@ -156,11 +157,14 @@ func (f *testFixture) someLabels() []core.KeyValue {
 	}
 }
 
-func (f *testFixture) startWorker(impl *sdk.SDK, meter api.Meter, wg *sync.WaitGroup, i int) {
+func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	descriptor := impl.GetDescriptor(instrument.SyncImpl())
+	var descriptor *metric.Descriptor
+	if ii, ok := instrument.SyncImpl().(*syncInstrument); ok {
+		descriptor = &ii.descriptor
+	}
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
 	labs := meter.Labels(kvs...)
@@ -292,7 +296,7 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := sdk.New(fixture, sdk.NewDefaultLabelEncoder())
+	sdk := New(fixture, NewDefaultLabelEncoder())
 	meter := metric.WrapMeterImpl(sdk)
 	fixture.wg.Add(cc + 1)
 
