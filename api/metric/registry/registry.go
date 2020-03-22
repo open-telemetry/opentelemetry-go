@@ -60,7 +60,7 @@ func keyOf(descriptor metric.Descriptor) mapKey {
 	}
 }
 
-func (u *uniqueInstrumentMeterImpl) uniqCheck(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
+func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
 	impl, ok := u.state[keyOf(descriptor)]
 	if !ok {
 		return nil, nil
@@ -68,7 +68,7 @@ func (u *uniqueInstrumentMeterImpl) uniqCheck(descriptor metric.Descriptor) (met
 
 	if impl.Descriptor().MetricKind() != descriptor.MetricKind() ||
 		impl.Descriptor().NumberKind() != descriptor.NumberKind() {
-		return nil, fmt.Errorf("Metric %s registered as a %s %s: %w",
+		return nil, fmt.Errorf("Metric was %s registered as a %s %s: %w",
 			impl.Descriptor().Name(),
 			impl.Descriptor().NumberKind(),
 			impl.Descriptor().MetricKind(),
@@ -83,7 +83,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	impl, err := u.uniqCheck(descriptor)
+	impl, err := u.checkUniqueness(descriptor)
 
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	impl, err := u.uniqCheck(descriptor)
+	impl, err := u.checkUniqueness(descriptor)
 
 	if err != nil {
 		return nil, err
