@@ -104,7 +104,8 @@ type AsyncImpl interface {
 // wrappedMeterImpl implements the `Meter` interface given a
 // `MeterImpl` implementation.
 type wrappedMeterImpl struct {
-	impl MeterImpl
+	impl        MeterImpl
+	libraryName string
 }
 
 // int64ObserverResult is an adapter for int64-valued asynchronous
@@ -159,9 +160,10 @@ func insertResource(impl MeterImpl, opts []Option) []Option {
 
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl) Meter {
+func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
 	return &wrappedMeterImpl{
-		impl: impl,
+		impl:        impl,
+		libraryName: libraryName,
 	}
 }
 

@@ -318,7 +318,7 @@ func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(core
 
 func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
-	meter := metric.WrapMeterImpl(impl)
+	meter := metric.WrapMeterImpl(impl, "test")
 
 	measure, err := meter.NewInt64Measure("test.measure")
 

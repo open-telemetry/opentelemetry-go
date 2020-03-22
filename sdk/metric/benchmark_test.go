@@ -44,7 +44,7 @@ func newFixtureWithEncoder(b *testing.B, encoder export.LabelEncoder) *benchFixt
 		B: b,
 	}
 	bf.sdk = sdk.New(bf, encoder)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk, "benchmarks"))
 	return bf
 }
 
