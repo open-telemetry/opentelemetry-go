@@ -63,8 +63,9 @@ type meter struct {
 	name     string
 
 	lock       sync.Mutex
-	syncInsts  map[string]*syncImpl
-	asyncInsts map[string]*asyncImpl
+	registry   map[string]metric.InstrumentImpl
+	syncInsts  []*syncImpl
+	asyncInsts []*asyncImpl
 }
 
 type instrument struct {
@@ -163,8 +164,9 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 	m := &meter{
 		provider:   p,
 		name:       name,
-		syncInsts:  map[string]*syncImpl{},
-		asyncInsts: map[string]*asyncImpl{},
+		registry:   map[string]metric.InstrumentImpl{},
+		syncInsts:  []*syncImpl{},
+		asyncInsts: []*asyncImpl{},
 	}
 	p.meters[name] = m
 	return m
@@ -198,14 +200,11 @@ func (m *meter) newSync(desc metric.Descriptor, constructor func(metric.Meter) (
 		return constructor(*meterPtr)
 	}
 
-	if exs, ok := m.syncInsts[desc.Name()]; ok {
-		if !registry.Compatible(desc, exs.Descriptor()) {
-			return nil, registry.NewMetricKindMismatchError(exs.Descriptor())
+	if ex, ok := m.registry[desc.Name()]; ok {
+		if !registry.Compatible(desc, ex.Descriptor()) {
+			return nil, registry.NewMetricKindMismatchError(ex.Descriptor())
 		}
-		return exs, nil
-	}
-	if exa, ok := m.asyncInsts[desc.Name()]; ok {
-		return nil, registry.NewMetricKindMismatchError(exa.Descriptor())
+		return ex.(metric.SyncImpl), nil
 	}
 
 	inst := &syncImpl{
@@ -214,7 +213,8 @@ func (m *meter) newSync(desc metric.Descriptor, constructor func(metric.Meter) (
 		},
 		constructor: constructor,
 	}
-	m.syncInsts[desc.Name()] = inst
+	m.syncInsts = append(m.syncInsts, inst)
+	m.registry[desc.Name()] = inst
 	return inst, nil
 }
 
@@ -286,14 +286,11 @@ func (m *meter) newAsync(desc metric.Descriptor, constructor func(metric.Meter) 
 		return constructor(*meterPtr)
 	}
 
-	if exa, ok := m.asyncInsts[desc.Name()]; ok {
-		if !registry.Compatible(desc, exa.Descriptor()) {
-			return nil, registry.NewMetricKindMismatchError(exa.Descriptor())
+	if ex, ok := m.registry[desc.Name()]; ok {
+		if !registry.Compatible(desc, ex.Descriptor()) {
+			return nil, registry.NewMetricKindMismatchError(ex.Descriptor())
 		}
-		return exa, nil
-	}
-	if exs, ok := m.syncInsts[desc.Name()]; ok {
-		return nil, registry.NewMetricKindMismatchError(exs.Descriptor())
+		return ex, nil
 	}
 
 	inst := &asyncImpl{
@@ -302,7 +299,8 @@ func (m *meter) newAsync(desc metric.Descriptor, constructor func(metric.Meter) 
 		},
 		constructor: constructor,
 	}
-	m.asyncInsts[desc.Name()] = inst
+	m.asyncInsts = append(m.asyncInsts, inst)
+	m.registry[desc.Name()] = inst
 	return inst, nil
 }
 

@@ -244,9 +244,9 @@ func (r resourceOption) Apply(config *Config) {
 	config.Resource = resource.Resource(r)
 }
 
-// WithLibraryName applies provided library name.
+// WithLibraryName applies provided library name.  This is
 //
-// This will override any prior LibraryName options.
+// This will override any prior LibraryName options
 func WithLibraryName(name string) Option {
 	return libraryNameOption(name)
 }
