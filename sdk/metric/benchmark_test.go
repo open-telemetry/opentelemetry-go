@@ -35,25 +35,24 @@ import (
 type processFunc func(context.Context, export.Record) error
 
 type benchFixture struct {
-	meter  metric.MeterMust
-	sdk    *sdk.SDK
-	B      *testing.B
-	cb     processFunc
+	meter metric.MeterMust
+	sdk   *sdk.SDK
+	B     *testing.B
+	pcb   processFunc
 }
 
-func newFixtureWithProcessFunc(b *testing.B, cb processFunc) *benchFixture {
+func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
-		B:  b,
-		cb: cb,
+		B: b,
 	}
 	bf.sdk = sdk.New(bf)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
 	return bf
 }
 
-func newFixture(b *testing.B) *benchFixture {
-	return newFixtureWithProcessFunc(b, nil)
+func (f *benchFixture) setProcessCallback(cb processFunc) {
+	f.pcb = cb
 }
 
 func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
@@ -75,11 +74,11 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (*benchFixture) Process(ctx context.Context, rec export.Record) error {
-	if b.cb == nil {
+func (f *benchFixture) Process(ctx context.Context, rec export.Record) error {
+	if f.pcb == nil {
 		return nil
 	}
-	return b.cb(ctx, rec)
+	return f.pcb(ctx, rec)
 }
 
 func (*benchFixture) CheckpointSet() export.CheckpointSet {
@@ -201,6 +200,61 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cnt.Bind(labels[i]).Unbind()
 	}
+}
+
+// Iterators
+
+var benchmarkIteratorVar core.KeyValue
+
+func benchmarkIterator(b *testing.B, n int) {
+	fix := newFixture(b)
+	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
+		var kv core.KeyValue
+		li := rec.Labels().Iter()
+		fix.B.StartTimer()
+		for i := 0; i < fix.B.N; i++ {
+			iter := li
+			// test getting only the first element
+			if iter.Next() {
+				kv = iter.Label()
+			}
+		}
+		fix.B.StopTimer()
+		benchmarkIteratorVar = kv
+		return nil
+	})
+	labs := fix.sdk.Labels(makeLabels(n)...)
+	cnt := fix.meter.NewInt64Counter("int64.counter")
+	ctx := context.Background()
+	cnt.Add(ctx, 1, labs)
+
+	b.StopTimer()
+	b.ResetTimer()
+	fix.sdk.Collect(ctx)
+}
+
+func BenchmarkIterator_0(b *testing.B) {
+	benchmarkIterator(b, 0)
+}
+
+func BenchmarkIterator_1(b *testing.B) {
+	benchmarkIterator(b, 1)
+}
+
+func BenchmarkIterator_2(b *testing.B) {
+	benchmarkIterator(b, 2)
+}
+
+func BenchmarkIterator_4(b *testing.B) {
+	benchmarkIterator(b, 4)
+}
+
+func BenchmarkIterator_8(b *testing.B) {
+	benchmarkIterator(b, 8)
+}
+
+func BenchmarkIterator_16(b *testing.B) {
+	benchmarkIterator(b, 16)
 }
 
 // Counters
