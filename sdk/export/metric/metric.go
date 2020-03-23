@@ -78,12 +78,7 @@ type Batcher interface {
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Record (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator).  The Batcher
-	// should be prepared to process duplicate (Descriptor,
-	// Labels) pairs during this pass due to race conditions, but
-	// this will usually be the ordinary course of events, as
-	// Aggregators are typically merged according the output set
-	// of labels.
+	// Labels, and the checkpointed Aggregator).
 	//
 	// The Context argument originates from the controller that
 	// orchestrates collection.
@@ -183,22 +178,6 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
-// Convenience function that creates a slice of labels from the passed
-// iterator. The iterator is set up to start from the beginning before
-// creating the slice.
-func IteratorToSlice(iter LabelIterator) []core.KeyValue {
-	l := iter.Len()
-	if l == 0 {
-		return nil
-	}
-	iter.idx = -1
-	slice := make([]core.KeyValue, 0, l)
-	for iter.Next() {
-		slice = append(slice, iter.Label())
-	}
-	return slice
-}
-
 // LabelStorage provides an access to the ordered labels.
 type LabelStorage interface {
 	// NumLabels returns a number of labels in the storage.
@@ -274,26 +253,35 @@ func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
 
+// Convenience function that creates a slice of labels from the passed
+// iterator. The iterator is set up to start from the beginning before
+// creating the slice.
+func IteratorToSlice(iter LabelIterator) []core.KeyValue {
+	l := iter.Len()
+	if l == 0 {
+		return nil
+	}
+	iter.idx = -1
+	slice := make([]core.KeyValue, 0, l)
+	for iter.Next() {
+		slice = append(slice, iter.Label())
+	}
+	return slice
+}
+
 // LabelEncoder enables an optimization for export pipelines that use
 // text to encode their label sets.
 //
-// This interface allows configuring the encoder used in the SDK
-// and/or the Batcher so that by the time the exporter is called, the
-// same encoding may be used.
-//
-// If none is provided, a default will be used.
+// This interface allows configuring the encoder used in the Batcher
+// so that by the time the exporter is called, the same encoding may
+// be used.
 type LabelEncoder interface {
 	// Encode is called (concurrently) in instrumentation context.
-	// It should return a unique representation of the labels
-	// suitable for the SDK to use as a map key.
 	//
-	// The exported Labels object retains a reference to its
-	// LabelEncoder to determine which encoding was used.
-	//
-	// The expectation is that Exporters with a pre-determined
-	// syntax for serialized label sets should implement
-	// LabelEncoder, thus avoiding duplicate computation in the
-	// export path.
+	// The expectation is that when setting up an export pipeline
+	// both the batcher and the exporter will use the same label
+	// encoder to avoid the duplicate computation of the encoded
+	// labels in the export path.
 	Encode(LabelIterator) string
 
 	// ID should return a unique positive number associated with
@@ -327,15 +315,15 @@ type Record struct {
 	aggregator Aggregator
 }
 
+// Labels store complete information about a computed label set,
+// including the labels in an appropriate order (as defined by the
+// Batcher).  If the batcher does not re-order labels, they are
+// presented in sorted order by the SDK.
 type Labels interface {
 	Iter() LabelIterator
 	Encoded(LabelEncoder) string
 }
 
-// Labels stores complete information about a computed label set,
-// including the labels in an appropriate order (as defined by the
-// Batcher).  If the batcher does not re-order labels, they are
-// presented in sorted order by the SDK.
 type labels struct {
 	encoderID int64
 	encoded   string
@@ -356,11 +344,12 @@ func NewSimpleLabels(encoder LabelEncoder, kvs ...core.KeyValue) Labels {
 	return l
 }
 
-// Iter returns an iterator over ordered labels.
+// Iter is a part of an implementation of the Labels interface.
 func (l *labels) Iter() LabelIterator {
 	return l.slice.Iter()
 }
 
+// Encoded is a part of an implementation of the Labels interface.
 func (l *labels) Encoded(encoder LabelEncoder) string {
 	if l.encoderID == encoder.ID() {
 		return l.encoded
