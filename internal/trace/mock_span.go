@@ -36,7 +36,7 @@ var _ apitrace.Span = (*MockSpan)(nil)
 // an empty core.SpanContext
 func (ms *MockSpan) SpanContext() core.SpanContext {
 	if ms == nil {
-		core.EmptySpanContext()
+		return core.EmptySpanContext()
 	}
 	return ms.sc
 }
