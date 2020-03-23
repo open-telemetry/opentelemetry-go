@@ -244,9 +244,14 @@ func (r resourceOption) Apply(config *Config) {
 	config.Resource = resource.Resource(r)
 }
 
-// WithLibraryName applies provided library name.  This is
+// WithLibraryName applies provided library name.  This is meant for
+// use in `Provider` implementations that have not used
+// `WrapMeterImpl`.  Implementations built using `WrapMeterImpl` have
+// instrument descriptors through this package are taken care.
 //
-// This will override any prior LibraryName options
+// This option will have no effect when supplied by the user.
+// Provider implementations are expected to append this option after
+// the user-supplied options when building instrument descriptors.
 func WithLibraryName(name string) Option {
 	return libraryNameOption(name)
 }
