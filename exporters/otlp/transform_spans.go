@@ -51,8 +51,8 @@ func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 		SpanId:            sd.SpanContext.SpanID[:],
 		ParentSpanId:      sd.ParentSpanID[:],
 		Status:            otStatusToProtoStatus(sd.StatusCode, sd.StatusMessage),
-		StartTimeUnixnano: uint64(sd.StartTime.Nanosecond()),
-		EndTimeUnixnano:   uint64(sd.EndTime.Nanosecond()),
+		StartTimeUnixNano: uint64(sd.StartTime.Nanosecond()),
+		EndTimeUnixNano:   uint64(sd.EndTime.Nanosecond()),
 		Links:             otLinksToProtoLinks(sd.Links),
 		Kind:              otSpanKindToProtoSpanKind(sd.SpanKind),
 		Name:              sd.Name,
@@ -155,7 +155,7 @@ func otTimeEventsToProtoTimeEvents(es []export.Event) []*tracepb.Span_Event {
 		messageEvents++
 		events = append(events,
 			&tracepb.Span_Event{
-				TimeUnixnano: uint64(e.Time.Nanosecond()),
+				TimeUnixNano: uint64(e.Time.Nanosecond()),
 				Attributes:   otAttributesToProtoAttributes(e.Attributes),
 				// TODO (rghetia) : Add Drop Counts when supported.
 			},

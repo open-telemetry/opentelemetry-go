@@ -194,11 +194,14 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	// Now verify spans and attributes for each resource span.
 	for _, rs := range rss {
-		if got, want := len(rs.Spans), m; got != want {
+		if len(rs.InstrumentationLibrarySpans) == 0 {
+			t.Fatalf("zero Instrumentation Library Spans")
+		}
+		if got, want := len(rs.InstrumentationLibrarySpans[0].Spans), m; got != want {
 			t.Fatalf("span counts: got %d, want %d", got, want)
 		}
 		attrMap := map[int64]bool{}
-		for _, s := range rs.Spans {
+		for _, s := range rs.InstrumentationLibrarySpans[0].Spans {
 			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
 				t.Fatalf("span name: got %s, want %s", gotName, want)
 			}
