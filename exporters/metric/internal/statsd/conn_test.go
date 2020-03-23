@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/internal/statsd"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
@@ -125,7 +124,7 @@ timer.B.D:%s|ms
 						t.Fatal("New error: ", err)
 					}
 
-					checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+					checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 					cdesc := metric.NewDescriptor(
 						"counter", metric.CounterKind, nkind)
 					gdesc := metric.NewDescriptor(

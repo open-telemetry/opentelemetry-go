@@ -19,7 +19,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // escapeChar is used to ensure uniqueness of the label encoding where
@@ -32,18 +31,14 @@ const escapeChar = '\\'
 type defaultLabelEncoder struct {
 	// pool is a pool of labelset builders.  The buffers in this
 	// pool grow to a size that most label encodings will not
-	// allocate new memory.  This pool reduces the number of
-	// allocations per new LabelSet to 3, typically, as seen in
-	// the benchmarks.  (It should be 2--one for the LabelSet
-	// object and one for the buffer.String() here--see the extra
-	// allocation in the call to sort.Stable).
+	// allocate new memory.
 	pool sync.Pool // *bytes.Buffer
 }
 
-var _ export.LabelEncoder = &defaultLabelEncoder{}
-var leID = export.NewLabelExporterID()
+var _ LabelEncoder = &defaultLabelEncoder{}
+var dleID = NewLabelExporterID()
 
-func NewDefaultLabelEncoder() export.LabelEncoder {
+func NewDefaultLabelEncoder() LabelEncoder {
 	return &defaultLabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
@@ -53,7 +48,7 @@ func NewDefaultLabelEncoder() export.LabelEncoder {
 	}
 }
 
-func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
+func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 	buf := d.pool.Get().(*bytes.Buffer)
 	defer d.pool.Put(buf)
 	buf.Reset()
@@ -77,7 +72,7 @@ func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
 }
 
 func (*defaultLabelEncoder) ID() int64 {
-	return leID
+	return dleID
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {

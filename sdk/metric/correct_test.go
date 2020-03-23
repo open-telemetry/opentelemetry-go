@@ -245,7 +245,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := metricsdk.NewDefaultLabelEncoder()
+	encoder := export.NewDefaultLabelEncoder()
 
 	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
@@ -302,7 +302,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.NewOutput(metricsdk.NewDefaultLabelEncoder())
+	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}

@@ -28,7 +28,6 @@ import (
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -105,7 +104,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		}
 	}
 	if config.LabelEncoder == nil {
-		config.LabelEncoder = sdk.NewDefaultLabelEncoder()
+		config.LabelEncoder = export.NewDefaultLabelEncoder()
 	}
 	return &Exporter{
 		config: config,

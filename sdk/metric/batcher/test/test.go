@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -60,7 +59,7 @@ var (
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
 	// GroupEncoder uses the SDK default encoder
-	GroupEncoder = sdk.NewDefaultLabelEncoder()
+	GroupEncoder = export.NewDefaultLabelEncoder()
 
 	// LastValue groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)

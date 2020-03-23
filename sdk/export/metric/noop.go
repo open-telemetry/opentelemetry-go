@@ -14,7 +14,7 @@
 
 package metric
 
-var leID = NewLabelExporterID()
+var nleID = NewLabelExporterID()
 
 type NoopLabelExporter struct{}
 
@@ -23,5 +23,5 @@ func (NoopLabelExporter) Encode(LabelIterator) string {
 }
 
 func (NoopLabelExporter) ID() int64 {
-	return leID
+	return nleID
 }
