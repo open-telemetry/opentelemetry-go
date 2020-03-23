@@ -36,7 +36,6 @@ type defaultLabelEncoder struct {
 }
 
 var _ LabelEncoder = &defaultLabelEncoder{}
-var dleID = NewLabelExporterID()
 
 func NewDefaultLabelEncoder() LabelEncoder {
 	return &defaultLabelEncoder{
@@ -72,7 +71,9 @@ func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 }
 
 func (*defaultLabelEncoder) ID() int64 {
-	return dleID
+	// special reserved number for default label encoder, see
+	// labelExporterIDCounter variable docs
+	return 2
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {

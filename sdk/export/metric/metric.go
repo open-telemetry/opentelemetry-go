@@ -22,10 +22,15 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
-var labelExporterIDCounter int64 = 0
+// id 1 is reserved for noop label exporter
+// id 2 is reserved for default label exporter
+//
+// we do atomic increments, so set it to the last reserved value
+var labelExporterIDCounter int64 = 2
 
 // NewLabelExporterID returns a unique label exporter ID. It should be
-// called once per each type of label exporter. Preferably in init().
+// called once per each type of label exporter. Preferably in init()
+// or in var definition.
 func NewLabelExporterID() int64 {
 	return atomic.AddInt64(&labelExporterIDCounter, 1)
 }
