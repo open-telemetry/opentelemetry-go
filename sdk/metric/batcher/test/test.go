@@ -100,7 +100,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 }
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	return export.NewSimpleLabels(export.LabelSlice(labels), encoder)
+	return export.NewSimpleLabels(encoder, labels...)
 }
 
 func (Encoder) Encode(iter export.LabelIterator) string {
