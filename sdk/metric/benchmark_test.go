@@ -32,20 +32,28 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
+type processFunc func(context.Context, export.Record) error
+
 type benchFixture struct {
-	meter metric.MeterMust
-	sdk   *sdk.SDK
-	B     *testing.B
+	meter  metric.MeterMust
+	sdk    *sdk.SDK
+	B      *testing.B
+	cb     processFunc
 }
 
-func newFixture(b *testing.B) *benchFixture {
+func newFixtureWithProcessFunc(b *testing.B, cb processFunc) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
-		B: b,
+		B:  b,
+		cb: cb,
 	}
 	bf.sdk = sdk.New(bf)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
 	return bf
+}
+
+func newFixture(b *testing.B) *benchFixture {
+	return newFixtureWithProcessFunc(b, nil)
 }
 
 func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
@@ -67,8 +75,11 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (*benchFixture) Process(context.Context, export.Record) error {
-	return nil
+func (*benchFixture) Process(ctx context.Context, rec export.Record) error {
+	if b.cb == nil {
+		return nil
+	}
+	return b.cb(ctx, rec)
 }
 
 func (*benchFixture) CheckpointSet() export.CheckpointSet {
