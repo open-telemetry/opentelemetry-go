@@ -73,8 +73,9 @@ func keyOf(descriptor metric.Descriptor) key {
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
 func NewMetricKindMismatchError(desc metric.Descriptor) error {
-	return fmt.Errorf("Metric was %s registered as a %s %s: %w",
+	return fmt.Errorf("Metric was %s (%s) registered as a %s %s: %w",
 		desc.Name(),
+		desc.LibraryName(),
 		desc.NumberKind(),
 		desc.MetricKind(),
 		ErrMetricKindMismatch)

@@ -82,7 +82,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
 		ResetForTest()
 
-		_, err := origf("this", "meter")
+		_, err := origf("this", "super")
 		require.Nil(t, err)
 
 		for newName, nf := range allNew {
@@ -90,10 +90,11 @@ func TestRegistryDiffInstruments(t *testing.T) {
 				continue
 			}
 
-			other, err := nf("this", "meter")
+			other, err := nf("this", "super")
 			require.NotNil(t, err)
 			require.NotNil(t, other)
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
+			require.Contains(t, err.Error(), "super")
 		}
 	}
 }
