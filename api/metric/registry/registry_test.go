@@ -25,49 +25,51 @@ import (
 )
 
 type (
-	syncImpler interface {
-		SyncImpl() metric.SyncImpl
-	}
-
-	newSyncFunc func(m metric.Meter, name string) (metric.SyncImpl, error)
+	newFunc func(m metric.Meter, name string) (metric.InstrumentImpl, error)
 )
 
 var (
-	allNewSync = map[string]newSyncFunc{
-		"counter.int64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-			return unwrapImpl(m.NewInt64Counter(name))
+	allNew = map[string]newFunc{
+		"counter.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewInt64Counter(name))
 		},
-		"counter.float64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-			return unwrapImpl(m.NewFloat64Counter(name))
+		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64Counter(name))
 		},
-		"measure.int64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-			return unwrapImpl(m.NewInt64Measure(name))
+		"measure.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewInt64Measure(name))
 		},
-		"measure.float64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-			return unwrapImpl(m.NewFloat64Measure(name))
+		"measure.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64Measure(name))
+		},
+		"observer.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+		},
+		"observer.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
 		},
 	}
-
-	// HERE @@@
-	// allNewAsync = map[string]newSyncFunc{
-	// 	"observer.int64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-	// 		return unwrapImpl(m.NewInt64Counter(name))
-	// 	},
-	// 	"observer.float64": func(m metric.Meter, name string) (metric.SyncImpl, error) {
-	// 		return unwrapImpl(m.NewFloat64Counter(name))
-	// 	},
-	// }
 )
 
-func unwrapImpl(impl syncImpler, err error) (metric.SyncImpl, error) {
+func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
 	if impl == nil {
 		return nil, err
 	}
-	return impl.SyncImpl(), err
+	if s, ok := impl.(interface {
+		SyncImpl() metric.SyncImpl
+	}); ok {
+		return s.SyncImpl(), err
+	}
+	if a, ok := impl.(interface {
+		AsyncImpl() metric.AsyncImpl
+	}); ok {
+		return a.AsyncImpl(), err
+	}
+	return nil, err
 }
 
-func TestRegistrySameSyncInstruments(t *testing.T) {
-	for _, nf := range allNewSync {
+func TestRegistrySameInstruments(t *testing.T) {
+	for _, nf := range allNew {
 		_, provider := mockTest.NewProvider()
 
 		meter := provider.Meter("meter")
@@ -80,15 +82,30 @@ func TestRegistrySameSyncInstruments(t *testing.T) {
 	}
 }
 
-func TestRegistryDiffSyncInstruments(t *testing.T) {
-	for origName, origf := range allNewSync {
+func TestRegistryDifferentNamespace(t *testing.T) {
+	for _, nf := range allNew {
+		_, provider := mockTest.NewProvider()
+
+		meter1 := provider.Meter("meter1")
+		meter2 := provider.Meter("meter2")
+		inst1, err1 := nf(meter1, "this")
+		inst2, err2 := nf(meter2, "this")
+
+		require.Nil(t, err1)
+		require.Nil(t, err2)
+		require.NotEqual(t, inst1, inst2)
+	}
+}
+
+func TestRegistryDiffInstruments(t *testing.T) {
+	for origName, origf := range allNew {
 		_, provider := mockTest.NewProvider()
 		meter := provider.Meter("meter")
 
 		_, err := origf(meter, "this")
 		require.Nil(t, err)
 
-		for newName, nf := range allNewSync {
+		for newName, nf := range allNew {
 			if newName == origName {
 				continue
 			}
