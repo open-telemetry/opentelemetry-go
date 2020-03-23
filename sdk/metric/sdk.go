@@ -366,22 +366,29 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	return ls
 }
 
+// NumLabels is a part of an implementation of the export.LabelStorage
+// interface.
 func (ls *labels) NumLabels() int {
 	return ls.cachedValue.Len()
 }
 
+// GetLabel is a part of an implementation of the export.LabelStorage
+// interface.
 func (ls *labels) GetLabel(idx int) core.KeyValue {
 	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
 }
 
+// Iter is a part of an implementation of the export.Labels interface.
 func (ls *labels) Iter() export.LabelIterator {
 	return export.NewLabelIterator(ls)
 }
 
+// Encoded is a part of an implementation of the export.Labels
+// interface.
 func (ls *labels) Encoded(encoder export.LabelEncoder) string {
 	id := encoder.ID()
 	if id <= 0 {
-		// punish misbehaving encoders by not even trying to
+		// Punish misbehaving encoders by not even trying to
 		// cache them
 		return encoder.Encode(ls.Iter())
 	}

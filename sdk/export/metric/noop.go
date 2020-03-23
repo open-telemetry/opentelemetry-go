@@ -14,12 +14,16 @@
 
 package metric
 
+// NoopLabelExporter does no encoding at all.
 type NoopLabelExporter struct{}
 
+// Encode is a part of an implementation of the LabelEncoder
+// interface. It returns an empty string.
 func (NoopLabelExporter) Encode(LabelIterator) string {
 	return ""
 }
 
+// ID is a part of an implementation of the LabelEncoder interface.
 func (NoopLabelExporter) ID() int64 {
 	// special reserved number for no op label encoder, see
 	// labelExporterIDCounter variable docs

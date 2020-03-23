@@ -315,7 +315,7 @@ type Record struct {
 	aggregator Aggregator
 }
 
-// Labels store complete information about a computed label set,
+// Labels stores complete information about a computed label set,
 // including the labels in an appropriate order (as defined by the
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.

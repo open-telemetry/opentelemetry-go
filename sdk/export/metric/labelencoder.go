@@ -37,6 +37,13 @@ type defaultLabelEncoder struct {
 
 var _ LabelEncoder = &defaultLabelEncoder{}
 
+// NewDefaultLabelEncoder returns a label encoder that encodes labels
+// in such a way that each escaped label's key is followed by an equal
+// sign and then by an escaped label's value. All key-value pairs are
+// separated by a comma.
+//
+// Escaping is done by prepending a backslash before either a
+// backslash, equal sign or a comma.
 func NewDefaultLabelEncoder() LabelEncoder {
 	return &defaultLabelEncoder{
 		pool: sync.Pool{
@@ -47,6 +54,8 @@ func NewDefaultLabelEncoder() LabelEncoder {
 	}
 }
 
+// Encode is a part of an implementation of the LabelEncoder
+// interface.
 func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 	buf := d.pool.Get().(*bytes.Buffer)
 	defer d.pool.Put(buf)
@@ -70,6 +79,7 @@ func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 	return buf.String()
 }
 
+// ID is a part of an implementation of the LabelEncoder interface.
 func (*defaultLabelEncoder) ID() int64 {
 	// special reserved number for default label encoder, see
 	// labelExporterIDCounter variable docs
