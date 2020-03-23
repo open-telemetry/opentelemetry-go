@@ -77,8 +77,8 @@ func TestRegistrySameInstruments(t *testing.T) {
 		inst1, err1 := nf(meter, "this")
 		inst2, err2 := nf(meter, "this")
 
-		require.Nil(t, err1)
-		require.Nil(t, err2)
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 		require.Equal(t, inst1, inst2)
 	}
 }
@@ -92,8 +92,8 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 		inst1, err1 := nf(meter1, "this")
 		inst2, err2 := nf(meter2, "this")
 
-		require.Nil(t, err1)
-		require.Nil(t, err2)
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 		require.NotEqual(t, inst1, inst2)
 	}
 }
@@ -104,7 +104,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 		meter := provider.Meter("meter")
 
 		_, err := origf(meter, "this")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		for newName, nf := range allNew {
 			if newName == origName {
@@ -112,7 +112,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			}
 
 			other, err := nf(meter, "this")
-			require.NotNil(t, err)
+			require.Error(t, err)
 			require.NotNil(t, other)
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 		}
