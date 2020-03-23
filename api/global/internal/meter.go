@@ -1,3 +1,17 @@
+// Copyright 2020, OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package internal
 
 import (
@@ -8,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/metric/registry"
 )
 
 // This file contains the forwarding implementation of metric.Provider
@@ -30,12 +45,15 @@ import (
 // Bound instrument operations are implemented by delegating to the
 // instrument after it is registered, with a sync.Once initializer to
 // protect against races with Release().
+//
+// Metric uniqueness checking is implemented by calling the exported
+// methods of the api/metric/registry package.
 
 type meterProvider struct {
 	delegate metric.Provider
 
 	lock   sync.Mutex
-	meters []*meter
+	meters map[string]*meter
 }
 
 type meter struct {
@@ -45,8 +63,8 @@ type meter struct {
 	name     string
 
 	lock       sync.Mutex
-	syncInsts  []*syncImpl
-	asyncInsts []*obsImpl
+	syncInsts  map[string]*syncImpl
+	asyncInsts map[string]*asyncImpl
 }
 
 type instrument struct {
@@ -61,7 +79,7 @@ type syncImpl struct {
 	constructor func(metric.Meter) (metric.SyncImpl, error)
 }
 
-type obsImpl struct {
+type asyncImpl struct {
 	delegate unsafe.Pointer // (*metric.AsyncImpl)
 
 	instrument
@@ -105,13 +123,19 @@ var _ metric.LabelSet = &labelSet{}
 var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSyncImpl = &syncHandle{}
-var _ metric.AsyncImpl = &obsImpl{}
+var _ metric.AsyncImpl = &asyncImpl{}
 
 func (inst *instrument) Descriptor() metric.Descriptor {
 	return inst.descriptor
 }
 
 // Provider interface and delegation
+
+func newMeterProvider() *meterProvider {
+	return &meterProvider{
+		meters: map[string]*meter{},
+	}
+}
 
 func (p *meterProvider) setDelegate(provider metric.Provider) {
 	p.lock.Lock()
@@ -132,11 +156,17 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 		return p.delegate.Meter(name)
 	}
 
-	m := &meter{
-		provider: p,
-		name:     name,
+	if exm, ok := p.meters[name]; ok {
+		return exm
 	}
-	p.meters = append(p.meters, m)
+
+	m := &meter{
+		provider:   p,
+		name:       name,
+		syncInsts:  map[string]*syncImpl{},
+		asyncInsts: map[string]*asyncImpl{},
+	}
+	p.meters[name] = m
 	return m
 }
 
@@ -168,13 +198,23 @@ func (m *meter) newSync(desc metric.Descriptor, constructor func(metric.Meter) (
 		return constructor(*meterPtr)
 	}
 
+	if exs, ok := m.syncInsts[desc.Name()]; ok {
+		if !registry.Compatible(desc, exs.Descriptor()) {
+			return nil, registry.NewMetricKindMismatchError(exs.Descriptor())
+		}
+		return exs, nil
+	}
+	if exa, ok := m.asyncInsts[desc.Name()]; ok {
+		return nil, registry.NewMetricKindMismatchError(exa.Descriptor())
+	}
+
 	inst := &syncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
 		constructor: constructor,
 	}
-	m.syncInsts = append(m.syncInsts, inst)
+	m.syncInsts[desc.Name()] = inst
 	return inst, nil
 }
 
@@ -246,17 +286,27 @@ func (m *meter) newAsync(desc metric.Descriptor, constructor func(metric.Meter) 
 		return constructor(*meterPtr)
 	}
 
-	inst := &obsImpl{
+	if exa, ok := m.asyncInsts[desc.Name()]; ok {
+		if !registry.Compatible(desc, exa.Descriptor()) {
+			return nil, registry.NewMetricKindMismatchError(exa.Descriptor())
+		}
+		return exa, nil
+	}
+	if exs, ok := m.syncInsts[desc.Name()]; ok {
+		return nil, registry.NewMetricKindMismatchError(exs.Descriptor())
+	}
+
+	inst := &asyncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
 		constructor: constructor,
 	}
-	m.asyncInsts = append(m.asyncInsts, inst)
+	m.asyncInsts[desc.Name()] = inst
 	return inst, nil
 }
 
-func (obs *obsImpl) Implementation() interface{} {
+func (obs *asyncImpl) Implementation() interface{} {
 	if implPtr := (*metric.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
@@ -273,7 +323,7 @@ func asyncCheck(has AsyncImpler, err error) (metric.AsyncImpl, error) {
 	return nil, err
 }
 
-func (obs *obsImpl) setDelegate(d metric.Meter) {
+func (obs *asyncImpl) setDelegate(d metric.Meter) {
 	implPtr := new(metric.AsyncImpl)
 
 	var err error
@@ -413,7 +463,7 @@ func AtomicFieldOffsets() map[string]uintptr {
 		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
 		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
 		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
-		"obsImpl.delegate":       unsafe.Offsetof(obsImpl{}.delegate),
+		"asyncImpl.delegate":     unsafe.Offsetof(asyncImpl{}.delegate),
 		"labelSet.delegate":      unsafe.Offsetof(labelSet{}.delegate),
 		"syncHandle.delegate":    unsafe.Offsetof(syncHandle{}.delegate),
 	}

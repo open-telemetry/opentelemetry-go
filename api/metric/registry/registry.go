@@ -23,41 +23,68 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
+// uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
+// uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
+// to wrap an implementation with uniqueness checking.
 type uniqueInstrumentMeterImpl struct {
-	impl  metric.MeterImpl
-	state map[mapKey]metric.InstrumentImpl
 	lock  sync.Mutex
+	impl  metric.MeterImpl
+	state map[key]metric.InstrumentImpl
 }
 
-type mapKey struct {
+type key struct {
 	name        string
 	libraryName string
 }
 
-var ErrMetricTypeMismatch = fmt.Errorf("A metric was already registered by this name with another kind or number type")
+// ErrMetricKindMismatch is the standard error for mismatched metric
+// instrument definitions.
+var ErrMetricKindMismatch = fmt.Errorf(
+	"A metric was already registered by this name with another kind or number type")
 
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
+// NewUniqueInstrumentMeter returns a wrapped metric.MeterImpl with
+// the addition of uniqueness checking.
 func NewUniqueInstrumentMeter(impl metric.MeterImpl) metric.MeterImpl {
 	return &uniqueInstrumentMeterImpl{
 		impl:  impl,
-		state: map[mapKey]metric.InstrumentImpl{},
+		state: map[key]metric.InstrumentImpl{},
 	}
 }
 
+// Labels implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) Labels(kvs ...core.KeyValue) metric.LabelSet {
 	return u.impl.Labels(kvs...)
 }
 
+// RecordBatch implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
-func keyOf(descriptor metric.Descriptor) mapKey {
-	return mapKey{
+func keyOf(descriptor metric.Descriptor) key {
+	return key{
 		descriptor.Name(),
 		descriptor.LibraryName(),
 	}
+}
+
+// NewMetricKindMismatchError formats an error that describes a
+// mismatched metric instrument definition.
+func NewMetricKindMismatchError(desc metric.Descriptor) error {
+	return fmt.Errorf("Metric was %s registered as a %s %s: %w",
+		desc.Name(),
+		desc.NumberKind(),
+		desc.MetricKind(),
+		ErrMetricKindMismatch)
+}
+
+// Compatible determines whether two metric.Descriptors are considered
+// the same for the purpose of uniqueness checking.
+func Compatible(candidate, existing metric.Descriptor) bool {
+	return candidate.MetricKind() == existing.MetricKind() &&
+		candidate.NumberKind() == existing.NumberKind()
 }
 
 func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
@@ -66,19 +93,14 @@ func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor
 		return nil, nil
 	}
 
-	if impl.Descriptor().MetricKind() != descriptor.MetricKind() ||
-		impl.Descriptor().NumberKind() != descriptor.NumberKind() {
-		return nil, fmt.Errorf("Metric was %s registered as a %s %s: %w",
-			impl.Descriptor().Name(),
-			impl.Descriptor().NumberKind(),
-			impl.Descriptor().MetricKind(),
-			ErrMetricTypeMismatch,
-		)
+	if !Compatible(descriptor, impl.Descriptor()) {
+		return nil, NewMetricKindMismatchError(impl.Descriptor())
 	}
 
 	return impl, nil
 }
 
+// NewSyncInstrument implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
@@ -99,6 +121,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 	return syncInst, nil
 }
 
+// NewAsyncInstrument implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	descriptor metric.Descriptor,
 	callback func(func(core.Number, metric.LabelSet)),

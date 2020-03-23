@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
@@ -113,7 +114,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			other, err := nf(meter, "this")
 			require.NotNil(t, err)
 			require.NotNil(t, other)
-			require.True(t, errors.Is(err, registry.ErrMetricTypeMismatch))
+			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 		}
 	}
 }
