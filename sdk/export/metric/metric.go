@@ -22,11 +22,19 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
-// id 1 is reserved for noop label exporter
-// id 2 is reserved for default label exporter
-//
-// we do atomic increments, so set it to the last reserved value
-var labelExporterIDCounter int64 = 2
+const (
+	// reserved ID for the noop label exporter
+	noopLabelExporterID int64 = 1 + iota
+	// reserved ID for the default label exporter
+	defaultLabelExporterID
+
+	// this must come last in enumeration
+	lastLabelExporterID
+)
+
+// labelExporterIDCounter is for generating IDs for other label
+// exporters
+var labelExporterIDCounter int64 = lastLabelExporterID
 
 // NewLabelExporterID returns a unique label exporter ID. It should be
 // called once per each type of label exporter. Preferably in init()

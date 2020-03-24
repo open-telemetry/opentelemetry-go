@@ -25,7 +25,5 @@ func (NoopLabelExporter) Encode(LabelIterator) string {
 
 // ID is a part of an implementation of the LabelEncoder interface.
 func (NoopLabelExporter) ID() int64 {
-	// special reserved number for no op label encoder, see
-	// labelExporterIDCounter variable docs
-	return 1
+	return noopLabelExporterID
 }

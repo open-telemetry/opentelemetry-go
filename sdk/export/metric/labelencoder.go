@@ -81,9 +81,7 @@ func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 
 // ID is a part of an implementation of the LabelEncoder interface.
 func (*defaultLabelEncoder) ID() int64 {
-	// special reserved number for default label encoder, see
-	// labelExporterIDCounter variable docs
-	return 2
+	return defaultLabelExporterID
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {
