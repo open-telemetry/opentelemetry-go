@@ -61,6 +61,13 @@ OTEL_VERSION="${OTEL_VERSION#v}"
 
 cd $(dirname $0)
 
+if ! git diff --quiet; then \
+	printf "Working tree is not clean, can't proceed with the release process\n"
+	git status
+	git diff
+	exit 1
+fi
+
 # Update sdk/opentelemetry.go
 cp ./sdk/opentelemetry.go ./sdk/opentelemetry.go.bak
 sed 's/\(return "\)[0-9]\+\.[0-9]\+\.[0-9]\+/\1'"${OTEL_VERSION}"'/' ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
