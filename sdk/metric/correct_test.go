@@ -73,7 +73,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 		t: t,
 	}
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -108,7 +108,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		t: t,
 	}
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -146,7 +146,8 @@ func TestDisabledInstrument(t *testing.T) {
 		t: t,
 	}
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
 	measure := Must(meter).NewFloat64Measure("name.disabled")
 
 	measure.Record(ctx, -1, sdk.Labels())
@@ -161,8 +162,9 @@ func TestRecordNaN(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
+
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -181,7 +183,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		t: t,
 	}
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter := Must(meter).NewInt64Counter("counter")
 
@@ -278,8 +280,9 @@ func TestObserverCollection(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
+
 	sdk := metricsdk.New(batcher)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
 		// TODO: The spec says the last-value wins in observer

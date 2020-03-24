@@ -46,8 +46,9 @@ func newFixture(b *testing.B) *benchFixture {
 	bf := &benchFixture{
 		B: b,
 	}
+
 	bf.sdk = sdk.New(bf)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk, "benchmarks"))
 	return bf
 }
 

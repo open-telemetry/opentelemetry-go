@@ -32,6 +32,40 @@ import (
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
 
+// Note: Maybe this should be factored into ../../../internal/metric?
+type measured struct {
+	Name        string
+	LibraryName string
+	Labels      map[core.Key]core.Value
+	Number      core.Number
+}
+
+func asStructs(batches []metrictest.Batch) []measured {
+	var r []measured
+	for _, batch := range batches {
+		for _, m := range batch.Measurements {
+			r = append(r, measured{
+				Name:        m.Instrument.Descriptor().Name(),
+				LibraryName: m.Instrument.Descriptor().LibraryName(),
+				Labels:      batch.LabelSet.Labels,
+				Number:      m.Number,
+			})
+		}
+	}
+	return r
+}
+
+func asMap(kvs ...core.KeyValue) map[core.Key]core.Value {
+	m := map[core.Key]core.Value{}
+	for _, kv := range kvs {
+		m[kv.Key] = kv.Value
+	}
+	return m
+}
+
+var asInt = core.NewInt64Number
+var asFloat = core.NewFloat64Number
+
 func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
@@ -67,89 +101,64 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 1, labels3)
 	second.Record(ctx, 2, labels3)
 
-	sdk := metrictest.NewProvider()
-	global.SetMeterProvider(sdk)
+	mock, provider := metrictest.NewProvider()
+	global.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1)
 	measure.Record(ctx, 3, labels1)
 	second.Record(ctx, 3, labels3)
 
-	mockImpl, _ := metric.UnwrapImpl(sdk.Meter("test1"))
-	mock := mockImpl.(*metrictest.Meter)
 	mock.RunAsyncInstruments()
-	require.Len(t, mock.MeasurementBatches, 6)
 
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
-	require.Equal(t, int64(1),
-		mock.MeasurementBatches[0].Measurements[0].Number.AsInt64())
-	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
+	measurements := asStructs(mock.MeasurementBatches)
 
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[1].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[1].Measurements, 1)
-	require.InDelta(t, float64(3),
-		mock.MeasurementBatches[1].Measurements[0].Number.AsFloat64(),
-		0.01)
-	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[2].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[2].Measurements, 1)
-	require.InDelta(t, float64(1),
-		mock.MeasurementBatches[2].Measurements[0].Number.AsFloat64(),
-		0.01)
-	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[2].Measurements[0].Instrument.Descriptor().Name())
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals2.Key: lvals2.Value,
-	}, mock.MeasurementBatches[3].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[3].Measurements, 1)
-	require.InDelta(t, float64(2),
-		mock.MeasurementBatches[3].Measurements[0].Number.AsFloat64(),
-		0.01)
-	require.Equal(t, "test.observer.float",
-		mock.MeasurementBatches[3].Measurements[0].Instrument.Descriptor().Name())
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[4].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[4].Measurements, 1)
-	require.Equal(t, int64(1),
-		mock.MeasurementBatches[4].Measurements[0].Number.AsInt64())
-	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[4].Measurements[0].Instrument.Descriptor().Name())
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals2.Key: lvals2.Value,
-	}, mock.MeasurementBatches[5].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[5].Measurements, 1)
-	require.Equal(t, int64(2),
-		mock.MeasurementBatches[5].Measurements[0].Number.AsInt64())
-	require.Equal(t, "test.observer.int",
-		mock.MeasurementBatches[5].Measurements[0].Instrument.Descriptor().Name())
-
-	// This tests the second Meter instance
-	mockImpl, _ = metric.UnwrapImpl(sdk.Meter("test2"))
-	mock = mockImpl.(*metrictest.Meter)
-	require.Len(t, mock.MeasurementBatches, 1)
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals3.Key: lvals3.Value,
-	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
-	require.InDelta(t, float64(3),
-		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
-		0.01)
-	require.Equal(t, "test.second",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
+	require.EqualValues(t,
+		[]measured{
+			{
+				Name:        "test.counter",
+				LibraryName: "test1",
+				Labels:      asMap(lvals1),
+				Number:      asInt(1),
+			},
+			{
+				Name:        "test.measure",
+				LibraryName: "test1",
+				Labels:      asMap(lvals1),
+				Number:      asFloat(3),
+			},
+			{
+				Name:        "test.second",
+				LibraryName: "test2",
+				Labels:      asMap(lvals3),
+				Number:      asFloat(3),
+			},
+			{
+				Name:        "test.observer.float",
+				LibraryName: "test1",
+				Labels:      asMap(lvals1),
+				Number:      asFloat(1),
+			},
+			{
+				Name:        "test.observer.float",
+				LibraryName: "test1",
+				Labels:      asMap(lvals2),
+				Number:      asFloat(2),
+			},
+			{
+				Name:        "test.observer.int",
+				LibraryName: "test1",
+				Labels:      asMap(lvals1),
+				Number:      asInt(1),
+			},
+			{
+				Name:        "test.observer.int",
+				LibraryName: "test1",
+				Labels:      asMap(lvals2),
+				Number:      asInt(2),
+			},
+		},
+		measurements,
+	)
 }
 
 func TestBound(t *testing.T) {
@@ -172,34 +181,28 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
-	sdk := metrictest.NewProvider()
-	global.SetMeterProvider(sdk)
+	mock, provider := metrictest.NewProvider()
+	global.SetMeterProvider(provider)
 
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
 
-	mockImpl, _ := metric.UnwrapImpl(sdk.Meter("test"))
-	mock := mockImpl.(*metrictest.Meter)
-	require.Len(t, mock.MeasurementBatches, 2)
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[0].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[0].Measurements, 1)
-	require.InDelta(t, float64(1),
-		mock.MeasurementBatches[0].Measurements[0].Number.AsFloat64(),
-		0.01)
-	require.Equal(t, "test.counter",
-		mock.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
-
-	require.Equal(t, map[core.Key]core.Value{
-		lvals1.Key: lvals1.Value,
-	}, mock.MeasurementBatches[1].LabelSet.Labels)
-	require.Len(t, mock.MeasurementBatches[1].Measurements, 1)
-	require.Equal(t, int64(3),
-		mock.MeasurementBatches[1].Measurements[0].Number.AsInt64())
-	require.Equal(t, "test.measure",
-		mock.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
+	require.EqualValues(t,
+		[]measured{
+			{
+				Name:        "test.counter",
+				LibraryName: "test",
+				Labels:      asMap(lvals1),
+				Number:      asFloat(1),
+			},
+			{
+				Name:        "test.measure",
+				LibraryName: "test",
+				Labels:      asMap(lvals1),
+				Number:      asInt(3),
+			},
+		},
+		asStructs(mock.MeasurementBatches))
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -263,19 +266,17 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	sdk := metrictest.NewProvider()
+	mock, provider := metrictest.NewProvider()
 
 	meter := global.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
 	boundC := counter.Bind(meter.Labels())
-	global.SetMeterProvider(sdk)
+	global.SetMeterProvider(provider)
 	boundC.Unbind()
 
 	require.NotPanics(t, func() {
 		boundC.Add(ctx, 1)
 	})
-	mockImpl, _ := metric.UnwrapImpl(global.Meter("test"))
-	mock := mockImpl.(*metrictest.Meter)
 	require.Equal(t, 0, len(mock.MeasurementBatches))
 }
 
@@ -304,7 +305,8 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
 
-	sdk := &meterProviderWithConstructorError{metrictest.NewProvider()}
+	_, provider := metrictest.NewProvider()
+	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
 		global.SetMeterProvider(sdk)
@@ -345,8 +347,8 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Register the SDK
-	sdk := metrictest.NewProvider()
-	global.SetMeterProvider(sdk)
+	_, provider := metrictest.NewProvider()
+	global.SetMeterProvider(provider)
 
 	// Repeat the above tests
 

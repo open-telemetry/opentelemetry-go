@@ -297,7 +297,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	}
 	cc := concurrency()
 	sdk := New(fixture)
-	meter := metric.WrapMeterImpl(sdk)
+	meter := metric.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

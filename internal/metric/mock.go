@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/metric/registry"
 )
 
 type (
@@ -30,8 +31,8 @@ type (
 	}
 
 	LabelSet struct {
-		TheMeter *Meter
-		Labels   map[core.Key]core.Value
+		Impl   *MeterImpl
+		Labels map[core.Key]core.Value
 	}
 
 	Batch struct {
@@ -39,14 +40,17 @@ type (
 		Measurements []Measurement
 		Ctx          context.Context
 		LabelSet     *LabelSet
+		LibraryName  string
 	}
 
 	MeterProvider struct {
 		lock       sync.Mutex
+		impl       *MeterImpl
+		unique     metric.MeterImpl
 		registered map[string]apimetric.Meter
 	}
 
-	Meter struct {
+	MeterImpl struct {
 		MeasurementBatches []Batch
 		AsyncInstruments   []*Async
 	}
@@ -58,7 +62,7 @@ type (
 	}
 
 	Instrument struct {
-		meter      *Meter
+		meter      *MeterImpl
 		descriptor apimetric.Descriptor
 	}
 
@@ -77,7 +81,7 @@ var (
 	_ apimetric.SyncImpl      = &Sync{}
 	_ apimetric.BoundSyncImpl = &Handle{}
 	_ apimetric.LabelSet      = &LabelSet{}
-	_ apimetric.MeterImpl     = &Meter{}
+	_ apimetric.MeterImpl     = &MeterImpl{}
 	_ apimetric.AsyncImpl     = &Async{}
 )
 
@@ -117,17 +121,21 @@ func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *Meter) doRecordSingle(ctx context.Context, labelSet *LabelSet, instrument apimetric.InstrumentImpl, number core.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labelSet *LabelSet, instrument apimetric.InstrumentImpl, number core.Number) {
 	m.recordMockBatch(ctx, labelSet, Measurement{
 		Instrument: instrument,
 		Number:     number,
 	})
 }
 
-func NewProvider() *MeterProvider {
-	return &MeterProvider{
+func NewProvider() (*MeterImpl, apimetric.Provider) {
+	impl := &MeterImpl{}
+	p := &MeterProvider{
+		impl:       impl,
+		unique:     registry.NewUniqueInstrumentMeterImpl(impl),
 		registered: map[string]apimetric.Meter{},
 	}
+	return impl, p
 }
 
 func (p *MeterProvider) Meter(name string) apimetric.Meter {
@@ -137,28 +145,28 @@ func (p *MeterProvider) Meter(name string) apimetric.Meter {
 	if lookup, ok := p.registered[name]; ok {
 		return lookup
 	}
-	_, m := NewMeter()
+	m := apimetric.WrapMeterImpl(p.unique, name)
 	p.registered[name] = m
 	return m
 }
 
-func NewMeter() (*Meter, apimetric.Meter) {
-	mock := &Meter{}
-	return mock, apimetric.WrapMeterImpl(mock)
+func NewMeter() (*MeterImpl, apimetric.Meter) {
+	impl, p := NewProvider()
+	return impl, p.Meter("mock")
 }
 
-func (m *Meter) Labels(labels ...core.KeyValue) apimetric.LabelSet {
+func (m *MeterImpl) Labels(labels ...core.KeyValue) apimetric.LabelSet {
 	ul := make(map[core.Key]core.Value)
 	for _, kv := range labels {
 		ul[kv.Key] = kv.Value
 	}
 	return &LabelSet{
-		TheMeter: m,
-		Labels:   ul,
+		Impl:   m,
+		Labels: ul,
 	}
 }
 
-func (m *Meter) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
+func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -167,7 +175,7 @@ func (m *Meter) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncI
 	}, nil
 }
 
-func (m *Meter) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(core.Number, apimetric.LabelSet))) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(core.Number, apimetric.LabelSet))) (apimetric.AsyncImpl, error) {
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
@@ -179,7 +187,7 @@ func (m *Meter) NewAsyncInstrument(descriptor metric.Descriptor, callback func(f
 	return a, nil
 }
 
-func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels apimetric.LabelSet, measurements ...apimetric.Measurement) {
 	ourLabelSet := labels.(*LabelSet)
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
@@ -192,7 +200,7 @@ func (m *Meter) RecordBatch(ctx context.Context, labels apimetric.LabelSet, meas
 	m.recordMockBatch(ctx, ourLabelSet, mm...)
 }
 
-func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measurements ...Measurement) {
+func (m *MeterImpl) recordMockBatch(ctx context.Context, labelSet *LabelSet, measurements ...Measurement) {
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
 		Ctx:          ctx,
 		LabelSet:     labelSet,
@@ -200,7 +208,7 @@ func (m *Meter) recordMockBatch(ctx context.Context, labelSet *LabelSet, measure
 	})
 }
 
-func (m *Meter) RunAsyncInstruments() {
+func (m *MeterImpl) RunAsyncInstruments() {
 	for _, observer := range m.AsyncInstruments {
 		observer.callback(func(n core.Number, labels apimetric.LabelSet) {
 
