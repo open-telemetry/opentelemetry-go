@@ -393,7 +393,7 @@ func (ls *labels) Encoded(encoder export.LabelEncoder) string {
 		return encoder.Encode(ls.Iter())
 	}
 	cachedID := atomic.LoadInt64(&ls.cachedEncoderID)
-	// If cached ID is less below zero, it means that other
+	// If cached ID is less than zero, it means that other
 	// goroutine is currently caching the encoded labels and the
 	// ID of the encoder. Wait until it's done - it's a
 	// nonblocking op.
