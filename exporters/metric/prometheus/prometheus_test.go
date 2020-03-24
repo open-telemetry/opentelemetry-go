@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/exporters/metric/test"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -41,7 +41,7 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	counter := metric.NewDescriptor(
 		"counter", metric.CounterKind, core.Float64NumberKind)

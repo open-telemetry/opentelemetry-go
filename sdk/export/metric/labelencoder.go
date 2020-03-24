@@ -19,7 +19,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // escapeChar is used to ensure uniqueness of the label encoding where
@@ -32,17 +31,20 @@ const escapeChar = '\\'
 type defaultLabelEncoder struct {
 	// pool is a pool of labelset builders.  The buffers in this
 	// pool grow to a size that most label encodings will not
-	// allocate new memory.  This pool reduces the number of
-	// allocations per new LabelSet to 3, typically, as seen in
-	// the benchmarks.  (It should be 2--one for the LabelSet
-	// object and one for the buffer.String() here--see the extra
-	// allocation in the call to sort.Stable).
+	// allocate new memory.
 	pool sync.Pool // *bytes.Buffer
 }
 
-var _ export.LabelEncoder = &defaultLabelEncoder{}
+var _ LabelEncoder = &defaultLabelEncoder{}
 
-func NewDefaultLabelEncoder() export.LabelEncoder {
+// NewDefaultLabelEncoder returns a label encoder that encodes labels
+// in such a way that each escaped label's key is followed by an equal
+// sign and then by an escaped label's value. All key-value pairs are
+// separated by a comma.
+//
+// Escaping is done by prepending a backslash before either a
+// backslash, equal sign or a comma.
+func NewDefaultLabelEncoder() LabelEncoder {
 	return &defaultLabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
@@ -52,7 +54,9 @@ func NewDefaultLabelEncoder() export.LabelEncoder {
 	}
 }
 
-func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
+// Encode is a part of an implementation of the LabelEncoder
+// interface.
+func (d *defaultLabelEncoder) Encode(iter LabelIterator) string {
 	buf := d.pool.Get().(*bytes.Buffer)
 	defer d.pool.Put(buf)
 	buf.Reset()
@@ -73,6 +77,11 @@ func (d *defaultLabelEncoder) Encode(iter export.LabelIterator) string {
 		}
 	}
 	return buf.String()
+}
+
+// ID is a part of an implementation of the LabelEncoder interface.
+func (*defaultLabelEncoder) ID() int64 {
+	return defaultLabelEncoderID
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {

@@ -32,24 +32,27 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
+type processFunc func(context.Context, export.Record) error
+
 type benchFixture struct {
 	meter metric.MeterMust
 	sdk   *sdk.SDK
 	B     *testing.B
+	pcb   processFunc
 }
 
-func newFixtureWithEncoder(b *testing.B, encoder export.LabelEncoder) *benchFixture {
+func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
 		B: b,
 	}
-	bf.sdk = sdk.New(bf, encoder)
+	bf.sdk = sdk.New(bf)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk))
 	return bf
 }
 
-func newFixture(b *testing.B) *benchFixture {
-	return newFixtureWithEncoder(b, sdk.NewDefaultLabelEncoder())
+func (f *benchFixture) setProcessCallback(cb processFunc) {
+	f.pcb = cb
 }
 
 func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
@@ -71,8 +74,11 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (*benchFixture) Process(context.Context, export.Record) error {
-	return nil
+func (f *benchFixture) Process(ctx context.Context, rec export.Record) error {
+	if f.pcb == nil {
+		return nil
+	}
+	return f.pcb(ctx, rec)
 }
 
 func (*benchFixture) CheckpointSet() export.CheckpointSet {
@@ -198,32 +204,25 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-type benchmarkEncoder struct {
-	b *testing.B
-}
-
-var _ export.LabelEncoder = benchmarkEncoder{}
-
-var benchmarkEncoderVar core.KeyValue
-
-func (e benchmarkEncoder) Encode(li export.LabelIterator) string {
-	var kv core.KeyValue
-	e.b.StartTimer()
-	for i := 0; i < e.b.N; i++ {
-		iter := li
-		// test getting only the first element
-		if iter.Next() {
-			kv = iter.Label()
-		}
-	}
-	e.b.StopTimer()
-	benchmarkEncoderVar = kv
-	return "foo=bar"
-}
+var benchmarkIteratorVar core.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
-	encoder := benchmarkEncoder{b: b}
-	fix := newFixtureWithEncoder(b, encoder)
+	fix := newFixture(b)
+	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
+		var kv core.KeyValue
+		li := rec.Labels().Iter()
+		fix.B.StartTimer()
+		for i := 0; i < fix.B.N; i++ {
+			iter := li
+			// test getting only the first element
+			if iter.Next() {
+				kv = iter.Label()
+			}
+		}
+		fix.B.StopTimer()
+		benchmarkIteratorVar = kv
+		return nil
+	})
 	labs := fix.sdk.Labels(makeLabels(n)...)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 	ctx := context.Background()

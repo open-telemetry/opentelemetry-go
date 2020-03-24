@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -94,7 +93,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	before := time.Now()
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	ctx := context.Background()
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Int64NumberKind)
@@ -140,7 +139,7 @@ func TestStdoutTimestamp(t *testing.T) {
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
 	cagg := sum.New()
@@ -157,7 +156,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 func TestStdoutLastValueFormat(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -174,7 +173,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 func TestStdoutMinMaxSumCount(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
@@ -194,7 +193,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 		PrettyPrint: true,
 	})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
 	magg := array.New()
@@ -248,7 +247,7 @@ func TestStdoutNoData(t *testing.T) {
 
 			fix := newFixture(t, stdout.Config{})
 
-			checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+			checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 			magg := tc
 			magg.Checkpoint(fix.ctx, &desc)
@@ -265,7 +264,7 @@ func TestStdoutNoData(t *testing.T) {
 func TestStdoutLastValueNotSet(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -281,7 +280,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 func TestStdoutCounterWithUnspecifiedKeys(t *testing.T) {
 	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	keys := []core.Key{key.New("C"), key.New("D")}
 

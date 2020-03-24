@@ -52,10 +52,9 @@ func (p *CheckpointSet) Reset() {
 // If there is an existing record with the same descriptor and LabelSet
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
-	ls := export.LabelSlice(labels)
-	elabels := export.NewLabels(ls, p.encoder.Encode(ls.Iter()), p.encoder)
+	elabels := export.NewSimpleLabels(p.encoder, labels...)
 
-	key := desc.Name() + "_" + elabels.Encoded()
+	key := desc.Name() + "_" + elabels.Encoded(p.encoder)
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}
