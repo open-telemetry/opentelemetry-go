@@ -310,7 +310,11 @@ func (e *Exporter) uploadMetrics(ctx context.Context, in <-chan *metricpb.Metric
 	rm := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
-			Metrics:  protoMetrics,
+			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				{
+					Metrics: protoMetrics,
+				},
+			},
 		},
 	}
 
@@ -357,11 +361,16 @@ func otSpanDataToPbSpans(sdl []*tracesdk.SpanData) []*tracepb.ResourceSpans {
 			if !ok {
 				rs = &tracepb.ResourceSpans{
 					Resource: otResourceToProtoResource(sd.Resource),
-					Spans:    []*tracepb.Span{},
+					InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
+						{
+							Spans: []*tracepb.Span{},
+						},
+					},
 				}
 				rsm[sd.Resource] = rs
 			}
-			rs.Spans = append(rs.Spans, otSpanToProtoSpan(sd))
+			rs.InstrumentationLibrarySpans[0].Spans =
+				append(rs.InstrumentationLibrarySpans[0].Spans, otSpanToProtoSpan(sd))
 		}
 	}
 	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))

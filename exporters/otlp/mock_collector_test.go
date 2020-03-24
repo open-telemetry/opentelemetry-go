@@ -53,7 +53,7 @@ func (mts *mockTraceService) getSpans() []*tracepb.Span {
 	defer mts.mu.RUnlock()
 	spans := []*tracepb.Span{}
 	for _, rs := range mts.rsm {
-		spans = append(spans, rs.Spans...)
+		spans = append(spans, rs.InstrumentationLibrarySpans[0].Spans...)
 	}
 	return spans
 }
@@ -77,8 +77,20 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportT
 		existingRs, ok := mts.rsm[rstr]
 		if !ok {
 			mts.rsm[rstr] = rs
+			// TODO (rghetia): Add support for library Info.
+			if len(rs.InstrumentationLibrarySpans) == 0 {
+				rs.InstrumentationLibrarySpans = []*tracepb.InstrumentationLibrarySpans{
+					{
+						Spans: []*tracepb.Span{},
+					},
+				}
+			}
 		} else {
-			existingRs.Spans = append(existingRs.Spans, rs.GetSpans()...)
+			if len(rs.InstrumentationLibrarySpans) > 0 {
+				existingRs.InstrumentationLibrarySpans[0].Spans =
+					append(existingRs.InstrumentationLibrarySpans[0].Spans,
+						rs.InstrumentationLibrarySpans[0].GetSpans()...)
+			}
 		}
 	}
 	return &coltracepb.ExportTraceServiceResponse{}, nil
@@ -117,7 +129,10 @@ func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
 func (mms *mockMetricService) Export(ctx context.Context, exp *colmetricpb.ExportMetricsServiceRequest) (*colmetricpb.ExportMetricsServiceResponse, error) {
 	mms.mu.Lock()
 	for _, rm := range exp.GetResourceMetrics() {
-		mms.metrics = append(mms.metrics, rm.Metrics...)
+		// TODO (rghetia) handle multiple resource and library info.
+		if len(rm.InstrumentationLibraryMetrics) > 0 {
+			mms.metrics = append(mms.metrics, rm.InstrumentationLibraryMetrics[0].Metrics...)
+		}
 	}
 	mms.mu.Unlock()
 	return &colmetricpb.ExportMetricsServiceResponse{}, nil
