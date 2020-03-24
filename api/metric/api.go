@@ -247,7 +247,7 @@ func (r resourceOption) Apply(config *Config) {
 // WithLibraryName applies provided library name.  This is meant for
 // use in `Provider` implementations that have not used
 // `WrapMeterImpl`.  Implementations built using `WrapMeterImpl` have
-// instrument descriptors through this package are taken care.
+// instrument descriptors taken care of through this package.
 //
 // This option will have no effect when supplied by the user.
 // Provider implementations are expected to append this option after

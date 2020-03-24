@@ -290,7 +290,7 @@ func (m *meter) newAsync(desc metric.Descriptor, constructor func(metric.Meter) 
 		if !registry.Compatible(desc, ex.Descriptor()) {
 			return nil, registry.NewMetricKindMismatchError(ex.Descriptor())
 		}
-		return ex, nil
+		return ex.(metric.AsyncImpl), nil
 	}
 
 	inst := &asyncImpl{
