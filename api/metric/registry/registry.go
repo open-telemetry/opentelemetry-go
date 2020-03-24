@@ -53,13 +53,8 @@ func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 	}
 }
 
-// Labels implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) Labels(kvs ...core.KeyValue) metric.LabelSet {
-	return u.impl.Labels(kvs...)
-}
-
 // RecordBatch implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels metric.LabelSet, ms ...metric.Measurement) {
+func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
@@ -130,7 +125,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 // NewAsyncInstrument implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	descriptor metric.Descriptor,
-	callback func(func(core.Number, metric.LabelSet)),
+	callback func(func(core.Number, []core.KeyValue)),
 ) (metric.AsyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
