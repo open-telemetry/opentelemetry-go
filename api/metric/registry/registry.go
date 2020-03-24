@@ -44,9 +44,9 @@ var ErrMetricKindMismatch = fmt.Errorf(
 
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
-// NewUniqueInstrumentMeter returns a wrapped metric.MeterImpl with
+// NewUniqueInstrumentMeterImpl returns a wrapped metric.MeterImpl with
 // the addition of uniqueness checking.
-func NewUniqueInstrumentMeter(impl metric.MeterImpl) metric.MeterImpl {
+func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 	return &uniqueInstrumentMeterImpl{
 		impl:  impl,
 		state: map[key]metric.InstrumentImpl{},
@@ -88,6 +88,11 @@ func Compatible(candidate, existing metric.Descriptor) bool {
 		candidate.NumberKind() == existing.NumberKind()
 }
 
+// checkUniqueness returns an ErrMetricKindMismatch error if there is
+// a conflict between a descriptor that was already registered and the
+// `descriptor` argument.  If there is an existing compatible
+// registration, this returns the already-registered instrument.  If
+// there is no conflict and no prior registration, returns (nil, nil).
 func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
 	impl, ok := u.state[keyOf(descriptor)]
 	if !ok {

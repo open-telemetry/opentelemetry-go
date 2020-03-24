@@ -80,7 +80,7 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration,
 	impl := sdk.New(batcher, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
-		uniq:         registry.NewUniqueInstrumentMeter(impl),
+		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
 		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
 		batcher:      batcher,

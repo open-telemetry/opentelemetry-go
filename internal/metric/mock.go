@@ -132,7 +132,7 @@ func NewProvider() (*MeterImpl, apimetric.Provider) {
 	impl := &MeterImpl{}
 	p := &MeterProvider{
 		impl:       impl,
-		unique:     registry.NewUniqueInstrumentMeter(impl),
+		unique:     registry.NewUniqueInstrumentMeterImpl(impl),
 		registered: map[string]apimetric.Meter{},
 	}
 	return impl, p
