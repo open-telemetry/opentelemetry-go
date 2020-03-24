@@ -104,7 +104,8 @@ type AsyncImpl interface {
 // wrappedMeterImpl implements the `Meter` interface given a
 // `MeterImpl` implementation.
 type wrappedMeterImpl struct {
-	impl MeterImpl
+	impl        MeterImpl
+	libraryName string
 }
 
 // int64ObserverResult is an adapter for int64-valued asynchronous
@@ -159,19 +160,11 @@ func insertResource(impl MeterImpl, opts []Option) []Option {
 
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl) Meter {
+func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
 	return &wrappedMeterImpl{
-		impl: impl,
+		impl:        impl,
+		libraryName: libraryName,
 	}
-}
-
-// UnwrapImpl returns a `MeterImpl` given a `Meter` that was
-// constructed using `WrapMeterImpl`.
-func UnwrapImpl(meter Meter) (MeterImpl, bool) {
-	if wrap, ok := meter.(*wrappedMeterImpl); ok {
-		return wrap.impl, true
-	}
-	return nil, false
 }
 
 func (m *wrappedMeterImpl) Labels(labels ...core.KeyValue) LabelSet {
@@ -184,7 +177,9 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...M
 
 func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
 	opts = insertResource(m.impl, opts)
-	return m.impl.NewSyncInstrument(NewDescriptor(name, metricKind, numberKind, opts...))
+	desc := NewDescriptor(name, metricKind, numberKind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewSyncInstrument(desc)
 }
 
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
@@ -245,9 +240,9 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 
 func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsyncImpl, error) {
 	opts = insertResource(m.impl, opts)
-	return m.impl.NewAsyncInstrument(
-		NewDescriptor(name, mkind, nkind, opts...),
-		callback)
+	desc := NewDescriptor(name, mkind, nkind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewAsyncInstrument(desc, callback)
 }
 
 func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
@@ -29,7 +30,8 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	sdk          *sdk.SDK
-	meter        metric.Meter
+	uniq         metric.MeterImpl
+	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
 	batcher      export.Batcher
 	exporter     export.Exporter
@@ -78,7 +80,8 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration,
 	impl := sdk.New(batcher, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
-		meter:        metric.WrapMeterImpl(impl),
+		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
+		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
@@ -105,8 +108,17 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
-func (c *Controller) Meter(_ string) metric.Meter {
-	return c.meter
+func (c *Controller) Meter(name string) metric.Meter {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if meter, ok := c.named[name]; ok {
+		return meter
+	}
+
+	meter := metric.WrapMeterImpl(c.uniq, name)
+	c.named[name] = meter
+	return meter
 }
 
 // Start begins a ticker that periodically collects and exports

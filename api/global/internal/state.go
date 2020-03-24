@@ -109,7 +109,7 @@ func defaultTracerValue() *atomic.Value {
 
 func defaultMeterValue() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(meterProviderHolder{mp: &meterProvider{}})
+	v.Store(meterProviderHolder{mp: newMeterProvider()})
 	return v
 }
 

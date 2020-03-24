@@ -212,7 +212,7 @@ func TestObserver(t *testing.T) {
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, mock *mockTest.Meter, kind core.NumberKind, instrument metric.InstrumentImpl) {
+func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, mock *mockTest.MeterImpl, kind core.NumberKind, instrument metric.InstrumentImpl) {
 	t.Helper()
 	if len(mock.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))
@@ -261,7 +261,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels metric.LabelSet, moc
 	}
 }
 
-func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.Meter, kind core.NumberKind, observer metric.AsyncImpl) {
+func checkObserverBatch(t *testing.T, labels metric.LabelSet, mock *mockTest.MeterImpl, kind core.NumberKind, observer metric.AsyncImpl) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {
@@ -318,7 +318,7 @@ func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(core
 
 func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
-	meter := metric.WrapMeterImpl(impl)
+	meter := metric.WrapMeterImpl(impl, "test")
 
 	measure, err := meter.NewInt64Measure("test.measure")
 

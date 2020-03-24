@@ -48,6 +48,9 @@ type Config struct {
 	Keys []core.Key
 	// Resource describes the entity for which measurements are made.
 	Resource resource.Resource
+	// LibraryName is the name given to the Meter that created
+	// this instrument.  See `Provider`.
+	LibraryName string
 }
 
 // Option is an interface for applying metric options.
@@ -150,6 +153,12 @@ func (d Descriptor) Resource() resource.Resource {
 	return d.config.Resource
 }
 
+// LibraryName returns the metric instrument's library name, typically
+// given via a call to Provider.Meter().
+func (d Descriptor) LibraryName() string {
+	return d.config.LibraryName
+}
+
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
 	// Labels returns a reference to a set of labels that cannot
@@ -233,4 +242,22 @@ type resourceOption resource.Resource
 
 func (r resourceOption) Apply(config *Config) {
 	config.Resource = resource.Resource(r)
+}
+
+// WithLibraryName applies provided library name.  This is meant for
+// use in `Provider` implementations that have not used
+// `WrapMeterImpl`.  Implementations built using `WrapMeterImpl` have
+// instrument descriptors taken care of through this package.
+//
+// This option will have no effect when supplied by the user.
+// Provider implementations are expected to append this option after
+// the user-supplied options when building instrument descriptors.
+func WithLibraryName(name string) Option {
+	return libraryNameOption(name)
+}
+
+type libraryNameOption string
+
+func (r libraryNameOption) Apply(config *Config) {
+	config.LibraryName = string(r)
 }
