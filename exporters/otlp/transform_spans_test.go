@@ -108,75 +108,79 @@ func TestOtSpanToOtlpSpan_Basic(t *testing.T) {
 				},
 			},
 			otlpResSpan: &tracepb.ResourceSpans{
-				Spans: []*tracepb.Span{
+				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
 					{
-						TraceId:           []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-						SpanId:            []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
-						ParentSpanId:      []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
-						Name:              "End-To-End Here",
-						Kind:              tracepb.Span_SERVER,
-						StartTimeUnixnano: uint64(startTime.Nanosecond()),
-						EndTimeUnixnano:   uint64(endTime.Nanosecond()),
-						Status: &tracepb.Status{
-							Code:    13,
-							Message: "utterly unrecognized",
-						},
-						Events: []*tracepb.Span_Event{
+						Spans: []*tracepb.Span{
 							{
-								TimeUnixnano: uint64(startTime.Nanosecond()),
+								TraceId:           []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+								SpanId:            []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+								ParentSpanId:      []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
+								Name:              "End-To-End Here",
+								Kind:              tracepb.Span_SERVER,
+								StartTimeUnixNano: uint64(startTime.Nanosecond()),
+								EndTimeUnixNano:   uint64(endTime.Nanosecond()),
+								Status: &tracepb.Status{
+									Code:    13,
+									Message: "utterly unrecognized",
+								},
+								Events: []*tracepb.Span_Event{
+									{
+										TimeUnixNano: uint64(startTime.Nanosecond()),
+										Attributes: []*commonpb.AttributeKeyValue{
+											{
+												Key:      "CompressedByteSize",
+												Type:     commonpb.AttributeKeyValue_INT,
+												IntValue: 512,
+											},
+										},
+									},
+									{
+										TimeUnixNano: uint64(endTime.Nanosecond()),
+										Attributes: []*commonpb.AttributeKeyValue{
+											{
+												Key:         "MessageEventType",
+												Type:        commonpb.AttributeKeyValue_STRING,
+												StringValue: "Recv",
+											},
+										},
+									},
+								},
+								Links: []*tracepb.Span_Link{
+									{
+										TraceId: []byte{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
+										SpanId:  []byte{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
+										Attributes: []*commonpb.AttributeKeyValue{
+											{
+												Key:         "LinkType",
+												Type:        commonpb.AttributeKeyValue_STRING,
+												StringValue: "Parent",
+											},
+										},
+									},
+									{
+										TraceId: []byte{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
+										SpanId:  []byte{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
+										Attributes: []*commonpb.AttributeKeyValue{
+											{
+												Key:         "LinkType",
+												Type:        commonpb.AttributeKeyValue_STRING,
+												StringValue: "Child",
+											},
+										},
+									},
+								},
 								Attributes: []*commonpb.AttributeKeyValue{
 									{
-										Key:      "CompressedByteSize",
+										Key:      "timeout_ns",
 										Type:     commonpb.AttributeKeyValue_INT,
-										IntValue: 512,
+										IntValue: 12e9,
 									},
 								},
-							},
-							{
-								TimeUnixnano: uint64(endTime.Nanosecond()),
-								Attributes: []*commonpb.AttributeKeyValue{
-									{
-										Key:         "MessageEventType",
-										Type:        commonpb.AttributeKeyValue_STRING,
-										StringValue: "Recv",
-									},
-								},
+								DroppedAttributesCount: 1,
+								DroppedEventsCount:     2,
+								DroppedLinksCount:      3,
 							},
 						},
-						Links: []*tracepb.Span_Link{
-							{
-								TraceId: []byte{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
-								SpanId:  []byte{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
-								Attributes: []*commonpb.AttributeKeyValue{
-									{
-										Key:         "LinkType",
-										Type:        commonpb.AttributeKeyValue_STRING,
-										StringValue: "Parent",
-									},
-								},
-							},
-							{
-								TraceId: []byte{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
-								SpanId:  []byte{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
-								Attributes: []*commonpb.AttributeKeyValue{
-									{
-										Key:         "LinkType",
-										Type:        commonpb.AttributeKeyValue_STRING,
-										StringValue: "Child",
-									},
-								},
-							},
-						},
-						Attributes: []*commonpb.AttributeKeyValue{
-							{
-								Key:      "timeout_ns",
-								Type:     commonpb.AttributeKeyValue_INT,
-								IntValue: 12e9,
-							},
-						},
-						DroppedAttributesCount: 1,
-						DroppedEventsCount:     2,
-						DroppedLinksCount:      3,
 					},
 				},
 				Resource: &resourcepb.Resource{
@@ -244,7 +248,11 @@ func TestOtSpanToOtlpSpan_SpanKind(t *testing.T) {
 			otSpan: otSpans,
 			otlpResSpan: &tracepb.ResourceSpans{
 				Resource: nil,
-				Spans:    otlpSpans,
+				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
+					{
+						Spans: otlpSpans,
+					},
+				},
 			},
 		}
 		return tc
@@ -342,7 +350,11 @@ func TestOtSpanToOtlpSpan_Attribute(t *testing.T) {
 			otSpan: otSpans,
 			otlpResSpan: &tracepb.ResourceSpans{
 				Resource: nil,
-				Spans:    otlpSpans,
+				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
+					{
+						Spans: otlpSpans,
+					},
+				},
 			},
 		}
 		return tc
@@ -370,8 +382,8 @@ func getSpan() (*export.SpanData, *tracepb.Span) {
 		ParentSpanId:      []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:              "Test Span",
 		Kind:              tracepb.Span_SERVER,
-		StartTimeUnixnano: uint64(startTime.Nanosecond()),
-		EndTimeUnixnano:   uint64(endTime.Nanosecond()),
+		StartTimeUnixNano: uint64(startTime.Nanosecond()),
+		EndTimeUnixNano:   uint64(endTime.Nanosecond()),
 		Status: &tracepb.Status{
 			Code: 0,
 		},

@@ -31,12 +31,8 @@ type LabelEncoder struct {
 	pool sync.Pool
 }
 
-// sameCheck is used to test whether label encoders are the same.
-type sameCheck interface {
-	isStatsd()
-}
-
 var _ export.LabelEncoder = &LabelEncoder{}
+var leID = export.NewLabelEncoderID()
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.
@@ -69,16 +65,6 @@ func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 	return buf.String()
 }
 
-func (e *LabelEncoder) isStatsd() {}
-
-// ForceEncode returns a statsd label encoding, even if the exported
-// labels were encoded by a different type of encoder.  Returns a
-// boolean to indicate whether the labels were in fact re-encoded, to
-// test for (and warn about) efficiency.
-func (e *LabelEncoder) ForceEncode(labels export.Labels) (string, bool) {
-	if _, ok := labels.Encoder().(sameCheck); ok {
-		return labels.Encoded(), false
-	}
-
-	return e.Encode(labels.Iter()), true
+func (*LabelEncoder) ID() int64 {
+	return leID
 }

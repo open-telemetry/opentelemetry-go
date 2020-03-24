@@ -30,7 +30,7 @@ import (
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), false)
+	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, false)
 
 	// Set initial lastValue values
 	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
@@ -61,7 +61,7 @@ func TestUngroupedStateless(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
-	records := test.Output{}
+	records := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records.AddTo)
 
 	// Output lastvalue should have only the "G=H" and "G=" keys.
@@ -79,7 +79,7 @@ func TestUngroupedStateless(t *testing.T) {
 		"lastvalue.b/G~H&C~D": 50, // labels1
 		"lastvalue.b/C~D&E~F": 20, // labels2
 		"lastvalue.b/":        30, // labels3
-	}, records)
+	}, records.Map)
 
 	// Verify that state was reset
 	checkpointSet = b.CheckpointSet()
@@ -92,7 +92,7 @@ func TestUngroupedStateless(t *testing.T) {
 
 func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), true)
+	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, true)
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
@@ -105,22 +105,22 @@ func TestUngroupedStateful(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
 
-	records1 := test.Output{}
+	records1 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/G~H&C~D": 10, // labels1
 		"sum.b/G~H&C~D": 10, // labels1
-	}, records1)
+	}, records1.Map)
 
 	// Test that state was NOT reset
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records2 := test.Output{}
+	records2 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records2.AddTo)
 
-	require.EqualValues(t, records1, records2)
+	require.EqualValues(t, records1.Map, records2.Map)
 
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, core.NewInt64Number(20), &test.CounterADesc)
@@ -133,10 +133,10 @@ func TestUngroupedStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records3 := test.Output{}
+	records3 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records3.AddTo)
 
-	require.EqualValues(t, records1, records3)
+	require.EqualValues(t, records1.Map, records3.Map)
 
 	// Now process the second update
 	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, caggA))
@@ -145,11 +145,11 @@ func TestUngroupedStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
 
-	records4 := test.Output{}
+	records4 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/G~H&C~D": 30,
 		"sum.b/G~H&C~D": 30,
-	}, records4)
+	}, records4.Map)
 }

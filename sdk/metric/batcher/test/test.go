@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -34,7 +33,10 @@ type (
 	Encoder struct{}
 
 	// Output collects distinct metric/label set outputs.
-	Output map[string]float64
+	Output struct {
+		Map          map[string]float64
+		labelEncoder export.LabelEncoder
+	}
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
@@ -57,7 +59,7 @@ var (
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
 	// GroupEncoder uses the SDK default encoder
-	GroupEncoder = sdk.NewDefaultLabelEncoder()
+	GroupEncoder = export.NewDefaultLabelEncoder()
 
 	// LastValue groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)
@@ -68,7 +70,16 @@ var (
 	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
 	Labels3 = makeLabels(SdkEncoder)
+
+	leID = export.NewLabelEncoderID()
 )
+
+func NewOutput(labelEncoder export.LabelEncoder) Output {
+	return Output{
+		Map:          make(map[string]float64),
+		labelEncoder: labelEncoder,
+	}
+}
 
 // NewAggregationSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
@@ -89,8 +100,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 }
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	ls := export.LabelSlice(labels)
-	return export.NewLabels(ls, encoder.Encode(ls.Iter()), encoder)
+	return export.NewSimpleLabels(encoder, labels...)
 }
 
 func (Encoder) Encode(iter export.LabelIterator) string {
@@ -105,6 +115,10 @@ func (Encoder) Encode(iter export.LabelIterator) string {
 		sb.WriteString(l.Value.Emit())
 	}
 	return sb.String()
+}
+
+func (Encoder) ID() int64 {
+	return leID
 }
 
 // LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.
@@ -138,8 +152,8 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 // AddTo adds a name/label-encoding entry with the lastValue or counter
 // value to the output map.
 func (o Output) AddTo(rec export.Record) error {
-	labels := rec.Labels()
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", labels.Encoded())
+	encoded := rec.Labels().Encoded(o.labelEncoder)
+	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded)
 	var value float64
 
 	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
@@ -151,6 +165,6 @@ func (o Output) AddTo(rec export.Record) error {
 	} else {
 		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
 	}
-	o[key] = value
+	o.Map[key] = value
 	return nil
 }

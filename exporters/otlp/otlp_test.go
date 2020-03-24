@@ -30,7 +30,8 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
+	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -110,7 +111,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	selector := simple.NewWithExactMeasure()
-	batcher := ungrouped.New(selector, true)
+	batcher := ungrouped.New(selector, exportmetric.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exp, 60*time.Second)
 	pusher.Start()
 
@@ -194,11 +195,14 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	// Now verify spans and attributes for each resource span.
 	for _, rs := range rss {
-		if got, want := len(rs.Spans), m; got != want {
+		if len(rs.InstrumentationLibrarySpans) == 0 {
+			t.Fatalf("zero Instrumentation Library Spans")
+		}
+		if got, want := len(rs.InstrumentationLibrarySpans[0].Spans), m; got != want {
 			t.Fatalf("span counts: got %d, want %d", got, want)
 		}
 		attrMap := map[int64]bool{}
-		for _, s := range rs.Spans {
+		for _, s := range rs.InstrumentationLibrarySpans[0].Spans {
 			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
 				t.Fatalf("span name: got %s, want %s", gotName, want)
 			}
@@ -318,7 +322,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	// reconnect.
 	for j := 0; j < 3; j++ {
 
-		exp.ExportSpans(context.Background(), []*export.SpanData{{Name: "in the midst"}})
+		exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old address, and the collector should reconnect automatically.
@@ -329,7 +333,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			exp.ExportSpans(context.Background(), []*export.SpanData{{Name: "Resurrected"}})
+			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}})
 		}
 
 		nmaSpans := nmc.getSpans()

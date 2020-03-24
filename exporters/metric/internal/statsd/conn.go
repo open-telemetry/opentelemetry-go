@@ -86,7 +86,7 @@ var (
 	ErrInvalidScheme = fmt.Errorf("invalid statsd transport")
 )
 
-// NewExport returns a common implementation for exporters that Export
+// NewExporter returns a common implementation for exporters that Export
 // statsd syntax.
 func NewExporter(config Config, adapter Adapter) (*Exporter, error) {
 	if config.MaxPacketSize <= 0 {

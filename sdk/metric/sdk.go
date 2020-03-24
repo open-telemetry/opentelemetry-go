@@ -60,9 +60,6 @@ type (
 		// batcher is the configured batcher+configuration.
 		batcher export.Batcher
 
-		// lencoder determines how labels are uniquely encoded.
-		labelEncoder export.LabelEncoder
-
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
 
@@ -85,6 +82,12 @@ type (
 	// represents an internalized set of labels that may be used
 	// repeatedly.
 	labels struct {
+		// cachedEncoderID needs to be aligned for atomic access
+		cachedEncoderID int64
+		// cachedEncoded is an encoded version of ordered
+		// labels
+		cachedEncoded string
+
 		meter *SDK
 		// ordered is the output of sorting and deduplicating
 		// the labels, copied into an array of the correct
@@ -98,9 +101,6 @@ type (
 		// cachedValue contains a `reflect.Value` of the `ordered`
 		// member
 		cachedValue reflect.Value
-		// cachedEncoded contains an encoded version of the
-		// `ordered` member
-		cachedEncoded string
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -168,6 +168,7 @@ var (
 	_ api.BoundSyncImpl   = &record{}
 	_ api.Resourcer       = &SDK{}
 	_ export.LabelStorage = &labels{}
+	_ export.Labels       = &labels{}
 
 	kvType = reflect.TypeOf(core.KeyValue{})
 )
@@ -306,7 +307,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, ls a
 // batcher will call Collect() when it receives a request to scrape
 // current metric values.  A push-based batcher should configure its
 // own periodic collection.
-func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Option) *SDK {
+func New(batcher export.Batcher, opts ...Option) *SDK {
 	c := &Config{ErrorHandler: DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
@@ -317,7 +318,6 @@ func New(batcher export.Batcher, labelEncoder export.LabelEncoder, opts ...Optio
 			ordered: [0]core.KeyValue{},
 		},
 		batcher:      batcher,
-		labelEncoder: labelEncoder,
 		errorHandler: c.ErrorHandler,
 		resource:     c.Resource,
 	}
@@ -366,12 +366,67 @@ func (m *SDK) Labels(kvs ...core.KeyValue) api.LabelSet {
 	return ls
 }
 
+// NumLabels is a part of an implementation of the export.LabelStorage
+// interface.
 func (ls *labels) NumLabels() int {
 	return ls.cachedValue.Len()
 }
 
+// GetLabel is a part of an implementation of the export.LabelStorage
+// interface.
 func (ls *labels) GetLabel(idx int) core.KeyValue {
 	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
+}
+
+// Iter is a part of an implementation of the export.Labels interface.
+func (ls *labels) Iter() export.LabelIterator {
+	return export.NewLabelIterator(ls)
+}
+
+// Encoded is a part of an implementation of the export.Labels
+// interface.
+func (ls *labels) Encoded(encoder export.LabelEncoder) string {
+	id := encoder.ID()
+	if id <= 0 {
+		// Punish misbehaving encoders by not even trying to
+		// cache them
+		return encoder.Encode(ls.Iter())
+	}
+	cachedID := atomic.LoadInt64(&ls.cachedEncoderID)
+	// If cached ID is less than zero, it means that other
+	// goroutine is currently caching the encoded labels and the
+	// ID of the encoder. Wait until it's done - it's a
+	// nonblocking op.
+	for cachedID < 0 {
+		// Let other goroutine finish its work.
+		runtime.Gosched()
+		cachedID = atomic.LoadInt64(&ls.cachedEncoderID)
+	}
+	// At this point, cachedID is either 0 (nothing cached) or
+	// some other number.
+	//
+	// If cached ID is the same as ID of the passed encoder, we've
+	// got the fast path.
+	if cachedID == id {
+		return ls.cachedEncoded
+	}
+	// If we are here, either some other encoder cached its
+	// encoded labels or the cache is still for the taking. Either
+	// way, we need to compute the encoded labels anyway.
+	encoded := encoder.Encode(ls.Iter())
+	// If some other encoder took the cache, then we just return
+	// our encoded labels. That's a slow path.
+	if cachedID > 0 {
+		return encoded
+	}
+	// Try to take the cache for ourselves. This is the place
+	// where other encoders may be "blocked".
+	if atomic.CompareAndSwapInt64(&ls.cachedEncoderID, 0, -1) {
+		// The cache is ours.
+		ls.cachedEncoded = encoded
+		atomic.StoreInt64(&ls.cachedEncoderID, id)
+	}
+	return encoded
 }
 
 func (ls *labels) computeOrdered(kvs []core.KeyValue) {
@@ -380,14 +435,6 @@ func (ls *labels) computeOrdered(kvs []core.KeyValue) {
 		ls.ordered = computeOrderedReflect(kvs)
 	}
 	ls.cachedValue = reflect.ValueOf(ls.ordered)
-}
-
-func (ls *labels) ensureEncoded(encoder export.LabelEncoder) {
-	if ls.cachedEncoded != "" {
-		return
-	}
-	iter := export.NewLabelIterator(ls)
-	ls.cachedEncoded = encoder.Encode(iter)
 }
 
 func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
@@ -567,9 +614,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
-	labels.ensureEncoded(m.labelEncoder)
-	exportLabels := export.NewLabels(labels, labels.cachedEncoded, m.labelEncoder)
-	exportRecord := export.NewRecord(descriptor, exportLabels, recorder)
+	exportRecord := export.NewRecord(descriptor, labels, recorder)
 	err := m.batcher.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)

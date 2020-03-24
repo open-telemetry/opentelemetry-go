@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
+	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	batchTest "go.opentelemetry.io/otel/sdk/metric/batcher/test"
@@ -41,8 +41,6 @@ type correctnessBatcher struct {
 
 	records []export.Record
 }
-
-type testLabelEncoder struct{}
 
 func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	name := descriptor.Name()
@@ -69,16 +67,12 @@ func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) e
 	return nil
 }
 
-func (testLabelEncoder) Encode(iter export.LabelIterator) string {
-	return fmt.Sprint(export.IteratorToSlice(iter))
-}
-
 func TestInputRangeTestCounter(t *testing.T) {
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -113,7 +107,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -151,8 +145,9 @@ func TestDisabledInstrument(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
+
 	measure := Must(meter).NewFloat64Measure("name.disabled")
 
 	measure.Record(ctx, -1, sdk.Labels())
@@ -167,7 +162,8 @@ func TestRecordNaN(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -181,31 +177,12 @@ func TestRecordNaN(t *testing.T) {
 	require.Error(t, sdkErr)
 }
 
-func TestSDKAltLabelEncoder(t *testing.T) {
-	ctx := context.Background()
-	batcher := &correctnessBatcher{
-		t: t,
-	}
-	sdk := sdk.New(batcher, testLabelEncoder{})
-	meter := metric.WrapMeterImpl(sdk, "test")
-
-	measure := Must(meter).NewFloat64Measure("measure")
-	measure.Record(ctx, 1, sdk.Labels(key.String("A", "B"), key.String("C", "D")))
-
-	sdk.Collect(ctx)
-
-	require.Equal(t, 1, len(batcher.records))
-
-	labels := batcher.records[0].Labels()
-	require.Equal(t, `[{A {8 0 B}} {C {8 0 D}}]`, labels.Encoded())
-}
-
 func TestSDKLabelsDeduplication(t *testing.T) {
 	ctx := context.Background()
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter := Must(meter).NewInt64Counter("counter")
@@ -270,7 +247,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := sdk.NewDefaultLabelEncoder()
+	encoder := export.NewDefaultLabelEncoder()
 
 	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
@@ -303,7 +280,8 @@ func TestObserverCollection(t *testing.T) {
 	batcher := &correctnessBatcher{
 		t: t,
 	}
-	sdk := sdk.New(batcher, sdk.NewDefaultLabelEncoder())
+
+	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
@@ -327,7 +305,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.Output{}
+	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -336,6 +314,6 @@ func TestObserverCollection(t *testing.T) {
 		"float.observer/C=D": -1,
 		"int.observer/":      1,
 		"int.observer/A=B":   1,
-	}, out)
+	}, out.Map)
 
 }
