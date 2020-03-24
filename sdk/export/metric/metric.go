@@ -23,24 +23,24 @@ import (
 )
 
 const (
-	// reserved ID for the noop label exporter
-	noopLabelExporterID int64 = 1 + iota
-	// reserved ID for the default label exporter
-	defaultLabelExporterID
+	// reserved ID for the noop label encoder
+	noopLabelEncoderID int64 = 1 + iota
+	// reserved ID for the default label encoder
+	defaultLabelEncoderID
 
 	// this must come last in enumeration
-	lastLabelExporterID
+	lastLabelEncoderID
 )
 
-// labelExporterIDCounter is for generating IDs for other label
-// exporters
-var labelExporterIDCounter int64 = lastLabelExporterID
+// labelEncoderIDCounter is for generating IDs for other label
+// encoders.
+var labelEncoderIDCounter int64 = lastLabelEncoderID
 
-// NewLabelExporterID returns a unique label exporter ID. It should be
-// called once per each type of label exporter. Preferably in init()
-// or in var definition.
-func NewLabelExporterID() int64 {
-	return atomic.AddInt64(&labelExporterIDCounter, 1)
+// NewLabelEncoderID returns a unique label encoder ID. It should be
+// called once per each type of label encoder. Preferably in init() or
+// in var definition.
+func NewLabelEncoderID() int64 {
+	return atomic.AddInt64(&labelEncoderIDCounter, 1)
 }
 
 // Batcher is responsible for deciding which kind of aggregation to

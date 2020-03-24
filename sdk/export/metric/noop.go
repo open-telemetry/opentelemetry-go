@@ -14,16 +14,18 @@
 
 package metric
 
-// NoopLabelExporter does no encoding at all.
-type NoopLabelExporter struct{}
+// NoopLabelEncoder does no encoding at all.
+type NoopLabelEncoder struct{}
+
+var _ LabelEncoder = NoopLabelEncoder{}
 
 // Encode is a part of an implementation of the LabelEncoder
 // interface. It returns an empty string.
-func (NoopLabelExporter) Encode(LabelIterator) string {
+func (NoopLabelEncoder) Encode(LabelIterator) string {
 	return ""
 }
 
 // ID is a part of an implementation of the LabelEncoder interface.
-func (NoopLabelExporter) ID() int64 {
-	return noopLabelExporterID
+func (NoopLabelEncoder) ID() int64 {
+	return noopLabelEncoderID
 }

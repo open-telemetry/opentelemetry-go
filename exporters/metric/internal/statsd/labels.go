@@ -32,7 +32,7 @@ type LabelEncoder struct {
 }
 
 var _ export.LabelEncoder = &LabelEncoder{}
-var leID = export.NewLabelExporterID()
+var leID = export.NewLabelEncoderID()
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.

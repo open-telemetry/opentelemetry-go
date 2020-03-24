@@ -71,7 +71,7 @@ var (
 	// Labels3 is the empty set
 	Labels3 = makeLabels(SdkEncoder)
 
-	leID = export.NewLabelExporterID()
+	leID = export.NewLabelEncoderID()
 )
 
 func NewOutput(labelEncoder export.LabelEncoder) Output {
