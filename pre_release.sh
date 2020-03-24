@@ -54,8 +54,17 @@ if [ ${TAG_FOUND} = ${TAG} ] ; then
         exit -1
 fi
 
+# Get version for sdk/opentelemetry.go
+OTEL_VERSION=$(echo "${TAG}" | grep -o '^v[0-9]\+\.[0-9]\+\.[0-9]\+')
+# Strip leading v
+OTEL_VERSION="${OTEL_VERSION#v}"
 
 cd $(dirname $0)
+
+# Update sdk/opentelemetry.go
+cp ./sdk/opentelemetry.go ./sdk/opentelemetry.go.bak
+sed 's/\(return "\)[0-9]\+\.[0-9]\+\.[0-9]\+/\1'"${OTEL_VERSION}"'/' ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
+rm -f ./sdk/opentelemetry.go.bak
 
 # Update go.mod
 git checkout -b pre_release_${TAG} master
