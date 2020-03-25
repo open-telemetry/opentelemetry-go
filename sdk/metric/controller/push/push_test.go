@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
@@ -68,7 +67,7 @@ var _ push.Clock = mockClock{}
 var _ push.Ticker = mockTicker{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet(sdk.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
 
 	batcher := &testBatcher{
 		t:             t,

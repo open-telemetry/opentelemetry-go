@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
@@ -29,7 +30,8 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	sdk          *sdk.SDK
-	meter        metric.Meter
+	uniq         metric.MeterImpl
+	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
 	batcher      export.Batcher
 	exporter     export.Exporter
@@ -69,27 +71,17 @@ var _ Ticker = realTicker{}
 // using the provided batcher, exporter, collection period, and SDK
 // configuration options to configure an SDK with periodic collection.
 // The batcher itself is configured with the aggregation selector policy.
-//
-// If the Exporter implements the export.LabelEncoder interface, the
-// exporter will be used as the label encoder for the SDK itself,
-// otherwise the SDK will be configured with the default label
-// encoder.
 func New(batcher export.Batcher, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
-	lencoder, _ := exporter.(export.LabelEncoder)
-
-	if lencoder == nil {
-		lencoder = sdk.NewDefaultLabelEncoder()
-	}
-
 	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	impl := sdk.New(batcher, lencoder, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.New(batcher, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
-		meter:        metric.WrapMeterImpl(impl),
+		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
+		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
 		batcher:      batcher,
 		exporter:     exporter,
@@ -116,8 +108,17 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
-func (c *Controller) Meter(_ string) metric.Meter {
-	return c.meter
+func (c *Controller) Meter(name string) metric.Meter {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if meter, ok := c.named[name]; ok {
+		return meter
+	}
+
+	meter := metric.WrapMeterImpl(c.uniq, name)
+	c.named[name] = meter
+	return meter
 }
 
 // Start begins a ticker that periodically collects and exports

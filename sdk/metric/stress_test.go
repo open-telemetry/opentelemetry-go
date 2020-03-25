@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -296,8 +296,8 @@ func stressTest(t *testing.T, impl testImpl) {
 		lused: map[string]bool{},
 	}
 	cc := concurrency()
-	sdk := New(fixture, NewDefaultLabelEncoder())
-	meter := metric.WrapMeterImpl(sdk)
+	sdk := New(fixture)
+	meter := metric.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

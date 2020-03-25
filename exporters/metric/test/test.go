@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
 import (
@@ -38,10 +52,9 @@ func (p *CheckpointSet) Reset() {
 // If there is an existing record with the same descriptor and LabelSet
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
-	ls := export.LabelSlice(labels)
-	elabels := export.NewLabels(ls, p.encoder.Encode(ls.Iter()), p.encoder)
+	elabels := export.NewSimpleLabels(p.encoder, labels...)
 
-	key := desc.Name() + "_" + elabels.Encoded()
+	key := desc.Name() + "_" + elabels.Encoded(p.encoder)
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}

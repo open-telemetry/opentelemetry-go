@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@ import (
 
 type (
 	Batcher struct {
-		selector export.AggregationSelector
-		batchMap batchMap
-		stateful bool
+		selector     export.AggregationSelector
+		batchMap     batchMap
+		stateful     bool
+		labelEncoder export.LabelEncoder
 	}
 
 	batchKey struct {
@@ -46,11 +47,12 @@ type (
 var _ export.Batcher = &Batcher{}
 var _ export.CheckpointSet = batchMap{}
 
-func New(selector export.AggregationSelector, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, labelEncoder export.LabelEncoder, stateful bool) *Batcher {
 	return &Batcher{
-		selector: selector,
-		batchMap: batchMap{},
-		stateful: stateful,
+		selector:     selector,
+		batchMap:     batchMap{},
+		stateful:     stateful,
+		labelEncoder: labelEncoder,
 	}
 }
 
@@ -60,9 +62,10 @@ func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator
 
 func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	desc := record.Descriptor()
+	encoded := record.Labels().Encoded(b.labelEncoder)
 	key := batchKey{
 		descriptor: desc,
-		encoded:    record.Labels().Encoded(),
+		encoded:    encoded,
 	}
 	agg := record.Aggregator()
 	value, ok := b.batchMap[key]

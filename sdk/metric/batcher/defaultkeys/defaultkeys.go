@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,7 +109,8 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	}
 
 	// Compute an encoded lookup key.
-	encoded := b.labelEncoder.Encode(export.LabelSlice(outputLabels).Iter())
+	elabels := export.NewSimpleLabels(b.labelEncoder, outputLabels...)
+	encoded := elabels.Encoded(b.labelEncoder)
 
 	// Merge this aggregator with all preceding aggregators that
 	// map to the same set of `outputLabels` labels.
@@ -137,11 +138,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 			return err
 		}
 	}
-	b.aggCheckpoint[key] = export.NewRecord(
-		desc,
-		export.NewLabels(export.LabelSlice(outputLabels), encoded, b.labelEncoder),
-		agg,
-	)
+	b.aggCheckpoint[key] = export.NewRecord(desc, elabels, agg)
 	return nil
 }
 

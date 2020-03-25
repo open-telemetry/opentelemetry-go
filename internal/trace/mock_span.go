@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ var _ apitrace.Span = (*MockSpan)(nil)
 // an empty core.SpanContext
 func (ms *MockSpan) SpanContext() core.SpanContext {
 	if ms == nil {
-		core.EmptySpanContext()
+		return core.EmptySpanContext()
 	}
 	return ms.sc
 }

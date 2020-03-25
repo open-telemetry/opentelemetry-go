@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,15 +23,12 @@ import (
 	"sync"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/sdk/resource"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
-	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -310,7 +307,11 @@ func (e *Exporter) uploadMetrics(ctx context.Context, in <-chan *metricpb.Metric
 	rm := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
-			Metrics:  protoMetrics,
+			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				{
+					Metrics: protoMetrics,
+				},
+			},
 		},
 	}
 
@@ -345,32 +346,6 @@ func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) {
 	e.uploadTraces(ctx, sds)
 }
 
-func otSpanDataToPbSpans(sdl []*tracesdk.SpanData) []*tracepb.ResourceSpans {
-	if len(sdl) == 0 {
-		return nil
-	}
-	rsm := make(map[*resource.Resource]*tracepb.ResourceSpans)
-
-	for _, sd := range sdl {
-		if sd != nil {
-			rs, ok := rsm[sd.Resource]
-			if !ok {
-				rs = &tracepb.ResourceSpans{
-					Resource: otResourceToProtoResource(sd.Resource),
-					Spans:    []*tracepb.Span{},
-				}
-				rsm[sd.Resource] = rs
-			}
-			rs.Spans = append(rs.Spans, otSpanToProtoSpan(sd))
-		}
-	}
-	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))
-	for _, rs := range rsm {
-		rss = append(rss, rs)
-	}
-	return rss
-}
-
 func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 	select {
 	case <-e.stopCh:
@@ -381,7 +356,7 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 			return
 		}
 
-		protoSpans := otSpanDataToPbSpans(sdl)
+		protoSpans := transform.SpanData(sdl)
 		if len(protoSpans) == 0 {
 			return
 		}

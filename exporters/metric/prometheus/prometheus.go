@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -153,7 +152,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := defaultkeys.New(selector, sdkmetric.NewDefaultLabelEncoder(), true)
+	batcher := defaultkeys.New(selector, export.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
