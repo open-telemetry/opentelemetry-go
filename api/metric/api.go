@@ -31,7 +31,14 @@ type Provider interface {
 	Meter(name string) Meter
 }
 
-// Labels is a convenience method to build a []core.KeyValue{}.
+// Labels is a convenience method to build a []core.KeyValue{}.  For example,
+//
+//    meter.RecordBatch(ctx, metric.Labels(...), ...)
+//
+// as opposed to:
+//
+//    meter.RecordBatch(ctx, []core.KeyValue{...}, ...)
+//
 func Labels(labels ...core.KeyValue) []core.KeyValue {
 	return labels
 }

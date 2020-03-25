@@ -315,5 +315,44 @@ func TestObserverCollection(t *testing.T) {
 		"int.observer/":      1,
 		"int.observer/A=B":   1,
 	}, out.Map)
+}
 
+func TestRecordBatch(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+
+	sdk := metricsdk.New(batcher)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
+	counter1 := Must(meter).NewInt64Counter("int64.counter")
+	counter2 := Must(meter).NewFloat64Counter("float64.counter")
+	measure1 := Must(meter).NewInt64Measure("int64.measure")
+	measure2 := Must(meter).NewFloat64Measure("float64.measure")
+
+	sdk.RecordBatch(
+		ctx,
+		metric.Labels(
+			key.String("A", "B"),
+			key.String("C", "D"),
+		),
+		counter1.Measurement(1),
+		counter2.Measurement(2),
+		measure1.Measurement(3),
+		measure2.Measurement(4),
+	)
+
+	sdk.Collect(ctx)
+
+	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
+	for _, rec := range batcher.records {
+		_ = out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"int64.counter/A=B,C=D":   1,
+		"float64.counter/A=B,C=D": 2,
+		"int64.measure/A=B,C=D":   3,
+		"float64.measure/A=B,C=D": 4,
+	}, out.Map)
 }
