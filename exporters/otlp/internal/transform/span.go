@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,37 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp
+package transform
 
 import (
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/sdk/resource"
-
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
-	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
-	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
 	maxMessageEventsPerSpan = 128
 )
 
-func otResourceToProtoResource(res *resource.Resource) *resourcepb.Resource {
-	if res == nil {
+// SpanData transforms a slice of SpanData into a slice of OTLP ResourceSpans.
+func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
+	if len(sdl) == 0 {
 		return nil
 	}
-	resProto := &resourcepb.Resource{
-		Attributes: otAttributesToProtoAttributes(res.Attributes()),
+	rsm := make(map[*resource.Resource]*tracepb.ResourceSpans)
+
+	for _, sd := range sdl {
+		if sd != nil {
+			rs, ok := rsm[sd.Resource]
+			if !ok {
+				rs = &tracepb.ResourceSpans{
+					Resource: Resource(sd.Resource),
+					InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
+						{
+							Spans: []*tracepb.Span{},
+						},
+					},
+				}
+				rsm[sd.Resource] = rs
+			}
+			rs.InstrumentationLibrarySpans[0].Spans =
+				append(rs.InstrumentationLibrarySpans[0].Spans, span(sd))
+		}
 	}
-	return resProto
+	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))
+	for _, rs := range rsm {
+		rss = append(rss, rs)
+	}
+	return rss
 }
 
-func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
+// span transforms a Span into an OTLP span.
+func span(sd *export.SpanData) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
@@ -50,14 +69,14 @@ func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 		TraceId:           sd.SpanContext.TraceID[:],
 		SpanId:            sd.SpanContext.SpanID[:],
 		ParentSpanId:      sd.ParentSpanID[:],
-		Status:            otStatusToProtoStatus(sd.StatusCode, sd.StatusMessage),
+		Status:            status(sd.StatusCode, sd.StatusMessage),
 		StartTimeUnixNano: uint64(sd.StartTime.Nanosecond()),
 		EndTimeUnixNano:   uint64(sd.EndTime.Nanosecond()),
-		Links:             otLinksToProtoLinks(sd.Links),
-		Kind:              otSpanKindToProtoSpanKind(sd.SpanKind),
+		Links:             links(sd.Links),
+		Kind:              spanKind(sd.SpanKind),
 		Name:              sd.Name,
-		Attributes:        otAttributesToProtoAttributes(sd.Attributes),
-		Events:            otTimeEventsToProtoTimeEvents(sd.MessageEvents),
+		Attributes:        Attributes(sd.Attributes),
+		Events:            spanEvents(sd.MessageEvents),
 		// TODO (rghetia): Add Tracestate: when supported.
 		DroppedAttributesCount: uint32(sd.DroppedAttributeCount),
 		DroppedEventsCount:     uint32(sd.DroppedMessageEventCount),
@@ -65,14 +84,16 @@ func otSpanToProtoSpan(sd *export.SpanData) *tracepb.Span {
 	}
 }
 
-func otStatusToProtoStatus(status codes.Code, message string) *tracepb.Status {
+// status transform a span code and message into an OTLP span status.
+func status(status codes.Code, message string) *tracepb.Status {
 	return &tracepb.Status{
 		Code:    tracepb.Status_StatusCode(status),
 		Message: message,
 	}
 }
 
-func otLinksToProtoLinks(links []apitrace.Link) []*tracepb.Span_Link {
+// links transforms span Links to OTLP span links.
+func links(links []apitrace.Link) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
@@ -86,56 +107,14 @@ func otLinksToProtoLinks(links []apitrace.Link) []*tracepb.Span_Link {
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:    otLink.TraceID[:],
 			SpanId:     otLink.SpanID[:],
-			Attributes: otAttributesToProtoAttributes(otLink.Attributes),
+			Attributes: Attributes(otLink.Attributes),
 		})
 	}
 	return sl
 }
 
-func otAttributesToProtoAttributes(attrs []core.KeyValue) []*commonpb.AttributeKeyValue {
-	if len(attrs) == 0 {
-		return nil
-	}
-	out := make([]*commonpb.AttributeKeyValue, 0, len(attrs))
-	for _, v := range attrs {
-		switch v.Value.Type() {
-		case core.BOOL:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:       string(v.Key),
-				Type:      commonpb.AttributeKeyValue_BOOL,
-				BoolValue: v.Value.AsBool(),
-			})
-		case core.INT64, core.INT32, core.UINT32, core.UINT64:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:      string(v.Key),
-				Type:     commonpb.AttributeKeyValue_INT,
-				IntValue: v.Value.AsInt64(),
-			})
-		case core.FLOAT32:
-			f32 := v.Value.AsFloat32()
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_DOUBLE,
-				DoubleValue: float64(f32),
-			})
-		case core.FLOAT64:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_DOUBLE,
-				DoubleValue: v.Value.AsFloat64(),
-			})
-		case core.STRING:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_STRING,
-				StringValue: v.Value.AsString(),
-			})
-		}
-	}
-	return out
-}
-
-func otTimeEventsToProtoTimeEvents(es []export.Event) []*tracepb.Span_Event {
+// spanEvents transforms span Events to an OTLP span events.
+func spanEvents(es []export.Event) []*tracepb.Span_Event {
 	if len(es) == 0 {
 		return nil
 	}
@@ -155,8 +134,9 @@ func otTimeEventsToProtoTimeEvents(es []export.Event) []*tracepb.Span_Event {
 		messageEvents++
 		events = append(events,
 			&tracepb.Span_Event{
+				Name:         e.Name,
 				TimeUnixNano: uint64(e.Time.Nanosecond()),
-				Attributes:   otAttributesToProtoAttributes(e.Attributes),
+				Attributes:   Attributes(e.Attributes),
 				// TODO (rghetia) : Add Drop Counts when supported.
 			},
 		)
@@ -165,7 +145,8 @@ func otTimeEventsToProtoTimeEvents(es []export.Event) []*tracepb.Span_Event {
 	return events
 }
 
-func otSpanKindToProtoSpanKind(kind apitrace.SpanKind) tracepb.Span_SpanKind {
+// spanKind transforms a SpanKind to an OTLP span kind.
+func spanKind(kind apitrace.SpanKind) tracepb.Span_SpanKind {
 	switch kind {
 	case apitrace.SpanKindInternal:
 		return tracepb.Span_INTERNAL
