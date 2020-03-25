@@ -1,3 +1,17 @@
+# Copyright The OpenTelemetry Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
 TOOLS_MOD_DIR := ./tools
 
@@ -51,7 +65,7 @@ test-with-coverage:
 	done
 
 .PHONY: ci
-ci: precommit check-clean-work-tree test-with-coverage test-386
+ci: precommit check-clean-work-tree license-check test-with-coverage test-386
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
@@ -118,3 +132,13 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 
 generate: $(TOOLS_DIR)/stringer
 	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
+
+.PHONY: license-check
+license-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*') ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi
