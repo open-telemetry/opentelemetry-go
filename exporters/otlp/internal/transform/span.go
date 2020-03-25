@@ -60,7 +60,7 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	return rss
 }
 
-// status transforms a Span into an OTLP span.
+// span transforms a Span into an OTLP span.
 func span(sd *export.SpanData) *tracepb.Span {
 	if sd == nil {
 		return nil
@@ -113,7 +113,7 @@ func links(links []apitrace.Link) []*tracepb.Span_Link {
 	return sl
 }
 
-// spanEvents transforms span Events to a OTLP span events.
+// spanEvents transforms span Events to an OTLP span events.
 func spanEvents(es []export.Event) []*tracepb.Span_Event {
 	if len(es) == 0 {
 		return nil
