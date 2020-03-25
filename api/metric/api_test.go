@@ -190,23 +190,25 @@ func TestMeasure(t *testing.T) {
 
 func TestObserver(t *testing.T) {
 	{
+		labels := metric.Labels(key.String("O", "P"))
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
-			result.Observe(42)
+			result.Observe(42, labels...)
 		})
 		t.Log("Testing float observer")
 
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, nil, mockSDK, core.Float64NumberKind, o.AsyncImpl())
+		checkObserverBatch(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
 	}
 	{
+		labels := metric.Labels()
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
-			result.Observe(42)
+			result.Observe(42, labels...)
 		})
 		t.Log("Testing int observer")
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, nil, mockSDK, core.Int64NumberKind, o.AsyncImpl())
+		checkObserverBatch(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
 	}
 }
 

@@ -40,7 +40,7 @@ func ExampleNew() {
 	meter := pusher.Meter("example")
 
 	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
+	labels := key.String("value")
 
 	counter.Add(ctx, 100, labels)
 

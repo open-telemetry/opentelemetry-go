@@ -116,36 +116,36 @@ func makeLabels(n int) []core.KeyValue {
 	return l
 }
 
-func benchmarkLabels(b *testing.B, n int) {
-	fix := newFixture(b)
-	labs := makeLabels(n)
+// func benchmarkLabels(b *testing.B, n int) {
+// 	fix := newFixture(b)
+// 	labs := makeLabels(n)
 
-	b.ResetTimer()
+// 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		fix.sdk.Labels(labs...)
-	}
-}
+// 	for i := 0; i < b.N; i++ {
+// 		fix.sdk.Labels(labs...)
+// 	}
+// }
 
-func BenchmarkLabels_1(b *testing.B) {
-	benchmarkLabels(b, 1)
-}
+// func BenchmarkLabels_1(b *testing.B) {
+// 	benchmarkLabels(b, 1)
+// }
 
-func BenchmarkLabels_2(b *testing.B) {
-	benchmarkLabels(b, 2)
-}
+// func BenchmarkLabels_2(b *testing.B) {
+// 	benchmarkLabels(b, 2)
+// }
 
-func BenchmarkLabels_4(b *testing.B) {
-	benchmarkLabels(b, 4)
-}
+// func BenchmarkLabels_4(b *testing.B) {
+// 	benchmarkLabels(b, 4)
+// }
 
-func BenchmarkLabels_8(b *testing.B) {
-	benchmarkLabels(b, 8)
-}
+// func BenchmarkLabels_8(b *testing.B) {
+// 	benchmarkLabels(b, 8)
+// }
 
-func BenchmarkLabels_16(b *testing.B) {
-	benchmarkLabels(b, 16)
-}
+// func BenchmarkLabels_16(b *testing.B) {
+// 	benchmarkLabels(b, 16)
+// }
 
 // Note: performance does not depend on label set size for the
 // benchmarks below.
@@ -154,16 +154,11 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
-
-	for i := 0; i < b.N; i++ {
-		labels[i] = fix.sdk.Labels(labelSets[i]...)
-	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Bind(labels[i])
+		cnt.Bind(labelSets[i]...)
 	}
 }
 
@@ -171,17 +166,15 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
 
 	for i := 0; i < b.N; i++ {
-		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.Bind(labels[i]).Unbind()
+		cnt.Bind(labelSets[i]...).Unbind()
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Bind(labels[i])
+		cnt.Bind(labelSets[i]...)
 	}
 }
 
@@ -189,17 +182,15 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	fix := newFixture(b)
 	labelSets := makeLabelSets(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
-	labels := make([]metric.LabelSet, b.N)
 
 	for i := 0; i < b.N; i++ {
-		labels[i] = fix.sdk.Labels(labelSets[i]...)
-		cnt.Bind(labels[i]).Unbind()
+		cnt.Bind(labelSets[i]...).Unbind()
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Bind(labels[i]).Unbind()
+		cnt.Bind(labelSets[i]...).Unbind()
 	}
 }
 
@@ -224,12 +215,10 @@ func benchmarkIterator(b *testing.B, n int) {
 		benchmarkIteratorVar = kv
 		return nil
 	})
-	labs := fix.sdk.Labels(makeLabels(n)...)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 	ctx := context.Background()
-	cnt.Add(ctx, 1, labs)
+	cnt.Add(ctx, 1, makeLabels(n)...)
 
-	b.StopTimer()
 	b.ResetTimer()
 	fix.sdk.Collect(ctx)
 }
@@ -263,22 +252,22 @@ func BenchmarkIterator_16(b *testing.B) {
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1, labs)
+		cnt.Add(ctx, 1, labs...)
 	}
 }
 
 func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
-	handle := cnt.Bind(labs)
+	handle := cnt.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -290,22 +279,22 @@ func BenchmarkInt64CounterHandleAdd(b *testing.B) {
 func BenchmarkFloat64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	cnt := fix.meter.NewFloat64Counter("float64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1.1, labs)
+		cnt.Add(ctx, 1.1, labs...)
 	}
 }
 
 func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	cnt := fix.meter.NewFloat64Counter("float64.counter")
-	handle := cnt.Bind(labs)
+	handle := cnt.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -319,22 +308,22 @@ func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
 func BenchmarkInt64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewInt64Measure("int64.lastvalue")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		mea.Record(ctx, int64(i), labs)
+		mea.Record(ctx, int64(i), labs...)
 	}
 }
 
 func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewInt64Measure("int64.lastvalue")
-	handle := mea.Bind(labs)
+	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -346,22 +335,22 @@ func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
 func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		mea.Record(ctx, float64(i), labs)
+		mea.Record(ctx, float64(i), labs...)
 	}
 }
 
 func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
-	handle := mea.Bind(labs)
+	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -375,22 +364,22 @@ func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewInt64Measure(name)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		mea.Record(ctx, int64(i), labs)
+		mea.Record(ctx, int64(i), labs...)
 	}
 }
 
 func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewInt64Measure(name)
-	handle := mea.Bind(labs)
+	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -402,22 +391,22 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewFloat64Measure(name)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		mea.Record(ctx, float64(i), labs)
+		mea.Record(ctx, float64(i), labs...)
 	}
 }
 
 func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	mea := fix.meter.NewFloat64Measure(name)
-	handle := mea.Bind(labs)
+	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
 
@@ -446,32 +435,34 @@ func BenchmarkObserverRegistration(b *testing.B) {
 func BenchmarkObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	_ = fix.meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
-		b.StartTimer()
-		defer b.StopTimer()
+		// b.StartTimer()
+		// defer b.StopTimer()
 		for i := 0; i < b.N; i++ {
-			result.Observe((int64)(i), labs)
+			result.Observe((int64)(i), labs...)
 		}
 	})
-	b.StopTimer()
+
 	b.ResetTimer()
+
 	fix.sdk.Collect(ctx)
 }
 
 func BenchmarkObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := fix.sdk.Labels(makeLabels(1)...)
+	labs := makeLabels(1)
 	_ = fix.meter.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
-		b.StartTimer()
-		defer b.StopTimer()
+		// b.StartTimer()
+		// defer b.StopTimer()
 		for i := 0; i < b.N; i++ {
-			result.Observe((float64)(i), labs)
+			result.Observe((float64)(i), labs...)
 		}
 	})
-	b.StopTimer()
+
 	b.ResetTimer()
+
 	fix.sdk.Collect(ctx)
 }
 

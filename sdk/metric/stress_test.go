@@ -75,7 +75,7 @@ type (
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) SyncImpler
 		getUpdateValue func() core.Number
-		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
+		operate        func(interface{}, context.Context, core.Number, []core.KeyValue)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
@@ -167,7 +167,6 @@ func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup
 	}
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
-	labs := meter.Labels(kvs...)
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,
@@ -177,7 +176,7 @@ func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup
 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
 		time.Sleep(sleep)
 		value := f.impl.getUpdateValue()
-		f.impl.operate(instrument, ctx, value, labs)
+		f.impl.operate(instrument, ctx, value, kvs)
 
 		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
 
@@ -353,9 +352,9 @@ func intCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			counter := inst.(api.Int64Counter)
-			counter.Add(ctx, value.AsInt64(), labels)
+			counter.Add(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			n := core.NewInt64Number(0)
@@ -391,9 +390,9 @@ func floatCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			counter := inst.(api.Float64Counter)
-			counter.Add(ctx, value.AsFloat64(), labels)
+			counter.Add(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			n := core.NewFloat64Number(0.0)
@@ -427,9 +426,9 @@ func intLastValueTestImpl() testImpl {
 			r1 := rand.Int63()
 			return core.NewInt64Number(rand.Int63() - r1)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			measure := inst.(api.Int64Measure)
-			measure.Record(ctx, value.AsInt64(), labels)
+			measure.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
@@ -468,9 +467,9 @@ func floatLastValueTestImpl() testImpl {
 		getUpdateValue: func() core.Number {
 			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			measure := inst.(api.Float64Measure)
-			measure.Record(ctx, value.AsFloat64(), labels)
+			measure.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{

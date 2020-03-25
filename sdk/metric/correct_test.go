@@ -82,7 +82,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 
 	counter := Must(meter).NewInt64Counter("name.counter")
 
-	counter.Add(ctx, -1, sdk.Labels())
+	counter.Add(ctx, -1)
 	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
 	sdkErr = nil
 
@@ -93,7 +93,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 	require.Nil(t, err)
 
 	batcher.records = nil
-	counter.Add(ctx, 1, sdk.Labels())
+	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
 	sum, err = batcher.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
@@ -117,7 +117,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 
 	measure := Must(meter).NewFloat64Measure("name.measure")
 
-	measure.Record(ctx, math.NaN(), sdk.Labels())
+	measure.Record(ctx, math.NaN())
 	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
 	sdkErr = nil
 
@@ -127,8 +127,8 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
 
-	measure.Record(ctx, 1, sdk.Labels())
-	measure.Record(ctx, 2, sdk.Labels())
+	measure.Record(ctx, 1)
+	measure.Record(ctx, 2)
 
 	batcher.records = nil
 	checkpointed = sdk.Collect(ctx)
@@ -150,7 +150,7 @@ func TestDisabledInstrument(t *testing.T) {
 
 	measure := Must(meter).NewFloat64Measure("name.disabled")
 
-	measure.Record(ctx, -1, sdk.Labels())
+	measure.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
@@ -173,7 +173,7 @@ func TestRecordNaN(t *testing.T) {
 	c := Must(meter).NewFloat64Counter("sum.name")
 
 	require.Nil(t, sdkErr)
-	c.Add(ctx, math.NaN(), sdk.Labels())
+	c.Add(ctx, math.NaN())
 	require.Error(t, sdkErr)
 }
 
@@ -219,14 +219,14 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 			expectB = append(expectB, keysB[i].Int(repeats-1))
 		}
 
-		counter.Add(ctx, 1, sdk.Labels(kvsA...))
-		counter.Add(ctx, 1, sdk.Labels(kvsA...))
+		counter.Add(ctx, 1, kvsA...)
+		counter.Add(ctx, 1, kvsA...)
 		allExpect = append(allExpect, expectA)
 
 		if numKeys != 0 {
 			// In this case A and B sets are the same.
-			counter.Add(ctx, 1, sdk.Labels(kvsB...))
-			counter.Add(ctx, 1, sdk.Labels(kvsB...))
+			counter.Add(ctx, 1, kvsB...)
+			counter.Add(ctx, 1, kvsB...)
 			allExpect = append(allExpect, expectB)
 		}
 
@@ -290,12 +290,12 @@ func TestObserverCollection(t *testing.T) {
 		// following line we get 1-1==0 instead of -1:
 		// result.Observe(1, meter.Labels(key.String("A", "B")))
 
-		result.Observe(-1, meter.Labels(key.String("A", "B")))
-		result.Observe(-1, meter.Labels(key.String("C", "D")))
+		result.Observe(-1, key.String("A", "B"))
+		result.Observe(-1, key.String("C", "D"))
 	})
 	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
-		result.Observe(1, meter.Labels(key.String("A", "B")))
-		result.Observe(1, meter.Labels())
+		result.Observe(1, key.String("A", "B"))
+		result.Observe(1)
 	})
 	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
 	})
