@@ -1,34 +1,54 @@
-version: 2
-jobs:
-  build:
+version: 2.1
+executors:
+  current-go:
     docker:
-      - image: circleci/golang:1.14
+      - image: cimg/go:1.14
+  prior-go:
+    docker:
+      - image: cimg/go:1.13
 
-    environment:
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+build-template: &build-template
+  environment:
+    TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 
-    steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS # create the test results directory
+  steps:
+    - checkout
+    - run: mkdir -p $TEST_RESULTS # create the test results directory
 
-      - restore_cache: # restores saved cache if no changes are detected since last run
-          keys:
-            - go-pkg-mod-{{ checksum "go.sum" }}
+    - restore_cache: # restores saved cache if no changes are detected since last run
+        keys:
+          - cimg-go-pkg-mod-{{ checksum "go.sum" }}
 
-      - run:
-          name: "Precommit and Coverage Report"
-          command: |
-            make ci
-            mv coverage.html $TEST_RESULTS/
+    - run:
+        name: "Precommit and Coverage Report"
+        command: |
+          make ci
+          mv coverage.html $TEST_RESULTS/
 
-      - save_cache:
-          key: go-pkg-mod-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
+    - save_cache:
+        key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
+        paths:
+          - "/home/circleci/go/pkg/mod"
 
-      - store_artifacts:
-          path: /tmp/test-results
-          destination: opentelemetry-go-test-output
+    - store_artifacts:
+        path: /tmp/test-results
+        destination: opentelemetry-go-test-output
 
-      - store_test_results:
-          path: /tmp/test-results
+    - store_test_results:
+        path: /tmp/test-results
+
+jobs:
+  current-go:
+    executor: current-go
+    <<: *build-template
+
+  prior-go:
+    executor: prior-go
+    <<: *build-template
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - current-go
+      - prior-go
