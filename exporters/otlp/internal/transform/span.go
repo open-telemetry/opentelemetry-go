@@ -28,7 +28,7 @@ const (
 	maxMessageEventsPerSpan = 128
 )
 
-// Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
+// SpanData transforms a slice of SpanData into a slice of OTLP ResourceSpans.
 func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
