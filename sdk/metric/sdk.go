@@ -65,7 +65,10 @@ type (
 		// resource represents the entity producing telemetry.
 		resource resource.Resource
 
-		asyncSortLabels sortedLabels
+		// asyncSortSlice has a single purpose - as a temporary
+		// place for sorting during labels creation to avoid
+		// allocation.  It is cleared after use.
+		asyncSortSlice sortedLabels
 	}
 
 	syncInstrument struct {
@@ -76,9 +79,8 @@ type (
 	// suitable for use as a map key.
 	orderedLabels interface{}
 
-	// labels implements the OpenTelemetry LabelSet API,
-	// represents an internalized set of labels that may be used
-	// repeatedly.
+	// labels represents an internalized set of labels that have been
+	// sorted and deduplicated.
 	labels struct {
 		// cachedEncoderID needs to be aligned for atomic access
 		cachedEncoderID int64
@@ -91,18 +93,13 @@ type (
 		// size for use as a map key.
 		ordered orderedLabels
 
-		// // sortSlice has a single purpose - as a temporary
-		// // place for sorting during labels creation to avoid
-		// // allocation.
-		// sortSlice sortedLabels
-
 		// cachedValue contains a `reflect.Value` of the `ordered`
 		// member
 		cachedValue reflect.Value
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
-	// its InstrumentID and the encoded form of its LabelSet.
+	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
 		descriptor *metric.Descriptor
 		ordered    orderedLabels
@@ -123,7 +120,10 @@ type (
 		// modified has to be aligned for 64-bit atomic operations.
 		modified int64
 
-		sortLabels sortedLabels
+		// sortSlice has a single purpose - as a temporary
+		// place for sorting during labels creation to avoid
+		// allocation.
+		sortSlice sortedLabels
 
 		// labels is the processed label set for this record.
 		labels labels
@@ -207,8 +207,10 @@ func (a *asyncInstrument) observe(number core.Number, labels []core.KeyValue) {
 }
 
 func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
-	// We are in a single-threaded context.
-	labels := a.meter.makeLabels(kvs, &a.meter.asyncSortLabels)
+	// We are in a single-threaded context.  Note: this assumption
+	// could be violated if the user added concurrency within
+	// their callback.
+	labels := a.meter.makeLabels(kvs, &a.meter.asyncSortSlice)
 
 	lrec, ok := a.recorders[labels.ordered]
 	if ok {
@@ -235,15 +237,20 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
+// acquireHandle gets or creates a `*record` corresponding to `kvs`,
+// the input labels.  The second argument `labels` is passed in to
+// support re-use of the orderedLabels computed by a previous
+// measurement in the same batch.   This performs two allocations
+// in the common case.
 func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labels labels) *record {
 	var rec *record
 
 	if labels.ordered == nil {
 		// This memory allocation may not be used, but it's
-		// needed for the `sortLabels` field, to avoid an
+		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		labels = s.meter.makeLabels(kvs, &rec.sortLabels)
+		labels = s.meter.makeLabels(kvs, &rec.sortSlice)
 	}
 
 	// Create lookup key for sync.Map (one allocation, as this
@@ -254,7 +261,7 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labels labels) *reco
 	}
 
 	if actual, ok := s.meter.current.Load(mk); ok {
-		// Existing record case, only one allocation so far.
+		// Existing record case.
 		rec = actual.(*record)
 		if rec.refMapped.ref() {
 			// At this moment it is guaranteed that the entry is in
@@ -338,7 +345,7 @@ func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
 }
 
-// Labels returns a LabelSet corresponding to the arguments.  Passed labels
+// makeLabels returns a `labels` corresponding to the arguments.  Labels
 // are sorted and de-duplicated, with last-value-wins semantics.  Note that
 // sorting and deduplicating happens in-place to avoid allocation, so the
 // passed slice will be modified.

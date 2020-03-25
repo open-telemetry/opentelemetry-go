@@ -72,12 +72,9 @@ func TestDirect(t *testing.T) {
 	ctx := context.Background()
 	meter1 := global.Meter("test1")
 	meter2 := global.Meter("test2")
-	lvals1 := key.String("A", "B")
-	labels1 := metric.Labels(lvals1)
-	lvals2 := key.String("C", "D")
-	labels2 := metric.Labels(lvals2)
-	lvals3 := key.String("E", "F")
-	labels3 := metric.Labels(lvals3)
+	labels1 := metric.Labels(key.String("A", "B"))
+	labels2 := metric.Labels(key.String("C", "D"))
+	labels3 := metric.Labels(key.String("E", "F"))
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -117,43 +114,43 @@ func TestDirect(t *testing.T) {
 			{
 				Name:        "test.counter",
 				LibraryName: "test1",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(labels1...),
 				Number:      asInt(1),
 			},
 			{
 				Name:        "test.measure",
 				LibraryName: "test1",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(labels1...),
 				Number:      asFloat(3),
 			},
 			{
 				Name:        "test.second",
 				LibraryName: "test2",
-				Labels:      asMap(lvals3),
+				Labels:      asMap(labels3...),
 				Number:      asFloat(3),
 			},
 			{
 				Name:        "test.observer.float",
 				LibraryName: "test1",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(labels1...),
 				Number:      asFloat(1),
 			},
 			{
 				Name:        "test.observer.float",
 				LibraryName: "test1",
-				Labels:      asMap(lvals2),
+				Labels:      asMap(labels2...),
 				Number:      asFloat(2),
 			},
 			{
 				Name:        "test.observer.int",
 				LibraryName: "test1",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(labels1...),
 				Number:      asInt(1),
 			},
 			{
 				Name:        "test.observer.int",
 				LibraryName: "test1",
-				Labels:      asMap(lvals2),
+				Labels:      asMap(labels2...),
 				Number:      asInt(2),
 			},
 		},
@@ -168,15 +165,15 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.Meter("test")
-	lvals1 := metric.Labels(key.String("A", "B"))
+	labels1 := metric.Labels(key.String("A", "B"))
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(lvals1...)
+	boundC := counter.Bind(labels1...)
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
 	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(lvals1...)
+	boundM := measure.Bind(labels1...)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
@@ -191,13 +188,13 @@ func TestBound(t *testing.T) {
 			{
 				Name:        "test.counter",
 				LibraryName: "test",
-				Labels:      asMap(lvals1...),
+				Labels:      asMap(labels1...),
 				Number:      asFloat(1),
 			},
 			{
 				Name:        "test.measure",
 				LibraryName: "test",
-				Labels:      asMap(lvals1...),
+				Labels:      asMap(labels1...),
 				Number:      asInt(3),
 			},
 		},
@@ -212,13 +209,13 @@ func TestUnbind(t *testing.T) {
 	internal.ResetForTest()
 
 	glob := global.Meter("test")
-	lvals1 := metric.Labels(key.String("A", "B"))
+	labels1 := metric.Labels(key.String("A", "B"))
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(lvals1...)
+	boundC := counter.Bind(labels1...)
 
 	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(lvals1...)
+	boundM := measure.Bind(labels1...)
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -229,8 +226,7 @@ func TestDefaultSDK(t *testing.T) {
 
 	ctx := context.Background()
 	meter1 := global.Meter("builtin")
-	lvals1 := key.String("A", "B")
-	labels1 := metric.Labels(lvals1)
+	labels1 := metric.Labels(key.String("A", "B"))
 
 	counter := Must(meter1).NewInt64Counter("test.builtin")
 	counter.Add(ctx, 1, labels1...)

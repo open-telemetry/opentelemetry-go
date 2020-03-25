@@ -97,7 +97,7 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 
 	// Note also the possibility to speed this computation of
 	// "encoded" via "outputLabels" in the form of a (Descriptor,
-	// LabelSet)->(Labels, Encoded) cache.
+	// Labels)->(Labels, Encoded) cache.
 	iter := record.Labels().Iter()
 	for iter.Next() {
 		kv := iter.Label()

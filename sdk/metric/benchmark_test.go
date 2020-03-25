@@ -89,7 +89,7 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func makeLabelSets(n int) [][]core.KeyValue {
+func makeManyLabels(n int) [][]core.KeyValue {
 	r := make([][]core.KeyValue, n)
 
 	for i := 0; i < n; i++ {
@@ -154,7 +154,7 @@ func BenchmarkInt64CounterAddWithLabels_16(b *testing.B) {
 
 func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
-	labelSets := makeLabelSets(b.N)
+	labelSets := makeManyLabels(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
@@ -166,7 +166,7 @@ func BenchmarkAcquireNewHandle(b *testing.B) {
 
 func BenchmarkAcquireExistingHandle(b *testing.B) {
 	fix := newFixture(b)
-	labelSets := makeLabelSets(b.N)
+	labelSets := makeManyLabels(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 
 	for i := 0; i < b.N; i++ {
@@ -182,7 +182,7 @@ func BenchmarkAcquireExistingHandle(b *testing.B) {
 
 func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 	fix := newFixture(b)
-	labelSets := makeLabelSets(b.N)
+	labelSets := makeManyLabels(b.N)
 	cnt := fix.meter.NewInt64Counter("int64.counter")
 
 	for i := 0; i < b.N; i++ {

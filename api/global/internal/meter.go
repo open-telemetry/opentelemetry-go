@@ -363,8 +363,6 @@ func (bound *syncHandle) RecordOne(ctx context.Context, number core.Number) {
 	(*implPtr).RecordOne(ctx, number)
 }
 
-// LabelSet initialization
-
 // Constructors
 
 func (m *meter) withName(opts []metric.Option) []metric.Option {

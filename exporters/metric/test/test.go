@@ -34,7 +34,7 @@ type CheckpointSet struct {
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
-// Records are grouped by their LabelSet.
+// Records are grouped by their encoded labels.
 func NewCheckpointSet(encoder export.LabelEncoder) *CheckpointSet {
 	return &CheckpointSet{
 		encoder: encoder,
@@ -49,7 +49,7 @@ func (p *CheckpointSet) Reset() {
 
 // Add a new descriptor to a Checkpoint.
 //
-// If there is an existing record with the same descriptor and LabelSet
+// If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
 	elabels := export.NewSimpleLabels(p.encoder, labels...)

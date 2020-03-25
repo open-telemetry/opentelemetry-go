@@ -31,6 +31,11 @@ type Provider interface {
 	Meter(name string) Meter
 }
 
+// Labels is a convenience method to build a []core.KeyValue{}.
+func Labels(labels ...core.KeyValue) []core.KeyValue {
+	return labels
+}
+
 // Config contains some options for metrics of any kind.
 type Config struct {
 	// Description is an optional field describing the metric
@@ -186,11 +191,6 @@ type Meter interface {
 	// with a given name, running a given callback, and customized with
 	// passed options. Callback can be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
-}
-
-// Labels is a convenience method to build a []core.KeyValue{}.
-func Labels(labels ...core.KeyValue) []core.KeyValue {
-	return labels
 }
 
 // WithDescription applies provided description.

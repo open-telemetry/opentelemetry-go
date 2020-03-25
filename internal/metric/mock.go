@@ -30,11 +30,6 @@ type (
 		Labels     []core.KeyValue
 	}
 
-	LabelSet struct {
-		Impl   *MeterImpl
-		Labels map[core.Key]core.Value
-	}
-
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
@@ -114,8 +109,8 @@ func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labelSet []core.KeyValue, instrument apimetric.InstrumentImpl, number core.Number) {
-	m.recordMockBatch(ctx, labelSet, Measurement{
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number core.Number) {
+	m.recordMockBatch(ctx, labels, Measurement{
 		Instrument: instrument,
 		Number:     number,
 	})
@@ -181,10 +176,10 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 	m.recordMockBatch(ctx, labels, mm...)
 }
 
-func (m *MeterImpl) recordMockBatch(ctx context.Context, labelSet []core.KeyValue, measurements ...Measurement) {
+func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue, measurements ...Measurement) {
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
 		Ctx:          ctx,
-		Labels:       labelSet,
+		Labels:       labels,
 		Measurements: measurements,
 	})
 }
