@@ -116,39 +116,41 @@ func makeLabels(n int) []core.KeyValue {
 	return l
 }
 
-// func benchmarkLabels(b *testing.B, n int) {
-// 	fix := newFixture(b)
-// 	labs := makeLabels(n)
+func benchmarkLabels(b *testing.B, n int) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := makeLabels(n)
+	cnt := fix.meter.NewInt64Counter("int64.counter")
 
-// 	b.ResetTimer()
+	b.ResetTimer()
 
-// 	for i := 0; i < b.N; i++ {
-// 		fix.sdk.Labels(labs...)
-// 	}
-// }
+	for i := 0; i < b.N; i++ {
+		cnt.Add(ctx, 1, labs...)
+	}
+}
 
-// func BenchmarkLabels_1(b *testing.B) {
-// 	benchmarkLabels(b, 1)
-// }
+func BenchmarkInt64CounterAddWithLabels_1(b *testing.B) {
+	benchmarkLabels(b, 1)
+}
 
-// func BenchmarkLabels_2(b *testing.B) {
-// 	benchmarkLabels(b, 2)
-// }
+func BenchmarkInt64CounterAddWithLabels_2(b *testing.B) {
+	benchmarkLabels(b, 2)
+}
 
-// func BenchmarkLabels_4(b *testing.B) {
-// 	benchmarkLabels(b, 4)
-// }
+func BenchmarkInt64CounterAddWithLabels_4(b *testing.B) {
+	benchmarkLabels(b, 4)
+}
 
-// func BenchmarkLabels_8(b *testing.B) {
-// 	benchmarkLabels(b, 8)
-// }
+func BenchmarkInt64CounterAddWithLabels_8(b *testing.B) {
+	benchmarkLabels(b, 8)
+}
 
-// func BenchmarkLabels_16(b *testing.B) {
-// 	benchmarkLabels(b, 16)
-// }
+func BenchmarkInt64CounterAddWithLabels_16(b *testing.B) {
+	benchmarkLabels(b, 16)
+}
 
 // Note: performance does not depend on label set size for the
-// benchmarks below.
+// benchmarks below--all are benchmarked for a single label.
 
 func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
@@ -437,8 +439,6 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 	fix := newFixture(b)
 	labs := makeLabels(1)
 	_ = fix.meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
-		// b.StartTimer()
-		// defer b.StopTimer()
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
@@ -454,8 +454,6 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 	fix := newFixture(b)
 	labs := makeLabels(1)
 	_ = fix.meter.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
-		// b.StartTimer()
-		// defer b.StopTimer()
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}
