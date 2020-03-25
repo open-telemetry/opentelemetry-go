@@ -2,10 +2,10 @@ version: 2.1
 executors:
   current-go:
     docker:
-      - image: circleci/golang:1.14
+      - image: cimg/go:1.14
   prior-go:
     docker:
-      - image: circleci/golang:1.13
+      - image: cimg/go:1.13
 
 build-template: &build-template
   environment:
