@@ -464,6 +464,42 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 	fix.sdk.Collect(ctx)
 }
 
+// BatchRecord
+
+func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
+	const numLabels = 8
+	ctx := context.Background()
+	fix := newFixture(b)
+	var meas []metric.Measurement
+
+	for i := 0; i < numInst; i++ {
+		inst := fix.meter.NewInt64Counter(fmt.Sprint("int64.counter.", i))
+		meas = append(meas, inst.Measurement(1))
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		fix.sdk.RecordBatch(ctx, makeLabels(numLabels), meas...)
+	}
+}
+
+func BenchmarkBatchRecord8Labels_1Instrument(b *testing.B) {
+	benchmarkBatchRecord8Labels(b, 1)
+}
+
+func BenchmarkBatchRecord_8Labels_2Instruments(b *testing.B) {
+	benchmarkBatchRecord8Labels(b, 2)
+}
+
+func BenchmarkBatchRecord_8Labels_4Instruments(b *testing.B) {
+	benchmarkBatchRecord8Labels(b, 4)
+}
+
+func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
+	benchmarkBatchRecord8Labels(b, 8)
+}
+
 // MaxSumCount
 
 func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
