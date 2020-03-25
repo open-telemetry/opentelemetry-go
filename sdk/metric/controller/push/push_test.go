@@ -193,7 +193,7 @@ func TestPushTicker(t *testing.T) {
 
 	p.Start()
 
-	counter.Add(ctx, 3, meter.Labels())
+	counter.Add(ctx, 3)
 
 	records, exports := fix.exporter.resetRecords()
 	checkpoints, finishes := fix.batcher.getCounts()
@@ -219,7 +219,7 @@ func TestPushTicker(t *testing.T) {
 
 	fix.checkpointSet.Reset()
 
-	counter.Add(ctx, 7, meter.Labels())
+	counter.Add(ctx, 7)
 
 	mock.Add(time.Second)
 	runtime.Gosched()
@@ -286,8 +286,8 @@ func TestPushExportError(t *testing.T) {
 			p.Start()
 			runtime.Gosched()
 
-			counter1.Add(ctx, 3, meter.Labels())
-			counter2.Add(ctx, 5, meter.Labels())
+			counter1.Add(ctx, 3)
+			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, fix.exporter.exports)
 			require.Nil(t, err)

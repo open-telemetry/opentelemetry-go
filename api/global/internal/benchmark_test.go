@@ -90,13 +90,13 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 	ctx := context.Background()
 	sdk := global.Meter("test")
-	labs := sdk.Labels(key.String("A", "B"))
+	labs := metric.Labels(key.String("A", "B"))
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1, labs)
+		cnt.Add(ctx, 1, labs...)
 	}
 }
 
@@ -109,13 +109,13 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 
 	global.SetMeterProvider(fix)
 
-	labs := sdk.Labels(key.String("A", "B"))
+	labs := metric.Labels(key.String("A", "B"))
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1, labs)
+		cnt.Add(ctx, 1, labs...)
 	}
 }
 

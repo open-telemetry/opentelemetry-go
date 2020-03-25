@@ -47,7 +47,7 @@ func asStructs(batches []metrictest.Batch) []measured {
 			r = append(r, measured{
 				Name:        m.Instrument.Descriptor().Name(),
 				LibraryName: m.Instrument.Descriptor().LibraryName(),
-				Labels:      batch.LabelSet.Labels,
+				Labels:      asMap(batch.Labels...),
 				Number:      m.Number,
 			})
 		}
@@ -73,40 +73,40 @@ func TestDirect(t *testing.T) {
 	meter1 := global.Meter("test1")
 	meter2 := global.Meter("test2")
 	lvals1 := key.String("A", "B")
-	labels1 := meter1.Labels(lvals1)
+	labels1 := metric.Labels(lvals1)
 	lvals2 := key.String("C", "D")
-	labels2 := meter1.Labels(lvals2)
+	labels2 := metric.Labels(lvals2)
 	lvals3 := key.String("E", "F")
-	labels3 := meter2.Labels(lvals3)
+	labels3 := metric.Labels(lvals3)
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
-	counter.Add(ctx, 1, labels1)
-	counter.Add(ctx, 1, labels1)
+	counter.Add(ctx, 1, labels1...)
+	counter.Add(ctx, 1, labels1...)
 
 	measure := Must(meter1).NewFloat64Measure("test.measure")
-	measure.Record(ctx, 1, labels1)
-	measure.Record(ctx, 2, labels1)
+	measure.Record(ctx, 1, labels1...)
+	measure.Record(ctx, 2, labels1...)
 
 	_ = Must(meter1).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
-		result.Observe(1., labels1)
-		result.Observe(2., labels2)
+		result.Observe(1., labels1...)
+		result.Observe(2., labels2...)
 	})
 
 	_ = Must(meter1).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
-		result.Observe(1, labels1)
-		result.Observe(2, labels2)
+		result.Observe(1, labels1...)
+		result.Observe(2, labels2...)
 	})
 
 	second := Must(meter2).NewFloat64Measure("test.second")
-	second.Record(ctx, 1, labels3)
-	second.Record(ctx, 2, labels3)
+	second.Record(ctx, 1, labels3...)
+	second.Record(ctx, 2, labels3...)
 
 	mock, provider := metrictest.NewProvider()
 	global.SetMeterProvider(provider)
 
-	counter.Add(ctx, 1, labels1)
-	measure.Record(ctx, 3, labels1)
-	second.Record(ctx, 3, labels3)
+	counter.Add(ctx, 1, labels1...)
+	measure.Record(ctx, 3, labels1...)
+	second.Record(ctx, 3, labels3...)
 
 	mock.RunAsyncInstruments()
 
@@ -168,16 +168,15 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.Meter("test")
-	lvals1 := key.String("A", "B")
-	labels1 := glob.Labels(lvals1)
+	lvals1 := metric.Labels(key.String("A", "B"))
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(labels1)
+	boundC := counter.Bind(lvals1...)
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
 	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(labels1)
+	boundM := measure.Bind(lvals1...)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
@@ -192,13 +191,13 @@ func TestBound(t *testing.T) {
 			{
 				Name:        "test.counter",
 				LibraryName: "test",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(lvals1...),
 				Number:      asFloat(1),
 			},
 			{
 				Name:        "test.measure",
 				LibraryName: "test",
-				Labels:      asMap(lvals1),
+				Labels:      asMap(lvals1...),
 				Number:      asInt(3),
 			},
 		},
@@ -213,14 +212,13 @@ func TestUnbind(t *testing.T) {
 	internal.ResetForTest()
 
 	glob := global.Meter("test")
-	lvals1 := key.New("A").String("B")
-	labels1 := glob.Labels(lvals1)
+	lvals1 := metric.Labels(key.String("A", "B"))
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(labels1)
+	boundC := counter.Bind(lvals1...)
 
 	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(labels1)
+	boundM := measure.Bind(lvals1...)
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -232,11 +230,11 @@ func TestDefaultSDK(t *testing.T) {
 	ctx := context.Background()
 	meter1 := global.Meter("builtin")
 	lvals1 := key.String("A", "B")
-	labels1 := meter1.Labels(lvals1)
+	labels1 := metric.Labels(lvals1)
 
 	counter := Must(meter1).NewInt64Counter("test.builtin")
-	counter.Add(ctx, 1, labels1)
-	counter.Add(ctx, 1, labels1)
+	counter.Add(ctx, 1, labels1...)
+	counter.Add(ctx, 1, labels1...)
 
 	in, out := io.Pipe()
 	pusher, err := stdout.InstallNewPipeline(stdout.Config{
@@ -247,7 +245,7 @@ func TestDefaultSDK(t *testing.T) {
 		panic(err)
 	}
 
-	counter.Add(ctx, 1, labels1)
+	counter.Add(ctx, 1, labels1...)
 
 	ch := make(chan string)
 	go func() {
@@ -270,7 +268,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 
 	meter := global.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
-	boundC := counter.Bind(meter.Labels())
+	boundC := counter.Bind()
 	global.SetMeterProvider(provider)
 	boundC.Unbind()
 
@@ -312,8 +310,8 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 		global.SetMeterProvider(sdk)
 	})
 
-	c1.Add(ctx, 1, meter.Labels())
-	c2.Add(ctx, 2, meter.Labels())
+	c1.Add(ctx, 1)
+	c2.Add(ctx, 2)
 }
 
 func TestImplementationIndirection(t *testing.T) {
