@@ -470,6 +470,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	const numLabels = 8
 	ctx := context.Background()
 	fix := newFixture(b)
+	labs := makeLabels(numLabels)
 	var meas []metric.Measurement
 
 	for i := 0; i < numInst; i++ {
@@ -480,7 +481,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.sdk.RecordBatch(ctx, makeLabels(numLabels), meas...)
+		fix.sdk.RecordBatch(ctx, labs, meas...)
 	}
 }
 

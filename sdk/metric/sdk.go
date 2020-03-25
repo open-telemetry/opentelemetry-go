@@ -242,15 +242,18 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labels labels) *record {
+func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *record {
 	var rec *record
+	var labels labels
 
-	if labels.ordered == nil {
+	if lptr == nil || lptr.ordered == nil {
 		// This memory allocation may not be used, but it's
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
 		labels = s.meter.makeLabels(kvs, &rec.sortSlice)
+	} else {
+		labels = *lptr
 	}
 
 	// Create lookup key for sync.Map (one allocation, as this
@@ -310,11 +313,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labels labels) *reco
 }
 
 func (s *syncInstrument) Bind(kvs []core.KeyValue) api.BoundSyncImpl {
-	return s.acquireHandle(kvs, labels{})
+	return s.acquireHandle(kvs, nil)
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, kvs []core.KeyValue) {
-	h := s.acquireHandle(kvs, labels{})
+	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
@@ -640,7 +643,7 @@ func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements
 	for _, meas := range measurements {
 		s := meas.SyncImpl().(*syncInstrument)
 
-		h := s.acquireHandle(kvs, labels)
+		h := s.acquireHandle(kvs, &labels)
 
 		// This assignment avoids recomputing the ordered
 		// labels on subsequent measurements.
