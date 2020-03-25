@@ -312,7 +312,7 @@ func TestSpanData(t *testing.T) {
 	// Not checking resource as the underlying map of our Resource makes
 	// ordering impossible to guarantee on the output. The Resource
 	// transform function has unit tests that should suffice.
-	expectedSpan := tracepb.Span{
+	expectedSpan := &tracepb.Span{
 		TraceId:                []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
@@ -341,59 +341,7 @@ func TestSpanData(t *testing.T) {
 	}
 	actualSpan := actualSpans[0].Spans[0]
 
-	if diff := cmp.Diff(expectedSpan.TraceId, actualSpan.TraceId, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.TraceId differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.SpanId, actualSpan.SpanId, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span..SpanId differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.ParentSpanId, actualSpan.ParentSpanId, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.ParentSpanId differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Status, actualSpan.Status, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Status differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.StartTimeUnixNano, actualSpan.StartTimeUnixNano, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.StartTimeUnixNano differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.EndTimeUnixNano, actualSpan.EndTimeUnixNano, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.EndTimeUnixNano differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Links, actualSpan.Links, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Links differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Kind, actualSpan.Kind, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Kind differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Name, actualSpan.Name, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Name differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Attributes, actualSpan.Attributes, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Attributes differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.Events, actualSpan.Events, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.Events differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.DroppedAttributesCount, actualSpan.DroppedAttributesCount, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.DroppedAttributesCount differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.DroppedEventsCount, actualSpan.DroppedEventsCount, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.DroppedEventsCount differs %v\n", diff)
-	}
-
-	if diff := cmp.Diff(expectedSpan.DroppedLinksCount, actualSpan.DroppedLinksCount, cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed span.DroppedLinksCount differs %v\n", diff)
+	if diff := cmp.Diff(expectedSpan, actualSpan, cmp.Comparer(proto.Equal)); diff != "" {
+		t.Fatalf("transformed span differs %v\n", diff)
 	}
 }
