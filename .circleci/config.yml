@@ -17,7 +17,7 @@ build-template: &build-template
 
     - restore_cache: # restores saved cache if no changes are detected since last run
         keys:
-          - go-pkg-mod-{{ checksum "go.sum" }}
+          - cimg-go-pkg-mod-{{ checksum "go.sum" }}
 
     - run:
         name: "Precommit and Coverage Report"
@@ -26,9 +26,9 @@ build-template: &build-template
           mv coverage.html $TEST_RESULTS/
 
     - save_cache:
-        key: go-pkg-mod-{{ checksum "go.sum" }}
+        key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
         paths:
-          - "/go/pkg/mod"
+          - "/home/circleci/go/pkg/mod"
 
     - store_artifacts:
         path: /tmp/test-results
