@@ -135,10 +135,7 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 func stringKeyValues(iter export.LabelIterator) []*commonpb.StringKeyValue {
 	l := iter.Len()
 	if l == 0 {
-		// TODO: That looks like a pointless allocation in case of
-		// no labels, but returning nil from this function makes
-		// the test fail.
-		return []*commonpb.StringKeyValue{}
+		return nil
 	}
 	result := make([]*commonpb.StringKeyValue, 0, l)
 	for iter.Next() {

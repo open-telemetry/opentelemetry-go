@@ -37,8 +37,12 @@ func TestStringKeyValues(t *testing.T) {
 		expected []*commonpb.StringKeyValue
 	}{
 		{
+			nil,
+			nil,
+		},
+		{
 			[]core.KeyValue{},
-			[]*commonpb.StringKeyValue{},
+			nil,
 		},
 		{
 			[]core.KeyValue{
@@ -118,7 +122,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				Labels:      []*commonpb.StringKeyValue{},
+				Labels:      nil,
 			},
 		},
 		{
@@ -224,7 +228,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_COUNTER_INT64,
-				Labels:      []*commonpb.StringKeyValue{},
+				Labels:      nil,
 			},
 		},
 		{
