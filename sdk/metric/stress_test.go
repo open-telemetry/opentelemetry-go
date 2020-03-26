@@ -44,7 +44,7 @@ import (
 const (
 	concurrencyPerCPU = 100
 	reclaimPeriod     = time.Millisecond * 100
-	testRun           = time.Second
+	testRun           = 5 * time.Second
 	epsilon           = 1e-10
 )
 
