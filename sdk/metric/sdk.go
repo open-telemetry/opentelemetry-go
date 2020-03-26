@@ -120,13 +120,15 @@ type (
 		// modified has to be aligned for 64-bit atomic operations.
 		modified int64
 
+		// labels is the processed label set for this record.
+		//
+		// labels has to be aligned for 64-bit atomic operations.
+		labels labels
+
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.
 		sortSlice sortedLabels
-
-		// labels is the processed label set for this record.
-		labels labels
 
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
@@ -152,9 +154,9 @@ type (
 	}
 
 	labeledRecorder struct {
-		recorder      export.Aggregator
-		labels        labels
 		modifiedEpoch int64
+		labels        labels
+		recorder      export.Aggregator
 	}
 
 	ErrorHandler func(error)
