@@ -269,11 +269,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *recor
 
 	if actual, ok := s.meter.current.Load(mk); ok {
 		// Existing record case.
-		rec = actual.(*record)
-		if rec.refMapped.ref() {
+		newRec := actual.(*record)
+		if newRec.refMapped.ref() {
 			// At this moment it is guaranteed that the entry is in
 			// the map and will not be removed.
-			return rec
+			return newRec
 		}
 		// This entry is no longer mapped, try to add a new entry.
 	}

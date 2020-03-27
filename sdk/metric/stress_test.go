@@ -16,10 +16,6 @@
 // that the race detector would help with, anyway.
 // +build !race
 
-// This test has exposed a difficult-to-understand failure for GOARCH=386
-// which we will continue to investigate.  Meanwhile, disable this test.
-// +build !386
-
 package metric
 
 import (
