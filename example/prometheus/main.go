@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
@@ -53,13 +54,13 @@ func main() {
 	meter := global.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
-	observerLabelSetToReport := new(metric.LabelSet)
+	observerLabelsToReport := new([]core.KeyValue)
 	cb := func(result metric.Float64ObserverResult) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
-		labelset := *observerLabelSetToReport
+		labels := *observerLabelsToReport
 		(*observerLock).RUnlock()
-		result.Observe(value, labelset)
+		result.Observe(value, labels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
@@ -69,14 +70,14 @@ func main() {
 	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
 	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
-	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
-	notSoCommonLabels := meter.Labels(lemonsKey.Int(13))
+	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
+	notSoCommonLabels := []core.KeyValue{lemonsKey.Int(13)}
 
 	ctx := context.Background()
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
-	*observerLabelSetToReport = &commonLabels
+	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,
@@ -89,7 +90,7 @@ func main() {
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
-	*observerLabelSetToReport = &notSoCommonLabels
+	*observerLabelsToReport = notSoCommonLabels
 	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,
@@ -102,7 +103,7 @@ func main() {
 
 	(*observerLock).Lock()
 	*observerValueToReport = 13.0
-	*observerLabelSetToReport = &commonLabels
+	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
 	meter.RecordBatch(
 		ctx,

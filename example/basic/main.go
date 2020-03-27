@@ -72,10 +72,10 @@ func main() {
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
-	commonLabels := meter.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
+	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
 
 	oneMetricCB := func(result metric.Float64ObserverResult) {
-		result.Observe(1, commonLabels)
+		result.Observe(1, commonLabels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
 		metric.WithKeys(fooKey, barKey, lemonsKey),
@@ -91,7 +91,7 @@ func main() {
 		barKey.String("bar1"),
 	)
 
-	measure := measureTwo.Bind(commonLabels)
+	measure := measureTwo.Bind(commonLabels...)
 	defer measure.Unbind()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {

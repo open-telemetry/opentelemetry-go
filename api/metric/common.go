@@ -35,7 +35,7 @@ type asyncInstrument struct {
 
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
-func (s syncInstrument) bind(labels LabelSet) syncBoundInstrument {
+func (s syncInstrument) bind(labels []core.KeyValue) syncBoundInstrument {
 	return newSyncBoundInstrument(s.instrument.Bind(labels))
 }
 
@@ -47,7 +47,7 @@ func (s syncInstrument) int64Measurement(value int64) Measurement {
 	return newMeasurement(s.instrument, core.NewInt64Number(value))
 }
 
-func (s syncInstrument) directRecord(ctx context.Context, number core.Number, labels LabelSet) {
+func (s syncInstrument) directRecord(ctx context.Context, number core.Number, labels []core.KeyValue) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
 

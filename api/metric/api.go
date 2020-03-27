@@ -31,11 +31,6 @@ type Provider interface {
 	Meter(name string) Meter
 }
 
-// LabelSet is an implementation-level interface that represents a
-// []core.KeyValue for use as pre-defined labels in the metrics API.
-type LabelSet interface {
-}
-
 // Config contains some options for metrics of any kind.
 type Config struct {
 	// Description is an optional field describing the metric
@@ -161,12 +156,8 @@ func (d Descriptor) LibraryName() string {
 
 // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
 type Meter interface {
-	// Labels returns a reference to a set of labels that cannot
-	// be read by the application.
-	Labels(...core.KeyValue) LabelSet
-
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
 
 	// All instrument constructors may return an error for
 	// conditions such as:

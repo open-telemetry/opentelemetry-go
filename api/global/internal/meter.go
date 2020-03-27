@@ -39,9 +39,6 @@ import (
 // provider.  Mutexes in the Provider and Meters ensure that each
 // instrument has a delegate before the global provider is set.
 //
-// LabelSets are implemented by delegating to the Meter instance using
-// the metric.LabelSetDelegator interface.
-//
 // Bound instrument operations are implemented by delegating to the
 // instrument after it is registered, with a sync.Once initializer to
 // protect against races with Release().
@@ -100,28 +97,17 @@ type AsyncImpler interface {
 	AsyncImpl() metric.AsyncImpl
 }
 
-type labelSet struct {
-	delegate unsafe.Pointer // (* metric.LabelSet)
-
-	meter *meter
-	value []core.KeyValue
-
-	initialize sync.Once
-}
-
 type syncHandle struct {
 	delegate unsafe.Pointer // (*metric.HandleImpl)
 
 	inst   *syncImpl
-	labels metric.LabelSet
+	labels []core.KeyValue
 
 	initialize sync.Once
 }
 
 var _ metric.Provider = &meterProvider{}
 var _ metric.Meter = &meter{}
-var _ metric.LabelSet = &labelSet{}
-var _ metric.LabelSetDelegate = &labelSet{}
 var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSyncImpl = &syncHandle{}
 var _ metric.AsyncImpl = &asyncImpl{}
@@ -254,7 +240,7 @@ func (inst *syncImpl) Implementation() interface{} {
 	return inst
 }
 
-func (inst *syncImpl) Bind(labels metric.LabelSet) metric.BoundSyncImpl {
+func (inst *syncImpl) Bind(labels []core.KeyValue) metric.BoundSyncImpl {
 	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
 	}
@@ -340,13 +326,13 @@ func (obs *asyncImpl) setDelegate(d metric.Meter) {
 
 // Metric updates
 
-func (m *meter) RecordBatch(ctx context.Context, labels metric.LabelSet, measurements ...metric.Measurement) {
+func (m *meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
 	if delegatePtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
 
-func (inst *syncImpl) RecordOne(ctx context.Context, number core.Number, labels metric.LabelSet) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
 	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
@@ -375,35 +361,6 @@ func (bound *syncHandle) RecordOne(ctx context.Context, number core.Number) {
 		return
 	}
 	(*implPtr).RecordOne(ctx, number)
-}
-
-// LabelSet initialization
-
-func (m *meter) Labels(labels ...core.KeyValue) metric.LabelSet {
-	return &labelSet{
-		meter: m,
-		value: labels,
-	}
-}
-
-func (labels *labelSet) Delegate() metric.LabelSet {
-	meterPtr := (*metric.Meter)(atomic.LoadPointer(&labels.meter.delegate))
-	if meterPtr == nil {
-		// This is technically impossible, provided the global
-		// Meter is updated after the meters and instruments
-		// have been delegated.
-		return labels
-	}
-	var implPtr *metric.LabelSet
-	labels.initialize.Do(func() {
-		implPtr = new(metric.LabelSet)
-		*implPtr = (*meterPtr).Labels(labels.value...)
-		atomic.StorePointer(&labels.delegate, unsafe.Pointer(implPtr))
-	})
-	if implPtr == nil {
-		implPtr = (*metric.LabelSet)(atomic.LoadPointer(&labels.delegate))
-	}
-	return (*implPtr)
 }
 
 // Constructors
@@ -466,7 +423,6 @@ func AtomicFieldOffsets() map[string]uintptr {
 		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
 		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
 		"asyncImpl.delegate":     unsafe.Offsetof(asyncImpl{}.delegate),
-		"labelSet.delegate":      unsafe.Offsetof(labelSet{}.delegate),
 		"syncHandle.delegate":    unsafe.Offsetof(syncHandle{}.delegate),
 	}
 }

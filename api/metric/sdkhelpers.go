@@ -26,12 +26,8 @@ import (
 // re-implement the API's type-safe interfaces.  Helpers provided in
 // this package will construct a `Meter` given a `MeterImpl`.
 type MeterImpl interface {
-	// Labels returns a reference to a set of labels that cannot
-	// be read by the application.
-	Labels(...core.KeyValue) LabelSet
-
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, LabelSet, ...Measurement)
+	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
 
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
@@ -43,17 +39,8 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(core.Number, LabelSet)),
+		callback func(func(core.Number, []core.KeyValue)),
 	) (AsyncImpl, error)
-}
-
-// LabelSetDelegate is a general-purpose delegating implementation of
-// the LabelSet interface.  This is implemented by the default
-// Provider returned by api/global.SetMeterProvider(), and should be
-// tested for by implementations before converting a LabelSet to their
-// private concrete type.
-type LabelSetDelegate interface {
-	Delegate() LabelSet
 }
 
 // InstrumentImpl is a common interface for synchronous and
@@ -75,10 +62,10 @@ type SyncImpl interface {
 
 	// Bind creates an implementation-level bound instrument,
 	// binding a label set with this instrument implementation.
-	Bind(labels LabelSet) BoundSyncImpl
+	Bind(labels []core.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number core.Number, labels LabelSet)
+	RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a
@@ -111,13 +98,13 @@ type wrappedMeterImpl struct {
 // int64ObserverResult is an adapter for int64-valued asynchronous
 // callbacks.
 type int64ObserverResult struct {
-	observe func(core.Number, LabelSet)
+	observe func(core.Number, []core.KeyValue)
 }
 
 // float64ObserverResult is an adapter for float64-valued asynchronous
 // callbacks.
 type float64ObserverResult struct {
-	observe func(core.Number, LabelSet)
+	observe func(core.Number, []core.KeyValue)
 }
 
 var (
@@ -167,11 +154,7 @@ func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
 	}
 }
 
-func (m *wrappedMeterImpl) Labels(labels ...core.KeyValue) LabelSet {
-	return m.impl.Labels(labels...)
-}
-
-func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls LabelSet, ms ...Measurement) {
+func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measurement) {
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
@@ -238,7 +221,7 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 	return Float64Measure{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, LabelSet))) (AsyncImpl, error) {
+func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
 	opts = insertResource(m.impl, opts)
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
@@ -251,7 +234,7 @@ func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64Obse
 	}
 	return WrapInt64ObserverInstrument(
 		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts,
-			func(observe func(core.Number, LabelSet)) {
+			func(observe func(core.Number, []core.KeyValue)) {
 				// Note: this memory allocation could be avoided by
 				// using a pointer to this object and mutating it
 				// on each collection interval.
@@ -274,7 +257,7 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 	}
 	return WrapFloat64ObserverInstrument(
 		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts,
-			func(observe func(core.Number, LabelSet)) {
+			func(observe func(core.Number, []core.KeyValue)) {
 				callback(float64ObserverResult{observe})
 			}))
 }
@@ -288,10 +271,10 @@ func WrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Obser
 	return Float64Observer{asyncInstrument: common}, err
 }
 
-func (io int64ObserverResult) Observe(value int64, labels LabelSet) {
+func (io int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
 	io.observe(core.NewInt64Number(value), labels)
 }
 
-func (fo float64ObserverResult) Observe(value float64, labels LabelSet) {
+func (fo float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
 	fo.observe(core.NewFloat64Number(value), labels)
 }

@@ -19,6 +19,7 @@ import (
 	"log"
 	"time"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
@@ -42,9 +43,9 @@ func ExampleNewExportPipeline() {
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
-	labels := meter.Labels(key.String("value"))
+	labels := []core.KeyValue{key.String("value")}
 
-	counter.Add(ctx, 100, labels)
+	counter.Add(ctx, 100, labels...)
 
 	// Output:
 	// {

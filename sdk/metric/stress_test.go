@@ -44,7 +44,7 @@ import (
 const (
 	concurrencyPerCPU = 100
 	reclaimPeriod     = time.Millisecond * 100
-	testRun           = time.Second
+	testRun           = 5 * time.Second
 	epsilon           = 1e-10
 )
 
@@ -75,7 +75,7 @@ type (
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) SyncImpler
 		getUpdateValue func() core.Number
-		operate        func(interface{}, context.Context, core.Number, api.LabelSet)
+		operate        func(interface{}, context.Context, core.Number, []core.KeyValue)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
@@ -167,7 +167,6 @@ func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup
 	}
 	kvs := f.someLabels()
 	clabs := canonicalizeLabels(kvs)
-	labs := meter.Labels(kvs...)
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,
@@ -177,7 +176,7 @@ func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup
 		sleep := time.Duration(rand.ExpFloat64() * float64(dur))
 		time.Sleep(sleep)
 		value := f.impl.getUpdateValue()
-		f.impl.operate(instrument, ctx, value, labs)
+		f.impl.operate(instrument, ctx, value, kvs)
 
 		actual, _ := f.expected.LoadOrStore(key, f.impl.newStore())
 
@@ -191,6 +190,7 @@ func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup
 }
 
 func (f *testFixture) assertTest(numCollect int) {
+	var allErrs []func()
 	csize := 0
 	f.received.Range(func(key, gstore interface{}) bool {
 		csize++
@@ -198,13 +198,18 @@ func (f *testFixture) assertTest(numCollect int) {
 
 		estore, loaded := f.expected.Load(key)
 		if !loaded {
-			f.T.Error("Could not locate expected key: ", key)
+			allErrs = append(allErrs, func() {
+				f.T.Error("Could not locate expected key: ", key)
+			})
+			return true
 		}
 		evalue := f.impl.readStore(estore)
 
 		if !f.impl.equalValues(evalue, gvalue) {
-			f.T.Error("Expected value mismatch: ",
-				evalue, "!=", gvalue, " for ", key)
+			allErrs = append(allErrs, func() {
+				f.T.Error("Expected value mismatch: ",
+					evalue, "!=", gvalue, " for ", key)
+			})
 		}
 		return true
 	})
@@ -212,12 +217,18 @@ func (f *testFixture) assertTest(numCollect int) {
 	f.expected.Range(func(key, value interface{}) bool {
 		rsize++
 		if _, loaded := f.received.Load(key); !loaded {
-			f.T.Error("Did not receive expected key: ", key)
+			allErrs = append(allErrs, func() {
+				f.T.Error("Did not receive expected key: ", key)
+			})
 		}
 		return true
 	})
 	if rsize != csize {
 		f.T.Error("Did not receive the correct set of metrics: Received != Expected", rsize, csize)
+	}
+
+	for _, anErr := range allErrs {
+		anErr()
 	}
 
 	// Note: It's useful to know the test triggers this condition,
@@ -353,9 +364,9 @@ func intCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			counter := inst.(api.Int64Counter)
-			counter.Add(ctx, value.AsInt64(), labels)
+			counter.Add(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			n := core.NewInt64Number(0)
@@ -391,9 +402,9 @@ func floatCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			counter := inst.(api.Float64Counter)
-			counter.Add(ctx, value.AsFloat64(), labels)
+			counter.Add(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			n := core.NewFloat64Number(0.0)
@@ -427,9 +438,9 @@ func intLastValueTestImpl() testImpl {
 			r1 := rand.Int63()
 			return core.NewInt64Number(rand.Int63() - r1)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			measure := inst.(api.Int64Measure)
-			measure.Record(ctx, value.AsInt64(), labels)
+			measure.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
@@ -468,9 +479,9 @@ func floatLastValueTestImpl() testImpl {
 		getUpdateValue: func() core.Number {
 			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels api.LabelSet) {
+		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
 			measure := inst.(api.Float64Measure)
-			measure.Record(ctx, value.AsFloat64(), labels)
+			measure.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{

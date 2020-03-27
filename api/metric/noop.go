@@ -23,7 +23,6 @@ import (
 type NoopProvider struct{}
 type NoopMeter struct{}
 
-type noopLabelSet struct{}
 type noopInstrument struct{}
 type noopBoundInstrument struct{}
 type NoopSync struct{ noopInstrument }
@@ -33,7 +32,6 @@ var _ Provider = NoopProvider{}
 var _ Meter = NoopMeter{}
 var _ SyncImpl = NoopSync{}
 var _ BoundSyncImpl = noopBoundInstrument{}
-var _ LabelSet = noopLabelSet{}
 var _ AsyncImpl = NoopAsync{}
 
 func (NoopProvider) Meter(name string) Meter {
@@ -54,18 +52,14 @@ func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
 func (noopBoundInstrument) Unbind() {
 }
 
-func (NoopSync) Bind(LabelSet) BoundSyncImpl {
+func (NoopSync) Bind([]core.KeyValue) BoundSyncImpl {
 	return noopBoundInstrument{}
 }
 
-func (NoopSync) RecordOne(context.Context, core.Number, LabelSet) {
+func (NoopSync) RecordOne(context.Context, core.Number, []core.KeyValue) {
 }
 
-func (NoopMeter) Labels(...core.KeyValue) LabelSet {
-	return noopLabelSet{}
-}
-
-func (NoopMeter) RecordBatch(context.Context, LabelSet, ...Measurement) {
+func (NoopMeter) RecordBatch(context.Context, []core.KeyValue, ...Measurement) {
 }
 
 func (NoopMeter) NewInt64Counter(string, ...Option) (Int64Counter, error) {

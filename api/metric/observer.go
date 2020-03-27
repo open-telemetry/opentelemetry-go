@@ -14,16 +14,18 @@
 
 package metric
 
+import "go.opentelemetry.io/otel/api/core"
+
 // Int64ObserverResult is an interface for reporting integral
 // observations.
 type Int64ObserverResult interface {
-	Observe(value int64, labels LabelSet)
+	Observe(value int64, labels ...core.KeyValue)
 }
 
 // Float64ObserverResult is an interface for reporting floating point
 // observations.
 type Float64ObserverResult interface {
-	Observe(value float64, labels LabelSet)
+	Observe(value float64, labels ...core.KeyValue)
 }
 
 // Int64ObserverCallback is a type of callback that integral
