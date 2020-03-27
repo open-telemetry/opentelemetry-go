@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/key"
@@ -90,7 +91,7 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 	ctx := context.Background()
 	sdk := global.Meter("test")
-	labs := metric.Labels(key.String("A", "B"))
+	labs := []core.KeyValue{key.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
@@ -109,7 +110,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 
 	global.SetMeterProvider(fix)
 
-	labs := metric.Labels(key.String("A", "B"))
+	labs := []core.KeyValue{key.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()

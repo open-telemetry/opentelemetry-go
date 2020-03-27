@@ -70,8 +70,8 @@ func main() {
 	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
 	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
-	commonLabels := metric.Labels(lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3"))
-	notSoCommonLabels := metric.Labels(lemonsKey.Int(13))
+	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
+	notSoCommonLabels := []core.KeyValue{lemonsKey.Int(13)}
 
 	ctx := context.Background()
 

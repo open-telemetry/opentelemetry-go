@@ -333,10 +333,10 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.RecordBatch(
 		ctx,
-		metric.Labels(
+		[]core.KeyValue{
 			key.String("A", "B"),
 			key.String("C", "D"),
-		),
+		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
 		measure1.Measurement(3),

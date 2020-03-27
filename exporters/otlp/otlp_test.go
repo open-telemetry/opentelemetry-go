@@ -117,7 +117,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	ctx := context.Background()
 	meter := pusher.Meter("test-meter")
-	labels := metric.Labels(core.Key("test").Bool(true))
+	labels := []core.KeyValue{core.Bool("test", true)}
 
 	type data struct {
 		iKind metric.Kind

@@ -139,7 +139,7 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
-		labels := metric.Labels(key.String("A", "B"))
+		labels := []core.KeyValue{key.String("A", "B")}
 		c.Add(ctx, 42, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 42)
@@ -151,7 +151,7 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
-		labels := metric.Labels(key.String("A", "B"), key.String("C", "D"))
+		labels := []core.KeyValue{key.String("A", "B"), key.String("C", "D")}
 		c.Add(ctx, 42, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 42)
@@ -166,7 +166,7 @@ func TestMeasure(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewFloat64Measure("test.measure.float")
 		ctx := context.Background()
-		labels := metric.Labels()
+		labels := []core.KeyValue{}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 42)
@@ -178,7 +178,7 @@ func TestMeasure(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
-		labels := metric.Labels(key.Int("I", 1))
+		labels := []core.KeyValue{key.Int("I", 1)}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 42)
@@ -190,7 +190,7 @@ func TestMeasure(t *testing.T) {
 
 func TestObserver(t *testing.T) {
 	{
-		labels := metric.Labels(key.String("O", "P"))
+		labels := []core.KeyValue{key.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels...)
@@ -201,7 +201,7 @@ func TestObserver(t *testing.T) {
 		checkObserverBatch(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
 	}
 	{
-		labels := metric.Labels()
+		labels := []core.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels...)
