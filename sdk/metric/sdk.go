@@ -557,6 +557,9 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 		unmapped := inuse.refMapped.tryUnmap()
 		// If able to unmap then remove the record from the current Map.
 		if unmapped {
+			// TODO: Consider leaving the record in the map for one
+			// collection interval? Since creating records is relatively
+			// expensive, this would optimize common cases of ongoing use.
 			m.current.Delete(inuse.mapkey())
 		}
 
