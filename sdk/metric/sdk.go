@@ -23,12 +23,10 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
-	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -269,11 +267,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *recor
 
 	if actual, ok := s.meter.current.Load(mk); ok {
 		// Existing record case.
-		newRec := actual.(*record)
-		if newRec.refMapped.ref() {
+		existingRec := actual.(*record)
+		if existingRec.refMapped.ref() {
 			// At this moment it is guaranteed that the entry is in
 			// the map and will not be removed.
-			return newRec
+			return existingRec
 		}
 		// This entry is no longer mapped, try to add a new entry.
 	}
@@ -686,19 +684,4 @@ func (r *record) mapkey() mapkey {
 		descriptor: &r.inst.descriptor,
 		ordered:    r.labels.ordered,
 	}
-}
-
-func AtomicFieldOffsets() (r []ottest.FieldOffset) {
-	fields := map[string]uintptr{
-		"record.refMapped.value":        unsafe.Offsetof(record{}.refMapped.value),
-		"record.modified":               unsafe.Offsetof(record{}.modified),
-		"record.labels.cachedEncoderID": unsafe.Offsetof(record{}.labels.cachedEncoded),
-	}
-	for name, offset := range fields {
-		r = append(r, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
-	}
-	return
 }

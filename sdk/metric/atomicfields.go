@@ -14,26 +14,12 @@
 
 package metric
 
-import (
-	"os"
-	"testing"
+import "unsafe"
 
-	ottest "go.opentelemetry.io/otel/internal/testing"
-)
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	offsets := AtomicFieldOffsets()
-	var r []ottest.FieldOffset
-	for name, offset := range offsets {
-		r = append(r, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
+func AtomicFieldOffsets() map[string]uintptr {
+	return map[string]uintptr{
+		"record.refMapped.value":        unsafe.Offsetof(record{}.refMapped.value),
+		"record.modified":               unsafe.Offsetof(record{}.modified),
+		"record.labels.cachedEncoderID": unsafe.Offsetof(record{}.labels.cachedEncoded),
 	}
-	if !ottest.Aligned8Byte(r, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
 }
