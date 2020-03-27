@@ -143,6 +143,19 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			waitTime:       waitTime,
 			parallel:       true,
 		},
+		{
+			name: "parallel span blocking",
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithScheduleDelayMillis(schDelay),
+				sdktrace.WithMaxExportBatchSize(200),
+				sdktrace.WithBlocking(),
+			},
+			wantNumSpans:   2000,
+			wantBatchCount: 10,
+			genNumSpans:    2000,
+			waitTime:       waitTime,
+			parallel:       true,
+		},
 	}
 	for _, option := range options {
 		te := testBatchExporter{}
@@ -157,6 +170,8 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		generateSpan(t, option.parallel, tr, option)
 
 		time.Sleep(option.waitTime)
+
+		tp.UnregisterSpanProcessor(ssp)
 
 		gotNumOfSpans := te.len()
 		if option.wantNumSpans != gotNumOfSpans {
