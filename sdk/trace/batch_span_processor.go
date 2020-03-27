@@ -103,10 +103,10 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 
 	bsp.stopCh = make(chan struct{})
 
-	//Start timer to export metrics
+	// Start timer to export spans.
 	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
 	bsp.stopWait.Add(1)
-	go func(ctx context.Context) {
+	go func() {
 		defer ticker.Stop()
 		batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
 		for {
@@ -120,7 +120,7 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 				bsp.processQueue(&batch)
 			}
 		}
-	}(context.Background())
+	}()
 
 	return bsp, nil
 }
@@ -174,11 +174,9 @@ func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 	for {
 		// Read spans until either the buffer fills or the
 		// queue is empty.
-		ok := true
-		for ok && len(*batch) < bsp.o.MaxExportBatchSize {
-			var sd *export.SpanData
+		for ok := true; ok && len(*batch) < bsp.o.MaxExportBatchSize; {
 			select {
-			case sd = <-bsp.queue:
+			case sd := <-bsp.queue:
 				if sd != nil && sd.SpanContext.IsSampled() {
 					*batch = append(*batch, sd)
 				}
@@ -192,13 +190,18 @@ func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 		}
 
 		// Send one batch, then continue reading until the
-		// queue or the buffer is empty.
+		// buffer is empty.
 		bsp.e.ExportSpans(context.Background(), *batch)
 		*batch = (*batch)[:0]
 	}
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
+	select {
+	case <-bsp.stopCh:
+		return
+	default:
+	}
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 	} else {
