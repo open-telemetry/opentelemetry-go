@@ -169,8 +169,7 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // processQueue removes spans from the `queue` channel until there is
 // no more data.  It calls the exporter in batches of up to
-// MaxExportBatchSize until all the available data has been processed
-// or the stop channel closes.
+// MaxExportBatchSize until all the available data have been processed.
 func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 	for {
 		// Read spans until either the buffer fills or the
@@ -183,8 +182,6 @@ func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 				if sd != nil && sd.SpanContext.IsSampled() {
 					*batch = append(*batch, sd)
 				}
-			case <-bsp.stopCh:
-				return
 			default:
 				ok = false
 			}
