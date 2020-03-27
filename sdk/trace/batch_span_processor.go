@@ -108,15 +108,16 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 	bsp.stopWait.Add(1)
 	go func(ctx context.Context) {
 		defer ticker.Stop()
+		batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
 		for {
 			select {
 			case <-bsp.stopCh:
-				bsp.processQueue()
+				bsp.processQueue(&batch)
 				close(bsp.queue)
 				bsp.stopWait.Done()
 				return
 			case <-ticker.C:
-				bsp.processQueue()
+				bsp.processQueue(&batch)
 			}
 		}
 	}(context.Background())
@@ -166,32 +167,37 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
-func (bsp *BatchSpanProcessor) processQueue() {
-	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
+// processQueue removes spans from the `queue` channel until there is
+// no more data.  It calls the exporter in batches of up to
+// MaxExportBatchSize until all the available data has been processed
+// or the stop channel closes.
+func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 	for {
-		var sd *export.SpanData
-		var ok bool
-		select {
-		case sd = <-bsp.queue:
-			if sd != nil && sd.SpanContext.IsSampled() {
-				batch = append(batch, sd)
+		// Read spans until either the buffer fills or the
+		// queue is empty.
+		ok := true
+		for ok && len(*batch) < bsp.o.MaxExportBatchSize {
+			var sd *export.SpanData
+			select {
+			case sd = <-bsp.queue:
+				if sd != nil && sd.SpanContext.IsSampled() {
+					*batch = append(*batch, sd)
+				}
+			case <-bsp.stopCh:
+				return
+			default:
+				ok = false
 			}
-			ok = true
-		default:
-			ok = false
 		}
 
-		if ok {
-			if len(batch) >= bsp.o.MaxExportBatchSize {
-				bsp.e.ExportSpans(context.Background(), batch)
-				batch = batch[:0]
-			}
-		} else {
-			if len(batch) > 0 {
-				bsp.e.ExportSpans(context.Background(), batch)
-			}
-			break
+		if len(*batch) == 0 {
+			return
 		}
+
+		// Send one batch, then continue reading until the
+		// queue or the buffer is empty.
+		bsp.e.ExportSpans(context.Background(), *batch)
+		*batch = (*batch)[:0]
 	}
 }
 
