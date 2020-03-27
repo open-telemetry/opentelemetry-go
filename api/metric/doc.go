@@ -26,11 +26,7 @@
 // The primary object that handles metrics is Meter. Meter can be
 // obtained from Provider. The implementations of the Meter and
 // Provider are provided by SDK. Normally, the Meter is used directly
-// only for the instrument creation, LabelSet generation and batch
-// recording.
-//
-// LabelSet is a set of keys and values that are in a suitable,
-// optimized form to be used by Meter.
+// only for the instrument creation and batch recording.
 //
 // Counters are instruments that are reporting a quantity or a sum. An
 // example could be bank account balance or bytes downloaded. Counters

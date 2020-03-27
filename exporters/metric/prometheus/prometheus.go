@@ -287,9 +287,9 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	ch <- m
 }
 
-func (c *collector) toDesc(metric *export.Record) *prometheus.Desc {
-	desc := metric.Descriptor()
-	labels := labelsKeys(metric.Labels())
+func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
+	desc := record.Descriptor()
+	labels := labelsKeys(record.Labels())
 	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
 }
 
