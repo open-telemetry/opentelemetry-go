@@ -353,7 +353,9 @@ func DefaultErrorHandler(err error) {
 // makeLabels returns a `labels` corresponding to the arguments.  Labels
 // are sorted and de-duplicated, with last-value-wins semantics.  Note that
 // sorting and deduplicating happens in-place to avoid allocation, so the
-// passed slice will be modified.
+// passed slice will be modified.  The `sortSlice` argument refers to a memory
+// location used temporarily while sorting the slice, to avoid a memory
+// allocation.
 func (m *SDK) makeLabels(kvs []core.KeyValue, sortSlice *sortedLabels) labels {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -644,15 +646,20 @@ func (m *SDK) Resource() resource.Resource {
 
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
+	// Labels will be computed the first time acquireHandle is
+	// called.  Subsequent calls to acquireHandle will re-use the
+	// previously computed value instead of recomputing the
+	// ordered labels.
 	var labels labels
-	for _, meas := range measurements {
+	for i, meas := range measurements {
 		s := meas.SyncImpl().(*syncInstrument)
 
 		h := s.acquireHandle(kvs, &labels)
 
-		// This assignment avoids recomputing the ordered
-		// labels on subsequent measurements.
-		labels = h.labels
+		// Re-use labels for the next measurement.
+		if i == 0 {
+			labels = h.labels
+		}
 
 		defer h.Unbind()
 		h.RecordOne(ctx, meas.Number())
