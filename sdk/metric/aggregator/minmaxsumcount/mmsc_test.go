@@ -16,9 +16,11 @@ package minmaxsumcount
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"os"
+	"sync"
 	"testing"
 	"unsafe"
 
@@ -236,5 +238,96 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		max, err := agg.Max()
 		require.Equal(t, aggregator.ErrNoData, err)
 		require.Equal(t, core.Number(0), max)
+	})
+}
+
+func BenchmarkCurrentMinMaxSumCount(b *testing.B) {
+	ctx := context.Background()
+	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
+	agg := New(descriptor)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := agg.Update(ctx, core.NewFloat64Number(float64(i)), descriptor); err != nil {
+			fmt.Print(err)
+		}
+	}
+}
+
+func BenchmarkCurrentMinMaxSumCountRunParallel(b *testing.B) {
+	ctx := context.Background()
+	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
+	agg := New(descriptor)
+
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := agg.Update(ctx, core.NewFloat64Number(float64(1.23)), descriptor); err != nil {
+				fmt.Print(err)
+			}
+		}
+	})
+}
+
+type testMMSCFloat64 struct {
+	sync.Mutex
+
+	min   float64
+	max   float64
+	sum   float64
+	count uint64
+}
+
+func newTestMMSCFloat64() *testMMSCFloat64 {
+	return &testMMSCFloat64{
+		min:   math.MaxFloat64,
+		max:   (-1. * math.MaxFloat64),
+		count: 0,
+		sum:   0.,
+	}
+}
+
+func (tmmsc *testMMSCFloat64) Update(_ context.Context, number core.Number) error {
+	num := number.AsFloat64()
+	tmmsc.Lock()
+	if tmmsc.min > num {
+		tmmsc.min = num
+	}
+	if tmmsc.max < num {
+		tmmsc.max = num
+	}
+	tmmsc.count++
+	tmmsc.sum += num
+	tmmsc.Unlock()
+	return nil
+}
+
+func BenchmarkCurrentMinMaxSumCountMutex(b *testing.B) {
+	ctx := context.Background()
+	agg := newTestMMSCFloat64()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := agg.Update(ctx, core.NewFloat64Number(float64(i))); err != nil {
+			fmt.Print(err)
+		}
+	}
+}
+
+func BenchmarkCurrentMinMaxSumCountMutexRunParallel(b *testing.B) {
+	ctx := context.Background()
+	agg := newTestMMSCFloat64()
+
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := agg.Update(ctx, core.NewFloat64Number(float64(1.23))); err != nil {
+				fmt.Print(err)
+			}
+		}
 	})
 }
