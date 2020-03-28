@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -53,4 +54,11 @@ func TestExactMeasure(t *testing.T) {
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testMeasureDesc).(*array.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testObserverDesc).(*array.Aggregator) })
+}
+
+func TestHistogramMeasure(t *testing.T) {
+	ex := simple.NewWithHistogramMeasure([]core.Number{})
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testMeasureDesc).(*histogram.Aggregator) })
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testObserverDesc).(*histogram.Aggregator) })
 }

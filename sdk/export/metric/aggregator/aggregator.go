@@ -75,6 +75,7 @@ type (
 
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
+		Sum
 		Histogram() (Buckets, error)
 	}
 
