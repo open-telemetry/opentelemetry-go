@@ -8,6 +8,6 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.3.0
-	go.opentelemetry.io/otel/exporters/trace/jaeger v0.3.0
+	go.opentelemetry.io/otel v0.4.0
+	go.opentelemetry.io/otel/exporters/trace/jaeger v0.4.0
 )
