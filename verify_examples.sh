@@ -40,8 +40,6 @@ if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
 	printf "$(git log -1)"
 	printf "\n\nError: HEAD is not pointing to a tagged version"
 fi
-exit
-
 
 make ${TOOLS_DIR}/gojq
 
