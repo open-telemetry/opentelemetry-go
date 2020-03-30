@@ -112,7 +112,7 @@ attempt to maintain backward compatibility with the alpha release.
 | Metrics API                      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
 | Metrics SDK                      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
 | Prometheus Metrics Exporter      | Alpha v0.2.0 | October 28 2019  | December 03 2019 |
-| Context Prop. rename/Baggage     | Alpha v0.3.0 | December 23 2019 | -                |
-| OpenTelemetry Collector Exporter | Alpha v0.4.0 | January 15 2020  | -                |
-| Zipkin Trace Exporter            | Alpha        | Unknown          | -                |
-| OpenCensus Bridge                | Alpha        | Unknown          | -                |
+| Context Prop. rename/Baggage     | Beta  v0.4.0 | December 23 2019 | March 30 2020    |
+| OpenTelemetry Collector Exporter | Beta  v0.4.0 | December 23 2019 | March 30 2020    |
+| Zipkin Trace Exporter            | Beta  v0.4.0 | December 23 2019 | March 30 2020    |
+| OTLP Trace & Metrics Exporter    | Beta  v0.4.0 | December 23 2019 | March 30 2020    |
