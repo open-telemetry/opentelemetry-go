@@ -1,7 +1,7 @@
 # OpenTelemetry-Go
 
 [![Circle CI](https://circleci.com/gh/open-telemetry/opentelemetry-go.svg?style=svg)](https://circleci.com/gh/open-telemetry/opentelemetry-go)
-[![Docs](https://godoc.org/go.opentelemetry.io/otel?status.svg)](https://godoc.org/go.opentelemetry.io/otel)
+[![Docs](https://godoc.org/go.opentelemetry.io/otel?status.svg)](https://pkg.go.dev/go.opentelemetry.io/otel)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/otel)](https://goreportcard.com/report/go.opentelemetry.io/otel)
 [![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go.svg)](https://gitter.im/open-telemetry/opentelemetry-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
@@ -79,7 +79,7 @@ func main() {
 ```
 
 See the [API
-documentation](https://godoc.org/go.opentelemetry.io/otel) for more
+documentation](https://pkg.go.dev/go.opentelemetry.io/otel) for more
 detail, and the
 [opentelemetry-example-app](./example/README.md)
 for a complete example.
