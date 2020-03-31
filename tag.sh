@@ -74,11 +74,11 @@ TAG_CURRENT=`git tag | grep '^v' | tail -1`
 PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; | egrep -v 'tools' | sed 's/^\.\///' | sort)
 
 # Create tag for root module
-git tag -a "${TAG}" -m "Version ${TAG}" ${COMMIT_HASH}
+git tag -a "${TAG}" -s -m "Version ${TAG}" ${COMMIT_HASH}
 
 # Create tag for submodules
 for dir in $PACKAGE_DIRS; do
-	git tag -a "${dir}/${TAG}" -m "Version ${dir}/${TAG}" ${COMMIT_HASH}
+	git tag -a "${dir}/${TAG}" -s -m "Version ${dir}/${TAG}" ${COMMIT_HASH}
 done
 
 # Generate commit logs
