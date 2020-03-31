@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright The OpenTelemetry Authors
 #
@@ -49,7 +49,7 @@ else
 fi
 
 TAG_FOUND=`git tag --list ${TAG}`
-if [ ${TAG_FOUND} = ${TAG} ] ; then
+if [[ ${TAG_FOUND} = ${TAG} ]] ; then
         printf "Tag ${TAG} already exists\n"
         exit -1
 fi
