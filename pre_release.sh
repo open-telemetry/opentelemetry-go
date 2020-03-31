@@ -70,7 +70,7 @@ fi
 
 # Update sdk/opentelemetry.go
 cp ./sdk/opentelemetry.go ./sdk/opentelemetry.go.bak
-sed 's/\(return "\)[0-9]\+\.[0-9]\+\.[0-9]\+/\1'"${OTEL_VERSION}"'/' ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
+sed "s/\(return \"\)[0-9]*\.[0-9]*\.[0-9]*\"/\1${OTEL_VERSION}\"/" ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
 rm -f ./sdk/opentelemetry.go.bak
 
 # Update go.mod
