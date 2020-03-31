@@ -265,7 +265,8 @@ func TestEmptySpanData(t *testing.T) {
 func TestSpanData(t *testing.T) {
 	// Full test of span data transform.
 
-	startTime := time.Now()
+	// March 31, 2020 5:01:26 1234nanos (UTC)
+	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
 	spanData := &export.SpanData{
 		SpanContext: core.SpanContext{
@@ -332,8 +333,8 @@ func TestSpanData(t *testing.T) {
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SERVER,
-		StartTimeUnixNano:      uint64(startTime.Nanosecond()),
-		EndTimeUnixNano:        uint64(endTime.Nanosecond()),
+		StartTimeUnixNano:      uint64(1585674086000001234),
+		EndTimeUnixNano:        uint64(1585674096000001234),
 		Status:                 status(spanData.StatusCode, spanData.StatusMessage),
 		Events:                 spanEvents(spanData.MessageEvents),
 		Links:                  links(spanData.Links),
