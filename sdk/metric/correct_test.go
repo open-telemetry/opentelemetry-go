@@ -285,15 +285,15 @@ func TestObserverCollection(t *testing.T) {
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
-		// TODO: The spec says the last-value wins in observer
-		// instruments, but it is not implemented yet, i.e., with the
-		// following line we get 1-1==0 instead of -1:
-		// result.Observe(1, meter.Labels(key.String("A", "B")))
-
+		result.Observe(1, key.String("A", "B"))
+		// last value wins
 		result.Observe(-1, key.String("A", "B"))
 		result.Observe(-1, key.String("C", "D"))
 	})
 	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+		result.Observe(-1, key.String("A", "B"))
+		result.Observe(1)
+		// last value wins
 		result.Observe(1, key.String("A", "B"))
 		result.Observe(1)
 	})
