@@ -15,10 +15,12 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -29,12 +31,16 @@ type (
 	selectorSketch      struct {
 		config *ddsketch.Config
 	}
+	selectorHistogram struct {
+		boundaries []core.Number
+	}
 )
 
 var (
 	_ export.AggregationSelector = selectorInexpensive{}
 	_ export.AggregationSelector = selectorSketch{}
 	_ export.AggregationSelector = selectorExact{}
+	_ export.AggregationSelector = selectorHistogram{}
 )
 
 // NewWithInexpensiveMeasure returns a simple aggregation selector
@@ -66,6 +72,14 @@ func NewWithExactMeasure() export.AggregationSelector {
 	return selectorExact{}
 }
 
+// NewWithHistogramMeasure returns a simple aggregation selector that uses counter,
+// histogram, and histogram aggregators for the three kinds of metric. This
+// selector uses more memory than the NewWithInexpensiveMeasure because it
+// uses a counter per bucket.
+func NewWithHistogramMeasure(boundaries []core.Number) export.AggregationSelector {
+	return selectorHistogram{boundaries: boundaries}
+}
+
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
@@ -94,6 +108,17 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 		fallthrough
 	case metric.MeasureKind:
 		return array.New()
+	default:
+		return sum.New()
+	}
+}
+
+func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
+	case metric.ObserverKind:
+		fallthrough
+	case metric.MeasureKind:
+		return histogram.New(descriptor, s.boundaries)
 	default:
 		return sum.New()
 	}
