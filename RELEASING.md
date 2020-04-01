@@ -34,3 +34,12 @@ Use the same tag as used in the pre-release step.
 ## Release
 Now create a release for the new tag on github. tag.sh script generates commit logs since
 last release. Use that to draft the new release.
+
+## Verify Examples
+After releasing run following script to verify that examples build outside of the otel repo.
+The script copies examples into a different directory and builds them.
+
+```
+./verify_examples.sh
+```
+

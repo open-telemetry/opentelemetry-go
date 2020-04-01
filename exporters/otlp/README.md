@@ -1,6 +1,6 @@
 # OpenTelemetry Collector Go Exporter
 
-[![GoDoc][godoc-image]][godoc-url]
+[![GoDoc](https://godoc.org/go.opentelemetry.io/otel?status.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp)
 
 
 This exporter converts OpenTelemetry [SpanData](https://github.com/open-telemetry/opentelemetry-go/blob/6769330394f78192df01cb59299e9e0f2e5e977b/sdk/export/trace/trace.go#L49) 
@@ -13,6 +13,3 @@ and exports them to OpenTelemetry Collector.
 ```bash
 $ go get -u go.opentelemetry.io/otel/exporters/otlp
 ```
-
-[godoc-url]: https://godoc.org/go.opentelemetry.io/otel/exporters/otlp
-

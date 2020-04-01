@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright The OpenTelemetry Authors
 #
@@ -49,7 +49,7 @@ else
 fi
 
 TAG_FOUND=`git tag --list ${TAG}`
-if [ ${TAG_FOUND} = ${TAG} ] ; then
+if [[ ${TAG_FOUND} = ${TAG} ]] ; then
         printf "Tag ${TAG} already exists\n"
         exit -1
 fi
@@ -70,7 +70,7 @@ fi
 
 # Update sdk/opentelemetry.go
 cp ./sdk/opentelemetry.go ./sdk/opentelemetry.go.bak
-sed 's/\(return "\)[0-9]\+\.[0-9]\+\.[0-9]\+/\1'"${OTEL_VERSION}"'/' ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
+sed "s/\(return \"\)[0-9]*\.[0-9]*\.[0-9]*\"/\1${OTEL_VERSION}\"/" ./sdk/opentelemetry.go.bak >./sdk/opentelemetry.go
 rm -f ./sdk/opentelemetry.go.bak
 
 # Update go.mod
