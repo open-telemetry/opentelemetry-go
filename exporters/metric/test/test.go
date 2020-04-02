@@ -23,6 +23,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -82,6 +83,10 @@ func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ..
 
 func (p *CheckpointSet) AddMeasure(desc *metric.Descriptor, v float64, labels ...core.KeyValue) {
 	p.updateAggregator(desc, array.New(), v, labels...)
+}
+
+func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []core.Number, v float64, labels ...core.KeyValue) {
+	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
 }
 
 func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.Aggregator, v float64, labels ...core.KeyValue) {
