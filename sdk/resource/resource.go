@@ -17,28 +17,55 @@
 package resource
 
 import (
-	"reflect"
+	"sort"
+	"strings"
 
 	"go.opentelemetry.io/otel/api/core"
 )
 
 // Resource describes an entity about which identifying information and metadata is exposed.
 type Resource struct {
-	labels map[core.Key]core.Value
+	str    string
+	sorted []core.KeyValue
+	keys   map[core.Key]struct{}
 }
 
 // New creates a resource from a set of attributes.
 // If there are duplicates keys then the first value of the key is preserved.
 func New(kvs ...core.KeyValue) *Resource {
-	res := &Resource{
-		labels: map[core.Key]core.Value{},
-	}
+	res := &Resource{keys: make(map[core.Key]struct{})}
 	for _, kv := range kvs {
-		if _, ok := res.labels[kv.Key]; !ok {
-			res.labels[kv.Key] = kv.Value
+		// First key-value wins.
+		if _, ok := res.keys[kv.Key]; !ok {
+			res.keys[kv.Key] = struct{}{}
+			res.sorted = append(res.sorted, kv)
 		}
 	}
+	sort.Slice(res.sorted, func(i, j int) bool {
+		return kvLess(res.sorted[i], res.sorted[j])
+	})
+	res.str = buildResourceString(res.sorted)
 	return res
+}
+
+// String implements the Stringer interface and provides a reproducibly
+// hashable representation of a Resource.
+func (r Resource) String() string {
+	return r.str
+}
+
+// Attributes returns a copy of attributes from the resource in a sorted order.
+func (r Resource) Attributes() []core.KeyValue {
+	attrs := make([]core.KeyValue, 0, len(r.sorted))
+	for _, kv := range r.sorted {
+		attrs = append(attrs, kv)
+	}
+	return attrs
+}
+
+// Equal returns true if other Resource is equal to r.
+func (r Resource) Equal(other Resource) bool {
+	return r.str == other.str
 }
 
 // Merge creates a new resource by combining resource a and b.
@@ -51,29 +78,86 @@ func Merge(a, b *Resource) *Resource {
 	if b == nil {
 		return a
 	}
+
+	n := len(a.sorted)
+	if len(b.sorted) > len(a.sorted) {
+		n = len(b.sorted)
+	}
+	// At a minimum the merge will be as large as the largest resource.
+	s := make([]core.KeyValue, 0, n)
+	k := make(map[core.Key]struct{}, n)
+	ai, bi := 0, 0
+	for ; ai < len(a.sorted) && bi < len(b.sorted); ai, bi = ai+1, bi+1 {
+		akv := a.sorted[ai]
+		k[akv.Key] = struct{}{}
+
+		bkv := b.sorted[bi]
+		if _, ok := k[bkv.Key]; ok {
+			// a overwrites b.
+			s = append(s, akv)
+			continue
+		}
+		k[bkv.Key] = struct{}{}
+
+		// Preserve sort.
+		if kvLess(akv, bkv) {
+			s = append(s, akv)
+			s = append(s, bkv)
+		} else {
+			s = append(s, bkv)
+			s = append(s, akv)
+		}
+	}
+
+	for ; ai < len(a.sorted); ai++ {
+		akv := a.sorted[ai]
+		s = append(s, akv)
+		k[akv.Key] = struct{}{}
+	}
+
+	for ; bi < len(b.sorted); bi++ {
+		bkv := b.sorted[bi]
+		if _, ok := k[bkv.Key]; ok {
+			continue
+		}
+		k[bkv.Key] = struct{}{}
+		s = append(s, bkv)
+	}
+
 	res := &Resource{
-		labels: map[core.Key]core.Value{},
+		keys:   k,
+		sorted: s,
 	}
-	for k, v := range b.labels {
-		res.labels[k] = v
-	}
-	// labels from resource a overwrite labels from resource b.
-	for k, v := range a.labels {
-		res.labels[k] = v
-	}
+	res.str = buildResourceString(res.sorted)
+
 	return res
 }
 
-// Attributes returns a copy of attributes from the resource.
-func (r Resource) Attributes() []core.KeyValue {
-	attrs := make([]core.KeyValue, 0, len(r.labels))
-	for k, v := range r.labels {
-		attrs = append(attrs, core.KeyValue{Key: k, Value: v})
+// buildResourceString returns a string representation of a Resource
+// containing kvs.
+func buildResourceString(kvs []core.KeyValue) string {
+	var b strings.Builder
+	b.WriteString("Resource(")
+	if len(kvs) > 0 {
+		b.WriteString(string(kvs[0].Key))
+		b.WriteRune('=')
+		b.WriteString(kvs[0].Value.Emit())
+		for _, s := range kvs[1:] {
+			b.WriteRune(',')
+			b.WriteString(string(s.Key))
+			b.WriteRune('=')
+			b.WriteString(s.Value.Emit())
+		}
+
 	}
-	return attrs
+	b.WriteRune(')')
+	return b.String()
 }
 
-// Equal returns true if other Resource is the equal to r.
-func (r Resource) Equal(other Resource) bool {
-	return reflect.DeepEqual(r.labels, other.labels)
+// kvLess returns if a < b.
+func kvLess(a, b core.KeyValue) bool {
+	if a.Key == b.Key {
+		return a.Value.Emit() < b.Value.Emit()
+	}
+	return a.Key < b.Key
 }
