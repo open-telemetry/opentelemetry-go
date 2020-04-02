@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	DefaultCollectorPort uint16 = 55678
+	DefaultCollectorPort uint16 = 55680
 	DefaultCollectorHost string = "localhost"
 	DefaultNumWorkers    uint   = 1
 )
