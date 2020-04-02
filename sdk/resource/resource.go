@@ -151,9 +151,8 @@ func buildResourceString(kvs []core.KeyValue) string {
 }
 
 // kvLess returns if a < b.
+//
+// Keys of a and b are assumed to be unique.
 func kvLess(a, b core.KeyValue) bool {
-	if a.Key == b.Key {
-		return a.Value.Emit() < b.Value.Emit()
-	}
 	return a.Key < b.Key
 }
