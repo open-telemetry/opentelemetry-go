@@ -216,7 +216,13 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 
 	lrec, ok := a.recorders[labels.ordered]
 	if ok {
-		lrec.modifiedEpoch = a.meter.currentEpoch
+		if lrec.modifiedEpoch == a.meter.currentEpoch {
+			// last value wins for Observers, so if we see the same labels
+			// in the current epoch, we replace the old recorder
+			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
+		} else {
+			lrec.modifiedEpoch = a.meter.currentEpoch
+		}
 		a.recorders[labels.ordered] = lrec
 		return lrec.recorder
 	}
