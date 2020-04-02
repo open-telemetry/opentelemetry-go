@@ -56,7 +56,7 @@ func (r Resource) String() string {
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 func (r Resource) Attributes() []core.KeyValue {
-	return append([]core.KeyValue{}, r.sorted...)
+	return append([]core.KeyValue(nil), r.sorted...)
 }
 
 // Equal returns true if other Resource is equal to r.

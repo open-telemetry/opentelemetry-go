@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "New with nil",
 			in:   nil,
-			want: []core.KeyValue{},
+			want: nil,
 		},
 	}
 	for _, c := range cases {
