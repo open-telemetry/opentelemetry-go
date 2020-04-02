@@ -56,11 +56,7 @@ func (r Resource) String() string {
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 func (r Resource) Attributes() []core.KeyValue {
-	attrs := make([]core.KeyValue, 0, len(r.sorted))
-	for _, kv := range r.sorted {
-		attrs = append(attrs, kv)
-	}
-	return attrs
+	return append([]core.KeyValue{}, r.sorted...)
 }
 
 // Equal returns true if other Resource is equal to r.
