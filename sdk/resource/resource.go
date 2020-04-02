@@ -35,7 +35,7 @@ type Resource struct {
 func New(kvs ...core.KeyValue) *Resource {
 	res := &Resource{keys: make(map[core.Key]struct{})}
 	for _, kv := range kvs {
-		// First key-value wins.
+		// First key wins.
 		if _, ok := res.keys[kv.Key]; !ok {
 			res.keys[kv.Key] = struct{}{}
 			res.sorted = append(res.sorted, kv)
