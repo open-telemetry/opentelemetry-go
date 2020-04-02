@@ -91,6 +91,13 @@ See the Go packages depending upon
 and [sdk/export/metric](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/metric?tab=importedby)
 for a list of all exporters compatible with OpenTelemetry's Go SDK.
 
+## Compatible Libraries
+
+See the
+[opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib)
+repo for packages that facilitates instrumenting other useful Go libraries
+with opentelemetry-go for distributed tracing and monitoring.
+
 ## Contributing
 
 See the [contributing file](CONTRIBUTING.md).
