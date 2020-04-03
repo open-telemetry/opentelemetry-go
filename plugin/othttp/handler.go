@@ -54,6 +54,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer           trace.Tracer
+	operationNamer   func(*http.Request) string
 	props            propagation.Propagators
 	spanStartOptions []trace.StartOption
 	readEvent        bool
@@ -69,6 +70,14 @@ type Option func(*Handler)
 func WithTracer(tracer trace.Tracer) Option {
 	return func(h *Handler) {
 		h.tracer = tracer
+	}
+}
+
+// WithOperationNamer configures the handler with a dynamic operation name provider func,
+// overriding the static operation name provided to othttp.NewHandler
+func WithOperationNamer(namer func(*http.Request) string) Option {
+	return func(h *Handler) {
+		h.operationNamer = namer
 	}
 }
 
@@ -168,8 +177,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
+	operation := h.operation
+	if h.operationNamer != nil {
+		operation = h.operationNamer(r)
+	}
+
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
-	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
+	ctx, span := h.tracer.Start(ctx, operation, opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}
