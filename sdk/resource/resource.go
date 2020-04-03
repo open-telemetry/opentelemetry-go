@@ -42,7 +42,7 @@ func New(kvs ...core.KeyValue) *Resource {
 		}
 	}
 	sort.Slice(res.sorted, func(i, j int) bool {
-		return kvLess(res.sorted[i], res.sorted[j])
+		return res.sorted[i].Key < res.sorted[j].Key
 	})
 	res.str = buildResourceString(res.sorted)
 	return res
@@ -85,24 +85,16 @@ func Merge(a, b *Resource) *Resource {
 	ai, bi := 0, 0
 	for ; ai < len(a.sorted) && bi < len(b.sorted); ai, bi = ai+1, bi+1 {
 		akv := a.sorted[ai]
+		s = append(s, akv)
 		k[akv.Key] = struct{}{}
 
 		bkv := b.sorted[bi]
-		if _, ok := k[bkv.Key]; ok {
+		if _, ok := a.keys[bkv.Key]; ok {
 			// a overwrites b.
-			s = append(s, akv)
 			continue
 		}
 		k[bkv.Key] = struct{}{}
-
-		// Preserve sort.
-		if kvLess(akv, bkv) {
-			s = append(s, akv)
-			s = append(s, bkv)
-		} else {
-			s = append(s, bkv)
-			s = append(s, akv)
-		}
+		s = append(s, bkv)
 	}
 
 	for ; ai < len(a.sorted); ai++ {
@@ -120,6 +112,7 @@ func Merge(a, b *Resource) *Resource {
 		s = append(s, bkv)
 	}
 
+	sort.Slice(s, func(i, j int) bool { return s[i].Key < s[j].Key })
 	res := &Resource{
 		keys:   k,
 		sorted: s,
@@ -148,11 +141,4 @@ func buildResourceString(kvs []core.KeyValue) string {
 	}
 	b.WriteRune(')')
 	return b.String()
-}
-
-// kvLess returns if a < b.
-//
-// Keys of a and b are assumed to be unique.
-func kvLess(a, b core.KeyValue) bool {
-	return a.Key < b.Key
 }

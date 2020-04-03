@@ -80,6 +80,12 @@ func TestMerge(t *testing.T) {
 			want: []core.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
+			name: "Merge with no overlap, no nil, not interleaved",
+			a:    resource.New(kv11, kv21),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
+		{
 			name: "Merge with common key order1",
 			a:    resource.New(kv11),
 			b:    resource.New(kv12, kv21),
@@ -90,6 +96,12 @@ func TestMerge(t *testing.T) {
 			a:    resource.New(kv12, kv21),
 			b:    resource.New(kv11),
 			want: []core.KeyValue{kv12, kv21},
+		},
+		{
+			name: "Merge with common key order4",
+			a:    resource.New(kv11, kv21, kv41),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with first resource nil",
