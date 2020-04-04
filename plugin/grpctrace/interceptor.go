@@ -19,6 +19,7 @@ package grpctrace
 import (
 	"context"
 	"net"
+	"regexp"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -47,7 +48,8 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		ctx, span = tracer.Start(
 			ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(getTargetInfo(cc.Target())...),
+			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
+			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(method))),
 		)
 		defer span.End()
 
@@ -79,7 +81,8 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(getPeerInfo(ctx)...),
+			trace.WithAttributes(peerInfoFromContext(ctx)...),
+			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(info.FullMethod))),
 		)
 		defer span.End()
 
@@ -94,7 +97,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 	}
 }
 
-func getTargetInfo(target string) []core.KeyValue {
+func peerInfoFromTarget(target string) []core.KeyValue {
 	host, port, err := net.SplitHostPort(target)
 
 	if err != nil {
@@ -111,12 +114,24 @@ func getTargetInfo(target string) []core.KeyValue {
 	}
 }
 
-func getPeerInfo(ctx context.Context) []core.KeyValue {
+func peerInfoFromContext(ctx context.Context) []core.KeyValue {
 	p, ok := peer.FromContext(ctx)
 
 	if !ok {
 		return []core.KeyValue{}
 	}
 
-	return getTargetInfo(p.Addr.String())
+	return peerInfoFromTarget(p.Addr.String())
+}
+
+var fullMethodRegexp = regexp.MustCompile(`^/\S*\.(\S*)/\S*$`)
+
+func serviceFromFullMethod(method string) string {
+	match := fullMethodRegexp.FindAllStringSubmatch(method, 1)
+
+	if len(match) != 1 && len(match[1]) != 2 {
+		return ""
+	}
+
+	return match[0][1]
 }
