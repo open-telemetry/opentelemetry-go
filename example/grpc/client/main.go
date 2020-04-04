@@ -19,20 +19,20 @@ import (
 	"log"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/example/grpc/api"
 	"go.opentelemetry.io/otel/example/grpc/config"
+	"go.opentelemetry.io/otel/plugin/grpctrace"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-
-	"go.opentelemetry.io/otel/example/grpc/middleware/tracing"
 )
 
 func main() {
 	config.Init()
 
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":7777", grpc.WithInsecure(), grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor))
+	conn, err := grpc.Dial(":7777", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor(global.Tracer(""))))
 	if err != nil {
 		log.Fatalf("did not connect: %s", err)
 	}

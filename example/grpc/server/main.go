@@ -19,12 +19,12 @@ import (
 	"log"
 	"net"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/example/grpc/api"
 	"go.opentelemetry.io/otel/example/grpc/config"
+	"go.opentelemetry.io/otel/plugin/grpctrace"
 
 	"google.golang.org/grpc"
-
-	"go.opentelemetry.io/otel/example/grpc/middleware/tracing"
 )
 
 const (
@@ -50,7 +50,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer(grpc.UnaryInterceptor(tracing.UnaryServerInterceptor))
+	s := grpc.NewServer(grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(global.Tracer(""))))
 
 	api.RegisterHelloServiceServer(s, &server{})
 	if err := s.Serve(lis); err != nil {
