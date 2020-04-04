@@ -18,13 +18,24 @@ package grpctrace
 // https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/data-rpc.md
 import (
 	"context"
+	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
+)
+
+var (
+	rpcServiceKey  = key.New("rpc.service")
+	netPeerIpKey   = key.New("net.peer.ip")
+	netPeerNameKey = key.New("net.peer.name")
+	netPeerPortKey = key.New("net.peer.port")
 )
 
 func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
@@ -33,7 +44,11 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		var span trace.Span
-		ctx, span = tracer.Start(ctx, method)
+		ctx, span = tracer.Start(
+			ctx, method,
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(getTargetInfo(cc.Target())...),
+		)
 		defer span.End()
 
 		Inject(ctx, &metadataCopy)
@@ -64,9 +79,37 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(getPeerInfo(ctx)...),
 		)
 		defer span.End()
 
 		return handler(ctx, req)
 	}
+}
+
+func getTargetInfo(target string) []core.KeyValue {
+	host, port, err := net.SplitHostPort(target)
+
+	if err != nil {
+		return []core.KeyValue{}
+	}
+
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	return []core.KeyValue{
+		netPeerIpKey.String(host),
+		netPeerPortKey.String(port),
+	}
+}
+
+func getPeerInfo(ctx context.Context) []core.KeyValue {
+	p, ok := peer.FromContext(ctx)
+
+	if !ok {
+		return []core.KeyValue{}
+	}
+
+	return getTargetInfo(p.Addr.String())
 }
