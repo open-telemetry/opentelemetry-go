@@ -83,7 +83,14 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 		)
 		defer span.End()
 
-		return handler(ctx, req)
+		resp, err := handler(ctx, req)
+
+		if err != nil {
+			s, _ := status.FromError(err)
+			span.SetStatus(s.Code(), s.Message())
+		}
+
+		return resp, err
 	}
 }
 
