@@ -39,7 +39,7 @@ type MockTracer struct {
 	// Sampled specifies if the new span should be sampled or not.
 	Sampled bool
 
-	// LastSpan is set each with the name argument of each *MockTracer.Start()
+	// LastSpan is set with the name argument of each *MockTracer.Start()
 	// invocation
 	LastSpan string
 	mu       sync.Mutex
