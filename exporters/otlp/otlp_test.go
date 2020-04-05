@@ -248,7 +248,22 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metric.MeasureKind, metric.ObserverKind:
+		case metric.ObserverKind:
+			switch data.nKind {
+			case core.Int64NumberKind:
+				assert.Equal(t, metricpb.MetricDescriptor_GAUGE_INT64.String(), desc.GetType().String())
+				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
+					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
+				}
+			case core.Float64NumberKind:
+				assert.Equal(t, metricpb.MetricDescriptor_GAUGE_DOUBLE.String(), desc.GetType().String())
+				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
+					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
+				}
+			default:
+				assert.Failf(t, "invalid number kind", data.nKind.String())
+			}
+		case metric.MeasureKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
 			m.GetSummaryDataPoints()
 			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {

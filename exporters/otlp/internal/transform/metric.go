@@ -42,8 +42,42 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		return minMaxSumCount(d, l, a)
 	case aggregator.Sum:
 		return sum(d, l, a)
+	case aggregator.LastValue:
+		return lastValue(d, l, a)
 	}
 	return nil, ErrUnimplementedAgg
+}
+
+// lastValue transforms a LastValue Aggregator into an OTLP Metric.
+func lastValue(desc *metric.Descriptor, labels export.Labels, a aggregator.LastValue) (*metricpb.Metric, error) {
+	lv, _, err := a.LastValue()
+	if err != nil {
+		return nil, err
+	}
+
+	m := &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			Labels:      stringKeyValues(labels.Iter()),
+		},
+	}
+
+	switch n := desc.NumberKind(); n {
+	case core.Int64NumberKind, core.Uint64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_GAUGE_INT64
+		m.Int64DataPoints = []*metricpb.Int64DataPoint{
+			{Value: lv.CoerceToInt64(n)},
+		}
+	case core.Float64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_GAUGE_DOUBLE
+		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
+			{Value: lv.CoerceToFloat64(n)},
+		}
+	}
+
+	return m, nil
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
