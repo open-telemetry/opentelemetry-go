@@ -37,12 +37,27 @@ var (
 	HTTPLocalAddr  = key.New("http.local")
 )
 
+var (
+	hookMap = map[string]string{
+		"http.dns":     "http.getconn",
+		"http.connect": "http.getconn",
+		"http.tls":     "http.getconn",
+	}
+)
+
+func parentHook(hook string) string {
+	if strings.HasPrefix(hook, "http.connect") {
+		return hookMap["http.connect"]
+	}
+	return hookMap[hook]
+}
+
 type clientTracer struct {
 	context.Context
 
 	tr trace.Tracer
 
-	activeHooks map[string]trace.Span
+	activeHooks map[string]context.Context
 	root        trace.Span
 	mtx         sync.Mutex
 }
@@ -50,7 +65,7 @@ type clientTracer struct {
 func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
-		activeHooks: make(map[string]trace.Span),
+		activeHooks: make(map[string]context.Context),
 	}
 
 	ct.tr = global.Tracer("go.opentelemetry.io/otel/plugin/httptrace")
@@ -76,25 +91,34 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
-	_, sp := ct.tr.Start(ct.Context, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	if ct.root == nil {
-		ct.root = sp
+
+	var ctx context.Context
+	var ok bool
+
+	if ctx, ok = ct.activeHooks[parentHook(hook)]; !ok {
+		ctx = ct.Context
 	}
-	if _, ok := ct.activeHooks[hook]; ok {
-		// end was called before start is handled.
-		sp.End()
-		delete(ct.activeHooks, hook)
+
+	if _, found := ct.activeHooks[hook]; !found {
+		var sp trace.Span
+		ct.activeHooks[hook], sp = ct.tr.Start(ctx, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+		if ct.root == nil {
+			ct.root = sp
+		}
 	} else {
-		ct.activeHooks[hook] = sp
+		// This should be a NoopSpan, but end it just in case
+		trace.SpanFromContext(ct.activeHooks[hook]).End()
+		delete(ct.activeHooks, hook)
 	}
 }
 
 func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	if span, ok := ct.activeHooks[hook]; ok {
+	if ctx, ok := ct.activeHooks[hook]; ok {
+		span := trace.SpanFromContext(ctx)
 		if err != nil {
 			span.SetStatus(codes.Unknown, err.Error())
 		}
@@ -103,14 +127,17 @@ func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 		delete(ct.activeHooks, hook)
 	} else {
 		// start is not finished before end is called.
-		ct.activeHooks[hook] = trace.NoopSpan{}
+		ct.activeHooks[hook] = context.Background()
 	}
 }
 
 func (ct *clientTracer) span(hook string) trace.Span {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	return ct.activeHooks[hook]
+	if ctx, ok := ct.activeHooks[hook]; ok {
+		return trace.SpanFromContext(ctx)
+	}
+	return nil
 }
 
 func (ct *clientTracer) getConn(host string) {
