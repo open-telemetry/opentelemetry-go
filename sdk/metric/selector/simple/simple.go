@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -83,7 +84,7 @@ func NewWithHistogramMeasure(boundaries []core.Number) export.AggregationSelecto
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
-		fallthrough
+		return lastvalue.New()
 	case metric.MeasureKind:
 		return minmaxsumcount.New(descriptor)
 	default:
@@ -94,7 +95,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.A
 func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
-		fallthrough
+		return lastvalue.New()
 	case metric.MeasureKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
@@ -105,7 +106,7 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggr
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
-		fallthrough
+		return lastvalue.New()
 	case metric.MeasureKind:
 		return array.New()
 	default:
@@ -116,7 +117,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
-		fallthrough
+		return lastvalue.New()
 	case metric.MeasureKind:
 		return histogram.New(descriptor, s.boundaries)
 	default:
