@@ -100,3 +100,35 @@ func TestBasicFilter(t *testing.T) {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
 }
+
+func TestSpanFormatter(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	var id uint64
+	tracer := mocktrace.MockTracer{StartSpanID: &id}
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, err := io.WriteString(w, "hello world"); err != nil {
+				t.Fatal(err)
+			}
+		}),
+		"",
+		WithTracer(&tracer),
+		WithSpanFormatter(func(r *http.Request) string {
+			return r.URL.Path
+		}),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+	if got, expected := tracer.LastSpan, "/hello"; got != expected {
+		t.Fatalf("got %q, expected %q", got, expected)
+	}
+}
