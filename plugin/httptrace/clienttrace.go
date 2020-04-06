@@ -94,14 +94,18 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
-	if _, found := ct.activeHooks[hook]; !found {
+	if hookCtx, found := ct.activeHooks[hook]; !found {
 		var sp trace.Span
 		ct.activeHooks[hook], sp = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if ct.root == nil {
 			ct.root = sp
 		}
 	} else {
-		// end was called before start finished, clean up the placeholder
+		// end was called before start finished, add the start attributes and end the span here
+		span := trace.SpanFromContext(hookCtx)
+		span.SetAttributes(attrs...)
+		span.End()
+
 		delete(ct.activeHooks, hook)
 	}
 }
@@ -119,11 +123,12 @@ func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 		delete(ct.activeHooks, hook)
 	} else {
 		// start is not finished before end is called.
-		// Record a span here with the ending attributes and put a placeholder
-		// context in activeHooks to prevent start from starting another
-		// if it is called after this point.
-		ctx, sp := ct.tr.Start(ct.getParentContext(hook), hook, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
-		sp.End()
+		// Start a span here with the ending attributes that will be finished when start finishes.
+		// Yes, it's backwards. v0v
+		ctx, span := ct.tr.Start(ct.getParentContext(hook), hook, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+		if err != nil {
+			span.SetStatus(codes.Unknown, err.Error())
+		}
 		ct.activeHooks[hook] = ctx
 	}
 }
