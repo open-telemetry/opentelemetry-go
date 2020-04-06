@@ -361,60 +361,11 @@ func TestSpanData(t *testing.T) {
 	}
 }
 
+// Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	// Root span should have an empty ParentSpanId field.
+	rs := SpanData([]*export.SpanData{{}})[0]
+	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
 
-	// March 31, 2020 5:01:26 1234nanos (UTC)
-	startTime := time.Unix(1585674086, 1234)
-	endTime := startTime.Add(10 * time.Second)
-
-	sds := []*export.SpanData{
-		{
-			SpanContext: core.SpanContext{
-				TraceID: core.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-				SpanID:  core.SpanID{0, 0, 0, 0, 0, 0, 0, 1},
-			},
-			Name:      "invalid nil parent span ID",
-			StartTime: startTime,
-			EndTime:   endTime,
-		},
-		{
-			SpanContext: core.SpanContext{
-				TraceID: core.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-				SpanID:  core.SpanID{0, 0, 0, 0, 0, 0, 0, 1},
-			},
-			Name:      "empty parent span ID",
-			StartTime: startTime,
-			EndTime:   endTime,
-		},
-	}
-	want := []*tracepb.InstrumentationLibrarySpans{
-		{
-			Spans: []*tracepb.Span{
-				{
-					TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-					SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
-					ParentSpanId:      []byte{}, // Empty means root span.
-					Name:              "invalid nil parent span ID",
-					StartTimeUnixNano: uint64(1585674086000001234),
-					EndTimeUnixNano:   uint64(1585674096000001234),
-					Status:            &tracepb.Status{},
-				},
-				{
-					TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-					SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
-					ParentSpanId:      []byte{}, // Empty means root span.
-					Name:              "empty parent span ID",
-					StartTimeUnixNano: uint64(1585674086000001234),
-					EndTimeUnixNano:   uint64(1585674096000001234),
-					Status:            &tracepb.Status{},
-				},
-			},
-		},
-	}
-
-	rss := SpanData(sds)[0]
-	if diff := cmp.Diff(want, rss.GetInstrumentationLibrarySpans(), cmp.Comparer(proto.Equal)); diff != "" {
-		t.Fatalf("transformed complete SpanData incorrect: %v\n", diff)
-	}
+	// Empty means root span.
+	assert.Nil(t, got, "incorrect transform of root parent span ID")
 }
