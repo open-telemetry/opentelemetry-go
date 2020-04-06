@@ -125,17 +125,20 @@ func Merge(a, b *Resource) *Resource {
 // buildResourceString returns a string representation of a Resource
 // containing kvs.
 func buildResourceString(kvs []core.KeyValue) string {
+	// Ensure unique strings if key/value contains '=', ',', or '\'.
+	escaper := strings.NewReplacer("=", `\=`, ",", `\,`, `\`, `\\`)
+
 	var b strings.Builder
 	b.WriteString("Resource(")
 	if len(kvs) > 0 {
-		b.WriteString(string(kvs[0].Key))
+		b.WriteString(escaper.Replace(string(kvs[0].Key)))
 		b.WriteRune('=')
-		b.WriteString(kvs[0].Value.Emit())
+		b.WriteString(escaper.Replace(kvs[0].Value.Emit()))
 		for _, s := range kvs[1:] {
 			b.WriteRune(',')
-			b.WriteString(string(s.Key))
+			b.WriteString(escaper.Replace(string(s.Key)))
 			b.WriteRune('=')
-			b.WriteString(s.Value.Emit())
+			b.WriteString(escaper.Replace(s.Value.Emit()))
 		}
 
 	}

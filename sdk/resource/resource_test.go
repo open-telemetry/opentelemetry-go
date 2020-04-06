@@ -184,6 +184,26 @@ func TestString(t *testing.T) {
 			kvs:  []core.KeyValue{kv31, kv11, kv21},
 			want: "Resource(k1=v11,k2=v21,k3=v31)",
 		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String("a"), core.Key("B").String("b")},
+			want: "Resource(A=a,B=b)",
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String("a,B=b")},
+			want: `Resource(A=a\,B\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String(`a,B\=b`)},
+			want: `Resource(A=a\,B\\\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A=a,B").String(`b`)},
+			want: `Resource(A\=a\,B=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key(`A=a\,B`).String(`b`)},
+			want: `Resource(A\=a\\\,B=b)`,
+		},
 	} {
 		if got := resource.New(test.kvs...).String(); got != test.want {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
