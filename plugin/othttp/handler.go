@@ -53,12 +53,13 @@ type Handler struct {
 	operation string
 	handler   http.Handler
 
-	tracer           trace.Tracer
-	props            propagation.Propagators
-	spanStartOptions []trace.StartOption
-	readEvent        bool
-	writeEvent       bool
-	filters          []Filter
+	tracer            trace.Tracer
+	props             propagation.Propagators
+	spanStartOptions  []trace.StartOption
+	readEvent         bool
+	writeEvent        bool
+	filters           []Filter
+	spanNameFormatter func(string, *http.Request) string
 }
 
 // Option function used for setting *optional* Handler properties
@@ -140,10 +141,27 @@ func WithMessageEvents(events ...event) Option {
 	}
 }
 
+// WithSpanNameFormatter takes a function that will be called on every
+// incoming request and the returned string will become the Span Name
+func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
+	return func(h *Handler) {
+		h.spanNameFormatter = f
+	}
+}
+
+func defaultFormatter(operation string, _ *http.Request) string {
+	return operation
+}
+
 // NewHandler wraps the passed handler, functioning like middleware, in a span
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
-	h := Handler{handler: handler, operation: operation}
+	h := Handler{
+		handler:           handler,
+		operation:         operation,
+		spanNameFormatter: defaultFormatter,
+	}
+
 	defaultOpts := []Option{
 		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
 		WithPropagators(global.Propagators()),
@@ -169,7 +187,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
-	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
+	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}

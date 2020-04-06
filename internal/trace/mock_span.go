@@ -28,6 +28,7 @@ import (
 type MockSpan struct {
 	sc     core.SpanContext
 	tracer apitrace.Tracer
+	Name   string
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
@@ -66,8 +67,9 @@ func (ms *MockSpan) End(options ...apitrace.EndOption) {
 func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
 }
 
-// SetName does nothing.
+// SetName sets the span name.
 func (ms *MockSpan) SetName(name string) {
+	ms.Name = name
 }
 
 // Tracer returns MockTracer implementation of Tracer.
