@@ -94,49 +94,11 @@ func Merge(a, b *Resource) *Resource {
 		return a
 	}
 
-	n := len(a.sorted)
-	if len(b.sorted) > len(a.sorted) {
-		n = len(b.sorted)
-	}
-	// At a minimum the merge will be as large as the largest resource.
-	s := make([]core.KeyValue, 0, n)
-	k := make(map[core.Key]struct{}, n)
-	ai, bi := 0, 0
-	for ; ai < len(a.sorted) && bi < len(b.sorted); ai, bi = ai+1, bi+1 {
-		akv := a.sorted[ai]
-		s = append(s, akv)
-		k[akv.Key] = struct{}{}
+	// Note: the following could be optimized by implementing a dedicated merge sort.
 
-		bkv := b.sorted[bi]
-		if _, ok := a.keys[bkv.Key]; ok {
-			// a overwrites b.
-			continue
-		}
-		k[bkv.Key] = struct{}{}
-		s = append(s, bkv)
-	}
-
-	for ; ai < len(a.sorted); ai++ {
-		akv := a.sorted[ai]
-		s = append(s, akv)
-		k[akv.Key] = struct{}{}
-	}
-
-	for ; bi < len(b.sorted); bi++ {
-		bkv := b.sorted[bi]
-		if _, ok := k[bkv.Key]; ok {
-			continue
-		}
-		k[bkv.Key] = struct{}{}
-		s = append(s, bkv)
-	}
-
-	sort.Slice(s, func(i, j int) bool { return s[i].Key < s[j].Key })
-	res := &Resource{
-		keys:   k,
-		sorted: s,
-	}
-	res.str = buildResourceString(res.sorted)
-
-	return res
+	kvs := make([]core.KeyValue, 0, len(a.sorted)+len(b.sorted))
+	kvs = append([]core.KeyValue(nil), a.sorted...)
+	// a overwrites b, so b needs to be at the end.
+	kvs = append(kvs, b.sorted...)
+	return New(kvs...)
 }
