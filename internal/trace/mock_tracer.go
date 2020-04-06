@@ -82,7 +82,9 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 		tracer: mt,
 		Name:   name,
 	}
-	mt.OnSpanStarted(span)
+	if mt.OnSpanStarted != nil {
+		mt.OnSpanStarted(span)
+	}
 
 	return apitrace.ContextWithSpan(ctx, span), span
 }
