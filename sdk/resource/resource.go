@@ -78,6 +78,13 @@ func (r Resource) Attributes() []core.KeyValue {
 	return append([]core.KeyValue(nil), r.sorted...)
 }
 
+// Iter returns an interator of the Resource attributes.
+//
+// This is ideal to use if you do not want a copy of the attributes.
+func (r Resource) Iter() AttributeIterator {
+	return NewAttributeIterator(r.sorted)
+}
+
 // Equal returns true if other Resource is equal to r.
 func (r Resource) Equal(other Resource) bool {
 	return r.String() == other.String()
