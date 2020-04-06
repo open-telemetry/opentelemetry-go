@@ -104,7 +104,7 @@ func Merge(a, b *Resource) *Resource {
 	// Note: the following could be optimized by implementing a dedicated merge sort.
 
 	kvs := make([]core.KeyValue, 0, len(a.sorted)+len(b.sorted))
-	kvs = append([]core.KeyValue(nil), a.sorted...)
+	kvs = append(kvs, a.sorted...)
 	// a overwrites b, so b needs to be at the end.
 	kvs = append(kvs, b.sorted...)
 	return New(kvs...)
