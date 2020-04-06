@@ -17,6 +17,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	nhtrace "net/http/httptrace"
 	"sync"
 	"testing"
 
@@ -280,4 +281,37 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEndBeforeStartCreatesSpan(t *testing.T) {
+	exp := &testExporter{
+		spanMap: make(map[string][]*export.SpanData),
+	}
+	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	global.SetTraceProvider(tp)
+
+	tr := tp.Tracer("httptrace/client")
+	ctx, span := tr.Start(context.Background(), "test")
+	defer span.End()
+
+	ct := httptrace.NewClientTrace(ctx)
+
+	ct.DNSDone(nhtrace.DNSDoneInfo{})
+	ct.DNSStart(nhtrace.DNSStartInfo{Host: "example.com"})
+
+	getSpan := func(name string) *export.SpanData {
+		spans, ok := exp.spanMap[name]
+		if !ok {
+			t.Fatalf("no spans found with the name %s, %v", name, exp.spanMap)
+		}
+
+		if len(spans) != 1 {
+			t.Fatalf("Expected exactly one span for %s but found %d", name, len(spans))
+		}
+
+		return spans[0]
+	}
+
+	getSpan("http.dns")
+
 }

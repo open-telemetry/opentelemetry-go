@@ -94,20 +94,14 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
-	ctx, ok := ct.activeHooks[parentHook(hook)]
-	if !ok {
-		ctx = ct.Context
-	}
-
-	if hookCtx, found := ct.activeHooks[hook]; !found {
+	if _, found := ct.activeHooks[hook]; !found {
 		var sp trace.Span
-		ct.activeHooks[hook], sp = ct.tr.Start(ctx, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+		ct.activeHooks[hook], sp = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if ct.root == nil {
 			ct.root = sp
 		}
 	} else {
-		// This should be a NoopSpan, but end it just in case
-		trace.SpanFromContext(hookCtx).End()
+		// end was called before start finished, clean up the placeholder
 		delete(ct.activeHooks, hook)
 	}
 }
@@ -125,8 +119,21 @@ func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
 		delete(ct.activeHooks, hook)
 	} else {
 		// start is not finished before end is called.
-		ct.activeHooks[hook] = context.Background()
+		// Record a span here with the ending attributes and put a placeholder
+		// context in activeHooks to prevent start from starting another
+		// if it is called after this point.
+		ctx, sp := ct.tr.Start(ct.getParentContext(hook), hook, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+		sp.End()
+		ct.activeHooks[hook] = ctx
 	}
+}
+
+func (ct *clientTracer) getParentContext(hook string) context.Context {
+	ctx, ok := ct.activeHooks[parentHook(hook)]
+	if !ok {
+		return ct.Context
+	}
+	return ctx
 }
 
 func (ct *clientTracer) span(hook string) trace.Span {
