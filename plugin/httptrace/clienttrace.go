@@ -94,14 +94,12 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
-	var ctx context.Context
-	var ok bool
-
-	if ctx, ok = ct.activeHooks[parentHook(hook)]; !ok {
+	ctx, ok := ct.activeHooks[parentHook(hook)]
+	if !ok {
 		ctx = ct.Context
 	}
 
-	if _, found := ct.activeHooks[hook]; !found {
+	if hookCtx, found := ct.activeHooks[hook]; !found {
 		var sp trace.Span
 		ct.activeHooks[hook], sp = ct.tr.Start(ctx, spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if ct.root == nil {
@@ -109,7 +107,7 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 		}
 	} else {
 		// This should be a NoopSpan, but end it just in case
-		trace.SpanFromContext(ct.activeHooks[hook]).End()
+		trace.SpanFromContext(hookCtx).End()
 		delete(ct.activeHooks, hook)
 	}
 }
