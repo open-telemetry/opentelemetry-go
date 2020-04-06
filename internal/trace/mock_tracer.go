@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -39,10 +38,8 @@ type MockTracer struct {
 	// Sampled specifies if the new span should be sampled or not.
 	Sampled bool
 
-	// LastSpan is set with the name argument of each *MockTracer.Start()
-	// invocation
-	LastSpan string
-	mu       sync.Mutex
+	// OnSpanStarted is called every time a new trace span is starterd
+	OnSpanStarted func(span *MockSpan)
 }
 
 var _ apitrace.Tracer = (*MockTracer)(nil)
@@ -78,15 +75,14 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 	} else {
 		sc = parentSpanContext
 	}
-	mt.mu.Lock()
-	mt.LastSpan = name
-	mt.mu.Unlock()
 
 	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))
 	span = &MockSpan{
 		sc:     sc,
 		tracer: mt,
+		Name:   name,
 	}
+	mt.OnSpanStarted(span)
 
 	return apitrace.ContextWithSpan(ctx, span), span
 }

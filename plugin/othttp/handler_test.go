@@ -105,7 +105,13 @@ func TestSpanFormatter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var id uint64
-	tracer := mocktrace.MockTracer{StartSpanID: &id}
+	var spanName string
+	tracer := mocktrace.MockTracer{
+		StartSpanID: &id,
+		OnSpanStarted: func(span *mocktrace.MockSpan) {
+			spanName = span.Name
+		},
+	}
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +121,7 @@ func TestSpanFormatter(t *testing.T) {
 		}),
 		"",
 		WithTracer(&tracer),
-		WithSpanFormatter(func(r *http.Request) string {
+		WithSpanNameFormatter(func(_ string, r *http.Request) string {
 			return r.URL.Path
 		}),
 	)
@@ -128,7 +134,7 @@ func TestSpanFormatter(t *testing.T) {
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
-	if got, expected := tracer.LastSpan, "/hello"; got != expected {
+	if got, expected := spanName, "/hello"; got != expected {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
 }
