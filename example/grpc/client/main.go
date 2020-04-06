@@ -45,15 +45,15 @@ func main() {
 
 	c := api.NewHelloServiceClient(conn)
 
-	CallSayHello(c)
-	CallSayHelloClientStream(c)
-	CallSayHelloServerStream(c)
-	CallSayHelloBidiStream(c)
+	callSayHello(c)
+	callSayHelloClientStream(c)
+	callSayHelloServerStream(c)
+	callSayHelloBidiStream(c)
 
 	time.Sleep(10 * time.Millisecond)
 }
 
-func CallSayHello(c api.HelloServiceClient) {
+func callSayHello(c api.HelloServiceClient) {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -68,7 +68,7 @@ func CallSayHello(c api.HelloServiceClient) {
 	log.Printf("Response from server: %s", response.Reply)
 }
 
-func CallSayHelloClientStream(c api.HelloServiceClient) {
+func callSayHelloClientStream(c api.HelloServiceClient) {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -99,7 +99,7 @@ func CallSayHelloClientStream(c api.HelloServiceClient) {
 	log.Printf("Response from server: %s", response.Reply)
 }
 
-func CallSayHelloServerStream(c api.HelloServiceClient) {
+func callSayHelloServerStream(c api.HelloServiceClient) {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -125,7 +125,7 @@ func CallSayHelloServerStream(c api.HelloServiceClient) {
 	}
 }
 
-func CallSayHelloBidiStream(c api.HelloServiceClient) {
+func callSayHelloBidiStream(c api.HelloServiceClient) {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",

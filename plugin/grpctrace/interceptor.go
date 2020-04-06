@@ -36,13 +36,11 @@ import (
 
 var (
 	rpcServiceKey  = key.New("rpc.service")
-	netPeerIpKey   = key.New("net.peer.ip")
-	netPeerNameKey = key.New("net.peer.name")
+	netPeerIPKey   = key.New("net.peer.ip")
 	netPeerPortKey = key.New("net.peer.port")
 
 	messageTypeKey             = key.New("message.type")
-	messageIdKey               = key.New("message.id")
-	messageCompressedSizeKey   = key.New("message.compressed_size")
+	messageIDKey               = key.New("message.id")
 	messageUncompressedSizeKey = key.New("message.uncompressed_size")
 )
 
@@ -113,8 +111,8 @@ type clientStream struct {
 	events   chan streamEvent
 	finished chan error
 
-	receivedMessageId int
-	sentMessageId     int
+	receivedMessageID int
+	sentMessageID     int
 }
 
 var _ = proto.Marshal
@@ -129,8 +127,8 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 	} else if err != nil {
 		w.events <- streamEvent{errorEvent, err}
 	} else {
-		w.receivedMessageId++
-		logReceivedMessage(w.Context(), w.receivedMessageId, m)
+		w.receivedMessageID++
+		logReceivedMessage(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -139,8 +137,8 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 func (w *clientStream) SendMsg(m interface{}) error {
 	err := w.ClientStream.SendMsg(m)
 
-	w.sentMessageId++
-	logSentMessage(w.Context(), w.sentMessageId, m)
+	w.sentMessageID++
+	logSentMessage(w.Context(), w.sentMessageID, m)
 
 	if err != nil {
 		w.events <- streamEvent{errorEvent, err}
@@ -302,8 +300,8 @@ type serverStream struct {
 	grpc.ServerStream
 	ctx context.Context
 
-	receivedMessageId int
-	sentMessageId     int
+	receivedMessageID int
+	sentMessageID     int
 }
 
 func (w *serverStream) Context() context.Context {
@@ -314,8 +312,8 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 	err := w.ServerStream.RecvMsg(m)
 
 	if err == nil {
-		w.receivedMessageId++
-		logReceivedMessage(w.Context(), w.receivedMessageId, m)
+		w.receivedMessageID++
+		logReceivedMessage(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -324,8 +322,8 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 func (w *serverStream) SendMsg(m interface{}) error {
 	err := w.ServerStream.SendMsg(m)
 
-	w.sentMessageId++
-	logSentMessage(w.Context(), w.sentMessageId, m)
+	w.sentMessageID++
+	logSentMessage(w.Context(), w.sentMessageID, m)
 
 	return err
 }
@@ -389,7 +387,7 @@ func peerInfoFromTarget(target string) []core.KeyValue {
 	}
 
 	return []core.KeyValue{
-		netPeerIpKey.String(host),
+		netPeerIPKey.String(host),
 		netPeerPortKey.String(port),
 	}
 }
@@ -422,7 +420,7 @@ func logReceivedMessage(ctx context.Context, id int, m interface{}) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(ctx, "message",
 		messageTypeKey.String(messageTypeReceived),
-		messageIdKey.Int(id),
+		messageIDKey.Int(id),
 		messageUncompressedSizeKey.Int(size),
 	)
 }
@@ -433,7 +431,7 @@ func logSentMessage(ctx context.Context, id int, m interface{}) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(ctx, "message",
 		messageTypeKey.String(messageTypeSent),
-		messageIdKey.Int(id),
+		messageIDKey.Int(id),
 		messageUncompressedSizeKey.Int(size),
 	)
 }

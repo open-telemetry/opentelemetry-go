@@ -51,7 +51,11 @@ func (s *server) SayHelloServerStream(in *api.HelloRequest, out api.HelloService
 	log.Printf("Received: %v\n", in.GetGreeting())
 
 	for i := 0; i < 5; i++ {
-		out.Send(&api.HelloResponse{Reply: "Hello " + in.Greeting})
+		err := out.Send(&api.HelloResponse{Reply: "Hello " + in.Greeting})
+		if err != nil {
+			return err
+		}
+
 		time.Sleep(time.Duration(i*50) * time.Millisecond)
 	}
 
