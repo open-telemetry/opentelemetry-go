@@ -38,7 +38,7 @@ type MockTracer struct {
 	// Sampled specifies if the new span should be sampled or not.
 	Sampled bool
 
-	// OnSpanStarted is called every time a new trace span is starterd
+	// OnSpanStarted is called every time a new trace span is started
 	OnSpanStarted func(span *MockSpan)
 }
 
