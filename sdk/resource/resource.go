@@ -25,7 +25,6 @@ import (
 
 // Resource describes an entity about which identifying information and metadata is exposed.
 type Resource struct {
-	str    string
 	sorted []core.KeyValue
 	keys   map[core.Key]struct{}
 }
@@ -44,14 +43,34 @@ func New(kvs ...core.KeyValue) *Resource {
 	sort.Slice(res.sorted, func(i, j int) bool {
 		return res.sorted[i].Key < res.sorted[j].Key
 	})
-	res.str = buildResourceString(res.sorted)
 	return res
 }
 
 // String implements the Stringer interface and provides a reproducibly
 // hashable representation of a Resource.
 func (r Resource) String() string {
-	return r.str
+	// Ensure unique strings if key/value contains '=', ',', or '\'.
+	escaper := strings.NewReplacer("=", `\=`, ",", `\,`, `\`, `\\`)
+
+	var b strings.Builder
+	// Note: this could be further optimized by precomputing the size of
+	// the resulting buffer and adding a call to b.Grow
+	b.WriteString("Resource(")
+	if len(r.sorted) > 0 {
+		b.WriteString(escaper.Replace(string(r.sorted[0].Key)))
+		b.WriteRune('=')
+		b.WriteString(escaper.Replace(r.sorted[0].Value.Emit()))
+		for _, s := range r.sorted[1:] {
+			b.WriteRune(',')
+			b.WriteString(escaper.Replace(string(s.Key)))
+			b.WriteRune('=')
+			b.WriteString(escaper.Replace(s.Value.Emit()))
+		}
+
+	}
+	b.WriteRune(')')
+
+	return b.String()
 }
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
@@ -61,7 +80,7 @@ func (r Resource) Attributes() []core.KeyValue {
 
 // Equal returns true if other Resource is equal to r.
 func (r Resource) Equal(other Resource) bool {
-	return r.str == other.str
+	return r.String() == other.String()
 }
 
 // Merge creates a new resource by combining resource a and b.
@@ -120,28 +139,4 @@ func Merge(a, b *Resource) *Resource {
 	res.str = buildResourceString(res.sorted)
 
 	return res
-}
-
-// buildResourceString returns a string representation of a Resource
-// containing kvs.
-func buildResourceString(kvs []core.KeyValue) string {
-	// Ensure unique strings if key/value contains '=', ',', or '\'.
-	escaper := strings.NewReplacer("=", `\=`, ",", `\,`, `\`, `\\`)
-
-	var b strings.Builder
-	b.WriteString("Resource(")
-	if len(kvs) > 0 {
-		b.WriteString(escaper.Replace(string(kvs[0].Key)))
-		b.WriteRune('=')
-		b.WriteString(escaper.Replace(kvs[0].Value.Emit()))
-		for _, s := range kvs[1:] {
-			b.WriteRune(',')
-			b.WriteString(escaper.Replace(string(s.Key)))
-			b.WriteRune('=')
-			b.WriteString(escaper.Replace(s.Value.Emit()))
-		}
-
-	}
-	b.WriteRune(')')
-	return b.String()
 }
