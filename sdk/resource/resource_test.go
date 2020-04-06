@@ -104,6 +104,24 @@ func TestMerge(t *testing.T) {
 			want: []core.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
+			name: "Merge with no keys",
+			a:    resource.New(),
+			b:    resource.New(),
+			want: nil,
+		},
+		{
+			name: "Merge with first resource no keys",
+			a:    resource.New(),
+			b:    resource.New(kv21),
+			want: []core.KeyValue{kv21},
+		},
+		{
+			name: "Merge with second resource no keys",
+			a:    resource.New(kv11),
+			b:    resource.New(),
+			want: []core.KeyValue{kv11},
+		},
+		{
 			name: "Merge with first resource nil",
 			a:    nil,
 			b:    resource.New(kv21),
@@ -134,6 +152,10 @@ func TestString(t *testing.T) {
 		kvs  []core.KeyValue
 		want string
 	}{
+		{
+			kvs:  nil,
+			want: "Resource()",
+		},
 		{
 			kvs:  []core.KeyValue{},
 			want: "Resource()",
