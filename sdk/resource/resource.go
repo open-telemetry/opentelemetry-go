@@ -26,17 +26,17 @@ import (
 // Resource describes an entity about which identifying information and metadata is exposed.
 type Resource struct {
 	sorted []core.KeyValue
-	keys   map[core.Key]struct{}
+	keySet map[core.Key]struct{}
 }
 
 // New creates a resource from a set of attributes.
 // If there are duplicates keys then the first value of the key is preserved.
 func New(kvs ...core.KeyValue) *Resource {
-	res := &Resource{keys: make(map[core.Key]struct{})}
+	res := &Resource{keySet: make(map[core.Key]struct{})}
 	for _, kv := range kvs {
 		// First key wins.
-		if _, ok := res.keys[kv.Key]; !ok {
-			res.keys[kv.Key] = struct{}{}
+		if _, ok := res.keySet[kv.Key]; !ok {
+			res.keySet[kv.Key] = struct{}{}
 			res.sorted = append(res.sorted, kv)
 		}
 	}
