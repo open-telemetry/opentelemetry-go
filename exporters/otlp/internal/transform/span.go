@@ -21,7 +21,6 @@ import (
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -33,11 +32,17 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
-	rsm := make(map[*resource.Resource]*tracepb.ResourceSpans)
+	// Group by the unique string representation of the Resource.
+	rsm := make(map[string]*tracepb.ResourceSpans)
 
 	for _, sd := range sdl {
 		if sd != nil {
-			rs, ok := rsm[sd.Resource]
+			var key string
+			if sd.Resource != nil {
+				key = sd.Resource.String()
+			}
+
+			rs, ok := rsm[key]
 			if !ok {
 				rs = &tracepb.ResourceSpans{
 					Resource: Resource(sd.Resource),
@@ -47,7 +52,7 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 						},
 					},
 				}
-				rsm[sd.Resource] = rs
+				rsm[key] = rs
 			}
 			rs.InstrumentationLibrarySpans[0].Spans =
 				append(rs.InstrumentationLibrarySpans[0].Spans, span(sd))
