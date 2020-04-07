@@ -17,6 +17,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	nhtrace "net/http/httptrace"
 	"sync"
 	"testing"
 
@@ -86,13 +87,28 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		panic("unexpected error in http request: " + err.Error())
 	}
 
+	getSpan := func(name string) *export.SpanData {
+		spans, ok := exp.spanMap[name]
+		if !ok {
+			t.Fatalf("no spans found with the name %s, %v", name, exp.spanMap)
+		}
+
+		if len(spans) != 1 {
+			t.Fatalf("Expected exactly one span for %s but found %d", name, len(spans))
+		}
+
+		return spans[0]
+	}
+
 	testLen := []struct {
 		name       string
 		attributes []core.KeyValue
+		parent     string
 	}{
 		{
 			name:       "http.connect",
 			attributes: []core.KeyValue{key.String("http.remote", address.String())},
+			parent:     "http.getconn",
 		},
 		{
 			name: "http.getconn",
@@ -100,27 +116,30 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 				key.String("http.remote", address.String()),
 				key.String("http.host", address.String()),
 			},
+			parent: "test",
 		},
 		{
-			name: "http.receive",
+			name:   "http.receive",
+			parent: "test",
 		},
 		{
-			name: "http.send",
+			name:   "http.send",
+			parent: "test",
 		},
 		{
 			name: "test",
 		},
 	}
 	for _, tl := range testLen {
-		spans, ok := exp.spanMap[tl.name]
-		if !ok {
-			t.Fatalf("no spans found with the name %s, %v", tl.name, exp.spanMap)
-		}
+		span := getSpan(tl.name)
 
-		if len(spans) != 1 {
-			t.Fatalf("Expected exactly one span for %s but found %d", tl.name, len(spans))
+		if tl.parent != "" {
+			parentSpan := getSpan(tl.parent)
+
+			if span.ParentSpanID != parentSpan.SpanContext.SpanID {
+				t.Fatalf("[span %s] does not have expected parent span %s", tl.name, tl.parent)
+			}
 		}
-		span := spans[0]
 
 		actualAttrs := make(map[core.Key]string)
 		for _, attr := range span.Attributes {
@@ -262,4 +281,37 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEndBeforeStartCreatesSpan(t *testing.T) {
+	exp := &testExporter{
+		spanMap: make(map[string][]*export.SpanData),
+	}
+	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	global.SetTraceProvider(tp)
+
+	tr := tp.Tracer("httptrace/client")
+	ctx, span := tr.Start(context.Background(), "test")
+	defer span.End()
+
+	ct := httptrace.NewClientTrace(ctx)
+
+	ct.DNSDone(nhtrace.DNSDoneInfo{})
+	ct.DNSStart(nhtrace.DNSStartInfo{Host: "example.com"})
+
+	getSpan := func(name string) *export.SpanData {
+		spans, ok := exp.spanMap[name]
+		if !ok {
+			t.Fatalf("no spans found with the name %s, %v", name, exp.spanMap)
+		}
+
+		if len(spans) != 1 {
+			t.Fatalf("Expected exactly one span for %s but found %d", name, len(spans))
+		}
+
+		return spans[0]
+	}
+
+	getSpan("http.dns")
+
 }
