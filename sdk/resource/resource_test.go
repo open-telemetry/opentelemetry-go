@@ -16,7 +16,6 @@ package resource_test
 
 import (
 	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -52,15 +51,15 @@ func TestNew(t *testing.T) {
 		{
 			name: "New with nil",
 			in:   nil,
-			want: []core.KeyValue{},
+			want: nil,
 		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.New(c.in...)
 			if diff := cmp.Diff(
-				sortedAttributes(res.Attributes()),
-				sortedAttributes(c.want),
+				res.Attributes(),
+				c.want,
 				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
@@ -81,16 +80,46 @@ func TestMerge(t *testing.T) {
 			want: []core.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
+			name: "Merge with no overlap, no nil, not interleaved",
+			a:    resource.New(kv11, kv21),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
+		{
 			name: "Merge with common key order1",
 			a:    resource.New(kv11),
 			b:    resource.New(kv12, kv21),
-			want: []core.KeyValue{kv21, kv11},
+			want: []core.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order2",
 			a:    resource.New(kv12, kv21),
 			b:    resource.New(kv11),
 			want: []core.KeyValue{kv12, kv21},
+		},
+		{
+			name: "Merge with common key order4",
+			a:    resource.New(kv11, kv21, kv41),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
+		{
+			name: "Merge with no keys",
+			a:    resource.New(),
+			b:    resource.New(),
+			want: nil,
+		},
+		{
+			name: "Merge with first resource no keys",
+			a:    resource.New(),
+			b:    resource.New(kv21),
+			want: []core.KeyValue{kv21},
+		},
+		{
+			name: "Merge with second resource no keys",
+			a:    resource.New(kv11),
+			b:    resource.New(),
+			want: []core.KeyValue{kv11},
 		},
 		{
 			name: "Merge with first resource nil",
@@ -109,8 +138,8 @@ func TestMerge(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.Merge(c.a, c.b)
 			if diff := cmp.Diff(
-				sortedAttributes(res.Attributes()),
-				sortedAttributes(c.want),
+				res.Attributes(),
+				c.want,
 				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
@@ -118,9 +147,66 @@ func TestMerge(t *testing.T) {
 	}
 }
 
-func sortedAttributes(attrs []core.KeyValue) []core.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
-		return attrs[i].Key < attrs[j].Key
-	})
-	return attrs
+func TestString(t *testing.T) {
+	for _, test := range []struct {
+		kvs  []core.KeyValue
+		want string
+	}{
+		{
+			kvs:  nil,
+			want: "Resource()",
+		},
+		{
+			kvs:  []core.KeyValue{},
+			want: "Resource()",
+		},
+		{
+			kvs:  []core.KeyValue{kv11},
+			want: "Resource(k1=v11)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv12},
+			want: "Resource(k1=v11)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv21},
+			want: "Resource(k1=v11,k2=v21)",
+		},
+		{
+			kvs:  []core.KeyValue{kv21, kv11},
+			want: "Resource(k1=v11,k2=v21)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv21, kv31},
+			want: "Resource(k1=v11,k2=v21,k3=v31)",
+		},
+		{
+			kvs:  []core.KeyValue{kv31, kv11, kv21},
+			want: "Resource(k1=v11,k2=v21,k3=v31)",
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String("a"), core.Key("B").String("b")},
+			want: "Resource(A=a,B=b)",
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String("a,B=b")},
+			want: `Resource(A=a\,B\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A").String(`a,B\=b`)},
+			want: `Resource(A=a\,B\\\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key("A=a,B").String(`b`)},
+			want: `Resource(A\=a\,B=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{core.Key(`A=a\,B`).String(`b`)},
+			want: `Resource(A\=a\\\,B=b)`,
+		},
+	} {
+		if got := resource.New(test.kvs...).String(); got != test.want {
+			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
+		}
+	}
 }
