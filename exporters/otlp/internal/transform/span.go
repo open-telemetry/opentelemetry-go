@@ -65,10 +65,10 @@ func span(sd *export.SpanData) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
-	return &tracepb.Span{
+
+	s := &tracepb.Span{
 		TraceId:           sd.SpanContext.TraceID[:],
 		SpanId:            sd.SpanContext.SpanID[:],
-		ParentSpanId:      sd.ParentSpanID[:],
 		Status:            status(sd.StatusCode, sd.StatusMessage),
 		StartTimeUnixNano: uint64(sd.StartTime.UnixNano()),
 		EndTimeUnixNano:   uint64(sd.EndTime.UnixNano()),
@@ -82,6 +82,12 @@ func span(sd *export.SpanData) *tracepb.Span {
 		DroppedEventsCount:     uint32(sd.DroppedMessageEventCount),
 		DroppedLinksCount:      uint32(sd.DroppedLinkCount),
 	}
+
+	if sd.ParentSpanID.IsValid() {
+		s.ParentSpanId = sd.ParentSpanID[:]
+	}
+
+	return s
 }
 
 // status transform a span code and message into an OTLP span status.

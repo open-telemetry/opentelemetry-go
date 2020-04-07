@@ -360,3 +360,12 @@ func TestSpanData(t *testing.T) {
 		t.Fatalf("transformed span differs %v\n", diff)
 	}
 }
+
+// Empty parent span ID should be treated as root span.
+func TestRootSpanData(t *testing.T) {
+	rs := SpanData([]*export.SpanData{{}})[0]
+	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
+
+	// Empty means root span.
+	assert.Nil(t, got, "incorrect transform of root parent span ID")
+}
