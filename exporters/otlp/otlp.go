@@ -28,12 +28,14 @@ import (
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
+	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type Exporter struct {
@@ -84,8 +86,12 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 }
 
 var (
-	errAlreadyStarted = errors.New("already started")
-	errNotStarted     = errors.New("not started")
+	errAlreadyStarted  = errors.New("already started")
+	errNotStarted      = errors.New("not started")
+	errDisconnected    = errors.New("exporter disconnected")
+	errStopped         = errors.New("exporter stopped")
+	errContextCanceled = errors.New("context canceled")
+	errTransforming    = errors.New("transforming failed")
 )
 
 // Start dials to the collector, establishing a connection to it. It also
@@ -208,134 +214,194 @@ func (e *Exporter) Stop() error {
 	return err
 }
 
+// result is the product of transforming Records into OTLP Metrics.
+type result struct {
+	Resource resource.Resource
+	Library  string
+	Metric   *metricpb.Metric
+	Err      error
+}
+
 // Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
 // interface. It transforms metric Records into OTLP Metrics and transmits them.
 func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) error {
-	// Seed records into the work processing pool.
-	records := make(chan metricsdk.Record)
-	go func() {
-		_ = cps.ForEach(func(record metricsdk.Record) (err error) {
-			select {
-			case <-e.stopCh:
-			case <-ctx.Done():
-			case records <- record:
-			}
-			return
-		})
-		close(records)
-	}()
+	records, errc := e.source(ctx, cps)
 
-	// Allow all errors to be collected and returned singularly.
-	errCh := make(chan error)
-	var errStrings []string
-	go func() {
-		for err := range errCh {
-			if err != nil {
-				errStrings = append(errStrings, err.Error())
-			}
-		}
-	}()
-
-	// Start the work processing pool.
-	processed := make(chan *metricpb.Metric)
+	// Start a fixed number of goroutines to transform records.
+	transformed := make(chan result)
 	var wg sync.WaitGroup
+	wg.Add(int(e.c.numWorkers))
 	for i := uint(0); i < e.c.numWorkers; i++ {
-		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			e.processMetrics(ctx, processed, errCh, records)
+			e.transformer(ctx, records, transformed)
 		}()
 	}
 	go func() {
 		wg.Wait()
-		close(processed)
+		close(transformed)
 	}()
 
-	// Synchronosly collected the processed records and transmit.
-	e.uploadMetrics(ctx, processed, errCh)
+	// Synchronosly collect the transformed records and transmit.
+	err := e.sink(ctx, transformed)
+	if err != nil {
+		return err
+	}
 
-	// Now that all processing is done, handle any errors seen.
-	close(errCh)
-	if len(errStrings) > 0 {
-		return fmt.Errorf("errors exporting:\n -%s", strings.Join(errStrings, "\n -"))
+	// source is complete, check for any errors.
+	if err := <-errc; err != nil {
+		return err
 	}
 	return nil
 }
 
-func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metric, errCh chan<- error, in <-chan metricsdk.Record) {
-	for r := range in {
-		m, err := transform.Record(r)
-		if err != nil {
-			if err == aggregator.ErrNoData {
-				// The Aggregator was checkpointed before the first value
-				// was set, skipping.
-				continue
-			}
+// source starts a goroutine that sends each one of the Records yielded by
+// the CheckpointSet on the returned chan. Any error encoutered will be sent
+// on the returned error chan after seeding is complete.
+func (e *Exporter) source(ctx context.Context, cps metricsdk.CheckpointSet) (<-chan metricsdk.Record, <-chan error) {
+	errc := make(chan error, 1)
+	out := make(chan metricsdk.Record)
+	// Seed records into process.
+	go func() {
+		defer close(out)
+		// No selected needed since errc is buffered.
+		errc <- cps.ForEach(func(r metricsdk.Record) error {
 			select {
 			case <-e.stopCh:
-				return
+				return errStopped
 			case <-ctx.Done():
-				return
-			case errCh <- err:
-				continue
+				return errContextCanceled
+			case out <- r:
 			}
-		}
+			return nil
+		})
+	}()
+	return out, errc
+}
 
+// transformer transforms records read from the passed in chan into
+// OTLP Metrics which are sent on the out chan.
+func (e *Exporter) transformer(ctx context.Context, in <-chan metricsdk.Record, out chan<- result) {
+	for r := range in {
+		m, err := transform.Record(r)
+		// Propagate errors, but do not send empty results.
+		if err == nil && m == nil {
+			continue
+		}
+		res := result{
+			Resource: r.Descriptor().Resource(),
+			Library:  r.Descriptor().LibraryName(),
+			Metric:   m,
+			Err:      err,
+		}
 		select {
 		case <-e.stopCh:
 			return
 		case <-ctx.Done():
 			return
-		case out <- m:
+		case out <- res:
 		}
 	}
 }
 
-func (e *Exporter) uploadMetrics(ctx context.Context, in <-chan *metricpb.Metric, errCh chan<- error) {
-	var protoMetrics []*metricpb.Metric
-	for m := range in {
-		protoMetrics = append(protoMetrics, m)
+// sink collects transformed Records, batches them by id, and exports them.
+func (e *Exporter) sink(ctx context.Context, in <-chan result) error {
+	var errStrings []string
+
+	type resourceBatch struct {
+		Resource *resourcepb.Resource
+		// Group by instrumentation library name and then the MetricDescriptor.
+		InstrumentationLibraryBatches map[string]map[string]*metricpb.Metric
 	}
 
-	if len(protoMetrics) == 0 {
-		return
+	// group by unique Resource string.
+	grouped := make(map[string]resourceBatch)
+	for res := range in {
+		if res.Err != nil {
+			errStrings = append(errStrings, res.Err.Error())
+			continue
+		}
+
+		rb, ok := grouped[res.Resource.String()]
+		if !ok {
+			rb = resourceBatch{
+				Resource:                      transform.Resource(&res.Resource),
+				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
+			}
+			grouped[res.Resource.String()] = rb
+		}
+
+		mb, ok := rb.InstrumentationLibraryBatches[res.Library]
+		if !ok {
+			mb = make(map[string]*metricpb.Metric)
+			rb.InstrumentationLibraryBatches[res.Library] = mb
+		}
+
+		m, ok := mb[res.Metric.GetMetricDescriptor().String()]
+		if !ok {
+			mb[res.Metric.GetMetricDescriptor().String()] = res.Metric
+			continue
+		}
+		if len(res.Metric.Int64DataPoints) > 0 {
+			m.Int64DataPoints = append(m.Int64DataPoints, res.Metric.Int64DataPoints...)
+		}
+		if len(res.Metric.DoubleDataPoints) > 0 {
+			m.DoubleDataPoints = append(m.DoubleDataPoints, res.Metric.DoubleDataPoints...)
+		}
+		if len(res.Metric.HistogramDataPoints) > 0 {
+			m.HistogramDataPoints = append(m.HistogramDataPoints, res.Metric.HistogramDataPoints...)
+		}
+		if len(res.Metric.SummaryDataPoints) > 0 {
+			m.SummaryDataPoints = append(m.SummaryDataPoints, res.Metric.SummaryDataPoints...)
+		}
+	}
+
+	if len(grouped) == 0 {
+		return nil
 	}
 	if !e.connected() {
-		return
+		return errDisconnected
 	}
 
-	rm := []*metricpb.ResourceMetrics{
-		{
-			Resource: nil,
-			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-				{
-					Metrics: protoMetrics,
-				},
-			},
-		},
+	var rms []*metricpb.ResourceMetrics
+	for _, rb := range grouped {
+		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
+		for ilName, mb := range rb.InstrumentationLibraryBatches {
+			ilm := &metricpb.InstrumentationLibraryMetrics{
+				Metrics: make([]*metricpb.Metric, 0, len(mb)),
+			}
+			if ilName != "" {
+				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{Name: ilName}
+			}
+			for _, m := range mb {
+				ilm.Metrics = append(ilm.Metrics, m)
+			}
+			rm.InstrumentationLibraryMetrics = append(rm.InstrumentationLibraryMetrics, ilm)
+		}
+		rms = append(rms, rm)
 	}
 
 	select {
 	case <-e.stopCh:
-		return
+		return errStopped
 	case <-ctx.Done():
-		return
+		return errContextCanceled
 	default:
 		e.senderMu.Lock()
 		_, err := e.metricExporter.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
-			ResourceMetrics: rm,
+			ResourceMetrics: rms,
 		})
 		e.senderMu.Unlock()
 		if err != nil {
-			select {
-			case <-e.stopCh:
-				return
-			case <-ctx.Done():
-				return
-			case errCh <- err:
-			}
+			return err
 		}
 	}
+
+	// Report any transformer errors.
+	if len(errStrings) > 0 {
+		return fmt.Errorf("%w:\n -%s", errTransforming, strings.Join(errStrings, "\n -"))
+	}
+	return nil
 }
 
 func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {
