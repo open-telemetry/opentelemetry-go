@@ -15,7 +15,7 @@
 package grpctrace
 
 // gRPC tracing middleware
-// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/data-rpc.md
+// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/rpc.md
 import (
 	"context"
 	"io"
@@ -58,7 +58,14 @@ const (
 //         grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor(tracer)),
 //         ...,  // (existing DialOptions))
 func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
@@ -74,11 +81,11 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		Inject(ctx, &metadataCopy)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
-		logSentMessage(ctx, 1, req)
+		addEventForMessageSent(ctx, 1, req)
 
 		err := invoker(ctx, method, req, reply, cc, opts...)
 
-		logReceivedMessage(ctx, 1, reply)
+		addEventForMessageReceived(ctx, 1, reply)
 
 		if err != nil {
 			s, _ := status.FromError(err)
@@ -128,7 +135,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 		w.events <- streamEvent{errorEvent, err}
 	} else {
 		w.receivedMessageID++
-		logReceivedMessage(w.Context(), w.receivedMessageID, m)
+		addEventForMessageReceived(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -138,7 +145,7 @@ func (w *clientStream) SendMsg(m interface{}) error {
 	err := w.ClientStream.SendMsg(m)
 
 	w.sentMessageID++
-	logSentMessage(w.Context(), w.sentMessageID, m)
+	addEventForMessageSent(w.Context(), w.sentMessageID, m)
 
 	if err != nil {
 		w.events <- streamEvent{errorEvent, err}
@@ -217,7 +224,14 @@ func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream 
 //         grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor(tracer)),
 //         ...,  // (existing DialOptions))
 func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
-	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		opts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
@@ -261,7 +275,12 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 //         grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(tracer)),
 //         ...,  // (existing ServerOptions))
 func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
@@ -279,11 +298,11 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 		)
 		defer span.End()
 
-		logReceivedMessage(ctx, 1, req)
+		addEventForMessageReceived(ctx, 1, req)
 
 		resp, err := handler(ctx, req)
 
-		logSentMessage(ctx, 1, resp)
+		addEventForMessageSent(ctx, 1, resp)
 
 		if err != nil {
 			s, _ := status.FromError(err)
@@ -313,7 +332,7 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 
 	if err == nil {
 		w.receivedMessageID++
-		logReceivedMessage(w.Context(), w.receivedMessageID, m)
+		addEventForMessageReceived(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -323,7 +342,7 @@ func (w *serverStream) SendMsg(m interface{}) error {
 	err := w.ServerStream.SendMsg(m)
 
 	w.sentMessageID++
-	logSentMessage(w.Context(), w.sentMessageID, m)
+	addEventForMessageSent(w.Context(), w.sentMessageID, m)
 
 	return err
 }
@@ -344,7 +363,12 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 //         grpc.StreamInterceptor(grpctrace.StreamServerInterceptor(tracer)),
 //         ...,  // (existing ServerOptions))
 func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
 		ctx := ss.Context()
 
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
@@ -414,7 +438,7 @@ func serviceFromFullMethod(method string) string {
 	return match[0][1]
 }
 
-func logReceivedMessage(ctx context.Context, id int, m interface{}) {
+func addEventForMessageReceived(ctx context.Context, id int, m interface{}) {
 	size := proto.Size(m.(proto.Message))
 
 	span := trace.SpanFromContext(ctx)
@@ -425,7 +449,7 @@ func logReceivedMessage(ctx context.Context, id int, m interface{}) {
 	)
 }
 
-func logSentMessage(ctx context.Context, id int, m interface{}) {
+func addEventForMessageSent(ctx context.Context, id int, m interface{}) {
 	size := proto.Size(m.(proto.Message))
 
 	span := trace.SpanFromContext(ctx)
