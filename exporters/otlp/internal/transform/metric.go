@@ -18,6 +18,7 @@ package transform
 
 import (
 	"errors"
+	"fmt"
 
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
@@ -28,9 +29,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
-// ErrUnimplementedAgg is returned when a transformation of an unimplemented
-// aggregator is attempted.
-var ErrUnimplementedAgg = errors.New("unimplemented aggregator")
+var (
+	// ErrUnimplementedAgg is returned when a transformation of an unimplemented
+	// aggregator is attempted.
+	ErrUnimplementedAgg = errors.New("unimplemented aggregator")
+
+	// ErrUnknownValueType is returned when a transformation of an unknown value
+	// is attempted.
+	ErrUnknownValueType = errors.New("invalid value type")
+)
 
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
@@ -42,8 +49,9 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		return minMaxSumCount(d, l, a)
 	case aggregator.Sum:
 		return sum(d, l, a)
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
 	}
-	return nil, ErrUnimplementedAgg
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
@@ -73,6 +81,8 @@ func sum(desc *metric.Descriptor, labels export.Labels, a aggregator.Sum) (*metr
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{Value: sum.CoerceToFloat64(n)},
 		}
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
 	}
 
 	return m, nil
