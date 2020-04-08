@@ -333,8 +333,8 @@ func TestSpanData(t *testing.T) {
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SERVER,
-		StartTimeUnixNano:      uint64(1585674086000001234),
-		EndTimeUnixNano:        uint64(1585674096000001234),
+		StartTimeUnixNano:      uint64(startTime.UnixNano()),
+		EndTimeUnixNano:        uint64(endTime.UnixNano()),
 		Status:                 status(spanData.StatusCode, spanData.StatusMessage),
 		Events:                 spanEvents(spanData.MessageEvents),
 		Links:                  links(spanData.Links),
@@ -368,4 +368,8 @@ func TestRootSpanData(t *testing.T) {
 
 	// Empty means root span.
 	assert.Nil(t, got, "incorrect transform of root parent span ID")
+}
+
+func TestSpanDataNilResource(t *testing.T) {
+	assert.NotPanics(t, func() { SpanData([]*export.SpanData{{}}) })
 }
