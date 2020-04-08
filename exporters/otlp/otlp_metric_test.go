@@ -23,6 +23,7 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
@@ -631,14 +632,14 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		ctx := context.Background()
 		switch r.nKind {
 		case core.Uint64NumberKind:
-			agg.Update(ctx, core.NewUint64Number(1), &desc)
-			agg.Update(ctx, core.NewUint64Number(10), &desc)
+			require.NoError(t, agg.Update(ctx, core.NewUint64Number(1), &desc))
+			require.NoError(t, agg.Update(ctx, core.NewUint64Number(10), &desc))
 		case core.Int64NumberKind:
-			agg.Update(ctx, core.NewInt64Number(1), &desc)
-			agg.Update(ctx, core.NewInt64Number(10), &desc)
+			require.NoError(t, agg.Update(ctx, core.NewInt64Number(1), &desc))
+			require.NoError(t, agg.Update(ctx, core.NewInt64Number(10), &desc))
 		case core.Float64NumberKind:
-			agg.Update(ctx, core.NewFloat64Number(1), &desc)
-			agg.Update(ctx, core.NewFloat64Number(10), &desc)
+			require.NoError(t, agg.Update(ctx, core.NewFloat64Number(1), &desc))
+			require.NoError(t, agg.Update(ctx, core.NewFloat64Number(10), &desc))
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}
@@ -711,7 +712,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		msc.Reset()
-		exp.Export(context.Background(), checkpointSet{records: test.records})
+		require.NoError(t, exp.Export(context.Background(), checkpointSet{records: test.records}))
 		assert.Equal(t, test.want, msc.ResourceMetrics())
 	}
 }
