@@ -674,20 +674,18 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				resource:               rm.GetResource().String(),
 				instrumentationLibrary: ilm.GetInstrumentationLibrary().String(),
 			}
+			seen[k] = struct{}{}
 			g, ok := got[k]
 			if !ok {
-				t.Errorf("did not expect metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
+				t.Errorf("missing metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
 				continue
 			}
-			if !assert.ElementsMatch(t, ilm.GetMetrics(), g, "metrics did not match for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary) {
-				continue
-			}
-			seen[k] = struct{}{}
+			assert.ElementsMatch(t, ilm.GetMetrics(), g, "metrics did not match for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
 		}
 	}
 	for k := range got {
 		if _, ok := seen[k]; !ok {
-			t.Errorf("missing metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
+			t.Errorf("did not expect metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
 		}
 	}
 }
