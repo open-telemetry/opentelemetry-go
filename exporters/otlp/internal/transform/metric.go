@@ -79,7 +79,7 @@ func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uin
 		close(transformed)
 	}()
 
-	// Synchronosly collect the transformed records and transmit.
+	// Synchronously collect the transformed records and transmit.
 	rms, err := sink(ctx, transformed)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record
 	// Seed records into process.
 	go func() {
 		defer close(out)
-		// No selected needed since errc is buffered.
+		// No select is needed since errc is buffered.
 		errc <- cps.ForEach(func(r export.Record) error {
 			select {
 			case <-ctx.Done():
