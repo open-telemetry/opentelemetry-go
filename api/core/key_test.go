@@ -15,6 +15,7 @@
 package core_test
 
 import (
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -22,6 +23,88 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 )
+
+func TestKV(t *testing.T) {
+	builder := &strings.Builder{}
+	builder.WriteString("foo")
+	for _, testcase := range []struct {
+		key       string
+		value     interface{}
+		wantType  core.ValueType
+		wantValue interface{}
+	}{
+		{
+			key:       "bool type inferred",
+			value:     true,
+			wantType:  core.BOOL,
+			wantValue: true,
+		},
+		{
+			key:       "int64 type inferred",
+			value:     int64(42),
+			wantType:  core.INT64,
+			wantValue: int64(42),
+		},
+		{
+			key:       "uint64 type inferred",
+			value:     uint64(42),
+			wantType:  core.UINT64,
+			wantValue: uint64(42),
+		},
+		{
+			key:       "float64 type inferred",
+			value:     float64(42.1),
+			wantType:  core.FLOAT64,
+			wantValue: 42.1,
+		},
+		{
+			key:       "int32 type inferred",
+			value:     int32(42),
+			wantType:  core.INT32,
+			wantValue: int32(42),
+		},
+		{
+			key:       "uint32 type inferred",
+			value:     uint32(42),
+			wantType:  core.UINT32,
+			wantValue: uint32(42),
+		},
+		{
+			key:       "float32 type inferred",
+			value:     float32(42.1),
+			wantType:  core.FLOAT32,
+			wantValue: float32(42.1),
+		},
+		{
+			key:       "string type inferred",
+			value:     "foo",
+			wantType:  core.STRING,
+			wantValue: "foo",
+		},
+		{
+			key:       "stringer type inferred",
+			value:     builder,
+			wantType:  core.STRING,
+			wantValue: "foo",
+		},
+		{
+			key:       "unknown value serialized as %v",
+			value:     nil,
+			wantType:  core.STRING,
+			wantValue: "<nil>",
+		},
+	} {
+		t.Logf("Running test case %s", testcase.key)
+		kv := core.KV(testcase.key, testcase.value)
+		if kv[0].Value.Type() != testcase.wantType {
+			t.Errorf("wrong value type, got %#v, expected %#v", kv[0].Value.Type(), testcase.wantType)
+		}
+		got := kv[0].Value.AsInterface()
+		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
+			t.Errorf("+got, -want: %s", diff)
+		}
+	}
+}
 
 func TestValue(t *testing.T) {
 	k := core.Key("test")

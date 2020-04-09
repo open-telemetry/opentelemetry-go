@@ -64,62 +64,6 @@ func Bool(v bool) Value {
 	}
 }
 
-// Int64 creates an INT64 Value.
-func Int64(v int64) Value {
-	return Value{
-		vtype:   INT64,
-		numeric: int64ToRaw(v),
-	}
-}
-
-// Uint64 creates a UINT64 Value.
-func Uint64(v uint64) Value {
-	return Value{
-		vtype:   UINT64,
-		numeric: uint64ToRaw(v),
-	}
-}
-
-// Float64 creates a FLOAT64 Value.
-func Float64(v float64) Value {
-	return Value{
-		vtype:   FLOAT64,
-		numeric: float64ToRaw(v),
-	}
-}
-
-// Int32 creates an INT32 Value.
-func Int32(v int32) Value {
-	return Value{
-		vtype:   INT32,
-		numeric: int32ToRaw(v),
-	}
-}
-
-// Uint32 creates a UINT32 Value.
-func Uint32(v uint32) Value {
-	return Value{
-		vtype:   UINT32,
-		numeric: uint32ToRaw(v),
-	}
-}
-
-// Float32 creates a FLOAT32 Value.
-func Float32(v float32) Value {
-	return Value{
-		vtype:   FLOAT32,
-		numeric: float32ToRaw(v),
-	}
-}
-
-// String creates a STRING Value.
-func String(v string) Value {
-	return Value{
-		vtype:    STRING,
-		stringly: v,
-	}
-}
-
 // Int creates either an INT32 or an INT64 Value, depending on whether
 // the int type is 32 or 64 bits wide.
 func Int(v int) Value {
@@ -138,6 +82,92 @@ func Uint(v uint) Value {
 	return Uint64(uint64(v))
 }
 
+// Int32 creates an INT32 Value.
+func Int32(v int32) Value {
+	return Value{
+		vtype:   INT32,
+		numeric: int32ToRaw(v),
+	}
+}
+
+// Int64 creates an INT64 Value.
+func Int64(v int64) Value {
+	return Value{
+		vtype:   INT64,
+		numeric: int64ToRaw(v),
+	}
+}
+
+// Uint32 creates a UINT32 Value.
+func Uint32(v uint32) Value {
+	return Value{
+		vtype:   UINT32,
+		numeric: uint32ToRaw(v),
+	}
+}
+
+// Uint64 creates a UINT64 Value.
+func Uint64(v uint64) Value {
+	return Value{
+		vtype:   UINT64,
+		numeric: uint64ToRaw(v),
+	}
+}
+
+// Float32 creates a FLOAT32 Value.
+func Float32(v float32) Value {
+	return Value{
+		vtype:   FLOAT32,
+		numeric: float32ToRaw(v),
+	}
+}
+
+// Float64 creates a FLOAT64 Value.
+func Float64(v float64) Value {
+	return Value{
+		vtype:   FLOAT64,
+		numeric: float64ToRaw(v),
+	}
+}
+
+// String creates a STRING Value.
+func String(v string) Value {
+	return Value{
+		vtype:    STRING,
+		stringly: v,
+	}
+}
+
+func KV(key string, value interface{}) []KeyValue {
+	k := Key(key)
+	switch v := value.(type) {
+	case bool:
+		return []KeyValue{k.Bool(v)}
+	case int:
+		return []KeyValue{k.Int(v)}
+	case uint:
+		return []KeyValue{k.Uint(v)}
+	case int32:
+		return []KeyValue{k.Int32(v)}
+	case int64:
+		return []KeyValue{k.Int64(v)}
+	case uint32:
+		return []KeyValue{k.Uint32(v)}
+	case uint64:
+		return []KeyValue{k.Uint64(v)}
+	case float32:
+		return []KeyValue{k.Float32(v)}
+	case float64:
+		return []KeyValue{k.Float64(v)}
+	case string:
+		return []KeyValue{k.String(v)}
+	case fmt.Stringer:
+		return []KeyValue{k.String(v.String())}
+	default:
+		return []KeyValue{k.String(fmt.Sprintf("%v", v))}
+	}
+}
+
 // Bool creates a KeyValue instance with a BOOL Value.
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
@@ -146,64 +176,6 @@ func (k Key) Bool(v bool) KeyValue {
 	}
 }
 
-// Int64 creates a KeyValue instance with an INT64 Value.
-func (k Key) Int64(v int64) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Int64(v),
-	}
-}
-
-// Uint64 creates a KeyValue instance with a UINT64 Value.
-func (k Key) Uint64(v uint64) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Uint64(v),
-	}
-}
-
-// Float64 creates a KeyValue instance with a FLOAT64 Value.
-func (k Key) Float64(v float64) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Float64(v),
-	}
-}
-
-// Int32 creates a KeyValue instance with an INT32 Value.
-func (k Key) Int32(v int32) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Int32(v),
-	}
-}
-
-// Uint32 creates a KeyValue instance with a UINT32 Value.
-func (k Key) Uint32(v uint32) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Uint32(v),
-	}
-}
-
-// Float32 creates a KeyValue instance with a FLOAT32 Value.
-func (k Key) Float32(v float32) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: Float32(v),
-	}
-}
-
-// String creates a KeyValue instance with a STRING Value.
-func (k Key) String(v string) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: String(v),
-	}
-}
-
-// Int creates a KeyValue instance with either an INT32 or an INT64
-// Value, depending on whether the int type is 32 or 64 bits wide.
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -220,6 +192,64 @@ func (k Key) Uint(v uint) KeyValue {
 	}
 }
 
+// Int64 creates a KeyValue instance with an INT64 Value.
+// Int32 creates a KeyValue instance with an INT32 Value.
+func (k Key) Int32(v int32) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Int32(v),
+	}
+}
+
+func (k Key) Int64(v int64) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Int64(v),
+	}
+}
+
+// Uint32 creates a KeyValue instance with a UINT32 Value.
+func (k Key) Uint32(v uint32) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Uint32(v),
+	}
+}
+
+// Uint64 creates a KeyValue instance with a UINT64 Value.
+func (k Key) Uint64(v uint64) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Uint64(v),
+	}
+}
+
+// Float32 creates a KeyValue instance with a FLOAT32 Value.
+func (k Key) Float32(v float32) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Float32(v),
+	}
+}
+
+// Float64 creates a KeyValue instance with a FLOAT64 Value.
+func (k Key) Float64(v float64) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Float64(v),
+	}
+}
+
+// String creates a KeyValue instance with a STRING Value.
+func (k Key) String(v string) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: String(v),
+	}
+}
+
+// Int creates a KeyValue instance with either an INT32 or an INT64
+// Value, depending on whether the int type is 32 or 64 bits wide.
 // Defined returns true for non-empty keys.
 func (k Key) Defined() bool {
 	return len(k) != 0
