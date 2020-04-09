@@ -28,14 +28,14 @@ var _ http.Handler = &Handler{}
 
 // Attribute keys that the Handler can add to a span.
 const (
-	HostKey       = core.Key("http.host")        // the http host (http.Request.Host)
-	MethodKey     = core.Key("http.method")      // the http method (http.Request.Method)
-	PathKey       = core.Key("http.path")        // the http path (http.Request.URL.Path)
-	URLKey        = core.Key("http.url")         // the http url (http.Request.URL.String())
-	UserAgentKey  = core.Key("http.user_agent")  // the http user agent (http.Request.UserAgent())
-	RouteKey      = core.Key("http.route")       // the http route (ex: /users/:id)
+	HostKey       = core.Key("http.host")        // the HTTP host (http.Request.Host)
+	MethodKey     = core.Key("http.method")      // the HTTP method (http.Request.Method)
+	PathKey       = core.Key("http.path")        // the HTTP path (http.Request.URL.Path)
+	URLKey        = core.Key("http.url")         // the HTTP URL (http.Request.URL.String())
+	UserAgentKey  = core.Key("http.user_agent")  // the HTTP user agent (http.Request.UserAgent())
+	RouteKey      = core.Key("http.route")       // the HTTP route (ex: /users/:id)
 	RemoteAddrKey = core.Key("http.remote_addr") // the network address of the client that sent the HTTP request (http.Request.RemoteAddr)
-	StatusCodeKey = core.Key("http.status_code") // if set, the http status
+	StatusCodeKey = core.Key("http.status_code") // if set, the HTTP status
 	ReadBytesKey  = core.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
 	ReadErrorKey  = core.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
 	WroteBytesKey = core.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
