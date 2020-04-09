@@ -159,13 +159,14 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 			continue
 		}
 
-		rb, ok := grouped[res.Resource.String()]
+		rID := res.Resource.String()
+		rb, ok := grouped[rID]
 		if !ok {
 			rb = resourceBatch{
 				Resource:                      Resource(&res.Resource),
 				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
 			}
-			grouped[res.Resource.String()] = rb
+			grouped[rID] = rb
 		}
 
 		mb, ok := rb.InstrumentationLibraryBatches[res.Library]
@@ -174,9 +175,10 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 			rb.InstrumentationLibraryBatches[res.Library] = mb
 		}
 
-		m, ok := mb[res.Metric.GetMetricDescriptor().String()]
+		mID := res.Metric.GetMetricDescriptor().String()
+		m, ok := mb[mID]
 		if !ok {
-			mb[res.Metric.GetMetricDescriptor().String()] = res.Metric
+			mb[mID] = res.Metric
 			continue
 		}
 		if len(res.Metric.Int64DataPoints) > 0 {
