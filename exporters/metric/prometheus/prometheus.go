@@ -281,7 +281,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	var sum core.Number
 	sum, err = dist.Sum()
 	if err != nil {
-		return fmt.Errorf("error retrieving sum: %w", err)
+		return fmt.Errorf("error retrieving distribution sum: %w", err)
 	}
 
 	quantiles := make(map[float64]float64)
