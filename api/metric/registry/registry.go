@@ -125,7 +125,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 // NewAsyncInstrument implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	descriptor metric.Descriptor,
-	callback func(func(core.Number, []core.KeyValue)),
+	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
@@ -138,7 +138,7 @@ func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 		return impl.(metric.AsyncImpl), nil
 	}
 
-	asyncInst, err := u.impl.NewAsyncInstrument(descriptor, callback)
+	asyncInst, err := u.impl.NewAsyncInstrument(descriptor, runner)
 	if err != nil {
 		return nil, err
 	}

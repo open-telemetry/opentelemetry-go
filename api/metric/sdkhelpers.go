@@ -39,7 +39,7 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(core.Number, []core.KeyValue)),
+		runner AsyncRunner,
 	) (AsyncImpl, error)
 }
 
@@ -95,23 +95,7 @@ type wrappedMeterImpl struct {
 	libraryName string
 }
 
-// int64ObserverResult is an adapter for int64-valued asynchronous
-// callbacks.
-type int64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
-}
-
-// float64ObserverResult is an adapter for float64-valued asynchronous
-// callbacks.
-type float64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
-}
-
-var (
-	_ Meter                 = (*wrappedMeterImpl)(nil)
-	_ Int64ObserverResult   = int64ObserverResult{}
-	_ Float64ObserverResult = float64ObserverResult{}
-)
+var _ Meter = (*wrappedMeterImpl)(nil)
 
 // Configure is a helper that applies all the options to a Config.
 func Configure(opts []Option) Config {
@@ -221,11 +205,11 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 	return Float64Measure{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
+func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, runner AsyncRunner) (AsyncImpl, error) {
 	opts = insertResource(m.impl, opts)
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
-	return m.impl.NewAsyncInstrument(desc, callback)
+	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
 func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
@@ -233,13 +217,7 @@ func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64Obse
 		return NoopMeter{}.RegisterInt64Observer("", nil)
 	}
 	return WrapInt64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
-				// Note: this memory allocation could be avoided by
-				// using a pointer to this object and mutating it
-				// on each collection interval.
-				callback(int64ObserverResult{observe})
-			}))
+		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts, callback))
 }
 
 // WrapInt64ObserverInstrument returns an `Int64Observer` from a
@@ -256,10 +234,7 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 		return NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
 	return WrapFloat64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
-				callback(float64ObserverResult{observe})
-			}))
+		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts, callback))
 }
 
 // WrapFloat64ObserverInstrument returns an `Float64Observer` from a
@@ -269,12 +244,4 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 func WrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Observer, error) {
 	common, err := checkNewAsync(asyncInst, err)
 	return Float64Observer{asyncInstrument: common}, err
-}
-
-func (io int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	io.observe(core.NewInt64Number(value), labels)
-}
-
-func (fo float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fo.observe(core.NewFloat64Number(value), labels)
 }

@@ -75,6 +75,27 @@ func (m Measurement) Number() core.Number {
 	return m.number
 }
 
+// Observation is used for reporting a batch of metric
+// values. Instances of this type should be created by instruments
+// (e.g., Int64Observer.Observation()).
+type Observation struct {
+	// number needs to be aligned for 64-bit atomic operations.
+	number     core.Number
+	instrument AsyncImpl
+}
+
+// AsyncImpl returns the instrument that created this observation.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (m Observation) AsyncImpl() AsyncImpl {
+	return m.instrument
+}
+
+// Number returns a number recorded in this observation.
+func (m Observation) Number() core.Number {
+	return m.number
+}
+
 // Kind describes the kind of instrument.
 type Kind int8
 

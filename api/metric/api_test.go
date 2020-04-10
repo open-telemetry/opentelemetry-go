@@ -192,9 +192,13 @@ func TestObserver(t *testing.T) {
 	{
 		labels := []core.KeyValue{key.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
-			result.Observe(42, labels...)
-		})
+		o := Must(meter).RegisterFloat64Observer("test.observer.float",
+			metric.NewFloat64ObserverCallback(
+				func(result metric.Float64ObserverResult) {
+					result.Observe(42, labels...)
+				},
+			),
+		)
 		t.Log("Testing float observer")
 
 		mockSDK.RunAsyncInstruments()
@@ -203,9 +207,13 @@ func TestObserver(t *testing.T) {
 	{
 		labels := []core.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
-			result.Observe(42, labels...)
-		})
+		o := Must(meter).RegisterInt64Observer("test.observer.int",
+			metric.NewInt64ObserverCallback(
+				func(result metric.Int64ObserverResult) {
+					result.Observe(42, labels...)
+				},
+			),
+		)
 		t.Log("Testing int observer")
 		mockSDK.RunAsyncInstruments()
 		checkObserverBatch(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
@@ -298,7 +306,7 @@ func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl,
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(core.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 
@@ -311,7 +319,11 @@ func TestWrappedInstrumentError(t *testing.T) {
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, measure.SyncImpl())
 
-	observer, err := meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {})
+	observer, err := meter.RegisterInt64Observer("test.observer",
+		metric.NewInt64ObserverCallback(
+			func(result metric.Int64ObserverResult) {},
+		),
+	)
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())

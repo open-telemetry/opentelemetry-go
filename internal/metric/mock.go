@@ -46,8 +46,11 @@ type (
 	}
 
 	MeterImpl struct {
+		lock sync.Mutex
+
 		MeasurementBatches []Batch
-		AsyncInstruments   []*Async
+		asyncRunnerMap     map[metric.AsyncRunner]struct{}
+		asyncRunners       []metric.AsyncRunner
 	}
 
 	Measurement struct {
@@ -63,8 +66,6 @@ type (
 
 	Async struct {
 		Instrument
-
-		callback func(func(core.Number, []core.KeyValue))
 	}
 
 	Sync struct {
@@ -117,7 +118,9 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, 
 }
 
 func NewProvider() (*MeterImpl, apimetric.Provider) {
-	impl := &MeterImpl{}
+	impl := &MeterImpl{
+		asyncRunnerMap: map[metric.AsyncRunner]struct{}{},
+	}
 	p := &MeterProvider{
 		impl:       impl,
 		unique:     registry.NewUniqueInstrumentMeterImpl(impl),
@@ -144,6 +147,9 @@ func NewMeter() (*MeterImpl, apimetric.Meter) {
 }
 
 func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -152,15 +158,20 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.S
 	}, nil
 }
 
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(core.Number, []core.KeyValue))) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner apimetric.AsyncRunner) (apimetric.AsyncImpl, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-		callback: callback,
 	}
-	m.AsyncInstruments = append(m.AsyncInstruments, a)
+	if _, ok := m.asyncRunnerMap[runner]; !ok {
+		m.asyncRunnerMap[runner] = struct{}{}
+		m.asyncRunners = append(m.asyncRunners, runner)
+	}
 	return a, nil
 }
 
@@ -185,9 +196,9 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 }
 
 func (m *MeterImpl) RunAsyncInstruments() {
-	for _, observer := range m.AsyncInstruments {
-		observer.callback(func(n core.Number, labels []core.KeyValue) {
-			m.doRecordSingle(context.Background(), labels, observer, n)
+	for runner := range m.asyncRunnerMap {
+		runner.Run(func(i apimetric.AsyncImpl, n core.Number, labels []core.KeyValue) {
+			m.doRecordSingle(context.Background(), labels, i, n)
 		})
 	}
 }
