@@ -93,5 +93,5 @@ func main() {
 	fmt.Printf("Response Received: %s\n\n\n", body)
 	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
 	time.Sleep(10 * time.Second)
-	fmt.Printf("Inspect traces on stdout")
+	fmt.Printf("Inspect traces on stdout\n")
 }
