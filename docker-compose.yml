@@ -1,0 +1,20 @@
+# Copyright The OpenTelemetry Authors
+version: "3.7"
+services:
+  http-server:
+    build:
+      context: .
+      target: example-http-server
+    networks:
+      - example
+  http-client:
+    build:
+      context: .
+      target: example-http-client
+    command: ["/go/bin/client", "http://http-server:7777/hello"]
+    networks:
+      - example
+    depends_on:
+      - http-server
+networks:
+  example:
