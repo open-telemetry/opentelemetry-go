@@ -21,6 +21,7 @@ import (
 	"log"
 
 	"net/http"
+	"os"
 	"time"
 
 	"go.opentelemetry.io/otel/api/correlation"
@@ -58,11 +59,18 @@ func main() {
 	)
 
 	var body []byte
+	var url string
+
+	if len(os.Args) > 1 {
+		url = os.Args[1]
+	} else {
+		url = "http://localhost:7777/hello"
+	}
 
 	tr := global.Tracer("example/client")
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
-			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
+			req, _ := http.NewRequest("GET", url, nil)
 
 			ctx, req = httptrace.W3C(ctx, req)
 			httptrace.Inject(ctx, req)
