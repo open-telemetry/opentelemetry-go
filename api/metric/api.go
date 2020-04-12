@@ -76,8 +76,8 @@ func (m Measurement) Number() core.Number {
 }
 
 // Observation is used for reporting a batch of metric
-// values. Instances of this type should be created by instruments
-// (e.g., Int64Observer.Observation()).
+// values. Instances of this type should be created by Observer
+// instruments (e.g., Int64Observer.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     core.Number

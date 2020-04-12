@@ -16,14 +16,86 @@ package metric
 
 import "go.opentelemetry.io/otel/api/core"
 
+// Int64ObserverCallback is a callback argument for
+// RegisterInt64Observer.  If reporting a single instrument, use
+// NewInt64ObserverCallback().  If reporting a batch of instruments,
+// use NewBatchObserverCallback().
+type Int64ObserverCallback interface {
+	intObserver()
+	anyRunner()
+}
+
+// Float64ObserverCallback is a callback argument for
+// RegisterFloat64Observer.  If reporting a single instrument, use
+// NewFloat64ObserverCallback().  If reporting a batch of instruments,
+// use NewBatchObserverCallback().
+type Float64ObserverCallback interface {
+	floatObserver()
+	anyRunner()
+}
+
+// BatchObserverCallback is a callback argument for use with any
+// Observer instrument that will be reported as a batch of
+// observations.
+type BatchObserverCallback interface {
+	intObserver()
+	floatObserver()
+	anyRunner()
+}
+
+// NewInt64ObserverCallback returns a single-observer callback for integer Observer instruments.
+func NewInt64ObserverCallback(f func(Int64ObserverResult)) Int64ObserverCallback {
+	var c int64ObserverCallback = f
+	return &c
+}
+
+// NewFloat64ObserverCallback returns a single-observer callback for floating point Observer instruments.
+func NewFloat64ObserverCallback(f func(Float64ObserverResult)) Float64ObserverCallback {
+	var c float64ObserverCallback = f
+	return &c
+}
+
+// NewBatchObserverCallback returns a batch-observer callback use with multiple Observer instruments.
+func NewBatchObserverCallback(f func(BatchObserverResult)) BatchObserverCallback {
+	var c batchObserverCallback = f
+	return &c
+}
+
+// Int64ObserverResult is passed to Int64ObserverCallback for
+// reporting results from a single integer Observer instrument.
 type Int64ObserverResult interface {
 	Observe(value int64, labels ...core.KeyValue)
 }
+
+// Float64ObserverResult is passed to Float64ObserverCallback for
+// reporting results from a single floating point Observer instrument.
 type Float64ObserverResult interface {
 	Observe(value float64, labels ...core.KeyValue)
 }
+
+// BatchObserverResult is passed to BatchObserverCallback for
+// reporting results for a batch of Observers.
 type BatchObserverResult interface {
 	Observe(labels []core.KeyValue, observations ...Observation)
+}
+
+// AsyncRunner is an interface implemented by all Observer callbacks.
+// SDKs should test whether the runner is an AsyncSingleRunner or
+// AsyncBatchRunner and use the correct interface to run the observers.
+type AsyncRunner interface {
+	anyRunner()
+}
+
+// AsyncSingleRunner is an interface implemented by single-observer
+// callbacks.
+type AsyncSingleRunner interface {
+	Run(AsyncImpl, func(AsyncImpl, core.Number, []core.KeyValue))
+}
+
+// AsyncBatchRunner is an interface implemented by batch-observer
+// callbacks.
+type AsyncBatchRunner interface {
+	Run(func([]core.KeyValue, []Observation))
 }
 
 type int64ObserverResult struct {
@@ -54,32 +126,6 @@ func (fr float64ObserverResult) Observe(value float64, labels ...core.KeyValue) 
 
 func (br batchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
 	br.function(labels, obs)
-}
-
-type AsyncRunner interface {
-	anyRunner()
-}
-
-type AsyncSingleRunner interface {
-	Run(AsyncImpl, func(AsyncImpl, core.Number, []core.KeyValue))
-}
-
-type AsyncBatchRunner interface {
-	Run(func([]core.KeyValue, []Observation))
-}
-
-type Int64ObserverCallback interface {
-	intObserver()
-	anyRunner()
-}
-type Float64ObserverCallback interface {
-	floatObserver()
-	anyRunner()
-}
-type BatchObserverCallback interface {
-	intObserver()
-	floatObserver()
-	anyRunner()
 }
 
 type int64ObserverCallback func(result Int64ObserverResult)
@@ -120,21 +166,6 @@ func (b *batchObserverCallback) Run(function func([]core.KeyValue, []Observation
 	(*b)(batchObserverResult{
 		function: function,
 	})
-}
-
-func NewInt64ObserverCallback(f func(Int64ObserverResult)) Int64ObserverCallback {
-	var c int64ObserverCallback = f
-	return &c
-}
-
-func NewFloat64ObserverCallback(f func(Float64ObserverResult)) Float64ObserverCallback {
-	var c float64ObserverCallback = f
-	return &c
-}
-
-func NewBatchObserverCallback(f func(BatchObserverResult)) BatchObserverCallback {
-	var c batchObserverCallback = f
-	return &c
 }
 
 // Int64Observer is a metric that captures a set of int64 values at a

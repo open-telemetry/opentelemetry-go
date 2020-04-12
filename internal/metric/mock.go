@@ -45,17 +45,29 @@ type (
 		registered map[string]apimetric.Meter
 	}
 
+	// runnerPair is a map entry for Observer callback runners.
 	runnerPair struct {
+		// runner is used as a map key here.  The API ensures
+		// that all callbacks are pointers for this reason.
 		runner metric.AsyncRunner
-		inst   *Async
+
+		// inst refers to a non-nil instrument when `runner`
+		// is a metric.AsyncSingleRunner.
+		inst *Async
 	}
 
 	MeterImpl struct {
 		lock sync.Mutex
 
 		MeasurementBatches []Batch
-		asyncRunnerMap     map[runnerPair]struct{}
-		asyncRunners       []runnerPair
+
+		// asyncRunnerMap ensures that batch callbacks are
+		// only registered in the asyncRunners list once.  The
+		// list is used to ensure that runners are run in the
+		// order they were registered.
+
+		asyncRunnerMap map[runnerPair]struct{}
+		asyncRunners   []runnerPair
 	}
 
 	Measurement struct {
@@ -175,6 +187,14 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner apim
 			meter:      m,
 		},
 	}
+	// runnerPair reflects this callback in the asyncRunners list.
+	// If this is a batch runner, the instrument is nil.  If this
+	// is a single-Observer runner, the instrument is included.
+	// This ensures that batch callbacks are called once and
+	// single callbacks are called once per instrument.  This
+	// handles the case where a single callback is used for more
+	// than one Observer by calling the callback once per
+	// instrument.
 	rp := runnerPair{
 		runner: runner,
 	}
@@ -211,6 +231,10 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 
 func (m *MeterImpl) RunAsyncInstruments() {
 	for _, rp := range m.asyncRunners {
+		// The runner must be a single or batch runner.  If
+		// single, the instrument is included in the
+		// `runnerPair`.
+
 		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
 			singleRunner.Run(rp.inst, func(i apimetric.AsyncImpl, n core.Number, labels []core.KeyValue) {
 				m.doRecordSingle(context.Background(), labels, i, n)
