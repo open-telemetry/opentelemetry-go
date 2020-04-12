@@ -10,3 +10,7 @@ CMD ["/go/bin/server"]
 FROM base AS example-http-client
 RUN go install ./example/http/client/client.go
 CMD ["/go/bin/client"]
+
+FROM base AS example-zipkin-client
+RUN go install ./example/zipkin/main.go
+CMD ["/go/bin/main"]
