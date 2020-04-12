@@ -45,12 +45,17 @@ type (
 		registered map[string]apimetric.Meter
 	}
 
+	runnerPair struct {
+		runner metric.AsyncRunner
+		inst   *Async
+	}
+
 	MeterImpl struct {
 		lock sync.Mutex
 
 		MeasurementBatches []Batch
-		asyncRunnerMap     map[metric.AsyncRunner]struct{}
-		asyncRunners       []metric.AsyncRunner
+		asyncRunnerMap     map[runnerPair]struct{}
+		asyncRunners       []runnerPair
 	}
 
 	Measurement struct {
@@ -111,15 +116,17 @@ func (h *Handle) Unbind() {
 }
 
 func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number core.Number) {
-	m.recordMockBatch(ctx, labels, Measurement{
-		Instrument: instrument,
-		Number:     number,
+	m.recordMockBatch(ctx, labels, []Measurement{
+		{
+			Instrument: instrument,
+			Number:     number,
+		},
 	})
 }
 
 func NewProvider() (*MeterImpl, apimetric.Provider) {
 	impl := &MeterImpl{
-		asyncRunnerMap: map[metric.AsyncRunner]struct{}{},
+		asyncRunnerMap: map[runnerPair]struct{}{},
 	}
 	p := &MeterProvider{
 		impl:       impl,
@@ -168,9 +175,16 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner apim
 			meter:      m,
 		},
 	}
-	if _, ok := m.asyncRunnerMap[runner]; !ok {
-		m.asyncRunnerMap[runner] = struct{}{}
-		m.asyncRunners = append(m.asyncRunners, runner)
+	rp := runnerPair{
+		runner: runner,
+	}
+	if _, ok := runner.(metric.AsyncSingleRunner); ok {
+		rp.inst = a
+	}
+
+	if _, ok := m.asyncRunnerMap[rp]; !ok {
+		m.asyncRunnerMap[rp] = struct{}{}
+		m.asyncRunners = append(m.asyncRunners, rp)
 	}
 	return a, nil
 }
@@ -184,10 +198,10 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 			Number:     m.Number(),
 		}
 	}
-	m.recordMockBatch(ctx, labels, mm...)
+	m.recordMockBatch(ctx, labels, mm)
 }
 
-func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue, measurements ...Measurement) {
+func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue, measurements []Measurement) {
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
 		Ctx:          ctx,
 		Labels:       labels,
@@ -196,9 +210,28 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 }
 
 func (m *MeterImpl) RunAsyncInstruments() {
-	for runner := range m.asyncRunnerMap {
-		runner.Run(func(i apimetric.AsyncImpl, n core.Number, labels []core.KeyValue) {
-			m.doRecordSingle(context.Background(), labels, i, n)
-		})
+	for _, rp := range m.asyncRunners {
+		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
+			singleRunner.Run(rp.inst, func(i apimetric.AsyncImpl, n core.Number, labels []core.KeyValue) {
+				m.doRecordSingle(context.Background(), labels, i, n)
+			})
+			continue
+		}
+
+		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
+			multiRunner.Run(func(labels []core.KeyValue, obs []metric.Observation) {
+				mm := make([]Measurement, len(obs))
+				for i := 0; i < len(obs); i++ {
+					o := obs[i]
+					mm[i] = Measurement{
+						Instrument: o.AsyncImpl().(*Async),
+						Number:     o.Number(),
+					}
+				}
+
+				m.recordMockBatch(context.Background(), labels, mm)
+			})
+			continue
+		}
 	}
 }

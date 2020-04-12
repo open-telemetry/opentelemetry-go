@@ -202,7 +202,7 @@ func TestObserver(t *testing.T) {
 		t.Log("Testing float observer")
 
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
+		checkObserverResults(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
 	}
 	{
 		labels := []core.KeyValue{}
@@ -216,8 +216,53 @@ func TestObserver(t *testing.T) {
 		)
 		t.Log("Testing int observer")
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
+		checkObserverResults(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
 	}
+}
+
+func TestBatchObserver(t *testing.T) {
+	mockSDK, meter := mockTest.NewMeter()
+
+	var obs1 metric.Int64Observer
+	var obs2 metric.Float64Observer
+
+	labels := []core.KeyValue{
+		key.String("A", "B"),
+		key.String("C", "D"),
+	}
+
+	cb := metric.NewBatchObserverCallback(
+		func(result metric.BatchObserverResult) {
+			result.Observe(labels,
+				obs1.Observation(42),
+				obs2.Observation(42.0),
+			)
+		},
+	)
+	obs1 = Must(meter).RegisterInt64Observer("test.observer.int", cb)
+	obs2 = Must(meter).RegisterFloat64Observer("test.observer.float", cb)
+
+	mockSDK.RunAsyncInstruments()
+
+	require.Len(t, mockSDK.MeasurementBatches, 1)
+
+	impl1 := obs1.AsyncImpl().Implementation().(*mockTest.Async)
+	impl2 := obs2.AsyncImpl().Implementation().(*mockTest.Async)
+
+	require.NotNil(t, impl1)
+	require.NotNil(t, impl2)
+
+	got := mockSDK.MeasurementBatches[0]
+	require.Equal(t, labels, got.Labels)
+	require.Len(t, got.Measurements, 2)
+
+	m1 := got.Measurements[0]
+	require.Equal(t, impl1, m1.Instrument.Implementation().(*mockTest.Async))
+	require.Equal(t, 0, m1.Number.CompareNumber(core.Int64NumberKind, fortyTwo(t, core.Int64NumberKind)))
+
+	m2 := got.Measurements[1]
+	require.Equal(t, impl2, m2.Instrument.Implementation().(*mockTest.Async))
+	require.Equal(t, 0, m2.Number.CompareNumber(core.Float64NumberKind, fortyTwo(t, core.Float64NumberKind)))
 }
 
 func checkBatches(t *testing.T, ctx context.Context, labels []core.KeyValue, mock *mockTest.MeterImpl, kind core.NumberKind, instrument metric.InstrumentImpl) {
@@ -260,7 +305,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels []core.KeyValue, moc
 	}
 }
 
-func checkObserverBatch(t *testing.T, labels []core.KeyValue, mock *mockTest.MeterImpl, kind core.NumberKind, observer metric.AsyncImpl) {
+func checkObserverResults(t *testing.T, labels []core.KeyValue, mock *mockTest.MeterImpl, kind core.NumberKind, observer metric.AsyncImpl) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {

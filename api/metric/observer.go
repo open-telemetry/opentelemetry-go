@@ -28,16 +28,16 @@ type BatchObserverResult interface {
 
 type int64ObserverResult struct {
 	instrument AsyncImpl
-	observe    func(AsyncImpl, core.Number, []core.KeyValue)
+	function   func(AsyncImpl, core.Number, []core.KeyValue)
 }
 
 type float64ObserverResult struct {
 	instrument AsyncImpl
-	observe    func(AsyncImpl, core.Number, []core.KeyValue)
+	function   func(AsyncImpl, core.Number, []core.KeyValue)
 }
 
 type batchObserverResult struct {
-	// observe func(AsyncImpl, core.Number, []core.KeyValue)
+	function func([]core.KeyValue, []Observation)
 }
 
 var _ Int64ObserverResult = int64ObserverResult{}
@@ -45,15 +45,15 @@ var _ Float64ObserverResult = float64ObserverResult{}
 var _ BatchObserverResult = batchObserverResult{}
 
 func (ir int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	ir.observe(ir.instrument, core.NewInt64Number(value), labels)
+	ir.function(ir.instrument, core.NewInt64Number(value), labels)
 }
 
 func (fr float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fr.observe(fr.instrument, core.NewFloat64Number(value), labels)
+	fr.function(fr.instrument, core.NewFloat64Number(value), labels)
 }
 
 func (br batchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
-	// fr.observe(fr.instrument, core.NewFloat64Number(value), labels)
+	br.function(labels, obs)
 }
 
 type AsyncRunner interface {
@@ -61,25 +61,25 @@ type AsyncRunner interface {
 }
 
 type AsyncSingleRunner interface {
-	Run(func(AsyncImpl, core.Number, []core.KeyValue))
-	anyRunner()
+	Run(AsyncImpl, func(AsyncImpl, core.Number, []core.KeyValue))
 }
 
 type AsyncBatchRunner interface {
 	Run(func([]core.KeyValue, []Observation))
-	anyRunner()
 }
 
 type Int64ObserverCallback interface {
 	intObserver()
+	anyRunner()
 }
 type Float64ObserverCallback interface {
 	floatObserver()
+	anyRunner()
 }
 type BatchObserverCallback interface {
-	Run(func([]core.KeyValue, []Observation))
 	intObserver()
 	floatObserver()
+	anyRunner()
 }
 
 type int64ObserverCallback func(result Int64ObserverResult)
@@ -90,22 +90,36 @@ var _ Int64ObserverCallback = (*int64ObserverCallback)(nil)
 var _ Int64ObserverCallback = (*batchObserverCallback)(nil)
 var _ Float64ObserverCallback = (*float64ObserverCallback)(nil)
 var _ Float64ObserverCallback = (*batchObserverCallback)(nil)
+var _ AsyncSingleRunner = (*int64ObserverCallback)(nil)
+var _ AsyncSingleRunner = (*float64ObserverCallback)(nil)
+var _ AsyncBatchRunner = (*batchObserverCallback)(nil)
 
 func (*int64ObserverCallback) intObserver()     {}
+func (*int64ObserverCallback) anyRunner()       {}
 func (*float64ObserverCallback) floatObserver() {}
+func (*float64ObserverCallback) anyRunner()     {}
 func (*batchObserverCallback) intObserver()     {}
 func (*batchObserverCallback) floatObserver()   {}
+func (*batchObserverCallback) anyRunner()       {}
 
-func (i *int64ObserverCallback) Run(function func(core.Number, []core.KeyValue)) {
-	//(*i)(function)
+func (i *int64ObserverCallback) Run(impl AsyncImpl, function func(AsyncImpl, core.Number, []core.KeyValue)) {
+	(*i)(int64ObserverResult{
+		instrument: impl,
+		function:   function,
+	})
 }
 
-func (f *float64ObserverCallback) Run(function func(core.Number, []core.KeyValue)) {
-	// (*f)(function)
+func (f *float64ObserverCallback) Run(impl AsyncImpl, function func(AsyncImpl, core.Number, []core.KeyValue)) {
+	(*f)(float64ObserverResult{
+		instrument: impl,
+		function:   function,
+	})
 }
 
-func (f *batchObserverCallback) Run(function func([]core.KeyValue, []Observation)) {
-	// (*f)(function)
+func (b *batchObserverCallback) Run(function func([]core.KeyValue, []Observation)) {
+	(*b)(batchObserverResult{
+		function: function,
+	})
 }
 
 func NewInt64ObserverCallback(f func(Int64ObserverResult)) Int64ObserverCallback {
