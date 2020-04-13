@@ -41,7 +41,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "while ! nc -w 1 -z zipkin-collector 9411; do echo sleep for 1s waiting for zipkin-collector to become available; sleep 1; done && /go/bin/main http://zipkin-collector:9411/api/v2/spans"
+      - "while ! nc -w 1 -z zipkin-collector 9411; do echo sleep for 1s waiting for zipkin-collector to become available; sleep 1; done && /go/bin/main -zipkin http://zipkin-collector:9411/api/v2/spans"
     networks:
       - example
     depends_on:

@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"time"
@@ -59,15 +60,10 @@ func initTracer(url string) {
 }
 
 func main() {
-	var url string
+	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
+	flag.Parse()
 
-	if len(os.Args) > 1 {
-		url = os.Args[1]
-	} else {
-		url = "http://localhost:9411/api/v2/spans"
-	}
-
-	initTracer(url)
+	initTracer(*url)
 
 	ctx := context.Background()
 
