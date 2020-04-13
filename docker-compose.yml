@@ -23,7 +23,7 @@ services:
     build:
       context: .
       target: example-http-client
-    command: ["/go/bin/client", "http://http-server:7777/hello"]
+    command: ["/go/bin/client", "-server", "http://http-server:7777/hello"]
     networks:
       - example
     depends_on:

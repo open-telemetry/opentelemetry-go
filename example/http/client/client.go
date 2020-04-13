@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 
 	"net/http"
-	"os"
 	"time"
 
 	"go.opentelemetry.io/otel/api/correlation"
@@ -52,6 +52,8 @@ func initTracer() {
 
 func main() {
 	initTracer()
+	url := flag.String("server", "http://localhost:7777/hello", "server url")
+	flag.Parse()
 
 	client := http.DefaultClient
 	ctx := correlation.NewContext(context.Background(),
@@ -59,18 +61,11 @@ func main() {
 	)
 
 	var body []byte
-	var url string
-
-	if len(os.Args) > 1 {
-		url = os.Args[1]
-	} else {
-		url = "http://localhost:7777/hello"
-	}
 
 	tr := global.Tracer("example/client")
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
-			req, _ := http.NewRequest("GET", url, nil)
+			req, _ := http.NewRequest("GET", *url, nil)
 
 			ctx, req = httptrace.W3C(ctx, req)
 			httptrace.Inject(ctx, req)
