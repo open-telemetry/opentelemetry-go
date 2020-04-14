@@ -42,7 +42,7 @@ func ExampleNewExportPipeline() {
 	meter := pusher.Meter("example")
 
 	// Create and update a single counter:
-	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
+	counter := metric.Must(meter).NewInt64Counter("a.counter")
 	labels := []core.KeyValue{key.String("value")}
 
 	counter.Add(ctx, 100, labels...)
