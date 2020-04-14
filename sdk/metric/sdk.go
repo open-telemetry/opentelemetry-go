@@ -63,7 +63,7 @@ type (
 		errorHandler ErrorHandler
 
 		// resource represents the entity producing telemetry.
-		resource resource.Resource
+		resource *resource.Resource
 
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -167,7 +167,6 @@ var (
 	_ api.AsyncImpl       = &asyncInstrument{}
 	_ api.SyncImpl        = &syncInstrument{}
 	_ api.BoundSyncImpl   = &record{}
-	_ api.Resourcer       = &SDK{}
 	_ export.LabelStorage = &labels{}
 	_ export.Labels       = &labels{}
 
@@ -646,7 +645,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 // Resource means that the SDK implements the Resourcer interface and
 // therefore all metric instruments it creates will inherit its
 // Resource by default unless explicitly overwritten.
-func (m *SDK) Resource() resource.Resource {
+func (m *SDK) Resource() *resource.Resource {
 	return m.resource
 }
 

@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -36,21 +35,19 @@ var Must = metric.Must
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
-		name     string
-		opts     []metric.Option
-		keys     []core.Key
-		desc     string
-		unit     unit.Unit
-		resource resource.Resource
+		name string
+		opts []metric.Option
+		keys []core.Key
+		desc string
+		unit unit.Unit
 	}
 	testcases := []testcase{
 		{
-			name:     "no opts",
-			opts:     nil,
-			keys:     nil,
-			desc:     "",
-			unit:     "",
-			resource: resource.Resource{},
+			name: "no opts",
+			opts: nil,
+			keys: nil,
+			desc: "",
+			unit: "",
 		},
 		{
 			name: "keys keys keys",
@@ -64,19 +61,17 @@ func TestOptions(t *testing.T) {
 				key.New("bar"), key.New("bar2"),
 				key.New("baz"), key.New("baz2"),
 			},
-			desc:     "",
-			unit:     "",
-			resource: resource.Resource{},
+			desc: "",
+			unit: "",
 		},
 		{
 			name: "description",
 			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
-			keys:     nil,
-			desc:     "stuff",
-			unit:     "",
-			resource: resource.Resource{},
+			keys: nil,
+			desc: "stuff",
+			unit: "",
 		},
 		{
 			name: "description override",
@@ -84,20 +79,18 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			keys:     nil,
-			desc:     "things",
-			unit:     "",
-			resource: resource.Resource{},
+			keys: nil,
+			desc: "things",
+			unit: "",
 		},
 		{
 			name: "unit",
 			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
-			keys:     nil,
-			desc:     "",
-			unit:     "s",
-			resource: resource.Resource{},
+			keys: nil,
+			desc: "",
+			unit: "s",
 		},
 		{
 			name: "unit override",
@@ -105,20 +98,9 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			keys:     nil,
-			desc:     "",
-			unit:     "h",
-			resource: resource.Resource{},
-		},
-		{
-			name: "resource override",
-			opts: []metric.Option{
-				metric.WithResource(*resource.New(key.New("name").String("test-name"))),
-			},
-			keys:     nil,
-			desc:     "",
-			unit:     "",
-			resource: *resource.New(key.New("name").String("test-name")),
+			keys: nil,
+			desc: "",
+			unit: "h",
 		},
 	}
 	for idx, tt := range testcases {
@@ -127,7 +109,6 @@ func TestOptions(t *testing.T) {
 			Description: tt.desc,
 			Unit:        tt.unit,
 			Keys:        tt.keys,
-			Resource:    tt.resource,
 		}); diff != "" {
 			t.Errorf("Compare options: -got +want %s", diff)
 		}

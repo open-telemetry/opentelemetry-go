@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Provider supports named Meter instances.
@@ -41,8 +40,6 @@ type Config struct {
 	// Keys are recommended keys determined in the handles
 	// obtained for the metric.
 	Keys []core.Key
-	// Resource describes the entity for which measurements are made.
-	Resource resource.Resource
 	// LibraryName is the name given to the Meter that created
 	// this instrument.  See `Provider`.
 	LibraryName string
@@ -142,12 +139,6 @@ func (d Descriptor) NumberKind() core.NumberKind {
 	return d.numberKind
 }
 
-// Resource returns the Resource describing the entity for which the metric
-// instrument measures.
-func (d Descriptor) Resource() resource.Resource {
-	return d.config.Resource
-}
-
 // LibraryName returns the metric instrument's library name, typically
 // given via a call to Provider.Meter().
 func (d Descriptor) LibraryName() string {
@@ -220,19 +211,6 @@ type keysOption []core.Key
 
 func (k keysOption) Apply(config *Config) {
 	config.Keys = append(config.Keys, k...)
-}
-
-// WithResource applies provided Resource.
-//
-// This will override any existing Resource.
-func WithResource(r resource.Resource) Option {
-	return resourceOption(r)
-}
-
-type resourceOption resource.Resource
-
-func (r resourceOption) Apply(config *Config) {
-	config.Resource = resource.Resource(r)
 }
 
 // WithLibraryName applies provided library name.  This is meant for
