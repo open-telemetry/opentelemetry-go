@@ -30,8 +30,6 @@ import (
 )
 
 var (
-	fooKey    = key.New("ex.com/foo")
-	barKey    = key.New("ex.com/bar")
 	lemonsKey = key.New("ex.com/lemons")
 )
 
@@ -63,11 +61,10 @@ func main() {
 		result.Observe(value, labels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
-		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("A measure set to 1.0"),
 	)
 
-	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two", metric.WithKeys(key.New("A")))
+	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
 	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
