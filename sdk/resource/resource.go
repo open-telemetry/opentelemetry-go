@@ -24,6 +24,7 @@ import (
 )
 
 // Resource describes an entity about which identifying information and metadata is exposed.
+// This type is immutable.
 type Resource struct {
 	sorted []core.KeyValue
 	keySet map[core.Key]struct{}

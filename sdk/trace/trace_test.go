@@ -1067,7 +1067,7 @@ func TestWithResource(t *testing.T) {
 	var te testExporter
 	tp, _ := NewProvider(WithSyncer(&te),
 		WithConfig(Config{DefaultSampler: AlwaysSample()}),
-		WithResourceAttributes(key.String("rk1", "rv1"), key.Int64("rk2", 5)))
+		WithResource(resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5))))
 	span := startSpan(tp, "WithResource")
 	span.SetAttributes(core.Key("key1").String("value1"))
 	got, err := endSpan(&te, span)

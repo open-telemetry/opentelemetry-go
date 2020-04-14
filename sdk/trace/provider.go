@@ -21,7 +21,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -195,10 +194,10 @@ func WithConfig(config Config) ProviderOption {
 	}
 }
 
-// WithResourceAttributes option sets the resource attributes to the provider.
+// WithResource option sets the Resource to the provider.
 // Resource is added to the span when it is started.
-func WithResourceAttributes(attrs ...core.KeyValue) ProviderOption {
+func WithResource(res *resource.Resource) ProviderOption {
 	return func(opts *ProviderOptions) {
-		opts.config.Resource = resource.New(attrs...)
+		opts.config.Resource = res
 	}
 }
