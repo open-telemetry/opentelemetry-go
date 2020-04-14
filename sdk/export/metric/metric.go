@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -183,7 +184,7 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Batcher that just
 	// completed collection.
-	Export(context.Context, CheckpointSet) error
+	Export(context.Context, *resource.Resource, CheckpointSet) error
 }
 
 // LabelStorage provides an access to the ordered labels.

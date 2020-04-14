@@ -25,12 +25,14 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testBatcher struct {
@@ -46,6 +48,7 @@ type testExporter struct {
 	lock      sync.Mutex
 	exports   int
 	records   []export.Record
+	resource  *resource.Resource
 	injectErr func(r export.Record) error
 }
 
@@ -114,7 +117,7 @@ func (b *testBatcher) getCounts() (checkpoints, finishes int) {
 	return b.checkpoints, b.finishes
 }
 
-func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *testExporter) Export(_ context.Context, resource *resource.Resource, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
@@ -131,6 +134,7 @@ func (e *testExporter) Export(_ context.Context, checkpointSet export.Checkpoint
 		return err
 	}
 	e.records = records
+	e.resource = resource
 	return nil
 }
 
@@ -180,8 +184,9 @@ func TestPushDoubleStart(t *testing.T) {
 
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
+	resource := resource.New(key.String("A", "B"))
 
-	p := push.New(fix.batcher, fix.exporter, time.Second)
+	p := push.New(fix.batcher, fix.exporter, time.Second, push.WithResource(resource))
 	meter := p.Meter("name")
 
 	mock := mockClock{clock.NewMock()}
@@ -212,6 +217,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, resource, fix.exporter.resource)
 
 	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())

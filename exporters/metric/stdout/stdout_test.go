@@ -37,12 +37,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testFixture struct {
 	t        *testing.T
 	ctx      context.Context
 	exporter *stdout.Exporter
+	resource *resource.Resource
 	output   *bytes.Buffer
 }
 
@@ -67,7 +69,7 @@ func (fix testFixture) Output() string {
 }
 
 func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
-	err := fix.exporter.Export(fix.ctx, checkpointSet)
+	err := fix.exporter.Export(fix.ctx, fix.resource, checkpointSet)
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
@@ -103,7 +105,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	checkpointSet.Add(&desc, lvagg)
 
-	if err := exporter.Export(ctx, checkpointSet); err != nil {
+	if err := exporter.Export(ctx, resource.New(), checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
