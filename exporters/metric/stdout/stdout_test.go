@@ -59,6 +59,7 @@ func newFixture(t *testing.T, config stdout.Config) testFixture {
 	return testFixture{
 		t:        t,
 		ctx:      context.Background(),
+		resource: resource.New(key.String("res1", "val1"), key.String("res2", "val2")),
 		exporter: exp,
 		output:   buf,
 	}
@@ -152,7 +153,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D,res1=val1,res2=val2}","sum":123}]}`, fix.Output())
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
@@ -169,7 +170,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D,res1=val1,res2=val2}","last":123.456}]}`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
@@ -187,7 +188,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D,res1=val1,res2=val2}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
@@ -213,7 +214,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 	require.Equal(t, `{
 	"updates": [
 		{
-			"name": "test.name{A=B,C=D}",
+			"name": "test.name{A=B,C=D,res1=val1,res2=val2}",
 			"min": 0.5,
 			"max": 999.5,
 			"sum": 500000,
@@ -277,23 +278,4 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 	fix.Export(checkpointSet)
 
 	require.Equal(t, `{"updates":null}`, fix.Output())
-}
-
-func TestStdoutCounterWithUnspecifiedKeys(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
-
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
-
-	keys := []core.Key{key.New("C"), key.New("D")}
-
-	desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind, metric.WithKeys(keys...))
-	cagg := sum.New()
-	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(10), &desc)
-	cagg.Checkpoint(fix.ctx, &desc)
-
-	checkpointSet.Add(&desc, cagg, key.String("A", "B"))
-
-	fix.Export(checkpointSet)
-
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C,D}","sum":10}]}`, fix.Output())
 }

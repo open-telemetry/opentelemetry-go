@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -37,7 +36,7 @@ import (
 type Exporter struct {
 	config Config
 
-	encodedResource export.Labels
+	encodedResource *string
 }
 
 var _ export.Exporter = &Exporter{}
@@ -147,6 +146,18 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 	return pusher, nil
 }
 
+func (e *Exporter) encodeResource(resource *resource.Resource) string {
+	if e.encodedResource != nil {
+		return *e.encodedResource
+	}
+	e.encodedResource = new(string)
+	*e.encodedResource = export.NewSimpleLabels(
+		e.config.LabelEncoder,
+		resource.Attributes()...,
+	).Encoded(e.config.LabelEncoder)
+	return *e.encodedResource
+}
+
 func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkpointSet export.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
@@ -155,9 +166,7 @@ func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkp
 		batch.Timestamp = &ts
 	}
 
-	if e.encodedResource == nil {
-		e.encodedResource = export.NewSimpleLabels(e.config.LabelEncoder, resource.Attributes()...)
-	}
+	encodedResource := e.encodeResource(resource)
 
 	aggError = checkpointSet.ForEach(func(record export.Record) error {
 		desc := record.Descriptor()
@@ -222,33 +231,28 @@ func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkp
 			}
 		}
 
-		specifiedKeyMap := make(map[core.Key]core.Value)
+		var encodedLabels string
 		iter := record.Labels().Iter()
-		for iter.Next() {
-			kv := iter.Label()
-			specifiedKeyMap[kv.Key] = kv.Value
-		}
-
-		var materializedKeys []string
 
 		if iter.Len() > 0 {
-			encoded := record.Labels().Encoded(e.config.LabelEncoder)
-			materializedKeys = append(materializedKeys, encoded)
-		}
-
-		for _, k := range desc.Keys() {
-			if _, ok := specifiedKeyMap[k]; !ok {
-				materializedKeys = append(materializedKeys, string(k))
-			}
+			encodedLabels = record.Labels().Encoded(e.config.LabelEncoder)
 		}
 
 		var sb strings.Builder
 
 		sb.WriteString(desc.Name())
 
-		if len(materializedKeys) > 0 {
+		if len(encodedLabels) > 0 || len(encodedResource) > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(strings.Join(materializedKeys, ","))
+			if len(encodedLabels) > 0 {
+				sb.WriteString(encodedLabels)
+				if len(encodedResource) > 0 {
+					sb.WriteRune(',')
+				}
+			}
+			if len(encodedResource) > 0 {
+				sb.WriteString(encodedResource)
+			}
 			sb.WriteRune('}')
 		}
 
