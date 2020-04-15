@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	exporttest "go.opentelemetry.io/otel/sdk/export/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -150,7 +151,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
-		labels := export.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
+		labels := exporttest.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
 		got, err := minMaxSumCount(&desc, labels, mmsc)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
@@ -160,7 +161,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := exporttest.NewSimpleLabels(export.NoopLabelEncoder{})
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
@@ -247,7 +248,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit),
 		)
-		labels := export.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
+		labels := exporttest.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
 		got, err := sum(&desc, labels, sumAgg.New())
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
@@ -257,7 +258,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 
 func TestSumInt64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := exporttest.NewSimpleLabels(export.NoopLabelEncoder{})
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
@@ -271,7 +272,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 
 func TestSumFloat64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Float64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := exporttest.NewSimpleLabels(export.NoopLabelEncoder{})
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)

@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -100,7 +101,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 }
 
 func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	return export.NewSimpleLabels(encoder, labels...)
+	return test.NewSimpleLabels(encoder, labels...)
 }
 
 func (Encoder) Encode(iter export.LabelIterator) string {

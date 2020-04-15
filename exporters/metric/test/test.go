@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -53,7 +54,7 @@ func (p *CheckpointSet) Reset() {
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
-	elabels := export.NewSimpleLabels(p.encoder, labels...)
+	elabels := test.NewSimpleLabels(p.encoder, labels...)
 
 	key := desc.Name() + "_" + elabels.Encoded(p.encoder)
 	if record, ok := p.records[key]; ok {

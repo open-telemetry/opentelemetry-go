@@ -453,6 +453,10 @@ func (ls *labels) Encoded(encoder export.LabelEncoder) string {
 	return encoded
 }
 
+func (ls *labels) Unique() interface{} {
+	return ls.ordered
+}
+
 func computeOrderedLabels(kvs []core.KeyValue) labels {
 	var ls labels
 	ls.ordered = computeOrderedFixed(kvs)

@@ -30,7 +30,7 @@ import (
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, false)
+	b := ungrouped.New(test.NewAggregationSelector(), false)
 
 	// Set initial lastValue values
 	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
@@ -92,7 +92,7 @@ func TestUngroupedStateless(t *testing.T) {
 
 func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, true)
+	b := ungrouped.New(test.NewAggregationSelector(), true)
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
