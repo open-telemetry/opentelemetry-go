@@ -256,9 +256,14 @@ func TestStringTraceID(t *testing.T) {
 		want string
 	}{
 		{
-			name: "TraceID.String returns string representation of self.TraceID values",
-			tid:  core.TraceID([16]byte{84, 82, 65, 67, 69, 73, 68, 89, 66, 71, 78, 65, 84, 81, 74, 76}),
-			want: "TRACEIDYBGNATQJL",
+			name: "TraceID.String returns string representation of self.TraceID values > 0",
+			tid:  core.TraceID([16]byte{255}),
+			want: "ff000000000000000000000000000000",
+		},
+		{
+			name: "TraceID.String returns string representation of self.TraceID values == 0",
+			tid:  core.TraceID([16]byte{}),
+			want: "00000000000000000000000000000000",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -278,9 +283,14 @@ func TestStringSpanID(t *testing.T) {
 		want string
 	}{
 		{
-			name: "SpanID.String returns string representation of self.SpanID values",
-			sid:  core.SpanID([8]byte{83, 80, 65, 78, 73, 68, 83, 80}),
-			want: "SPANIDSP",
+			name: "SpanID.String returns string representation of self.SpanID values > 0",
+			sid:  core.SpanID([8]byte{255}),
+			want: "ff00000000000000",
+		},
+		{
+			name: "SpanID.String returns string representation of self.SpanID values == 0",
+			sid:  core.SpanID([8]byte{}),
+			want: "0000000000000000",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
