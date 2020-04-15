@@ -37,7 +37,6 @@ func TestOptions(t *testing.T) {
 	type testcase struct {
 		name string
 		opts []metric.Option
-		keys []core.Key
 		desc string
 		unit unit.Unit
 	}
@@ -45,22 +44,6 @@ func TestOptions(t *testing.T) {
 		{
 			name: "no opts",
 			opts: nil,
-			keys: nil,
-			desc: "",
-			unit: "",
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.Option{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
 			desc: "",
 			unit: "",
 		},
@@ -69,7 +52,6 @@ func TestOptions(t *testing.T) {
 			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
-			keys: nil,
 			desc: "stuff",
 			unit: "",
 		},
@@ -79,7 +61,6 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			keys: nil,
 			desc: "things",
 			unit: "",
 		},
@@ -88,7 +69,6 @@ func TestOptions(t *testing.T) {
 			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
-			keys: nil,
 			desc: "",
 			unit: "s",
 		},
@@ -98,7 +78,6 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			keys: nil,
 			desc: "",
 			unit: "h",
 		},
@@ -108,7 +87,6 @@ func TestOptions(t *testing.T) {
 		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
-			Keys:        tt.keys,
 		}); diff != "" {
 			t.Errorf("Compare options: -got +want %s", diff)
 		}

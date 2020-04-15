@@ -34,6 +34,7 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type Exporter struct {
@@ -210,7 +211,7 @@ func (e *Exporter) Stop() error {
 
 // Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
 // interface. It transforms metric Records into OTLP Metrics and transmits them.
-func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) error {
+func (e *Exporter) Export(ctx context.Context, _ *resource.Resource, cps metricsdk.CheckpointSet) error {
 	// Seed records into the work processing pool.
 	records := make(chan metricsdk.Record)
 	go func() {

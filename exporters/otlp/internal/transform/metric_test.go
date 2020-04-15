@@ -102,7 +102,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
 		metricKind  metric.Kind
-		keys        []core.Key
 		description string
 		unit        unit.Unit
 		numberKind  core.NumberKind
@@ -112,7 +111,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		{
 			"mmsc-test-a",
 			metric.MeasureKind,
-			[]core.Key{},
 			"test-a-description",
 			unit.Dimensionless,
 			core.Int64NumberKind,
@@ -128,7 +126,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		{
 			"mmsc-test-b",
 			metric.CounterKind, // This shouldn't change anything.
-			[]core.Key{"test"}, // This shouldn't change anything.
 			"test-b-description",
 			unit.Bytes,
 			core.Float64NumberKind, // This shouldn't change anything.
@@ -151,7 +148,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	mmsc.Checkpoint(ctx, &metric.Descriptor{})
 	for _, test := range tests {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
-			metric.WithKeys(test.keys...),
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
 		labels := export.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
@@ -208,7 +204,6 @@ func TestSumMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
 		metricKind  metric.Kind
-		keys        []core.Key
 		description string
 		unit        unit.Unit
 		numberKind  core.NumberKind
@@ -218,7 +213,6 @@ func TestSumMetricDescriptor(t *testing.T) {
 		{
 			"sum-test-a",
 			metric.CounterKind,
-			[]core.Key{},
 			"test-a-description",
 			unit.Dimensionless,
 			core.Int64NumberKind,
@@ -234,7 +228,6 @@ func TestSumMetricDescriptor(t *testing.T) {
 		{
 			"sum-test-b",
 			metric.MeasureKind, // This shouldn't change anything.
-			[]core.Key{"test"}, // This shouldn't change anything.
 			"test-b-description",
 			unit.Milliseconds,
 			core.Float64NumberKind,
@@ -251,7 +244,6 @@ func TestSumMetricDescriptor(t *testing.T) {
 
 	for _, test := range tests {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
-			metric.WithKeys(test.keys...),
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit),
 		)

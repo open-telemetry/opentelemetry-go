@@ -27,8 +27,8 @@ import (
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/sdk/resource"
 )
 
 var (
@@ -80,7 +80,6 @@ func main() {
 		result.Observe(1, commonLabels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
-		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("An observer set to 1.0"),
 	)
 

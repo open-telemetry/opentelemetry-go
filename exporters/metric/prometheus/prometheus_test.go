@@ -119,7 +119,8 @@ func TestPrometheusExporter(t *testing.T) {
 }
 
 func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *test.CheckpointSet, expected []string) {
-	err := exporter.Export(context.Background(), checkpointSet)
+	// TODO: Add resources to this exporter and test.
+	err := exporter.Export(context.Background(), nil, checkpointSet)
 	require.Nil(t, err)
 
 	rec := httptest.NewRecorder()
