@@ -151,10 +151,8 @@ func (e *Exporter) encodeResource(resource *resource.Resource) string {
 		return *e.encodedResource
 	}
 	e.encodedResource = new(string)
-	*e.encodedResource = export.NewSimpleLabels(
-		e.config.LabelEncoder,
-		resource.Attributes()...,
-	).Encoded(e.config.LabelEncoder)
+	resourceSlice := export.LabelSlice(resource.Attributes())
+	*e.encodedResource = e.config.LabelEncoder.Encode(resourceSlice.Iter())
 	return *e.encodedResource
 }
 
