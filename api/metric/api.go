@@ -38,9 +38,6 @@ type Config struct {
 	Description string
 	// Unit is an optional field describing the metric instrument.
 	Unit unit.Unit
-	// Keys are recommended keys determined in the handles
-	// obtained for the metric.
-	Keys []core.Key
 	// Resource describes the entity for which measurements are made.
 	Resource resource.Resource
 	// LibraryName is the name given to the Meter that created
@@ -115,13 +112,6 @@ func (d Descriptor) Name() string {
 // MetricKind returns the specific kind of instrument.
 func (d Descriptor) MetricKind() Kind {
 	return d.kind
-}
-
-// Keys returns the recommended keys included in the metric
-// definition.  These keys may be used by a Batcher as a default set
-// of grouping keys for the metric instrument.
-func (d Descriptor) Keys() []core.Key {
-	return d.config.Keys
 }
 
 // Description provides a human-readable description of the metric
@@ -208,18 +198,6 @@ type unitOption unit.Unit
 
 func (u unitOption) Apply(config *Config) {
 	config.Unit = unit.Unit(u)
-}
-
-// WithKeys applies recommended label keys. Multiple `WithKeys`
-// options accumulate.
-func WithKeys(keys ...core.Key) Option {
-	return keysOption(keys)
-}
-
-type keysOption []core.Key
-
-func (k keysOption) Apply(config *Config) {
-	config.Keys = append(config.Keys, k...)
 }
 
 // WithResource applies provided Resource.
