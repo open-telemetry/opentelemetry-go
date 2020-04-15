@@ -571,7 +571,7 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 		if unmapped {
 			// TODO: Consider leaving the record in the map for one
 			// collection interval? Since creating records is relatively
-			// expensive, this would optimize common cases of ongoing use.
+			// expensive, this would optimize common cases of ongoing use!
 			m.current.Delete(inuse.mapkey())
 		}
 

@@ -312,8 +312,23 @@ type Record struct {
 // Batcher).  If the batcher does not re-order labels, they are
 // presented in sorted order by the SDK.
 type Labels interface {
+	// Iter returns an iterator for this set of labels.
 	Iter() LabelIterator
+
+	// Unique returns a value that is unique with respect to other
+	// label sets, that may be used as a map key in the export
+	// pipeline and without requiring a label encoder.  The SDK
+	// will return a variable-size array of core.KeyValue, the
+	// same it uses for its sync.Map.  The "SimpleLabels" type in
+	// the test package returns the encoded labels, so the two
+	// implementations do not return a consistent value,
+	// uniqueness is only guaranteed for a single implementation.
 	Unique() interface{}
+
+	// Encoded returns an encoded representation of the string,
+	// according to the label encoder.  This result is cached,
+	// meaning that subsequent accesses will not re-encode the
+	// string on each collection interval.
 	Encoded(LabelEncoder) string
 }
 
