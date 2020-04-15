@@ -62,7 +62,8 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(t[:]))
 }
 
-// Stringer Implementation of String() returns the string form of a TraceID
+// Stringer Implementation of String() returns the hex string representation
+// form of a TraceID
 func (t TraceID) String() string {
 	return hex.EncodeToString(t[:])
 }
@@ -85,7 +86,8 @@ func (s SpanID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(s[:]))
 }
 
-// Stringer Implementation of String() returns the string form of a SpanID
+// Stringer Implementation of String() returns the hex string representation
+// form of a SpanID
 func (s SpanID) String() string {
 	return hex.EncodeToString(s[:])
 }
