@@ -62,6 +62,11 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(t[:]))
 }
 
+// Stringer Implementation of String() returns the string form of a TraceID
+func (t TraceID) String() string {
+	return string(t[:])
+}
+
 // SpanID is a unique identify of a span in a trace.
 type SpanID [8]byte
 
@@ -78,6 +83,11 @@ func (s SpanID) IsValid() bool {
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(s[:]))
+}
+
+// Stringer Implementation of String() returns the string form of a SpanID
+func (s SpanID) String() string {
+	return string(s[:])
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant
