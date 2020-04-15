@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	exporttest "go.opentelemetry.io/otel/sdk/export/metric/test"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -239,7 +240,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, core.NewInt64Number(2))
 
-		kvs := export.IteratorToSlice(rec.Labels().Iter())
+		kvs := exporttest.IteratorToSlice(rec.Labels().Iter())
 		actual = append(actual, kvs)
 	}
 

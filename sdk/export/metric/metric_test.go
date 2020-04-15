@@ -55,13 +55,3 @@ func TestEmptyLabelIterator(t *testing.T) {
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 }
-
-func TestIteratorToSlice(t *testing.T) {
-	iter := LabelSlice(testSlice).Iter()
-	got := IteratorToSlice(iter)
-	require.Equal(t, testSlice, got)
-
-	iter = LabelSlice(nil).Iter()
-	got = IteratorToSlice(iter)
-	require.Nil(t, got)
-}

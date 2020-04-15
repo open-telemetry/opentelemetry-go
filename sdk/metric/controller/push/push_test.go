@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	exporttest "go.opentelemetry.io/otel/sdk/export/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
@@ -103,7 +104,7 @@ func (b *testBatcher) FinishedCollection() {
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	labels := export.IteratorToSlice(record.Labels().Iter())
+	labels := exporttest.IteratorToSlice(record.Labels().Iter())
 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
 	return nil
 }

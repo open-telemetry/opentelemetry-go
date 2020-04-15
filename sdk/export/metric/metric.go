@@ -261,22 +261,6 @@ func (i *LabelIterator) Len() int {
 	return i.storage.NumLabels()
 }
 
-// Convenience function that creates a slice of labels from the passed
-// iterator. The iterator is set up to start from the beginning before
-// creating the slice.
-func IteratorToSlice(iter LabelIterator) []core.KeyValue {
-	l := iter.Len()
-	if l == 0 {
-		return nil
-	}
-	iter.idx = -1
-	slice := make([]core.KeyValue, 0, l)
-	for iter.Next() {
-		slice = append(slice, iter.Label())
-	}
-	return slice
-}
-
 // LabelEncoder enables an optimization for export pipelines that use
 // text to encode their label sets.
 //

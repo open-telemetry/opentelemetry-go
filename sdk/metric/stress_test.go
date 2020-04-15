@@ -37,6 +37,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	exporttest "go.opentelemetry.io/otel/sdk/export/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -265,7 +266,7 @@ func (*testFixture) FinishedCollection() {
 }
 
 func (f *testFixture) Process(_ context.Context, record export.Record) error {
-	labels := export.IteratorToSlice(record.Labels().Iter())
+	labels := exporttest.IteratorToSlice(record.Labels().Iter())
 	key := testKey{
 		labels:     canonicalizeLabels(labels),
 		descriptor: record.Descriptor(),
