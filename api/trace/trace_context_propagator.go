@@ -50,7 +50,7 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 	}
 	h := fmt.Sprintf("%.2x-%s-%s-%.2x",
 		supportedVersion,
-		sc.TraceIDString(),
+		sc.TraceID,
 		sc.SpanID,
 		sc.TraceFlags&core.TraceFlagsSampled)
 	supplier.Set(traceparentHeader, h)
