@@ -15,36 +15,20 @@ version: "3.7"
 services:
   http-server:
     build:
-      context: .
+      dockerfile: $PWD/Dockerfile
+      context: ../..
       target: example-http-server
     networks:
       - example
   http-client:
     build:
-      context: .
+      dockerfile: $PWD/Dockerfile
+      context: ../..
       target: example-http-client
     command: ["/go/bin/client", "-server", "http://http-server:7777/hello"]
     networks:
       - example
     depends_on:
       - http-server
-  zipkin-collector:
-    image: openzipkin/zipkin-slim:latest
-    ports:
-      - "9411:9411"
-    networks:
-      - example
-  zipkin-client:
-    build:
-      context: .
-      target: example-zipkin-client
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "while ! nc -w 1 -z zipkin-collector 9411; do echo sleep for 1s waiting for zipkin-collector to become available; sleep 1; done && /go/bin/main -zipkin http://zipkin-collector:9411/api/v2/spans"
-    networks:
-      - example
-    depends_on:
-      - zipkin-collector
 networks:
   example:
