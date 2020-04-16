@@ -16,6 +16,7 @@ package transform
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
@@ -280,5 +281,16 @@ func TestSumFloat64DataPoints(t *testing.T) {
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
 		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
+	}
+}
+
+func TestSumErrUnknownValueType(t *testing.T) {
+	desc := metric.NewDescriptor("", metric.MeasureKind, core.NumberKind(-1))
+	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	s := sumAgg.New()
+	_, err := sum(&desc, labels, s)
+	assert.Error(t, err)
+	if !errors.Is(err, ErrUnknownValueType) {
+		t.Errorf("expected ErrUnknownValueType, got %v", err)
 	}
 }
