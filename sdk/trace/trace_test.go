@@ -620,10 +620,10 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
-	if got, want := s.spanContext.TraceIDString(), p.TraceIDString(); got != want {
+	if got, want := s.spanContext.TraceID.String(), p.TraceID.String(); got != want {
 		return fmt.Errorf("got child trace ID %s, want %s", got, want)
 	}
-	if childID, parentID := s.spanContext.SpanIDString(), p.SpanIDString(); childID == parentID {
+	if childID, parentID := s.spanContext.SpanID.String(), p.SpanID.String(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
 	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {

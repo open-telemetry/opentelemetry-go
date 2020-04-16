@@ -159,60 +159,6 @@ func TestHasSpanID(t *testing.T) {
 	}
 }
 
-func TestSpanIDString(t *testing.T) {
-	for _, testcase := range []struct {
-		name string
-		sc   core.SpanContext
-		want string
-	}{
-		{
-			name: "SpanContext.SpanIDString returns string representation of self.TraceID values > 0",
-			sc:   core.SpanContext{SpanID: [8]byte{42}},
-			want: `2a00000000000000`,
-		}, {
-			name: "SpanContext.SpanIDString returns string representation of self.TraceID values == 0",
-			sc:   core.SpanContext{},
-			want: `0000000000000000`,
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) SpanIDString() string {}
-			have := testcase.sc.SpanIDString()
-			if have != testcase.want {
-				t.Errorf("Want: %s, but have: %s", testcase.want, have)
-			}
-		})
-	}
-}
-
-func TestTraceIDString(t *testing.T) {
-	for _, testcase := range []struct {
-		name string
-		sc   core.SpanContext
-		want string
-	}{
-		{
-			name: "SpanContext.TraceIDString returns string representation of self.TraceID values > 0",
-			sc: core.SpanContext{
-				TraceID: core.TraceID([16]byte{255}),
-			},
-			want: `ff000000000000000000000000000000`,
-		}, {
-			name: "SpanContext.TraceIDString returns string representation of self.TraceID values == 0",
-			sc:   core.SpanContext{TraceID: core.TraceID{}},
-			want: `00000000000000000000000000000000`,
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) TraceIDString() string {}
-			have := testcase.sc.TraceIDString()
-			if have != testcase.want {
-				t.Errorf("Want: %s, but have: %s", testcase.want, have)
-			}
-		})
-	}
-}
-
 func TestSpanContextIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
@@ -240,10 +186,63 @@ func TestSpanContextIsSampled(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) TraceIDString() string {}
 			have := testcase.sc.IsSampled()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestStringTraceID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tid  core.TraceID
+		want string
+	}{
+		{
+			name: "TraceID.String returns string representation of self.TraceID values > 0",
+			tid:  core.TraceID([16]byte{255}),
+			want: "ff000000000000000000000000000000",
+		},
+		{
+			name: "TraceID.String returns string representation of self.TraceID values == 0",
+			tid:  core.TraceID([16]byte{}),
+			want: "00000000000000000000000000000000",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			//proto: func (t TraceID) String() string {}
+			have := testcase.tid.String()
+			if have != testcase.want {
+				t.Errorf("Want: %s, but have: %s", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestStringSpanID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		sid  core.SpanID
+		want string
+	}{
+		{
+			name: "SpanID.String returns string representation of self.SpanID values > 0",
+			sid:  core.SpanID([8]byte{255}),
+			want: "ff00000000000000",
+		},
+		{
+			name: "SpanID.String returns string representation of self.SpanID values == 0",
+			sid:  core.SpanID([8]byte{}),
+			want: "0000000000000000",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			//proto: func (t TraceID) String() string {}
+			have := testcase.sid.String()
+			if have != testcase.want {
+				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
 	}

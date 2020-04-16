@@ -59,11 +59,10 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	if b3.SingleHeader {
 		sampled := sc.TraceFlags & core.TraceFlagsSampled
 		supplier.Set(B3SingleHeader,
-			fmt.Sprintf("%s-%.16x-%.1d", sc.TraceIDString(), sc.SpanID, sampled))
+			fmt.Sprintf("%s-%s-%.1d", sc.TraceID, sc.SpanID, sampled))
 	} else {
-		supplier.Set(B3TraceIDHeader, sc.TraceIDString())
-		supplier.Set(B3SpanIDHeader,
-			fmt.Sprintf("%.16x", sc.SpanID))
+		supplier.Set(B3TraceIDHeader, sc.TraceID.String())
+		supplier.Set(B3SpanIDHeader, sc.SpanID.String())
 
 		var sampled string
 		if sc.IsSampled() {
