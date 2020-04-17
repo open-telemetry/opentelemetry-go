@@ -26,23 +26,25 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-func toZipkinSpanModels(batch []*export.SpanData) []zkmodel.SpanModel {
+func toZipkinSpanModels(batch []*export.SpanData, serviceName string) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
-		models = append(models, toZipkinSpanModel(data))
+		models = append(models, toZipkinSpanModel(data, serviceName))
 	}
 	return models
 }
 
-func toZipkinSpanModel(data *export.SpanData) zkmodel.SpanModel {
+func toZipkinSpanModel(data *export.SpanData, serviceName string) zkmodel.SpanModel {
 	return zkmodel.SpanModel{
-		SpanContext:    toZipkinSpanContext(data),
-		Name:           data.Name,
-		Kind:           toZipkinKind(data.SpanKind),
-		Timestamp:      data.StartTime,
-		Duration:       data.EndTime.Sub(data.StartTime),
-		Shared:         false,
-		LocalEndpoint:  nil, // *Endpoint
+		SpanContext: toZipkinSpanContext(data),
+		Name:        data.Name,
+		Kind:        toZipkinKind(data.SpanKind),
+		Timestamp:   data.StartTime,
+		Duration:    data.EndTime.Sub(data.StartTime),
+		Shared:      false,
+		LocalEndpoint: &zkmodel.Endpoint{
+			ServiceName: serviceName,
+		},
 		RemoteEndpoint: nil, // *Endpoint
 		Annotations:    toZipkinAnnotations(data.MessageEvents),
 		Tags:           toZipkinTags(data),
