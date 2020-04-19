@@ -554,3 +554,25 @@ func BenchmarkBatchRecord_8Labels_4Instruments(b *testing.B) {
 func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
 	benchmarkBatchRecord8Labels(b, 8)
 }
+
+// Record creation
+
+func BenchmarkRepeatedDirectCalls(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	encoder := export.NewDefaultLabelEncoder()
+	fix.pcb = func(_ context.Context, rec export.Record) error {
+		_ = rec.Labels().Encoded(encoder)
+		return nil
+	}
+
+	c := fix.meter.NewInt64Counter("int64.counter")
+	k := key.String("bench", "true")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.Add(ctx, 1, k)
+		fix.sdk.Collect(ctx)
+	}
+}

@@ -375,8 +375,8 @@ func TestRecordPersistence(t *testing.T) {
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	c := Must(meter).NewFloat64Counter("sum.name")
-	b := c.Bind()
-	uk := key.String("bound", "true")
+	b := c.Bind(key.String("bound", "true"))
+	uk := key.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)
