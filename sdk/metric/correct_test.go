@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,19 +40,26 @@ var Must = metric.Must
 type correctnessBatcher struct {
 	t *testing.T
 
+	newAggCount int64
+
 	records []export.Record
 }
 
-func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
+
 	switch {
 	case strings.HasSuffix(name, ".counter"):
-		return sum.New()
+		agg = sum.New()
 	case strings.HasSuffix(name, ".disabled"):
-		return nil
+		agg = nil
 	default:
-		return array.New()
+		agg = array.New()
 	}
+	if agg != nil {
+		atomic.AddInt64(&cb.newAggCount, 1)
+	}
+	return
 }
 
 func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
@@ -355,4 +363,26 @@ func TestRecordBatch(t *testing.T) {
 		"int64.measure/A=B,C=D":   3,
 		"float64.measure/A=B,C=D": 4,
 	}, out.Map)
+}
+
+func TestRecordPersistence(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+
+	sdk := metricsdk.New(batcher)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
+	c := Must(meter).NewFloat64Counter("sum.name")
+	b := c.Bind()
+	uk := key.String("bound", "true")
+
+	for i := 0; i < 100; i++ {
+		c.Add(ctx, 1, uk)
+		b.Add(ctx, 1)
+		sdk.Collect(ctx)
+	}
+
+	require.Equal(t, 2, batcher.newAggCount)
 }
