@@ -182,12 +182,14 @@ func TestExportSpans(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "exporter-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
@@ -208,12 +210,14 @@ func TestExportSpans(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "bar",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
-			Duration:       30 * time.Second,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "bar",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
+			Duration:  30 * time.Second,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "exporter-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
@@ -227,7 +231,9 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := NewExporter(collector.url, WithLogger(logger))
+	_, err := NewExporter(collector.url, "", WithLogger(logger))
+	require.Error(t, err, "service name must be non-empty string")
+	exporter, err := NewExporter(collector.url, "exporter-test", WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
