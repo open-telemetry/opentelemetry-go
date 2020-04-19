@@ -564,18 +564,6 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	m.current.Range(func(key interface{}, value interface{}) bool {
 		inuse := value.(*record)
 
-		// unmapped := inuse.refMapped.tryUnmap()
-
-		// // If able to unmap then remove the record from the current Map.
-		// if unmapped {
-		// 	m.current.Delete(inuse.mapkey())
-		// }
-
-		// if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modifications) != 0 {
-		// 	atomic.StoreInt64(&inuse.modified, 0)
-		// 	checkpointed += m.checkpointRecord(ctx, inuse)
-		// }
-
 		mods := atomic.LoadInt64(&inuse.updateCount)
 		coll := inuse.collectedCount
 
