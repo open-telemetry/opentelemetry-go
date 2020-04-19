@@ -114,11 +114,12 @@ type (
 		// SDK.current map.
 		refMapped refcountMapped
 
-		// modified is an atomic boolean that tracks if the current record
-		// was modified since the last Collect().
-		//
-		// modified has to be aligned for 64-bit atomic operations.
-		modified int64
+		// updateCount is incremented on every Update.
+		updateCount int64
+
+		// collectedCount is set to updateCount on collection,
+		// supports checking for no updates during a round.
+		collectedCount int64
 
 		// labels is the processed label set for this record.
 		//
@@ -154,7 +155,7 @@ type (
 	}
 
 	labeledRecorder struct {
-		modifiedEpoch int64
+		observedEpoch int64
 		labels        labels
 		recorder      export.Aggregator
 	}
@@ -216,12 +217,12 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 
 	lrec, ok := a.recorders[labels.ordered]
 	if ok {
-		if lrec.modifiedEpoch == a.meter.currentEpoch {
+		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
 			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
 		} else {
-			lrec.modifiedEpoch = a.meter.currentEpoch
+			lrec.observedEpoch = a.meter.currentEpoch
 		}
 		a.recorders[labels.ordered] = lrec
 		return lrec.recorder
@@ -236,7 +237,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	a.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
-		modifiedEpoch: a.meter.currentEpoch,
+		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
 }
@@ -562,22 +563,36 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
 		inuse := value.(*record)
-		unmapped := inuse.refMapped.tryUnmap()
-		// If able to unmap then remove the record from the current Map.
-		if unmapped {
-			// TODO: Consider leaving the record in the map for one
-			// collection interval? Since creating records is relatively
-			// expensive, this would optimize common cases of ongoing use.
-			m.current.Delete(inuse.mapkey())
+
+		// unmapped := inuse.refMapped.tryUnmap()
+
+		// // If able to unmap then remove the record from the current Map.
+		// if unmapped {
+		// 	m.current.Delete(inuse.mapkey())
+		// }
+
+		// if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modifications) != 0 {
+		// 	atomic.StoreInt64(&inuse.modified, 0)
+		// 	checkpointed += m.checkpointRecord(ctx, inuse)
+		// }
+
+		mods := atomic.LoadInt64(&inuse.updateCount)
+		coll := inuse.collectedCount
+
+		if mods != coll {
+			// Updates happened in this interval.
+			checkpointed += m.checkpointRecord(ctx, inuse)
+		} else {
+			// No updates since last collection.
+			unmapped := inuse.refMapped.tryUnmap()
+
+			// If able to unmap then remove the record from the current Map.
+			if unmapped {
+				m.current.Delete(inuse.mapkey())
+			}
 		}
 
-		// Always report the values if a reference to the Record is active,
-		// this is to keep the previous behavior.
-		// TODO: Reconsider this logic.
-		if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modified) != 0 {
-			atomic.StoreInt64(&inuse.modified, 0)
-			checkpointed += m.checkpointRecord(ctx, inuse)
-		}
+		inuse.collectedCount = mods
 
 		// Always continue to iterate over the entire map.
 		return true
@@ -610,7 +625,7 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	checkpointed := 0
 	for encodedLabels, lrec := range a.recorders {
 		lrec := lrec
-		epochDiff := m.currentEpoch - lrec.modifiedEpoch
+		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
 			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, &lrec.labels)
 		} else if epochDiff > 1 {
@@ -685,13 +700,12 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		r.inst.meter.errorHandler(err)
 		return
 	}
+	// Record was modified, inform the Collect() that things need
+	// to be collected while the record is still mapped.
+	atomic.AddInt64(&r.updateCount, 1)
 }
 
 func (r *record) Unbind() {
-	// Record was modified, inform the Collect() that things need to be collected.
-	// TODO: Reconsider if we should marked as modified when an Update happens and
-	// collect only when updates happened even for Bounds.
-	atomic.StoreInt64(&r.modified, 1)
 	r.refMapped.unref()
 }
 
