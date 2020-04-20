@@ -30,9 +30,10 @@ import (
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.
 type Exporter struct {
-	url    string
-	client *http.Client
-	logger *log.Logger
+	url         string
+	serviceName string
+	client      *http.Client
+	logger      *log.Logger
 }
 
 var (
@@ -63,9 +64,12 @@ func WithClient(client *http.Client) Option {
 }
 
 // NewExporter creates a new zipkin exporter.
-func NewExporter(collectorURL string, os ...Option) (*Exporter, error) {
+func NewExporter(collectorURL string, serviceName string, os ...Option) (*Exporter, error) {
 	if _, err := url.Parse(collectorURL); err != nil {
 		return nil, fmt.Errorf("invalid collector URL: %v", err)
+	}
+	if serviceName == "" {
+		return nil, fmt.Errorf("service name must be non-empty string")
 	}
 	opts := Options{}
 	for _, o := range os {
@@ -75,9 +79,10 @@ func NewExporter(collectorURL string, os ...Option) (*Exporter, error) {
 		opts.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:    collectorURL,
-		client: opts.client,
-		logger: opts.logger,
+		url:         collectorURL,
+		client:      opts.client,
+		logger:      opts.logger,
+		serviceName: serviceName,
 	}, nil
 }
 
@@ -88,7 +93,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) {
 		e.logf("no spans to export")
 		return
 	}
-	models := toZipkinSpanModels(batch)
+	models := toZipkinSpanModels(batch, e.serviceName)
 	body, err := json.Marshal(models)
 	if err != nil {
 		e.logf("failed to serialize zipkin models to JSON: %v", err)

@@ -35,6 +35,7 @@ func initTracer() {
 	// Create Zipkin Exporter
 	exporter, err := zipkin.NewExporter(
 		"http://localhost:9411/api/v2/spans",
+		"zipkin-example",
 		zipkin.WithLogger(logger),
 	)
 	if err != nil {
