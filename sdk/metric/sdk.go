@@ -562,27 +562,39 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
+		// Note: always continue to iterate over the entire
+		// map by returning `true` in this function.
 		inuse := value.(*record)
 
 		mods := atomic.LoadInt64(&inuse.updateCount)
 		coll := inuse.collectedCount
 
 		if mods != coll {
-			// Updates happened in this interval.
+			// Updates happened in this interval,
+			// checkpoint and continue.
 			checkpointed += m.checkpointRecord(ctx, inuse)
-		} else {
-			// No updates since last collection.
-			unmapped := inuse.refMapped.tryUnmap()
-
-			// If able to unmap then remove the record from the current Map.
-			if unmapped {
-				m.current.Delete(inuse.mapkey())
-			}
+			inuse.collectedCount = mods
+			return true
 		}
 
-		inuse.collectedCount = mods
+		// Having no updates since last collection, try to unmap:
+		if unmapped := inuse.refMapped.tryUnmap(); !unmapped {
+			// The record is referenced by a binding, continue.
+			return true
+		}
 
-		// Always continue to iterate over the entire map.
+		// If any other goroutines are now trying to re-insert this
+		// entry in the map, they are busy calling Gosched() awaiting
+		// this deletion:
+		m.current.Delete(inuse.mapkey())
+
+		// There's a potential race between `LoadInt64` and
+		// `tryUnmap` in this function.  Since this is the
+		// last we'll see of this record, checkpoint
+		mods = atomic.LoadInt64(&inuse.updateCount)
+		if mods != coll {
+			checkpointed += m.checkpointRecord(ctx, inuse)
+		}
 		return true
 	})
 

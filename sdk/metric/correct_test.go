@@ -38,9 +38,9 @@ import (
 var Must = metric.Must
 
 type correctnessBatcher struct {
-	t *testing.T
-
 	newAggCount int64
+
+	t *testing.T
 
 	records []export.Record
 }
