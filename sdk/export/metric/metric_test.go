@@ -29,11 +29,13 @@ var testSlice = []core.KeyValue{
 	key.Int("foo", 42),
 }
 
-func TestLabelIterator(t *testing.T) {
-	var tmp label.Sortable
-	labels := label.NewSetWithSortable(testSlice, &tmp)
+func newIter(slice []core.KeyValue) label.Iterator {
+	labels := label.NewSet(slice...)
+	return labels.Iter()
+}
 
-	iter := labels.Iter()
+func TestLabelIterator(t *testing.T) {
+	iter := newIter(testSlice)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
@@ -55,24 +57,17 @@ func TestLabelIterator(t *testing.T) {
 }
 
 func TestEmptyLabelIterator(t *testing.T) {
-	var tmp label.Sortable
-	labels := label.NewSetWithSortable(nil, &tmp)
-
-	iter := labels.Iter()
+	iter := newIter(nil)
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 }
 
 func TestIteratorToSlice(t *testing.T) {
-	var tmp label.Sortable
-	labels := label.NewSetWithSortable(testSlice, &tmp)
-
-	iter := labels.Iter()
+	iter := newIter(testSlice)
 	got := iter.ToSlice()
 	require.Equal(t, testSlice, got)
 
-	labels = label.NewSetWithSortable(nil, &tmp)
-	iter = labels.Iter()
+	iter = newIter(nil)
 	got = iter.ToSlice()
 	require.Nil(t, got)
 }
