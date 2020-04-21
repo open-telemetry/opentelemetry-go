@@ -554,3 +554,38 @@ func BenchmarkBatchRecord_8Labels_4Instruments(b *testing.B) {
 func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
 	benchmarkBatchRecord8Labels(b, 8)
 }
+
+// LabelIterator
+func BenchmarkLabelIterator(b *testing.B) {
+	const labelCount = 1024
+	ctx := context.Background()
+	fix := newFixture(b)
+
+	var rec export.Record
+	fix.pcb = func(_ context.Context, processRec export.Record) error {
+		rec = processRec
+		return nil
+	}
+
+	keyValues := makeLabels(labelCount)
+	counter := fix.meter.NewInt64Counter("test.counter")
+	counter.Add(ctx, 1, keyValues...)
+
+	fix.sdk.Collect(ctx)
+
+	b.ResetTimer()
+
+	labels := rec.Labels()
+	iter := labels.Iter()
+	var val core.KeyValue
+	for i := 0; i < b.N; i++ {
+		if !iter.Next() {
+			iter = labels.Iter()
+			iter.Next()
+		}
+		val = iter.Label()
+	}
+	if false {
+		fmt.Println(val)
+	}
+}

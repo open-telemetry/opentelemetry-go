@@ -92,10 +92,6 @@ type (
 		// the labels, copied into an array of the correct
 		// size for use as a map key.
 		ordered orderedLabels
-
-		// cachedValue contains a `reflect.Value` of the `ordered`
-		// member
-		cachedValue reflect.Value
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -174,8 +170,7 @@ var (
 	kvType = reflect.TypeOf(core.KeyValue{})
 
 	emptyLabels = labels{
-		ordered:     [0]core.KeyValue{},
-		cachedValue: reflect.ValueOf([0]core.KeyValue{}),
+		ordered: [0]core.KeyValue{},
 	}
 )
 
@@ -393,13 +388,15 @@ func (m *SDK) makeLabels(kvs []core.KeyValue, sortSlice *sortedLabels) labels {
 // NumLabels is a part of an implementation of the export.LabelStorage
 // interface.
 func (ls *labels) NumLabels() int {
-	return ls.cachedValue.Len()
+	return reflect.ValueOf(ls.ordered).Len()
 }
 
 // GetLabel is a part of an implementation of the export.LabelStorage
 // interface.
 func (ls *labels) GetLabel(idx int) core.KeyValue {
-	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
+	// Note: The Go compiler successfully avoids an allocation for
+	// the interface{} conversion here:
+	return reflect.ValueOf(ls.ordered).Index(idx).Interface().(core.KeyValue)
 }
 
 // Iter is a part of an implementation of the export.Labels interface.
@@ -459,7 +456,6 @@ func computeOrderedLabels(kvs []core.KeyValue) labels {
 	if ls.ordered == nil {
 		ls.ordered = computeOrderedReflect(kvs)
 	}
-	ls.cachedValue = reflect.ValueOf(ls.ordered)
 	return ls
 }
 
