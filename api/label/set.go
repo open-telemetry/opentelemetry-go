@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,16 +38,8 @@ type (
 
 	// Iterator allows iterating over an ordered set of labels.
 	Iterator struct {
-		storage Storage
+		storage *Set
 		idx     int
-	}
-
-	// Storage provides an access to the ordered labels.
-	Storage interface {
-		// Len returns a number of labels in the storage.
-		Len() int
-		// Get gets a label from a passed index.
-		Get(int) (core.KeyValue, bool)
 	}
 
 	Sortable []core.KeyValue
@@ -58,8 +50,6 @@ type (
 )
 
 var (
-	_ Storage = (*Set)(nil)
-
 	keyValueType = reflect.TypeOf(core.KeyValue{})
 
 	emptySet = Set{
