@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -49,7 +49,7 @@ func TestWithErrorHandler(t *testing.T) {
 }
 
 func TestWithResource(t *testing.T) {
-	r := resource.New(core.Key("A").String("a"))
+	r := resource.New(key.String("A", "a"))
 
 	c := &Config{}
 	WithResource(*r).Apply(c)
