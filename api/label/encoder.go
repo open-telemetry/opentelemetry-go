@@ -33,13 +33,13 @@ type (
 		// labels in the export path.
 		Encode(Iterator) string
 
-		// ID should return a unique positive number associated with
-		// the label encoder. Stateless label encoders could return
-		// the same number regardless of an instance, stateful label
-		// encoders should return a number depending on their state.
+		// ID returns a value that is unique for each class of
+		// label encoder.  Label encoders allocate these using
+		// `NewEncoderID`.
 		ID() EncoderID
 	}
 
+	// EncoderID
 	EncoderID struct {
 		value int64
 	}
@@ -128,6 +128,8 @@ func (*defaultLabelEncoder) ID() EncoderID {
 	return defaultEncoderID
 }
 
+// copyAndEscape escapes `=`, `,` and its own escape character (`\`),
+// making the default encoding unique.
 func copyAndEscape(buf *bytes.Buffer, val string) {
 	for _, ch := range val {
 		switch ch {
@@ -138,6 +140,8 @@ func copyAndEscape(buf *bytes.Buffer, val string) {
 	}
 }
 
+// Valid returns true if this encoder ID was allocated by
+// `NewEncoderID`.  Invalid encoder IDs will not be cached.
 func (id EncoderID) Valid() bool {
 	return id.value > 0
 }

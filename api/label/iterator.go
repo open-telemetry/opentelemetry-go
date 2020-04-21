@@ -38,7 +38,7 @@ func (i *Iterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
 }
 
-// Len returns a number of labels in the iterator's label storage.
+// Len returns a number of labels in the iterator's `*Set`.
 func (i *Iterator) Len() int {
 	return i.storage.Len()
 }

@@ -265,9 +265,7 @@ func (*testFixture) FinishedCollection() {
 }
 
 func (f *testFixture) Process(_ context.Context, record export.Record) error {
-	labelsIter := record.Labels().Iter()
-
-	labels := labelsIter.ToSlice()
+	labels := record.Labels().ToSlice()
 	key := testKey{
 		labels:     canonicalizeLabels(labels),
 		descriptor: record.Descriptor(),
