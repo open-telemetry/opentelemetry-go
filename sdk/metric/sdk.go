@@ -78,7 +78,7 @@ type (
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
 		descriptor *metric.Descriptor
-		ordered    label.Equivalent
+		ordered    label.Distinct
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -124,7 +124,7 @@ type (
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[label.Equivalent]labeledRecorder
+		recorders map[label.Distinct]labeledRecorder
 
 		callback func(func(core.Number, []core.KeyValue))
 	}
@@ -194,7 +194,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	}
 	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
-		a.recorders = make(map[label.Equivalent]labeledRecorder)
+		a.recorders = make(map[label.Distinct]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,

@@ -22,49 +22,74 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-const maxConcurrentEncoders = 3
-
 type (
-	// Set is the internal representation for LabelSet.  It manages an
-	// immutable set of labels with an internal cache for storing encoded
-	// labels.
+	// Set is the representation for a distinct label set.  It
+	// manages an immutable set of labels, with an internal cache
+	// for storing label encodings.
+	//
+	// This type supports the `Equivalent` method of comparison
+	// using values of type `Distinct`.
+	//
+	// This type is used to implement:
+	// 1. Metric labels
+	// 2. Resource sets
+	// 3. Correlation map (TODO)
 	Set struct {
-		equivalent Equivalent
+		equivalent Distinct
 
 		lock     sync.Mutex
 		encoders [maxConcurrentEncoders]EncoderID
 		encoded  [maxConcurrentEncoders]string
 	}
 
-	// Iterator allows iterating over an ordered set of labels.
+	// Distinct wraps a variable-size array of `core.KeyValue`,
+	// constructed with keys in sorted order.
+	Distinct struct {
+		iface interface{}
+	}
+
+	// Iterator allows iterating over the set of labels in order,
+	// sorted by key.
 	Iterator struct {
 		storage *Set
 		idx     int
 	}
 
+	// Sortable implements `sort.Interface`, used for sorting
+	// `core.KeyValue`.  This is an exported type to support an
+	// memory optimization.  A pointer to one of these is needed
+	// for the call to `sort.Stable()`, which the caller may
+	// provide in order to avoid an allocation.  See
+	// `NewSetWithSortable()`.
 	Sortable []core.KeyValue
-
-	Equivalent struct {
-		iface interface{}
-	}
 )
 
 var (
+	// keyValueType is used in `computeDistinctReflect`.
 	keyValueType = reflect.TypeOf(core.KeyValue{})
 
+	// emptySet is returned for empty label sets.
 	emptySet = Set{
-		equivalent: Equivalent{
+		equivalent: Distinct{
 			iface: [0]core.KeyValue{},
 		},
 	}
 )
 
+const maxConcurrentEncoders = 3
+
 func EmptySet() Set {
 	return emptySet
 }
 
-func (e Equivalent) reflect() reflect.Value {
-	return reflect.ValueOf(e.iface)
+// reflect abbreviates `reflect.ValueOf`.
+func (d Distinct) reflect() reflect.Value {
+	return reflect.ValueOf(d.iface)
+}
+
+// Valid returns true if this value refers to a valid `*Set`.
+func (d Distinct) Valid() bool {
+	return d.iface != nil
 }
 
 // Len returns the number of labels in this set.
@@ -121,6 +146,7 @@ func (l *Set) HasValue(k core.Key) bool {
 	return ok
 }
 
+// Iter returns an iterator for visiting the labels in this set.
 func (l *Set) Iter() Iterator {
 	return Iterator{
 		storage: l,
@@ -128,16 +154,20 @@ func (l *Set) Iter() Iterator {
 	}
 }
 
+// Return the set of labels belonging to this set, sorted, where keys
+// appear no more than once.
 func (l *Set) ToSlice() []core.KeyValue {
 	iter := l.Iter()
 	return iter.ToSlice()
 }
 
-// Equivalent returns a value that may be used as a map key.
-// Equivalent guarantees that the result will equal the Equivalent
-// value of any label set with the same elements as this set.
-func (l *Set) Equivalent() Equivalent {
-	if l == nil {
+// Equivalent returns a value that may be used as a map key.  The
+// Distinct type guarantees that the result will equal the equivalent
+// Distinct value of any label set with the same elements as this,
+// where sets are made unique by choosing the last value in the input
+// for any given key.
+func (l *Set) Equivalent() Distinct {
+	if l == nil || !l.equivalent.Valid() {
 		return emptySet.equivalent
 	}
 	return l.equivalent
@@ -148,7 +178,8 @@ func (l *Set) Equals(o *Set) bool {
 	return l.Equivalent() == o.Equivalent()
 }
 
-// Encoded is a pre-encoded form of the ordered labels.
+// Encoded returns a the encoded form of this set, according to
+// `encoder`.  The result will be cached in this `*Set`.
 func (l *Set) Encoded(encoder Encoder) string {
 	if l == nil || encoder == nil {
 		return ""
@@ -195,11 +226,36 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
+// NewSet returns a new `*Set`.  Except for empty sets, this method
+// adds an additional allocation compared with a call to
+// `NewSetWithSortable`.  See that method for more details.
 func NewSet(kvs ...core.KeyValue) Set {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return emptySet
+	}
+
 	return NewSetWithSortable(kvs, new(Sortable))
 }
 
+// NewSetWithSortable modifies the input slice, ensuring the
+// following:
+//
+// - Last-value wins semantics
+// - Caller sees the reordering, but doesn't lose values
+// - Repeated call preserve last-value wins.
+//
+// Note that methods are defined `*Set`, although no allocation for
+// `Set` is required.  Callers may avoid memory allocations by:
+//
+// - allocating a `Sortable` for use as a temporary in this method
+// - allocating a `Set` for storing the return value of this
+//   constructor.
 func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
+	// The requitements stated above require that the stable
+	// result be placed in the end of the input slice, while
+	// overwritten values are swapped to the beginning.
+
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return emptySet
@@ -213,13 +269,6 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 
 	*tmp = nil
 
-	// Modify the input slice, ensuring the following:
-	// - Last-value wins semantics
-	// - Caller sees the reordering, but doesn't lose values
-	// - Repeated call preserve last-value wins.
-	// This requires that the stable result be placed in the end of the
-	// input slice, while duplicate values are swapped to the beginning.
-
 	position := len(kvs) - 1
 	offset := position - 1
 
@@ -232,21 +281,25 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 	}
 
 	return Set{
-		equivalent: computeEquivalent(kvs[position:]),
+		equivalent: computeDistinct(kvs[position:]),
 	}
 }
 
-func computeEquivalent(kvs []core.KeyValue) Equivalent {
-	iface := computeEquivalentFixed(kvs)
+// computeDistinct returns a `Distinct` using either the fixed- or
+// reflect-oriented code path, depending on the size of the input.
+func computeDistinct(kvs []core.KeyValue) Distinct {
+	iface := computeDistinctFixed(kvs)
 	if iface == nil {
-		iface = computeEquivalentReflect(kvs)
+		iface = computeDistinctReflect(kvs)
 	}
-	return Equivalent{
+	return Distinct{
 		iface: iface,
 	}
 }
 
-func computeEquivalentFixed(kvs []core.KeyValue) interface{} {
+// computeDistinctFixed computes a `Distinct` for small slices.  It
+// returns nil if the input is too large for this code path.
+func computeDistinctFixed(kvs []core.KeyValue) interface{} {
 	switch len(kvs) {
 	case 1:
 		ptr := new([1]core.KeyValue)
@@ -293,7 +346,9 @@ func computeEquivalentFixed(kvs []core.KeyValue) interface{} {
 	}
 }
 
-func computeEquivalentReflect(kvs []core.KeyValue) interface{} {
+// computeDistinctReflect computes a `Distinct` using reflection,
+// works for any size input.
+func computeDistinctReflect(kvs []core.KeyValue) interface{} {
 	at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
 	for i, kv := range kvs {
 		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
@@ -301,14 +356,17 @@ func computeEquivalentReflect(kvs []core.KeyValue) interface{} {
 	return at.Interface()
 }
 
+// Len implements `sort.Interface`.
 func (l *Sortable) Len() int {
 	return len(*l)
 }
 
+// Swap implements `sort.Interface`.
 func (l *Sortable) Swap(i, j int) {
 	(*l)[i], (*l)[j] = (*l)[j], (*l)[i]
 }
 
+// Less implements `sort.Interface`.
 func (l *Sortable) Less(i, j int) bool {
 	return (*l)[i].Key < (*l)[j].Key
 }
