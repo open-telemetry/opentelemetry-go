@@ -240,32 +240,34 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, core.NewInt64Number(2))
 
-		labelsIter := rec.Labels().Iter()
-		labels := labelsIter.ToSlice()
-		actual = append(actual, labels)
+		kvs := rec.Labels().ToSlice()
+		actual = append(actual, kvs)
 	}
 
 	require.ElementsMatch(t, allExpect, actual)
 }
 
+func newSet(kvs ...core.KeyValue) *label.Set {
+	labels := &label.Set{}
+	*labels = label.NewSet(kvs...)
+	return labels
+}
+
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := label.DefaultEncoder()
 
-	set1 := label.NewSet(key.String("A", "B"), key.String("C", "D"))
-	encoded := encoder.Encode(set1.Iter())
+	encoded := encoder.Encode(newSet(key.String("A", "B"), key.String("C", "D")).Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	set2 := label.NewSet(key.String("A", "B,c=d"), key.String(`C\`, "D"))
-	encoded = encoder.Encode(set2.Iter())
+	encoded = encoder.Encode(newSet(key.String("A", "B,c=d"), key.String(`C\`, "D")).Iter())
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	set3 := label.NewSet(key.String(`\`, `=`), key.String(`,`, `\`))
-	encoded = encoder.Encode(set3.Iter())
+	encoded = encoder.Encode(newSet(key.String(`\`, `=`), key.String(`,`, `\`)).Iter())
 	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	set4 := label.NewSet(
+	encoded = encoder.Encode(newSet(
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -276,8 +278,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	)
-	encoded = encoder.Encode(set4.Iter())
+	).Iter())
 	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
 }
 

@@ -104,8 +104,7 @@ func (b *testBatcher) FinishedCollection() {
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	labelsIter := record.Labels().Iter()
-	labels := labelsIter.ToSlice()
+	labels := record.Labels().ToSlice()
 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
 	return nil
 }
