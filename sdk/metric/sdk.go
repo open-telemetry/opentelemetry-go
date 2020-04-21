@@ -143,7 +143,6 @@ var (
 	_ api.AsyncImpl     = &asyncInstrument{}
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
-	_ api.Resourcer     = &SDK{}
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {

@@ -249,7 +249,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := label.NewDefaultEncoder()
+	encoder := label.DefaultEncoder()
 
 	set1 := label.NewSet(key.String("A", "B"), key.String("C", "D"))
 	encoded := encoder.Encode(set1.Iter())
@@ -311,7 +311,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.NewOutput(label.NewDefaultEncoder())
+	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -351,7 +351,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(label.NewDefaultEncoder())
+	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}

@@ -104,7 +104,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		}
 	}
 	if config.LabelEncoder == nil {
-		config.LabelEncoder = label.NewDefaultEncoder()
+		config.LabelEncoder = label.DefaultEncoder()
 	}
 	return &Exporter{
 		config: config,

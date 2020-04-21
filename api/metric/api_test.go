@@ -88,22 +88,12 @@ func TestOptions(t *testing.T) {
 			unit:     "h",
 			resource: resource.Resource{},
 		},
-		{
-			name: "resource override",
-			opts: []metric.Option{
-				metric.WithResource(*resource.New(key.New("name").String("test-name"))),
-			},
-			desc:     "",
-			unit:     "",
-			resource: *resource.New(key.New("name").String("test-name")),
-		},
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
 		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
-			Resource:    tt.resource,
 		}); diff != "" {
 			t.Errorf("Compare options: -got +want %s", diff)
 		}

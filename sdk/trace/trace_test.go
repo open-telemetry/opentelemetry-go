@@ -602,7 +602,15 @@ func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(core.Value{}),
 		cmp.AllowUnexported(export.Event{}),
-		cmp.AllowUnexported(resource.Resource{}))
+		cmp.Comparer(func(a, b *resource.Resource) bool {
+			if a == nil && b == nil {
+				return true
+			} else if a != nil && b != nil {
+				return a.Labels().Equivalent() == b.Labels().Equivalent()
+			} else {
+				return false
+			}
+		}))
 }
 
 func remoteSpanContext() core.SpanContext {

@@ -138,6 +138,11 @@ func (l *Set) Iter() Iterator {
 	}
 }
 
+func (l *Set) ToSlice() []core.KeyValue {
+	iter := l.Iter()
+	return iter.ToSlice()
+}
+
 // Equivalent returns a value that may be used as a map key.
 // Equivalent guarantees that the result will equal the Equivalent
 // value of any label set with the same elements as this set.

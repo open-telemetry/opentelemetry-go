@@ -66,7 +66,9 @@ var (
 	// encoders.
 	encoderIDCounter int64 = 1
 
-	defaultEncoderID = NewEncoderID()
+	defaultEncoderOnce     sync.Once
+	defaultEncoderID       = NewEncoderID()
+	defaultEncoderInstance *defaultLabelEncoder
 )
 
 // NewEncoderID returns a unique label encoder ID. It should be
@@ -76,21 +78,24 @@ func NewEncoderID() EncoderID {
 	return EncoderID{value: atomic.AddInt64(&encoderIDCounter, 1)}
 }
 
-// NewDefaultEncoder returns a label encoder that encodes labels
+// DefaultEncoder returns a label encoder that encodes labels
 // in such a way that each escaped label's key is followed by an equal
 // sign and then by an escaped label's value. All key-value pairs are
 // separated by a comma.
 //
 // Escaping is done by prepending a backslash before either a
 // backslash, equal sign or a comma.
-func NewDefaultEncoder() Encoder {
-	return &defaultLabelEncoder{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &bytes.Buffer{}
+func DefaultEncoder() Encoder {
+	defaultEncoderOnce.Do(func() {
+		defaultEncoderInstance = &defaultLabelEncoder{
+			pool: sync.Pool{
+				New: func() interface{} {
+					return &bytes.Buffer{}
+				},
 			},
-		},
-	}
+		}
+	})
+	return defaultEncoderInstance
 }
 
 // Encode is a part of an implementation of the LabelEncoder

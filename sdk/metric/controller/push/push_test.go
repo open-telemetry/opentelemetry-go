@@ -68,7 +68,7 @@ var _ push.Clock = mockClock{}
 var _ push.Ticker = mockTicker{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet(label.NewDefaultEncoder())
+	checkpointSet := test.NewCheckpointSet(label.DefaultEncoder())
 
 	batcher := &testBatcher{
 		t:             t,

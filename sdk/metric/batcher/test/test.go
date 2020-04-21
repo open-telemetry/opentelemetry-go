@@ -60,7 +60,7 @@ var (
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
 	// GroupEncoder uses the SDK default encoder
-	GroupEncoder = label.NewDefaultEncoder()
+	GroupEncoder = label.DefaultEncoder()
 
 	// LastValue groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)

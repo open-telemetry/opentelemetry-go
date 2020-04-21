@@ -25,7 +25,7 @@ import (
 )
 
 func TestSetDedup(t *testing.T) {
-	enc := label.NewDefaultEncoder()
+	enc := label.DefaultEncoder()
 
 	sl1 := []core.KeyValue{key.String("A", "1"), key.String("C", "D"), key.String("A", "B")}
 	sl2 := []core.KeyValue{key.String("A", "2"), key.String("A", "B"), key.String("C", "D")}
