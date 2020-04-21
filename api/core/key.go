@@ -139,6 +139,11 @@ func Uint(v uint) Value {
 }
 
 // Bool creates a KeyValue instance with a BOOL Value.
+//
+// If creating both key and a bool value at the same time, then
+// instead of calling core.Key(name).Bool(value) consider using a
+// convenience function provided by the api/key package -
+// key.Bool(name, value).
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -147,6 +152,11 @@ func (k Key) Bool(v bool) KeyValue {
 }
 
 // Int64 creates a KeyValue instance with an INT64 Value.
+//
+// If creating both key and an int64 value at the same time, then
+// instead of calling core.Key(name).Int64(value) consider using a
+// convenience function provided by the api/key package -
+// key.Int64(name, value).
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -155,6 +165,11 @@ func (k Key) Int64(v int64) KeyValue {
 }
 
 // Uint64 creates a KeyValue instance with a UINT64 Value.
+//
+// If creating both key and a uint64 value at the same time, then
+// instead of calling core.Key(name).Uint64(value) consider using a
+// convenience function provided by the api/key package -
+// key.Uint64(name, value).
 func (k Key) Uint64(v uint64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -163,6 +178,11 @@ func (k Key) Uint64(v uint64) KeyValue {
 }
 
 // Float64 creates a KeyValue instance with a FLOAT64 Value.
+//
+// If creating both key and a float64 value at the same time, then
+// instead of calling core.Key(name).Float64(value) consider using a
+// convenience function provided by the api/key package -
+// key.Float64(name, value).
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -171,6 +191,11 @@ func (k Key) Float64(v float64) KeyValue {
 }
 
 // Int32 creates a KeyValue instance with an INT32 Value.
+//
+// If creating both key and an int32 value at the same time, then
+// instead of calling core.Key(name).Int32(value) consider using a
+// convenience function provided by the api/key package -
+// key.Int32(name, value).
 func (k Key) Int32(v int32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -179,6 +204,11 @@ func (k Key) Int32(v int32) KeyValue {
 }
 
 // Uint32 creates a KeyValue instance with a UINT32 Value.
+//
+// If creating both key and a uint32 value at the same time, then
+// instead of calling core.Key(name).Uint32(value) consider using a
+// convenience function provided by the api/key package -
+// key.Uint32(name, value).
 func (k Key) Uint32(v uint32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -187,6 +217,11 @@ func (k Key) Uint32(v uint32) KeyValue {
 }
 
 // Float32 creates a KeyValue instance with a FLOAT32 Value.
+//
+// If creating both key and a float32 value at the same time, then
+// instead of calling core.Key(name).Float32(value) consider using a
+// convenience function provided by the api/key package -
+// key.Float32(name, value).
 func (k Key) Float32(v float32) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -195,6 +230,11 @@ func (k Key) Float32(v float32) KeyValue {
 }
 
 // String creates a KeyValue instance with a STRING Value.
+//
+// If creating both key and a string value at the same time, then
+// instead of calling core.Key(name).String(value) consider using a
+// convenience function provided by the api/key package -
+// key.String(name, value).
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -204,6 +244,11 @@ func (k Key) String(v string) KeyValue {
 
 // Int creates a KeyValue instance with either an INT32 or an INT64
 // Value, depending on whether the int type is 32 or 64 bits wide.
+//
+// If creating both key and an int value at the same time, then
+// instead of calling core.Key(name).Int(value) consider using a
+// convenience function provided by the api/key package -
+// key.Int(name, value).
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -211,8 +256,13 @@ func (k Key) Int(v int) KeyValue {
 	}
 }
 
-// Uint creates a KeyValue instance with either an UINT32 or an UINT64
+// Uint creates a KeyValue instance with either a UINT32 or a UINT64
 // Value, depending on whether the uint type is 32 or 64 bits wide.
+//
+// If creating both key and a uint value at the same time, then
+// instead of calling core.Key(name).Uint(value) consider using a
+// convenience function provided by the api/key package -
+// key.Uint(name, value).
 func (k Key) Uint(v uint) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -230,7 +280,7 @@ func (v *Value) Type() ValueType {
 	return v.vtype
 }
 
-// Bool returns the bool value. Make sure that the Value's type is
+// AsBool returns the bool value. Make sure that the Value's type is
 // BOOL.
 func (v *Value) AsBool() bool {
 	return rawToBool(v.numeric)
