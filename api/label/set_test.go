@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package label_test
 
 import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	label "go.opentelemetry.io/otel/api/label/internal"
+	"go.opentelemetry.io/otel/api/label"
 
 	"github.com/stretchr/testify/require"
 )

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package label
 
 import (
 	"reflect"
@@ -25,6 +25,15 @@ import (
 const maxConcurrentEncoders = 3
 
 type (
+	// Labels stores complete information about a computed label set,
+	// including the labels in an appropriate order (as defined by the
+	// Batcher).  If the batcher does not re-order labels, they are
+	// presented in sorted order by the SDK.
+	Labels interface {
+		Iter() Iterator
+		Encoded(Encoder) string
+	}
+
 	// Set is the internal representation for LabelSet.  It manages an
 	// immutable set of labels with an internal cache for storing encoded
 	// labels.
@@ -63,7 +72,9 @@ type (
 )
 
 var (
-	kvType = reflect.TypeOf(core.KeyValue{})
+	_ Labels = (*Set)(nil)
+
+	keyValueType = reflect.TypeOf(core.KeyValue{})
 
 	emptySet = Set{
 		equivalent: Equivalent{
@@ -80,6 +91,9 @@ func (e Equivalent) reflect() reflect.Value {
 	return reflect.ValueOf(e.iface)
 }
 
+// ToSlice is a convenience function that creates a slice of labels
+// from the passed iterator. The iterator is set up to start from the
+// beginning before creating the slice.
 func (i Iterator) ToSlice() []core.KeyValue {
 	l := i.Len()
 	if l == 0 {
@@ -216,7 +230,11 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
-func NewSet(kvs []core.KeyValue, tmp *Sortable) Set {
+func NewSet(kvs []core.KeyValue) Set {
+	return NewSetWithSortable(kvs, new(Sortable))
+}
+
+func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return emptySet
@@ -311,7 +329,7 @@ func computeEquivalentFixed(kvs []core.KeyValue) interface{} {
 }
 
 func computeEquivalentReflect(kvs []core.KeyValue) interface{} {
-	at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
+	at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
 	for i, kv := range kvs {
 		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
 	}

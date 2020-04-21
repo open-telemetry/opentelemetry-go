@@ -1,4 +1,4 @@
-package internal
+package label
 
 import "go.opentelemetry.io/otel/api/core"
 
