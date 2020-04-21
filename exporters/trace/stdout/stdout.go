@@ -33,7 +33,7 @@ type Options struct {
 	PrettyPrint bool
 }
 
-// Exporter is an implementation of trace.Exporter that writes spans to stdout.
+// Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type Exporter struct {
 	pretty       bool
 	outputWriter io.Writer
