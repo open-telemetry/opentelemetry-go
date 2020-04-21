@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -239,28 +240,32 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, core.NewInt64Number(2))
 
-		kvs := export.IteratorToSlice(rec.Labels().Iter())
-		actual = append(actual, kvs)
+		labelsIter := rec.Labels().Iter()
+		labels := labelsIter.ToSlice()
+		actual = append(actual, labels)
 	}
 
 	require.ElementsMatch(t, allExpect, actual)
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := export.NewDefaultLabelEncoder()
+	encoder := label.NewDefaultEncoder()
 
-	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
+	set1 := label.NewSet(key.String("A", "B"), key.String("C", "D"))
+	encoded := encoder.Encode(set1.Iter())
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")}).Iter())
+	set2 := label.NewSet(key.String("A", "B,c=d"), key.String(`C\`, "D"))
+	encoded = encoder.Encode(set2.Iter())
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)}).Iter())
-	require.Equal(t, `\\=\=,\,=\\`, encoded)
+	set3 := label.NewSet(key.String(`\`, `=`), key.String(`,`, `\`))
+	encoded = encoder.Encode(set3.Iter())
+	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{
+	set4 := label.NewSet(
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -271,8 +276,9 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	}).Iter())
-	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
+	)
+	encoded = encoder.Encode(set4.Iter())
+	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
 }
 
 func TestObserverCollection(t *testing.T) {
@@ -305,7 +311,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
+	out := batchTest.NewOutput(label.NewDefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -345,7 +351,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
+	out := batchTest.NewOutput(label.NewDefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}

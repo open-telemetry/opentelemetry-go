@@ -18,12 +18,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -67,41 +67,18 @@ type (
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
-		asyncSortSlice sortedLabels
+		asyncSortSlice label.Sortable
 	}
 
 	syncInstrument struct {
 		instrument
 	}
 
-	// orderedLabels is a variable-size array of core.KeyValue
-	// suitable for use as a map key.
-	orderedLabels interface{}
-
-	// labels represents an internalized set of labels that have been
-	// sorted and deduplicated.
-	labels struct {
-		// cachedEncoderID needs to be aligned for atomic access
-		cachedEncoderID int64
-		// cachedEncoded is an encoded version of ordered
-		// labels
-		cachedEncoded string
-
-		// ordered is the output of sorting and deduplicating
-		// the labels, copied into an array of the correct
-		// size for use as a map key.
-		ordered orderedLabels
-
-		// cachedValue contains a `reflect.Value` of the `ordered`
-		// member
-		cachedValue reflect.Value
-	}
-
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
 		descriptor *metric.Descriptor
-		ordered    orderedLabels
+		ordered    label.Equivalent
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -122,12 +99,12 @@ type (
 		// labels is the processed label set for this record.
 		//
 		// labels has to be aligned for 64-bit atomic operations.
-		labels labels
+		labels label.Set
 
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.
-		sortSlice sortedLabels
+		sortSlice label.Sortable
 
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
@@ -147,14 +124,14 @@ type (
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[orderedLabels]labeledRecorder
+		recorders map[label.Equivalent]labeledRecorder
 
 		callback func(func(core.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
 		modifiedEpoch int64
-		labels        labels
+		labels        label.Set
 		recorder      export.Aggregator
 	}
 
@@ -162,20 +139,11 @@ type (
 )
 
 var (
-	_ api.MeterImpl       = &SDK{}
-	_ api.AsyncImpl       = &asyncInstrument{}
-	_ api.SyncImpl        = &syncInstrument{}
-	_ api.BoundSyncImpl   = &record{}
-	_ api.Resourcer       = &SDK{}
-	_ export.LabelStorage = &labels{}
-	_ export.Labels       = &labels{}
-
-	kvType = reflect.TypeOf(core.KeyValue{})
-
-	emptyLabels = labels{
-		ordered:     [0]core.KeyValue{},
-		cachedValue: reflect.ValueOf([0]core.KeyValue{}),
-	}
+	_ api.MeterImpl     = &SDK{}
+	_ api.AsyncImpl     = &asyncInstrument{}
+	_ api.SyncImpl      = &syncInstrument{}
+	_ api.BoundSyncImpl = &record{}
+	_ api.Resourcer     = &SDK{}
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -211,9 +179,9 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	// We are in a single-threaded context.  Note: this assumption
 	// could be violated if the user added concurrency within
 	// their callback.
-	labels := a.meter.makeLabels(kvs, &a.meter.asyncSortSlice)
+	labels := label.NewSetWithSortable(kvs, &a.meter.asyncSortSlice)
 
-	lrec, ok := a.recorders[labels.ordered]
+	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		if lrec.modifiedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
@@ -222,17 +190,17 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 		} else {
 			lrec.modifiedEpoch = a.meter.currentEpoch
 		}
-		a.recorders[labels.ordered] = lrec
+		a.recorders[labels.Equivalent()] = lrec
 		return lrec.recorder
 	}
 	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
-		a.recorders = make(map[orderedLabels]labeledRecorder)
+		a.recorders = make(map[label.Equivalent]labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	a.recorders[labels.ordered] = labeledRecorder{
+	a.recorders[labels.Equivalent()] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
 		modifiedEpoch: a.meter.currentEpoch,
@@ -249,16 +217,16 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *record {
+func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *record {
 	var rec *record
-	var labels labels
+	var labels label.Set
 
-	if lptr == nil || lptr.ordered == nil {
+	if lptr == nil {
 		// This memory allocation may not be used, but it's
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		labels = s.meter.makeLabels(kvs, &rec.sortSlice)
+		labels = label.NewSetWithSortable(kvs, &rec.sortSlice)
 	} else {
 		labels = *lptr
 	}
@@ -267,7 +235,7 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *recor
 	// passes through an interface{})
 	mk := mapkey{
 		descriptor: &s.descriptor,
-		ordered:    labels.ordered,
+		ordered:    labels.Equivalent(),
 	}
 
 	if actual, ok := s.meter.current.Load(mk); ok {
@@ -463,7 +431,7 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
+func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
 	if recorder == nil {
 		return 0
 	}
@@ -493,11 +461,16 @@ func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
 	// ordered labels.
-	var labels labels
+	var labels label.Set
 	for i, meas := range measurements {
 		s := meas.SyncImpl().(*syncInstrument)
 
-		h := s.acquireHandle(kvs, &labels)
+		var labelsPtr *label.Set
+		if i > 0 {
+			labelsPtr = &labels
+		}
+
+		h := s.acquireHandle(kvs, labelsPtr)
 
 		// Re-use labels for the next measurement.
 		if i == 0 {
@@ -535,6 +508,6 @@ func (r *record) Unbind() {
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: &r.inst.descriptor,
-		ordered:    r.labels.ordered,
+		ordered:    r.labels.Equivalent(),
 	}
 }

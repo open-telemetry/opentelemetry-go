@@ -25,14 +25,13 @@ import (
 )
 
 func TestSetDedup(t *testing.T) {
-	tmp := &label.Sortable{}
 	enc := label.NewDefaultEncoder()
 
 	sl1 := []core.KeyValue{key.String("A", "1"), key.String("C", "D"), key.String("A", "B")}
 	sl2 := []core.KeyValue{key.String("A", "2"), key.String("A", "B"), key.String("C", "D")}
 
-	s1 := label.NewSet(sl1, tmp)
-	s2 := label.NewSet(sl2, tmp)
+	s1 := label.NewSet(sl1...)
+	s2 := label.NewSet(sl2...)
 
 	require.Equal(t, s1.Equivalent(), s2.Equivalent())
 

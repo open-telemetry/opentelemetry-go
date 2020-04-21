@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label
+package label // import "go.opentelemetry.io/otel/api/label"
 
 import (
 	"reflect"
@@ -72,7 +72,8 @@ type (
 )
 
 var (
-	_ Labels = (*Set)(nil)
+	_ Labels  = (*Set)(nil)
+	_ Storage = (*Set)(nil)
 
 	keyValueType = reflect.TypeOf(core.KeyValue{})
 
@@ -89,22 +90,6 @@ func EmptySet() Set {
 
 func (e Equivalent) reflect() reflect.Value {
 	return reflect.ValueOf(e.iface)
-}
-
-// ToSlice is a convenience function that creates a slice of labels
-// from the passed iterator. The iterator is set up to start from the
-// beginning before creating the slice.
-func (i Iterator) ToSlice() []core.KeyValue {
-	l := i.Len()
-	if l == 0 {
-		return nil
-	}
-	i.idx = -1
-	slice := make([]core.KeyValue, 0, l)
-	for i.Next() {
-		slice = append(slice, i.Label())
-	}
-	return slice
 }
 
 // Len returns the number of labels in this set.
@@ -230,7 +215,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
-func NewSet(kvs []core.KeyValue) Set {
+func NewSet(kvs ...core.KeyValue) Set {
 	return NewSetWithSortable(kvs, new(Sortable))
 }
 

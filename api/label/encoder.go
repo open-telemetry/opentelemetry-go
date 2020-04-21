@@ -72,8 +72,8 @@ var (
 // NewEncoderID returns a unique label encoder ID. It should be
 // called once per each type of label encoder. Preferably in init() or
 // in var definition.
-func NewEncoderID() int64 {
-	return atomic.AddInt64(&encoderIDCounter, 1)
+func NewEncoderID() EncoderID {
+	return EncoderID{value: atomic.AddInt64(&encoderIDCounter, 1)}
 }
 
 // NewDefaultEncoder returns a label encoder that encodes labels
@@ -120,9 +120,7 @@ func (d *defaultLabelEncoder) Encode(iter Iterator) string {
 
 // ID is a part of an implementation of the LabelEncoder interface.
 func (*defaultLabelEncoder) ID() EncoderID {
-	return EncoderID{
-		defaultEncoderID,
-	}
+	return defaultEncoderID
 }
 
 func copyAndEscape(buf *bytes.Buffer, val string) {
