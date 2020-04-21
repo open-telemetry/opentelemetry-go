@@ -25,23 +25,9 @@ import (
 const maxConcurrentEncoders = 3
 
 type (
-	// Labels stores complete information about a computed label set,
-	// including the labels in an appropriate order (as defined by the
-	// Batcher).  If the batcher does not re-order labels, they are
-	// presented in sorted order by the SDK.
-	Labels interface {
-		Iter() Iterator
-		Encoded(Encoder) string
-	}
-
 	// Set is the internal representation for LabelSet.  It manages an
 	// immutable set of labels with an internal cache for storing encoded
 	// labels.
-	//
-	// Note this has a remarkably similar API to the
-	// `distributedcontext.Map` type.  This code, which uses a sorted
-	// KeyValue list, could be used to implement `distributedcontext.Map`,
-	// which uses a map[Key]Value.
 	Set struct {
 		equivalent Equivalent
 
@@ -72,7 +58,6 @@ type (
 )
 
 var (
-	_ Labels  = (*Set)(nil)
 	_ Storage = (*Set)(nil)
 
 	keyValueType = reflect.TypeOf(core.KeyValue{})

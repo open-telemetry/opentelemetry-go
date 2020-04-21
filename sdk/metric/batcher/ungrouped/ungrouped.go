@@ -39,7 +39,7 @@ type (
 
 	batchValue struct {
 		aggregator export.Aggregator
-		labels     label.Labels
+		labels     *label.Set
 	}
 
 	batchMap map[batchKey]batchValue

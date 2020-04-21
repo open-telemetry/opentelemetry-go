@@ -185,14 +185,14 @@ type CheckpointSet interface {
 // and label set.
 type Record struct {
 	descriptor *metric.Descriptor
-	labels     label.Labels
+	labels     *label.Set
 	aggregator Aggregator
 }
 
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels label.Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -213,6 +213,6 @@ func (r Record) Descriptor() *metric.Descriptor {
 
 // Labels describes the labels associated with the instrument and the
 // aggregated data.
-func (r Record) Labels() label.Labels {
+func (r Record) Labels() *label.Set {
 	return r.labels
 }
