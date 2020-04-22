@@ -15,12 +15,15 @@
 package core_test
 
 import (
+	"encoding/json"
 	"testing"
 	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestValue(t *testing.T) {
@@ -159,6 +162,19 @@ func TestDefined(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestJSONValue(t *testing.T) {
+	var kvs interface{} = [2]core.KeyValue{
+		key.String("A", "B"),
+		key.Int64("C", 1),
+	}
+
+	data, err := json.Marshal(kvs)
+	require.NoError(t, err)
+	require.Equal(t,
+		`[{"Key":"A","Value":{"Type":"STRING","Value":"B"}},{"Key":"C","Value":{"Type":"INT64","Value":1}}]`,
+		string(data))
 }
 
 func TestEmit(t *testing.T) {

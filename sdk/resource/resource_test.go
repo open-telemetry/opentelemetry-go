@@ -15,10 +15,12 @@
 package resource_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
@@ -210,4 +212,13 @@ func TestString(t *testing.T) {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
 		}
 	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	r := resource.New(key.Int64("A", 1), key.String("C", "D"))
+	data, err := json.Marshal(r)
+	require.NoError(t, err)
+	require.Equal(t,
+		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
+		string(data))
 }

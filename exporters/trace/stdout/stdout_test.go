@@ -119,7 +119,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
 		`"ChildSpanCount":0,` +
-		`"Resource":[{` +
+		`"Resource":[` +
+		`{` +
 		`"Key":"rk1",` +
 		`"Value":{"Type":"STRING","Value":"rv11"}` +
 		`}]}` + "\n"
