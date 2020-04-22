@@ -61,8 +61,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := core.Key("a").String("1")
-			attr2 := core.Key("b").String("2")
+			attr1 := key.String("a", "1")
+			attr2 := key.String("b", "2")
 
 			subject := testtrace.NewTracer()
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
@@ -227,7 +227,7 @@ func TestTracer(t *testing.T) {
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
 				Attributes: []core.KeyValue{
-					core.Key("a").String("1"),
+					key.String("a", "1"),
 				},
 			}
 
@@ -235,7 +235,7 @@ func TestTracer(t *testing.T) {
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
 				Attributes: []core.KeyValue{
-					core.Key("b").String("2"),
+					key.String("b", "2"),
 				},
 			}
 
@@ -268,8 +268,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := core.Key("a").String("1")
-			attr2 := core.Key("b").String("2")
+			attr1 := key.String("a", "1")
+			attr2 := key.String("b", "2")
 
 			subject := testtrace.NewTracer()
 			var span trace.Span

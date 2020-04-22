@@ -44,7 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	spanID, _ := core.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
-	resource := resource.New(core.Key("rk1").String("rv11"))
+	resource := resource.New(key.String("rk1", "rv11"))
 
 	testSpan := &export.SpanData{
 		SpanContext: core.SpanContext{

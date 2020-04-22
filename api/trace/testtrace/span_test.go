@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/internal/matchers"
@@ -339,9 +340,9 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			attr1 := core.Key("key1").String("value1")
-			attr2 := core.Key("key2").String("value2")
-			attr3 := core.Key("key3").String("value3")
+			attr1 := key.String("key1", "value1")
+			attr2 := key.String("key2", "value2")
+			attr3 := key.String("key3", "value3")
 			unexpectedAttr := attr2.Key.String("unexpected")
 
 			subject.SetAttributes(attr1, unexpectedAttr, attr3)
@@ -365,7 +366,7 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			expectedAttr := core.Key("key").String("value")
+			expectedAttr := key.String("key", "value")
 			subject.SetAttributes(expectedAttr)
 			subject.End()
 
@@ -395,7 +396,7 @@ func TestSpan(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				subject.SetAttributes(core.Key("key").String("value"))
+				subject.SetAttributes(key.String("key", "value"))
 			}()
 
 			go func() {
@@ -452,8 +453,8 @@ func TestSpan(t *testing.T) {
 
 			event1Name := "event1"
 			event1Attributes := []core.KeyValue{
-				core.Key("event1Attr1").String("foo"),
-				core.Key("event1Attr2").String("bar"),
+				key.String("event1Attr1", "foo"),
+				key.String("event1Attr2", "bar"),
 			}
 
 			event1Start := time.Now()
@@ -463,7 +464,7 @@ func TestSpan(t *testing.T) {
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
 			event2Name := "event1"
 			event2Attributes := []core.KeyValue{
-				core.Key("event2Attr").String("abc"),
+				key.String("event2Attr", "abc"),
 			}
 
 			subject.AddEventWithTimestamp(context.Background(), event2Timestamp, event2Name, event2Attributes...)

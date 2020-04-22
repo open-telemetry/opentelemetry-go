@@ -47,7 +47,7 @@ func initTracer() {
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv11"), core.Key("rk2").Int64(5)))
+		sdktrace.WithResourceAttributes(key.String("rk1", "rv11"), key.Int64("rk2", 5)))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
