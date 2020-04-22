@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,21 +38,28 @@ import (
 var Must = metric.Must
 
 type correctnessBatcher struct {
+	newAggCount int64
+
 	t *testing.T
 
 	records []export.Record
 }
 
-func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
+
 	switch {
 	case strings.HasSuffix(name, ".counter"):
-		return sum.New()
+		agg = sum.New()
 	case strings.HasSuffix(name, ".disabled"):
-		return nil
+		agg = nil
 	default:
-		return array.New()
+		agg = array.New()
 	}
+	if agg != nil {
+		atomic.AddInt64(&cb.newAggCount, 1)
+	}
+	return
 }
 
 func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
@@ -87,15 +95,12 @@ func TestInputRangeTestCounter(t *testing.T) {
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
-	require.Equal(t, int64(0), sum.AsInt64())
-	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
+	require.Equal(t, 0, checkpointed)
 
 	batcher.records = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err = batcher.records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -122,10 +127,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
-	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
-	require.Equal(t, int64(0), count)
-	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
+	require.Equal(t, 0, checkpointed)
 
 	measure.Record(ctx, 1)
 	measure.Record(ctx, 2)
@@ -133,7 +135,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	batcher.records = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err = batcher.records[0].Aggregator().(aggregator.Distribution).Count()
+	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, sdkErr)
@@ -355,4 +357,29 @@ func TestRecordBatch(t *testing.T) {
 		"int64.measure/A=B,C=D":   3,
 		"float64.measure/A=B,C=D": 4,
 	}, out.Map)
+}
+
+// TestRecordPersistence ensures that a direct-called instrument that
+// is repeatedly used each interval results in a persistent record, so
+// that its encoded labels will be cached across collection intervals.
+func TestRecordPersistence(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+
+	sdk := metricsdk.New(batcher)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
+	c := Must(meter).NewFloat64Counter("sum.name")
+	b := c.Bind(key.String("bound", "true"))
+	uk := key.String("bound", "false")
+
+	for i := 0; i < 100; i++ {
+		c.Add(ctx, 1, uk)
+		b.Add(ctx, 1)
+		sdk.Collect(ctx)
+	}
+
+	require.Equal(t, int64(2), batcher.newAggCount)
 }
