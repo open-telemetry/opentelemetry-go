@@ -12,34 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resource
+package resource_test
 
-// func TestAttributeIterator(t *testing.T) {
-// 	one := key.String("one", "1")
-// 	two := key.Int("two", 2)
-// 	iter := NewAttributeIterator([]core.KeyValue{one, two})
-// 	require.Equal(t, 2, iter.Len())
+import (
+	"testing"
 
-// 	require.True(t, iter.Next())
-// 	require.Equal(t, one, iter.Attribute())
-// 	idx, attr := iter.IndexedAttribute()
-// 	require.Equal(t, 0, idx)
-// 	require.Equal(t, one, attr)
-// 	require.Equal(t, 2, iter.Len())
+	"github.com/stretchr/testify/require"
 
-// 	require.True(t, iter.Next())
-// 	require.Equal(t, two, iter.Attribute())
-// 	idx, attr = iter.IndexedAttribute()
-// 	require.Equal(t, 1, idx)
-// 	require.Equal(t, two, attr)
-// 	require.Equal(t, 2, iter.Len())
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
 
-// 	require.False(t, iter.Next())
-// 	require.Equal(t, 2, iter.Len())
-// }
+func TestAttributeIterator(t *testing.T) {
+	one := key.String("one", "1")
+	two := key.Int("two", 2)
+	iter := resource.New(one, two).Iter()
+	require.Equal(t, 2, iter.Len())
 
-// func TestEmptyAttributeIterator(t *testing.T) {
-// 	iter := NewAttributeIterator(nil)
-// 	require.Equal(t, 0, iter.Len())
-// 	require.False(t, iter.Next())
-// }
+	require.True(t, iter.Next())
+	require.Equal(t, one, iter.Attribute())
+	idx, attr := iter.IndexedAttribute()
+	require.Equal(t, 0, idx)
+	require.Equal(t, one, attr)
+	require.Equal(t, 2, iter.Len())
+
+	require.True(t, iter.Next())
+	require.Equal(t, two, iter.Attribute())
+	idx, attr = iter.IndexedAttribute()
+	require.Equal(t, 1, idx)
+	require.Equal(t, two, attr)
+	require.Equal(t, 2, iter.Len())
+
+	require.False(t, iter.Next())
+	require.Equal(t, 2, iter.Len())
+}
+
+func TestEmptyAttributeIterator(t *testing.T) {
+	iter := resource.New().Iter()
+	require.Equal(t, 0, iter.Len())
+	require.False(t, iter.Next())
+}

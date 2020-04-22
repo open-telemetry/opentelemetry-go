@@ -18,24 +18,34 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
-// Next moves the iterator to the next label. Returns false if there
+// Next moves the iterator to the next position. Returns false if there
 // are no more labels.
 func (i *Iterator) Next() bool {
 	i.idx++
 	return i.idx < i.Len()
 }
 
-// Label returns current label. Must be called only after Next returns
+// Label returns current core.KeyValue. Must be called only after Next returns
 // true.
 func (i *Iterator) Label() core.KeyValue {
 	kv, _ := i.storage.Get(i.idx)
 	return kv
 }
 
+// Attribute is a synonym for Label().
+func (i *Iterator) Attribute() core.KeyValue {
+	return i.Label()
+}
+
 // IndexedLabel returns current index and label. Must be called only
 // after Next returns true.
 func (i *Iterator) IndexedLabel() (int, core.KeyValue) {
 	return i.idx, i.Label()
+}
+
+// IndexedAttribute is a synonym for IndexedLabel().
+func (i *Iterator) IndexedAttribute() (int, core.KeyValue) {
+	return i.IndexedLabel()
 }
 
 // Len returns a number of labels in the iterator's `*Set`.

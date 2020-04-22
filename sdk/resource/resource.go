@@ -43,6 +43,9 @@ func Empty() *Resource {
 
 // @@@ Note this allocates a copy
 func (r *Resource) Attributes() []core.KeyValue {
+	if r == nil {
+		r = Empty()
+	}
 	return r.labels.ToSlice()
 }
 
@@ -56,17 +59,50 @@ func (r *Resource) Equal(eq *Resource) bool {
 	return r.Equivalent() == eq.Equivalent()
 }
 
+func (r *Resource) Len() int {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Len()
+}
+
 func (r *Resource) Equivalent() label.Distinct {
 	if r == nil {
-		return Empty().Equivalent()
+		r = Empty()
 	}
 	return r.labels.Equivalent()
 }
 
 func (r *Resource) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		r = Empty()
+	}
 	return r.labels.MarshalJSON()
 }
 
 func (r *Resource) String() string {
+	if r == nil {
+		r = Empty()
+	}
 	return r.labels.Encoded(label.DefaultEncoder())
+}
+
+func (r *Resource) Iter() label.Iterator {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Iter()
+}
+
+func Merge(a, b *Resource) *Resource {
+	if a == nil {
+		a = Empty()
+	}
+	if b == nil {
+		b = Empty()
+	}
+	// Note: 'b' is listed first so that 'a' will overwrite with
+	// last-value-wins in label.New()
+	combine := append(b.Attributes(), a.Attributes()...)
+	return New(combine...)
 }
