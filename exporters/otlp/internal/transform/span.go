@@ -38,10 +38,7 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 
 	for _, sd := range sdl {
 		if sd != nil {
-			var key label.Distinct
-			if sd.Resource != nil {
-				key = sd.Resource.Equivalent()
-			}
+			key := sd.Resource.Equivalent()
 
 			rs, ok := rsm[key]
 			if !ok {

@@ -682,9 +682,6 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				continue
 			}
 			assert.ElementsMatch(t, ilm.GetMetrics(), g, "metrics did not match for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
-			// if diff := cmp.Diff(ilm.GetMetrics(), g); diff != "" {
-			// 	t.Errorf("metrics did not match for:\n\tResource: %s\n\tInstrumentationLibrary: %s\nDiff: %s\n", k.resource, k.instrumentationLibrary, diff)
-			// }
 		}
 	}
 	for k := range got {

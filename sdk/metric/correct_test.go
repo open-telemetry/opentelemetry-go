@@ -249,26 +249,26 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	require.ElementsMatch(t, allExpect, actual)
 }
 
-func newSet(kvs ...core.KeyValue) *label.Set {
+func newSetIter(kvs ...core.KeyValue) label.Iterator {
 	labels := label.NewSet(kvs...)
-	return &labels
+	return labels.Iter()
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := label.DefaultEncoder()
 
-	encoded := encoder.Encode(newSet(key.String("A", "B"), key.String("C", "D")).Iter())
+	encoded := encoder.Encode(newSetIter(key.String("A", "B"), key.String("C", "D")))
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(newSet(key.String("A", "B,c=d"), key.String(`C\`, "D")).Iter())
+	encoded = encoder.Encode(newSetIter(key.String("A", "B,c=d"), key.String(`C\`, "D")))
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(newSet(key.String(`\`, `=`), key.String(`,`, `\`)).Iter())
+	encoded = encoder.Encode(newSetIter(key.String(`\`, `=`), key.String(`,`, `\`)))
 	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	encoded = encoder.Encode(newSet(
+	encoded = encoder.Encode(newSetIter(
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -279,7 +279,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	).Iter())
+	))
 	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
 }
 

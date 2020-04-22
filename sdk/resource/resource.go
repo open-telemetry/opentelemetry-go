@@ -50,7 +50,7 @@ func New(kvs ...core.KeyValue) *Resource {
 // use Equivalent() as the key instead.
 func (r *Resource) String() string {
 	if r == nil {
-		r = Empty()
+		return ""
 	}
 	return r.labels.Encoded(label.DefaultEncoder())
 }
@@ -85,8 +85,9 @@ func (r *Resource) Equal(eq *Resource) bool {
 }
 
 // Merge creates a new resource by combining resource a and b.
-// If there are common key between resource a and b then value from resource a is preserved.
-// If one of the resources is nil then the other resource is returned without creating a new one.
+//
+// If there are common keys between resource a and b, then the value
+// from resource a is preserved.
 func Merge(a, b *Resource) *Resource {
 	if a == nil {
 		a = Empty()
@@ -128,7 +129,7 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 // Len returns the number of unique key-values in this Resource.
 func (r *Resource) Len() int {
 	if r == nil {
-		r = Empty()
+		return 0
 	}
 	return r.labels.Len()
 }
