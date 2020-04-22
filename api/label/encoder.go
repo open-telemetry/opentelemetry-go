@@ -23,14 +23,14 @@ import (
 )
 
 type (
-	// Encoder is a mechanism.
+	// Encoder is a mechanism for serializing a label set into a
+	// specific string representation that supports caching, to
+	// avoid repeated serialization. An example could be an
+	// exporter encoding the label set into a wire representation.
 	Encoder interface {
-		// Encode is called (concurrently) in instrumentation context.
-		//
-		// The expectation is that when setting up an export pipeline
-		// both the batcher and the exporter will use the same label
-		// encoder to avoid the duplicate computation of the encoded
-		// labels in the export path.
+		// Encode returns the serialized encoding of the label
+		// set using its Iterator.  This result may be cached
+		// by a label.Set.
 		Encode(Iterator) string
 
 		// ID returns a value that is unique for each class of
@@ -39,11 +39,16 @@ type (
 		ID() EncoderID
 	}
 
-	// EncoderID
+	// EncoderID is used to identify distinct Encoder
+	// implementations, for caching encoded results.
 	EncoderID struct {
-		value int64
+		value uint64
 	}
 
+	// defaultLabelEncoder uses a sync.Pool of buffers to reduce
+	// the number of allocations used in encoding labels.  This
+	// implementation encodes a comma-separated list of key=value,
+	// with '/'-escaping of '=', ',', and '\'.
 	defaultLabelEncoder struct {
 		// pool is a pool of labelset builders.  The buffers in this
 		// pool grow to a size that most label encodings will not
@@ -62,9 +67,9 @@ const escapeChar = '\\'
 var (
 	_ Encoder = &defaultLabelEncoder{}
 
-	// labelEncoderIDCounter is for generating IDs for other label
+	// encoderIDCounter is for generating IDs for other label
 	// encoders.
-	encoderIDCounter int64 = 1
+	encoderIDCounter uint64
 
 	defaultEncoderOnce     sync.Once
 	defaultEncoderID       = NewEncoderID()
@@ -75,7 +80,7 @@ var (
 // called once per each type of label encoder. Preferably in init() or
 // in var definition.
 func NewEncoderID() EncoderID {
-	return EncoderID{value: atomic.AddInt64(&encoderIDCounter, 1)}
+	return EncoderID{value: atomic.AddUint64(&encoderIDCounter, 1)}
 }
 
 // DefaultEncoder returns a label encoder that encodes labels
@@ -143,5 +148,5 @@ func copyAndEscape(buf *bytes.Buffer, val string) {
 // Valid returns true if this encoder ID was allocated by
 // `NewEncoderID`.  Invalid encoder IDs will not be cached.
 func (id EncoderID) Valid() bool {
-	return id.value > 0
+	return id.value != 0
 }

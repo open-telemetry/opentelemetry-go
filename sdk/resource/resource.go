@@ -22,26 +22,41 @@ import (
 )
 
 // Resource describes an entity about which identifying information
-// and metadata is exposed.
+// and metadata is exposed.  Resource is an immutable object,
+// equivalent to a map from key to unique value.
+//
+// Resources should be passed and stored as pointers
+// (`*resource.Resource`).  The `nil` value is equivalent to an empty
+// Resource.
 type Resource struct {
 	labels label.Set
 }
 
 var emptyResource Resource
 
-// New creates a resource from a set of attributes.
-// If there are duplicate keys then the last value of the key is preserved.
+// New creates a resource from a set of attributes.  If there are
+// duplicate keys present in the list of attributes, then the last
+// value found for the key is preserved.
 func New(kvs ...core.KeyValue) *Resource {
 	return &Resource{
 		labels: label.NewSet(kvs...),
 	}
 }
 
-func Empty() *Resource {
-	return &emptyResource
+// String implements the Stringer interface and provides a
+// human-readable form of the resource.
+//
+// Avoid using this representation as the key in a map of resources,
+// use Equivalent() as the key instead.
+func (r *Resource) String() string {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Encoded(label.DefaultEncoder())
 }
 
-// @@@ Note this allocates a copy
+// Attributes returns a copy of attributes from the resource in a sorted order.
+// To avoid allocating a new slice, use an iterator.
 func (r *Resource) Attributes() []core.KeyValue {
 	if r == nil {
 		r = Empty()
@@ -49,6 +64,16 @@ func (r *Resource) Attributes() []core.KeyValue {
 	return r.labels.ToSlice()
 }
 
+// Iter returns an interator of the Resource attributes.
+// This is ideal to use if you do not want a copy of the attributes.
+func (r *Resource) Iter() label.Iterator {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Iter()
+}
+
+// Equal returns true when a Resource is equivalent to this Resource.
 func (r *Resource) Equal(eq *Resource) bool {
 	if r == nil {
 		r = Empty()
@@ -59,41 +84,9 @@ func (r *Resource) Equal(eq *Resource) bool {
 	return r.Equivalent() == eq.Equivalent()
 }
 
-func (r *Resource) Len() int {
-	if r == nil {
-		r = Empty()
-	}
-	return r.labels.Len()
-}
-
-func (r *Resource) Equivalent() label.Distinct {
-	if r == nil {
-		r = Empty()
-	}
-	return r.labels.Equivalent()
-}
-
-func (r *Resource) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		r = Empty()
-	}
-	return r.labels.MarshalJSON()
-}
-
-func (r *Resource) String() string {
-	if r == nil {
-		r = Empty()
-	}
-	return r.labels.Encoded(label.DefaultEncoder())
-}
-
-func (r *Resource) Iter() label.Iterator {
-	if r == nil {
-		r = Empty()
-	}
-	return r.labels.Iter()
-}
-
+// Merge creates a new resource by combining resource a and b.
+// If there are common key between resource a and b then value from resource a is preserved.
+// If one of the resources is nil then the other resource is returned without creating a new one.
 func Merge(a, b *Resource) *Resource {
 	if a == nil {
 		a = Empty()
@@ -105,4 +98,37 @@ func Merge(a, b *Resource) *Resource {
 	// last-value-wins in label.New()
 	combine := append(b.Attributes(), a.Attributes()...)
 	return New(combine...)
+}
+
+// Empty returns an instance of Resource with no attributes.  It is
+// equivalent to a `nil` Resource.
+func Empty() *Resource {
+	return &emptyResource
+}
+
+// Equivalent returns an object that can be compared for equality
+// between two resources.  This value is suitable for use as a key in
+// a map.
+func (r *Resource) Equivalent() label.Distinct {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Equivalent()
+}
+
+// MarshalJSON encodes labels as a JSON list of { "Key": "...", "Value": ... }
+// pairs in order sorted by key.
+func (r *Resource) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.MarshalJSON()
+}
+
+// Len returns the number of unique key-values in this Resource.
+func (r *Resource) Len() int {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Len()
 }

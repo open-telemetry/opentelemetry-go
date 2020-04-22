@@ -250,9 +250,8 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 }
 
 func newSet(kvs ...core.KeyValue) *label.Set {
-	labels := &label.Set{}
-	*labels = label.NewSet(kvs...)
-	return labels
+	labels := label.NewSet(kvs...)
+	return &labels
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
