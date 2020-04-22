@@ -179,7 +179,7 @@ type Process struct {
 	Tags []core.KeyValue
 }
 
-// Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
+// Exporter is an implementation of trace.SpanSyncer that uploads spans to Jaeger.
 type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler
