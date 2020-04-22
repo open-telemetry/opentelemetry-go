@@ -28,6 +28,7 @@ import (
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -53,7 +54,7 @@ var (
 
 // result is the product of transforming Records into OTLP Metrics.
 type result struct {
-	Resource resource.Resource
+	Resource *resource.Resource
 	Library  string
 	Metric   *metricpb.Metric
 	Err      error
@@ -152,18 +153,18 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	}
 
 	// group by unique Resource string.
-	grouped := make(map[string]resourceBatch)
+	grouped := make(map[label.Distinct]resourceBatch)
 	for res := range in {
 		if res.Err != nil {
 			errStrings = append(errStrings, res.Err.Error())
 			continue
 		}
 
-		rID := res.Resource.String()
+		rID := res.Resource.Equivalent()
 		rb, ok := grouped[rID]
 		if !ok {
 			rb = resourceBatch{
-				Resource:                      Resource(&res.Resource),
+				Resource:                      Resource(res.Resource),
 				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
 			}
 			grouped[rID] = rb
@@ -240,7 +241,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metric.Descriptor, labels export.Labels, a aggregator.Sum) (*metricpb.Metric, error) {
+func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricpb.Metric, error) {
 	sum, err := a.Sum()
 	if err != nil {
 		return nil, err
@@ -292,7 +293,7 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Numbe
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
@@ -327,7 +328,7 @@ func minMaxSumCount(desc *metric.Descriptor, labels export.Labels, a aggregator.
 }
 
 // stringKeyValues transforms a label iterator into an OTLP StringKeyValues.
-func stringKeyValues(iter export.LabelIterator) []*commonpb.StringKeyValue {
+func stringKeyValues(iter label.Iterator) []*commonpb.StringKeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil

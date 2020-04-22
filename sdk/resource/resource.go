@@ -27,12 +27,18 @@ type Resource struct {
 	labels label.Set
 }
 
+var emptyResource Resource
+
 // New creates a resource from a set of attributes.
-// If there are duplicates keys then the first value of the key is preserved.
+// If there are duplicate keys then the last value of the key is preserved.
 func New(kvs ...core.KeyValue) *Resource {
 	return &Resource{
 		labels: label.NewSet(kvs...),
 	}
+}
+
+func Empty() *Resource {
+	return &emptyResource
 }
 
 // @@@ Note this allocates a copy
@@ -40,6 +46,27 @@ func (r *Resource) Attributes() []core.KeyValue {
 	return r.labels.ToSlice()
 }
 
+func (r *Resource) Equal(eq *Resource) bool {
+	if r == nil {
+		r = Empty()
+	}
+	if eq == nil {
+		eq = Empty()
+	}
+	return r.Equivalent() == eq.Equivalent()
+}
+
+func (r *Resource) Equivalent() label.Distinct {
+	if r == nil {
+		return Empty().Equivalent()
+	}
+	return r.labels.Equivalent()
+}
+
 func (r *Resource) MarshalJSON() ([]byte, error) {
 	return r.labels.MarshalJSON()
+}
+
+func (r *Resource) String() string {
+	return r.labels.Encoded(label.DefaultEncoder())
 }

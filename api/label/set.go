@@ -70,7 +70,7 @@ var (
 	keyValueType = reflect.TypeOf(core.KeyValue{})
 
 	// emptySet is returned for empty label sets.
-	emptySet = Set{
+	emptySet = &Set{
 		equivalent: Distinct{
 			iface: [0]core.KeyValue{},
 		},
@@ -79,7 +79,7 @@ var (
 
 const maxConcurrentEncoders = 3
 
-func EmptySet() Set {
+func EmptySet() *Set {
 	return emptySet
 }
 
@@ -95,7 +95,7 @@ func (d Distinct) Valid() bool {
 
 // Len returns the number of labels in this set.
 func (l *Set) Len() int {
-	if l == nil {
+	if l == nil || !l.equivalent.Valid() {
 		return 0
 	}
 	return l.equivalent.reflect().Len()
@@ -233,7 +233,9 @@ func (l *Set) Encoded(encoder Encoder) string {
 func NewSet(kvs ...core.KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return emptySet
+		return Set{
+			equivalent: emptySet.equivalent,
+		}
 	}
 
 	return NewSetWithSortable(kvs, new(Sortable))
@@ -259,7 +261,9 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return emptySet
+		return Set{
+			equivalent: emptySet.equivalent,
+		}
 	}
 
 	*tmp = kvs

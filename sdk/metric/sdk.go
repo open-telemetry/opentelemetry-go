@@ -62,7 +62,7 @@ type (
 		errorHandler ErrorHandler
 
 		// resource represents the entity producing telemetry.
-		resource resource.Resource
+		resource *resource.Resource
 
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -100,7 +100,7 @@ type (
 		// labels is the processed label set for this record.
 		//
 		// labels has to be aligned for 64-bit atomic operations.
-		labels label.Set
+		labels label.Set // @@@ things fell apart. how about batch record?
 
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -125,14 +125,14 @@ type (
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[label.Distinct]labeledRecorder
+		recorders map[label.Distinct]*labeledRecorder
 
 		callback func(func(core.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
 		observedEpoch int64
-		labels        label.Set
+		labels        *label.Set
 		recorder      export.Aggregator
 	}
 
@@ -195,14 +195,14 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	}
 	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
-		a.recorders = make(map[label.Distinct]labeledRecorder)
+		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	a.recorders[labels.Equivalent()] = labeledRecorder{
+	a.recorders[labels.Equivalent()] = &labeledRecorder{
 		recorder:      rec,
-		labels:        labels,
+		labels:        &labels,
 		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
@@ -220,6 +220,7 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *record {
 	var rec *record
 	var labels label.Set
+	var equiv label.Distinct
 
 	if lptr == nil {
 		// This memory allocation may not be used, but it's
@@ -227,15 +228,16 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *re
 		// allocation while sorting.
 		rec = &record{}
 		labels = label.NewSetWithSortable(kvs, &rec.sortSlice)
+		equiv = labels.Equivalent()
 	} else {
-		labels = *lptr
+		equiv = lptr.Equivalent()
 	}
 
 	// Create lookup key for sync.Map (one allocation, as this
 	// passes through an interface{})
 	mk := mapkey{
 		descriptor: &s.descriptor,
-		ordered:    labels.Equivalent(),
+		ordered:    equiv,
 	}
 
 	if actual, ok := s.meter.current.Load(mk); ok {
@@ -253,9 +255,14 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *re
 		rec = &record{}
 	}
 	rec.refMapped = refcountMapped{value: 2}
-	rec.labels = labels
 	rec.inst = s
 	rec.recorder = s.meter.batcher.AggregatorFor(&s.descriptor)
+
+	if lptr != nil {
+		rec.labels = *lptr
+	} else {
+		rec.labels = labels
+	}
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -431,7 +438,7 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 		lrec := lrec
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, &lrec.labels)
+			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -465,7 +472,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 // Resource means that the SDK implements the Resourcer interface and
 // therefore all metric instruments it creates will inherit its
 // Resource by default unless explicitly overwritten.
-func (m *SDK) Resource() resource.Resource {
+func (m *SDK) Resource() *resource.Resource {
 	return m.resource
 }
 

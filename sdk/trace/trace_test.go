@@ -606,7 +606,7 @@ func cmpDiff(x, y interface{}) string {
 			if a == nil && b == nil {
 				return true
 			} else if a != nil && b != nil {
-				return a.Labels().Equivalent() == b.Labels().Equivalent()
+				return a.Equal(b)
 			} else {
 				return false
 			}
