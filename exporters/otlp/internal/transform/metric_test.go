@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -47,16 +48,16 @@ func TestStringKeyValues(t *testing.T) {
 		},
 		{
 			[]core.KeyValue{
-				core.Key("true").Bool(true),
-				core.Key("one").Int64(1),
-				core.Key("two").Uint64(2),
-				core.Key("three").Float64(3),
-				core.Key("four").Int32(4),
-				core.Key("five").Uint32(5),
-				core.Key("six").Float32(6),
-				core.Key("seven").Int(7),
-				core.Key("eight").Uint(8),
-				core.Key("the").String("final word"),
+				key.Bool("true", true),
+				key.Int64("one", 1),
+				key.Uint64("two", 2),
+				key.Float64("three", 3),
+				key.Int32("four", 4),
+				key.Uint32("five", 5),
+				key.Float32("six", 6),
+				key.Int("seven", 7),
+				key.Uint("eight", 8),
+				key.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{
 				{Key: "true", Value: "true"},
@@ -130,7 +131,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Bytes,
 			core.Float64NumberKind, // This shouldn't change anything.
-			[]core.KeyValue{core.Key("A").String("1")},
+			[]core.KeyValue{key.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-b",
 				Description: "test-b-description",
@@ -232,7 +233,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Milliseconds,
 			core.Float64NumberKind,
-			[]core.KeyValue{core.Key("A").String("1")},
+			[]core.KeyValue{key.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-b",
 				Description: "test-b-description",

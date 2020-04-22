@@ -88,13 +88,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		),
 	}
 	tp1, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv11)"),
-			core.Key("rk2").Int64(5)))...)
+		sdktrace.WithResourceAttributes(key.String("rk1", "rv11)"),
+			key.Int64("rk2", 5)))...)
 	assert.NoError(t, err)
 
 	tp2, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv12)"),
-			core.Key("rk3").Float32(6.5)))...)
+		sdktrace.WithResourceAttributes(key.String("rk1", "rv12)"),
+			key.Float32("rk3", 6.5)))...)
 	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
@@ -103,11 +103,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	m := 4
 	for i := 0; i < m; i++ {
 		_, span := tr1.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(core.Key("i").Int64(int64(i)))
+		span.SetAttributes(key.Int64("i", int64(i)))
 		span.End()
 
 		_, span = tr2.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(core.Key("i").Int64(int64(i)))
+		span.SetAttributes(key.Int64("i", int64(i)))
 		span.End()
 	}
 

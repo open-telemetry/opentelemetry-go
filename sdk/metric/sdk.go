@@ -92,10 +92,6 @@ type (
 		// the labels, copied into an array of the correct
 		// size for use as a map key.
 		ordered orderedLabels
-
-		// cachedValue contains a `reflect.Value` of the `ordered`
-		// member
-		cachedValue reflect.Value
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -114,11 +110,12 @@ type (
 		// SDK.current map.
 		refMapped refcountMapped
 
-		// modified is an atomic boolean that tracks if the current record
-		// was modified since the last Collect().
-		//
-		// modified has to be aligned for 64-bit atomic operations.
-		modified int64
+		// updateCount is incremented on every Update.
+		updateCount int64
+
+		// collectedCount is set to updateCount on collection,
+		// supports checking for no updates during a round.
+		collectedCount int64
 
 		// labels is the processed label set for this record.
 		//
@@ -154,7 +151,7 @@ type (
 	}
 
 	labeledRecorder struct {
-		modifiedEpoch int64
+		observedEpoch int64
 		labels        labels
 		recorder      export.Aggregator
 	}
@@ -174,8 +171,7 @@ var (
 	kvType = reflect.TypeOf(core.KeyValue{})
 
 	emptyLabels = labels{
-		ordered:     [0]core.KeyValue{},
-		cachedValue: reflect.ValueOf([0]core.KeyValue{}),
+		ordered: [0]core.KeyValue{},
 	}
 )
 
@@ -216,12 +212,12 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 
 	lrec, ok := a.recorders[labels.ordered]
 	if ok {
-		if lrec.modifiedEpoch == a.meter.currentEpoch {
+		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
 			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
 		} else {
-			lrec.modifiedEpoch = a.meter.currentEpoch
+			lrec.observedEpoch = a.meter.currentEpoch
 		}
 		a.recorders[labels.ordered] = lrec
 		return lrec.recorder
@@ -236,7 +232,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	a.recorders[labels.ordered] = labeledRecorder{
 		recorder:      rec,
 		labels:        labels,
-		modifiedEpoch: a.meter.currentEpoch,
+		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
 }
@@ -393,13 +389,15 @@ func (m *SDK) makeLabels(kvs []core.KeyValue, sortSlice *sortedLabels) labels {
 // NumLabels is a part of an implementation of the export.LabelStorage
 // interface.
 func (ls *labels) NumLabels() int {
-	return ls.cachedValue.Len()
+	return reflect.ValueOf(ls.ordered).Len()
 }
 
 // GetLabel is a part of an implementation of the export.LabelStorage
 // interface.
 func (ls *labels) GetLabel(idx int) core.KeyValue {
-	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
+	// Note: The Go compiler successfully avoids an allocation for
+	// the interface{} conversion here:
+	return reflect.ValueOf(ls.ordered).Index(idx).Interface().(core.KeyValue)
 }
 
 // Iter is a part of an implementation of the export.Labels interface.
@@ -459,7 +457,6 @@ func computeOrderedLabels(kvs []core.KeyValue) labels {
 	if ls.ordered == nil {
 		ls.ordered = computeOrderedReflect(kvs)
 	}
-	ls.cachedValue = reflect.ValueOf(ls.ordered)
 	return ls
 }
 
@@ -561,25 +558,39 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
+		// Note: always continue to iterate over the entire
+		// map by returning `true` in this function.
 		inuse := value.(*record)
-		unmapped := inuse.refMapped.tryUnmap()
-		// If able to unmap then remove the record from the current Map.
-		if unmapped {
-			// TODO: Consider leaving the record in the map for one
-			// collection interval? Since creating records is relatively
-			// expensive, this would optimize common cases of ongoing use.
-			m.current.Delete(inuse.mapkey())
+
+		mods := atomic.LoadInt64(&inuse.updateCount)
+		coll := inuse.collectedCount
+
+		if mods != coll {
+			// Updates happened in this interval,
+			// checkpoint and continue.
+			checkpointed += m.checkpointRecord(ctx, inuse)
+			inuse.collectedCount = mods
+			return true
 		}
 
-		// Always report the values if a reference to the Record is active,
-		// this is to keep the previous behavior.
-		// TODO: Reconsider this logic.
-		if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modified) != 0 {
-			atomic.StoreInt64(&inuse.modified, 0)
+		// Having no updates since last collection, try to unmap:
+		if unmapped := inuse.refMapped.tryUnmap(); !unmapped {
+			// The record is referenced by a binding, continue.
+			return true
+		}
+
+		// If any other goroutines are now trying to re-insert this
+		// entry in the map, they are busy calling Gosched() awaiting
+		// this deletion:
+		m.current.Delete(inuse.mapkey())
+
+		// There's a potential race between `LoadInt64` and
+		// `tryUnmap` in this function.  Since this is the
+		// last we'll see of this record, checkpoint
+		mods = atomic.LoadInt64(&inuse.updateCount)
+		if mods != coll {
 			checkpointed += m.checkpointRecord(ctx, inuse)
 		}
-
-		// Always continue to iterate over the entire map.
 		return true
 	})
 
@@ -610,7 +621,7 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	checkpointed := 0
 	for encodedLabels, lrec := range a.recorders {
 		lrec := lrec
-		epochDiff := m.currentEpoch - lrec.modifiedEpoch
+		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
 			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, &lrec.labels)
 		} else if epochDiff > 1 {
@@ -685,13 +696,12 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		r.inst.meter.errorHandler(err)
 		return
 	}
+	// Record was modified, inform the Collect() that things need
+	// to be collected while the record is still mapped.
+	atomic.AddInt64(&r.updateCount, 1)
 }
 
 func (r *record) Unbind() {
-	// Record was modified, inform the Collect() that things need to be collected.
-	// TODO: Reconsider if we should marked as modified when an Update happens and
-	// collect only when updates happened even for Bounds.
-	atomic.StoreInt64(&r.modified, 1)
 	r.refMapped.unref()
 }
 

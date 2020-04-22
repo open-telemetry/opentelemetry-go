@@ -285,8 +285,8 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 	}
 
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
-		otelcore.Key("error.type").String(reflect.TypeOf(err).String()),
-		otelcore.Key("error.message").String(err.Error()),
+		otelkey.String("error.type", reflect.TypeOf(err).String()),
+		otelkey.String("error.message", err.Error()),
 	)
 }
 
