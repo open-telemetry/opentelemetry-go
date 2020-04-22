@@ -173,7 +173,7 @@ func (l *Set) Equals(o *Set) bool {
 	return l.Equivalent() == o.Equivalent()
 }
 
-// Encoded returns a the encoded form of this set, according to
+// Encoded returns the encoded form of this set, according to
 // `encoder`.  The result will be cached in this `*Set`.
 func (l *Set) Encoded(encoder Encoder) string {
 	if l == nil || encoder == nil {
