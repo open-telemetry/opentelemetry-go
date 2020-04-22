@@ -21,15 +21,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
-	kv11 = core.Key("k1").String("v11")
-	kv12 = core.Key("k1").String("v12")
-	kv21 = core.Key("k2").String("v21")
-	kv31 = core.Key("k3").String("v31")
-	kv41 = core.Key("k4").String("v41")
+	kv11 = key.String("k1", "v11")
+	kv12 = key.String("k1", "v12")
+	kv21 = key.String("k2", "v21")
+	kv31 = key.String("k3", "v31")
+	kv41 = key.String("k4", "v41")
 )
 
 func TestNew(t *testing.T) {
@@ -185,23 +186,23 @@ func TestString(t *testing.T) {
 			want: "Resource(k1=v11,k2=v21,k3=v31)",
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String("a"), core.Key("B").String("b")},
+			kvs:  []core.KeyValue{key.String("A", "a"), key.String("B", "b")},
 			want: "Resource(A=a,B=b)",
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String("a,B=b")},
+			kvs:  []core.KeyValue{key.String("A", "a,B=b")},
 			want: `Resource(A=a\,B\=b)`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String(`a,B\=b`)},
+			kvs:  []core.KeyValue{key.String("A", `a,B\=b`)},
 			want: `Resource(A=a\,B\\\=b)`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A=a,B").String(`b`)},
+			kvs:  []core.KeyValue{key.String("A=a,B", `b`)},
 			want: `Resource(A\=a\,B=b)`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key(`A=a\,B`).String(`b`)},
+			kvs:  []core.KeyValue{key.String(`A=a\,B`, `b`)},
 			want: `Resource(A\=a\\\,B=b)`,
 		},
 	} {
