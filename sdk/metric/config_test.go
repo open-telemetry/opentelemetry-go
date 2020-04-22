@@ -52,7 +52,7 @@ func TestWithResource(t *testing.T) {
 
 	c := &Config{}
 	WithResource(r).Apply(c)
-	assert.Equal(t, *r, c.Resource)
+	assert.True(t, r.Equal(c.Resource))
 
 	// Ensure overwriting works.
 	c = &Config{Resource: &resource.Resource{}}

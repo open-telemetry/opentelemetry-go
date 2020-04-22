@@ -97,10 +97,17 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		// labels is the processed label set for this record.
+		// storage is the stored label set for this record,
+		// except in cases where a label set is shared due to
+		// batch recording.
 		//
 		// labels has to be aligned for 64-bit atomic operations.
-		labels label.Set // @@@ things fell apart. how about batch record?
+		storage label.Set
+
+		// labels is the processed label set for this record.
+		// this may refer to the `storage` field if this label
+		// set is not shared.
+		labels *label.Set
 
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -217,20 +224,20 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set) *record {
 	var rec *record
-	var labels label.Set
 	var equiv label.Distinct
 
-	if lptr == nil {
+	if labelPtr == nil {
 		// This memory allocation may not be used, but it's
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		labels = label.NewSetWithSortable(kvs, &rec.sortSlice)
-		equiv = labels.Equivalent()
+		rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
+		rec.labels = &rec.storage
+		equiv = rec.storage.Equivalent()
 	} else {
-		equiv = lptr.Equivalent()
+		equiv = labelPtr.Equivalent()
 	}
 
 	// Create lookup key for sync.Map (one allocation, as this
@@ -253,16 +260,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *label.Set) *re
 
 	if rec == nil {
 		rec = &record{}
+		rec.labels = labelPtr
 	}
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
 	rec.recorder = s.meter.batcher.AggregatorFor(&s.descriptor)
-
-	if lptr != nil {
-		rec.labels = *lptr
-	} else {
-		rec.labels = labels
-	}
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -426,7 +428,7 @@ func (m *SDK) collectAsync(ctx context.Context) int {
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
-	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, &r.labels)
+	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
 func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
@@ -482,20 +484,15 @@ func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
 	// ordered labels.
-	var labels label.Set
+	var labelsPtr *label.Set
 	for i, meas := range measurements {
 		s := meas.SyncImpl().(*syncInstrument)
-
-		var labelsPtr *label.Set
-		if i > 0 {
-			labelsPtr = &labels
-		}
 
 		h := s.acquireHandle(kvs, labelsPtr)
 
 		// Re-use labels for the next measurement.
 		if i == 0 {
-			labels = h.labels
+			labelsPtr = h.labels
 		}
 
 		defer h.Unbind()
