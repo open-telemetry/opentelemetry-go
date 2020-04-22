@@ -167,7 +167,7 @@ func TestDefined(t *testing.T) {
 func TestJSONValue(t *testing.T) {
 	var kvs interface{} = [2]core.KeyValue{
 		key.String("A", "B"),
-		key.Int("C", 1),
+		key.Int64("C", 1),
 	}
 
 	data, err := json.Marshal(kvs)
