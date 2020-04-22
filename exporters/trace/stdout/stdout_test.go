@@ -88,12 +88,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`{` +
 		`"Key":"double",` +
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
-		`},` +
-		`{` +
-		`"Key":"rk1",` +
-		`"Value":{"Type":"STRING","Value":"rv11"}` +
-		`}` +
-		`],` +
+		`}],` +
 		`"MessageEvents":[` +
 		`{` +
 		`"Name":"foo",` +
@@ -124,7 +119,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
 		`"ChildSpanCount":0,` +
-		`"Resource":null}` + "\n"
+		`"Resource":[` +
+		`{` +
+		`"Key":"rk1",` +
+		`"Value":{"Type":"STRING","Value":"rv11"}` +
+		`}]}` + "\n"
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)
