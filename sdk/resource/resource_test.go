@@ -215,7 +215,7 @@ func TestString(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	r := resource.New(key.Int("A", 1), key.String("C", "D"))
+	r := resource.New(key.Int64("A", 1), key.String("C", "D"))
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
 	require.Equal(t,
