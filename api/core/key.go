@@ -276,62 +276,62 @@ func (k Key) Defined() bool {
 }
 
 // Type returns a type of the Value.
-func (v *Value) Type() ValueType {
+func (v Value) Type() ValueType {
 	return v.vtype
 }
 
 // AsBool returns the bool value. Make sure that the Value's type is
 // BOOL.
-func (v *Value) AsBool() bool {
+func (v Value) AsBool() bool {
 	return rawToBool(v.numeric)
 }
 
 // AsInt32 returns the int32 value. Make sure that the Value's type is
 // INT32.
-func (v *Value) AsInt32() int32 {
+func (v Value) AsInt32() int32 {
 	return rawToInt32(v.numeric)
 }
 
 // AsInt64 returns the int64 value. Make sure that the Value's type is
 // INT64.
-func (v *Value) AsInt64() int64 {
+func (v Value) AsInt64() int64 {
 	return rawToInt64(v.numeric)
 }
 
 // AsUint32 returns the uint32 value. Make sure that the Value's type
 // is UINT32.
-func (v *Value) AsUint32() uint32 {
+func (v Value) AsUint32() uint32 {
 	return rawToUint32(v.numeric)
 }
 
 // AsUint64 returns the uint64 value. Make sure that the Value's type is
 // UINT64.
-func (v *Value) AsUint64() uint64 {
+func (v Value) AsUint64() uint64 {
 	return rawToUint64(v.numeric)
 }
 
 // AsFloat32 returns the float32 value. Make sure that the Value's
 // type is FLOAT32.
-func (v *Value) AsFloat32() float32 {
+func (v Value) AsFloat32() float32 {
 	return rawToFloat32(v.numeric)
 }
 
 // AsFloat64 returns the float64 value. Make sure that the Value's
 // type is FLOAT64.
-func (v *Value) AsFloat64() float64 {
+func (v Value) AsFloat64() float64 {
 	return rawToFloat64(v.numeric)
 }
 
 // AsString returns the string value. Make sure that the Value's type
 // is STRING.
-func (v *Value) AsString() string {
+func (v Value) AsString() string {
 	return v.stringly
 }
 
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as interface{}.
-func (v *Value) AsInterface() interface{} {
+func (v Value) AsInterface() interface{} {
 	switch v.Type() {
 	case BOOL:
 		return v.AsBool()
@@ -354,7 +354,7 @@ func (v *Value) AsInterface() interface{} {
 }
 
 // Emit returns a string representation of Value's data.
-func (v *Value) Emit() string {
+func (v Value) Emit() string {
 	switch v.Type() {
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
@@ -378,7 +378,7 @@ func (v *Value) Emit() string {
 }
 
 // MarshalJSON returns the JSON encoding of the Value.
-func (v *Value) MarshalJSON() ([]byte, error) {
+func (v Value) MarshalJSON() ([]byte, error) {
 	var jsonVal struct {
 		Type  string
 		Value interface{}

@@ -17,6 +17,7 @@
 package resource
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 
@@ -108,4 +109,9 @@ func Merge(a, b *Resource) *Resource {
 	// a overwrites b, so b needs to be at the end.
 	kvs = append(kvs, b.sorted...)
 	return New(kvs...)
+}
+
+// MarshalJSON prints the resource attributes in sorted order.
+func (r Resource) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.sorted)
 }
