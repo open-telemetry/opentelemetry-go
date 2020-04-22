@@ -21,6 +21,8 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 )
 
+// Resource describes an entity about which identifying information
+// and metadata is exposed.
 type Resource struct {
 	labels label.Set
 }
@@ -33,6 +35,11 @@ func New(kvs ...core.KeyValue) *Resource {
 	}
 }
 
-func (r *Resource) Labels() *label.Set {
-	return &r.labels
+// @@@ Note this allocates a copy
+func (r *Resource) Attributes() []core.KeyValue {
+	return r.labels.ToSlice()
+}
+
+func (r *Resource) MarshalJSON() ([]byte, error) {
+	return r.labels.MarshalJSON()
 }

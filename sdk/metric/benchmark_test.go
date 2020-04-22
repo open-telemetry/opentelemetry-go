@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"resource-go.opentelemetry.io/api/context/label"
 )
 
 type processFunc func(context.Context, export.Record) error
@@ -555,7 +556,30 @@ func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
 	benchmarkBatchRecord8Labels(b, 8)
 }
 
+// Record creation
+
+func BenchmarkRepeatedDirectCalls(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	encoder := label.NewDefaultEncoder()
+	fix.pcb = func(_ context.Context, rec export.Record) error {
+		_ = rec.Labels().Encoded(encoder)
+		return nil
+	}
+
+	c := fix.meter.NewInt64Counter("int64.counter")
+	k := key.String("bench", "true")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.Add(ctx, 1, k)
+		fix.sdk.Collect(ctx)
+	}
+}
+
 // LabelIterator
+
 func BenchmarkLabelIterator(b *testing.B) {
 	const labelCount = 1024
 	ctx := context.Background()

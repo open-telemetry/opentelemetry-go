@@ -42,12 +42,6 @@ func (rm *refcountMapped) unref() {
 	atomic.AddInt64(&rm.value, -2)
 }
 
-// inUse returns true if there is a reference to the entry and it is mapped.
-func (rm *refcountMapped) inUse() bool {
-	val := atomic.LoadInt64(&rm.value)
-	return val >= 2 && val&1 == 0
-}
-
 // tryUnmap flips the mapped bit to "unmapped" state and returns true if both of the
 // following conditions are true upon entry to this function:
 //  * There are no active references;

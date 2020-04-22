@@ -15,6 +15,7 @@
 package label // import "go.opentelemetry.io/otel/api/label"
 
 import (
+	"encoding/json"
 	"reflect"
 	"sort"
 	"sync"
@@ -354,6 +355,10 @@ func computeDistinctReflect(kvs []core.KeyValue) interface{} {
 		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
 	}
 	return at.Interface()
+}
+
+func (l *Set) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.equivalent.iface)
 }
 
 // Len implements `sort.Interface`.
