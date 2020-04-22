@@ -601,16 +601,7 @@ func TestSetSpanStatus(t *testing.T) {
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(core.Value{}),
-		cmp.AllowUnexported(export.Event{}),
-		cmp.Comparer(func(a, b *resource.Resource) bool {
-			if a == nil && b == nil {
-				return true
-			} else if a != nil && b != nil {
-				return a.Equal(b)
-			} else {
-				return false
-			}
-		}))
+		cmp.AllowUnexported(export.Event{}))
 }
 
 func remoteSpanContext() core.SpanContext {

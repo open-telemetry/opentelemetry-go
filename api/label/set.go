@@ -44,20 +44,14 @@ type (
 	}
 
 	// Distinct wraps a variable-size array of `core.KeyValue`,
-	// constructed with keys in sorted order.
+	// constructed with keys in sorted order.  This can be used as
+	// a map key or for equality checking between Sets.
 	Distinct struct {
 		iface interface{}
 	}
 
-	// Iterator allows iterating over the set of labels in order,
-	// sorted by key.
-	Iterator struct {
-		storage *Set
-		idx     int
-	}
-
 	// Sortable implements `sort.Interface`, used for sorting
-	// `core.KeyValue`.  This is an exported type to support an
+	// `core.KeyValue`.  This is an exported type to support a
 	// memory optimization.  A pointer to one of these is needed
 	// for the call to `sort.Stable()`, which the caller may
 	// provide in order to avoid an allocation.  See
@@ -227,9 +221,11 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
-// NewSet returns a new `*Set`.  Except for empty sets, this method
-// adds an additional allocation compared with a call to
-// `NewSetWithSortable`.  See that method for more details.
+// NewSet returns a new `*Set`.  See the documentation for
+// `NewSetWithSortable` for more details.
+//
+// Except for empty sets, this method adds an additional allocation
+// compared with a call to `NewSetWithSortable`.
 func NewSet(kvs ...core.KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -241,24 +237,28 @@ func NewSet(kvs ...core.KeyValue) Set {
 	return NewSetWithSortable(kvs, new(Sortable))
 }
 
-// NewSetWithSortable modifies the input slice, ensuring the
-// following:
+// NewSetWithSortable returns a new `*Set`.
+//
+// Duplicate keys are eliminated by taking the last value.  This
+// re-orders the input slice so that unique last-values are contiguous
+// at the end of the slice.
+//
+// This ensures the following:
 //
 // - Last-value wins semantics
 // - Caller sees the reordering, but doesn't lose values
 // - Repeated call preserve last-value wins.
 //
 // Note that methods are defined `*Set`, although no allocation for
-// `Set` is required.  Callers may avoid memory allocations by:
+// `Set` is required.  Callers can avoid memory allocations by:
 //
 // - allocating a `Sortable` for use as a temporary in this method
 // - allocating a `Set` for storing the return value of this
 //   constructor.
+//
+// The result maintains a cache of encoded labels, by label.EncoderID.
+// This value should not be copied after its first use.
 func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
-	// The requitements stated above require that the stable
-	// result be placed in the end of the input slice, while
-	// overwritten values are swapped to the beginning.
-
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return Set{
@@ -268,8 +268,8 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 
 	*tmp = kvs
 
-	// Sort and de-duplicate.  Note: this use of `tmp`
-	// avoids an allocation because it is a pointer.
+	// Stable sort so the following de-duplication can implement
+	// last-value-wins semantics.
 	sort.Stable(tmp)
 
 	*tmp = nil
@@ -277,12 +277,18 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 	position := len(kvs) - 1
 	offset := position - 1
 
+	// The requitements stated above require that the stable
+	// result be placed in the end of the input slice, while
+	// overwritten values are swapped to the beginning.
+	//
+	// De-duplicate with last-value-wins semantics.  Preserve
+	// duplicate values at the beginning of the input slice.
 	for ; offset >= 0; offset-- {
 		if kvs[offset].Key == kvs[position].Key {
 			continue
 		}
 		kvs[offset], kvs[position-1] = kvs[position-1], kvs[offset]
-		position = position - 1
+		position--
 	}
 
 	return Set{
@@ -292,6 +298,7 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 
 // computeDistinct returns a `Distinct` using either the fixed- or
 // reflect-oriented code path, depending on the size of the input.
+// The input slice is assumed to already be sorted and de-duplicated.
 func computeDistinct(kvs []core.KeyValue) Distinct {
 	iface := computeDistinctFixed(kvs)
 	if iface == nil {

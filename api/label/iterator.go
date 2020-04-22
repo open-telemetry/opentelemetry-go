@@ -18,6 +18,13 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 )
 
+// Iterator allows iterating over the set of labels in order,
+// sorted by key.
+type Iterator struct {
+	storage *Set
+	idx     int
+}
+
 // Next moves the iterator to the next position. Returns false if there
 // are no more labels.
 func (i *Iterator) Next() bool {

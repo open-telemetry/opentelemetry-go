@@ -61,7 +61,7 @@ type (
 // keys or values contain either '=' or ','.  Since there is no parser
 // needed for this encoding and its only requirement is to be unique,
 // this choice is arbitrary.  Users will see these in some exporters
-// (e.g., stdout), so the backslash ('\') is used a conventional choice.
+// (e.g., stdout), so the backslash ('\') is used as a conventional choice.
 const escapeChar = '\\'
 
 var (
