@@ -25,5 +25,5 @@ func Resource(r *resource.Resource) *resourcepb.Resource {
 	if r == nil {
 		return nil
 	}
-	return &resourcepb.Resource{Attributes: Attributes(r.Attributes())}
+	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
 }

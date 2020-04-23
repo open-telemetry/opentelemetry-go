@@ -40,7 +40,7 @@ func TestOptions(t *testing.T) {
 		opts     []metric.Option
 		desc     string
 		unit     unit.Unit
-		resource resource.Resource
+		resource *resource.Resource
 	}
 	testcases := []testcase{
 		{
@@ -48,7 +48,7 @@ func TestOptions(t *testing.T) {
 			opts:     nil,
 			desc:     "",
 			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "description",
@@ -57,7 +57,7 @@ func TestOptions(t *testing.T) {
 			},
 			desc:     "stuff",
 			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "description override",
@@ -67,7 +67,7 @@ func TestOptions(t *testing.T) {
 			},
 			desc:     "things",
 			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "unit",
@@ -76,7 +76,7 @@ func TestOptions(t *testing.T) {
 			},
 			desc:     "",
 			unit:     "s",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "unit override",
@@ -86,16 +86,16 @@ func TestOptions(t *testing.T) {
 			},
 			desc:     "",
 			unit:     "h",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "resource override",
 			opts: []metric.Option{
-				metric.WithResource(*resource.New(key.New("name").String("test-name"))),
+				metric.WithResource(resource.New(key.New("name").String("test-name"))),
 			},
 			desc:     "",
 			unit:     "",
-			resource: *resource.New(key.New("name").String("test-name")),
+			resource: resource.New(key.New("name").String("test-name")),
 		},
 	}
 	for idx, tt := range testcases {

@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -35,7 +36,7 @@ type (
 	// Output collects distinct metric/label set outputs.
 	Output struct {
 		Map          map[string]float64
-		labelEncoder export.LabelEncoder
+		labelEncoder label.Encoder
 	}
 
 	// testAggregationSelector returns aggregators consistent with
@@ -59,22 +60,22 @@ var (
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
 	// GroupEncoder uses the SDK default encoder
-	GroupEncoder = export.NewDefaultLabelEncoder()
+	GroupEncoder = label.DefaultEncoder()
 
 	// LastValue groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(SdkEncoder, key.String("G", "H"), key.String("C", "D"))
+	Labels1 = makeLabels(key.String("G", "H"), key.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(SdkEncoder, key.String("C", "D"), key.String("E", "F"))
+	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
 	// Labels3 is the empty set
-	Labels3 = makeLabels(SdkEncoder)
+	Labels3 = makeLabels()
 
-	leID = export.NewLabelEncoderID()
+	testLabelEncoderID = label.NewEncoderID()
 )
 
-func NewOutput(labelEncoder export.LabelEncoder) Output {
+func NewOutput(labelEncoder label.Encoder) Output {
 	return Output{
 		Map:          make(map[string]float64),
 		labelEncoder: labelEncoder,
@@ -99,11 +100,12 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(encoder export.LabelEncoder, labels ...core.KeyValue) export.Labels {
-	return export.NewSimpleLabels(encoder, labels...)
+func makeLabels(labels ...core.KeyValue) *label.Set {
+	s := label.NewSet(labels...)
+	return &s
 }
 
-func (Encoder) Encode(iter export.LabelIterator) string {
+func (Encoder) Encode(iter label.Iterator) string {
 	var sb strings.Builder
 	for iter.Next() {
 		i, l := iter.IndexedLabel()
@@ -117,8 +119,8 @@ func (Encoder) Encode(iter export.LabelIterator) string {
 	return sb.String()
 }
 
-func (Encoder) ID() int64 {
-	return leID
+func (Encoder) ID() label.EncoderID {
+	return testLabelEncoderID
 }
 
 // LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.
@@ -131,12 +133,12 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 }
 
 // Convenience method for building a test exported lastValue record.
-func NewLastValueRecord(desc *metric.Descriptor, labels export.Labels, value int64) export.Record {
+func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
 	return export.NewRecord(desc, labels, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
-func NewCounterRecord(desc *metric.Descriptor, labels export.Labels, value int64) export.Record {
+func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
 	return export.NewRecord(desc, labels, CounterAgg(desc, value))
 }
 

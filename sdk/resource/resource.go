@@ -17,101 +17,119 @@
 package resource
 
 import (
-	"encoding/json"
-	"sort"
-	"strings"
-
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 )
 
-// Resource describes an entity about which identifying information and metadata is exposed.
+// Resource describes an entity about which identifying information
+// and metadata is exposed.  Resource is an immutable object,
+// equivalent to a map from key to unique value.
+//
+// Resources should be passed and stored as pointers
+// (`*resource.Resource`).  The `nil` value is equivalent to an empty
+// Resource.
 type Resource struct {
-	sorted []core.KeyValue
-	keySet map[core.Key]struct{}
+	labels label.Set
 }
 
-// New creates a resource from a set of attributes.
-// If there are duplicates keys then the first value of the key is preserved.
+var emptyResource Resource
+
+// New creates a resource from a set of attributes.  If there are
+// duplicate keys present in the list of attributes, then the last
+// value found for the key is preserved.
 func New(kvs ...core.KeyValue) *Resource {
-	res := &Resource{keySet: make(map[core.Key]struct{})}
-	for _, kv := range kvs {
-		// First key wins.
-		if _, ok := res.keySet[kv.Key]; !ok {
-			res.keySet[kv.Key] = struct{}{}
-			res.sorted = append(res.sorted, kv)
-		}
+	return &Resource{
+		labels: label.NewSet(kvs...),
 	}
-	sort.Slice(res.sorted, func(i, j int) bool {
-		return res.sorted[i].Key < res.sorted[j].Key
-	})
-	return res
 }
 
-// String implements the Stringer interface and provides a reproducibly
-// hashable representation of a Resource.
-func (r Resource) String() string {
-	// Ensure unique strings if key/value contains '=', ',', or '\'.
-	escaper := strings.NewReplacer("=", `\=`, ",", `\,`, `\`, `\\`)
-
-	var b strings.Builder
-	// Note: this could be further optimized by precomputing the size of
-	// the resulting buffer and adding a call to b.Grow
-	b.WriteString("Resource(")
-	if len(r.sorted) > 0 {
-		b.WriteString(escaper.Replace(string(r.sorted[0].Key)))
-		b.WriteRune('=')
-		b.WriteString(escaper.Replace(r.sorted[0].Value.Emit()))
-		for _, s := range r.sorted[1:] {
-			b.WriteRune(',')
-			b.WriteString(escaper.Replace(string(s.Key)))
-			b.WriteRune('=')
-			b.WriteString(escaper.Replace(s.Value.Emit()))
-		}
-
+// String implements the Stringer interface and provides a
+// human-readable form of the resource.
+//
+// Avoid using this representation as the key in a map of resources,
+// use Equivalent() as the key instead.
+func (r *Resource) String() string {
+	if r == nil {
+		return ""
 	}
-	b.WriteRune(')')
-
-	return b.String()
+	return r.labels.Encoded(label.DefaultEncoder())
 }
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
-func (r Resource) Attributes() []core.KeyValue {
-	return append([]core.KeyValue(nil), r.sorted...)
+// To avoid allocating a new slice, use an iterator.
+func (r *Resource) Attributes() []core.KeyValue {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.ToSlice()
 }
 
 // Iter returns an interator of the Resource attributes.
-//
 // This is ideal to use if you do not want a copy of the attributes.
-func (r Resource) Iter() AttributeIterator {
-	return NewAttributeIterator(r.sorted)
+func (r *Resource) Iter() label.Iterator {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Iter()
 }
 
-// Equal returns true if other Resource is equal to r.
-func (r Resource) Equal(other Resource) bool {
-	return r.String() == other.String()
+// Equal returns true when a Resource is equivalent to this Resource.
+func (r *Resource) Equal(eq *Resource) bool {
+	if r == nil {
+		r = Empty()
+	}
+	if eq == nil {
+		eq = Empty()
+	}
+	return r.Equivalent() == eq.Equivalent()
 }
 
 // Merge creates a new resource by combining resource a and b.
-// If there are common key between resource a and b then value from resource a is preserved.
-// If one of the resources is nil then the other resource is returned without creating a new one.
+//
+// If there are common keys between resource a and b, then the value
+// from resource a is preserved.
 func Merge(a, b *Resource) *Resource {
 	if a == nil {
-		return b
+		a = Empty()
 	}
 	if b == nil {
-		return a
+		b = Empty()
 	}
-
-	// Note: the following could be optimized by implementing a dedicated merge sort.
-
-	kvs := make([]core.KeyValue, 0, len(a.sorted)+len(b.sorted))
-	kvs = append(kvs, a.sorted...)
-	// a overwrites b, so b needs to be at the end.
-	kvs = append(kvs, b.sorted...)
-	return New(kvs...)
+	// Note: 'b' is listed first so that 'a' will overwrite with
+	// last-value-wins in label.New()
+	combine := append(b.Attributes(), a.Attributes()...)
+	return New(combine...)
 }
 
-// MarshalJSON prints the resource attributes in sorted order.
-func (r Resource) MarshalJSON() ([]byte, error) {
-	return json.Marshal(r.sorted)
+// Empty returns an instance of Resource with no attributes.  It is
+// equivalent to a `nil` Resource.
+func Empty() *Resource {
+	return &emptyResource
+}
+
+// Equivalent returns an object that can be compared for equality
+// between two resources.  This value is suitable for use as a key in
+// a map.
+func (r *Resource) Equivalent() label.Distinct {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.Equivalent()
+}
+
+// MarshalJSON encodes labels as a JSON list of { "Key": "...", "Value": ... }
+// pairs in order sorted by key.
+func (r *Resource) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		r = Empty()
+	}
+	return r.labels.MarshalJSON()
+}
+
+// Len returns the number of unique key-values in this Resource.
+func (r *Resource) Len() int {
+	if r == nil {
+		return 0
+	}
+	return r.labels.Len()
 }

@@ -25,9 +25,9 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -60,23 +60,23 @@ func TestStringKeyValues(t *testing.T) {
 				key.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{
-				{Key: "true", Value: "true"},
-				{Key: "one", Value: "1"},
-				{Key: "two", Value: "2"},
-				{Key: "three", Value: "3"},
-				{Key: "four", Value: "4"},
-				{Key: "five", Value: "5"},
-				{Key: "six", Value: "6"},
-				{Key: "seven", Value: "7"},
 				{Key: "eight", Value: "8"},
+				{Key: "five", Value: "5"},
+				{Key: "four", Value: "4"},
+				{Key: "one", Value: "1"},
+				{Key: "seven", Value: "7"},
+				{Key: "six", Value: "6"},
 				{Key: "the", Value: "final word"},
+				{Key: "three", Value: "3"},
+				{Key: "true", Value: "true"},
+				{Key: "two", Value: "2"},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		iter := export.LabelSlice(test.kvs).Iter()
-		assert.Equal(t, test.expected, stringKeyValues(iter))
+		labels := label.NewSet(test.kvs...)
+		assert.Equal(t, test.expected, stringKeyValues(labels.Iter()))
 	}
 }
 
@@ -152,8 +152,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
-		labels := export.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
-		got, err := minMaxSumCount(&desc, labels, mmsc)
+		labels := label.NewSet(test.labels...)
+		got, err := minMaxSumCount(&desc, &labels, mmsc)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -162,7 +162,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := label.NewSet()
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
@@ -183,7 +183,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			},
 		},
 	}
-	m, err := minMaxSumCount(&desc, labels, mmsc)
+	m, err := minMaxSumCount(&desc, &labels, mmsc)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
@@ -249,8 +249,8 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit),
 		)
-		labels := export.NewSimpleLabels(export.NoopLabelEncoder{}, test.labels...)
-		got, err := sum(&desc, labels, sumAgg.New())
+		labels := label.NewSet(test.labels...)
+		got, err := sum(&desc, &labels, sumAgg.New())
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -259,11 +259,11 @@ func TestSumMetricDescriptor(t *testing.T) {
 
 func TestSumInt64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
-	if m, err := sum(&desc, labels, s); assert.NoError(t, err) {
+	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
@@ -273,11 +273,11 @@ func TestSumInt64DataPoints(t *testing.T) {
 
 func TestSumFloat64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.Float64NumberKind)
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
-	if m, err := sum(&desc, labels, s); assert.NoError(t, err) {
+	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
@@ -287,9 +287,9 @@ func TestSumFloat64DataPoints(t *testing.T) {
 
 func TestSumErrUnknownValueType(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.MeasureKind, core.NumberKind(-1))
-	labels := export.NewSimpleLabels(export.NoopLabelEncoder{})
+	labels := label.NewSet()
 	s := sumAgg.New()
-	_, err := sum(&desc, labels, s)
+	_, err := sum(&desc, &labels, s)
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)

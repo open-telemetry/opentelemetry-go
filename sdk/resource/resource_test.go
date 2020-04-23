@@ -43,12 +43,12 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name: "New with common key order1",
-			in:   []core.KeyValue{kv11, kv12, kv21},
+			in:   []core.KeyValue{kv12, kv11, kv21},
 			want: []core.KeyValue{kv11, kv21},
 		},
 		{
 			name: "New with common key order2",
-			in:   []core.KeyValue{kv12, kv11, kv21},
+			in:   []core.KeyValue{kv11, kv12, kv21},
 			want: []core.KeyValue{kv12, kv21},
 		},
 		{
@@ -157,55 +157,55 @@ func TestString(t *testing.T) {
 	}{
 		{
 			kvs:  nil,
-			want: "Resource()",
+			want: "",
 		},
 		{
 			kvs:  []core.KeyValue{},
-			want: "Resource()",
+			want: "",
 		},
 		{
 			kvs:  []core.KeyValue{kv11},
-			want: "Resource(k1=v11)",
+			want: "k1=v11",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv12},
-			want: "Resource(k1=v11)",
+			want: "k1=v12",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv21},
-			want: "Resource(k1=v11,k2=v21)",
+			want: "k1=v11,k2=v21",
 		},
 		{
 			kvs:  []core.KeyValue{kv21, kv11},
-			want: "Resource(k1=v11,k2=v21)",
+			want: "k1=v11,k2=v21",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv21, kv31},
-			want: "Resource(k1=v11,k2=v21,k3=v31)",
+			want: "k1=v11,k2=v21,k3=v31",
 		},
 		{
 			kvs:  []core.KeyValue{kv31, kv11, kv21},
-			want: "Resource(k1=v11,k2=v21,k3=v31)",
+			want: "k1=v11,k2=v21,k3=v31",
 		},
 		{
 			kvs:  []core.KeyValue{key.String("A", "a"), key.String("B", "b")},
-			want: "Resource(A=a,B=b)",
+			want: "A=a,B=b",
 		},
 		{
 			kvs:  []core.KeyValue{key.String("A", "a,B=b")},
-			want: `Resource(A=a\,B\=b)`,
+			want: `A=a\,B\=b`,
 		},
 		{
 			kvs:  []core.KeyValue{key.String("A", `a,B\=b`)},
-			want: `Resource(A=a\,B\\\=b)`,
+			want: `A=a\,B\\\=b`,
 		},
 		{
 			kvs:  []core.KeyValue{key.String("A=a,B", `b`)},
-			want: `Resource(A\=a\,B=b)`,
+			want: `A\=a\,B=b`,
 		},
 		{
 			kvs:  []core.KeyValue{key.String(`A=a\,B`, `b`)},
-			want: `Resource(A\=a\\\,B=b)`,
+			want: `A\=a\\\,B=b`,
 		},
 	} {
 		if got := resource.New(test.kvs...).String(); got != test.want {

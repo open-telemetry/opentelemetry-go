@@ -27,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -92,12 +93,12 @@ var (
 		Type: metricpb.MetricDescriptor_COUNTER_INT64,
 		Labels: []*commonpb.StringKeyValue{
 			{
-				Key:   "host",
-				Value: "test.com",
-			},
-			{
 				Key:   "CPU",
 				Value: "1",
+			},
+			{
+				Key:   "host",
+				Value: "test.com",
 			},
 		},
 	}
@@ -106,12 +107,12 @@ var (
 		Type: metricpb.MetricDescriptor_COUNTER_INT64,
 		Labels: []*commonpb.StringKeyValue{
 			{
-				Key:   "host",
-				Value: "test.com",
-			},
-			{
 				Key:   "CPU",
 				Value: "2",
+			},
+			{
+				Key:   "host",
+				Value: "test.com",
 			},
 		},
 	}
@@ -157,7 +158,7 @@ func TestNoGroupingExport(t *testing.T) {
 		},
 		[]metricpb.ResourceMetrics{
 			{
-				Resource: &resourcepb.Resource{},
+				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						Metrics: []*metricpb.Metric{
@@ -195,7 +196,7 @@ func TestMeasureMetricGroupingExport(t *testing.T) {
 	}
 	expected := []metricpb.ResourceMetrics{
 		{
-			Resource: &resourcepb.Resource{},
+			Resource: nil,
 			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 				{
 					Metrics: []*metricpb.Metric{
@@ -205,12 +206,12 @@ func TestMeasureMetricGroupingExport(t *testing.T) {
 								Type: metricpb.MetricDescriptor_SUMMARY,
 								Labels: []*commonpb.StringKeyValue{
 									{
-										Key:   "host",
-										Value: "test.com",
-									},
-									{
 										Key:   "CPU",
 										Value: "1",
+									},
+									{
+										Key:   "host",
+										Value: "test.com",
 									},
 								},
 							},
@@ -271,7 +272,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
-				Resource: &resourcepb.Resource{},
+				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						Metrics: []*metricpb.Metric{
@@ -307,7 +308,7 @@ func TestCountUint64MetricGroupingExport(t *testing.T) {
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
-				Resource: &resourcepb.Resource{},
+				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						Metrics: []*metricpb.Metric{
@@ -317,12 +318,12 @@ func TestCountUint64MetricGroupingExport(t *testing.T) {
 									Type: metricpb.MetricDescriptor_COUNTER_INT64,
 									Labels: []*commonpb.StringKeyValue{
 										{
-											Key:   "host",
-											Value: "test.com",
-										},
-										{
 											Key:   "CPU",
 											Value: "1",
+										},
+										{
+											Key:   "host",
+											Value: "test.com",
 										},
 									},
 								},
@@ -356,7 +357,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
-				Resource: &resourcepb.Resource{},
+				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						Metrics: []*metricpb.Metric{
@@ -366,12 +367,12 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 									Type: metricpb.MetricDescriptor_COUNTER_DOUBLE,
 									Labels: []*commonpb.StringKeyValue{
 										{
-											Key:   "host",
-											Value: "test.com",
-										},
-										{
 											Key:   "CPU",
 											Value: "1",
+										},
+										{
+											Key:   "host",
+											Value: "test.com",
 										},
 									},
 								},
@@ -400,28 +401,28 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(*testInstA)},
+				[]metric.Option{metric.WithResource(testInstA)},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(*testInstA)},
+				[]metric.Option{metric.WithResource(testInstA)},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(*testInstA)},
+				[]metric.Option{metric.WithResource(testInstA)},
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(*testInstB)},
+				[]metric.Option{metric.WithResource(testInstB)},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -484,7 +485,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				core.Int64NumberKind,
 				[]metric.Option{
-					metric.WithResource(*testInstA),
+					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -494,7 +495,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				core.Int64NumberKind,
 				[]metric.Option{
-					metric.WithResource(*testInstA),
+					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -504,7 +505,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				core.Int64NumberKind,
 				[]metric.Option{
-					metric.WithResource(*testInstA),
+					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(2)),
@@ -514,7 +515,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				core.Int64NumberKind,
 				[]metric.Option{
-					metric.WithResource(*testInstA),
+					metric.WithResource(testInstA),
 					metric.WithLibraryName("summing-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -524,7 +525,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				core.Int64NumberKind,
 				[]metric.Option{
-					metric.WithResource(*testInstB),
+					metric.WithResource(testInstB),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -619,7 +620,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	var recs []metricsdk.Record
 	for _, r := range rs {
 		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
-		labs := metricsdk.NewSimpleLabels(metricsdk.NewDefaultLabelEncoder(), r.labels...)
+		labs := label.NewSet(r.labels...)
 
 		var agg metricsdk.Aggregator
 		switch r.mKind {
@@ -645,7 +646,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		}
 		agg.Checkpoint(ctx, &desc)
 
-		recs = append(recs, metricsdk.NewRecord(&desc, labs, agg))
+		recs = append(recs, metricsdk.NewRecord(&desc, &labs, agg))
 	}
 	assert.NoError(t, exp.Export(context.Background(), checkpointSet{records: recs}))
 
