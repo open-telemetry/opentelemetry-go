@@ -57,7 +57,11 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 }
 
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	return ContextWithRemoteSpanContext(ctx, tc.extract(supplier))
+	sc := tc.extract(supplier)
+	if !sc.IsValid() {
+		return ctx
+	}
+	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
