@@ -16,7 +16,7 @@ COPY . /go/src/github.com/open-telemetry/opentelemetry-go/
 WORKDIR /go/src/github.com/open-telemetry/opentelemetry-go/example/http/
 
 FROM base AS example-http-server
-RUN go install ./example/http/server/server.go
+RUN go install ./server/server.go
 CMD ["/go/bin/server"]
 
 FROM base AS example-http-client
