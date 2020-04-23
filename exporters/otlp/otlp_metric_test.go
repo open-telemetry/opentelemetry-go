@@ -74,11 +74,12 @@ func (m checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
 }
 
 type record struct {
-	name   string
-	mKind  metric.Kind
-	nKind  core.NumberKind
-	opts   []metric.Option
-	labels []core.KeyValue
+	name     string
+	mKind    metric.Kind
+	nKind    core.NumberKind
+	resource *resource.Resource
+	opts     []metric.Option
+	labels   []core.KeyValue
 }
 
 var (
@@ -145,14 +146,16 @@ func TestNoGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{},
+				nil,
+				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{},
+				nil,
+				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 		},
@@ -191,7 +194,8 @@ func TestMeasureMetricGroupingExport(t *testing.T) {
 		"measure",
 		metric.MeasureKind,
 		core.Int64NumberKind,
-		[]metric.Option{},
+		nil,
+		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	expected := []metricpb.ResourceMetrics{
@@ -264,7 +268,8 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 		"int64-count",
 		metric.CounterKind,
 		core.Int64NumberKind,
-		[]metric.Option{},
+		nil,
+		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	runMetricExportTests(
@@ -300,7 +305,8 @@ func TestCountUint64MetricGroupingExport(t *testing.T) {
 		"uint64-count",
 		metric.CounterKind,
 		core.Uint64NumberKind,
-		[]metric.Option{},
+		nil,
+		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	runMetricExportTests(
@@ -349,7 +355,8 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 		"float64-count",
 		metric.CounterKind,
 		core.Float64NumberKind,
-		[]metric.Option{},
+		nil,
+		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	runMetricExportTests(
@@ -401,28 +408,32 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(testInstA)},
+				testInstA,
+				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(testInstA)},
+				testInstA,
+				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(testInstA)},
+				testInstA,
+				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
-				[]metric.Option{metric.WithResource(testInstB)},
+				testInstB,
+				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -484,8 +495,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
+				testInstA,
 				[]metric.Option{
-					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -494,8 +505,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
+				testInstA,
 				[]metric.Option{
-					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -504,8 +515,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
+				testInstA,
 				[]metric.Option{
-					metric.WithResource(testInstA),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(2)),
@@ -514,8 +525,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
+				testInstA,
 				[]metric.Option{
-					metric.WithResource(testInstA),
 					metric.WithLibraryName("summing-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -524,8 +535,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterKind,
 				core.Int64NumberKind,
+				testInstB,
 				[]metric.Option{
-					metric.WithResource(testInstB),
 					metric.WithLibraryName("couting-lib"),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -617,7 +628,8 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	exp.metricExporter = msc
 	exp.started = true
 
-	var recs []metricsdk.Record
+	recs := map[label.Distinct][]metricsdk.Record{}
+	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
 		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
@@ -646,9 +658,14 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		}
 		agg.Checkpoint(ctx, &desc)
 
-		recs = append(recs, metricsdk.NewRecord(&desc, &labs, agg))
+		equiv := r.resource.Equivalent()
+		resources[equiv] = r.resource
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, agg))
 	}
-	assert.NoError(t, exp.Export(context.Background(), checkpointSet{records: recs}))
+	for equiv, records := range recs {
+		resource := resources[equiv]
+		assert.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: records}))
+	}
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
@@ -697,6 +714,8 @@ func TestEmptyMetricExport(t *testing.T) {
 	exp.metricExporter = msc
 	exp.started = true
 
+	resource := resource.New(key.String("R", "S"))
+
 	for _, test := range []struct {
 		records []metricsdk.Record
 		want    []metricpb.ResourceMetrics
@@ -711,7 +730,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		msc.Reset()
-		require.NoError(t, exp.Export(context.Background(), checkpointSet{records: test.records}))
+		require.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: test.records}))
 		assert.Equal(t, test.want, msc.ResourceMetrics())
 	}
 }

@@ -62,7 +62,7 @@ type result struct {
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+func CheckpointSet(ctx context.Context, resource *resource.Resource, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
 	records, errc := source(ctx, cps)
 
 	// Start a fixed number of goroutines to transform records.
@@ -72,7 +72,7 @@ func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uin
 	for i := uint(0); i < numWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			transformer(ctx, records, transformed)
+			transformer(ctx, resource, records, transformed)
 		}()
 	}
 	go func() {
@@ -117,7 +117,7 @@ func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record
 
 // transformer transforms records read from the passed in chan into
 // OTLP Metrics which are sent on the out chan.
-func transformer(ctx context.Context, in <-chan export.Record, out chan<- result) {
+func transformer(ctx context.Context, resource *resource.Resource, in <-chan export.Record, out chan<- result) {
 	for r := range in {
 		m, err := Record(r)
 		// Propagate errors, but do not send empty results.
@@ -125,7 +125,7 @@ func transformer(ctx context.Context, in <-chan export.Record, out chan<- result
 			continue
 		}
 		res := result{
-			Resource: r.Descriptor().Resource(),
+			Resource: resource,
 			Library:  r.Descriptor().LibraryName(),
 			Metric:   m,
 			Err:      err,

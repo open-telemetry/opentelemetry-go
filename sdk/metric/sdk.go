@@ -28,7 +28,6 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -60,9 +59,6 @@ type (
 
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
-
-		// resource represents the entity producing telemetry.
-		resource *resource.Resource
 
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -323,7 +319,6 @@ func New(batcher export.Batcher, opts ...Option) *SDK {
 	return &SDK{
 		batcher:      batcher,
 		errorHandler: c.ErrorHandler,
-		resource:     c.Resource,
 	}
 }
 
@@ -465,16 +460,6 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 		m.errorHandler(err)
 	}
 	return 1
-}
-
-// Resource returns the Resource this SDK was created with describing the
-// entity for which it creates instruments for.
-//
-// Resource means that the SDK implements the Resourcer interface and
-// therefore all metric instruments it creates will inherit its
-// Resource by default unless explicitly overwritten.
-func (m *SDK) Resource() *resource.Resource {
-	return m.resource
 }
 
 // RecordBatch enters a batch of metric events.
