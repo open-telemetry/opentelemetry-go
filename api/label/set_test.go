@@ -72,11 +72,17 @@ func TestSetDedup(t *testing.T) {
 	}
 
 	for s, d := range s2d {
-		// All the Distinct values of a given string are equal.
-		for _, elt := range d {
-			require.Equal(t, d[0], elt)
-		}
 		// No other Distinct values are equal to this.
+		for s2, d2 := range s2d {
+			if s2 == s {
+				continue
+			}
+			for _, elt := range d {
+				for _, otherDistinct := range d2 {
+					require.NotEqual(t, otherDistinct, elt)
+				}
+			}
+		}
 		for _, strings := range d2s {
 			if strings[0] == s {
 				continue
@@ -88,16 +94,22 @@ func TestSetDedup(t *testing.T) {
 	}
 
 	for d, s := range d2s {
-		// All the String values of a given Distinct are equal.
-		for _, elt := range s {
-			require.Equal(t, s[0], elt)
-		}
-		// No other String values are equal to this.
-		for _, distinct := range s2d {
-			if distinct[0] == d {
+		// No other Distinct values are equal to this.
+		for d2, s2 := range d2s {
+			if d2 == d {
 				continue
 			}
-			for _, otherDistinct := range distinct {
+			for _, elt := range s {
+				for _, otherDistinct := range s2 {
+					require.NotEqual(t, otherDistinct, elt)
+				}
+			}
+		}
+		for _, distincts := range s2d {
+			if distincts[0] == d {
+				continue
+			}
+			for _, otherDistinct := range distincts {
 				require.NotEqual(t, otherDistinct, d)
 			}
 		}
