@@ -149,8 +149,8 @@ func (l *Set) Iter() Iterator {
 	}
 }
 
-// Return the set of labels belonging to this set, sorted, where keys
-// appear no more than once.
+// ToSlice returns the set of labels belonging to this set, sorted,
+// where keys appear no more than once.
 func (l *Set) ToSlice() []core.KeyValue {
 	iter := l.Iter()
 	return iter.ToSlice()
@@ -245,7 +245,7 @@ func NewSet(kvs ...core.KeyValue) Set {
 //
 // This ensures the following:
 //
-// - Last-value wins semantics
+// - Last-value-wins semantics
 // - Caller sees the reordering, but doesn't lose values
 // - Repeated call preserve last-value wins.
 //
@@ -277,7 +277,7 @@ func NewSetWithSortable(kvs []core.KeyValue, tmp *Sortable) Set {
 	position := len(kvs) - 1
 	offset := position - 1
 
-	// The requitements stated above require that the stable
+	// The requirements stated above require that the stable
 	// result be placed in the end of the input slice, while
 	// overwritten values are swapped to the beginning.
 	//
@@ -368,6 +368,7 @@ func computeDistinctReflect(kvs []core.KeyValue) interface{} {
 	return at.Interface()
 }
 
+// MarshalJSON returns the JSON encoding of the `*Set`.
 func (l *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.equivalent.iface)
 }

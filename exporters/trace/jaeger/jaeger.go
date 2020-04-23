@@ -206,8 +206,8 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 
 	// TODO (jmacd): OTel has a broad "last value wins"
 	// semantic. Should resources be appended before span
-	// attributes, above, to allow span attributes to ovewrite
-	// resource attributes?
+	// attributes, above, to allow span attributes to
+	// overwrite resource attributes?
 	if data.Resource != nil {
 		for iter := data.Resource.Iter(); iter.Next(); {
 			if tag := keyValueToTag(iter.Attribute()); tag != nil {

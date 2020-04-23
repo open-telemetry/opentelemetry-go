@@ -100,13 +100,12 @@ type (
 		// storage is the stored label set for this record,
 		// except in cases where a label set is shared due to
 		// batch recording.
-		//
-		// labels has to be aligned for 64-bit atomic operations.
 		storage label.Set
 
 		// labels is the processed label set for this record.
-		// this may refer to the `storage` field if this label
-		// set is not shared.
+		// this may refer to the `storage` field in another
+		// record if this label set is shared resulting from
+		// `RecordBatch`.
 		labels *label.Set
 
 		// sortSlice has a single purpose - as a temporary
