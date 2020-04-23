@@ -24,20 +24,82 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testCase struct {
+	kvs      []core.KeyValue
+	encoding string
+}
+
+func expect(enc string, kvs ...core.KeyValue) testCase {
+	return testCase{
+		kvs:      kvs,
+		encoding: enc,
+	}
+}
+
 func TestSetDedup(t *testing.T) {
+	cases := []testCase{
+		expect("A=B", key.String("A", "2"), key.String("A", "B")),
+		expect("A=B", key.String("A", "2"), key.Int("A", 1), key.String("A", "B")),
+		expect("A=B", key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
+
+		expect("A=B,C=D", key.String("A", "1"), key.String("C", "D"), key.String("A", "B")),
+		expect("A=B,C=D", key.String("A", "2"), key.String("A", "B"), key.String("C", "D")),
+		expect("A=B,C=D", key.Float64("C", 1.2), key.String("A", "2"), key.String("A", "B"), key.String("C", "D")),
+		expect("A=B,C=D", key.String("C", "D"), key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
+		expect("A=B,C=D", key.String("A", "B"), key.String("C", "D"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
+		expect("A=B,C=D", key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B"), key.String("C", "D")),
+	}
 	enc := label.DefaultEncoder()
 
-	sl1 := []core.KeyValue{key.String("A", "1"), key.String("C", "D"), key.String("A", "B")}
-	sl2 := []core.KeyValue{key.String("A", "2"), key.String("A", "B"), key.String("C", "D")}
+	s2d := map[string][]label.Distinct{}
+	d2s := map[label.Distinct][]string{}
 
-	s1 := label.NewSet(sl1...)
-	s2 := label.NewSet(sl2...)
+	for _, tc := range cases {
+		cpy := make([]core.KeyValue, len(tc.kvs))
+		copy(cpy, tc.kvs)
+		sl := label.NewSet(cpy...)
 
-	require.Equal(t, s1.Equivalent(), s2.Equivalent())
+		// Ensure that the input was reordered but no elements went missing.
+		require.ElementsMatch(t, tc.kvs, cpy)
 
-	require.Equal(t, sl1[0], key.String("A", "1"))
-	require.Equal(t, sl2[0], key.String("A", "2"))
+		str := sl.Encoded(enc)
+		equ := sl.Equivalent()
 
-	require.Equal(t, "A=B,C=D", s1.Encoded(enc))
-	require.Equal(t, "A=B,C=D", s2.Encoded(enc))
+		s2d[str] = append(s2d[str], equ)
+		d2s[equ] = append(d2s[equ], str)
+
+		require.Equal(t, tc.encoding, str)
+	}
+
+	for s, d := range s2d {
+		// All the Distinct values of a given string are equal.
+		for _, elt := range d {
+			require.Equal(t, d[0], elt)
+		}
+		// No other Distinct values are equal to this.
+		for _, strings := range d2s {
+			if strings[0] == s {
+				continue
+			}
+			for _, otherString := range strings {
+				require.NotEqual(t, otherString, s)
+			}
+		}
+	}
+
+	for d, s := range d2s {
+		// All the String values of a given Distinct are equal.
+		for _, elt := range s {
+			require.Equal(t, s[0], elt)
+		}
+		// No other String values are equal to this.
+		for _, distinct := range s2d {
+			if distinct[0] == d {
+				continue
+			}
+			for _, otherDistinct := range distinct {
+				require.NotEqual(t, otherDistinct, d)
+			}
+		}
+	}
 }
