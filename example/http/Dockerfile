@@ -20,5 +20,5 @@ RUN go install ./server/server.go
 CMD ["/go/bin/server"]
 
 FROM base AS example-http-client
-RUN go install ./example/http/client/client.go
+RUN go install ./client/client.go
 CMD ["/go/bin/client"]
