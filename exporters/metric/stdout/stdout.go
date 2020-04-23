@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/label"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -61,7 +62,7 @@ type Config struct {
 	Quantiles []float64
 
 	// LabelEncoder encodes the labels
-	LabelEncoder export.LabelEncoder
+	LabelEncoder label.Encoder
 }
 
 type expoBatch struct {
@@ -103,7 +104,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		}
 	}
 	if config.LabelEncoder == nil {
-		config.LabelEncoder = export.NewDefaultLabelEncoder()
+		config.LabelEncoder = label.DefaultEncoder()
 	}
 	return &Exporter{
 		config: config,

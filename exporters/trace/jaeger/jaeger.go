@@ -204,12 +204,13 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		}
 	}
 
-	// TODO (rghetia): what to do if a resource key is the same as one of the attribute's key
-	// TODO (rghetia): is there a need for prefixing keys with "resource-"?
+	// TODO (jmacd): OTel has a broad "last value wins"
+	// semantic. Should resources be appended before span
+	// attributes, above, to allow span attributes to
+	// overwrite resource attributes?
 	if data.Resource != nil {
-		for _, kv := range data.Resource.Attributes() {
-			tag := keyValueToTag(kv)
-			if tag != nil {
+		for iter := data.Resource.Iter(); iter.Next(); {
+			if tag := keyValueToTag(iter.Attribute()); tag != nil {
 				tags = append(tags, tag)
 			}
 		}
