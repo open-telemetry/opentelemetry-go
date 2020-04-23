@@ -14,5 +14,5 @@
 FROM golang:alpine
 COPY . /go/src/github.com/open-telemetry/opentelemetry-go/
 WORKDIR /go/src/github.com/open-telemetry/opentelemetry-go/example/zipkin/
-RUN go install ./example/zipkin/main.go
+RUN go install ./main.go
 CMD ["/go/bin/main"]
