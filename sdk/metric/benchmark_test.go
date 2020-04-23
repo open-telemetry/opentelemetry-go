@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -560,7 +561,7 @@ func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
 func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	encoder := export.NewDefaultLabelEncoder()
+	encoder := label.DefaultEncoder()
 	fix.pcb = func(_ context.Context, rec export.Record) error {
 		_ = rec.Labels().Encoded(encoder)
 		return nil

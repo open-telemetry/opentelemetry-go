@@ -127,7 +127,7 @@ func Configure(opts []Option) Config {
 // The Resource method is used to set the Resource for Descriptors of new
 // metric instruments.
 type Resourcer interface {
-	Resource() resource.Resource
+	Resource() *resource.Resource
 }
 
 // insertResource inserts a WithResource option at the beginning of opts
