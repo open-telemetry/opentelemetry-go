@@ -170,11 +170,11 @@ type Meter interface {
 
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
-	// options. Callback can be nil.
+	// options. Callback may be nil.
 	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
-	// passed options. Callback can be nil.
+	// passed options. Callback may be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
 }
 
