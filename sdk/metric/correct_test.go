@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -37,21 +39,28 @@ import (
 var Must = metric.Must
 
 type correctnessBatcher struct {
+	newAggCount int64
+
 	t *testing.T
 
 	records []export.Record
 }
 
-func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
+
 	switch {
 	case strings.HasSuffix(name, ".counter"):
-		return sum.New()
+		agg = sum.New()
 	case strings.HasSuffix(name, ".disabled"):
-		return nil
+		agg = nil
 	default:
-		return array.New()
+		agg = array.New()
 	}
+	if agg != nil {
+		atomic.AddInt64(&cb.newAggCount, 1)
+	}
+	return
 }
 
 func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
@@ -87,15 +96,12 @@ func TestInputRangeTestCounter(t *testing.T) {
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
-	require.Equal(t, int64(0), sum.AsInt64())
-	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
+	require.Equal(t, 0, checkpointed)
 
 	batcher.records = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err = batcher.records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -122,10 +128,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
-	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
-	require.Equal(t, int64(0), count)
-	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
+	require.Equal(t, 0, checkpointed)
 
 	measure.Record(ctx, 1)
 	measure.Record(ctx, 2)
@@ -133,7 +136,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	batcher.records = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err = batcher.records[0].Aggregator().(aggregator.Distribution).Count()
+	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, sdkErr)
@@ -239,28 +242,33 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, core.NewInt64Number(2))
 
-		kvs := export.IteratorToSlice(rec.Labels().Iter())
+		kvs := rec.Labels().ToSlice()
 		actual = append(actual, kvs)
 	}
 
 	require.ElementsMatch(t, allExpect, actual)
 }
 
-func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := export.NewDefaultLabelEncoder()
+func newSetIter(kvs ...core.KeyValue) label.Iterator {
+	labels := label.NewSet(kvs...)
+	return labels.Iter()
+}
 
-	encoded := encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B"), key.String("C", "D")}).Iter())
+func TestDefaultLabelEncoder(t *testing.T) {
+	encoder := label.DefaultEncoder()
+
+	encoded := encoder.Encode(newSetIter(key.String("A", "B"), key.String("C", "D")))
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String("A", "B,c=d"), key.String(`C\`, "D")}).Iter())
+	encoded = encoder.Encode(newSetIter(key.String("A", "B,c=d"), key.String(`C\`, "D")))
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{key.String(`\`, `=`), key.String(`,`, `\`)}).Iter())
-	require.Equal(t, `\\=\=,\,=\\`, encoded)
+	encoded = encoder.Encode(newSetIter(key.String(`\`, `=`), key.String(`,`, `\`)))
+	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
-	encoded = encoder.Encode(export.LabelSlice([]core.KeyValue{
+	encoded = encoder.Encode(newSetIter(
 		key.Int("I", 1),
 		key.Uint("U", 1),
 		key.Int32("I32", 1),
@@ -271,8 +279,8 @@ func TestDefaultLabelEncoder(t *testing.T) {
 		key.Float64("F64", 1),
 		key.String("S", "1"),
 		key.Bool("B", true),
-	}).Iter())
-	require.Equal(t, "I=1,U=1,I32=1,U32=1,I64=1,U64=1,F64=1,F64=1,S=1,B=true", encoded)
+	))
+	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
 }
 
 func TestObserverCollection(t *testing.T) {
@@ -305,7 +313,7 @@ func TestObserverCollection(t *testing.T) {
 	require.Equal(t, 4, collected)
 	require.Equal(t, 4, len(batcher.records))
 
-	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
+	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -345,7 +353,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(export.NewDefaultLabelEncoder())
+	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range batcher.records {
 		_ = out.AddTo(rec)
 	}
@@ -355,4 +363,29 @@ func TestRecordBatch(t *testing.T) {
 		"int64.measure/A=B,C=D":   3,
 		"float64.measure/A=B,C=D": 4,
 	}, out.Map)
+}
+
+// TestRecordPersistence ensures that a direct-called instrument that
+// is repeatedly used each interval results in a persistent record, so
+// that its encoded labels will be cached across collection intervals.
+func TestRecordPersistence(t *testing.T) {
+	ctx := context.Background()
+	batcher := &correctnessBatcher{
+		t: t,
+	}
+
+	sdk := metricsdk.New(batcher)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
+	c := Must(meter).NewFloat64Counter("sum.name")
+	b := c.Bind(key.String("bound", "true"))
+	uk := key.String("bound", "false")
+
+	for i := 0; i < 100; i++ {
+		c.Add(ctx, 1, uk)
+		b.Add(ctx, 1)
+		sdk.Collect(ctx)
+	}
+
+	require.Equal(t, int64(2), batcher.newAggCount)
 }

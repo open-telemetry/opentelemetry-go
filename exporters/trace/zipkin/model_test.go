@@ -321,12 +321,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -358,12 +360,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -395,12 +399,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -432,12 +438,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -469,12 +477,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "CLIENT",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "CLIENT",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -506,12 +516,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "PRODUCER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "PRODUCER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -543,12 +555,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "CONSUMER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "CONSUMER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -580,12 +594,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
@@ -608,12 +624,14 @@ func TestModelConversion(t *testing.T) {
 				Sampled:  nil,
 				Err:      nil,
 			},
-			Name:           "foo",
-			Kind:           "SERVER",
-			Timestamp:      time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			Duration:       time.Minute,
-			Shared:         false,
-			LocalEndpoint:  nil,
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
 			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
@@ -631,7 +649,7 @@ func TestModelConversion(t *testing.T) {
 			},
 		},
 	}
-	gottenOutputBatch := toZipkinSpanModels(inputBatch)
+	gottenOutputBatch := toZipkinSpanModels(inputBatch, "model-test")
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 

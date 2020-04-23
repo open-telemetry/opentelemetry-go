@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/matchers"
 )
@@ -329,7 +330,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.SetName("new name")
 		},
 		"#SetAttributes": func(span trace.Span) {
-			span.SetAttributes(core.Key("key1").String("value"), core.Key("key2").Int(123))
+			span.SetAttributes(key.String("key1", "value"), key.Int("key2", 123))
 		},
 	}
 	var mechanisms = map[string]func() trace.Span{

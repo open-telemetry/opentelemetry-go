@@ -38,45 +38,26 @@ func TestOptions(t *testing.T) {
 	type testcase struct {
 		name     string
 		opts     []metric.Option
-		keys     []core.Key
 		desc     string
 		unit     unit.Unit
-		resource resource.Resource
+		resource *resource.Resource
 	}
 	testcases := []testcase{
 		{
 			name:     "no opts",
 			opts:     nil,
-			keys:     nil,
 			desc:     "",
 			unit:     "",
-			resource: resource.Resource{},
-		},
-		{
-			name: "keys keys keys",
-			opts: []metric.Option{
-				metric.WithKeys(key.New("foo"), key.New("foo2")),
-				metric.WithKeys(key.New("bar"), key.New("bar2")),
-				metric.WithKeys(key.New("baz"), key.New("baz2")),
-			},
-			keys: []core.Key{
-				key.New("foo"), key.New("foo2"),
-				key.New("bar"), key.New("bar2"),
-				key.New("baz"), key.New("baz2"),
-			},
-			desc:     "",
-			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "description",
 			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
-			keys:     nil,
 			desc:     "stuff",
 			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "description override",
@@ -84,20 +65,18 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			keys:     nil,
 			desc:     "things",
 			unit:     "",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "unit",
 			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
-			keys:     nil,
 			desc:     "",
 			unit:     "s",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "unit override",
@@ -105,20 +84,18 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			keys:     nil,
 			desc:     "",
 			unit:     "h",
-			resource: resource.Resource{},
+			resource: nil,
 		},
 		{
 			name: "resource override",
 			opts: []metric.Option{
-				metric.WithResource(*resource.New(key.New("name").String("test-name"))),
+				metric.WithResource(resource.New(key.New("name").String("test-name"))),
 			},
-			keys:     nil,
 			desc:     "",
 			unit:     "",
-			resource: *resource.New(key.New("name").String("test-name")),
+			resource: resource.New(key.New("name").String("test-name")),
 		},
 	}
 	for idx, tt := range testcases {
@@ -126,7 +103,6 @@ func TestOptions(t *testing.T) {
 		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
-			Keys:        tt.keys,
 			Resource:    tt.resource,
 		}); diff != "" {
 			t.Errorf("Compare options: -got +want %s", diff)

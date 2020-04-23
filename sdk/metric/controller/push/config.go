@@ -29,7 +29,7 @@ type Config struct {
 
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
-	Resource resource.Resource
+	Resource *resource.Resource
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -50,12 +50,12 @@ func (o errorHandlerOption) Apply(config *Config) {
 }
 
 // WithResource sets the Resource configuration option of a Config.
-func WithResource(r resource.Resource) Option {
-	return resourceOption(r)
+func WithResource(r *resource.Resource) Option {
+	return resourceOption{r}
 }
 
-type resourceOption resource.Resource
+type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) Apply(config *Config) {
-	config.Resource = resource.Resource(o)
+	config.Resource = o.Resource
 }

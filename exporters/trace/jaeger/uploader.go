@@ -36,7 +36,7 @@ type EndpointOption func() (batchUploader, error)
 
 // WithAgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
 // For example, localhost:6831.
-func WithAgentEndpoint(agentEndpoint string) func() (batchUploader, error) {
+func WithAgentEndpoint(agentEndpoint string) EndpointOption {
 	return func() (batchUploader, error) {
 		if agentEndpoint == "" {
 			return nil, errors.New("agentEndpoint must not be empty")
@@ -53,7 +53,7 @@ func WithAgentEndpoint(agentEndpoint string) func() (batchUploader, error) {
 
 // WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector.
 // For example, http://localhost:14268/api/traces
-func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpointOption) func() (batchUploader, error) {
+func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
 		if collectorEndpoint == "" {
 			return nil, errors.New("collectorEndpoint must not be empty")
@@ -83,14 +83,14 @@ type CollectorEndpointOptions struct {
 }
 
 // WithUsername sets the username to be used if basic auth is required.
-func WithUsername(username string) func(o *CollectorEndpointOptions) {
+func WithUsername(username string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.username = username
 	}
 }
 
 // WithPassword sets the password to be used if basic auth is required.
-func WithPassword(password string) func(o *CollectorEndpointOptions) {
+func WithPassword(password string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.password = password
 	}

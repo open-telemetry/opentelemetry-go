@@ -25,6 +25,7 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -67,7 +68,7 @@ var _ push.Clock = mockClock{}
 var _ push.Ticker = mockTicker{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet(label.DefaultEncoder())
 
 	batcher := &testBatcher{
 		t:             t,
@@ -103,7 +104,7 @@ func (b *testBatcher) FinishedCollection() {
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	labels := export.IteratorToSlice(record.Labels().Iter())
+	labels := record.Labels().ToSlice()
 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
 	return nil
 }

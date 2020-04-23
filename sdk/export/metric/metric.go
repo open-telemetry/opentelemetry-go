@@ -16,32 +16,11 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 )
-
-const (
-	// reserved ID for the noop label encoder
-	noopLabelEncoderID int64 = 1 + iota
-	// reserved ID for the default label encoder
-	defaultLabelEncoderID
-
-	// this must come last in enumeration
-	lastLabelEncoderID
-)
-
-// labelEncoderIDCounter is for generating IDs for other label
-// encoders.
-var labelEncoderIDCounter int64 = lastLabelEncoderID
-
-// NewLabelEncoderID returns a unique label encoder ID. It should be
-// called once per each type of label encoder. Preferably in init() or
-// in var definition.
-func NewLabelEncoderID() int64 {
-	return atomic.AddInt64(&labelEncoderIDCounter, 1)
-}
 
 // Batcher is responsible for deciding which kind of aggregation to
 // use (via AggregationSelector), gathering exported results from the
@@ -186,119 +165,6 @@ type Exporter interface {
 	Export(context.Context, CheckpointSet) error
 }
 
-// LabelStorage provides an access to the ordered labels.
-type LabelStorage interface {
-	// NumLabels returns a number of labels in the storage.
-	NumLabels() int
-	// GetLabels gets a label from a passed index.
-	GetLabel(int) core.KeyValue
-}
-
-// LabelSlice implements LabelStorage in terms of a slice.
-type LabelSlice []core.KeyValue
-
-var _ LabelStorage = LabelSlice{}
-
-// NumLabels is a part of LabelStorage implementation.
-func (s LabelSlice) NumLabels() int {
-	return len(s)
-}
-
-// GetLabel is a part of LabelStorage implementation.
-func (s LabelSlice) GetLabel(idx int) core.KeyValue {
-	return s[idx]
-}
-
-// Iter returns an iterator going over the slice.
-func (s LabelSlice) Iter() LabelIterator {
-	return NewLabelIterator(s)
-}
-
-// LabelIterator allows iterating over an ordered set of labels. The
-// typical use of the iterator is as follows:
-//
-//     iter := export.NewLabelIterator(getStorage())
-//     for iter.Next() {
-//       label := iter.Label()
-//       // or, if we need an index:
-//       // idx, label := iter.IndexedLabel()
-//       // do something with label
-//     }
-type LabelIterator struct {
-	storage LabelStorage
-	idx     int
-}
-
-// NewLabelIterator creates an iterator going over a passed storage.
-func NewLabelIterator(storage LabelStorage) LabelIterator {
-	return LabelIterator{
-		storage: storage,
-		idx:     -1,
-	}
-}
-
-// Next moves the iterator to the next label. Returns false if there
-// are no more labels.
-func (i *LabelIterator) Next() bool {
-	i.idx++
-	return i.idx < i.Len()
-}
-
-// Label returns current label. Must be called only after Next returns
-// true.
-func (i *LabelIterator) Label() core.KeyValue {
-	return i.storage.GetLabel(i.idx)
-}
-
-// IndexedLabel returns current index and label. Must be called only
-// after Next returns true.
-func (i *LabelIterator) IndexedLabel() (int, core.KeyValue) {
-	return i.idx, i.Label()
-}
-
-// Len returns a number of labels in the iterator's label storage.
-func (i *LabelIterator) Len() int {
-	return i.storage.NumLabels()
-}
-
-// Convenience function that creates a slice of labels from the passed
-// iterator. The iterator is set up to start from the beginning before
-// creating the slice.
-func IteratorToSlice(iter LabelIterator) []core.KeyValue {
-	l := iter.Len()
-	if l == 0 {
-		return nil
-	}
-	iter.idx = -1
-	slice := make([]core.KeyValue, 0, l)
-	for iter.Next() {
-		slice = append(slice, iter.Label())
-	}
-	return slice
-}
-
-// LabelEncoder enables an optimization for export pipelines that use
-// text to encode their label sets.
-//
-// This interface allows configuring the encoder used in the Batcher
-// so that by the time the exporter is called, the same encoding may
-// be used.
-type LabelEncoder interface {
-	// Encode is called (concurrently) in instrumentation context.
-	//
-	// The expectation is that when setting up an export pipeline
-	// both the batcher and the exporter will use the same label
-	// encoder to avoid the duplicate computation of the encoded
-	// labels in the export path.
-	Encode(LabelIterator) string
-
-	// ID should return a unique positive number associated with
-	// the label encoder. Stateless label encoders could return
-	// the same number regardless of an instance, stateful label
-	// encoders should return a number depending on their state.
-	ID() int64
-}
-
 // CheckpointSet allows a controller to access a complete checkpoint of
 // aggregated metrics from the Batcher.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
@@ -319,56 +185,14 @@ type CheckpointSet interface {
 // and label set.
 type Record struct {
 	descriptor *metric.Descriptor
-	labels     Labels
+	labels     *label.Set
 	aggregator Aggregator
-}
-
-// Labels stores complete information about a computed label set,
-// including the labels in an appropriate order (as defined by the
-// Batcher).  If the batcher does not re-order labels, they are
-// presented in sorted order by the SDK.
-type Labels interface {
-	Iter() LabelIterator
-	Encoded(LabelEncoder) string
-}
-
-type labels struct {
-	encoderID int64
-	encoded   string
-	slice     LabelSlice
-}
-
-var _ Labels = &labels{}
-
-// NewSimpleLabels builds a Labels object, consisting of an ordered
-// set of labels in a provided slice and a unique encoded
-// representation generated by the passed encoder.
-func NewSimpleLabels(encoder LabelEncoder, kvs ...core.KeyValue) Labels {
-	l := &labels{
-		encoderID: encoder.ID(),
-		slice:     kvs,
-	}
-	l.encoded = encoder.Encode(l.Iter())
-	return l
-}
-
-// Iter is a part of an implementation of the Labels interface.
-func (l *labels) Iter() LabelIterator {
-	return l.slice.Iter()
-}
-
-// Encoded is a part of an implementation of the Labels interface.
-func (l *labels) Encoded(encoder LabelEncoder) string {
-	if l.encoderID == encoder.ID() {
-		return l.encoded
-	}
-	return encoder.Encode(l.Iter())
 }
 
 // NewRecord allows Batcher implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels Labels, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
@@ -389,6 +213,6 @@ func (r Record) Descriptor() *metric.Descriptor {
 
 // Labels describes the labels associated with the instrument and the
 // aggregated data.
-func (r Record) Labels() Labels {
+func (r Record) Labels() *label.Set {
 	return r.labels
 }

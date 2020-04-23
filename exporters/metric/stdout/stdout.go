@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/label"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -62,7 +62,7 @@ type Config struct {
 	Quantiles []float64
 
 	// LabelEncoder encodes the labels
-	LabelEncoder export.LabelEncoder
+	LabelEncoder label.Encoder
 }
 
 type expoBatch struct {
@@ -104,7 +104,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		}
 	}
 	if config.LabelEncoder == nil {
-		config.LabelEncoder = export.NewDefaultLabelEncoder()
+		config.LabelEncoder = label.DefaultEncoder()
 	}
 	return &Exporter{
 		config: config,
@@ -214,33 +214,19 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 		}
 
-		specifiedKeyMap := make(map[core.Key]core.Value)
+		var encodedLabels string
 		iter := record.Labels().Iter()
-		for iter.Next() {
-			kv := iter.Label()
-			specifiedKeyMap[kv.Key] = kv.Value
-		}
-
-		var materializedKeys []string
-
 		if iter.Len() > 0 {
-			encoded := record.Labels().Encoded(e.config.LabelEncoder)
-			materializedKeys = append(materializedKeys, encoded)
-		}
-
-		for _, k := range desc.Keys() {
-			if _, ok := specifiedKeyMap[k]; !ok {
-				materializedKeys = append(materializedKeys, string(k))
-			}
+			encodedLabels = record.Labels().Encoded(e.config.LabelEncoder)
 		}
 
 		var sb strings.Builder
 
 		sb.WriteString(desc.Name())
 
-		if len(materializedKeys) > 0 {
+		if len(encodedLabels) > 0 {
 			sb.WriteRune('{')
-			sb.WriteString(strings.Join(materializedKeys, ","))
+			sb.WriteString(encodedLabels)
 			sb.WriteRune('}')
 		}
 

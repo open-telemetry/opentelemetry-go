@@ -56,28 +56,28 @@ type options struct {
 // WithOnError sets the hook to be called when there is
 // an error occurred when uploading the span data.
 // If no custom hook is set, errors are logged.
-func WithOnError(onError func(err error)) func(o *options) {
+func WithOnError(onError func(err error)) Option {
 	return func(o *options) {
 		o.OnError = onError
 	}
 }
 
 // WithProcess sets the process with the information about the exporting process.
-func WithProcess(process Process) func(o *options) {
+func WithProcess(process Process) Option {
 	return func(o *options) {
 		o.Process = process
 	}
 }
 
 //WithBufferMaxCount defines the total number of traces that can be buffered in memory
-func WithBufferMaxCount(bufferMaxCount int) func(o *options) {
+func WithBufferMaxCount(bufferMaxCount int) Option {
 	return func(o *options) {
 		o.BufferMaxCount = bufferMaxCount
 	}
 }
 
 // WithSDK sets the SDK config for the exporter pipeline.
-func WithSDK(config *sdktrace.Config) func(o *options) {
+func WithSDK(config *sdktrace.Config) Option {
 	return func(o *options) {
 		o.Config = config
 	}
@@ -85,7 +85,7 @@ func WithSDK(config *sdktrace.Config) func(o *options) {
 
 // RegisterAsGlobal enables the registration of the trace provider of the new pipeline
 // as Global Trace Provider.
-func RegisterAsGlobal() func(o *options) {
+func RegisterAsGlobal() Option {
 	return func(o *options) {
 		o.RegisterGlobal = true
 	}
@@ -179,7 +179,7 @@ type Process struct {
 	Tags []core.KeyValue
 }
 
-// Exporter is an implementation of trace.Exporter that uploads spans to Jaeger.
+// Exporter is an implementation of trace.SpanSyncer that uploads spans to Jaeger.
 type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler
@@ -204,12 +204,13 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		}
 	}
 
-	// TODO (rghetia): what to do if a resource key is the same as one of the attribute's key
-	// TODO (rghetia): is there a need for prefixing keys with "resource-"?
+	// TODO (jmacd): OTel has a broad "last value wins"
+	// semantic. Should resources be appended before span
+	// attributes, above, to allow span attributes to
+	// overwrite resource attributes?
 	if data.Resource != nil {
-		for _, kv := range data.Resource.Attributes() {
-			tag := keyValueToTag(kv)
-			if tag != nil {
+		for iter := data.Resource.Iter(); iter.Next(); {
+			if tag := keyValueToTag(iter.Attribute()); tag != nil {
 				tags = append(tags, tag)
 			}
 		}

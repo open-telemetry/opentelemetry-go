@@ -38,11 +38,8 @@ type Config struct {
 	Description string
 	// Unit is an optional field describing the metric instrument.
 	Unit unit.Unit
-	// Keys are recommended keys determined in the handles
-	// obtained for the metric.
-	Keys []core.Key
 	// Resource describes the entity for which measurements are made.
-	Resource resource.Resource
+	Resource *resource.Resource
 	// LibraryName is the name given to the Meter that created
 	// this instrument.  See `Provider`.
 	LibraryName string
@@ -138,13 +135,6 @@ func (d Descriptor) MetricKind() Kind {
 	return d.kind
 }
 
-// Keys returns the recommended keys included in the metric
-// definition.  These keys may be used by a Batcher as a default set
-// of grouping keys for the metric instrument.
-func (d Descriptor) Keys() []core.Key {
-	return d.config.Keys
-}
-
 // Description provides a human-readable description of the metric
 // instrument.
 func (d Descriptor) Description() string {
@@ -165,7 +155,7 @@ func (d Descriptor) NumberKind() core.NumberKind {
 
 // Resource returns the Resource describing the entity for which the metric
 // instrument measures.
-func (d Descriptor) Resource() resource.Resource {
+func (d Descriptor) Resource() *resource.Resource {
 	return d.config.Resource
 }
 
@@ -201,11 +191,11 @@ type Meter interface {
 
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
-	// options. Callback can be nil.
+	// options. Callback may be nil.
 	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
-	// passed options. Callback can be nil.
+	// passed options. Callback may be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
 }
 
@@ -231,29 +221,17 @@ func (u unitOption) Apply(config *Config) {
 	config.Unit = unit.Unit(u)
 }
 
-// WithKeys applies recommended label keys. Multiple `WithKeys`
-// options accumulate.
-func WithKeys(keys ...core.Key) Option {
-	return keysOption(keys)
-}
-
-type keysOption []core.Key
-
-func (k keysOption) Apply(config *Config) {
-	config.Keys = append(config.Keys, k...)
-}
-
 // WithResource applies provided Resource.
 //
 // This will override any existing Resource.
-func WithResource(r resource.Resource) Option {
-	return resourceOption(r)
+func WithResource(r *resource.Resource) Option {
+	return resourceOption{r}
 }
 
-type resourceOption resource.Resource
+type resourceOption struct{ *resource.Resource }
 
 func (r resourceOption) Apply(config *Config) {
-	config.Resource = resource.Resource(r)
+	config.Resource = r.Resource
 }
 
 // WithLibraryName applies provided library name.  This is meant for

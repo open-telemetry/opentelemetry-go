@@ -25,9 +25,10 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -158,7 +159,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := defaultkeys.New(selector, export.NewDefaultLabelEncoder(), true)
+	batcher := ungrouped.New(selector, label.DefaultEncoder(), true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
@@ -211,7 +212,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		desc := c.toDesc(&record)
 
 		if hist, ok := agg.(aggregator.Histogram); ok {
-			return c.exportHistogram(ch, hist, numberKind, desc, labels)
+			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting histogram: %w", err)
+			}
 		} else if dist, ok := agg.(aggregator.Distribution); ok {
 			// TODO: summaries values are never being resetted.
 			//  As measures are recorded, new records starts to have less impact on these summaries.
@@ -221,11 +224,17 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			//  References:
 			// 	https://www.robustperception.io/how-does-a-prometheus-summary-work
 			//  https://github.com/prometheus/client_golang/blob/fa4aa9000d2863904891d193dea354d23f3d712a/prometheus/summary.go#L135
-			return c.exportSummary(ch, dist, numberKind, desc, labels)
+			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting summary: %w", err)
+			}
 		} else if sum, ok := agg.(aggregator.Sum); ok {
-			return c.exportCounter(ch, sum, numberKind, desc, labels)
+			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting counter: %w", err)
+			}
 		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
-			return c.exportLastValue(ch, lastValue, numberKind, desc, labels)
+			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting last value: %w", err)
+			}
 		}
 		return nil
 	})
@@ -237,12 +246,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving last value: %w", err)
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating constant metric: %w", err)
 	}
 
 	ch <- m
@@ -252,12 +261,12 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving counter: %w", err)
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating constant metric: %w", err)
 	}
 
 	ch <- m
@@ -267,13 +276,13 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
 	var sum core.Number
 	sum, err = dist.Sum()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving distribution sum: %w", err)
 	}
 
 	quantiles := make(map[float64]float64)
@@ -284,7 +293,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 
 	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), quantiles, labels...)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating constant summary: %w", err)
 	}
 
 	ch <- m
@@ -294,11 +303,11 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving histogram: %w", err)
 	}
 	sum, err := hist.Sum()
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving sum: %w", err)
 	}
 
 	var totalCount uint64
@@ -315,7 +324,7 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 
 	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, labels...)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating constant histogram: %w", err)
 	}
 
 	ch <- m
@@ -332,7 +341,7 @@ func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
 
-func labelsKeys(labels export.Labels) []string {
+func labelsKeys(labels *label.Set) []string {
 	iter := labels.Iter()
 	keys := make([]string, 0, iter.Len())
 	for iter.Next() {
@@ -342,7 +351,7 @@ func labelsKeys(labels export.Labels) []string {
 	return keys
 }
 
-func labelValues(labels export.Labels) []string {
+func labelValues(labels *label.Set) []string {
 	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
 	//  this would avoid unnecessary allocations.
 	iter := labels.Iter()

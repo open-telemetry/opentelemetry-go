@@ -47,7 +47,7 @@ func initTracer() {
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(core.Key("rk1").String("rv11"), core.Key("rk2").Int64(5)))
+		sdktrace.WithResourceAttributes(key.String("rk1", "rv11"), key.Int64("rk2", 5)))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
@@ -78,7 +78,6 @@ func main() {
 		result.Observe(1, commonLabels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
-		metric.WithKeys(fooKey, barKey, lemonsKey),
 		metric.WithDescription("An observer set to 1.0"),
 	)
 
