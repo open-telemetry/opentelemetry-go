@@ -59,7 +59,12 @@ func (t TraceID) IsValid() bool {
 // MarshalJSON implements a custom marshal function to encode TraceID
 // as a hex string.
 func (t TraceID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeToString(t[:]))
+	return json.Marshal(t.String())
+}
+
+// String returns the hex string representation form of a TraceID
+func (t TraceID) String() string {
+	return hex.EncodeToString(t[:])
 }
 
 // SpanID is a unique identify of a span in a trace.
@@ -77,7 +82,12 @@ func (s SpanID) IsValid() bool {
 // MarshalJSON implements a custom marshal function to encode SpanID
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeToString(s[:]))
+	return json.Marshal(s.String())
+}
+
+// String returns the hex string representation form of a SpanID
+func (s SpanID) String() string {
+	return hex.EncodeToString(s[:])
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant
@@ -167,18 +177,6 @@ func (sc SpanContext) HasTraceID() bool {
 // HasSpanID checks if the span context has a valid span ID.
 func (sc SpanContext) HasSpanID() bool {
 	return sc.SpanID.IsValid()
-}
-
-// SpanIDString returns a hex string representation of the span ID in
-// the span context.
-func (sc SpanContext) SpanIDString() string {
-	return hex.EncodeToString(sc.SpanID[:])
-}
-
-// TraceIDString returns a hex string representation of the trace ID
-// in the span context.
-func (sc SpanContext) TraceIDString() string {
-	return hex.EncodeToString(sc.TraceID[:])
 }
 
 // IsSampled check if the sampling bit in trace flags is set.

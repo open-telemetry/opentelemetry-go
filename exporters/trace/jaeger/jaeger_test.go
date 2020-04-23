@@ -242,7 +242,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,
 				SpanKind:      apitrace.SpanKindClient,
-				Resource:      resource.New(core.Key("rk1").String(rv1), core.Key("rk2").Int64(rv2)),
+				Resource:      resource.New(key.String("rk1", rv1), key.Int64("rk2", rv2)),
 			},
 			want: &gen.Span{
 				TraceIdLow:    651345242494996240,

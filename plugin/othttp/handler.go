@@ -28,13 +28,14 @@ var _ http.Handler = &Handler{}
 
 // Attribute keys that the Handler can add to a span.
 const (
-	HostKey       = core.Key("http.host")        // the http host (http.Request.Host)
-	MethodKey     = core.Key("http.method")      // the http method (http.Request.Method)
-	PathKey       = core.Key("http.path")        // the http path (http.Request.URL.Path)
-	URLKey        = core.Key("http.url")         // the http url (http.Request.URL.String())
-	UserAgentKey  = core.Key("http.user_agent")  // the http user agent (http.Request.UserAgent())
-	RouteKey      = core.Key("http.route")       // the http route (ex: /users/:id)
-	StatusCodeKey = core.Key("http.status_code") // if set, the http status
+	HostKey       = core.Key("http.host")        // the HTTP host (http.Request.Host)
+	MethodKey     = core.Key("http.method")      // the HTTP method (http.Request.Method)
+	PathKey       = core.Key("http.path")        // the HTTP path (http.Request.URL.Path)
+	URLKey        = core.Key("http.url")         // the HTTP URL (http.Request.URL.String())
+	UserAgentKey  = core.Key("http.user_agent")  // the HTTP user agent (http.Request.UserAgent())
+	RouteKey      = core.Key("http.route")       // the HTTP route (ex: /users/:id)
+	RemoteAddrKey = core.Key("http.remote_addr") // the network address of the client that sent the HTTP request (http.Request.RemoteAddr)
+	StatusCodeKey = core.Key("http.status_code") // if set, the HTTP status
 	ReadBytesKey  = core.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
 	ReadErrorKey  = core.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
 	WroteBytesKey = core.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
@@ -53,12 +54,13 @@ type Handler struct {
 	operation string
 	handler   http.Handler
 
-	tracer           trace.Tracer
-	props            propagation.Propagators
-	spanStartOptions []trace.StartOption
-	readEvent        bool
-	writeEvent       bool
-	filters          []Filter
+	tracer            trace.Tracer
+	props             propagation.Propagators
+	spanStartOptions  []trace.StartOption
+	readEvent         bool
+	writeEvent        bool
+	filters           []Filter
+	spanNameFormatter func(string, *http.Request) string
 }
 
 // Option function used for setting *optional* Handler properties
@@ -140,10 +142,27 @@ func WithMessageEvents(events ...event) Option {
 	}
 }
 
+// WithSpanNameFormatter takes a function that will be called on every
+// incoming request and the returned string will become the Span Name
+func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
+	return func(h *Handler) {
+		h.spanNameFormatter = f
+	}
+}
+
+func defaultFormatter(operation string, _ *http.Request) string {
+	return operation
+}
+
 // NewHandler wraps the passed handler, functioning like middleware, in a span
 // named after the operation and with any provided HandlerOptions.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
-	h := Handler{handler: handler, operation: operation}
+	h := Handler{
+		handler:           handler,
+		operation:         operation,
+		spanNameFormatter: defaultFormatter,
+	}
+
 	defaultOpts := []Option{
 		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
 		WithPropagators(global.Propagators()),
@@ -169,7 +188,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
 	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
-	ctx, span := h.tracer.Start(ctx, h.operation, opts...)
+	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}
@@ -198,6 +217,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		PathKey.String(r.URL.Path),
 		URLKey.String(r.URL.String()),
 		UserAgentKey.String(r.UserAgent()),
+		RemoteAddrKey.String(r.RemoteAddr),
 	)
 
 	h.handler.ServeHTTP(rww, r.WithContext(ctx))

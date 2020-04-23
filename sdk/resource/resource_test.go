@@ -15,22 +15,24 @@
 package resource_test
 
 import (
+	"encoding/json"
 	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
-	kv11 = core.Key("k1").String("v11")
-	kv12 = core.Key("k1").String("v12")
-	kv21 = core.Key("k2").String("v21")
-	kv31 = core.Key("k3").String("v31")
-	kv41 = core.Key("k4").String("v41")
+	kv11 = key.String("k1", "v11")
+	kv12 = key.String("k1", "v12")
+	kv21 = key.String("k2", "v21")
+	kv31 = key.String("k3", "v31")
+	kv41 = key.String("k4", "v41")
 )
 
 func TestNew(t *testing.T) {
@@ -52,15 +54,15 @@ func TestNew(t *testing.T) {
 		{
 			name: "New with nil",
 			in:   nil,
-			want: []core.KeyValue{},
+			want: nil,
 		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.New(c.in...)
 			if diff := cmp.Diff(
-				sortedAttributes(res.Attributes()),
-				sortedAttributes(c.want),
+				res.Attributes(),
+				c.want,
 				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
@@ -81,16 +83,46 @@ func TestMerge(t *testing.T) {
 			want: []core.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
+			name: "Merge with no overlap, no nil, not interleaved",
+			a:    resource.New(kv11, kv21),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
+		{
 			name: "Merge with common key order1",
 			a:    resource.New(kv11),
 			b:    resource.New(kv12, kv21),
-			want: []core.KeyValue{kv21, kv11},
+			want: []core.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order2",
 			a:    resource.New(kv12, kv21),
 			b:    resource.New(kv11),
 			want: []core.KeyValue{kv12, kv21},
+		},
+		{
+			name: "Merge with common key order4",
+			a:    resource.New(kv11, kv21, kv41),
+			b:    resource.New(kv31, kv41),
+			want: []core.KeyValue{kv11, kv21, kv31, kv41},
+		},
+		{
+			name: "Merge with no keys",
+			a:    resource.New(),
+			b:    resource.New(),
+			want: nil,
+		},
+		{
+			name: "Merge with first resource no keys",
+			a:    resource.New(),
+			b:    resource.New(kv21),
+			want: []core.KeyValue{kv21},
+		},
+		{
+			name: "Merge with second resource no keys",
+			a:    resource.New(kv11),
+			b:    resource.New(),
+			want: []core.KeyValue{kv11},
 		},
 		{
 			name: "Merge with first resource nil",
@@ -109,8 +141,8 @@ func TestMerge(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.Merge(c.a, c.b)
 			if diff := cmp.Diff(
-				sortedAttributes(res.Attributes()),
-				sortedAttributes(c.want),
+				res.Attributes(),
+				c.want,
 				cmp.AllowUnexported(core.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
@@ -118,9 +150,75 @@ func TestMerge(t *testing.T) {
 	}
 }
 
-func sortedAttributes(attrs []core.KeyValue) []core.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
-		return attrs[i].Key < attrs[j].Key
-	})
-	return attrs
+func TestString(t *testing.T) {
+	for _, test := range []struct {
+		kvs  []core.KeyValue
+		want string
+	}{
+		{
+			kvs:  nil,
+			want: "Resource()",
+		},
+		{
+			kvs:  []core.KeyValue{},
+			want: "Resource()",
+		},
+		{
+			kvs:  []core.KeyValue{kv11},
+			want: "Resource(k1=v11)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv12},
+			want: "Resource(k1=v11)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv21},
+			want: "Resource(k1=v11,k2=v21)",
+		},
+		{
+			kvs:  []core.KeyValue{kv21, kv11},
+			want: "Resource(k1=v11,k2=v21)",
+		},
+		{
+			kvs:  []core.KeyValue{kv11, kv21, kv31},
+			want: "Resource(k1=v11,k2=v21,k3=v31)",
+		},
+		{
+			kvs:  []core.KeyValue{kv31, kv11, kv21},
+			want: "Resource(k1=v11,k2=v21,k3=v31)",
+		},
+		{
+			kvs:  []core.KeyValue{key.String("A", "a"), key.String("B", "b")},
+			want: "Resource(A=a,B=b)",
+		},
+		{
+			kvs:  []core.KeyValue{key.String("A", "a,B=b")},
+			want: `Resource(A=a\,B\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{key.String("A", `a,B\=b`)},
+			want: `Resource(A=a\,B\\\=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{key.String("A=a,B", `b`)},
+			want: `Resource(A\=a\,B=b)`,
+		},
+		{
+			kvs:  []core.KeyValue{key.String(`A=a\,B`, `b`)},
+			want: `Resource(A\=a\\\,B=b)`,
+		},
+	} {
+		if got := resource.New(test.kvs...).String(); got != test.want {
+			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
+		}
+	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	r := resource.New(key.Int64("A", 1), key.String("C", "D"))
+	data, err := json.Marshal(r)
+	require.NoError(t, err)
+	require.Equal(t,
+		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
+		string(data))
 }

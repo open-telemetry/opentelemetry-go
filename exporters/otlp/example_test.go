@@ -62,7 +62,7 @@ func Example_insecure() {
 }
 
 func Example_withTLS() {
-	// Please take at look at https://godoc.org/google.golang.org/grpc/credentials#TransportCredentials
+	// Please take at look at https://pkg.go.dev/google.golang.org/grpc/credentials#TransportCredentials
 	// for ways on how to initialize gRPC TransportCredentials.
 	creds, err := credentials.NewClientTLSFromFile("my-cert.pem", "")
 	if err != nil {

@@ -47,14 +47,14 @@ type (
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
-		"lastvalue.a", metric.ObserverKind, core.Int64NumberKind, metric.WithKeys(key.New("G")))
+		"lastvalue.a", metric.ObserverKind, core.Int64NumberKind)
 	LastValueBDesc = metric.NewDescriptor(
-		"lastvalue.b", metric.ObserverKind, core.Int64NumberKind, metric.WithKeys(key.New("G")))
+		"lastvalue.b", metric.ObserverKind, core.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = metric.NewDescriptor(
-		"sum.a", metric.CounterKind, core.Int64NumberKind, metric.WithKeys(key.New("C")))
+		"sum.a", metric.CounterKind, core.Int64NumberKind)
 	CounterBDesc = metric.NewDescriptor(
-		"sum.b", metric.CounterKind, core.Int64NumberKind, metric.WithKeys(key.New("C")))
+		"sum.b", metric.CounterKind, core.Int64NumberKind)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}

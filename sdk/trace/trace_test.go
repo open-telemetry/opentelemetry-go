@@ -81,7 +81,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSampled
 	}
-	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{core.Key("callCount").Int(ts.callCount)}}
+	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{key.Int("callCount", ts.callCount)}}
 }
 
 func (ts testSampler) Description() string {
@@ -620,10 +620,10 @@ func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
-	if got, want := s.spanContext.TraceIDString(), p.TraceIDString(); got != want {
+	if got, want := s.spanContext.TraceID.String(), p.TraceID.String(); got != want {
 		return fmt.Errorf("got child trace ID %s, want %s", got, want)
 	}
-	if childID, parentID := s.spanContext.SpanIDString(), p.SpanIDString(); childID == parentID {
+	if childID, parentID := s.spanContext.SpanID.String(), p.SpanID.String(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
 	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
@@ -1069,7 +1069,7 @@ func TestWithResource(t *testing.T) {
 		WithConfig(Config{DefaultSampler: AlwaysSample()}),
 		WithResourceAttributes(key.String("rk1", "rv1"), key.Int64("rk2", 5)))
 	span := startSpan(tp, "WithResource")
-	span.SetAttributes(core.Key("key1").String("value1"))
+	span.SetAttributes(key.String("key1", "value1"))
 	got, err := endSpan(&te, span)
 	if err != nil {
 		t.Error(err.Error())

@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/defaultkeys"
+	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -43,7 +43,8 @@ type Exporter struct {
 	snapshot export.CheckpointSet
 	onError  func(error)
 
-	defaultSummaryQuantiles []float64
+	defaultSummaryQuantiles    []float64
+	defaultHistogramBoundaries []core.Number
 }
 
 var _ export.Exporter = &Exporter{}
@@ -73,6 +74,10 @@ type Config struct {
 	// to use. Use nil to specify the system-default summary quantiles.
 	DefaultSummaryQuantiles []float64
 
+	// DefaultHistogramBoundaries defines the default histogram bucket
+	// boundaries.
+	DefaultHistogramBoundaries []core.Number
+
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
 	OnError func(error)
@@ -100,11 +105,12 @@ func NewRawExporter(config Config) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		handler:                 promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
-		registerer:              config.Registerer,
-		gatherer:                config.Gatherer,
-		defaultSummaryQuantiles: config.DefaultSummaryQuantiles,
-		onError:                 config.OnError,
+		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
+		registerer:                 config.Registerer,
+		gatherer:                   config.Gatherer,
+		defaultSummaryQuantiles:    config.DefaultSummaryQuantiles,
+		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
+		onError:                    config.OnError,
 	}
 
 	c := newCollector(e)
@@ -138,7 +144,7 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
 func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
-	selector := simple.NewWithExactMeasure()
+	selector := simple.NewWithHistogramMeasure(config.DefaultHistogramBoundaries)
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
@@ -152,7 +158,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := defaultkeys.New(selector, export.NewDefaultLabelEncoder(), true)
+	batcher := ungrouped.New(selector, export.NewDefaultLabelEncoder(), true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
@@ -198,16 +204,17 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
+	err := c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
 		labels := labelValues(record.Labels())
 		desc := c.toDesc(&record)
 
-		// TODO: implement histogram export when the histogram aggregation is done.
-		//  https://github.com/open-telemetry/opentelemetry-go/issues/317
-
-		if dist, ok := agg.(aggregator.Distribution); ok {
+		if hist, ok := agg.(aggregator.Histogram); ok {
+			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting histogram: %w", err)
+			}
+		} else if dist, ok := agg.(aggregator.Distribution); ok {
 			// TODO: summaries values are never being resetted.
 			//  As measures are recorded, new records starts to have less impact on these summaries.
 			//  We should implement an solution that is similar to the Prometheus Clients
@@ -216,60 +223,65 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			//  References:
 			// 	https://www.robustperception.io/how-does-a-prometheus-summary-work
 			//  https://github.com/prometheus/client_golang/blob/fa4aa9000d2863904891d193dea354d23f3d712a/prometheus/summary.go#L135
-			c.exportSummary(ch, dist, numberKind, desc, labels)
+			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting summary: %w", err)
+			}
 		} else if sum, ok := agg.(aggregator.Sum); ok {
-			c.exportCounter(ch, sum, numberKind, desc, labels)
+			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting counter: %w", err)
+			}
 		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
-			c.exportLastValue(ch, lastValue, numberKind, desc, labels)
+			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting last value: %w", err)
+			}
 		}
 		return nil
 	})
-}
-
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
-	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		c.exp.onError(err)
-		return
+	}
+}
+
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+	lv, _, err := lvagg.LastValue()
+	if err != nil {
+		return fmt.Errorf("error retrieving last value: %w", err)
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error creating constant metric: %w", err)
 	}
 
 	ch <- m
+	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error retrieving counter: %w", err)
 	}
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error creating constant metric: %w", err)
 	}
 
 	ch <- m
+	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
 	var sum core.Number
 	sum, err = dist.Sum()
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error retrieving distribution sum: %w", err)
 	}
 
 	quantiles := make(map[float64]float64)
@@ -280,11 +292,42 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 
 	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), quantiles, labels...)
 	if err != nil {
-		c.exp.onError(err)
-		return
+		return fmt.Errorf("error creating constant summary: %w", err)
 	}
 
 	ch <- m
+	return nil
+}
+
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+	buckets, err := hist.Histogram()
+	if err != nil {
+		return fmt.Errorf("error retrieving histogram: %w", err)
+	}
+	sum, err := hist.Sum()
+	if err != nil {
+		return fmt.Errorf("error retrieving sum: %w", err)
+	}
+
+	var totalCount uint64
+	// counts maps from the bucket upper-bound to the cumulative count.
+	// The bucket with upper-bound +inf is not included.
+	counts := make(map[float64]uint64, len(buckets.Boundaries))
+	for i := range buckets.Boundaries {
+		boundary := buckets.Boundaries[i].CoerceToFloat64(kind)
+		totalCount += buckets.Counts[i].AsUint64()
+		counts[boundary] = totalCount
+	}
+	// Include the +inf bucket in the total count.
+	totalCount += buckets.Counts[len(buckets.Counts)-1].AsUint64()
+
+	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, labels...)
+	if err != nil {
+		return fmt.Errorf("error creating constant histogram: %w", err)
+	}
+
+	ch <- m
+	return nil
 }
 
 func (c *collector) toDesc(record *export.Record) *prometheus.Desc {

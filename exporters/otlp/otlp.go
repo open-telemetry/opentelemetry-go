@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"unsafe"
 
@@ -28,11 +27,9 @@ import (
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
-	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -84,8 +81,11 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 }
 
 var (
-	errAlreadyStarted = errors.New("already started")
-	errNotStarted     = errors.New("not started")
+	errAlreadyStarted  = errors.New("already started")
+	errNotStarted      = errors.New("not started")
+	errDisconnected    = errors.New("exporter disconnected")
+	errStopped         = errors.New("exporter stopped")
+	errContextCanceled = errors.New("context canceled")
 )
 
 // Start dials to the collector, establishing a connection to it. It also
@@ -209,133 +209,45 @@ func (e *Exporter) Stop() error {
 }
 
 // Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
-// interface. It transforms metric Records into OTLP Metrics and transmits them.
-func (e *Exporter) Export(ctx context.Context, cps metricsdk.CheckpointSet) error {
-	// Seed records into the work processing pool.
-	records := make(chan metricsdk.Record)
-	go func() {
-		_ = cps.ForEach(func(record metricsdk.Record) (err error) {
-			select {
-			case <-e.stopCh:
-			case <-ctx.Done():
-			case records <- record:
-			}
-			return
-		})
-		close(records)
-	}()
-
-	// Allow all errors to be collected and returned singularly.
-	errCh := make(chan error)
-	var errStrings []string
-	go func() {
-		for err := range errCh {
-			if err != nil {
-				errStrings = append(errStrings, err.Error())
-			}
-		}
-	}()
-
-	// Start the work processing pool.
-	processed := make(chan *metricpb.Metric)
-	var wg sync.WaitGroup
-	for i := uint(0); i < e.c.numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			e.processMetrics(ctx, processed, errCh, records)
-		}()
-	}
-	go func() {
-		wg.Wait()
-		close(processed)
-	}()
-
-	// Synchronosly collected the processed records and transmit.
-	e.uploadMetrics(ctx, processed, errCh)
-
-	// Now that all processing is done, handle any errors seen.
-	close(errCh)
-	if len(errStrings) > 0 {
-		return fmt.Errorf("errors exporting:\n -%s", strings.Join(errStrings, "\n -"))
-	}
-	return nil
-}
-
-func (e *Exporter) processMetrics(ctx context.Context, out chan<- *metricpb.Metric, errCh chan<- error, in <-chan metricsdk.Record) {
-	for r := range in {
-		m, err := transform.Record(r)
-		if err != nil {
-			if err == aggregator.ErrNoData {
-				// The Aggregator was checkpointed before the first value
-				// was set, skipping.
-				continue
-			}
-			select {
-			case <-e.stopCh:
-				return
-			case <-ctx.Done():
-				return
-			case errCh <- err:
-				continue
-			}
-		}
-
+// interface. It transforms and batches metric Records into OTLP Metrics and
+// transmits them to the configured collector.
+func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) error {
+	// Unify the parent context Done signal with the exporter stopCh.
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+	go func(ctx context.Context, cancel context.CancelFunc) {
 		select {
-		case <-e.stopCh:
-			return
 		case <-ctx.Done():
-			return
-		case out <- m:
+		case <-e.stopCh:
+			cancel()
 		}
-	}
-}
+	}(ctx, cancel)
 
-func (e *Exporter) uploadMetrics(ctx context.Context, in <-chan *metricpb.Metric, errCh chan<- error) {
-	var protoMetrics []*metricpb.Metric
-	for m := range in {
-		protoMetrics = append(protoMetrics, m)
+	rms, err := transform.CheckpointSet(ctx, cps, e.c.numWorkers)
+	if err != nil {
+		return err
 	}
 
-	if len(protoMetrics) == 0 {
-		return
-	}
 	if !e.connected() {
-		return
-	}
-
-	rm := []*metricpb.ResourceMetrics{
-		{
-			Resource: nil,
-			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-				{
-					Metrics: protoMetrics,
-				},
-			},
-		},
+		return errDisconnected
 	}
 
 	select {
 	case <-e.stopCh:
-		return
+		return errStopped
 	case <-ctx.Done():
-		return
+		return errContextCanceled
 	default:
 		e.senderMu.Lock()
 		_, err := e.metricExporter.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
-			ResourceMetrics: rm,
+			ResourceMetrics: rms,
 		})
 		e.senderMu.Unlock()
 		if err != nil {
-			select {
-			case <-e.stopCh:
-				return
-			case <-ctx.Done():
-				return
-			case errCh <- err:
-			}
+			return err
 		}
 	}
+	return nil
 }
 
 func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {

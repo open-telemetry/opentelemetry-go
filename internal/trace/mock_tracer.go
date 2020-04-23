@@ -37,6 +37,9 @@ type MockTracer struct {
 
 	// Sampled specifies if the new span should be sampled or not.
 	Sampled bool
+
+	// OnSpanStarted is called every time a new trace span is started
+	OnSpanStarted func(span *MockSpan)
 }
 
 var _ apitrace.Tracer = (*MockTracer)(nil)
@@ -77,6 +80,10 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 	span = &MockSpan{
 		sc:     sc,
 		tracer: mt,
+		Name:   name,
+	}
+	if mt.OnSpanStarted != nil {
+		mt.OnSpanStarted(span)
 	}
 
 	return apitrace.ContextWithSpan(ctx, span), span

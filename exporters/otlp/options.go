@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	DefaultCollectorPort uint16 = 55678
+	DefaultCollectorPort uint16 = 55680
 	DefaultCollectorHost string = "localhost"
 	DefaultNumWorkers    uint   = 1
 )
@@ -51,7 +51,7 @@ func WorkerCount(n uint) ExporterOption {
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
-// just like grpc.WithInsecure() https://godoc.org/google.golang.org/grpc#WithInsecure
+// just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
 func WithInsecure() ExporterOption {
 	return func(cfg *Config) {
