@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -90,12 +91,12 @@ func TestExportSpans(t *testing.T) {
 					StartTime: startTime,
 					EndTime:   endTime,
 					Attributes: []core.KeyValue{
-						core.Key("user").String("alice"),
-						core.Key("authenticated").Bool(true),
+						key.String("user", "alice"),
+						key.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(core.Key("instance").String("tester-a")),
+					Resource:      resource.New(key.String("instance", "tester-a")),
 				},
 				{
 					SpanContext: core.SpanContext{
@@ -109,12 +110,12 @@ func TestExportSpans(t *testing.T) {
 					StartTime:    startTime,
 					EndTime:      endTime,
 					Attributes: []core.KeyValue{
-						core.Key("user").String("alice"),
-						core.Key("authenticated").Bool(true),
+						key.String("user", "alice"),
+						key.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(core.Key("instance").String("tester-a")),
+					Resource:      resource.New(key.String("instance", "tester-a")),
 				},
 				{
 					SpanContext: core.SpanContext{
@@ -127,12 +128,12 @@ func TestExportSpans(t *testing.T) {
 					StartTime: startTime,
 					EndTime:   endTime,
 					Attributes: []core.KeyValue{
-						core.Key("user").String("bob"),
-						core.Key("authenticated").Bool(false),
+						key.String("user", "bob"),
+						key.Bool("authenticated", false),
 					},
 					StatusCode:    codes.Unauthenticated,
 					StatusMessage: "Unauthenticated",
-					Resource:      resource.New(core.Key("instance").String("tester-b")),
+					Resource:      resource.New(key.String("instance", "tester-b")),
 				},
 			},
 			[]tracepb.ResourceSpans{

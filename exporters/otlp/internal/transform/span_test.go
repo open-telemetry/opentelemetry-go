@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -74,7 +75,7 @@ func TestEmptySpanEvent(t *testing.T) {
 }
 
 func TestSpanEvent(t *testing.T) {
-	attrs := []core.KeyValue{core.Key("one").Int(1), core.Key("two").Int(2)}
+	attrs := []core.KeyValue{key.Int("one", 1), key.Int("two", 2)}
 	now := time.Now()
 	got := spanEvents([]export.Event{
 		{
@@ -118,7 +119,7 @@ func TestEmptyLinks(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	attrs := []core.KeyValue{core.Key("one").Int(1), core.Key("two").Int(2)}
+	attrs := []core.KeyValue{key.Int("one", 1), key.Int("two", 2)}
 	l := []apitrace.Link{
 		{},
 		{
@@ -281,12 +282,12 @@ func TestSpanData(t *testing.T) {
 		MessageEvents: []export.Event{
 			{Time: startTime,
 				Attributes: []core.KeyValue{
-					core.Key("CompressedByteSize").Uint64(512),
+					key.Uint64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
 				Attributes: []core.KeyValue{
-					core.Key("MessageEventType").String("Recv"),
+					key.String("MessageEventType", "Recv"),
 				},
 			},
 		},
@@ -298,7 +299,7 @@ func TestSpanData(t *testing.T) {
 					TraceFlags: 0,
 				},
 				Attributes: []core.KeyValue{
-					core.Key("LinkType").String("Parent"),
+					key.String("LinkType", "Parent"),
 				},
 			},
 			{
@@ -308,7 +309,7 @@ func TestSpanData(t *testing.T) {
 					TraceFlags: 0,
 				},
 				Attributes: []core.KeyValue{
-					core.Key("LinkType").String("Child"),
+					key.String("LinkType", "Child"),
 				},
 			},
 		},
@@ -316,12 +317,12 @@ func TestSpanData(t *testing.T) {
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
 		Attributes: []core.KeyValue{
-			core.Key("timeout_ns").Int64(12e9),
+			key.Int64("timeout_ns", 12e9),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
-		Resource:                 resource.New(core.Key("rk1").String("rv1"), core.Key("rk2").Int64(5)),
+		Resource:                 resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5)),
 	}
 
 	// Not checking resource as the underlying map of our Resource makes

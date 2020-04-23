@@ -20,11 +20,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestAttributeIterator(t *testing.T) {
-	one := core.Key("one").String("1")
-	two := core.Key("two").Int(2)
+	one := key.String("one", "1")
+	two := key.Int("two", 2)
 	iter := NewAttributeIterator([]core.KeyValue{one, two})
 	require.Equal(t, 2, iter.Len())
 
