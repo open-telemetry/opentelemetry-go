@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -28,23 +29,26 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
+type mapkey struct {
+	desc     *metric.Descriptor
+	distinct label.Distinct
+}
+
 type CheckpointSet struct {
-	encoder export.LabelEncoder
-	records map[string]export.Record
+	records map[mapkey]export.Record
 	updates []export.Record
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
 // Records are grouped by their encoded labels.
-func NewCheckpointSet(encoder export.LabelEncoder) *CheckpointSet {
+func NewCheckpointSet() *CheckpointSet {
 	return &CheckpointSet{
-		encoder: encoder,
-		records: make(map[string]export.Record),
+		records: make(map[mapkey]export.Record),
 	}
 }
 
 func (p *CheckpointSet) Reset() {
-	p.records = make(map[string]export.Record)
+	p.records = make(map[mapkey]export.Record)
 	p.updates = nil
 }
 
@@ -53,14 +57,17 @@ func (p *CheckpointSet) Reset() {
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
-	elabels := export.NewSimpleLabels(p.encoder, labels...)
+	elabels := label.NewSet(labels...)
 
-	key := desc.Name() + "_" + elabels.Encoded(p.encoder)
+	key := mapkey{
+		desc:     desc,
+		distinct: elabels.Equivalent(),
+	}
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}
 
-	rec := export.NewRecord(desc, elabels, newAgg)
+	rec := export.NewRecord(desc, &elabels, newAgg)
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

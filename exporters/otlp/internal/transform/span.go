@@ -19,6 +19,7 @@ import (
 
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 
+	"go.opentelemetry.io/otel/api/label"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -32,15 +33,12 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
-	// Group by the unique string representation of the Resource.
-	rsm := make(map[string]*tracepb.ResourceSpans)
+	// Group by the distinct representation of the Resource.
+	rsm := make(map[label.Distinct]*tracepb.ResourceSpans)
 
 	for _, sd := range sdl {
 		if sd != nil {
-			var key string
-			if sd.Resource != nil {
-				key = sd.Resource.String()
-			}
+			key := sd.Resource.Equivalent()
 
 			rs, ok := rsm[key]
 			if !ok {

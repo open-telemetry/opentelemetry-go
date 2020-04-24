@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 )
 
 func TestAttributes(t *testing.T) {
@@ -31,16 +32,16 @@ func TestAttributes(t *testing.T) {
 		{nil, nil},
 		{
 			[]core.KeyValue{
-				core.Key("int to int").Int(123),
-				core.Key("uint to int").Uint(1234),
-				core.Key("int32 to int").Int32(12345),
-				core.Key("uint32 to int").Uint32(123456),
-				core.Key("int64 to int64").Int64(1234567),
-				core.Key("uint64 to int64").Uint64(12345678),
-				core.Key("float32 to double").Float32(3.14),
-				core.Key("float64 to double").Float32(1.61),
-				core.Key("string to string").String("string"),
-				core.Key("bool to bool").Bool(true),
+				key.Int("int to int", 123),
+				key.Uint("uint to int", 1234),
+				key.Int32("int32 to int", 12345),
+				key.Uint32("uint32 to int", 123456),
+				key.Int64("int64 to int64", 1234567),
+				key.Uint64("uint64 to int64", 12345678),
+				key.Float32("float32 to double", 3.14),
+				key.Float32("float64 to double", 1.61),
+				key.String("string to string", "string"),
+				key.Bool("bool to bool", true),
 			},
 			[]*commonpb.AttributeKeyValue{
 				{

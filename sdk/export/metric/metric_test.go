@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 
 	"github.com/stretchr/testify/require"
 )
@@ -28,8 +29,13 @@ var testSlice = []core.KeyValue{
 	key.Int("foo", 42),
 }
 
+func newIter(slice []core.KeyValue) label.Iterator {
+	labels := label.NewSet(slice...)
+	return labels.Iter()
+}
+
 func TestLabelIterator(t *testing.T) {
-	iter := LabelSlice(testSlice).Iter()
+	iter := newIter(testSlice)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
@@ -51,17 +57,17 @@ func TestLabelIterator(t *testing.T) {
 }
 
 func TestEmptyLabelIterator(t *testing.T) {
-	iter := LabelSlice(nil).Iter()
+	iter := newIter(nil)
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
 }
 
 func TestIteratorToSlice(t *testing.T) {
-	iter := LabelSlice(testSlice).Iter()
-	got := IteratorToSlice(iter)
+	iter := newIter(testSlice)
+	got := iter.ToSlice()
 	require.Equal(t, testSlice, got)
 
-	iter = LabelSlice(nil).Iter()
-	got = IteratorToSlice(iter)
+	iter = newIter(nil)
+	got = iter.ToSlice()
 	require.Nil(t, got)
 }

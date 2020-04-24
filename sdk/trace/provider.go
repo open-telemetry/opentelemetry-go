@@ -163,7 +163,7 @@ func (p *Provider) ApplyConfig(cfg Config) {
 		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
 	}
 	if cfg.Resource != nil {
-		c.Resource = resource.New(cfg.Resource.Attributes()...)
+		c.Resource = cfg.Resource
 	}
 	p.config.Store(&c)
 }

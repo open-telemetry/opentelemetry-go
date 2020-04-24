@@ -18,6 +18,7 @@ import (
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
@@ -27,40 +28,63 @@ func Attributes(attrs []core.KeyValue) []*commonpb.AttributeKeyValue {
 	}
 
 	out := make([]*commonpb.AttributeKeyValue, 0, len(attrs))
-	for _, v := range attrs {
-		switch v.Value.Type() {
-		case core.BOOL:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:       string(v.Key),
-				Type:      commonpb.AttributeKeyValue_BOOL,
-				BoolValue: v.Value.AsBool(),
-			})
-		case core.INT64, core.INT32, core.UINT32, core.UINT64:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:      string(v.Key),
-				Type:     commonpb.AttributeKeyValue_INT,
-				IntValue: v.Value.AsInt64(),
-			})
-		case core.FLOAT32:
-			f32 := v.Value.AsFloat32()
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_DOUBLE,
-				DoubleValue: float64(f32),
-			})
-		case core.FLOAT64:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_DOUBLE,
-				DoubleValue: v.Value.AsFloat64(),
-			})
-		case core.STRING:
-			out = append(out, &commonpb.AttributeKeyValue{
-				Key:         string(v.Key),
-				Type:        commonpb.AttributeKeyValue_STRING,
-				StringValue: v.Value.AsString(),
-			})
-		}
+	for _, kv := range attrs {
+		out = append(out, toAttribute(kv))
 	}
 	return out
+}
+
+// ResourceAttributes transforms a Resource into a slice of OTLP attribute key-values.
+func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyValue {
+	if resource.Len() == 0 {
+		return nil
+	}
+
+	out := make([]*commonpb.AttributeKeyValue, 0, resource.Len())
+	for iter := resource.Iter(); iter.Next(); {
+		out = append(out, toAttribute(iter.Attribute()))
+	}
+
+	return out
+}
+
+func toAttribute(v core.KeyValue) *commonpb.AttributeKeyValue {
+	switch v.Value.Type() {
+	case core.BOOL:
+		return &commonpb.AttributeKeyValue{
+			Key:       string(v.Key),
+			Type:      commonpb.AttributeKeyValue_BOOL,
+			BoolValue: v.Value.AsBool(),
+		}
+	case core.INT64, core.INT32, core.UINT32, core.UINT64:
+		return &commonpb.AttributeKeyValue{
+			Key:      string(v.Key),
+			Type:     commonpb.AttributeKeyValue_INT,
+			IntValue: v.Value.AsInt64(),
+		}
+	case core.FLOAT32:
+		return &commonpb.AttributeKeyValue{
+			Key:         string(v.Key),
+			Type:        commonpb.AttributeKeyValue_DOUBLE,
+			DoubleValue: float64(v.Value.AsFloat32()),
+		}
+	case core.FLOAT64:
+		return &commonpb.AttributeKeyValue{
+			Key:         string(v.Key),
+			Type:        commonpb.AttributeKeyValue_DOUBLE,
+			DoubleValue: v.Value.AsFloat64(),
+		}
+	case core.STRING:
+		return &commonpb.AttributeKeyValue{
+			Key:         string(v.Key),
+			Type:        commonpb.AttributeKeyValue_STRING,
+			StringValue: v.Value.AsString(),
+		}
+	default:
+		return &commonpb.AttributeKeyValue{
+			Key:         string(v.Key),
+			Type:        commonpb.AttributeKeyValue_STRING,
+			StringValue: "INVALID",
+		}
+	}
 }

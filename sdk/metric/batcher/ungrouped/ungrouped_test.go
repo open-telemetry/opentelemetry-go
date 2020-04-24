@@ -30,7 +30,7 @@ import (
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, false)
+	b := ungrouped.New(test.NewAggregationSelector(), false)
 
 	// Set initial lastValue values
 	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
@@ -67,16 +67,16 @@ func TestUngroupedStateless(t *testing.T) {
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]float64{
-		"sum.a/G~H&C~D":       60, // labels1
+		"sum.a/C~D&G~H":       60, // labels1
 		"sum.a/C~D&E~F":       20, // labels2
 		"sum.a/":              40, // labels3
-		"sum.b/G~H&C~D":       60, // labels1
+		"sum.b/C~D&G~H":       60, // labels1
 		"sum.b/C~D&E~F":       20, // labels2
 		"sum.b/":              40, // labels3
-		"lastvalue.a/G~H&C~D": 50, // labels1
+		"lastvalue.a/C~D&G~H": 50, // labels1
 		"lastvalue.a/C~D&E~F": 20, // labels2
 		"lastvalue.a/":        30, // labels3
-		"lastvalue.b/G~H&C~D": 50, // labels1
+		"lastvalue.b/C~D&G~H": 50, // labels1
 		"lastvalue.b/C~D&E~F": 20, // labels2
 		"lastvalue.b/":        30, // labels3
 	}, records.Map)
@@ -92,7 +92,7 @@ func TestUngroupedStateless(t *testing.T) {
 
 func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), test.SdkEncoder, true)
+	b := ungrouped.New(test.NewAggregationSelector(), true)
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
@@ -109,8 +109,8 @@ func TestUngroupedStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/G~H&C~D": 10, // labels1
-		"sum.b/G~H&C~D": 10, // labels1
+		"sum.a/C~D&G~H": 10, // labels1
+		"sum.b/C~D&G~H": 10, // labels1
 	}, records1.Map)
 
 	// Test that state was NOT reset
@@ -149,7 +149,7 @@ func TestUngroupedStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/G~H&C~D": 30,
-		"sum.b/G~H&C~D": 30,
+		"sum.a/C~D&G~H": 30,
+		"sum.b/C~D&G~H": 30,
 	}, records4.Map)
 }

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -51,6 +52,8 @@ func initTracer() {
 
 func main() {
 	initTracer()
+	url := flag.String("server", "http://localhost:7777/hello", "server url")
+	flag.Parse()
 
 	client := http.DefaultClient
 	ctx := correlation.NewContext(context.Background(),
@@ -62,7 +65,7 @@ func main() {
 	tr := global.Tracer("example/client")
 	err := tr.WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
-			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
+			req, _ := http.NewRequest("GET", *url, nil)
 
 			ctx, req = httptrace.W3C(ctx, req)
 			httptrace.Inject(ctx, req)
@@ -85,5 +88,5 @@ func main() {
 	fmt.Printf("Response Received: %s\n\n\n", body)
 	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
 	time.Sleep(10 * time.Second)
-	fmt.Printf("Inspect traces on stdout")
+	fmt.Printf("Inspect traces on stdout\n")
 }

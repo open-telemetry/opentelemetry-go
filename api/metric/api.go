@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Provider supports named Meter instances.
@@ -38,8 +37,6 @@ type Config struct {
 	Description string
 	// Unit is an optional field describing the metric instrument.
 	Unit unit.Unit
-	// Resource describes the entity for which measurements are made.
-	Resource resource.Resource
 	// LibraryName is the name given to the Meter that created
 	// this instrument.  See `Provider`.
 	LibraryName string
@@ -132,12 +129,6 @@ func (d Descriptor) NumberKind() core.NumberKind {
 	return d.numberKind
 }
 
-// Resource returns the Resource describing the entity for which the metric
-// instrument measures.
-func (d Descriptor) Resource() resource.Resource {
-	return d.config.Resource
-}
-
 // LibraryName returns the metric instrument's library name, typically
 // given via a call to Provider.Meter().
 func (d Descriptor) LibraryName() string {
@@ -170,11 +161,11 @@ type Meter interface {
 
 	// RegisterInt64Observer creates a new integral observer with a
 	// given name, running a given callback, and customized with passed
-	// options. Callback can be nil.
+	// options. Callback may be nil.
 	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
 	// RegisterFloat64Observer creates a new floating point observer
 	// with a given name, running a given callback, and customized with
-	// passed options. Callback can be nil.
+	// passed options. Callback may be nil.
 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
 }
 
@@ -198,19 +189,6 @@ type unitOption unit.Unit
 
 func (u unitOption) Apply(config *Config) {
 	config.Unit = unit.Unit(u)
-}
-
-// WithResource applies provided Resource.
-//
-// This will override any existing Resource.
-func WithResource(r resource.Resource) Option {
-	return resourceOption(r)
-}
-
-type resourceOption resource.Resource
-
-func (r resourceOption) Apply(config *Config) {
-	config.Resource = resource.Resource(r)
 }
 
 // WithLibraryName applies provided library name.  This is meant for

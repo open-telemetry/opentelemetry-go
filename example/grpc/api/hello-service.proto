@@ -17,6 +17,12 @@ package api;
 
 service HelloService {
   rpc SayHello (HelloRequest) returns (HelloResponse);
+
+  rpc SayHelloServerStream (HelloRequest) returns (stream HelloResponse);
+
+  rpc SayHelloClientStream (stream HelloRequest) returns (HelloResponse);
+
+  rpc SayHelloBidiStream (stream HelloRequest) returns (stream HelloResponse);
 }
 
 message HelloRequest {

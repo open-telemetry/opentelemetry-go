@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testBatcher struct {
@@ -67,7 +68,7 @@ var _ push.Clock = mockClock{}
 var _ push.Ticker = mockTicker{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	batcher := &testBatcher{
 		t:             t,
@@ -103,7 +104,7 @@ func (b *testBatcher) FinishedCollection() {
 func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	labels := export.IteratorToSlice(record.Labels().Iter())
+	labels := record.Labels().ToSlice()
 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
 	return nil
 }
@@ -114,7 +115,7 @@ func (b *testBatcher) getCounts() (checkpoints, finishes int) {
 	return b.checkpoints, b.finishes
 }
 
-func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *testExporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++

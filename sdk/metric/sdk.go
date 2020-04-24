@@ -18,18 +18,16 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"runtime"
-	"sort"
 	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -62,47 +60,21 @@ type (
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
 
-		// resource represents the entity producing telemetry.
-		resource resource.Resource
-
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
-		asyncSortSlice sortedLabels
+		asyncSortSlice label.Sortable
 	}
 
 	syncInstrument struct {
 		instrument
 	}
 
-	// orderedLabels is a variable-size array of core.KeyValue
-	// suitable for use as a map key.
-	orderedLabels interface{}
-
-	// labels represents an internalized set of labels that have been
-	// sorted and deduplicated.
-	labels struct {
-		// cachedEncoderID needs to be aligned for atomic access
-		cachedEncoderID int64
-		// cachedEncoded is an encoded version of ordered
-		// labels
-		cachedEncoded string
-
-		// ordered is the output of sorting and deduplicating
-		// the labels, copied into an array of the correct
-		// size for use as a map key.
-		ordered orderedLabels
-
-		// cachedValue contains a `reflect.Value` of the `ordered`
-		// member
-		cachedValue reflect.Value
-	}
-
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
 		descriptor *metric.Descriptor
-		ordered    orderedLabels
+		ordered    label.Distinct
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -114,21 +86,28 @@ type (
 		// SDK.current map.
 		refMapped refcountMapped
 
-		// modified is an atomic boolean that tracks if the current record
-		// was modified since the last Collect().
-		//
-		// modified has to be aligned for 64-bit atomic operations.
-		modified int64
+		// updateCount is incremented on every Update.
+		updateCount int64
+
+		// collectedCount is set to updateCount on collection,
+		// supports checking for no updates during a round.
+		collectedCount int64
+
+		// storage is the stored label set for this record,
+		// except in cases where a label set is shared due to
+		// batch recording.
+		storage label.Set
 
 		// labels is the processed label set for this record.
-		//
-		// labels has to be aligned for 64-bit atomic operations.
-		labels labels
+		// this may refer to the `storage` field in another
+		// record if this label set is shared resulting from
+		// `RecordBatch`.
+		labels *label.Set
 
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.
-		sortSlice sortedLabels
+		sortSlice label.Sortable
 
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
@@ -148,14 +127,14 @@ type (
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[orderedLabels]labeledRecorder
+		recorders map[label.Distinct]*labeledRecorder
 
 		callback func(func(core.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
-		modifiedEpoch int64
-		labels        labels
+		observedEpoch int64
+		labels        *label.Set
 		recorder      export.Aggregator
 	}
 
@@ -163,20 +142,10 @@ type (
 )
 
 var (
-	_ api.MeterImpl       = &SDK{}
-	_ api.AsyncImpl       = &asyncInstrument{}
-	_ api.SyncImpl        = &syncInstrument{}
-	_ api.BoundSyncImpl   = &record{}
-	_ api.Resourcer       = &SDK{}
-	_ export.LabelStorage = &labels{}
-	_ export.Labels       = &labels{}
-
-	kvType = reflect.TypeOf(core.KeyValue{})
-
-	emptyLabels = labels{
-		ordered:     [0]core.KeyValue{},
-		cachedValue: reflect.ValueOf([0]core.KeyValue{}),
-	}
+	_ api.MeterImpl     = &SDK{}
+	_ api.AsyncImpl     = &asyncInstrument{}
+	_ api.SyncImpl      = &syncInstrument{}
+	_ api.BoundSyncImpl = &record{}
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -212,31 +181,31 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	// We are in a single-threaded context.  Note: this assumption
 	// could be violated if the user added concurrency within
 	// their callback.
-	labels := a.meter.makeLabels(kvs, &a.meter.asyncSortSlice)
+	labels := label.NewSetWithSortable(kvs, &a.meter.asyncSortSlice)
 
-	lrec, ok := a.recorders[labels.ordered]
+	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
-		if lrec.modifiedEpoch == a.meter.currentEpoch {
+		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
 			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
 		} else {
-			lrec.modifiedEpoch = a.meter.currentEpoch
+			lrec.observedEpoch = a.meter.currentEpoch
 		}
-		a.recorders[labels.ordered] = lrec
+		a.recorders[labels.Equivalent()] = lrec
 		return lrec.recorder
 	}
 	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
-		a.recorders = make(map[orderedLabels]labeledRecorder)
+		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	a.recorders[labels.ordered] = labeledRecorder{
+	a.recorders[labels.Equivalent()] = &labeledRecorder{
 		recorder:      rec,
-		labels:        labels,
-		modifiedEpoch: a.meter.currentEpoch,
+		labels:        &labels,
+		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
 }
@@ -250,25 +219,27 @@ func (m *SDK) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *record {
+func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set) *record {
 	var rec *record
-	var labels labels
+	var equiv label.Distinct
 
-	if lptr == nil || lptr.ordered == nil {
+	if labelPtr == nil {
 		// This memory allocation may not be used, but it's
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		labels = s.meter.makeLabels(kvs, &rec.sortSlice)
+		rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
+		rec.labels = &rec.storage
+		equiv = rec.storage.Equivalent()
 	} else {
-		labels = *lptr
+		equiv = labelPtr.Equivalent()
 	}
 
 	// Create lookup key for sync.Map (one allocation, as this
 	// passes through an interface{})
 	mk := mapkey{
 		descriptor: &s.descriptor,
-		ordered:    labels.ordered,
+		ordered:    equiv,
 	}
 
 	if actual, ok := s.meter.current.Load(mk); ok {
@@ -284,9 +255,9 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, lptr *labels) *recor
 
 	if rec == nil {
 		rec = &record{}
+		rec.labels = labelPtr
 	}
 	rec.refMapped = refcountMapped{value: 2}
-	rec.labels = labels
 	rec.inst = s
 	rec.recorder = s.meter.batcher.AggregatorFor(&s.descriptor)
 
@@ -348,174 +319,11 @@ func New(batcher export.Batcher, opts ...Option) *SDK {
 	return &SDK{
 		batcher:      batcher,
 		errorHandler: c.ErrorHandler,
-		resource:     c.Resource,
 	}
 }
 
 func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
-}
-
-// makeLabels returns a `labels` corresponding to the arguments.  Labels
-// are sorted and de-duplicated, with last-value-wins semantics.  Note that
-// sorting and deduplicating happens in-place to avoid allocation, so the
-// passed slice will be modified.  The `sortSlice` argument refers to a memory
-// location used temporarily while sorting the slice, to avoid a memory
-// allocation.
-func (m *SDK) makeLabels(kvs []core.KeyValue, sortSlice *sortedLabels) labels {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return emptyLabels
-	}
-
-	*sortSlice = kvs
-
-	// Sort and de-duplicate.  Note: this use of `sortSlice`
-	// avoids an allocation because it is a pointer.
-	sort.Stable(sortSlice)
-
-	*sortSlice = nil
-
-	oi := 1
-	for i := 1; i < len(kvs); i++ {
-		if kvs[i-1].Key == kvs[i].Key {
-			// Overwrite the value for "last-value wins".
-			kvs[oi-1].Value = kvs[i].Value
-			continue
-		}
-		kvs[oi] = kvs[i]
-		oi++
-	}
-	kvs = kvs[0:oi]
-	return computeOrderedLabels(kvs)
-}
-
-// NumLabels is a part of an implementation of the export.LabelStorage
-// interface.
-func (ls *labels) NumLabels() int {
-	return ls.cachedValue.Len()
-}
-
-// GetLabel is a part of an implementation of the export.LabelStorage
-// interface.
-func (ls *labels) GetLabel(idx int) core.KeyValue {
-	return ls.cachedValue.Index(idx).Interface().(core.KeyValue)
-}
-
-// Iter is a part of an implementation of the export.Labels interface.
-func (ls *labels) Iter() export.LabelIterator {
-	return export.NewLabelIterator(ls)
-}
-
-// Encoded is a part of an implementation of the export.Labels
-// interface.
-func (ls *labels) Encoded(encoder export.LabelEncoder) string {
-	id := encoder.ID()
-	if id <= 0 {
-		// Punish misbehaving encoders by not even trying to
-		// cache them
-		return encoder.Encode(ls.Iter())
-	}
-	cachedID := atomic.LoadInt64(&ls.cachedEncoderID)
-	// If cached ID is less than zero, it means that other
-	// goroutine is currently caching the encoded labels and the
-	// ID of the encoder. Wait until it's done - it's a
-	// nonblocking op.
-	for cachedID < 0 {
-		// Let other goroutine finish its work.
-		runtime.Gosched()
-		cachedID = atomic.LoadInt64(&ls.cachedEncoderID)
-	}
-	// At this point, cachedID is either 0 (nothing cached) or
-	// some other number.
-	//
-	// If cached ID is the same as ID of the passed encoder, we've
-	// got the fast path.
-	if cachedID == id {
-		return ls.cachedEncoded
-	}
-	// If we are here, either some other encoder cached its
-	// encoded labels or the cache is still for the taking. Either
-	// way, we need to compute the encoded labels anyway.
-	encoded := encoder.Encode(ls.Iter())
-	// If some other encoder took the cache, then we just return
-	// our encoded labels. That's a slow path.
-	if cachedID > 0 {
-		return encoded
-	}
-	// Try to take the cache for ourselves. This is the place
-	// where other encoders may be "blocked".
-	if atomic.CompareAndSwapInt64(&ls.cachedEncoderID, 0, -1) {
-		// The cache is ours.
-		ls.cachedEncoded = encoded
-		atomic.StoreInt64(&ls.cachedEncoderID, id)
-	}
-	return encoded
-}
-
-func computeOrderedLabels(kvs []core.KeyValue) labels {
-	var ls labels
-	ls.ordered = computeOrderedFixed(kvs)
-	if ls.ordered == nil {
-		ls.ordered = computeOrderedReflect(kvs)
-	}
-	ls.cachedValue = reflect.ValueOf(ls.ordered)
-	return ls
-}
-
-func computeOrderedFixed(kvs []core.KeyValue) orderedLabels {
-	switch len(kvs) {
-	case 1:
-		ptr := new([1]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 2:
-		ptr := new([2]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 3:
-		ptr := new([3]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 4:
-		ptr := new([4]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 5:
-		ptr := new([5]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 6:
-		ptr := new([6]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 7:
-		ptr := new([7]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 8:
-		ptr := new([8]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 9:
-		ptr := new([9]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	case 10:
-		ptr := new([10]core.KeyValue)
-		copy((*ptr)[:], kvs)
-		return *ptr
-	default:
-		return nil
-	}
-}
-
-func computeOrderedReflect(kvs []core.KeyValue) interface{} {
-	at := reflect.New(reflect.ArrayOf(len(kvs), kvType)).Elem()
-	for i, kv := range kvs {
-		*(at.Index(i).Addr().Interface().(*core.KeyValue)) = kv
-	}
-	return at.Interface()
 }
 
 func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
@@ -561,25 +369,39 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
+		// Note: always continue to iterate over the entire
+		// map by returning `true` in this function.
 		inuse := value.(*record)
-		unmapped := inuse.refMapped.tryUnmap()
-		// If able to unmap then remove the record from the current Map.
-		if unmapped {
-			// TODO: Consider leaving the record in the map for one
-			// collection interval? Since creating records is relatively
-			// expensive, this would optimize common cases of ongoing use.
-			m.current.Delete(inuse.mapkey())
+
+		mods := atomic.LoadInt64(&inuse.updateCount)
+		coll := inuse.collectedCount
+
+		if mods != coll {
+			// Updates happened in this interval,
+			// checkpoint and continue.
+			checkpointed += m.checkpointRecord(ctx, inuse)
+			inuse.collectedCount = mods
+			return true
 		}
 
-		// Always report the values if a reference to the Record is active,
-		// this is to keep the previous behavior.
-		// TODO: Reconsider this logic.
-		if inuse.refMapped.inUse() || atomic.LoadInt64(&inuse.modified) != 0 {
-			atomic.StoreInt64(&inuse.modified, 0)
+		// Having no updates since last collection, try to unmap:
+		if unmapped := inuse.refMapped.tryUnmap(); !unmapped {
+			// The record is referenced by a binding, continue.
+			return true
+		}
+
+		// If any other goroutines are now trying to re-insert this
+		// entry in the map, they are busy calling Gosched() awaiting
+		// this deletion:
+		m.current.Delete(inuse.mapkey())
+
+		// There's a potential race between `LoadInt64` and
+		// `tryUnmap` in this function.  Since this is the
+		// last we'll see of this record, checkpoint
+		mods = atomic.LoadInt64(&inuse.updateCount)
+		if mods != coll {
 			checkpointed += m.checkpointRecord(ctx, inuse)
 		}
-
-		// Always continue to iterate over the entire map.
 		return true
 	})
 
@@ -600,7 +422,7 @@ func (m *SDK) collectAsync(ctx context.Context) int {
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
-	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, &r.labels)
+	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
 func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
@@ -610,9 +432,9 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	checkpointed := 0
 	for encodedLabels, lrec := range a.recorders {
 		lrec := lrec
-		epochDiff := m.currentEpoch - lrec.modifiedEpoch
+		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, &lrec.labels)
+			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -626,7 +448,7 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *labels) int {
+func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
 	if recorder == nil {
 		return 0
 	}
@@ -640,31 +462,21 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	return 1
 }
 
-// Resource returns the Resource this SDK was created with describing the
-// entity for which it creates instruments for.
-//
-// Resource means that the SDK implements the Resourcer interface and
-// therefore all metric instruments it creates will inherit its
-// Resource by default unless explicitly overwritten.
-func (m *SDK) Resource() resource.Resource {
-	return m.resource
-}
-
 // RecordBatch enters a batch of metric events.
 func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
 	// ordered labels.
-	var labels labels
+	var labelsPtr *label.Set
 	for i, meas := range measurements {
 		s := meas.SyncImpl().(*syncInstrument)
 
-		h := s.acquireHandle(kvs, &labels)
+		h := s.acquireHandle(kvs, labelsPtr)
 
 		// Re-use labels for the next measurement.
 		if i == 0 {
-			labels = h.labels
+			labelsPtr = h.labels
 		}
 
 		defer h.Unbind()
@@ -685,19 +497,18 @@ func (r *record) RecordOne(ctx context.Context, number core.Number) {
 		r.inst.meter.errorHandler(err)
 		return
 	}
+	// Record was modified, inform the Collect() that things need
+	// to be collected while the record is still mapped.
+	atomic.AddInt64(&r.updateCount, 1)
 }
 
 func (r *record) Unbind() {
-	// Record was modified, inform the Collect() that things need to be collected.
-	// TODO: Reconsider if we should marked as modified when an Update happens and
-	// collect only when updates happened even for Bounds.
-	atomic.StoreInt64(&r.modified, 1)
 	r.refMapped.unref()
 }
 
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: &r.inst.descriptor,
-		ordered:    r.labels.ordered,
+		ordered:    r.labels.Equivalent(),
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Controller organizes a periodic push of metric data.
@@ -30,6 +31,7 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	sdk          *sdk.SDK
+	resource     *resource.Resource
 	uniq         metric.MeterImpl
 	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
@@ -77,9 +79,10 @@ func New(batcher export.Batcher, exporter export.Exporter, period time.Duration,
 		opt.Apply(c)
 	}
 
-	impl := sdk.New(batcher, sdk.WithResource(c.Resource), sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.New(batcher, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		sdk:          impl,
+		resource:     c.Resource,
 		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
 		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
@@ -175,7 +178,7 @@ func (c *Controller) tick() {
 		mtx:      &c.collectLock,
 		delegate: c.batcher.CheckpointSet(),
 	}
-	err := c.exporter.Export(ctx, checkpointSet)
+	err := c.exporter.Export(ctx, c.resource, checkpointSet)
 	c.batcher.FinishedCollection()
 
 	if err != nil {

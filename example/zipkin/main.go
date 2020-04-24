@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"time"
@@ -31,10 +32,11 @@ import (
 var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer() {
+func initTracer(url string) {
 	// Create Zipkin Exporter
 	exporter, err := zipkin.NewExporter(
-		"http://localhost:9411/api/v2/spans",
+		url,
+		"zipkin-example",
 		zipkin.WithLogger(logger),
 	)
 	if err != nil {
@@ -58,7 +60,10 @@ func initTracer() {
 }
 
 func main() {
-	initTracer()
+	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
+	flag.Parse()
+
+	initTracer(*url)
 
 	ctx := context.Background()
 

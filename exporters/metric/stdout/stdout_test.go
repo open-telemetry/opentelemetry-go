@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testFixture struct {
@@ -44,9 +45,10 @@ type testFixture struct {
 	ctx      context.Context
 	exporter *stdout.Exporter
 	output   *bytes.Buffer
+	resource *resource.Resource
 }
 
-func newFixture(t *testing.T, config stdout.Config) testFixture {
+func newFixture(t *testing.T, resource *resource.Resource, config stdout.Config) testFixture {
 	buf := &bytes.Buffer{}
 	config.Writer = buf
 	config.DoNotPrintTime = true
@@ -59,6 +61,7 @@ func newFixture(t *testing.T, config stdout.Config) testFixture {
 		ctx:      context.Background(),
 		exporter: exp,
 		output:   buf,
+		resource: resource,
 	}
 }
 
@@ -67,7 +70,7 @@ func (fix testFixture) Output() string {
 }
 
 func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
-	err := fix.exporter.Export(fix.ctx, checkpointSet)
+	err := fix.exporter.Export(fix.ctx, fix.resource, checkpointSet)
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
@@ -93,7 +96,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	before := time.Now()
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	ctx := context.Background()
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Int64NumberKind)
@@ -103,7 +106,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	checkpointSet.Add(&desc, lvagg)
 
-	if err := exporter.Export(ctx, checkpointSet); err != nil {
+	if err := exporter.Export(ctx, nil, checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
@@ -137,9 +140,9 @@ func TestStdoutTimestamp(t *testing.T) {
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t, nil, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
 	cagg := sum.New()
@@ -154,9 +157,9 @@ func TestStdoutCounterFormat(t *testing.T) {
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t, nil, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -171,9 +174,9 @@ func TestStdoutLastValueFormat(t *testing.T) {
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t, nil, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
@@ -189,11 +192,11 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 }
 
 func TestStdoutMeasureFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{
+	fix := newFixture(t, nil, stdout.Config{
 		PrettyPrint: true,
 	})
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
 	magg := array.New()
@@ -245,9 +248,9 @@ func TestStdoutNoData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fix := newFixture(t, stdout.Config{})
+			fix := newFixture(t, nil, stdout.Config{})
 
-			checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+			checkpointSet := test.NewCheckpointSet()
 
 			magg := tc
 			magg.Checkpoint(fix.ctx, &desc)
@@ -262,9 +265,9 @@ func TestStdoutNoData(t *testing.T) {
 }
 
 func TestStdoutLastValueNotSet(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t, nil, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+	checkpointSet := test.NewCheckpointSet()
 
 	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -275,4 +278,56 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 	fix.Export(checkpointSet)
 
 	require.Equal(t, `{"updates":null}`, fix.Output())
+}
+
+func TestStdoutResource(t *testing.T) {
+	type testCase struct {
+		expect string
+		res    *resource.Resource
+		attrs  []core.KeyValue
+	}
+	newCase := func(expect string, res *resource.Resource, attrs ...core.KeyValue) testCase {
+		return testCase{
+			expect: expect,
+			res:    res,
+			attrs:  attrs,
+		}
+	}
+	testCases := []testCase{
+		newCase("R1=V1,R2=V2,A=B,C=D",
+			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
+			key.String("A", "B"),
+			key.String("C", "D")),
+		newCase("R1=V1,R2=V2",
+			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
+		),
+		newCase("A=B,C=D",
+			nil,
+			key.String("A", "B"),
+			key.String("C", "D"),
+		),
+		// We explicitly do not de-duplicate between resources
+		// and metric labels in this exporter.
+		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
+			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
+			key.String("R1", "V3"),
+			key.String("R2", "V4")),
+	}
+
+	for _, tc := range testCases {
+		fix := newFixture(t, tc.res, stdout.Config{})
+
+		checkpointSet := test.NewCheckpointSet()
+
+		desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+		lvagg := lastvalue.New()
+		aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), &desc)
+		lvagg.Checkpoint(fix.ctx, &desc)
+
+		checkpointSet.Add(&desc, lvagg, tc.attrs...)
+
+		fix.Export(checkpointSet)
+
+		require.Equal(t, `{"updates":[{"name":"test.name{`+tc.expect+`}","last":123.456}]}`, fix.Output())
+	}
 }

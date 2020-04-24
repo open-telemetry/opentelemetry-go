@@ -15,21 +15,24 @@
 package resource_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
-	kv11 = core.Key("k1").String("v11")
-	kv12 = core.Key("k1").String("v12")
-	kv21 = core.Key("k2").String("v21")
-	kv31 = core.Key("k3").String("v31")
-	kv41 = core.Key("k4").String("v41")
+	kv11 = key.String("k1", "v11")
+	kv12 = key.String("k1", "v12")
+	kv21 = key.String("k2", "v21")
+	kv31 = key.String("k3", "v31")
+	kv41 = key.String("k4", "v41")
 )
 
 func TestNew(t *testing.T) {
@@ -40,12 +43,12 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name: "New with common key order1",
-			in:   []core.KeyValue{kv11, kv12, kv21},
+			in:   []core.KeyValue{kv12, kv11, kv21},
 			want: []core.KeyValue{kv11, kv21},
 		},
 		{
 			name: "New with common key order2",
-			in:   []core.KeyValue{kv12, kv11, kv21},
+			in:   []core.KeyValue{kv11, kv12, kv21},
 			want: []core.KeyValue{kv12, kv21},
 		},
 		{
@@ -154,59 +157,68 @@ func TestString(t *testing.T) {
 	}{
 		{
 			kvs:  nil,
-			want: "Resource()",
+			want: "",
 		},
 		{
 			kvs:  []core.KeyValue{},
-			want: "Resource()",
+			want: "",
 		},
 		{
 			kvs:  []core.KeyValue{kv11},
-			want: "Resource(k1=v11)",
+			want: "k1=v11",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv12},
-			want: "Resource(k1=v11)",
+			want: "k1=v12",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv21},
-			want: "Resource(k1=v11,k2=v21)",
+			want: "k1=v11,k2=v21",
 		},
 		{
 			kvs:  []core.KeyValue{kv21, kv11},
-			want: "Resource(k1=v11,k2=v21)",
+			want: "k1=v11,k2=v21",
 		},
 		{
 			kvs:  []core.KeyValue{kv11, kv21, kv31},
-			want: "Resource(k1=v11,k2=v21,k3=v31)",
+			want: "k1=v11,k2=v21,k3=v31",
 		},
 		{
 			kvs:  []core.KeyValue{kv31, kv11, kv21},
-			want: "Resource(k1=v11,k2=v21,k3=v31)",
+			want: "k1=v11,k2=v21,k3=v31",
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String("a"), core.Key("B").String("b")},
-			want: "Resource(A=a,B=b)",
+			kvs:  []core.KeyValue{key.String("A", "a"), key.String("B", "b")},
+			want: "A=a,B=b",
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String("a,B=b")},
-			want: `Resource(A=a\,B\=b)`,
+			kvs:  []core.KeyValue{key.String("A", "a,B=b")},
+			want: `A=a\,B\=b`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A").String(`a,B\=b`)},
-			want: `Resource(A=a\,B\\\=b)`,
+			kvs:  []core.KeyValue{key.String("A", `a,B\=b`)},
+			want: `A=a\,B\\\=b`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key("A=a,B").String(`b`)},
-			want: `Resource(A\=a\,B=b)`,
+			kvs:  []core.KeyValue{key.String("A=a,B", `b`)},
+			want: `A\=a\,B=b`,
 		},
 		{
-			kvs:  []core.KeyValue{core.Key(`A=a\,B`).String(`b`)},
-			want: `Resource(A\=a\\\,B=b)`,
+			kvs:  []core.KeyValue{key.String(`A=a\,B`, `b`)},
+			want: `A\=a\\\,B=b`,
 		},
 	} {
 		if got := resource.New(test.kvs...).String(); got != test.want {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
 		}
 	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	r := resource.New(key.Int64("A", 1), key.String("C", "D"))
+	data, err := json.Marshal(r)
+	require.NoError(t, err)
+	require.Equal(t,
+		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
+		string(data))
 }

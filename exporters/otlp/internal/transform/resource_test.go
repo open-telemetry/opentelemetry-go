@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -38,7 +39,7 @@ func TestEmptyResource(t *testing.T) {
  */
 
 func TestResourceAttributes(t *testing.T) {
-	attrs := []core.KeyValue{core.Key("one").Int(1), core.Key("two").Int(2)}
+	attrs := []core.KeyValue{key.Int("one", 1), key.Int("two", 2)}
 
 	got := Resource(resource.New(attrs...)).GetAttributes()
 	if !assert.Len(t, attrs, 2) {
