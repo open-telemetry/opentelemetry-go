@@ -66,17 +66,6 @@ type (
 		asyncSortSlice label.Sortable
 	}
 
-	// runnerPair is a map entry for Observer callback runners.
-	runnerPair struct {
-		// runner is used as a map key here.  The API ensures
-		// that all callbacks are pointers for this reason.
-		runner metric.AsyncRunner
-
-		// inst refers to a non-nil instrument when `runner`
-		// is a metric.AsyncSingleRunner.
-		inst *asyncInstrument
-	}
-
 	syncInstrument struct {
 		instrument
 	}

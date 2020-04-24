@@ -45,17 +45,6 @@ type (
 		registered map[string]apimetric.Meter
 	}
 
-	// runnerPair is a map entry for Observer callback runners.
-	runnerPair struct {
-		// runner is used as a map key here.  The API ensures
-		// that all callbacks are pointers for this reason.
-		runner metric.AsyncRunner
-
-		// inst refers to a non-nil instrument when `runner`
-		// is a metric.AsyncSingleRunner.
-		inst *Async
-	}
-
 	MeterImpl struct {
 		lock sync.Mutex
 
@@ -195,7 +184,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 }
 
 func (m *MeterImpl) CollectAsyncSingle(labels []core.KeyValue, obs metric.Observation) {
-	m.collect(nil, labels, []Measurement{
+	m.collect(context.Background(), labels, []Measurement{
 		{
 			Instrument: obs.AsyncImpl(),
 			Number:     obs.Number(),
@@ -212,7 +201,7 @@ func (m *MeterImpl) CollectAsyncBatch(labels []core.KeyValue, obs []metric.Obser
 			Number:     o.Number(),
 		}
 	}
-	m.collect(nil, labels, mm)
+	m.collect(context.Background(), labels, mm)
 }
 
 func (m *MeterImpl) collect(ctx context.Context, labels []core.KeyValue, measurements []Measurement) {
