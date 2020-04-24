@@ -221,58 +221,86 @@ func WrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Obser
 	return Float64Observer{asyncInstrument: common}, err
 }
 
-// @@@ comments
+// AsyncCollector is an interface used between the MeterImpl and the
+// AsyncInstrumentState helper below.  This interface is implemented by
+// the SDK to provide support for running observer callbacks.
+type AsyncCollector interface {
+	// CollectAsyncSingle passes a single observation to the
+	// MeterImpl.
+	CollectAsyncSingle([]core.KeyValue, Observation)
 
-// runnerPair is a map entry for Observer callback runners.
-type runnerPair struct {
+	// CollectAsyncSingle passes a batch observation to the
+	// MeterImpl.
+	CollectAsyncBatch([]core.KeyValue, []Observation)
+}
+
+// AsyncInstrumentState manages an ordered set of asynchronous
+// instruments and the distinct runners, taking into account batch
+// observer callbacks.
+type AsyncInstrumentState struct {
+	lock sync.Mutex
+
+	// runnerMap keeps the set of runners that will run each
+	// collection interval.  Singletons are entered with a real
+	// instrument each, batch observers are entered with a nil
+	// instrument, ensuring that when a singleton callback is used
+	// repeatedly, it is excuted repeatedly in the interval, while
+	// when a batch callback is used repeatedly, it only executes
+	// once per interval.
+	runnerMap map[asyncRunnerPair]struct{}
+
+	// runners maintains the set of runners in the order they were
+	// registered.
+	runners []asyncRunnerPair
+
+	// instruments maintains the set of instruments in the order
+	// they were registered.
+	instruments []AsyncImpl
+}
+
+// asyncRunnerPair is a map entry for Observer callback runners.
+type asyncRunnerPair struct {
 	// runner is used as a map key here.  The API ensures
 	// that all callbacks are pointers for this reason.
 	runner AsyncRunner
 
-	// inst refers to a non-nil instrument when `runner`
-	// is a AsyncSingleRunner.
+	// inst refers to a non-nil instrument when `runner` is a
+	// AsyncSingleRunner.
 	inst AsyncImpl
 }
 
-type AsyncCollector interface {
-	CollectAsyncSingle([]core.KeyValue, Observation)
-	CollectAsyncBatch([]core.KeyValue, []Observation)
-}
-
-type AsyncInstrumentState struct {
-	lock        sync.Mutex
-	runnerMap   map[runnerPair]struct{}
-	runners     []runnerPair
-	instruments []AsyncImpl
-}
-
+// NewAsyncInstrumentState returns a new *AsyncInstrumentState, for
+// use by MeterImpl to manage running the set of observer callbacks in
+// the correct order.
 func NewAsyncInstrumentState() *AsyncInstrumentState {
 	return &AsyncInstrumentState{
-		runnerMap: map[runnerPair]struct{}{},
+		runnerMap: map[asyncRunnerPair]struct{}{},
 	}
 }
 
+// Instruments returns the asynchronous instruments managed by this
+// object, the set that should be checkpointed after observers are
+// run.
 func (a *AsyncInstrumentState) Instruments() []AsyncImpl {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	return a.instruments
 }
 
+// Register adds a new asynchronous instrument to by managed by this
+// object.
 func (a *AsyncInstrumentState) Register(inst AsyncImpl, runner AsyncRunner) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	a.instruments = append(a.instruments, inst)
 
-	// runnerPair reflects this callback in the asyncRunners list.
-	// If this is a batch runner, the instrument is nil.  If this
-	// is a single-Observer runner, the instrument is included.
-	// This ensures that batch callbacks are called once and
-	// single callbacks are called once per instrument.  This
-	// handles the case where a single callback is used for more
-	// than one Observer by calling the callback once per
-	// instrument.
-	rp := runnerPair{
+	// asyncRunnerPair reflects this callback in the asyncRunners
+	// list.  If this is a batch runner, the instrument is nil.
+	// If this is a single-Observer runner, the instrument is
+	// included.  This ensures that batch callbacks are called
+	// once and single callbacks are called once per instrument.
+	rp := asyncRunnerPair{
 		runner: runner,
 	}
 	if _, ok := runner.(AsyncSingleRunner); ok {
@@ -285,6 +313,7 @@ func (a *AsyncInstrumentState) Register(inst AsyncImpl, runner AsyncRunner) {
 	}
 }
 
+// Run executes the complete set of observer callbacks.
 func (a *AsyncInstrumentState) Run(collector AsyncCollector) {
 	a.lock.Lock()
 	runners := a.runners

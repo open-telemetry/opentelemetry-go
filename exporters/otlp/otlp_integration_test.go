@@ -156,12 +156,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			switch data.nKind {
 			case core.Int64NumberKind:
 				callback := func(v int64) metricapi.Int64ObserverCallback {
-					return metricapi.Int64ObserverCallback(func(result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
+					return metricapi.NewInt64ObserverCallback(func(result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
 				}(data.val)
 				metricapi.Must(meter).RegisterInt64Observer(name, callback)
 			case core.Float64NumberKind:
 				callback := func(v float64) metricapi.Float64ObserverCallback {
-					return metricapi.Float64ObserverCallback(func(result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
+					return metricapi.NewFloat64ObserverCallback(func(result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
 				metricapi.Must(meter).RegisterFloat64Observer(name, callback)
 			default:

@@ -60,7 +60,8 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
+	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one",
+		metric.NewFloat64ObserverCallback(cb),
 		metric.WithDescription("A measure set to 1.0"),
 	)
 

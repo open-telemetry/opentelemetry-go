@@ -169,7 +169,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number core.Number, labels []core.KeyValue) {
+func (a *asyncInstrument) observe(number core.Number, labels *label.Set) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -186,12 +186,10 @@ func (a *asyncInstrument) observe(number core.Number, labels []core.KeyValue) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
+func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	// We are in a single-threaded context.  Note: this assumption
 	// could be violated if the user added concurrency within
 	// their callback.
-	labels := label.NewSetWithSortable(kvs, &a.meter.asyncSortSlice)
-
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		if lrec.observedEpoch == a.meter.currentEpoch {
@@ -213,7 +211,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	// but will be revisited later.
 	a.recorders[labels.Equivalent()] = &labeledRecorder{
 		recorder:      rec,
-		labels:        &labels,
+		labels:        labels,
 		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
@@ -417,9 +415,22 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) CollectAsyncBatch(kvs []core.KeyValue, obs []metric.Observation) {
+func (m *SDK) CollectAsyncBatch(kvs []core.KeyValue, observations []metric.Observation) {
+	// Note an allocation of *label.Set here.
+	labels := label.NewSetWithSortable(kvs, &m.asyncSortSlice)
+
+	for _, obs := range observations {
+		inst := obs.AsyncImpl().(*asyncInstrument)
+		inst.observe(obs.Number(), &labels)
+	}
 }
+
 func (m *SDK) CollectAsyncSingle(kvs []core.KeyValue, obs metric.Observation) {
+	// Note an allocation of *label.Set here.
+	labels := label.NewSetWithSortable(kvs, &m.asyncSortSlice)
+
+	inst := obs.AsyncImpl().(*asyncInstrument)
+	inst.observe(obs.Number(), &labels)
 }
 
 func (m *SDK) collectAsync(ctx context.Context) int {
