@@ -8,6 +8,6 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.4.2
-	go.opentelemetry.io/otel/exporters/metric/prometheus v0.4.2
+	go.opentelemetry.io/otel v0.4.3
+	go.opentelemetry.io/otel/exporters/metric/prometheus v0.4.3
 )
