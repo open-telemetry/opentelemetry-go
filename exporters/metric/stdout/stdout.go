@@ -138,7 +138,7 @@ func NewExportPipeline(config Config, period time.Duration, opts ...push.Option)
 	if err != nil {
 		return nil, err
 	}
-	batcher := ungrouped.New(selector, exporter.config.LabelEncoder, true)
+	batcher := ungrouped.New(selector, true)
 	pusher := push.New(batcher, exporter, period, opts...)
 	pusher.Start()
 
