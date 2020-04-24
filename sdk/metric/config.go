@@ -14,8 +14,6 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/sdk/resource"
-
 // Config contains configuration for an SDK.
 type Config struct {
 	// ErrorHandler is the function called when the SDK encounters an error.
@@ -23,10 +21,6 @@ type Config struct {
 	// This option can be overridden after instantiation of the SDK
 	// with the `SetErrorHandler` method.
 	ErrorHandler ErrorHandler
-
-	// Resource is the OpenTelemetry resource associated with all Meters
-	// created by the SDK.
-	Resource *resource.Resource
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -44,15 +38,4 @@ type errorHandlerOption ErrorHandler
 
 func (o errorHandlerOption) Apply(config *Config) {
 	config.ErrorHandler = ErrorHandler(o)
-}
-
-// WithResource sets the Resource configuration option of a Config.
-func WithResource(r *resource.Resource) Option {
-	return resourceOption{r}
-}
-
-type resourceOption struct{ *resource.Resource }
-
-func (o resourceOption) Apply(config *Config) {
-	config.Resource = o.Resource
 }

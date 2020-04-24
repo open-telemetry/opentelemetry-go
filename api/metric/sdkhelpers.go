@@ -16,9 +16,9 @@ package metric
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterImpl is a convenient interface for SDK and test
@@ -106,29 +106,6 @@ func Configure(opts []Option) Config {
 	return config
 }
 
-// Resourcer is implemented by any value that has a Resource method,
-// which returns the Resource associated with the value.
-// The Resource method is used to set the Resource for Descriptors of new
-// metric instruments.
-type Resourcer interface {
-	Resource() *resource.Resource
-}
-
-// insertResource inserts a WithResource option at the beginning of opts
-// using the resource defined by impl if impl implements Resourcer.
-//
-// If opts contains a WithResource option already, that Option will take
-// precedence and overwrite the Resource set from impl.
-//
-// The returned []Option may uses the same underlying array as opts.
-func insertResource(impl MeterImpl, opts []Option) []Option {
-	if r, ok := impl.(Resourcer); ok {
-		// default to the impl resource and override if passed in opts.
-		return append([]Option{WithResource(r.Resource())}, opts...)
-	}
-	return opts
-}
-
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
 func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
@@ -143,7 +120,6 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls []core.KeyValue, 
 }
 
 func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
-	opts = insertResource(m.impl, opts)
 	desc := NewDescriptor(name, metricKind, numberKind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewSyncInstrument(desc)
@@ -206,7 +182,6 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 }
 
 func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, runner AsyncRunner) (AsyncImpl, error) {
-	opts = insertResource(m.impl, opts)
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewAsyncInstrument(desc, runner)
@@ -244,4 +219,92 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 func WrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Observer, error) {
 	common, err := checkNewAsync(asyncInst, err)
 	return Float64Observer{asyncInstrument: common}, err
+}
+
+// @@@ comments
+
+// runnerPair is a map entry for Observer callback runners.
+type runnerPair struct {
+	// runner is used as a map key here.  The API ensures
+	// that all callbacks are pointers for this reason.
+	runner AsyncRunner
+
+	// inst refers to a non-nil instrument when `runner`
+	// is a AsyncSingleRunner.
+	inst AsyncImpl
+}
+
+type AsyncCollector interface {
+	CollectAsyncSingle([]core.KeyValue, Observation)
+	CollectAsyncBatch([]core.KeyValue, []Observation)
+}
+
+type AsyncInstrumentState struct {
+	lock        sync.Mutex
+	runnerMap   map[runnerPair]struct{}
+	runners     []runnerPair
+	instruments []AsyncImpl
+}
+
+func NewAsyncInstrumentState() *AsyncInstrumentState {
+	return &AsyncInstrumentState{
+		runnerMap: map[runnerPair]struct{}{},
+	}
+}
+
+func (a *AsyncInstrumentState) Instruments() []AsyncImpl {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	return a.instruments
+}
+
+func (a *AsyncInstrumentState) Register(inst AsyncImpl, runner AsyncRunner) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	a.instruments = append(a.instruments, inst)
+
+	// runnerPair reflects this callback in the asyncRunners list.
+	// If this is a batch runner, the instrument is nil.  If this
+	// is a single-Observer runner, the instrument is included.
+	// This ensures that batch callbacks are called once and
+	// single callbacks are called once per instrument.  This
+	// handles the case where a single callback is used for more
+	// than one Observer by calling the callback once per
+	// instrument.
+	rp := runnerPair{
+		runner: runner,
+	}
+	if _, ok := runner.(AsyncSingleRunner); ok {
+		rp.inst = inst
+	}
+
+	if _, ok := a.runnerMap[rp]; !ok {
+		a.runnerMap[rp] = struct{}{}
+		a.runners = append(a.runners, rp)
+	}
+}
+
+func (a *AsyncInstrumentState) Run(collector AsyncCollector) {
+	a.lock.Lock()
+	runners := a.runners
+	a.lock.Unlock()
+
+	for _, rp := range runners {
+		// The runner must be a single or batch runner, no
+		// other implementations are possible because the
+		// interface has un-exported methods.
+
+		if singleRunner, ok := rp.runner.(AsyncSingleRunner); ok {
+			singleRunner.Run(rp.inst, collector.CollectAsyncSingle)
+			continue
+		}
+
+		if multiRunner, ok := rp.runner.(AsyncBatchRunner); ok {
+			multiRunner.Run(collector.CollectAsyncBatch)
+			continue
+		}
+
+		panic("internal error: unknown async runner")
+	}
 }

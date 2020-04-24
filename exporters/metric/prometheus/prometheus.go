@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
@@ -159,7 +160,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := ungrouped.New(selector, label.DefaultEncoder(), true)
+	batcher := ungrouped.New(selector, true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
@@ -167,7 +168,8 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 }
 
 // Export exports the provide metric record to prometheus.
-func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
+	// TODO: Use the resource value in this exporter.
 	e.snapshot = checkpointSet
 	return nil
 }

@@ -133,3 +133,13 @@ func (r *Resource) Len() int {
 	}
 	return r.labels.Len()
 }
+
+// Encoded returns an encoded representation of the resource by
+// applying a label encoder.  The result is cached by the underlying
+// label set.
+func (r *Resource) Encoded(enc label.Encoder) string {
+	if r == nil {
+		return ""
+	}
+	return r.labels.Encoded(enc)
+}

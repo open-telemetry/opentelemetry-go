@@ -431,7 +431,7 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.meter.RegisterInt64Observer(names[i], cb)
+		fix.meter.RegisterInt64Observer(names[i], metric.NewInt64ObserverCallback(cb))
 	}
 }
 
@@ -439,11 +439,11 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
+	_ = fix.meter.RegisterInt64Observer("test.observer", metric.NewInt64ObserverCallback(func(result metric.Int64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
-	})
+	}))
 
 	b.ResetTimer()
 
@@ -454,11 +454,11 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
+	_ = fix.meter.RegisterFloat64Observer("test.observer", metric.NewFloat64ObserverCallback(func(result metric.Float64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}
-	})
+	}))
 
 	b.ResetTimer()
 

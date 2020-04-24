@@ -28,7 +28,6 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -44,9 +43,9 @@ type (
 		// current maps `mapkey` to *record.
 		current sync.Map
 
-		// asyncInstruments is a set of
-		// `*asyncInstrument` instances
-		asyncInstruments sync.Map
+		// asyncInstruments is a set of `*asyncInstrument`
+		// instances and their AsyncRunner functions.
+		asyncInstruments *metric.AsyncInstrumentState
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -61,13 +60,21 @@ type (
 		// errorHandler supports delivering errors to the user.
 		errorHandler ErrorHandler
 
-		// resource represents the entity producing telemetry.
-		resource *resource.Resource
-
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
 		asyncSortSlice label.Sortable
+	}
+
+	// runnerPair is a map entry for Observer callback runners.
+	runnerPair struct {
+		// runner is used as a map key here.  The API ensures
+		// that all callbacks are pointers for this reason.
+		runner metric.AsyncRunner
+
+		// inst refers to a non-nil instrument when `runner`
+		// is a metric.AsyncSingleRunner.
+		inst *asyncInstrument
 	}
 
 	syncInstrument struct {
@@ -132,8 +139,6 @@ type (
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
 		recorders map[label.Distinct]*labeledRecorder
-
-		callback func(func(core.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
@@ -321,9 +326,9 @@ func New(batcher export.Batcher, opts ...Option) *SDK {
 	}
 
 	return &SDK{
-		batcher:      batcher,
-		errorHandler: c.ErrorHandler,
-		resource:     c.Resource,
+		batcher:          batcher,
+		errorHandler:     c.ErrorHandler,
+		asyncInstruments: metric.NewAsyncInstrumentState(),
 	}
 }
 
@@ -340,15 +345,14 @@ func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error)
 	}, nil
 }
 
-func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(core.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, runner metric.AsyncRunner) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-		callback: callback,
 	}
-	m.asyncInstruments.Store(a, nil)
+	m.asyncInstruments.Register(a, runner)
 	return a, nil
 }
 
@@ -413,17 +417,19 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
+func (m *SDK) CollectAsyncBatch(kvs []core.KeyValue, obs []metric.Observation) {
+}
+func (m *SDK) CollectAsyncSingle(kvs []core.KeyValue, obs metric.Observation) {
+}
+
 func (m *SDK) collectAsync(ctx context.Context) int {
-	checkpointed := 0
+	m.asyncInstruments.Run(m)
 
-	m.asyncInstruments.Range(func(key, value interface{}) bool {
-		a := key.(*asyncInstrument)
-		a.callback(a.observe)
-		checkpointed += m.checkpointAsync(ctx, a)
-		return true
-	})
-
-	return checkpointed
+	collected := 0
+	for _, inst := range m.asyncInstruments.Instruments() {
+		collected += m.checkpointAsync(ctx, inst.(*asyncInstrument))
+	}
+	return collected
 }
 
 func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
@@ -465,16 +471,6 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 		m.errorHandler(err)
 	}
 	return 1
-}
-
-// Resource returns the Resource this SDK was created with describing the
-// entity for which it creates instruments for.
-//
-// Resource means that the SDK implements the Resourcer interface and
-// therefore all metric instruments it creates will inherit its
-// Resource by default unless explicitly overwritten.
-func (m *SDK) Resource() *resource.Resource {
-	return m.resource
 }
 
 // RecordBatch enters a batch of metric events.

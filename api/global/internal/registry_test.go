@@ -43,10 +43,10 @@ var (
 			return unwrap(MeterProvider().Meter(libraryName).NewFloat64Measure(name))
 		},
 		"observer.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+			return unwrap(MeterProvider().Meter(libraryName).RegisterInt64Observer(name, metric.NewInt64ObserverCallback(func(metric.Int64ObserverResult) {})))
 		},
 		"observer.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
+			return unwrap(MeterProvider().Meter(libraryName).RegisterFloat64Observer(name, metric.NewFloat64ObserverCallback(func(metric.Float64ObserverResult) {})))
 		},
 	}
 )

@@ -292,21 +292,21 @@ func TestObserverCollection(t *testing.T) {
 	sdk := metricsdk.New(batcher)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64Observer("float.observer", metric.NewFloat64ObserverCallback(func(result metric.Float64ObserverResult) {
 		result.Observe(1, key.String("A", "B"))
 		// last value wins
 		result.Observe(-1, key.String("A", "B"))
 		result.Observe(-1, key.String("C", "D"))
-	})
-	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+	}))
+	_ = Must(meter).RegisterInt64Observer("int.observer", metric.NewInt64ObserverCallback(func(result metric.Int64ObserverResult) {
 		result.Observe(-1, key.String("A", "B"))
 		result.Observe(1)
 		// last value wins
 		result.Observe(1, key.String("A", "B"))
 		result.Observe(1)
-	})
-	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
-	})
+	}))
+	_ = Must(meter).RegisterInt64Observer("empty.observer", metric.NewInt64ObserverCallback(func(result metric.Int64ObserverResult) {
+	}))
 
 	collected := sdk.Collect(ctx)
 

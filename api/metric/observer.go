@@ -14,7 +14,9 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/core"
+import (
+	"go.opentelemetry.io/otel/api/core"
+)
 
 // Int64ObserverCallback is a callback argument for
 // RegisterInt64Observer.  If reporting a single instrument, use
@@ -89,7 +91,7 @@ type AsyncRunner interface {
 // AsyncSingleRunner is an interface implemented by single-observer
 // callbacks.
 type AsyncSingleRunner interface {
-	Run(AsyncImpl, func(AsyncImpl, core.Number, []core.KeyValue))
+	Run(AsyncImpl, func([]core.KeyValue, Observation))
 }
 
 // AsyncBatchRunner is an interface implemented by batch-observer
@@ -100,12 +102,12 @@ type AsyncBatchRunner interface {
 
 type int64ObserverResult struct {
 	instrument AsyncImpl
-	function   func(AsyncImpl, core.Number, []core.KeyValue)
+	function   func([]core.KeyValue, Observation)
 }
 
 type float64ObserverResult struct {
 	instrument AsyncImpl
-	function   func(AsyncImpl, core.Number, []core.KeyValue)
+	function   func([]core.KeyValue, Observation)
 }
 
 type batchObserverResult struct {
@@ -117,11 +119,17 @@ var _ Float64ObserverResult = float64ObserverResult{}
 var _ BatchObserverResult = batchObserverResult{}
 
 func (ir int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	ir.function(ir.instrument, core.NewInt64Number(value), labels)
+	ir.function(labels, Observation{
+		instrument: ir.instrument,
+		number:     core.NewInt64Number(value),
+	})
 }
 
 func (fr float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fr.function(fr.instrument, core.NewFloat64Number(value), labels)
+	fr.function(labels, Observation{
+		instrument: fr.instrument,
+		number:     core.NewFloat64Number(value),
+	})
 }
 
 func (br batchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
@@ -148,14 +156,14 @@ func (*batchObserverCallback) intObserver()     {}
 func (*batchObserverCallback) floatObserver()   {}
 func (*batchObserverCallback) anyRunner()       {}
 
-func (i *int64ObserverCallback) Run(impl AsyncImpl, function func(AsyncImpl, core.Number, []core.KeyValue)) {
+func (i *int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
 	(*i)(int64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
-func (f *float64ObserverCallback) Run(impl AsyncImpl, function func(AsyncImpl, core.Number, []core.KeyValue)) {
+func (f *float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
 	(*f)(float64ObserverResult{
 		instrument: impl,
 		function:   function,

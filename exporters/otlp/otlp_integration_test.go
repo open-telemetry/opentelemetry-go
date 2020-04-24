@@ -28,7 +28,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -112,7 +111,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	selector := simple.NewWithExactMeasure()
-	batcher := ungrouped.New(selector, label.DefaultEncoder(), true)
+	batcher := ungrouped.New(selector, true)
 	pusher := push.New(batcher, exp, 60*time.Second)
 	pusher.Start()
 

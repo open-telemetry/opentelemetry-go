@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type Exporter struct {
@@ -211,7 +212,7 @@ func (e *Exporter) Stop() error {
 // Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
 // interface. It transforms and batches metric Records into OTLP Metrics and
 // transmits them to the configured collector.
-func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) error {
+func (e *Exporter) Export(parent context.Context, resource *resource.Resource, cps metricsdk.CheckpointSet) error {
 	// Unify the parent context Done signal with the exporter stopCh.
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
@@ -223,7 +224,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
-	rms, err := transform.CheckpointSet(ctx, cps, e.c.numWorkers)
+	rms, err := transform.CheckpointSet(ctx, resource, cps, e.c.numWorkers)
 	if err != nil {
 		return err
 	}

@@ -61,13 +61,7 @@ type (
 
 		MeasurementBatches []Batch
 
-		// asyncRunnerMap ensures that batch callbacks are
-		// only registered in the asyncRunners list once.  The
-		// list is used to ensure that runners are run in the
-		// order they were registered.
-
-		asyncRunnerMap map[runnerPair]struct{}
-		asyncRunners   []runnerPair
+		asyncInstruments *metric.AsyncInstrumentState
 	}
 
 	Measurement struct {
@@ -128,7 +122,7 @@ func (h *Handle) Unbind() {
 }
 
 func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number core.Number) {
-	m.recordMockBatch(ctx, labels, []Measurement{
+	m.collect(ctx, labels, []Measurement{
 		{
 			Instrument: instrument,
 			Number:     number,
@@ -138,7 +132,7 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, 
 
 func NewProvider() (*MeterImpl, apimetric.Provider) {
 	impl := &MeterImpl{
-		asyncRunnerMap: map[runnerPair]struct{}{},
+		asyncInstruments: metric.NewAsyncInstrumentState(),
 	}
 	p := &MeterProvider{
 		impl:       impl,
@@ -178,34 +172,13 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.S
 }
 
 func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner apimetric.AsyncRunner) (apimetric.AsyncImpl, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
 	}
-	// runnerPair reflects this callback in the asyncRunners list.
-	// If this is a batch runner, the instrument is nil.  If this
-	// is a single-Observer runner, the instrument is included.
-	// This ensures that batch callbacks are called once and
-	// single callbacks are called once per instrument.  This
-	// handles the case where a single callback is used for more
-	// than one Observer by calling the callback once per
-	// instrument.
-	rp := runnerPair{
-		runner: runner,
-	}
-	if _, ok := runner.(metric.AsyncSingleRunner); ok {
-		rp.inst = a
-	}
-
-	if _, ok := m.asyncRunnerMap[rp]; !ok {
-		m.asyncRunnerMap[rp] = struct{}{}
-		m.asyncRunners = append(m.asyncRunners, rp)
-	}
+	m.asyncInstruments.Register(a, runner)
 	return a, nil
 }
 
@@ -218,10 +191,34 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 			Number:     m.Number(),
 		}
 	}
-	m.recordMockBatch(ctx, labels, mm)
+	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue, measurements []Measurement) {
+func (m *MeterImpl) CollectAsyncSingle(labels []core.KeyValue, obs metric.Observation) {
+	m.collect(nil, labels, []Measurement{
+		{
+			Instrument: obs.AsyncImpl(),
+			Number:     obs.Number(),
+		},
+	})
+}
+
+func (m *MeterImpl) CollectAsyncBatch(labels []core.KeyValue, obs []metric.Observation) {
+	mm := make([]Measurement, len(obs))
+	for i := 0; i < len(obs); i++ {
+		o := obs[i]
+		mm[i] = Measurement{
+			Instrument: o.AsyncImpl(),
+			Number:     o.Number(),
+		}
+	}
+	m.collect(nil, labels, mm)
+}
+
+func (m *MeterImpl) collect(ctx context.Context, labels []core.KeyValue, measurements []Measurement) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
 		Ctx:          ctx,
 		Labels:       labels,
@@ -230,32 +227,5 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 }
 
 func (m *MeterImpl) RunAsyncInstruments() {
-	for _, rp := range m.asyncRunners {
-		// The runner must be a single or batch runner.  If
-		// single, the instrument is included in the
-		// `runnerPair`.
-
-		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
-			singleRunner.Run(rp.inst, func(i apimetric.AsyncImpl, n core.Number, labels []core.KeyValue) {
-				m.doRecordSingle(context.Background(), labels, i, n)
-			})
-			continue
-		}
-
-		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
-			multiRunner.Run(func(labels []core.KeyValue, obs []metric.Observation) {
-				mm := make([]Measurement, len(obs))
-				for i := 0; i < len(obs); i++ {
-					o := obs[i]
-					mm[i] = Measurement{
-						Instrument: o.AsyncImpl().(*Async),
-						Number:     o.Number(),
-					}
-				}
-
-				m.recordMockBatch(context.Background(), labels, mm)
-			})
-			continue
-		}
-	}
+	m.asyncInstruments.Run(m)
 }
