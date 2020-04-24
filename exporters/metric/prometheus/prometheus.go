@@ -159,7 +159,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := ungrouped.New(selector, label.DefaultEncoder(), true)
+	batcher := ungrouped.New(selector, true)
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 

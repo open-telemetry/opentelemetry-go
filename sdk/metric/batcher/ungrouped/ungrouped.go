@@ -26,15 +26,14 @@ import (
 
 type (
 	Batcher struct {
-		selector     export.AggregationSelector
-		batchMap     batchMap
-		stateful     bool
-		labelEncoder label.Encoder
+		selector export.AggregationSelector
+		batchMap batchMap
+		stateful bool
 	}
 
 	batchKey struct {
 		descriptor *metric.Descriptor
-		encoded    string
+		distinct   label.Distinct
 	}
 
 	batchValue struct {
@@ -48,12 +47,11 @@ type (
 var _ export.Batcher = &Batcher{}
 var _ export.CheckpointSet = batchMap{}
 
-func New(selector export.AggregationSelector, labelEncoder label.Encoder, stateful bool) *Batcher {
+func New(selector export.AggregationSelector, stateful bool) *Batcher {
 	return &Batcher{
-		selector:     selector,
-		batchMap:     batchMap{},
-		stateful:     stateful,
-		labelEncoder: labelEncoder,
+		selector: selector,
+		batchMap: batchMap{},
+		stateful: stateful,
 	}
 }
 
@@ -63,10 +61,9 @@ func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator
 
 func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	desc := record.Descriptor()
-	encoded := record.Labels().Encoded(b.labelEncoder)
 	key := batchKey{
 		descriptor: desc,
-		encoded:    encoded,
+		distinct:   record.Labels().Equivalent(),
 	}
 	agg := record.Aggregator()
 	value, ok := b.batchMap[key]
