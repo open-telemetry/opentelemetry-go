@@ -19,9 +19,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestWithErrorHandler(t *testing.T) {
@@ -45,17 +42,4 @@ func TestWithErrorHandler(t *testing.T) {
 	err2 := fmt.Errorf("error 2")
 	c.ErrorHandler(err2)
 	assert.EqualError(t, *reg, err2.Error())
-}
-
-func TestWithResource(t *testing.T) {
-	r := resource.New(key.String("A", "a"))
-
-	c := &Config{}
-	WithResource(r).Apply(c)
-	assert.True(t, r.Equal(c.Resource))
-
-	// Ensure overwriting works.
-	c = &Config{Resource: &resource.Resource{}}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 }

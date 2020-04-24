@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Batcher is responsible for deciding which kind of aggregation to
@@ -160,9 +161,12 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
+	// The Resource contains common attributes that apply to all
+	// metric events in the SDK.
+	//
 	// The CheckpointSet interface refers to the Batcher that just
 	// completed collection.
-	Export(context.Context, CheckpointSet) error
+	Export(context.Context, *resource.Resource, CheckpointSet) error
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of

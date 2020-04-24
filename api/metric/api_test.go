@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -36,28 +35,25 @@ var Must = metric.Must
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
-		name     string
-		opts     []metric.Option
-		desc     string
-		unit     unit.Unit
-		resource *resource.Resource
+		name string
+		opts []metric.Option
+		desc string
+		unit unit.Unit
 	}
 	testcases := []testcase{
 		{
-			name:     "no opts",
-			opts:     nil,
-			desc:     "",
-			unit:     "",
-			resource: nil,
+			name: "no opts",
+			opts: nil,
+			desc: "",
+			unit: "",
 		},
 		{
 			name: "description",
 			opts: []metric.Option{
 				metric.WithDescription("stuff"),
 			},
-			desc:     "stuff",
-			unit:     "",
-			resource: nil,
+			desc: "stuff",
+			unit: "",
 		},
 		{
 			name: "description override",
@@ -65,18 +61,16 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			desc:     "things",
-			unit:     "",
-			resource: nil,
+			desc: "things",
+			unit: "",
 		},
 		{
 			name: "unit",
 			opts: []metric.Option{
 				metric.WithUnit("s"),
 			},
-			desc:     "",
-			unit:     "s",
-			resource: nil,
+			desc: "",
+			unit: "s",
 		},
 		{
 			name: "unit override",
@@ -84,18 +78,8 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			desc:     "",
-			unit:     "h",
-			resource: nil,
-		},
-		{
-			name: "resource override",
-			opts: []metric.Option{
-				metric.WithResource(resource.New(key.New("name").String("test-name"))),
-			},
-			desc:     "",
-			unit:     "",
-			resource: resource.New(key.New("name").String("test-name")),
+			desc: "",
+			unit: "h",
 		},
 	}
 	for idx, tt := range testcases {
@@ -103,7 +87,6 @@ func TestOptions(t *testing.T) {
 		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
 			Description: tt.desc,
 			Unit:        tt.unit,
-			Resource:    tt.resource,
 		}); diff != "" {
 			t.Errorf("Compare options: -got +want %s", diff)
 		}

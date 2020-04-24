@@ -29,23 +29,26 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
+type mapkey struct {
+	desc     *metric.Descriptor
+	distinct label.Distinct
+}
+
 type CheckpointSet struct {
-	encoder label.Encoder
-	records map[string]export.Record
+	records map[mapkey]export.Record
 	updates []export.Record
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
 // Records are grouped by their encoded labels.
-func NewCheckpointSet(encoder label.Encoder) *CheckpointSet {
+func NewCheckpointSet() *CheckpointSet {
 	return &CheckpointSet{
-		encoder: encoder,
-		records: make(map[string]export.Record),
+		records: make(map[mapkey]export.Record),
 	}
 }
 
 func (p *CheckpointSet) Reset() {
-	p.records = make(map[string]export.Record)
+	p.records = make(map[mapkey]export.Record)
 	p.updates = nil
 }
 
@@ -56,7 +59,10 @@ func (p *CheckpointSet) Reset() {
 func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
 	elabels := label.NewSet(labels...)
 
-	key := desc.Name() + "_" + elabels.Encoded(p.encoder)
+	key := mapkey{
+		desc:     desc,
+		distinct: elabels.Equivalent(),
+	}
 	if record, ok := p.records[key]; ok {
 		return record.Aggregator(), false
 	}
