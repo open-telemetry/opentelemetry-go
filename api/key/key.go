@@ -120,6 +120,6 @@ func Infer(k string, value interface{}) core.KeyValue {
 	case fmt.Stringer:
 		return Stringer(k, v)
 	default:
-		return String(k, fmt.Sprintf("%v", v))
+		return String(k, fmt.Sprint(v))
 	}
 }
