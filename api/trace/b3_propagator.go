@@ -82,6 +82,9 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	} else {
 		sc = b3.extract(supplier)
 	}
+	if !sc.IsValid() {
+		return ctx
+	}
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
