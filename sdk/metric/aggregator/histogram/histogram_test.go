@@ -16,11 +16,13 @@ package histogram
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"os"
 	"sort"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
@@ -28,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -71,20 +74,20 @@ var (
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "Aggregator.states",
-			Offset: unsafe.Offsetof(Aggregator{}.states),
+			Name:   "AggregatorSL.states",
+			Offset: unsafe.Offsetof(AggregatorSL{}.states),
 		},
 		{
-			Name:   "state.buckets",
-			Offset: unsafe.Offsetof(state{}.buckets),
+			Name:   "stateSL.buckets",
+			Offset: unsafe.Offsetof(stateSL{}.buckets),
 		},
 		{
-			Name:   "state.sum",
-			Offset: unsafe.Offsetof(state{}.sum),
+			Name:   "stateSL.sum",
+			Offset: unsafe.Offsetof(stateSL{}.sum),
 		},
 		{
-			Name:   "state.count",
-			Offset: unsafe.Offsetof(state{}.count),
+			Name:   "stateSL.count",
+			Offset: unsafe.Offsetof(stateSL{}.count),
 		},
 	}
 
@@ -145,12 +148,12 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
-	require.Equal(t, len(agg.checkpoint().buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+	require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 	counts := calcBuckets(all.Points(), profile)
 	for i, v := range counts {
-		bCount := agg.checkpoint().buckets.Counts[i].AsUint64()
-		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint().buckets.Counts)
+		bCount := agg.checkpoint.buckets.Counts[i].AsUint64()
+		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint.buckets.Counts)
 	}
 }
 
@@ -196,12 +199,12 @@ func TestHistogramMerge(t *testing.T) {
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg1.checkpoint().buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		require.Equal(t, len(agg1.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 		counts := calcBuckets(all.Points(), profile)
 		for i, v := range counts {
-			bCount := agg1.checkpoint().buckets.Counts[i].AsUint64()
-			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint().buckets.Counts)
+			bCount := agg1.checkpoint.buckets.Counts[i].AsUint64()
+			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint.buckets.Counts)
 		}
 	})
 }
@@ -223,8 +226,8 @@ func TestHistogramNotSet(t *testing.T) {
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg.checkpoint().buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
-		for i, bCount := range agg.checkpoint().buckets.Counts {
+		require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		for i, bCount := range agg.checkpoint.buckets.Counts {
 			require.Equal(t, uint64(0), bCount.AsUint64(), "Bucket #%d must have 0 observed values", i)
 		}
 	})
@@ -250,4 +253,57 @@ func calcBuckets(points []core.Number, profile test.Profile) []uint64 {
 	}
 
 	return counts
+}
+
+const maxCycleSize = 256
+
+func newRandomCycle() [maxCycleSize]core.Number {
+	rng := rand.New(rand.NewSource(time.Now().Unix()))
+	var r [maxCycleSize]core.Number
+	for i := 0; i < maxCycleSize; i++ {
+		r[i] = core.NewInt64Number(rng.Int63n(test.Magnitude + 1))
+	}
+	return r
+}
+
+func BenchmarkHistogramAggregators(b *testing.B) {
+	ctx := context.Background()
+	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
+
+	r := newRandomCycle()
+	for name, agg := range map[string]export.Aggregator{
+		"mutex":       New(descriptor, boundaries[core.Int64NumberKind]),
+		"statelocker": NewSL(descriptor, boundaries[core.Int64NumberKind])} {
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if err := agg.Update(ctx, r[i%maxCycleSize], descriptor); err != nil {
+					fmt.Print(err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkHistogramAggregatorsRunParallel(b *testing.B) {
+	ctx := context.Background()
+	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
+
+	r := newRandomCycle()
+
+	for name, agg := range map[string]export.Aggregator{
+		"mutex":       New(descriptor, boundaries[core.Int64NumberKind]),
+		"statelocker": NewSL(descriptor, boundaries[core.Int64NumberKind])} {
+		b.Run(name, func(b *testing.B) {
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				i := 0
+				for pb.Next() {
+					if err := agg.Update(ctx, r[i], descriptor); err != nil {
+						fmt.Print(err)
+					}
+					i = (i + 1) % maxCycleSize
+				}
+			})
+		})
+	}
 }
