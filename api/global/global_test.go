@@ -40,7 +40,7 @@ func (*testMeterProvider) Meter(_ string) metric.Meter {
 	return &metric.NoopMeter{}
 }
 
-func TestMulitpleGlobalTracerProvider(t *testing.T) {
+func TestMultipleGlobalTracerProvider(t *testing.T) {
 	p1 := testTraceProvider{}
 	p2 := trace.NoopProvider{}
 	global.SetTraceProvider(&p1)
@@ -53,7 +53,7 @@ func TestMulitpleGlobalTracerProvider(t *testing.T) {
 	}
 }
 
-func TestMulitpleGlobalMeterProvider(t *testing.T) {
+func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
 	p2 := metric.NoopProvider{}
 	global.SetMeterProvider(&p1)
