@@ -123,6 +123,7 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.
 	kind := desc.NumberKind()
 
 	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.current.count.AddInt64(1)
 	c.current.sum.AddNumber(kind, number)
 	if number.CompareNumber(kind, c.current.min) < 0 {
@@ -131,7 +132,6 @@ func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.
 	if number.CompareNumber(kind, c.current.max) > 0 {
 		c.current.max = number
 	}
-	c.lock.Unlock()
 	return nil
 }
 

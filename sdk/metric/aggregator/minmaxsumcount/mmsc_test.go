@@ -16,7 +16,6 @@ package minmaxsumcount
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"math/rand"
 	"os"
@@ -28,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -239,41 +237,4 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		require.Equal(t, aggregator.ErrNoData, err)
 		require.Equal(t, core.Number(0), max)
 	})
-}
-
-func BenchmarkMinMaxSumCountAggregators(b *testing.B) {
-	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
-
-	for name, agg := range map[string]export.Aggregator{
-		"mutex":       New(descriptor),
-		"statelocker": NewSL(descriptor)} {
-		b.Run(name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if err := agg.Update(ctx, core.NewFloat64Number(float64(i)), descriptor); err != nil {
-					fmt.Print(err)
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkMinMaxSumCountAggregatorsRunParallel(b *testing.B) {
-	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
-
-	for name, agg := range map[string]export.Aggregator{
-		"mutex":       New(descriptor),
-		"statelocker": NewSL(descriptor)} {
-		b.Run(name, func(b *testing.B) {
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					if err := agg.Update(ctx, core.NewFloat64Number(float64(1.23)), descriptor); err != nil {
-						fmt.Print(err)
-					}
-				}
-			})
-		})
-	}
 }
