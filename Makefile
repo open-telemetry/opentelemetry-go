@@ -124,7 +124,7 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(TOOLS_DIR)/golangci-lint run --disable unused --fix && \
+	    $(TOOLS_DIR)/golangci-lint run --fix && \
 	    $(TOOLS_DIR)/golangci-lint run); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
