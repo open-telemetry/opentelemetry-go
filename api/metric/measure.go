@@ -44,25 +44,15 @@ type BoundInt64Measure struct {
 	syncBoundInstrument
 }
 
-// Bind creates a bound instrument for this measure. The labels should
-// contain the keys and values for each key specified in the measure
-// with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// measure with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// Bind creates a bound instrument for this measure. The labels are
+// associated with values recorded via subsequent calls to Record.
 func (c Float64Measure) Bind(labels ...core.KeyValue) (h BoundFloat64Measure) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
-// Bind creates a bound instrument for this measure. The labels should
-// contain the keys and values for each key specified in the measure
-// with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// measure with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// Bind creates a bound instrument for this measure. The labels are
+// associated with values recorded via subsequent calls to Record.
 func (c Int64Measure) Bind(labels ...core.KeyValue) (h BoundInt64Measure) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
@@ -81,33 +71,27 @@ func (c Int64Measure) Measurement(value int64) Measurement {
 }
 
 // Record adds a new value to the list of measure's records. The
-// labels should contain the keys and values for each key specified in
-// the measure with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// measure with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// labels should contain the keys and values to be associated with
+// this value.
 func (c Float64Measure) Record(ctx context.Context, value float64, labels ...core.KeyValue) {
 	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the list of measure's records. The
-// labels should contain the keys and values for each key specified in
-// the measure with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// measure with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// labels should contain the keys and values to be associated with
+// this value.
 func (c Int64Measure) Record(ctx context.Context, value int64, labels ...core.KeyValue) {
 	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
-// Record adds a new value to the list of measure's records.
+// Record adds a new value to the list of measure's records using the labels
+// previously bound to the measure via Bind()
 func (b BoundFloat64Measure) Record(ctx context.Context, value float64) {
 	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
-// Record adds a new value to the list of measure's records.
+// Record adds a new value to the list of measure's records using the labels
+// previously bound to the measure via Bind()
 func (b BoundInt64Measure) Record(ctx context.Context, value int64) {
 	b.directRecord(ctx, core.NewInt64Number(value))
 }
