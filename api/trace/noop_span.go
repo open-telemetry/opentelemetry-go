@@ -50,6 +50,10 @@ func (NoopSpan) SetError(v bool) {
 func (NoopSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
+// SetAttribute does nothing.
+func (NoopSpan) SetAttribute(k string, v interface{}) {
+}
+
 // End does nothing.
 func (NoopSpan) End(options ...EndOption) {
 }

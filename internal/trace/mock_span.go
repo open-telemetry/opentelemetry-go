@@ -59,6 +59,10 @@ func (ms *MockSpan) SetError(v bool) {
 func (ms *MockSpan) SetAttributes(attributes ...core.KeyValue) {
 }
 
+// SetAttribute does nothing.
+func (ms *MockSpan) SetAttribute(k string, v interface{}) {
+}
+
 // End does nothing.
 func (ms *MockSpan) End(options ...apitrace.EndOption) {
 }
