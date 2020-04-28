@@ -44,14 +44,14 @@ type BoundInt64Measure struct {
 	syncBoundInstrument
 }
 
-// Bind creates a bound instrument for this counter. The labels are
+// Bind creates a bound instrument for this measure. The labels are
 // associated with values recorded via subsequent calls to Record.
 func (c Float64Measure) Bind(labels ...core.KeyValue) (h BoundFloat64Measure) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
-// Bind creates a bound instrument for this counter. The labels are
+// Bind creates a bound instrument for this measure. The labels are
 // associated with values recorded via subsequent calls to Record.
 func (c Int64Measure) Bind(labels ...core.KeyValue) (h BoundInt64Measure) {
 	h.syncBoundInstrument = c.bind(labels)
