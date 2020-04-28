@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
@@ -98,6 +99,10 @@ func (s *span) SetAttributes(attributes ...core.KeyValue) {
 		return
 	}
 	s.copyToCappedAttributes(attributes...)
+}
+
+func (s *span) SetAttribute(k string, v interface{}) {
+	s.SetAttributes(key.Infer(k, v))
 }
 
 func (s *span) End(options ...apitrace.EndOption) {

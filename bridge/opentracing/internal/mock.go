@@ -239,6 +239,10 @@ func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
 	})
 }
 
+func (s *MockSpan) SetAttribute(k string, v interface{}) {
+	s.SetAttributes(otelkey.Infer(k, v))
+}
+
 func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }

@@ -121,6 +121,9 @@ type Span interface {
 
 	// Set span attributes
 	SetAttributes(...core.KeyValue)
+
+	// Set singular span attribute, with type inference.
+	SetAttribute(string, interface{})
 }
 
 // StartOption applies changes to StartConfig that sets options at span start time.

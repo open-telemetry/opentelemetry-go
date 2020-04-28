@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -175,6 +176,10 @@ func (s *Span) SetAttributes(attrs ...core.KeyValue) {
 	for _, attr := range attrs {
 		s.attributes[attr.Key] = attr.Value
 	}
+}
+
+func (s *Span) SetAttribute(k string, v interface{}) {
+	s.SetAttributes(key.Infer(k, v))
 }
 
 // Name returns the name most recently set on the Span, either at or after creation time.
