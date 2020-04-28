@@ -123,6 +123,16 @@ func TestKeyValueConstructors(t *testing.T) {
 
 func TestInfer(t *testing.T) {
 	builder := &strings.Builder{}
+	boolVar := true
+	int64Var := int64(42)
+	uint64Var := uint64(42)
+	float64Var := float64(42.1)
+	int32Var := int32(42)
+	uint32Var := uint32(42)
+	float32Var := float32(42.1)
+	stringVar := "foo"
+	var nullPointer *int
+
 	builder.WriteString("foo")
 	for _, testcase := range []struct {
 		key       string
@@ -179,6 +189,54 @@ func TestInfer(t *testing.T) {
 			wantValue: "foo",
 		},
 		{
+			key:       "*bool type inferred",
+			value:     &boolVar,
+			wantType:  core.BOOL,
+			wantValue: true,
+		},
+		{
+			key:       "*int64 type inferred",
+			value:     &int64Var,
+			wantType:  core.INT64,
+			wantValue: int64(42),
+		},
+		{
+			key:       "*uint64 type inferred",
+			value:     &uint64Var,
+			wantType:  core.UINT64,
+			wantValue: uint64(42),
+		},
+		{
+			key:       "*float64 type inferred",
+			value:     &float64Var,
+			wantType:  core.FLOAT64,
+			wantValue: 42.1,
+		},
+		{
+			key:       "*int32 type inferred",
+			value:     &int32Var,
+			wantType:  core.INT32,
+			wantValue: int32(42),
+		},
+		{
+			key:       "*uint32 type inferred",
+			value:     &uint32Var,
+			wantType:  core.UINT32,
+			wantValue: uint32(42),
+		},
+		{
+			key:       "*float32 type inferred",
+			value:     &float32Var,
+			wantType:  core.FLOAT32,
+			wantValue: float32(42.1),
+		},
+		{
+			key:       "*string type inferred",
+			value:     &stringVar,
+			wantType:  core.STRING,
+			wantValue: "foo",
+		},
+		{
 			key:       "stringer type inferred",
 			value:     builder,
 			wantType:  core.STRING,
@@ -187,6 +245,12 @@ func TestInfer(t *testing.T) {
 		{
 			key:       "unknown value serialized as %v",
 			value:     nil,
+			wantType:  core.STRING,
+			wantValue: "<nil>",
+		},
+		{
+			key:       "null value serialized as %v",
+			value:     nullPointer,
 			wantType:  core.STRING,
 			wantValue: "<nil>",
 		},

@@ -117,9 +117,48 @@ func Infer(k string, value interface{}) core.KeyValue {
 		return Float64(k, v)
 	case string:
 		return String(k, v)
+	case *bool:
+		if v != nil {
+			return Bool(k, *v)
+		}
+	case *int:
+		if v != nil {
+			return Int(k, *v)
+		}
+	case *uint:
+		if v != nil {
+			return Uint(k, *v)
+		}
+	case *int32:
+		if v != nil {
+			return Int32(k, *v)
+		}
+	case *int64:
+		if v != nil {
+			return Int64(k, *v)
+		}
+	case *uint32:
+		if v != nil {
+			return Uint32(k, *v)
+		}
+	case *uint64:
+		if v != nil {
+			return Uint64(k, *v)
+		}
+	case *float32:
+		if v != nil {
+			return Float32(k, *v)
+		}
+	case *float64:
+		if v != nil {
+			return Float64(k, *v)
+		}
+	case *string:
+		if v != nil {
+			return String(k, *v)
+		}
 	case fmt.Stringer:
 		return Stringer(k, v)
-	default:
-		return String(k, fmt.Sprint(v))
 	}
+	return String(k, fmt.Sprint(value))
 }
