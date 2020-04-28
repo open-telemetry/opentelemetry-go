@@ -16,21 +16,15 @@ package histogram
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"math/rand"
-	"os"
 	"sort"
 	"testing"
-	"time"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
-	ottest "go.opentelemetry.io/otel/internal/testing"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -69,34 +63,6 @@ var (
 		core.Int64NumberKind:   {core.NewInt64Number(500), core.NewInt64Number(250), core.NewInt64Number(750)},
 	}
 )
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "AggregatorSL.states",
-			Offset: unsafe.Offsetof(AggregatorSL{}.states),
-		},
-		{
-			Name:   "stateSL.buckets",
-			Offset: unsafe.Offsetof(stateSL{}.buckets),
-		},
-		{
-			Name:   "stateSL.sum",
-			Offset: unsafe.Offsetof(stateSL{}.sum),
-		},
-		{
-			Name:   "stateSL.count",
-			Offset: unsafe.Offsetof(stateSL{}.count),
-		},
-	}
-
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
 
 func TestHistogramAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
@@ -253,57 +219,4 @@ func calcBuckets(points []core.Number, profile test.Profile) []uint64 {
 	}
 
 	return counts
-}
-
-const maxCycleSize = 256
-
-func newRandomCycle() [maxCycleSize]core.Number {
-	rng := rand.New(rand.NewSource(time.Now().Unix()))
-	var r [maxCycleSize]core.Number
-	for i := 0; i < maxCycleSize; i++ {
-		r[i] = core.NewInt64Number(rng.Int63n(test.Magnitude + 1))
-	}
-	return r
-}
-
-func BenchmarkHistogramAggregators(b *testing.B) {
-	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
-
-	r := newRandomCycle()
-	for name, agg := range map[string]export.Aggregator{
-		"mutex":       New(descriptor, boundaries[core.Int64NumberKind]),
-		"statelocker": NewSL(descriptor, boundaries[core.Int64NumberKind])} {
-		b.Run(name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if err := agg.Update(ctx, r[i%maxCycleSize], descriptor); err != nil {
-					fmt.Print(err)
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkHistogramAggregatorsRunParallel(b *testing.B) {
-	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
-
-	r := newRandomCycle()
-
-	for name, agg := range map[string]export.Aggregator{
-		"mutex":       New(descriptor, boundaries[core.Int64NumberKind]),
-		"statelocker": NewSL(descriptor, boundaries[core.Int64NumberKind])} {
-		b.Run(name, func(b *testing.B) {
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				i := 0
-				for pb.Next() {
-					if err := agg.Update(ctx, r[i], descriptor); err != nil {
-						fmt.Print(err)
-					}
-					i = (i + 1) % maxCycleSize
-				}
-			})
-		})
-	}
 }
