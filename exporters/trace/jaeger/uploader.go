@@ -59,15 +59,18 @@ func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpoin
 			return nil, errors.New("collectorEndpoint must not be empty")
 		}
 
-		o := &CollectorEndpointOptions{}
+		o := &CollectorEndpointOptions{
+			httpClient: http.DefaultClient,
+		}
 		for _, opt := range options {
 			opt(o)
 		}
 
 		return &collectorUploader{
-			endpoint: collectorEndpoint,
-			username: o.username,
-			password: o.password,
+			endpoint:   collectorEndpoint,
+			username:   o.username,
+			password:   o.password,
+			httpClient: o.httpClient,
 		}, nil
 	}
 }
@@ -80,6 +83,9 @@ type CollectorEndpointOptions struct {
 
 	// password to be used if basic auth is required.
 	password string
+
+	// httpClient to be used to make requests to the collector endpoint.
+	httpClient *http.Client
 }
 
 // WithUsername sets the username to be used if basic auth is required.
@@ -93,6 +99,13 @@ func WithUsername(username string) CollectorEndpointOption {
 func WithPassword(password string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.password = password
+	}
+}
+
+// WithHTTPClient sets the http client to be used to make request to the collector endpoint.
+func WithHTTPClient(client *http.Client) CollectorEndpointOption {
+	return func(o *CollectorEndpointOptions) {
+		o.httpClient = client
 	}
 }
 
@@ -111,9 +124,10 @@ func (a *agentUploader) upload(batch *gen.Batch) error {
 // collectorUploader implements batchUploader interface sending batches to
 // Jaeger through the collector http endpoint.
 type collectorUploader struct {
-	endpoint string
-	username string
-	password string
+	endpoint   string
+	username   string
+	password   string
+	httpClient *http.Client
 }
 
 var _ batchUploader = (*collectorUploader)(nil)
@@ -132,7 +146,7 @@ func (c *collectorUploader) upload(batch *gen.Batch) error {
 	}
 	req.Header.Set("Content-Type", "application/x-thrift")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
