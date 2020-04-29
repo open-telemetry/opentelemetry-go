@@ -16,6 +16,7 @@ package key
 
 import (
 	"fmt"
+	"reflect"
 
 	"go.opentelemetry.io/otel/api/core"
 )
@@ -99,32 +100,57 @@ func Infer(k string, value interface{}) core.KeyValue {
 	if value == nil {
 		return String(k, "<nil>")
 	}
-	switch v := value.(type) {
-	case bool:
-		return Bool(k, v)
-	case int:
-		return Int(k, v)
-	case uint:
-		return Uint(k, v)
-	case int32:
-		return Int32(k, v)
-	case int64:
-		return Int64(k, v)
-	case uint32:
-		return Uint32(k, v)
-	case uint64:
-		return Uint64(k, v)
-	case float32:
-		return Float32(k, v)
-	case float64:
-		return Float64(k, v)
-	case string:
-		return String(k, v)
-	case fmt.Stringer:
-		return Stringer(k, v)
-	case *int:
-		return Int(k, *v)
-	default:
-		return String(k, fmt.Sprint(v))
+
+	if stringer, ok := value.(fmt.Stringer); ok {
+		return String(k, stringer.String())
 	}
+
+	rv := reflect.ValueOf(value)
+
+	// N.B. we can do something like the following to infer the
+	// value of an interface or indirect a pointer.
+	//
+	// // Unpack interfaces to get to a real value.
+	// for rv.Kind() == reflect.Interface {
+	// 	rv = rv.Elem()
+	// }
+
+	// // Indirect a single pointer.
+	// if rv.Kind() == reflect.Ptr {
+	// 	rv = rv.Elem()
+	// }
+
+	switch rv.Kind() {
+	case reflect.Bool:
+		return Bool(k, rv.Interface().(bool))
+	case reflect.Int:
+		return Int(k, rv.Interface().(int))
+	case reflect.Int8:
+		return Int(k, int(rv.Interface().(int8)))
+	case reflect.Int16:
+		return Int(k, int(rv.Interface().(int16)))
+	case reflect.Int32:
+		return Int32(k, rv.Interface().(int32))
+	case reflect.Int64:
+		return Int64(k, rv.Interface().(int64))
+	case reflect.Uint:
+		return Uint(k, rv.Interface().(uint))
+	case reflect.Uint8:
+		return Uint(k, uint(rv.Interface().(uint8)))
+	case reflect.Uint16:
+		return Uint(k, uint(rv.Interface().(uint16)))
+	case reflect.Uint32:
+		return Uint32(k, rv.Interface().(uint32))
+	case reflect.Uint64:
+		return Uint64(k, rv.Interface().(uint64))
+	case reflect.Uintptr:
+		return Uint64(k, uint64(rv.Interface().(uintptr)))
+	case reflect.Float32:
+		return Float32(k, rv.Interface().(float32))
+	case reflect.Float64:
+		return Float64(k, rv.Interface().(float64))
+	case reflect.String:
+		return String(k, rv.Interface().(string))
+	}
+	return String(k, fmt.Sprint(rv.Interface()))
 }

@@ -102,10 +102,7 @@ func (s *span) SetAttributes(attributes ...core.KeyValue) {
 }
 
 func (s *span) SetAttribute(k string, v interface{}) {
-	if !s.IsRecording() {
-		return
-	}
-	s.copyToCappedAttributesSingle(key.Infer(k, v))
+	s.SetAttributes(key.Infer(k, v))
 }
 
 func (s *span) End(options ...apitrace.EndOption) {
@@ -295,12 +292,6 @@ func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
 	for _, a := range attributes {
 		s.attributes.add(a)
 	}
-}
-
-func (s *span) copyToCappedAttributesSingle(attribute core.KeyValue) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.attributes.add(attribute)
 }
 
 func (s *span) addChild() {
