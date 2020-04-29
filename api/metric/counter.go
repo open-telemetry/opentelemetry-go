@@ -44,25 +44,15 @@ type BoundInt64Counter struct {
 	syncBoundInstrument
 }
 
-// Bind creates a bound instrument for this counter. The labels should
-// contain the keys and values for each key specified in the counter
-// with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// counter with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// Bind creates a bound instrument for this counter. The labels are
+// associated with values recorded via subsequent calls to Record.
 func (c Float64Counter) Bind(labels ...core.KeyValue) (h BoundFloat64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
-// Bind creates a bound instrument for this counter. The labels should
-// contain the keys and values for each key specified in the counter
-// with the WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// counter with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// Bind creates a bound instrument for this counter. The labels are
+// associated with values recorded via subsequent calls to Record.
 func (c Int64Counter) Bind(labels ...core.KeyValue) (h BoundInt64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
@@ -81,33 +71,25 @@ func (c Int64Counter) Measurement(value int64) Measurement {
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values for each key specified in the counter with the
-// WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// counter with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// the keys and values to be associated with this value.
 func (c Float64Counter) Add(ctx context.Context, value float64, labels ...core.KeyValue) {
 	c.directRecord(ctx, core.NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
-// the keys and values for each key specified in the counter with the
-// WithKeys option.
-//
-// If the labels do not contain a value for the key specified in the
-// counter with the WithKeys option, then the missing value will be
-// treated as unspecified.
+// the keys and values to be associated with this value.
 func (c Int64Counter) Add(ctx context.Context, value int64, labels ...core.KeyValue) {
 	c.directRecord(ctx, core.NewInt64Number(value), labels)
 }
 
-// Add adds the value to the counter's sum.
+// Add adds the value to the counter's sum using the labels
+// previously bound to this counter via Bind()
 func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
 	b.directRecord(ctx, core.NewFloat64Number(value))
 }
 
-// Add adds the value to the counter's sum.
+// Add adds the value to the counter's sum using the labels
+// previously bound to this counter via Bind()
 func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
 	b.directRecord(ctx, core.NewInt64Number(value))
 }

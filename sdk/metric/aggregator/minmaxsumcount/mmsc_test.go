@@ -18,15 +18,12 @@ import (
 	"context"
 	"math"
 	"math/rand"
-	"os"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
-	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -61,37 +58,6 @@ var (
 		},
 	}
 )
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "Aggregator.states",
-			Offset: unsafe.Offsetof(Aggregator{}.states),
-		},
-		{
-			Name:   "state.count",
-			Offset: unsafe.Offsetof(state{}.count),
-		},
-		{
-			Name:   "state.sum",
-			Offset: unsafe.Offsetof(state{}.sum),
-		},
-		{
-			Name:   "state.min",
-			Offset: unsafe.Offsetof(state{}.min),
-		},
-		{
-			Name:   "state.max",
-			Offset: unsafe.Offsetof(state{}.max),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
 
 func TestMinMaxSumCountAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
