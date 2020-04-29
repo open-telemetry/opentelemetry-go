@@ -107,19 +107,6 @@ func Infer(k string, value interface{}) core.KeyValue {
 
 	rv := reflect.ValueOf(value)
 
-	// N.B. we can do something like the following to infer the
-	// value of an interface or indirect a pointer.
-	//
-	// // Unpack interfaces to get to a real value.
-	// for rv.Kind() == reflect.Interface {
-	// 	rv = rv.Elem()
-	// }
-
-	// // Indirect a single pointer.
-	// if rv.Kind() == reflect.Ptr {
-	// 	rv = rv.Elem()
-	// }
-
 	switch rv.Kind() {
 	case reflect.Bool:
 		return Bool(k, rv.Interface().(bool))
