@@ -20,7 +20,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -405,7 +404,7 @@ func TestRecordBatchRealSDK(t *testing.T) {
 		DoNotPrintTime: true,
 	})
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	global.SetMeterProvider(pusher)
 
