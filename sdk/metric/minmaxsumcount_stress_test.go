@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This test is too large for the race detector.  This SDK uses no locks
-// that the race detector would help with, anyway.
-// +build !race
-
 package metric_test
 
 import (
