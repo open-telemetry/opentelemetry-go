@@ -17,30 +17,21 @@ package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/hist
 import (
 	"context"
 	"sort"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 type (
 	// Aggregator observe events and counts them in pre-determined buckets.
 	// It also calculates the sum and count of all events.
 	Aggregator struct {
-		// This aggregator uses the StateLocker that enables a lock-free Update()
-		// in exchange of a blocking and consistent Checkpoint(). Since Checkpoint()
-		// is called by the sdk itself and it is not part of a hot path,
-		// the user is not impacted by these blocking calls.
-		//
-		// The algorithm keeps two states. At every instance of time there exist one current state,
-		// in which new updates are aggregated, and one checkpoint state, that represents the state
-		// since the last Checkpoint(). These states are swapped when a `Checkpoint()` occur.
-
-		// states needs to be aligned for 64-bit atomic operations.
-		states     [2]state
-		lock       internal.StateLocker
+		lock       sync.Mutex
+		current    state
+		checkpoint state
 		boundaries []core.Number
 		kind       core.NumberKind
 	}
@@ -84,18 +75,10 @@ func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
 	agg := Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: boundaries,
-		states: [2]state{
-			{
-				buckets: aggregator.Buckets{
-					Boundaries: boundaries,
-					Counts:     make([]core.Number, len(boundaries)+1),
-				},
-			},
-			{
-				buckets: aggregator.Buckets{
-					Boundaries: boundaries,
-					Counts:     make([]core.Number, len(boundaries)+1),
-				},
+		current: state{
+			buckets: aggregator.Buckets{
+				Boundaries: boundaries,
+				Counts:     make([]core.Number, len(boundaries)+1),
 			},
 		},
 	}
@@ -106,21 +89,21 @@ func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
 func (c *Aggregator) Sum() (core.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.checkpoint().sum, nil
+	return c.checkpoint.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return int64(c.checkpoint().count), nil
+	return int64(c.checkpoint.count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.checkpoint().buckets, nil
+	return c.checkpoint.buckets, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -128,42 +111,38 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
-	c.lock.SwapActiveState(c.resetCheckpoint)
+	c.lock.Lock()
+	c.checkpoint, c.current = c.current, c.emptyState()
+	c.lock.Unlock()
 }
 
-// checkpoint returns the checkpoint state by inverting the lower bit of generationAndHotIdx.
-func (c *Aggregator) checkpoint() *state {
-	return &c.states[c.lock.ColdIdx()]
-}
-
-func (c *Aggregator) resetCheckpoint() {
-	checkpoint := c.checkpoint()
-
-	checkpoint.count.SetUint64(0)
-	checkpoint.sum.SetNumber(core.Number(0))
-	checkpoint.buckets.Counts = make([]core.Number, len(checkpoint.buckets.Counts))
+func (c *Aggregator) emptyState() state {
+	return state{
+		buckets: aggregator.Buckets{
+			Boundaries: c.boundaries,
+			Counts:     make([]core.Number, len(c.boundaries)+1),
+		},
+	}
 }
 
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
-	cIdx := c.lock.Start()
-	defer c.lock.End(cIdx)
-
-	current := &c.states[cIdx]
-	current.count.AddUint64Atomic(1)
-	current.sum.AddNumberAtomic(kind, number)
-
+	bucketID := len(c.boundaries)
 	for i, boundary := range c.boundaries {
 		if number.CompareNumber(kind, boundary) < 0 {
-			current.buckets.Counts[i].AddUint64Atomic(1)
-			return nil
+			bucketID = i
+			break
 		}
 	}
 
-	// Observed event is bigger than all defined boundaries.
-	current.buckets.Counts[len(c.boundaries)].AddUint64Atomic(1)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.current.count.AddInt64(1)
+	c.current.sum.AddNumber(kind, number)
+	c.current.buckets.Counts[bucketID].AddUint64(1)
 
 	return nil
 }
@@ -175,20 +154,11 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	// Lock() synchronize Merge() and Checkpoint() to make sure all operations of
-	// Merge() is done to the same state.
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
+	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
 
-	current := c.checkpoint()
-	// We assume that the aggregator being merged is not being updated nor checkpointed or this could be inconsistent.
-	ocheckpoint := o.checkpoint()
-
-	current.sum.AddNumber(desc.NumberKind(), ocheckpoint.sum)
-	current.count.AddNumber(core.Uint64NumberKind, ocheckpoint.count)
-
-	for i := 0; i < len(current.buckets.Counts); i++ {
-		current.buckets.Counts[i].AddNumber(core.Uint64NumberKind, ocheckpoint.buckets.Counts[i])
+	for i := 0; i < len(c.checkpoint.buckets.Counts); i++ {
+		c.checkpoint.buckets.Counts[i].AddNumber(core.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
 	}
 	return nil
 }
