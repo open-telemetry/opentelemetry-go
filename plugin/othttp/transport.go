@@ -32,7 +32,7 @@ type Transport struct {
 	rt http.RoundTripper
 
 	tracer            trace.Tracer
-	props             propagation.Propagators
+	propagators       propagation.Propagators
 	spanStartOptions  []trace.StartOption
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
@@ -62,7 +62,7 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 
 func (t *Transport) configure(c *Config) {
 	t.tracer = c.Tracer
-	t.props = c.Props
+	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
@@ -89,7 +89,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	r = r.WithContext(ctx)
 	setBasicAttributes(span, r)
-	propagation.InjectHTTP(ctx, t.props, r.Header)
+	propagation.InjectHTTP(ctx, t.propagators, r.Header)
 
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {

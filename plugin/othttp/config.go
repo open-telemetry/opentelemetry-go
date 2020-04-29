@@ -25,7 +25,7 @@ import (
 // and othttp.Transport types.
 type Config struct {
 	Tracer            trace.Tracer
-	Props             propagation.Propagators
+	Propagators       propagation.Propagators
 	SpanStartOptions  []trace.StartOption
 	ReadEvent         bool
 	WriteEvent        bool
@@ -77,7 +77,7 @@ func WithPublicEndpoint() Option {
 // go.opentelemetry.io/otel/api/global.Propagators are used.
 func WithPropagators(ps propagation.Propagators) Option {
 	return OptionFunc(func(c *Config) {
-		c.Props = ps
+		c.Propagators = ps
 	})
 }
 

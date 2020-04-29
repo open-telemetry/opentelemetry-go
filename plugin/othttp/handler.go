@@ -35,7 +35,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer            trace.Tracer
-	props             propagation.Propagators
+	propagators       propagation.Propagators
 	spanStartOptions  []trace.StartOption
 	readEvent         bool
 	writeEvent        bool
@@ -70,7 +70,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 
 func (h *Handler) configure(c *Config) {
 	h.tracer = c.Tracer
-	h.props = c.Props
+	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
@@ -90,7 +90,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
+	ctx := propagation.ExtractHTTP(r.Context(), h.propagators, r.Header)
 	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
@@ -110,7 +110,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.props}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.propagators}
 
 	setBasicAttributes(span, r)
 	span.SetAttributes(RemoteAddrKey.String(r.RemoteAddr))
