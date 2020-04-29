@@ -96,6 +96,9 @@ func Uint(k string, v uint) core.KeyValue {
 // Infer creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
 func Infer(k string, value interface{}) core.KeyValue {
+	if value == nil {
+		return String(k, "<nil>")
+	}
 	switch v := value.(type) {
 	case bool:
 		return Bool(k, v)
@@ -119,6 +122,8 @@ func Infer(k string, value interface{}) core.KeyValue {
 		return String(k, v)
 	case fmt.Stringer:
 		return Stringer(k, v)
+	case *int:
+		return Int(k, *v)
 	default:
 		return String(k, fmt.Sprint(v))
 	}
