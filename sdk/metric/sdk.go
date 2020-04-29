@@ -470,7 +470,7 @@ func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements
 	// ordered labels.
 	var labelsPtr *label.Set
 	for i, meas := range measurements {
-		s := meas.SyncImpl().(*syncInstrument)
+		s := meas.SyncImpl().Implementation().(*syncInstrument)
 
 		h := s.acquireHandle(kvs, labelsPtr)
 
