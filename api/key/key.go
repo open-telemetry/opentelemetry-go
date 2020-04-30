@@ -16,6 +16,7 @@ package key
 
 import (
 	"fmt"
+	"reflect"
 
 	"go.opentelemetry.io/otel/api/core"
 )
@@ -96,30 +97,37 @@ func Uint(k string, v uint) core.KeyValue {
 // Infer creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
 func Infer(k string, value interface{}) core.KeyValue {
-	switch v := value.(type) {
-	case bool:
-		return Bool(k, v)
-	case int:
-		return Int(k, v)
-	case uint:
-		return Uint(k, v)
-	case int32:
-		return Int32(k, v)
-	case int64:
-		return Int64(k, v)
-	case uint32:
-		return Uint32(k, v)
-	case uint64:
-		return Uint64(k, v)
-	case float32:
-		return Float32(k, v)
-	case float64:
-		return Float64(k, v)
-	case string:
-		return String(k, v)
-	case fmt.Stringer:
-		return Stringer(k, v)
-	default:
-		return String(k, fmt.Sprint(v))
+	if value == nil {
+		return String(k, "<nil>")
 	}
+
+	if stringer, ok := value.(fmt.Stringer); ok {
+		return String(k, stringer.String())
+	}
+
+	rv := reflect.ValueOf(value)
+
+	switch rv.Kind() {
+	case reflect.Bool:
+		return Bool(k, rv.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16:
+		return Int(k, int(rv.Int()))
+	case reflect.Int32:
+		return Int32(k, int32(rv.Int()))
+	case reflect.Int64:
+		return Int64(k, int64(rv.Int()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16:
+		return Uint(k, uint(rv.Uint()))
+	case reflect.Uint32:
+		return Uint32(k, uint32(rv.Uint()))
+	case reflect.Uint64, reflect.Uintptr:
+		return Uint64(k, rv.Uint())
+	case reflect.Float32:
+		return Float32(k, float32(rv.Float()))
+	case reflect.Float64:
+		return Float64(k, rv.Float())
+	case reflect.String:
+		return String(k, rv.Interface().(string))
+	}
+	return String(k, fmt.Sprint(rv.Interface()))
 }
