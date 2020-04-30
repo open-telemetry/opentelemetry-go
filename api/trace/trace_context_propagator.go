@@ -28,7 +28,7 @@ import (
 const (
 	supportedVersion  = 0
 	maxVersion        = 254
-	traceparentHeader = "Traceparent"
+	traceparentHeader = "traceparent"
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
