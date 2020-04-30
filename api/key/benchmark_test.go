@@ -33,6 +33,12 @@ func getSpan() trace.Span {
 	return sp
 }
 
+func BenchmarkKeyInfer(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		key.Infer("Attr", int(256))
+	}
+}
+
 func BenchmarkMultiNoKeyInference(b *testing.B) {
 	sp := getSpan()
 

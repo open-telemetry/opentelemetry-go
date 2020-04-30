@@ -109,33 +109,23 @@ func Infer(k string, value interface{}) core.KeyValue {
 
 	switch rv.Kind() {
 	case reflect.Bool:
-		return Bool(k, rv.Interface().(bool))
-	case reflect.Int:
-		return Int(k, rv.Interface().(int))
-	case reflect.Int8:
-		return Int(k, int(rv.Interface().(int8)))
-	case reflect.Int16:
-		return Int(k, int(rv.Interface().(int16)))
+		return Bool(k, rv.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16:
+		return Int(k, int(rv.Int()))
 	case reflect.Int32:
-		return Int32(k, rv.Interface().(int32))
+		return Int32(k, int32(rv.Int()))
 	case reflect.Int64:
-		return Int64(k, rv.Interface().(int64))
-	case reflect.Uint:
-		return Uint(k, rv.Interface().(uint))
-	case reflect.Uint8:
-		return Uint(k, uint(rv.Interface().(uint8)))
-	case reflect.Uint16:
-		return Uint(k, uint(rv.Interface().(uint16)))
+		return Int64(k, int64(rv.Int()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16:
+		return Uint(k, uint(rv.Uint()))
 	case reflect.Uint32:
-		return Uint32(k, rv.Interface().(uint32))
-	case reflect.Uint64:
-		return Uint64(k, rv.Interface().(uint64))
-	case reflect.Uintptr:
-		return Uint64(k, uint64(rv.Interface().(uintptr)))
+		return Uint32(k, uint32(rv.Uint()))
+	case reflect.Uint64, reflect.Uintptr:
+		return Uint64(k, rv.Uint())
 	case reflect.Float32:
-		return Float32(k, rv.Interface().(float32))
+		return Float32(k, float32(rv.Float()))
 	case reflect.Float64:
-		return Float64(k, rv.Interface().(float64))
+		return Float64(k, rv.Float())
 	case reflect.String:
 		return String(k, rv.Interface().(string))
 	}
