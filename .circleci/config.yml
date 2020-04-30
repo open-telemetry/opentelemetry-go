@@ -4,6 +4,7 @@ executors:
     docker:
       - image: cimg/go:1.14
   prior-go:
+    resource_class: medium+
     docker:
       - image: cimg/go:1.13
 
