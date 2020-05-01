@@ -426,12 +426,11 @@ func peerInfoFromContext(ctx context.Context) []core.KeyValue {
 	return peerInfoFromTarget(p.Addr.String())
 }
 
-var fullMethodRegexp = regexp.MustCompile(`^/(?:\S*\.)?(\S*)/\S*$`)
+var fullMethodRegexp = regexp.MustCompile(`^/(?:\S*/)?(?:\S*\.)?(\S*)/\S*$`)
 
 func serviceFromFullMethod(method string) string {
 	match := fullMethodRegexp.FindAllStringSubmatch(method, 1)
-
-	if len(match) != 1 && len(match[1]) != 2 {
+	if (len(match) == 0) || (len(match) > 1 && len(match[1]) != 2) {
 		return ""
 	}
 
