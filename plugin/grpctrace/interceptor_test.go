@@ -57,36 +57,36 @@ func (mm *mockProtoMessage) Reset()         {}
 func (mm *mockProtoMessage) String() string { return "mock" }
 func (mm *mockProtoMessage) ProtoMessage()  {}
 
-func TestUCIFullyQualifiedMethodNameExtractsServiceName(t *testing.T) {
+func TestUCIFullyQualifiedMethodNameSetsServiceNameAttribute(t *testing.T) {
 
 	expectedServiceName := "serviceName"
 	fullyQualifiedName := fmt.Sprintf("/foo.%s/bar", expectedServiceName)
 
-	testUCIExtractsExpectedName(t, fullyQualifiedName, expectedServiceName)
+	testUCISetsExpectedNameAttribute(t, fullyQualifiedName, expectedServiceName)
 }
 
-func TestUCISimpleMethodNameExtractsServiceName(t *testing.T) {
+func TestUCISimpleMethodNameSetsServiceNameAttribute(t *testing.T) {
 	expectedServiceName := "serviceName"
 	simpleName := fmt.Sprintf("/%s/bar", expectedServiceName)
 
-	testUCIExtractsExpectedName(t, simpleName, expectedServiceName)
+	testUCISetsExpectedNameAttribute(t, simpleName, expectedServiceName)
 }
 
-func TestUCIUnamedMethodServiceExtractsEmptyName(t *testing.T) {
+func TestUCIUnamedMethodSetsEmptyNameAttribute(t *testing.T) {
 	expectedServiceName := ""
 	emptyName := fmt.Sprintf("/%s/bar", expectedServiceName)
 
-	testUCIExtractsExpectedName(t, emptyName, expectedServiceName)
+	testUCISetsExpectedNameAttribute(t, emptyName, expectedServiceName)
 }
 
-func TestUCILongMethodNameExtractsServiceName(t *testing.T) {
+func TestUCILongMethodNameSetsServiceNameAttribute(t *testing.T) {
 	expectedServiceName := "serviceName"
 	emptyServiceFullName := fmt.Sprintf("/github.com/foo.baz/bar/foo.%s/bar", expectedServiceName)
 
-	testUCIExtractsExpectedName(t, emptyServiceFullName, expectedServiceName)
+	testUCISetsExpectedNameAttribute(t, emptyServiceFullName, expectedServiceName)
 }
 
-func testUCIExtractsExpectedName(t *testing.T, fullServiceName, expectedServiceName string) {
+func testUCISetsExpectedNameAttribute(t *testing.T, fullServiceName, expectedServiceName string) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	global.SetTraceProvider(tp)
