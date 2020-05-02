@@ -426,15 +426,15 @@ func peerInfoFromContext(ctx context.Context) []core.KeyValue {
 	return peerInfoFromTarget(p.Addr.String())
 }
 
-var fullMethodRegexp = regexp.MustCompile(`^/(?:\S*/)?(?:\S*\.)?(\S*)/\S*$`)
+var fullMethodRegexp = regexp.MustCompile(`^\/?(?:\S+\.)?(\S+)\/\S+$`)
 
 func serviceFromFullMethod(method string) string {
-	match := fullMethodRegexp.FindAllStringSubmatch(method, 1)
-	if (len(match) == 0) || (len(match) > 1 && len(match[1]) != 2) {
+	match := fullMethodRegexp.FindStringSubmatch(method)
+	if len(match) == 0 {
 		return ""
 	}
 
-	return match[0][1]
+	return match[1]
 }
 
 func addEventForMessageReceived(ctx context.Context, id int, m interface{}) {

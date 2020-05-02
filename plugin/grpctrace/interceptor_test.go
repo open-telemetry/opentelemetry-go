@@ -30,15 +30,7 @@ type testExporter struct {
 }
 
 func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	var spans []*export.SpanData
-	var ok bool
-
-	if spans, ok = t.spanMap[s.Name]; !ok {
-		spans = []*export.SpanData{}
-		t.spanMap[s.Name] = spans
-	}
-	spans = append(spans, s)
-	t.spanMap[s.Name] = spans
+	t.spanMap[s.Name] = append(t.spanMap[s.Name], s)
 }
 
 type mockCCInvoker struct {
@@ -72,16 +64,23 @@ func TestUCISimpleMethodNameSetsServiceNameAttribute(t *testing.T) {
 	testUCISetsExpectedNameAttribute(t, simpleName, expectedServiceName)
 }
 
-func TestUCIUnamedMethodSetsEmptyNameAttribute(t *testing.T) {
+func TestUCIInvalidMethodSetsEmptyNameAttribute(t *testing.T) {
 	expectedServiceName := ""
-	emptyName := fmt.Sprintf("/%s/bar", expectedServiceName)
+	emptyName := "invalidMethodName"
 
 	testUCISetsExpectedNameAttribute(t, emptyName, expectedServiceName)
 }
 
 func TestUCILongMethodNameSetsServiceNameAttribute(t *testing.T) {
 	expectedServiceName := "serviceName"
-	emptyServiceFullName := fmt.Sprintf("/github.com/foo.baz/bar/foo.%s/bar", expectedServiceName)
+	emptyServiceFullName := fmt.Sprintf("/github.com.foo.baz.%s/bar", expectedServiceName)
+
+	testUCISetsExpectedNameAttribute(t, emptyServiceFullName, expectedServiceName)
+}
+
+func TestUCINonAlhanumericMethodNameSetsServiceNameAttribute(t *testing.T) {
+	expectedServiceName := "serviceName_123"
+	emptyServiceFullName := fmt.Sprintf("/faz.bar/baz.%s/bar", expectedServiceName)
 
 	testUCISetsExpectedNameAttribute(t, emptyServiceFullName, expectedServiceName)
 }
