@@ -191,10 +191,10 @@ func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID, _ := apitrace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	traceID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
 
-	linkTraceID, _ := apitrace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"

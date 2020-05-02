@@ -24,7 +24,7 @@ import (
 
 func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 	sampler := sdktrace.AlwaysParentSample()
-	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.SpanContext{
 		TraceID:    traceID,
@@ -38,7 +38,7 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 
 func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
 	sampler := sdktrace.AlwaysParentSample()
-	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.SpanContext{
 		TraceID: traceID,

@@ -218,7 +218,7 @@ func generateSpan(t *testing.T, parallel bool, tr apitrace.Tracer, option testOp
 }
 
 func getSpanContext() apitrace.SpanContext {
-	tid, _ := apitrace.TraceIDFromHex("01020304050607080102040810203040")
+	tid, _ := apitrace.IDFromHex("01020304050607080102040810203040")
 	sid, _ := apitrace.SpanIDFromHex("0102040810203040")
 	return apitrace.SpanContext{
 		TraceID:    tid,

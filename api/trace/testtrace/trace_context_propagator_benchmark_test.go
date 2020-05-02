@@ -39,7 +39,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 	b.Run("SampledSpanContext", func(b *testing.B) {
 		var id uint64
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-		traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+		traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 
 		mockTracer := &mocktrace.MockTracer{
 			Sampled:     false,

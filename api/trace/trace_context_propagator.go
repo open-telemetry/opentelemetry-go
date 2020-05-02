@@ -101,7 +101,7 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 
 	var sc SpanContext
 
-	sc.TraceID, err = TraceIDFromHex(sections[1][:32])
+	sc.TraceID, err = IDFromHex(sections[1][:32])
 	if err != nil {
 		return EmptySpanContext()
 	}

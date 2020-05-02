@@ -21,6 +21,6 @@ import (
 
 // IDGenerator allows custom generators for TraceId and SpanId.
 type IDGenerator interface {
-	NewTraceID() trace.TraceID
+	NewTraceID() trace.ID
 	NewSpanID() trace.SpanID
 }

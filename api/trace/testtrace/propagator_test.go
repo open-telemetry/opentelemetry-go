@@ -32,7 +32,7 @@ type outOfThinAirPropagator struct {
 var _ propagation.HTTPPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	traceID, err := trace.TraceIDFromHex("938753245abe987f098c0987a9873987")
+	traceID, err := trace.IDFromHex("938753245abe987f098c0987a9873987")
 	require.NoError(p.t, err)
 	spanID, err := trace.SpanIDFromHex("2345f98c0987a09d")
 	require.NoError(p.t, err)

@@ -49,7 +49,7 @@ type MockContextKeyValue struct {
 type MockTracer struct {
 	Resources             otelcorrelation.Map
 	FinishedSpans         []*MockSpan
-	SpareTraceIDs         []oteltrace.TraceID
+	SpareTraceIDs         []oteltrace.ID
 	SpareSpanIDs          []oteltrace.SpanID
 	SpareContextKeyValues []MockContextKeyValue
 
@@ -126,7 +126,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartConfig) oteltrace.TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartConfig) oteltrace.ID {
 	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
 		return parent.TraceID
 	}
@@ -175,11 +175,11 @@ func (t *MockTracer) getRandSpanID() oteltrace.SpanID {
 	return sid
 }
 
-func (t *MockTracer) getRandTraceID() oteltrace.TraceID {
+func (t *MockTracer) getRandTraceID() oteltrace.ID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
-	tid := oteltrace.TraceID{}
+	tid := oteltrace.ID{}
 	t.rand.Read(tid[:])
 
 	return tid

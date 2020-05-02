@@ -88,7 +88,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 }
 
 func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
-	tid, err := TraceIDFromHex(supplier.Get(B3TraceIDHeader))
+	tid, err := IDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
 		return EmptySpanContext()
 	}
@@ -139,7 +139,7 @@ func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) SpanContext 
 	}
 
 	var err error
-	sc.TraceID, err = TraceIDFromHex(parts[0])
+	sc.TraceID, err = IDFromHex(parts[0])
 	if err != nil {
 		return EmptySpanContext()
 	}

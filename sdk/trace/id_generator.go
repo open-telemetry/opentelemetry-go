@@ -41,10 +41,10 @@ func (gen *defaultIDGenerator) NewSpanID() trace.SpanID {
 
 // NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func (gen *defaultIDGenerator) NewTraceID() trace.TraceID {
+func (gen *defaultIDGenerator) NewTraceID() trace.ID {
 	gen.Lock()
 	defer gen.Unlock()
-	tid := trace.TraceID{}
+	tid := trace.ID{}
 	gen.randSource.Read(tid[:])
 	return tid
 }

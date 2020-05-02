@@ -32,7 +32,7 @@ type alwaysOffSampler struct{}
 func (ns alwaysOffSampler) ShouldSample(
 	_ SpanContext,
 	_ bool,
-	_ TraceID,
+	_ ID,
 	_ SpanID,
 	_ string,
 	_ SpanKind,

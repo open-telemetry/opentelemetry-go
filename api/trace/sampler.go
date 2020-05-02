@@ -23,7 +23,7 @@ type Sampler interface {
 	ShouldSample(
 		sc SpanContext,
 		remote bool,
-		traceID TraceID,
+		traceID ID,
 		spanID SpanID,
 		spanName string,
 		spanKind SpanKind,

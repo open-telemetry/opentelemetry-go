@@ -22,7 +22,7 @@ import (
 )
 
 type Generator interface {
-	TraceID() trace.TraceID
+	TraceID() trace.ID
 	SpanID() trace.SpanID
 }
 
@@ -41,7 +41,7 @@ func NewCountGenerator() *CountGenerator {
 	return &CountGenerator{}
 }
 
-func (g *CountGenerator) TraceID() trace.TraceID {
+func (g *CountGenerator) TraceID() trace.ID {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -51,7 +51,7 @@ func (g *CountGenerator) TraceID() trace.TraceID {
 		g.traceIDLow++
 	}
 
-	var traceID trace.TraceID
+	var traceID trace.ID
 
 	binary.BigEndian.PutUint64(traceID[0:8], g.traceIDLow)
 	binary.BigEndian.PutUint64(traceID[8:], g.traceIDHigh)

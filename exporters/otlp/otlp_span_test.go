@@ -82,7 +82,7 @@ func TestExportSpans(t *testing.T) {
 			[]*tracesdk.SpanData{
 				{
 					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
@@ -100,7 +100,7 @@ func TestExportSpans(t *testing.T) {
 				},
 				{
 					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
 						TraceFlags: byte(1),
 					},
@@ -119,7 +119,7 @@ func TestExportSpans(t *testing.T) {
 				},
 				{
 					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},

@@ -40,7 +40,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	traceID, _ := trace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456

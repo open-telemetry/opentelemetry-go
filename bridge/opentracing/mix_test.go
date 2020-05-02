@@ -143,7 +143,7 @@ func TestMixedAPIs(t *testing.T) {
 // simple test
 
 type simpleTest struct {
-	traceID oteltrace.TraceID
+	traceID oteltrace.ID
 	spanIDs []oteltrace.SpanID
 }
 
@@ -178,7 +178,7 @@ func (st *simpleTest) noop(t *testing.T, ctx context.Context) context.Context {
 // current/active span test
 
 type currentActiveSpanTest struct {
-	traceID oteltrace.TraceID
+	traceID oteltrace.ID
 	spanIDs []oteltrace.SpanID
 
 	recordedCurrentOtelSpanIDs []oteltrace.SpanID
@@ -614,7 +614,7 @@ func generateBaggageKeys(key string) (otKey, otelKey string) {
 
 // helpers
 
-func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID oteltrace.TraceID, expectedSpanIDs []oteltrace.SpanID) {
+func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID oteltrace.ID, expectedSpanIDs []oteltrace.SpanID) {
 	expectedSpanCount := len(expectedSpanIDs)
 
 	// reverse spanIDs, since first span ID belongs to root, that
@@ -661,7 +661,7 @@ func reverse(length int, swap func(i, j int)) {
 	}
 }
 
-func simpleTraceID() oteltrace.TraceID {
+func simpleTraceID() oteltrace.ID {
 	return [16]byte{123, 42}
 }
 

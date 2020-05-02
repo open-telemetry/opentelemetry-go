@@ -133,7 +133,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
-	t, _ := apitrace.TraceIDFromHex("0000000000000001000000000000002a")
+	t, _ := apitrace.IDFromHex("0000000000000001000000000000002a")
 	sc := apitrace.SpanContext{TraceID: t}
 
 	want := "0000000000000001000000000000002a"

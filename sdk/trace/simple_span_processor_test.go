@@ -57,7 +57,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("SimpleSpanProcessor")
-	tid, _ := apitrace.TraceIDFromHex("01020304050607080102040810203040")
+	tid, _ := apitrace.IDFromHex("01020304050607080102040810203040")
 	sid, _ := apitrace.SpanIDFromHex("0102040810203040")
 	sc := apitrace.SpanContext{
 		TraceID:    tid,

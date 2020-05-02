@@ -31,8 +31,8 @@ var (
 	spanID  = mustSpanIDFromHex("00f067aa0ba902b7")
 )
 
-func mustTraceIDFromHex(s string) (t trace.TraceID) {
-	t, _ = trace.TraceIDFromHex(s)
+func mustTraceIDFromHex(s string) (t trace.ID) {
+	t, _ = trace.IDFromHex(s)
 	return
 }
 

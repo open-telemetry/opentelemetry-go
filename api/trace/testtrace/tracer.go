@@ -51,7 +51,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 		opt(&c)
 	}
 
-	var traceID trace.TraceID
+	var traceID trace.ID
 	var parentSpanID trace.SpanID
 
 	parentSpanContext, _, links := parent.GetSpanContextAndLinks(ctx, c.NewRoot)

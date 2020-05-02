@@ -23,7 +23,7 @@ import (
 func TestIsValid(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		tid  trace.TraceID
+		tid  trace.ID
 		sid  trace.SpanID
 		want bool
 	}{
@@ -34,17 +34,17 @@ func TestIsValid(t *testing.T) {
 			want: true,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has neither an Trace ID nor Span ID",
-			tid:  trace.TraceID([16]byte{}),
+			tid:  trace.ID([16]byte{}),
 			sid:  [8]byte{},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Span ID but not a Trace ID",
-			tid:  trace.TraceID([16]byte{}),
+			tid:  trace.ID([16]byte{}),
 			sid:  [8]byte{42},
 			want: false,
 		}, {
 			name: "SpanContext.IsValid() returns false if sc has a Trace ID but not a Span ID",
-			tid:  trace.TraceID([16]byte{1}),
+			tid:  trace.ID([16]byte{1}),
 			sid:  [8]byte{},
 			want: false,
 		},
@@ -66,12 +66,12 @@ func TestIsValidFromHex(t *testing.T) {
 	for _, testcase := range []struct {
 		name  string
 		hex   string
-		tid   trace.TraceID
+		tid   trace.ID
 		valid bool
 	}{
 		{
 			name:  "Valid TraceID",
-			tid:   trace.TraceID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
+			tid:   trace.ID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
 			hex:   "80f198ee56343ba864fe8b2a57d3eff7",
 			valid: true,
 		}, {
@@ -89,7 +89,7 @@ func TestIsValidFromHex(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			tid, err := trace.TraceIDFromHex(testcase.hex)
+			tid, err := trace.IDFromHex(testcase.hex)
 
 			if testcase.valid && err != nil {
 				t.Errorf("Expected TraceID %s to be valid but end with error %s", testcase.hex, err.Error())
@@ -109,16 +109,16 @@ func TestIsValidFromHex(t *testing.T) {
 func TestHasTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		tid  trace.TraceID
+		tid  trace.ID
 		want bool
 	}{
 		{
 			name: "SpanContext.HasTraceID() returns true if both Low and High are nonzero",
-			tid:  trace.TraceID([16]byte{1}),
+			tid:  trace.ID([16]byte{1}),
 			want: true,
 		}, {
 			name: "SpanContext.HasTraceID() returns false if neither Low nor High are nonzero",
-			tid:  trace.TraceID{},
+			tid:  trace.ID{},
 			want: false,
 		},
 	} {
@@ -168,20 +168,20 @@ func TestSpanContextIsSampled(t *testing.T) {
 		{
 			name: "sampled",
 			sc: trace.SpanContext{
-				TraceID:    trace.TraceID([16]byte{1}),
+				TraceID:    trace.ID([16]byte{1}),
 				TraceFlags: trace.TraceFlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "sampled plus unused",
 			sc: trace.SpanContext{
-				TraceID:    trace.TraceID([16]byte{1}),
+				TraceID:    trace.ID([16]byte{1}),
 				TraceFlags: trace.TraceFlagsSampled | trace.TraceFlagsUnused,
 			},
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   trace.SpanContext{TraceID: trace.TraceID{}},
+			sc:   trace.SpanContext{TraceID: trace.ID{}},
 			want: false,
 		},
 	} {
@@ -197,17 +197,17 @@ func TestSpanContextIsSampled(t *testing.T) {
 func TestStringTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		tid  trace.TraceID
+		tid  trace.ID
 		want string
 	}{
 		{
 			name: "TraceID.String returns string representation of self.TraceID values > 0",
-			tid:  trace.TraceID([16]byte{255}),
+			tid:  trace.ID([16]byte{255}),
 			want: "ff000000000000000000000000000000",
 		},
 		{
 			name: "TraceID.String returns string representation of self.TraceID values == 0",
-			tid:  trace.TraceID([16]byte{}),
+			tid:  trace.ID([16]byte{}),
 			want: "00000000000000000000000000000000",
 		},
 	} {

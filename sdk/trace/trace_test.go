@@ -38,12 +38,12 @@ import (
 )
 
 var (
-	tid apitrace.TraceID
+	tid apitrace.ID
 	sid apitrace.SpanID
 )
 
 func init() {
-	tid, _ = apitrace.TraceIDFromHex("01020304050607080102040810203040")
+	tid, _ = apitrace.IDFromHex("01020304050607080102040810203040")
 	sid, _ = apitrace.SpanIDFromHex("0102040810203040")
 }
 
@@ -469,8 +469,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := apitrace.SpanContext{TraceID: apitrace.TraceID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
-	sc2 := apitrace.SpanContext{TraceID: apitrace.TraceID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	span := startSpan(tp, "Links",
 		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
@@ -508,9 +508,9 @@ func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := apitrace.SpanContext{TraceID: apitrace.TraceID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
-	sc2 := apitrace.SpanContext{TraceID: apitrace.TraceID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
-	sc3 := apitrace.SpanContext{TraceID: apitrace.TraceID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc3 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
@@ -833,7 +833,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
-	tID, _ := apitrace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
+	tID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f")
 	sID, _ := apitrace.SpanIDFromHex("0001020304050607")
 	ctx := context.Background()
 
