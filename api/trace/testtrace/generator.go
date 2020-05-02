@@ -18,12 +18,12 @@ import (
 	"encoding/binary"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 type Generator interface {
-	TraceID() core.TraceID
-	SpanID() core.SpanID
+	TraceID() trace.TraceID
+	SpanID() trace.SpanID
 }
 
 var _ Generator = (*CountGenerator)(nil)
@@ -41,7 +41,7 @@ func NewCountGenerator() *CountGenerator {
 	return &CountGenerator{}
 }
 
-func (g *CountGenerator) TraceID() core.TraceID {
+func (g *CountGenerator) TraceID() trace.TraceID {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -51,7 +51,7 @@ func (g *CountGenerator) TraceID() core.TraceID {
 		g.traceIDLow++
 	}
 
-	var traceID core.TraceID
+	var traceID trace.TraceID
 
 	binary.BigEndian.PutUint64(traceID[0:8], g.traceIDLow)
 	binary.BigEndian.PutUint64(traceID[8:], g.traceIDHigh)
@@ -59,13 +59,13 @@ func (g *CountGenerator) TraceID() core.TraceID {
 	return traceID
 }
 
-func (g *CountGenerator) SpanID() core.SpanID {
+func (g *CountGenerator) SpanID() trace.SpanID {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
 	g.spanID++
 
-	var spanID core.SpanID
+	var spanID trace.SpanID
 
 	binary.BigEndian.PutUint64(spanID[:], g.spanID)
 

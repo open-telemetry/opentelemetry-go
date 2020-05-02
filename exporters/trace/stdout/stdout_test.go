@@ -40,14 +40,14 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := trace.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
 	resource := resource.New(key.String("rk1", "rv11"))
 
 	testSpan := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},

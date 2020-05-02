@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -52,7 +51,7 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 		supportedVersion,
 		sc.TraceID,
 		sc.SpanID,
-		sc.TraceFlags&core.TraceFlagsSampled)
+		sc.TraceFlags&TraceFlagsSampled)
 	supplier.Set(traceparentHeader, h)
 }
 
@@ -64,68 +63,68 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (TraceContext) extract(supplier propagation.HTTPSupplier) core.SpanContext {
+func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	h = strings.Trim(h, "-")
 	if !traceCtxRegExp.MatchString(h) {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	sections := strings.Split(h, "-")
 	if len(sections) < 4 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if len(sections[0]) != 2 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 	ver, err := hex.DecodeString(sections[0])
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if version == 0 && len(sections) != 4 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if len(sections[1]) != 32 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
-	var sc core.SpanContext
+	var sc SpanContext
 
-	sc.TraceID, err = core.TraceIDFromHex(sections[1][:32])
+	sc.TraceID, err = TraceIDFromHex(sections[1][:32])
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if len(sections[2]) != 16 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
-	sc.SpanID, err = core.SpanIDFromHex(sections[2])
+	sc.SpanID, err = SpanIDFromHex(sections[2])
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if len(sections[3]) != 2 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 	opts, err := hex.DecodeString(sections[3])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
-	sc.TraceFlags = opts[0] &^ core.TraceFlagsUnused
+	sc.TraceFlags = opts[0] &^ TraceFlagsUnused
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	return sc

@@ -62,18 +62,18 @@ func toZipkinSpanContext(data *export.SpanData) zkmodel.SpanContext {
 	}
 }
 
-func toZipkinTraceID(traceID core.TraceID) zkmodel.TraceID {
+func toZipkinTraceID(traceID trace.TraceID) zkmodel.TraceID {
 	return zkmodel.TraceID{
 		High: binary.BigEndian.Uint64(traceID[:8]),
 		Low:  binary.BigEndian.Uint64(traceID[8:]),
 	}
 }
 
-func toZipkinID(spanID core.SpanID) zkmodel.ID {
+func toZipkinID(spanID trace.SpanID) zkmodel.ID {
 	return zkmodel.ID(binary.BigEndian.Uint64(spanID[:]))
 }
 
-func toZipkinParentID(spanID core.SpanID) *zkmodel.ID {
+func toZipkinParentID(spanID trace.SpanID) *zkmodel.ID {
 	if spanID.IsValid() {
 		id := toZipkinID(spanID)
 		return &id

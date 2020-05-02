@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -33,11 +32,11 @@ type outOfThinAirPropagator struct {
 var _ propagation.HTTPPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	traceID, err := core.TraceIDFromHex("938753245abe987f098c0987a9873987")
+	traceID, err := trace.TraceIDFromHex("938753245abe987f098c0987a9873987")
 	require.NoError(p.t, err)
-	spanID, err := core.SpanIDFromHex("2345f98c0987a09d")
+	spanID, err := trace.SpanIDFromHex("2345f98c0987a09d")
 	require.NoError(p.t, err)
-	sc := core.SpanContext{
+	sc := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: 0,

@@ -51,8 +51,8 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 		opt(&c)
 	}
 
-	var traceID core.TraceID
-	var parentSpanID core.SpanID
+	var traceID trace.TraceID
+	var parentSpanID trace.SpanID
 
 	parentSpanContext, _, links := parent.GetSpanContextAndLinks(ctx, c.NewRoot)
 
@@ -75,13 +75,13 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 		lock:      &sync.RWMutex{},
 		tracer:    t,
 		startTime: startTime,
-		spanContext: core.SpanContext{
+		spanContext: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
 		parentSpanID: parentSpanID,
 		attributes:   make(map[core.Key]core.Value),
-		links:        make(map[core.SpanContext][]core.KeyValue),
+		links:        make(map[trace.SpanContext][]core.KeyValue),
 	}
 
 	span.SetName(name)

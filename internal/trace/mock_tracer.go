@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/trace/parent"
 )
@@ -62,15 +61,15 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 		op(&opts)
 	}
 	var span *MockSpan
-	var sc core.SpanContext
+	var sc apitrace.SpanContext
 
 	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
 
 	if !parentSpanContext.IsValid() {
-		sc = core.SpanContext{}
+		sc = apitrace.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
-			sc.TraceFlags = core.TraceFlagsSampled
+			sc.TraceFlags = apitrace.TraceFlagsSampled
 		}
 	} else {
 		sc = parentSpanContext

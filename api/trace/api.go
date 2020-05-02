@@ -105,7 +105,7 @@ type Span interface {
 
 	// SpanContext returns span context of the span. Returned SpanContext is usable
 	// even after the span ends.
-	SpanContext() core.SpanContext
+	SpanContext() SpanContext
 
 	// SetStatus sets the status of the span in the form of a code
 	// and a message.  SetStatus overrides the value of previous
@@ -152,7 +152,7 @@ type StartConfig struct {
 //      on service provider side so two traces (from Client and from Service Provider) can
 //      be correlated.
 type Link struct {
-	core.SpanContext
+	SpanContext
 	Attributes []core.KeyValue
 }
 
@@ -248,7 +248,7 @@ func WithNewRoot() StartOption {
 }
 
 // LinkedTo allows instantiating a Span with initial Links.
-func LinkedTo(sc core.SpanContext, attrs ...core.KeyValue) StartOption {
+func LinkedTo(sc SpanContext, attrs ...core.KeyValue) StartOption {
 	return func(c *StartConfig) {
 		c.Links = append(c.Links, Link{sc, attrs})
 	}

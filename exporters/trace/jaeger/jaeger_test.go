@@ -191,11 +191,11 @@ func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := apitrace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
 
-	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
+	linkTraceID, _ := apitrace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
 	keyValue := "value"
@@ -215,7 +215,7 @@ func Test_spanDataToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -224,7 +224,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				EndTime:   now,
 				Links: []apitrace.Link{
 					{
-						SpanContext: core.SpanContext{
+						SpanContext: apitrace.SpanContext{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
 						},
