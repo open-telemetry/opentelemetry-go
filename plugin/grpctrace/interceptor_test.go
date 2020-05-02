@@ -20,6 +20,8 @@ import (
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -32,110 +34,97 @@ func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 	t.spanMap[s.Name] = append(t.spanMap[s.Name], s)
 }
 
-type mockCCInvoker struct {
+type mockUICInvoker struct {
 	ctx context.Context
 }
 
-func (mcci *mockCCInvoker) invoke(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
-	mcci.ctx = ctx
+func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+	mcuici.ctx = ctx
 	return nil
 }
 
-type mockProtoMessage struct {
+type mockProtoMessage struct{}
+
+func (mm *mockProtoMessage) Reset() {
 }
 
-func (mm *mockProtoMessage) Reset()         {}
-func (mm *mockProtoMessage) String() string { return "mock" }
-func (mm *mockProtoMessage) ProtoMessage()  {}
-
-type nameAttributeTestCase struct {
-	testName     string
-	expectedName string
-	fullNameFmt  string
+func (mm *mockProtoMessage) String() string {
+	return "mock"
 }
 
-func (tc nameAttributeTestCase) fullName() string {
-	return fmt.Sprintf(tc.fullNameFmt, tc.expectedName)
+func (mm *mockProtoMessage) ProtoMessage() {
 }
 
-func TestUCISetsExpectedServiceNameAttribute(t *testing.T) {
-	testCases := []nameAttributeTestCase{
-		{
-			"FullyQualifiedMethodName",
-			"serviceName",
-			"/github.com.foo.%s/bar",
-		},
-		{
-			"SimpleMethodName",
-			"serviceName",
-			"/%s/bar",
-		},
-		{
-			"MethodNameWithoutFullPath",
-			"serviceName",
-			"%s/bar",
-		},
-		{
-			"InvalidMethodName",
-			"",
-			"invalidName",
-		},
-		{
-			"NonAlphanumericMethodName",
-			"serviceName_123",
-			"/github.com.foo.%s/method",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.testName, tc.testUCISetsExpectedNameAttribute)
-	}
-}
-
-func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
+func TestUnaryClientInterceptor(t *testing.T) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-
-	tr := tp.Tracer("grpctrace/client")
-	ctx, span := tr.Start(context.Background(), tc.testName)
-	defer span.End()
+		sdktrace.WithConfig(sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		},
+		))
+	global.SetTraceProvider(tp)
 
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
-
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
 
-	unaryInt := UnaryClientInterceptor(tr)
+	tracer := tp.Tracer("grpctrace/client")
+	unaryInterceptor := UnaryClientInterceptor(tracer)
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
-	ccInvoker := &mockCCInvoker{}
+	uniInterceptorInvoker := &mockUICInvoker{}
 
-	err = unaryInt(ctx, tc.fullName(), req, reply, clientConn, ccInvoker.invoke)
-	if err != nil {
-		t.Fatalf("failed to run unary interceptor: %v", err)
+	checks := []struct {
+		name         string
+		expectedAttr map[core.Key]core.Value
+		eventsAttr   [][]core.KeyValue
+	}{
+		{
+			name: fmt.Sprintf("/foo.%s/bar", "serviceName"),
+			expectedAttr: map[core.Key]core.Value{
+				rpcServiceKey:  core.String("serviceName"),
+				netPeerIPKey:   core.String("fake"),
+				netPeerPortKey: core.String("connection"),
+			},
+			eventsAttr: [][]core.KeyValue{
+				{
+					core.KeyValue{Key: messageTypeKey, Value: core.String("SENT")},
+					core.KeyValue{Key: messageIDKey, Value: core.Int(1)},
+				},
+				{
+					core.KeyValue{Key: messageTypeKey, Value: core.String("RECEIVED")},
+					core.KeyValue{Key: messageIDKey, Value: core.Int(1)},
+				},
+			},
+		},
 	}
 
-	spanData, hasSpanData := exp.spanMap[tc.fullName()]
-
-	if !hasSpanData || len(spanData) == 0 {
-		t.Fatalf("no span data found for name < %s >", tc.fullName())
-	}
-
-	attributes := spanData[0].Attributes
-
-	var actualServiceName string
-	for _, attr := range attributes {
-		if attr.Key == rpcServiceKey {
-			actualServiceName = attr.Value.AsString()
-			break
+	for _, check := range checks {
+		err = unaryInterceptor(context.Background(), check.name, req, reply, clientConn, uniInterceptorInvoker.invoker)
+		if err != nil {
+			t.Fatalf("failed to run unary interceptor: %v", err)
 		}
-	}
 
-	if tc.expectedName != actualServiceName {
-		t.Fatalf("invalid service name found. expected %s, actual %s",
-			tc.expectedName, actualServiceName)
+		attrs := exp.spanMap[check.name][0].Attributes
+		for _, attr := range attrs {
+			expectedAttr, ok := check.expectedAttr[attr.Key]
+			if ok {
+				if expectedAttr != attr.Value {
+					t.Fatalf("invalid %s found. expected %s, actual %s", string(attr.Key),
+						expectedAttr.AsString(), attr.Value.AsString())
+				}
+			}
+		}
+
+		events := exp.spanMap[check.name][0].MessageEvents
+		for event := 0; event < len(check.eventsAttr); event++ {
+			for attr := 0; attr < len(check.eventsAttr[event]); attr++ {
+				if events[event].Attributes[attr] != check.eventsAttr[event][attr] {
+					t.Fatalf("invalid attribute in events")
+				}
+			}
+		}
 	}
 }
