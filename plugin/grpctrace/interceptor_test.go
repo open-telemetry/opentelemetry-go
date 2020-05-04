@@ -62,38 +62,38 @@ func (tc nameAttributeTestCase) fullName() string {
 func TestUCISetsExpectedServiceNameAttribute(t *testing.T) {
 	testCases := []nameAttributeTestCase{
 		{
-			"Fully Qualified Method Name",
+			"FullyQualifiedMethodName",
 			"serviceName",
 			"/github.com.foo.%s/bar",
 		},
 		{
-			"Simple Method Name",
+			"SimpleMethodName",
 			"serviceName",
 			"/%s/bar",
 		},
 		{
-			"Method Name Without Full Path",
+			"MethodNameWithoutFullPath",
 			"serviceName",
 			"%s/bar",
 		},
 		{
-			"Invalid Method Name",
+			"InvalidMethodName",
 			"",
 			"invalidName",
 		},
 		{
-			"Non Alhanumeric Method Name",
+			"NonAlhanumericMethodName",
 			"serviceName_123",
 			"/github.com.foo.%s/method",
 		},
 	}
 
 	for _, tc := range testCases {
-		testUCISetsExpectedNameAttribute(t, tc)
+		t.Run(tc.testName, tc.testUCISetsExpectedNameAttribute)
 	}
 }
 
-func testUCISetsExpectedNameAttribute(t *testing.T, tc nameAttributeTestCase) {
+func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
@@ -106,7 +106,7 @@ func testUCISetsExpectedNameAttribute(t *testing.T, tc nameAttributeTestCase) {
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 
 	if err != nil {
-		t.Fatalf("[TestCase: %s]: failed to create client connection: %v", tc.testName, err)
+		t.Fatalf("failed to create client connection: %v", err)
 	}
 
 	unaryInt := UnaryClientInterceptor(tr)
@@ -117,7 +117,7 @@ func testUCISetsExpectedNameAttribute(t *testing.T, tc nameAttributeTestCase) {
 
 	err = unaryInt(ctx, tc.fullName(), req, reply, clientConn, ccInvoker.invoke)
 	if err != nil {
-		t.Fatalf("[TestCase: %s]: failed to run unary interceptor: %v", tc.testName, err)
+		t.Fatalf("failed to run unary interceptor: %v", err)
 	}
 
 	attributes := exp.spanMap[tc.fullName()][0].Attributes
@@ -130,7 +130,7 @@ func testUCISetsExpectedNameAttribute(t *testing.T, tc nameAttributeTestCase) {
 	}
 
 	if tc.expectedName != actualServiceName {
-		t.Fatalf("[TestCase: %s]: invalid service name found. expected %s, actual %s",
-			tc.testName, tc.expectedName, actualServiceName)
+		t.Fatalf("invalid service name found. expected %s, actual %s",
+			tc.expectedName, actualServiceName)
 	}
 }
