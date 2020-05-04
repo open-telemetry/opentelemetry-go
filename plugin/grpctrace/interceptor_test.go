@@ -49,55 +49,64 @@ func (mm *mockProtoMessage) Reset()         {}
 func (mm *mockProtoMessage) String() string { return "mock" }
 func (mm *mockProtoMessage) ProtoMessage()  {}
 
-func TestUCIFullyQualifiedMethodNameSetsServiceNameAttribute(t *testing.T) {
-
-	expectedServiceName := "serviceName"
-	fullyQualifiedName := fmt.Sprintf("/foo.%s/bar", expectedServiceName)
-
-	testUCISetsExpectedNameAttribute(t, fullyQualifiedName, expectedServiceName)
+type nameAttributeTestCase struct {
+	testName     string
+	expectedName string
+	fullNameFmt  string
 }
 
-func TestUCISimpleMethodNameSetsServiceNameAttribute(t *testing.T) {
-	expectedServiceName := "serviceName"
-	simpleName := fmt.Sprintf("/%s/bar", expectedServiceName)
-
-	testUCISetsExpectedNameAttribute(t, simpleName, expectedServiceName)
+func (tc nameAttributeTestCase) fullName() string {
+	return fmt.Sprintf(tc.fullNameFmt, tc.expectedName)
 }
 
-func TestUCIInvalidMethodSetsEmptyNameAttribute(t *testing.T) {
-	expectedServiceName := ""
-	emptyName := "invalidMethodName"
+func TestUCISetsExpectedServiceNameAttribute(t *testing.T) {
+	testCases := []nameAttributeTestCase{
+		{
+			"Fully Qualified Method Name",
+			"serviceName",
+			"/github.com.foo.%s/bar",
+		},
+		{
+			"Simple Method Name",
+			"serviceName",
+			"/%s/bar",
+		},
+		{
+			"Method Name Without Full Path",
+			"serviceName",
+			"%s/bar",
+		},
+		{
+			"Invalid Method Name",
+			"",
+			"invalidName",
+		},
+		{
+			"Non Alhanumeric Method Name",
+			"serviceName_123",
+			"/github.com.foo.%s/method",
+		},
+	}
 
-	testUCISetsExpectedNameAttribute(t, emptyName, expectedServiceName)
+	for _, tc := range testCases {
+		testUCISetsExpectedNameAttribute(t, tc)
+	}
 }
 
-func TestUCILongMethodNameSetsServiceNameAttribute(t *testing.T) {
-	expectedServiceName := "serviceName"
-	emptyServiceFullName := fmt.Sprintf("/github.com.foo.baz.%s/bar", expectedServiceName)
-
-	testUCISetsExpectedNameAttribute(t, emptyServiceFullName, expectedServiceName)
-}
-
-func TestUCINonAlhanumericMethodNameSetsServiceNameAttribute(t *testing.T) {
-	expectedServiceName := "serviceName_123"
-	emptyServiceFullName := fmt.Sprintf("/faz.bar/baz.%s/bar", expectedServiceName)
-
-	testUCISetsExpectedNameAttribute(t, emptyServiceFullName, expectedServiceName)
-}
-
-func testUCISetsExpectedNameAttribute(t *testing.T, fullServiceName, expectedServiceName string) {
+func testUCISetsExpectedNameAttribute(t *testing.T, tc nameAttributeTestCase) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	global.SetTraceProvider(tp)
 
 	tr := tp.Tracer("grpctrace/client")
-	ctx, span := tr.Start(context.Background(), "test")
+	ctx, span := tr.Start(context.Background(), tc.testName)
 	defer span.End()
 
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 
 	if err != nil {
-		t.Fatalf("failed to create client connection: %v", err)
+		t.Fatalf("[TestCase: %s]: failed to create client connection: %v", tc.testName, err)
 	}
 
 	unaryInt := UnaryClientInterceptor(tr)
@@ -106,12 +115,12 @@ func testUCISetsExpectedNameAttribute(t *testing.T, fullServiceName, expectedSer
 	reply := &mockProtoMessage{}
 	ccInvoker := &mockCCInvoker{}
 
-	err = unaryInt(ctx, fullServiceName, req, reply, clientConn, ccInvoker.invoke)
+	err = unaryInt(ctx, tc.fullName(), req, reply, clientConn, ccInvoker.invoke)
 	if err != nil {
-		t.Fatalf("failed to run unary interceptor: %v", err)
+		t.Fatalf("[TestCase: %s]: failed to run unary interceptor: %v", tc.testName, err)
 	}
 
-	attributes := exp.spanMap[fullServiceName][0].Attributes
+	attributes := exp.spanMap[tc.fullName()][0].Attributes
 
 	var actualServiceName string
 	for _, attr := range attributes {
@@ -120,8 +129,8 @@ func testUCISetsExpectedNameAttribute(t *testing.T, fullServiceName, expectedSer
 		}
 	}
 
-	if expectedServiceName != actualServiceName {
-		t.Fatalf("invalid service name found. expected %s, actual %s",
-			expectedServiceName, actualServiceName)
+	if tc.expectedName != actualServiceName {
+		t.Fatalf("[TestCase: %s]: invalid service name found. expected %s, actual %s",
+			tc.testName, tc.expectedName, actualServiceName)
 	}
 }
