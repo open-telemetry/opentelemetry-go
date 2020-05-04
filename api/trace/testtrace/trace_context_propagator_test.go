@@ -288,9 +288,26 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator trace.TraceContext
-	want := []string{"traceparent"}
+	want := []string{"traceparent", "tracestate"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
+	}
+}
+
+func TestTraceStatePropagation(t *testing.T) {
+	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}), propagation.WithExtractors(trace.TraceContext{}))
+	want := "opaquevalue"
+	headerName := "tracestate"
+
+	inReq, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	inReq.Header.Add(headerName, want)
+	ctx := propagation.ExtractHTTP(context.Background(), props, inReq.Header)
+
+	outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
+	propagation.InjectHTTP(ctx, props, outReq.Header)
+
+	if diff := cmp.Diff(outReq.Header.Get(headerName), want); diff != "" {
+		t.Errorf("Propagate tracestate: -got +want %s", diff)
 	}
 }
