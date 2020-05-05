@@ -120,7 +120,13 @@ func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 		t.Fatalf("failed to run unary interceptor: %v", err)
 	}
 
-	attributes := exp.spanMap[tc.fullName()][0].Attributes
+	spanData, hasSpanData := exp.spanMap[tc.fullName()]
+
+	if !hasSpanData || len(spanData) == 0 {
+		t.Fatalf("no span data found for name < %s >", tc.fullName())
+	}
+
+	attributes := spanData[0].Attributes
 
 	var actualServiceName string
 	for _, attr := range attributes {
