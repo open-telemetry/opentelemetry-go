@@ -17,18 +17,19 @@ package trace_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/trace"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 	sampler := sdktrace.AlwaysParentSample()
-	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := core.SpanContext{
+	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
-		TraceFlags: core.TraceFlagsSampled,
+		TraceFlags: trace.FlagsSampled,
 	}
 	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")
@@ -37,9 +38,9 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 
 func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
 	sampler := sdktrace.AlwaysParentSample()
-	traceID, _ := core.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := core.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := core.SpanContext{
+	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.SpanContext{
 		TraceID: traceID,
 		SpanID:  spanID,
 	}

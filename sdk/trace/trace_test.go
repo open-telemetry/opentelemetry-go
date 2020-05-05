@@ -38,13 +38,13 @@ import (
 )
 
 var (
-	tid core.TraceID
-	sid core.SpanID
+	tid apitrace.ID
+	sid apitrace.SpanID
 )
 
 func init() {
-	tid, _ = core.TraceIDFromHex("01020304050607080102040810203040")
-	sid, _ = core.SpanIDFromHex("0102040810203040")
+	tid, _ = apitrace.IDFromHex("01020304050607080102040810203040")
+	sid, _ = apitrace.SpanIDFromHex("0102040810203040")
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
@@ -195,12 +195,12 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				ctx := context.Background()
 				if tc.parent {
-					psc := core.SpanContext{
+					psc := apitrace.SpanContext{
 						TraceID: idg.NewTraceID(),
 						SpanID:  idg.NewSpanID(),
 					}
 					if tc.sampledParent {
-						psc.TraceFlags = core.TraceFlagsSampled
+						psc.TraceFlags = apitrace.FlagsSampled
 					}
 					ctx = apitrace.ContextWithRemoteSpanContext(ctx, psc)
 				}
@@ -231,7 +231,7 @@ func TestStartSpanWithParent(t *testing.T) {
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
-	sc1 := core.SpanContext{
+	sc1 := apitrace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
@@ -246,7 +246,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	sc2 := core.SpanContext{
+	sc2 := apitrace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
@@ -283,7 +283,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -312,7 +312,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -347,7 +347,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -392,7 +392,7 @@ func TestEvents(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -442,7 +442,7 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -469,8 +469,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := key.New("key2").String("value2")
 	k3v3 := key.New("key3").String("value3")
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	span := startSpan(tp, "Links",
 		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
@@ -486,7 +486,7 @@ func TestLinks(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -508,9 +508,9 @@ func TestLinksOverLimit(t *testing.T) {
 	te := &testExporter{}
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc2 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
-	sc3 := core.SpanContext{TraceID: core.TraceID([16]byte{1, 1}), SpanID: core.SpanID{3}}
+	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
+	sc3 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
@@ -529,7 +529,7 @@ func TestLinksOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -554,7 +554,7 @@ func TestSetSpanName(t *testing.T) {
 	ctx := context.Background()
 
 	want := "SpanName-1"
-	ctx = apitrace.ContextWithRemoteSpanContext(ctx, core.SpanContext{
+	ctx = apitrace.ContextWithRemoteSpanContext(ctx, apitrace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
@@ -582,7 +582,7 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -604,8 +604,8 @@ func cmpDiff(x, y interface{}) string {
 		cmp.AllowUnexported(export.Event{}))
 }
 
-func remoteSpanContext() core.SpanContext {
-	return core.SpanContext{
+func remoteSpanContext() apitrace.SpanContext {
+	return apitrace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
@@ -614,7 +614,7 @@ func remoteSpanContext() core.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p core.SpanContext, apiSpan apitrace.Span) error {
+func checkChild(p apitrace.SpanContext, apiSpan apitrace.Span) error {
 	s := apiSpan.(*span)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
@@ -681,7 +681,7 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = core.SpanID{}
+	got.SpanContext.SpanID = apitrace.SpanID{}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -833,12 +833,12 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // never sample
 
-	tID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
-	sID, _ := core.SpanIDFromHex("0001020304050607")
+	tID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f")
+	sID, _ := apitrace.SpanIDFromHex("0001020304050607")
 	ctx := context.Background()
 
 	ctx = apitrace.ContextWithRemoteSpanContext(ctx,
-		core.SpanContext{
+		apitrace.SpanContext{
 			TraceID:    tID,
 			SpanID:     sID,
 			TraceFlags: 0,
@@ -925,7 +925,7 @@ func TestRecordError(t *testing.T) {
 		}
 
 		want := &export.SpanData{
-			SpanContext: core.SpanContext{
+			SpanContext: apitrace.SpanContext{
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			},
@@ -969,7 +969,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -1008,7 +1008,7 @@ func TestRecordErrorNil(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -1075,7 +1075,7 @@ func TestWithResource(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: core.SpanContext{
+		SpanContext: apitrace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},

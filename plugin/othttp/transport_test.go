@@ -22,7 +22,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -37,7 +36,7 @@ func TestTransportBasics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := propagation.ExtractHTTP(r.Context(), global.Propagators(), r.Header)
 		span := trace.RemoteSpanContextFromContext(ctx)
-		tgtID, err := core.SpanIDFromHex(fmt.Sprintf("%016x", id))
+		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", id))
 		if err != nil {
 			t.Fatalf("Error converting id to SpanID: %s", err.Error())
 		}
