@@ -95,7 +95,7 @@ func fixB3TID(in string) string {
 }
 
 func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
-	tid, err := FromHex(fixB3TID(supplier.Get(B3TraceIDHeader)))
+	tid, err := IDFromHex(fixB3TID(supplier.Get(B3TraceIDHeader)))
 	if err != nil {
 		return EmptySpanContext()
 	}
