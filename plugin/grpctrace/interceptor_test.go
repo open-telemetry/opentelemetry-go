@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -62,7 +61,6 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			DefaultSampler: sdktrace.AlwaysSample(),
 		},
 		))
-	global.SetTraceProvider(tp)
 
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 	if err != nil {
@@ -79,50 +77,102 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	checks := []struct {
 		name         string
 		expectedAttr map[core.Key]core.Value
-		eventsAttr   [][]core.KeyValue
+		eventsAttr   []map[core.Key]core.Value
 	}{
 		{
-			name: fmt.Sprintf("/foo.%s/bar", "serviceName"),
+			name: "/github.com.serviceName/bar",
 			expectedAttr: map[core.Key]core.Value{
 				rpcServiceKey:  core.String("serviceName"),
 				netPeerIPKey:   core.String("fake"),
 				netPeerPortKey: core.String("connection"),
 			},
-			eventsAttr: [][]core.KeyValue{
+			eventsAttr: []map[core.Key]core.Value{
 				{
-					core.KeyValue{Key: messageTypeKey, Value: core.String("SENT")},
-					core.KeyValue{Key: messageIDKey, Value: core.Int(1)},
+					messageTypeKey: core.String("SENT"),
+					messageIDKey:   core.Int(1),
 				},
 				{
-					core.KeyValue{Key: messageTypeKey, Value: core.String("RECEIVED")},
-					core.KeyValue{Key: messageIDKey, Value: core.Int(1)},
+					messageTypeKey: core.String("RECEIVED"),
+					messageIDKey:   core.Int(1),
 				},
 			},
 		},
+		{
+			name: "/serviceName/bar",
+			expectedAttr: map[core.Key]core.Value{
+				rpcServiceKey: core.String("serviceName"),
+			},
+			eventsAttr: []map[core.Key]core.Value{
+				{
+					messageTypeKey: core.String("SENT"),
+					messageIDKey:   core.Int(1),
+				},
+				{
+					messageTypeKey: core.String("RECEIVED"),
+					messageIDKey:   core.Int(1),
+				},
+			},
+		},
+		{
+			name:         "serviceName/bar",
+			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("serviceName")},
+		},
+		{
+			name:         "invalidName",
+			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("")},
+		},
+		{
+			name:         "/github.com.foo.serviceName_123/method",
+			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("serviceName_123")},
+		},
 	}
 
-	for _, check := range checks {
+	for idx, check := range checks {
+		fmt.Println("================", idx, "==================")
 		err = unaryInterceptor(context.Background(), check.name, req, reply, clientConn, uniInterceptorInvoker.invoker)
 		if err != nil {
 			t.Fatalf("failed to run unary interceptor: %v", err)
 		}
 
-		attrs := exp.spanMap[check.name][0].Attributes
+		spanData, ok := exp.spanMap[check.name]
+		if !ok || len(spanData) == 0 {
+			t.Fatalf("no span data found for name < %s >", check.name)
+		}
+
+		attrs := spanData[0].Attributes
 		for _, attr := range attrs {
 			expectedAttr, ok := check.expectedAttr[attr.Key]
 			if ok {
 				if expectedAttr != attr.Value {
-					t.Fatalf("invalid %s found. expected %s, actual %s", string(attr.Key),
+					t.Errorf("name: %s invalid %s found. expected %s, actual %s", check.name, string(attr.Key),
 						expectedAttr.AsString(), attr.Value.AsString())
 				}
+				delete(check.expectedAttr, attr.Key)
 			}
 		}
 
-		events := exp.spanMap[check.name][0].MessageEvents
+		// Check if any expected attr not seen
+		if len(check.expectedAttr) > 0 {
+			for attr := range check.expectedAttr {
+				t.Errorf("missing attribute %s in span", string(attr))
+			}
+		}
+
+		events := spanData[0].MessageEvents
 		for event := 0; event < len(check.eventsAttr); event++ {
-			for attr := 0; attr < len(check.eventsAttr[event]); attr++ {
-				if events[event].Attributes[attr] != check.eventsAttr[event][attr] {
-					t.Fatalf("invalid attribute in events")
+			for _, attr := range events[event].Attributes {
+				expectedAttr, ok := check.eventsAttr[event][attr.Key]
+				if ok {
+					if attr.Value != expectedAttr {
+						t.Errorf("invalid value for attribute %s in events, expected %s actual %s",
+							string(attr.Key), attr.Value.AsString(), expectedAttr.AsString())
+					}
+					delete(check.eventsAttr[event], attr.Key)
+				}
+			}
+			if len(check.eventsAttr[event]) > 0 {
+				for attr := range check.eventsAttr[event] {
+					t.Errorf("missing attribute %s in span event", string(attr))
 				}
 			}
 		}
