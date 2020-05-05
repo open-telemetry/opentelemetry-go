@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package trace
 
 import (
 	"bytes"
@@ -24,10 +24,10 @@ const (
 	traceFlagsBitMaskSampled = byte(0x01)
 	traceFlagsBitMaskUnused  = byte(0xFE)
 
-	// TraceFlagsSampled is a byte with sampled bit set. It is a convenient value initializer
+	// FlagsSampled is a byte with sampled bit set. It is a convenient value initializer
 	// for SpanContext TraceFlags field when a trace is sampled.
-	TraceFlagsSampled = traceFlagsBitMaskSampled
-	TraceFlagsUnused  = traceFlagsBitMaskUnused
+	FlagsSampled = traceFlagsBitMaskSampled
+	FlagsUnused  = traceFlagsBitMaskUnused
 
 	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
@@ -44,26 +44,26 @@ func (e errorConst) Error() string {
 	return string(e)
 }
 
-// TraceID is a unique identity of a trace.
-type TraceID [16]byte
+// ID is a unique identity of a trace.
+type ID [16]byte
 
-var nilTraceID TraceID
+var nilTraceID ID
 var _ json.Marshaler = nilTraceID
 
 // IsValid checks whether the trace ID is valid. A valid trace ID does
 // not consist of zeros only.
-func (t TraceID) IsValid() bool {
+func (t ID) IsValid() bool {
 	return !bytes.Equal(t[:], nilTraceID[:])
 }
 
 // MarshalJSON implements a custom marshal function to encode TraceID
 // as a hex string.
-func (t TraceID) MarshalJSON() ([]byte, error) {
+func (t ID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
 // String returns the hex string representation form of a TraceID
-func (t TraceID) String() string {
+func (t ID) String() string {
 	return hex.EncodeToString(t[:])
 }
 
@@ -90,11 +90,11 @@ func (s SpanID) String() string {
 	return hex.EncodeToString(s[:])
 }
 
-// TraceIDFromHex returns a TraceID from a hex string if it is compliant
+// IDFromHex returns a TraceID from a hex string if it is compliant
 // with the w3c trace-context specification.
 // See more at https://www.w3.org/TR/trace-context/#trace-id
-func TraceIDFromHex(h string) (TraceID, error) {
-	t := TraceID{}
+func IDFromHex(h string) (ID, error) {
+	t := ID{}
 	if len(h) != 32 {
 		return t, ErrInvalidTraceIDLength
 	}
@@ -152,7 +152,7 @@ func decodeHex(h string, b []byte) error {
 // SpanContext contains basic information about the span - its trace
 // ID, span ID and trace flags.
 type SpanContext struct {
-	TraceID    TraceID
+	TraceID    ID
 	SpanID     SpanID
 	TraceFlags byte
 }

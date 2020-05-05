@@ -23,7 +23,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/matchers"
@@ -79,7 +78,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			ctx, span := subject.Start(context.Background(), "test")
 
 			e.Expect(span).NotToBeNil()
-			e.Expect(span.SpanContext()).NotToEqual(core.EmptySpanContext())
+			e.Expect(span.SpanContext()).NotToEqual(trace.EmptySpanContext())
 			e.Expect(trace.SpanFromContext(ctx)).ToEqual(span)
 		})
 

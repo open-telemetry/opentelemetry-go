@@ -40,12 +40,12 @@ import (
 
 type bridgeSpanContext struct {
 	baggageItems    otelcorrelation.Map
-	otelSpanContext otelcore.SpanContext
+	otelSpanContext oteltrace.SpanContext
 }
 
 var _ ot.SpanContext = &bridgeSpanContext{}
 
-func newBridgeSpanContext(otelSpanContext otelcore.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
+func newBridgeSpanContext(otelSpanContext oteltrace.SpanContext, parentOtSpanContext ot.SpanContext) *bridgeSpanContext {
 	bCtx := &bridgeSpanContext{
 		baggageItems:    otelcorrelation.NewEmptyMap(),
 		otelSpanContext: otelSpanContext,
@@ -582,10 +582,10 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 type fakeSpan struct {
 	oteltrace.NoopSpan
 
-	sc otelcore.SpanContext
+	sc oteltrace.SpanContext
 }
 
-func (s fakeSpan) SpanContext() otelcore.SpanContext {
+func (s fakeSpan) SpanContext() oteltrace.SpanContext {
 	return s.sc
 }
 
