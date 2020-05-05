@@ -82,7 +82,7 @@ func TestUCISetsExpectedServiceNameAttribute(t *testing.T) {
 			"invalidName",
 		},
 		{
-			"NonAlhanumericMethodName",
+			"NonAlphanumericMethodName",
 			"serviceName_123",
 			"/github.com.foo.%s/method",
 		},
@@ -97,7 +97,6 @@ func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
 
 	tr := tp.Tracer("grpctrace/client")
 	ctx, span := tr.Start(context.Background(), tc.testName)
@@ -132,6 +131,7 @@ func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 	for _, attr := range attributes {
 		if attr.Key == rpcServiceKey {
 			actualServiceName = attr.Value.AsString()
+			break
 		}
 	}
 
