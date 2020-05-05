@@ -302,11 +302,12 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 
 		resp, err := handler(ctx, req)
 
-		addEventForMessageSent(ctx, 1, resp)
-
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(s.Code(), s.Message())
+			addEventForMessageSent(ctx, 1, s.Proto())
+		} else {
+			addEventForMessageSent(ctx, 1, resp)
 		}
 
 		return resp, err
