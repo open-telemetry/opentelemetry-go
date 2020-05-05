@@ -135,7 +135,7 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3TraceIDHeader: "a3ce929d0e0e4736",
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID64bitPadded,
 			SpanID:  spanID,
 		},
@@ -208,7 +208,7 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "a3ce929d0e0e4736-00f067aa0ba902b7",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID64bitPadded,
 			SpanID:  spanID,
 		},
