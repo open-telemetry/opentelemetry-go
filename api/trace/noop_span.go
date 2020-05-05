@@ -29,8 +29,8 @@ type NoopSpan struct {
 var _ Span = (*NoopSpan)(nil)
 
 // SpanContext returns an invalid span context.
-func (NoopSpan) SpanContext() core.SpanContext {
-	return core.EmptySpanContext()
+func (NoopSpan) SpanContext() SpanContext {
+	return EmptySpanContext()
 }
 
 // IsRecording always returns false for NoopSpan.

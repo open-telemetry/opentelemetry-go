@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -57,7 +56,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 		return
 	}
 	if b3.SingleHeader {
-		sampled := sc.TraceFlags & core.TraceFlagsSampled
+		sampled := sc.TraceFlags & FlagsSampled
 		supplier.Set(B3SingleHeader,
 			fmt.Sprintf("%s-%s-%.1d", sc.TraceID, sc.SpanID, sampled))
 	} else {
@@ -76,7 +75,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 
 // Extract retrieves B3 Headers from the supplier
 func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	var sc core.SpanContext
+	var sc SpanContext
 	if b3.SingleHeader {
 		sc = b3.extractSingleHeader(supplier)
 	} else {
@@ -88,84 +87,84 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
-	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
+func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
+	tid, err := IDFromHex(supplier.Get(B3TraceIDHeader))
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
-	sid, err := core.SpanIDFromHex(supplier.Get(B3SpanIDHeader))
+	sid, err := SpanIDFromHex(supplier.Get(B3SpanIDHeader))
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 	sampled, ok := b3.extractSampledState(supplier.Get(B3SampledHeader))
 	if !ok {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	debug, ok := b3.extracDebugFlag(supplier.Get(B3DebugFlagHeader))
 	if !ok {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
-	if debug == core.TraceFlagsSampled {
-		sampled = core.TraceFlagsSampled
+	if debug == FlagsSampled {
+		sampled = FlagsSampled
 	}
 
-	sc := core.SpanContext{
+	sc := SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: sampled,
 	}
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	return sc
 }
 
-func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) core.SpanContext {
+func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) SpanContext {
 	h := supplier.Get(B3SingleHeader)
 	if h == "" || h == "0" {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
-	sc := core.SpanContext{}
+	sc := SpanContext{}
 	parts := strings.Split(h, "-")
 	l := len(parts)
 	if l > 4 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if l < 2 {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	var err error
-	sc.TraceID, err = core.TraceIDFromHex(parts[0])
+	sc.TraceID, err = IDFromHex(parts[0])
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
-	sc.SpanID, err = core.SpanIDFromHex(parts[1])
+	sc.SpanID, err = SpanIDFromHex(parts[1])
 	if err != nil {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	if l > 2 {
 		var ok bool
 		sc.TraceFlags, ok = b3.extractSampledState(parts[2])
 		if !ok {
-			return core.EmptySpanContext()
+			return EmptySpanContext()
 		}
 	}
 	if l == 4 {
-		_, err = core.SpanIDFromHex(parts[3])
+		_, err = SpanIDFromHex(parts[3])
 		if err != nil {
-			return core.EmptySpanContext()
+			return EmptySpanContext()
 		}
 	}
 
 	if !sc.IsValid() {
-		return core.EmptySpanContext()
+		return EmptySpanContext()
 	}
 
 	return sc
@@ -177,14 +176,14 @@ func (b3 B3) extractSampledState(sampled string) (flag byte, ok bool) {
 	case "", "0":
 		return 0, true
 	case "1":
-		return core.TraceFlagsSampled, true
+		return FlagsSampled, true
 	case "true":
 		if !b3.SingleHeader {
-			return core.TraceFlagsSampled, true
+			return FlagsSampled, true
 		}
 	case "d":
 		if b3.SingleHeader {
-			return core.TraceFlagsSampled, true
+			return FlagsSampled, true
 		}
 	}
 	return 0, false
@@ -196,7 +195,7 @@ func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
 	case "", "0":
 		return 0, true
 	case "1":
-		return core.TraceFlagsSampled, true
+		return FlagsSampled, true
 	}
 	return 0, false
 }

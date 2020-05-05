@@ -21,10 +21,10 @@ type Sampler interface {
 	// or not sample the span to be created. Decision is based on a Sampler specific
 	// algorithm that takes into account one or more input parameters.
 	ShouldSample(
-		sc core.SpanContext,
+		sc SpanContext,
 		remote bool,
-		traceID core.TraceID,
-		spanID core.SpanID,
+		traceID ID,
+		spanID SpanID,
 		spanName string,
 		spanKind SpanKind,
 		attributes []core.KeyValue,
