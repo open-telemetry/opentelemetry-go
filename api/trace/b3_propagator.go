@@ -88,8 +88,15 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
+func fixB3TID(in string) string {
+	if len(in) == 16 {
+		in = strings.Repeat("0", 16) + in
+	}
+	return in
+}
+
 func (b3 B3) extract(supplier propagation.HTTPSupplier) core.SpanContext {
-	tid, err := core.TraceIDFromHex(supplier.Get(B3TraceIDHeader))
+	tid, err := core.TraceIDFromHex(fixB3TID(supplier.Get(B3TraceIDHeader)))
 	if err != nil {
 		return core.EmptySpanContext()
 	}
@@ -140,7 +147,7 @@ func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) core.SpanCon
 	}
 
 	var err error
-	sc.TraceID, err = core.TraceIDFromHex(parts[0])
+	sc.TraceID, err = core.TraceIDFromHex(fixB3TID(parts[0]))
 	if err != nil {
 		return core.EmptySpanContext()
 	}

@@ -25,6 +25,10 @@ type extractTest struct {
 	wantSc  core.SpanContext
 }
 
+var (
+	traceID64bitPadded = mustTraceIDFromHex("0000000000000000a3ce929d0e0e4736")
+)
+
 var extractMultipleHeaders = []extractTest{
 	{
 		name: "sampling state defer",
@@ -126,6 +130,17 @@ var extractMultipleHeaders = []extractTest{
 		},
 		wantSc: core.EmptySpanContext(),
 	},
+	{
+		name: "left-padding 64-bit traceID",
+		headers: map[string]string{
+			trace.B3TraceIDHeader: "a3ce929d0e0e4736",
+			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+		},
+		wantSc: core.SpanContext{
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
+		},
+	},
 }
 
 var extractSingleHeader = []extractTest{
@@ -188,6 +203,16 @@ var extractSingleHeader = []extractTest{
 			trace.B3SingleHeader: "0",
 		},
 		wantSc: core.EmptySpanContext(),
+	},
+	{
+		name: "left-padding 64-bit traceID",
+		headers: map[string]string{
+			trace.B3SingleHeader: "a3ce929d0e0e4736-00f067aa0ba902b7",
+		},
+		wantSc: core.SpanContext{
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
+		},
 	},
 }
 
