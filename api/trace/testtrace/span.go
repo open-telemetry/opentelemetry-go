@@ -39,8 +39,8 @@ var _ trace.Span = (*Span)(nil)
 type Span struct {
 	lock          *sync.RWMutex
 	tracer        *Tracer
-	spanContext   core.SpanContext
-	parentSpanID  core.SpanID
+	spanContext   trace.SpanContext
+	parentSpanID  trace.SpanID
 	ended         bool
 	name          string
 	startTime     time.Time
@@ -49,7 +49,7 @@ type Span struct {
 	statusMessage string
 	attributes    map[core.Key]core.Value
 	events        []Event
-	links         map[core.SpanContext][]core.KeyValue
+	links         map[trace.SpanContext][]core.KeyValue
 }
 
 func (s *Span) Tracer() trace.Tracer {
@@ -138,7 +138,7 @@ func (s *Span) IsRecording() bool {
 	return true
 }
 
-func (s *Span) SpanContext() core.SpanContext {
+func (s *Span) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
@@ -191,7 +191,7 @@ func (s *Span) Name() string {
 // ParentSpanID returns the SpanID of the parent Span.
 // If the Span is a root Span and therefore does not have a parent, the returned SpanID will be invalid
 // (i.e., it will contain all zeroes).
-func (s *Span) ParentSpanID() core.SpanID {
+func (s *Span) ParentSpanID() trace.SpanID {
 	return s.parentSpanID
 }
 
@@ -219,8 +219,8 @@ func (s *Span) Events() []Event {
 
 // Links returns the links set on the Span at creation time.
 // If multiple links for the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[core.SpanContext][]core.KeyValue {
-	links := make(map[core.SpanContext][]core.KeyValue)
+func (s *Span) Links() map[trace.SpanContext][]core.KeyValue {
+	links := make(map[trace.SpanContext][]core.KeyValue)
 
 	for sc, attributes := range s.links {
 		links[sc] = append([]core.KeyValue{}, attributes...)

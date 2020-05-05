@@ -48,8 +48,8 @@ type SpanBatcher interface {
 
 // SpanData contains all the information collected by a span.
 type SpanData struct {
-	SpanContext  core.SpanContext
-	ParentSpanID core.SpanID
+	SpanContext  apitrace.SpanContext
+	ParentSpanID apitrace.SpanID
 	SpanKind     apitrace.SpanKind
 	Name         string
 	StartTime    time.Time
