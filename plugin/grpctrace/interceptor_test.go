@@ -97,7 +97,6 @@ func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 	exp := &testExporter{make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
 
 	tr := tp.Tracer("grpctrace/client")
 	ctx, span := tr.Start(context.Background(), tc.testName)
