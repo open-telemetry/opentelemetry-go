@@ -126,6 +126,7 @@ func (tc nameAttributeTestCase) testUCISetsExpectedNameAttribute(t *testing.T) {
 	for _, attr := range attributes {
 		if attr.Key == rpcServiceKey {
 			actualServiceName = attr.Value.AsString()
+			break
 		}
 	}
 
