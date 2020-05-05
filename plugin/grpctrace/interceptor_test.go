@@ -20,7 +20,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
