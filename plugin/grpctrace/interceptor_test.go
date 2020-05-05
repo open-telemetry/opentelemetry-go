@@ -82,7 +82,7 @@ func TestUCISetsExpectedServiceNameAttribute(t *testing.T) {
 			"invalidName",
 		},
 		{
-			"NonAlhanumericMethodName",
+			"NonAlphanumericMethodName",
 			"serviceName_123",
 			"/github.com.foo.%s/method",
 		},
