@@ -29,7 +29,7 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 	parentCtx := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
-		TraceFlags: trace.TraceFlagsSampled,
+		TraceFlags: trace.FlagsSampled,
 	}
 	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")

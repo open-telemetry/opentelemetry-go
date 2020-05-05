@@ -200,7 +200,7 @@ func TestSampling(t *testing.T) {
 						SpanID:  idg.NewSpanID(),
 					}
 					if tc.sampledParent {
-						psc.TraceFlags = apitrace.TraceFlagsSampled
+						psc.TraceFlags = apitrace.FlagsSampled
 					}
 					ctx = apitrace.ContextWithRemoteSpanContext(ctx, psc)
 				}

@@ -58,7 +58,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -71,7 +71,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -84,7 +84,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -101,7 +101,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -115,7 +115,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -156,7 +156,7 @@ var extractSingleHeader = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -167,7 +167,7 @@ var extractSingleHeader = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -178,7 +178,7 @@ var extractSingleHeader = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -446,7 +446,7 @@ var injectB3MultipleHeader = []injectTest{
 		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
@@ -496,7 +496,7 @@ var injectB3SingleleHeader = []injectTest{
 		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-1",

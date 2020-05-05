@@ -403,13 +403,13 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Links:           data.links,
 		})
 		if sampled.Decision == RecordAndSampled {
-			spanContext.TraceFlags |= apitrace.TraceFlagsSampled
+			spanContext.TraceFlags |= apitrace.FlagsSampled
 		} else {
-			spanContext.TraceFlags &^= apitrace.TraceFlagsSampled
+			spanContext.TraceFlags &^= apitrace.FlagsSampled
 		}
 		return sampled
 	}
-	if data.parent.TraceFlags&apitrace.TraceFlagsSampled != 0 {
+	if data.parent.TraceFlags&apitrace.FlagsSampled != 0 {
 		return SamplingResult{Decision: RecordAndSampled}
 	}
 	return SamplingResult{Decision: NotRecord}

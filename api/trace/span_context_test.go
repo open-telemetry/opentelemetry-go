@@ -169,14 +169,14 @@ func TestSpanContextIsSampled(t *testing.T) {
 			name: "sampled",
 			sc: trace.SpanContext{
 				TraceID:    trace.ID([16]byte{1}),
-				TraceFlags: trace.TraceFlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "sampled plus unused",
 			sc: trace.SpanContext{
 				TraceID:    trace.ID([16]byte{1}),
-				TraceFlags: trace.TraceFlagsSampled | trace.TraceFlagsUnused,
+				TraceFlags: trace.FlagsSampled | trace.FlagsUnused,
 			},
 			want: true,
 		}, {

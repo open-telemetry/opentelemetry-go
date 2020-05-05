@@ -62,7 +62,7 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 		supportedVersion,
 		sc.TraceID,
 		sc.SpanID,
-		sc.TraceFlags&TraceFlagsSampled)
+		sc.TraceFlags&FlagsSampled)
 	supplier.Set(traceparentHeader, h)
 }
 
@@ -137,7 +137,7 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
 		return EmptySpanContext()
 	}
-	sc.TraceFlags = opts[0] &^ TraceFlagsUnused
+	sc.TraceFlags = opts[0] &^ FlagsUnused
 
 	if !sc.IsValid() {
 		return EmptySpanContext()

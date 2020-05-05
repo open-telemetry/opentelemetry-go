@@ -49,7 +49,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 		sc := trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		}
 		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 		ctx, _ = mockTracer.Start(ctx, "inject")

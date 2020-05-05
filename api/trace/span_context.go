@@ -24,10 +24,10 @@ const (
 	traceFlagsBitMaskSampled = byte(0x01)
 	traceFlagsBitMaskUnused  = byte(0xFE)
 
-	// TraceFlagsSampled is a byte with sampled bit set. It is a convenient value initializer
+	// FlagsSampled is a byte with sampled bit set. It is a convenient value initializer
 	// for SpanContext TraceFlags field when a trace is sampled.
-	TraceFlagsSampled = traceFlagsBitMaskSampled
-	TraceFlagsUnused  = traceFlagsBitMaskUnused
+	FlagsSampled = traceFlagsBitMaskSampled
+	FlagsUnused  = traceFlagsBitMaskUnused
 
 	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 

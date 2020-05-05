@@ -56,7 +56,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 		return
 	}
 	if b3.SingleHeader {
-		sampled := sc.TraceFlags & TraceFlagsSampled
+		sampled := sc.TraceFlags & FlagsSampled
 		supplier.Set(B3SingleHeader,
 			fmt.Sprintf("%s-%s-%.1d", sc.TraceID, sc.SpanID, sampled))
 	} else {
@@ -105,8 +105,8 @@ func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
 	if !ok {
 		return EmptySpanContext()
 	}
-	if debug == TraceFlagsSampled {
-		sampled = TraceFlagsSampled
+	if debug == FlagsSampled {
+		sampled = FlagsSampled
 	}
 
 	sc := SpanContext{
@@ -176,14 +176,14 @@ func (b3 B3) extractSampledState(sampled string) (flag byte, ok bool) {
 	case "", "0":
 		return 0, true
 	case "1":
-		return TraceFlagsSampled, true
+		return FlagsSampled, true
 	case "true":
 		if !b3.SingleHeader {
-			return TraceFlagsSampled, true
+			return FlagsSampled, true
 		}
 	case "d":
 		if b3.SingleHeader {
-			return TraceFlagsSampled, true
+			return FlagsSampled, true
 		}
 	}
 	return 0, false
@@ -195,7 +195,7 @@ func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
 	case "", "0":
 		return 0, true
 	case "1":
-		return TraceFlagsSampled, true
+		return FlagsSampled, true
 	}
 	return 0, false
 }
