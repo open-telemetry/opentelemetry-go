@@ -19,7 +19,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"go.opentelemetry.io/otel/api/propagation"
 )
@@ -28,6 +27,13 @@ const (
 	supportedVersion  = 0
 	maxVersion        = 254
 	traceparentHeader = "traceparent"
+	tracestateHeader  = "tracestate"
+)
+
+type traceContextPropagatorKeyType uint
+
+const (
+	tracestateKey traceContextPropagatorKeyType = 0
 )
 
 // TraceContext propagates SpanContext in W3C TraceContext format.
@@ -35,7 +41,7 @@ const (
 type TraceContext struct{}
 
 var _ propagation.HTTPPropagator = TraceContext{}
-var traceCtxRegExp = regexp.MustCompile("^[0-9a-f]{2}-[a-f0-9]{32}-[a-f0-9]{16}-[a-f0-9]{2}-?")
+var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
 // DefaultHTTPPropagator returns the default trace HTTP propagator.
 func DefaultHTTPPropagator() propagation.HTTPPropagator {
@@ -43,6 +49,11 @@ func DefaultHTTPPropagator() propagation.HTTPPropagator {
 }
 
 func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+	tracestate := ctx.Value(tracestateKey)
+	if state, ok := tracestate.(string); tracestate != nil && ok {
+		supplier.Set(tracestateHeader, state)
+	}
+
 	sc := SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
 		return
@@ -56,6 +67,11 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 }
 
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	state := supplier.Get(tracestateHeader)
+	if state != "" {
+		ctx = context.WithValue(ctx, tracestateKey, state)
+	}
+
 	sc := tc.extract(supplier)
 	if !sc.IsValid() {
 		return ctx
@@ -69,20 +85,20 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 		return EmptySpanContext()
 	}
 
-	h = strings.Trim(h, "-")
-	if !traceCtxRegExp.MatchString(h) {
+	matches := traceCtxRegExp.FindStringSubmatch(h)
+
+	if len(matches) == 0 {
 		return EmptySpanContext()
 	}
 
-	sections := strings.Split(h, "-")
-	if len(sections) < 4 {
+	if len(matches) < 5 { // four subgroups plus the overall match
 		return EmptySpanContext()
 	}
 
-	if len(sections[0]) != 2 {
+	if len(matches[1]) != 2 {
 		return EmptySpanContext()
 	}
-	ver, err := hex.DecodeString(sections[0])
+	ver, err := hex.DecodeString(matches[1])
 	if err != nil {
 		return EmptySpanContext()
 	}
@@ -91,33 +107,33 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 		return EmptySpanContext()
 	}
 
-	if version == 0 && len(sections) != 4 {
+	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
 		return EmptySpanContext()
 	}
 
-	if len(sections[1]) != 32 {
+	if len(matches[2]) != 32 {
 		return EmptySpanContext()
 	}
 
 	var sc SpanContext
 
-	sc.TraceID, err = IDFromHex(sections[1][:32])
+	sc.TraceID, err = IDFromHex(matches[2][:32])
 	if err != nil {
 		return EmptySpanContext()
 	}
 
-	if len(sections[2]) != 16 {
+	if len(matches[3]) != 16 {
 		return EmptySpanContext()
 	}
-	sc.SpanID, err = SpanIDFromHex(sections[2])
+	sc.SpanID, err = SpanIDFromHex(matches[3])
 	if err != nil {
 		return EmptySpanContext()
 	}
 
-	if len(sections[3]) != 2 {
+	if len(matches[4]) != 2 {
 		return EmptySpanContext()
 	}
-	opts, err := hex.DecodeString(sections[3])
+	opts, err := hex.DecodeString(matches[4])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
 		return EmptySpanContext()
 	}
@@ -131,5 +147,5 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 }
 
 func (TraceContext) GetAllKeys() []string {
-	return []string{traceparentHeader}
+	return []string{traceparentHeader, tracestateHeader}
 }
