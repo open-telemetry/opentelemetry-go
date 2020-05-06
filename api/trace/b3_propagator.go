@@ -29,6 +29,7 @@ const (
 	B3SpanIDHeader       = "X-B3-SpanId"
 	B3SampledHeader      = "X-B3-Sampled"
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
+	b3TraceIDPadding     = "0000000000000000"
 )
 
 // B3 propagator serializes SpanContext to/from B3 Headers.
@@ -89,7 +90,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 
 func fixB3TID(in string) string {
 	if len(in) == 16 {
-		in = strings.Repeat("0", 16) + in
+		in = b3TraceIDPadding + in
 	}
 	return in
 }
