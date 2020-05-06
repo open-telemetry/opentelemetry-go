@@ -26,7 +26,7 @@ import (
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
-	sc     core.SpanContext
+	sc     apitrace.SpanContext
 	tracer apitrace.Tracer
 	Name   string
 }
@@ -35,9 +35,9 @@ var _ apitrace.Span = (*MockSpan)(nil)
 
 // SpanContext returns associated core.SpanContext. If the receiver is nil it returns
 // an empty core.SpanContext
-func (ms *MockSpan) SpanContext() core.SpanContext {
+func (ms *MockSpan) SpanContext() apitrace.SpanContext {
 	if ms == nil {
-		return core.EmptySpanContext()
+		return apitrace.EmptySpanContext()
 	}
 	return ms.sc
 }

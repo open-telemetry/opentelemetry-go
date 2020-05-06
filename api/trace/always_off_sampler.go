@@ -30,10 +30,10 @@ type alwaysOffSampler struct{}
 // It always returns a Decision with Sampled value set to false
 // and with Attributes set to an empty slice.
 func (ns alwaysOffSampler) ShouldSample(
-	_ core.SpanContext,
+	_ SpanContext,
 	_ bool,
-	_ core.TraceID,
-	_ core.SpanID,
+	_ ID,
+	_ SpanID,
 	_ string,
 	_ SpanKind,
 	_ []core.KeyValue,
