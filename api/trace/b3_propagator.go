@@ -29,9 +29,10 @@ const (
 	B3SpanIDHeader       = "X-B3-SpanId"
 	B3SampledHeader      = "X-B3-Sampled"
 	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
+	b3TraceIDPadding     = "0000000000000000"
 )
 
-// B3 propagator serializes core.SpanContext to/from B3 Headers.
+// B3 propagator serializes SpanContext to/from B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
 //    X-B3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
@@ -87,8 +88,15 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
+func fixB3TID(in string) string {
+	if len(in) == 16 {
+		in = b3TraceIDPadding + in
+	}
+	return in
+}
+
 func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
-	tid, err := IDFromHex(supplier.Get(B3TraceIDHeader))
+	tid, err := IDFromHex(fixB3TID(supplier.Get(B3TraceIDHeader)))
 	if err != nil {
 		return EmptySpanContext()
 	}
@@ -139,7 +147,7 @@ func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) SpanContext 
 	}
 
 	var err error
-	sc.TraceID, err = IDFromHex(parts[0])
+	sc.TraceID, err = IDFromHex(fixB3TID(parts[0]))
 	if err != nil {
 		return EmptySpanContext()
 	}
