@@ -72,8 +72,8 @@ type mockSpan struct{}
 var _ trace.Span = mockSpan{}
 
 // SpanContext returns an invalid span context.
-func (mockSpan) SpanContext() core.SpanContext {
-	return core.EmptySpanContext()
+func (mockSpan) SpanContext() trace.SpanContext {
+	return trace.EmptySpanContext()
 }
 
 // IsRecording always returns false for mockSpan.
@@ -95,6 +95,10 @@ func (mockSpan) SetError(v bool) {
 
 // SetAttributes does nothing.
 func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
+}
+
+// SetAttribute does nothing.
+func (mockSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.

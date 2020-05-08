@@ -176,7 +176,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
 		mm[i] = Measurement{
-			Instrument: m.SyncImpl().(*Sync),
+			Instrument: m.SyncImpl().Implementation().(*Sync),
 			Number:     m.Number(),
 		}
 	}

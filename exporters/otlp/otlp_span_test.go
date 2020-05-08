@@ -81,9 +81,9 @@ func TestExportSpans(t *testing.T) {
 		{
 			[]*tracesdk.SpanData{
 				{
-					SpanContext: core.SpanContext{
-						TraceID:    core.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     core.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: apitrace.SpanContext{
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
 					SpanKind:  apitrace.SpanKindServer,
@@ -99,12 +99,12 @@ func TestExportSpans(t *testing.T) {
 					Resource:      resource.New(key.String("instance", "tester-a")),
 				},
 				{
-					SpanContext: core.SpanContext{
-						TraceID:    core.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     core.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
+					SpanContext: apitrace.SpanContext{
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
 						TraceFlags: byte(1),
 					},
-					ParentSpanID: core.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					ParentSpanID: apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 					SpanKind:     apitrace.SpanKindInternal,
 					Name:         "internal process",
 					StartTime:    startTime,
@@ -118,9 +118,9 @@ func TestExportSpans(t *testing.T) {
 					Resource:      resource.New(key.String("instance", "tester-a")),
 				},
 				{
-					SpanContext: core.SpanContext{
-						TraceID:    core.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
-						SpanID:     core.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: apitrace.SpanContext{
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
 					SpanKind:  apitrace.SpanKindServer,

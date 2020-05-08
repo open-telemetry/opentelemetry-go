@@ -15,15 +15,18 @@
 package testtrace_test
 
 import (
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 type extractTest struct {
 	name    string
 	headers map[string]string
-	wantSc  core.SpanContext
+	wantSc  trace.SpanContext
 }
+
+var (
+	traceID64bitPadded = mustTraceIDFromHex("0000000000000000a3ce929d0e0e4736")
+)
 
 var extractMultipleHeaders = []extractTest{
 	{
@@ -32,7 +35,7 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -44,7 +47,7 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 			trace.B3SampledHeader: "0",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -56,10 +59,10 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 			trace.B3SampledHeader: "1",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -69,10 +72,10 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 			trace.B3SampledHeader: "true",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -82,10 +85,10 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:    "00f067aa0ba902b7",
 			trace.B3DebugFlagHeader: "1",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -99,10 +102,10 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SampledHeader:   "0",
 			trace.B3DebugFlagHeader: "1",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -113,10 +116,10 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SampledHeader:      "1",
 			trace.B3ParentSpanIDHeader: "00f067aa0ba90200",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -124,7 +127,18 @@ var extractMultipleHeaders = []extractTest{
 		headers: map[string]string{
 			trace.B3SampledHeader: "0",
 		},
-		wantSc: core.EmptySpanContext(),
+		wantSc: trace.EmptySpanContext(),
+	},
+	{
+		name: "left-padding 64-bit traceID",
+		headers: map[string]string{
+			trace.B3TraceIDHeader: "a3ce929d0e0e4736",
+			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+		},
+		wantSc: trace.SpanContext{
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
+		},
 	},
 }
 
@@ -134,7 +148,7 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -144,7 +158,7 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-0",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -154,10 +168,10 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -165,10 +179,10 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-d",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -176,10 +190,10 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1-00000000000000cd",
 		},
-		wantSc: core.SpanContext{
+		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
@@ -187,7 +201,17 @@ var extractSingleHeader = []extractTest{
 		headers: map[string]string{
 			trace.B3SingleHeader: "0",
 		},
-		wantSc: core.EmptySpanContext(),
+		wantSc: trace.EmptySpanContext(),
+	},
+	{
+		name: "left-padding 64-bit traceID",
+		headers: map[string]string{
+			trace.B3SingleHeader: "a3ce929d0e0e4736-00f067aa0ba902b7",
+		},
+		wantSc: trace.SpanContext{
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
+		},
 	},
 }
 
@@ -436,7 +460,7 @@ var extractInvalidB3SingleHeader = []extractTest{
 
 type injectTest struct {
 	name             string
-	parentSc         core.SpanContext
+	parentSc         trace.SpanContext
 	wantHeaders      map[string]string
 	doNotWantHeaders []string
 }
@@ -444,10 +468,10 @@ type injectTest struct {
 var injectB3MultipleHeader = []injectTest{
 	{
 		name: "valid spancontext, sampled",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
@@ -460,7 +484,7 @@ var injectB3MultipleHeader = []injectTest{
 	},
 	{
 		name: "valid spancontext, not sampled",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -475,7 +499,7 @@ var injectB3MultipleHeader = []injectTest{
 	},
 	{
 		name: "valid spancontext, with unsupported bit set in traceflags",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: 0xff,
@@ -494,10 +518,10 @@ var injectB3MultipleHeader = []injectTest{
 var injectB3SingleleHeader = []injectTest{
 	{
 		name: "valid spancontext, sampled",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: core.TraceFlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-1",
@@ -511,7 +535,7 @@ var injectB3SingleleHeader = []injectTest{
 	},
 	{
 		name: "valid spancontext, not sampled",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -527,7 +551,7 @@ var injectB3SingleleHeader = []injectTest{
 	},
 	{
 		name: "valid spancontext, with unsupported bit set in traceflags",
-		parentSc: core.SpanContext{
+		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: 0xff,

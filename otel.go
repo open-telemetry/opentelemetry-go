@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package internal provides trace internals.
-package internal
+package otel
 
 import (
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// IDGenerator allows custom generators for TraceId and SpanId.
-type IDGenerator interface {
-	NewTraceID() trace.ID
-	NewSpanID() trace.SpanID
-}
+type Tracer = trace.Tracer
+
+type Meter = metric.Meter
+
+type Propagators = propagation.Propagators

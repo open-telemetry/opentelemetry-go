@@ -26,26 +26,6 @@ import (
 
 var _ http.Handler = &Handler{}
 
-// Attribute keys that the Handler can add to a span.
-const (
-	HostKey       = core.Key("http.host")        // the HTTP host (http.Request.Host)
-	MethodKey     = core.Key("http.method")      // the HTTP method (http.Request.Method)
-	PathKey       = core.Key("http.path")        // the HTTP path (http.Request.URL.Path)
-	URLKey        = core.Key("http.url")         // the HTTP URL (http.Request.URL.String())
-	UserAgentKey  = core.Key("http.user_agent")  // the HTTP user agent (http.Request.UserAgent())
-	RouteKey      = core.Key("http.route")       // the HTTP route (ex: /users/:id)
-	RemoteAddrKey = core.Key("http.remote_addr") // the network address of the client that sent the HTTP request (http.Request.RemoteAddr)
-	StatusCodeKey = core.Key("http.status_code") // if set, the HTTP status
-	ReadBytesKey  = core.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
-	ReadErrorKey  = core.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
-	WroteBytesKey = core.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
-	WriteErrorKey = core.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
-)
-
-// Filter is a predicate used to determine whether a given http.request should
-// be traced. A Filter must return true if the request should be traced.
-type Filter func(*http.Request) bool
-
 // Handler is http middleware that corresponds to the http.Handler interface and
 // is designed to wrap a http.Mux (or equivalent), while individual routes on
 // the mux are wrapped with WithRouteTag. A Handler will add various attributes
@@ -55,7 +35,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer            trace.Tracer
-	props             propagation.Propagators
+	propagators       propagation.Propagators
 	spanStartOptions  []trace.StartOption
 	readEvent         bool
 	writeEvent        bool
@@ -63,116 +43,39 @@ type Handler struct {
 	spanNameFormatter func(string, *http.Request) string
 }
 
-// Option function used for setting *optional* Handler properties
-type Option func(*Handler)
-
-// WithTracer configures the Handler with a specific tracer. If this option
-// isn't specified then the global tracer is used.
-func WithTracer(tracer trace.Tracer) Option {
-	return func(h *Handler) {
-		h.tracer = tracer
-	}
-}
-
-// WithPublicEndpoint configures the Handler to link the span with an incoming
-// span context. If this option is not provided, then the association is a child
-// association instead of a link.
-func WithPublicEndpoint() Option {
-	return func(h *Handler) {
-		h.spanStartOptions = append(h.spanStartOptions, trace.WithNewRoot())
-	}
-}
-
-// WithPropagators configures the Handler with specific propagators. If this
-// option isn't specified then
-// go.opentelemetry.io/otel/api/global.Propagators are used.
-func WithPropagators(ps propagation.Propagators) Option {
-	return func(h *Handler) {
-		h.props = ps
-	}
-}
-
-// WithSpanOptions configures the Handler with an additional set of
-// trace.StartOptions, which are applied to each new span.
-func WithSpanOptions(opts ...trace.StartOption) Option {
-	return func(h *Handler) {
-		h.spanStartOptions = append(h.spanStartOptions, opts...)
-	}
-}
-
-// WithFilter adds a filter to the list of filters used by the handler.
-// If any filter indicates to exclude a request then the request will not be
-// traced. All filters must allow a request to be traced for a Span to be created.
-// If no filters are provided then all requests are traced.
-// Filters will be invoked for each processed request, it is advised to make them
-// simple and fast.
-func WithFilter(f Filter) Option {
-	return func(h *Handler) {
-		h.filters = append(h.filters, f)
-	}
-}
-
-type event int
-
-// Different types of events that can be recorded, see WithMessageEvents
-const (
-	ReadEvents event = iota
-	WriteEvents
-)
-
-// WithMessageEvents configures the Handler to record the specified events
-// (span.AddEvent) on spans. By default only summary attributes are added at the
-// end of the request.
-//
-// Valid events are:
-//     * ReadEvents: Record the number of bytes read after every http.Request.Body.Read
-//       using the ReadBytesKey
-//     * WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
-//       using the WriteBytesKey
-func WithMessageEvents(events ...event) Option {
-	return func(h *Handler) {
-		for _, e := range events {
-			switch e {
-			case ReadEvents:
-				h.readEvent = true
-			case WriteEvents:
-				h.writeEvent = true
-			}
-		}
-	}
-}
-
-// WithSpanNameFormatter takes a function that will be called on every
-// incoming request and the returned string will become the Span Name
-func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
-	return func(h *Handler) {
-		h.spanNameFormatter = f
-	}
-}
-
-func defaultFormatter(operation string, _ *http.Request) string {
+func defaultHandlerFormatter(operation string, _ *http.Request) string {
 	return operation
 }
 
 // NewHandler wraps the passed handler, functioning like middleware, in a span
-// named after the operation and with any provided HandlerOptions.
+// named after the operation and with any provided Options.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{
-		handler:           handler,
-		operation:         operation,
-		spanNameFormatter: defaultFormatter,
+		handler:   handler,
+		operation: operation,
 	}
 
 	defaultOpts := []Option{
 		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
 		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
+		WithSpanNameFormatter(defaultHandlerFormatter),
 	}
 
-	for _, opt := range append(defaultOpts, opts...) {
-		opt(&h)
-	}
+	c := NewConfig(append(defaultOpts, opts...)...)
+	h.configure(c)
+
 	return &h
+}
+
+func (h *Handler) configure(c *Config) {
+	h.tracer = c.Tracer
+	h.propagators = c.Propagators
+	h.spanStartOptions = c.SpanStartOptions
+	h.readEvent = c.ReadEvent
+	h.writeEvent = c.WriteEvent
+	h.filters = c.Filters
+	h.spanNameFormatter = c.SpanNameFormatter
 }
 
 // ServeHTTP serves HTTP requests (http.Handler)
@@ -187,7 +90,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	opts := append([]trace.StartOption{}, h.spanStartOptions...) // start with the configured options
 
-	ctx := propagation.ExtractHTTP(r.Context(), h.props, r.Header)
+	ctx := propagation.ExtractHTTP(r.Context(), h.propagators, r.Header)
 	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
@@ -207,18 +110,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.props}
+	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.propagators}
 
-	// Setup basic span attributes before calling handler.ServeHTTP so that they
-	// are available to be mutated by the handler if needed.
-	span.SetAttributes(
-		HostKey.String(r.Host),
-		MethodKey.String(r.Method),
-		PathKey.String(r.URL.Path),
-		URLKey.String(r.URL.String()),
-		UserAgentKey.String(r.UserAgent()),
-		RemoteAddrKey.String(r.RemoteAddr),
-	)
+	setBasicAttributes(span, r)
+	span.SetAttributes(RemoteAddrKey.String(r.RemoteAddr))
 
 	h.handler.ServeHTTP(rww, r.WithContext(ctx))
 

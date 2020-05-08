@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
@@ -44,7 +45,7 @@ type span struct {
 	// SpanContext, so that the trace ID is propagated.
 	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
-	spanContext core.SpanContext
+	spanContext apitrace.SpanContext
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
@@ -66,9 +67,9 @@ type span struct {
 
 var _ apitrace.Span = &span{}
 
-func (s *span) SpanContext() core.SpanContext {
+func (s *span) SpanContext() apitrace.SpanContext {
 	if s == nil {
-		return core.EmptySpanContext()
+		return apitrace.EmptySpanContext()
 	}
 	return s.spanContext
 }
@@ -98,6 +99,10 @@ func (s *span) SetAttributes(attributes ...core.KeyValue) {
 		return
 	}
 	s.copyToCappedAttributes(attributes...)
+}
+
+func (s *span) SetAttribute(k string, v interface{}) {
+	s.SetAttributes(key.Infer(k, v))
 }
 
 func (s *span) End(options ...apitrace.EndOption) {
@@ -207,9 +212,9 @@ func (s *span) SetName(name string) {
 	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
-	var ctx core.SpanContext
+	var ctx apitrace.SpanContext
 	if noParent {
-		ctx = core.EmptySpanContext()
+		ctx = apitrace.EmptySpanContext()
 	} else {
 		// FIXME: Where do we get the parent context from?
 		// From SpanStore?
@@ -298,14 +303,14 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == core.EmptySpanContext() {
+	if parent == apitrace.EmptySpanContext() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}
@@ -365,7 +370,7 @@ func startSpanInternal(tr *tracer, name string, parent core.SpanContext, remoteP
 type samplingData struct {
 	noParent     bool
 	remoteParent bool
-	parent       core.SpanContext
+	parent       apitrace.SpanContext
 	name         string
 	cfg          *Config
 	span         *span
@@ -398,13 +403,13 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Links:           data.links,
 		})
 		if sampled.Decision == RecordAndSampled {
-			spanContext.TraceFlags |= core.TraceFlagsSampled
+			spanContext.TraceFlags |= apitrace.FlagsSampled
 		} else {
-			spanContext.TraceFlags &^= core.TraceFlagsSampled
+			spanContext.TraceFlags &^= apitrace.FlagsSampled
 		}
 		return sampled
 	}
-	if data.parent.TraceFlags&core.TraceFlagsSampled != 0 {
+	if data.parent.TraceFlags&apitrace.FlagsSampled != 0 {
 		return SamplingResult{Decision: RecordAndSampled}
 	}
 	return SamplingResult{Decision: NotRecord}

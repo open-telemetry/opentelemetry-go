@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -134,8 +133,8 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
-	t, _ := core.TraceIDFromHex("0000000000000001000000000000002a")
-	sc := core.SpanContext{TraceID: t}
+	t, _ := apitrace.IDFromHex("0000000000000001000000000000002a")
+	sc := apitrace.SpanContext{TraceID: t}
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
@@ -146,7 +145,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	sc := core.SpanContext{SpanID: core.SpanID{1}}
+	sc := apitrace.SpanContext{SpanID: apitrace.SpanID{1}}
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
 		if got := sc.SpanID.String(); got != want {

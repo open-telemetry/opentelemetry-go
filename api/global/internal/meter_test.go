@@ -15,6 +15,7 @@
 package internal_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -359,4 +360,57 @@ func TestImplementationIndirection(t *testing.T) {
 
 	_, ok = ival.(*metrictest.Async)
 	require.True(t, ok)
+}
+
+func TestRecordBatchMock(t *testing.T) {
+	internal.ResetForTest()
+
+	meter := global.MeterProvider().Meter("builtin")
+
+	counter := Must(meter).NewInt64Counter("test.counter")
+
+	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
+
+	mock, provider := metrictest.NewProvider()
+	global.SetMeterProvider(provider)
+
+	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
+
+	require.EqualValues(t,
+		[]measured{
+			{
+				Name:        "test.counter",
+				LibraryName: "builtin",
+				Labels:      asMap(),
+				Number:      asInt(1),
+			},
+		},
+		asStructs(mock.MeasurementBatches))
+}
+
+func TestRecordBatchRealSDK(t *testing.T) {
+	internal.ResetForTest()
+
+	meter := global.MeterProvider().Meter("builtin")
+
+	counter := Must(meter).NewInt64Counter("test.counter")
+
+	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
+
+	var buf bytes.Buffer
+
+	pusher, err := stdout.InstallNewPipeline(stdout.Config{
+		Writer:         &buf,
+		DoNotPrintTime: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	global.SetMeterProvider(pusher)
+
+	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
+	pusher.Stop()
+
+	require.Equal(t, `{"updates":[{"name":"test.counter","sum":1}]}
+`, buf.String())
 }
