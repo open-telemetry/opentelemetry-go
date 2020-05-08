@@ -18,12 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
-	if err = exp.GetLastConnectError(); err != nil {
-		log.Fatalf("Failed to create the collector exporter: %v", err)
-	}
-
 	defer func() {
-
 		_ = exp.Stop()
 	}()
 
@@ -49,6 +44,4 @@ func main() {
 		<-time.After(6 * time.Second)
 		iSpan.End()
 	}
-
-	// exp.ExportSpan(ctx, span)
 }
