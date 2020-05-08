@@ -27,7 +27,6 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -257,12 +256,12 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 	}
 
 	switch n := desc.NumberKind(); n {
-	case core.Int64NumberKind, core.Uint64NumberKind:
+	case metric.Int64NumberKind, metric.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{Value: sum.CoerceToInt64(n)},
 		}
-	case core.Float64NumberKind:
+	case metric.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{Value: sum.CoerceToFloat64(n)},
@@ -276,7 +275,7 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.
-func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}

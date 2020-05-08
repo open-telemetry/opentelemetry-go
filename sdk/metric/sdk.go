@@ -129,7 +129,7 @@ type (
 		// labelset and recorder
 		recorders map[label.Distinct]*labeledRecorder
 
-		callback func(func(core.Number, []core.KeyValue))
+		callback func(func(api.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
@@ -160,7 +160,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number core.Number, labels []core.KeyValue) {
+func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -295,7 +295,7 @@ func (s *syncInstrument) Bind(kvs []core.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, kvs []core.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []core.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
@@ -335,7 +335,7 @@ func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error)
 	}, nil
 }
 
-func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(core.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -484,7 +484,7 @@ func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements
 	}
 }
 
-func (r *record) RecordOne(ctx context.Context, number core.Number) {
+func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
 		return

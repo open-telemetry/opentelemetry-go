@@ -53,7 +53,7 @@ type Option interface {
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
-	number     core.Number
+	number     Number
 	instrument SyncImpl
 }
 
@@ -65,7 +65,7 @@ func (m Measurement) SyncImpl() SyncImpl {
 }
 
 // Number returns a number recorded in this measurement.
-func (m Measurement) Number() core.Number {
+func (m Measurement) Number() Number {
 	return m.number
 }
 
@@ -87,12 +87,12 @@ const (
 type Descriptor struct {
 	name       string
 	kind       Kind
-	numberKind core.NumberKind
+	numberKind NumberKind
 	config     Config
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
+func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...Option) Descriptor {
 	return Descriptor{
 		name:       name,
 		kind:       mkind,
@@ -125,7 +125,7 @@ func (d Descriptor) Unit() unit.Unit {
 
 // NumberKind returns whether this instrument is declared over int64,
 // float64, or uint64 values.
-func (d Descriptor) NumberKind() core.NumberKind {
+func (d Descriptor) NumberKind() NumberKind {
 	return d.numberKind
 }
 

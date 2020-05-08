@@ -240,7 +240,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	var actual [][]core.KeyValue
 	for _, rec := range batcher.records {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
-		require.Equal(t, sum, core.NewInt64Number(2))
+		require.Equal(t, sum, metric.NewInt64Number(2))
 
 		kvs := rec.Labels().ToSlice()
 		actual = append(actual, kvs)
