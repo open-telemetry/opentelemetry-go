@@ -87,9 +87,9 @@ type AsyncImpl interface {
 	// Note: An `Unregister()` API could be supported here.
 }
 
-// wrappedMeterImpl implements the `Meter` interface given a
+// Meter implements the `Meter` interface given a
 // `MeterImpl` implementation.
-type wrappedMeterImpl struct {
+type Meter struct {
 	impl        MeterImpl
 	libraryName string
 }
@@ -107,7 +107,6 @@ type float64ObserverResult struct {
 }
 
 var (
-	_ Meter                 = (*wrappedMeterImpl)(nil)
 	_ Int64ObserverResult   = int64ObserverResult{}
 	_ Float64ObserverResult = float64ObserverResult{}
 )
@@ -124,23 +123,33 @@ func Configure(opts []Option) Config {
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
 func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
-	return &wrappedMeterImpl{
+	return Meter{
 		impl:        impl,
 		libraryName: libraryName,
 	}
 }
 
-func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measurement) {
+func (m Meter) MeterImpl() MeterImpl {
+	return m.impl
+}
+
+func (m Meter) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measurement) {
+	if m.impl == nil {
+		return
+	}
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
-func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
+func (m Meter) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
+	if m.impl == nil {
+		return NoopSync{}, nil
+	}
 	desc := NewDescriptor(name, metricKind, numberKind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewSyncInstrument(desc)
 }
 
-func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
+func (m Meter) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
 	return WrapInt64CounterInstrument(
 		m.newSync(name, CounterKind, core.Int64NumberKind, opts))
 }
@@ -154,7 +163,7 @@ func WrapInt64CounterInstrument(syncInst SyncImpl, err error) (Int64Counter, err
 	return Int64Counter{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
+func (m Meter) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
 	return WrapFloat64CounterInstrument(
 		m.newSync(name, CounterKind, core.Float64NumberKind, opts))
 }
@@ -168,7 +177,7 @@ func WrapFloat64CounterInstrument(syncInst SyncImpl, err error) (Float64Counter,
 	return Float64Counter{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
+func (m Meter) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
 	return WrapInt64MeasureInstrument(
 		m.newSync(name, MeasureKind, core.Int64NumberKind, opts))
 }
@@ -182,7 +191,7 @@ func WrapInt64MeasureInstrument(syncInst SyncImpl, err error) (Int64Measure, err
 	return Int64Measure{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
+func (m Meter) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
 	return WrapFloat64MeasureInstrument(
 		m.newSync(name, MeasureKind, core.Float64NumberKind, opts))
 }
@@ -196,15 +205,18 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 	return Float64Measure{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
+func (m Meter) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
+	if m.impl == nil || callback == nil {
+		return NoopAsync{}, nil
+	}
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewAsyncInstrument(desc, callback)
 }
 
-func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
+func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
 	if callback == nil {
-		return NoopMeter{}.RegisterInt64Observer("", nil)
+		return WrapInt64ObserverInstrument(NoopAsync{}, nil)
 	}
 	return WrapInt64ObserverInstrument(
 		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts,
@@ -225,9 +237,9 @@ func WrapInt64ObserverInstrument(asyncInst AsyncImpl, err error) (Int64Observer,
 	return Int64Observer{asyncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error) {
+func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error) {
 	if callback == nil {
-		return NoopMeter{}.RegisterFloat64Observer("", nil)
+		return WrapFloat64ObserverInstrument(NoopAsync{}, nil)
 	}
 	return WrapFloat64ObserverInstrument(
 		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts,

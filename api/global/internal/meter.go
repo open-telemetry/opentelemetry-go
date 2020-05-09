@@ -50,17 +50,19 @@ type meterProvider struct {
 	delegate metric.Provider
 
 	lock   sync.Mutex
-	meters map[string]*meter
+	meters map[string]*meterEntry
+	impl   meterImpl
 }
 
-type meter struct {
-	delegate unsafe.Pointer // (*metric.Meter)
+type meterEntry struct {
+	registry metric.MeterImpl
+	impl     meterImpl
+}
 
-	provider *meterProvider
-	name     string
+type meterImpl struct {
+	delegate unsafe.Pointer // (*metric.MeterImpl)
 
 	lock       sync.Mutex
-	registry   map[string]metric.InstrumentImpl
 	syncInsts  []*syncImpl
 	asyncInsts []*asyncImpl
 }
@@ -73,8 +75,6 @@ type syncImpl struct {
 	delegate unsafe.Pointer // (*metric.SyncImpl)
 
 	instrument
-
-	constructor func(metric.Meter) (metric.SyncImpl, error)
 }
 
 type asyncImpl struct {
@@ -82,7 +82,7 @@ type asyncImpl struct {
 
 	instrument
 
-	constructor func(metric.Meter) (metric.AsyncImpl, error)
+	callback func(func(core.Number, []core.KeyValue))
 }
 
 // SyncImpler is implemented by all of the sync metric
@@ -107,7 +107,7 @@ type syncHandle struct {
 }
 
 var _ metric.Provider = &meterProvider{}
-var _ metric.Meter = &meter{}
+var _ metric.MeterImpl = &meterImpl{}
 var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSyncImpl = &syncHandle{}
 var _ metric.AsyncImpl = &asyncImpl{}
@@ -120,7 +120,7 @@ func (inst *instrument) Descriptor() metric.Descriptor {
 
 func newMeterProvider() *meterProvider {
 	return &meterProvider{
-		meters: map[string]*meter{},
+		meters: map[string]*meterEntry{},
 	}
 }
 
@@ -129,8 +129,8 @@ func (p *meterProvider) setDelegate(provider metric.Provider) {
 	defer p.lock.Unlock()
 
 	p.delegate = provider
-	for _, m := range p.meters {
-		m.setDelegate(provider)
+	for name, entry := range p.meters {
+		entry.impl.setDelegate(name, provider)
 	}
 	p.meters = nil
 }
@@ -143,29 +143,24 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 		return p.delegate.Meter(name)
 	}
 
-	if exm, ok := p.meters[name]; ok {
-		return exm
-	}
+	entry, ok := p.meters[name]
+	if !ok {
+		entry = &meterEntry{}
+		entry.registry = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
+		p.meters[name] = entry
 
-	m := &meter{
-		provider:   p,
-		name:       name,
-		registry:   map[string]metric.InstrumentImpl{},
-		syncInsts:  []*syncImpl{},
-		asyncInsts: []*asyncImpl{},
 	}
-	p.meters[name] = m
-	return m
+	return metric.WrapMeterImpl(entry.registry, name)
 }
 
 // Meter interface and delegation
 
-func (m *meter) setDelegate(provider metric.Provider) {
+func (m *meterImpl) setDelegate(name string, provider metric.Provider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	d := new(metric.Meter)
-	*d = provider.Meter(m.name)
+	d := new(metric.MeterImpl)
+	*d = provider.Meter(name).MeterImpl()
 	m.delegate = unsafe.Pointer(d)
 
 	for _, inst := range m.syncInsts {
@@ -178,29 +173,20 @@ func (m *meter) setDelegate(provider metric.Provider) {
 	m.asyncInsts = nil
 }
 
-func (m *meter) newSync(desc metric.Descriptor, constructor func(metric.Meter) (metric.SyncImpl, error)) (metric.SyncImpl, error) {
+func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return constructor(*meterPtr)
-	}
-
-	if ex, ok := m.registry[desc.Name()]; ok {
-		if !registry.Compatible(desc, ex.Descriptor()) {
-			return nil, registry.NewMetricKindMismatchError(ex.Descriptor())
-		}
-		return ex.(metric.SyncImpl), nil
+	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).NewSyncInstrument(desc)
 	}
 
 	inst := &syncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		constructor: constructor,
 	}
 	m.syncInsts = append(m.syncInsts, inst)
-	m.registry[desc.Name()] = inst
 	return inst, nil
 }
 
@@ -216,11 +202,11 @@ func syncCheck(has SyncImpler, err error) (metric.SyncImpl, error) {
 
 // Synchronous delegation
 
-func (inst *syncImpl) setDelegate(d metric.Meter) {
+func (inst *syncImpl) setDelegate(d metric.MeterImpl) {
 	implPtr := new(metric.SyncImpl)
 
 	var err error
-	*implPtr, err = inst.constructor(d)
+	*implPtr, err = d.NewSyncInstrument(inst.descriptor)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -264,29 +250,23 @@ func (bound *syncHandle) Unbind() {
 
 // Async delegation
 
-func (m *meter) newAsync(desc metric.Descriptor, constructor func(metric.Meter) (metric.AsyncImpl, error)) (metric.AsyncImpl, error) {
+func (m *meterImpl) NewAsyncInstrument(desc metric.Descriptor,
+	callback func(func(core.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return constructor(*meterPtr)
-	}
-
-	if ex, ok := m.registry[desc.Name()]; ok {
-		if !registry.Compatible(desc, ex.Descriptor()) {
-			return nil, registry.NewMetricKindMismatchError(ex.Descriptor())
-		}
-		return ex.(metric.AsyncImpl), nil
+	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+		return (*meterPtr).NewAsyncInstrument(desc, callback)
 	}
 
 	inst := &asyncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		constructor: constructor,
+		callback: callback,
 	}
 	m.asyncInsts = append(m.asyncInsts, inst)
-	m.registry[desc.Name()] = inst
 	return inst, nil
 }
 
@@ -307,11 +287,11 @@ func asyncCheck(has AsyncImpler, err error) (metric.AsyncImpl, error) {
 	return nil, err
 }
 
-func (obs *asyncImpl) setDelegate(d metric.Meter) {
+func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 	implPtr := new(metric.AsyncImpl)
 
 	var err error
-	*implPtr, err = obs.constructor(d)
+	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.callback)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -326,7 +306,7 @@ func (obs *asyncImpl) setDelegate(d metric.Meter) {
 
 // Metric updates
 
-func (m *meter) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
+func (m *meterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
 	if delegatePtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
@@ -363,64 +343,10 @@ func (bound *syncHandle) RecordOne(ctx context.Context, number core.Number) {
 	(*implPtr).RecordOne(ctx, number)
 }
 
-// Constructors
-
-func (m *meter) withName(opts []metric.Option) []metric.Option {
-	return append(opts, metric.WithLibraryName(m.name))
-}
-
-func (m *meter) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
-	return metric.WrapInt64CounterInstrument(m.newSync(
-		metric.NewDescriptor(name, metric.CounterKind, core.Int64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.SyncImpl, error) {
-			return syncCheck(other.NewInt64Counter(name, opts...))
-		}))
-}
-
-func (m *meter) NewFloat64Counter(name string, opts ...metric.Option) (metric.Float64Counter, error) {
-	return metric.WrapFloat64CounterInstrument(m.newSync(
-		metric.NewDescriptor(name, metric.CounterKind, core.Float64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.SyncImpl, error) {
-			return syncCheck(other.NewFloat64Counter(name, opts...))
-		}))
-}
-
-func (m *meter) NewInt64Measure(name string, opts ...metric.Option) (metric.Int64Measure, error) {
-	return metric.WrapInt64MeasureInstrument(m.newSync(
-		metric.NewDescriptor(name, metric.MeasureKind, core.Int64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.SyncImpl, error) {
-			return syncCheck(other.NewInt64Measure(name, opts...))
-		}))
-}
-
-func (m *meter) NewFloat64Measure(name string, opts ...metric.Option) (metric.Float64Measure, error) {
-	return metric.WrapFloat64MeasureInstrument(m.newSync(
-		metric.NewDescriptor(name, metric.MeasureKind, core.Float64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.SyncImpl, error) {
-			return syncCheck(other.NewFloat64Measure(name, opts...))
-		}))
-}
-
-func (m *meter) RegisterInt64Observer(name string, callback metric.Int64ObserverCallback, opts ...metric.Option) (metric.Int64Observer, error) {
-	return metric.WrapInt64ObserverInstrument(m.newAsync(
-		metric.NewDescriptor(name, metric.ObserverKind, core.Int64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.AsyncImpl, error) {
-			return asyncCheck(other.RegisterInt64Observer(name, callback, opts...))
-		}))
-}
-
-func (m *meter) RegisterFloat64Observer(name string, callback metric.Float64ObserverCallback, opts ...metric.Option) (metric.Float64Observer, error) {
-	return metric.WrapFloat64ObserverInstrument(m.newAsync(
-		metric.NewDescriptor(name, metric.ObserverKind, core.Float64NumberKind, m.withName(opts)...),
-		func(other metric.Meter) (metric.AsyncImpl, error) {
-			return asyncCheck(other.RegisterFloat64Observer(name, callback, opts...))
-		}))
-}
-
 func AtomicFieldOffsets() map[string]uintptr {
 	return map[string]uintptr{
 		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
-		"meter.delegate":         unsafe.Offsetof(meter{}.delegate),
+		"meterImpl.delegate":     unsafe.Offsetof(meterImpl{}.delegate),
 		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
 		"asyncImpl.delegate":     unsafe.Offsetof(asyncImpl{}.delegate),
 		"syncHandle.delegate":    unsafe.Offsetof(syncHandle{}.delegate),

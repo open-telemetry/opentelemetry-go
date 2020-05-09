@@ -282,6 +282,7 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 
 	observer := Must(meter).RegisterInt64Observer("test.observer", nil)
 
+	fmt.Printf("%T\n", observer.AsyncImpl())
 	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)
 }

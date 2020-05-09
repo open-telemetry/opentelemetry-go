@@ -17,8 +17,6 @@
 package metric
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/unit"
 )
@@ -135,39 +133,39 @@ func (d Descriptor) LibraryName() string {
 	return d.config.LibraryName
 }
 
-// Meter is an interface to the metrics portion of the OpenTelemetry SDK.
-type Meter interface {
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
+// // Meter is an interface to the metrics portion of the OpenTelemetry SDK.
+// type Meter interface {
+// 	// RecordBatch atomically records a batch of measurements.
+// 	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
 
-	// All instrument constructors may return an error for
-	// conditions such as:
-	//   `name` is an empty string
-	//   `name` was previously registered as a different kind of instrument
-	//          for a given named `Meter`.
+// 	// All instrument constructors may return an error for
+// 	// conditions such as:
+// 	//   `name` is an empty string
+// 	//   `name` was previously registered as a different kind of instrument
+// 	//          for a given named `Meter`.
 
-	// NewInt64Counter creates a new integral counter with a given
-	// name and customized with passed options.
-	NewInt64Counter(name string, opts ...Option) (Int64Counter, error)
-	// NewFloat64Counter creates a new floating point counter with
-	// a given name and customized with passed options.
-	NewFloat64Counter(name string, opts ...Option) (Float64Counter, error)
-	// NewInt64Measure creates a new integral measure with a given
-	// name and customized with passed options.
-	NewInt64Measure(name string, opts ...Option) (Int64Measure, error)
-	// NewFloat64Measure creates a new floating point measure with
-	// a given name and customized with passed options.
-	NewFloat64Measure(name string, opts ...Option) (Float64Measure, error)
+// 	// NewInt64Counter creates a new integral counter with a given
+// 	// name and customized with passed options.
+// 	NewInt64Counter(name string, opts ...Option) (Int64Counter, error)
+// 	// NewFloat64Counter creates a new floating point counter with
+// 	// a given name and customized with passed options.
+// 	NewFloat64Counter(name string, opts ...Option) (Float64Counter, error)
+// 	// NewInt64Measure creates a new integral measure with a given
+// 	// name and customized with passed options.
+// 	NewInt64Measure(name string, opts ...Option) (Int64Measure, error)
+// 	// NewFloat64Measure creates a new floating point measure with
+// 	// a given name and customized with passed options.
+// 	NewFloat64Measure(name string, opts ...Option) (Float64Measure, error)
 
-	// RegisterInt64Observer creates a new integral observer with a
-	// given name, running a given callback, and customized with passed
-	// options. Callback may be nil.
-	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
-	// RegisterFloat64Observer creates a new floating point observer
-	// with a given name, running a given callback, and customized with
-	// passed options. Callback may be nil.
-	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
-}
+// 	// RegisterInt64Observer creates a new integral observer with a
+// 	// given name, running a given callback, and customized with passed
+// 	// options. Callback may be nil.
+// 	RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error)
+// 	// RegisterFloat64Observer creates a new floating point observer
+// 	// with a given name, running a given callback, and customized with
+// 	// passed options. Callback may be nil.
+// 	RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error)
+// }
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {

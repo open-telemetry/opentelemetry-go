@@ -280,15 +280,15 @@ type meterProviderWithConstructorError struct {
 }
 
 type meterWithConstructorError struct {
-	metric.Meter
+	metric.MeterImpl
 }
 
 func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
-	return &meterWithConstructorError{m.Provider.Meter(name)}
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(name).MeterImpl()}, name)
 }
 
-func (m *meterWithConstructorError) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
-	return metric.Int64Counter{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
+	return metric.NoopSync{}, errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {
