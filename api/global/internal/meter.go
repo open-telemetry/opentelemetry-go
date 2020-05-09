@@ -53,17 +53,17 @@ type meterProvider struct {
 	meters map[string]*meterEntry
 }
 
-type meterEntry struct {
-	registry metric.MeterImpl
-	impl     meterImpl
-}
-
 type meterImpl struct {
 	delegate unsafe.Pointer // (*metric.MeterImpl)
 
 	lock       sync.Mutex
 	syncInsts  []*syncImpl
 	asyncInsts []*asyncImpl
+}
+
+type meterEntry struct {
+	registry metric.MeterImpl
+	impl     meterImpl
 }
 
 type instrument struct {

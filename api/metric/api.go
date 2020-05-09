@@ -152,10 +152,10 @@ func (m Meter) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measur
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
-// NewInt64Counter creates a new integer Counter instrument with the given name,
-// customized with options.  May return an error if the name is
-// invalid (e.g., empty) or improperly registered (e.g., duplicate
-// registration).
+// NewInt64Counter creates a new integer Counter instrument with the
+// given name, customized with options.  May return an error if the
+// name is invalid (e.g., empty) or improperly registered (e.g.,
+// duplicate registration).
 func (m Meter) NewInt64Counter(name string, options ...Option) (Int64Counter, error) {
 	return wrapInt64CounterInstrument(
 		m.newSync(name, CounterKind, core.Int64NumberKind, options))
@@ -170,10 +170,10 @@ func (m Meter) NewFloat64Counter(name string, options ...Option) (Float64Counter
 		m.newSync(name, CounterKind, core.Float64NumberKind, options))
 }
 
-// NewInt64Measure creates a new integer Measure instrument with the given name,
-// customized with options.  May return an error if the name is
-// invalid (e.g., empty) or improperly registered (e.g., duplicate
-// registration).
+// NewInt64Measure creates a new integer Measure instrument with the
+// given name, customized with options.  May return an error if the
+// name is invalid (e.g., empty) or improperly registered (e.g.,
+// duplicate registration).
 func (m Meter) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
 	return wrapInt64MeasureInstrument(
 		m.newSync(name, MeasureKind, core.Int64NumberKind, opts))
@@ -188,10 +188,10 @@ func (m Meter) NewFloat64Measure(name string, opts ...Option) (Float64Measure, e
 		m.newSync(name, MeasureKind, core.Float64NumberKind, opts))
 }
 
-// RegisterInt64Observer creates a new integer Observer instrument with the given name,
-// customized with options.  May return an error if the name is
-// invalid (e.g., empty) or improperly registered (e.g., duplicate
-// registration).
+// RegisterInt64Observer creates a new integer Observer instrument
+// with the given name, customized with options.  May return an error
+// if the name is invalid (e.g., empty) or improperly registered
+// (e.g., duplicate registration).
 func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
 	if callback == nil {
 		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
@@ -203,9 +203,9 @@ func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback
 			}))
 }
 
-// RegisterFloat64Observer creates a new floating point Observer with the
-// given name, customized with options.  May return an error if the
-// name is invalid (e.g., empty) or improperly registered (e.g.,
+// RegisterFloat64Observer creates a new floating point Observer with
+// the given name, customized with options.  May return an error if
+// the name is invalid (e.g., empty) or improperly registered (e.g.,
 // duplicate registration).
 func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error) {
 	if callback == nil {
