@@ -51,7 +51,6 @@ type meterProvider struct {
 
 	lock   sync.Mutex
 	meters map[string]*meterEntry
-	impl   meterImpl
 }
 
 type meterEntry struct {
@@ -190,16 +189,6 @@ func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, 
 	return inst, nil
 }
 
-func syncCheck(has SyncImpler, err error) (metric.SyncImpl, error) {
-	if has != nil {
-		return has.SyncImpl(), err
-	}
-	if err == nil {
-		err = metric.ErrSDKReturnedNilImpl
-	}
-	return nil, err
-}
-
 // Synchronous delegation
 
 func (inst *syncImpl) setDelegate(d metric.MeterImpl) {
@@ -277,16 +266,6 @@ func (obs *asyncImpl) Implementation() interface{} {
 	return obs
 }
 
-func asyncCheck(has AsyncImpler, err error) (metric.AsyncImpl, error) {
-	if has != nil {
-		return has.AsyncImpl(), err
-	}
-	if err == nil {
-		err = metric.ErrSDKReturnedNilImpl
-	}
-	return nil, err
-}
-
 func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 	implPtr := new(metric.AsyncImpl)
 
@@ -307,7 +286,7 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 // Metric updates
 
 func (m *meterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
-	if delegatePtr := (*metric.Meter)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
+	if delegatePtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
