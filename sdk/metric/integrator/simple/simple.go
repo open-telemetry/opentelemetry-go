@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ungrouped // import "go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 )
 
 type (
-	Batcher struct {
+	Integrator struct {
 		selector export.AggregationSelector
 		batchMap batchMap
 		stateful bool
@@ -44,22 +44,22 @@ type (
 	batchMap map[batchKey]batchValue
 )
 
-var _ export.Batcher = &Batcher{}
+var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = batchMap{}
 
-func New(selector export.AggregationSelector, stateful bool) *Batcher {
-	return &Batcher{
+func New(selector export.AggregationSelector, stateful bool) *Integrator {
+	return &Integrator{
 		selector: selector,
 		batchMap: batchMap{},
 		stateful: stateful,
 	}
 }
 
-func (b *Batcher) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (b *Integrator) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	return b.selector.AggregatorFor(descriptor)
 }
 
-func (b *Batcher) Process(_ context.Context, record export.Record) error {
+func (b *Integrator) Process(_ context.Context, record export.Record) error {
 	desc := record.Descriptor()
 	key := batchKey{
 		descriptor: desc,
@@ -70,12 +70,12 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	if ok {
 		// Note: The call to Merge here combines only
 		// identical records.  It is required even for a
-		// stateless Batcher because such identical records
+		// stateless Integrator because such identical records
 		// may arise in the Meter implementation due to race
 		// conditions.
 		return value.aggregator.Merge(agg, desc)
 	}
-	// If this Batcher is stateful, create a copy of the
+	// If this integrator is stateful, create a copy of the
 	// Aggregator for long-term storage.  Otherwise the
 	// Meter implementation will checkpoint the aggregator
 	// again, overwriting the long-lived state.
@@ -95,11 +95,11 @@ func (b *Batcher) Process(_ context.Context, record export.Record) error {
 	return nil
 }
 
-func (b *Batcher) CheckpointSet() export.CheckpointSet {
+func (b *Integrator) CheckpointSet() export.CheckpointSet {
 	return b.batchMap
 }
 
-func (b *Batcher) FinishedCollection() {
+func (b *Integrator) FinishedCollection() {
 	if !b.stateful {
 		b.batchMap = batchMap{}
 	}

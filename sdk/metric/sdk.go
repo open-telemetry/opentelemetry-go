@@ -32,12 +32,12 @@ import (
 
 type (
 	// SDK implements the OpenTelemetry Meter API.  The SDK is
-	// bound to a single export.Batcher in `New()`.
+	// bound to a single export.Integrator in `New()`.
 	//
 	// The SDK supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
-	// the batcher model.  Push-based batchers will setup a
-	// timer to call Collect() periodically.  Pull-based batchers
+	// the integrator model.  Push-based integrators will setup a
+	// timer to call Collect() periodically.  Pull-based integrators
 	// will call Collect() when a pull request arrives.
 	SDK struct {
 		// current maps `mapkey` to *record.
@@ -51,8 +51,8 @@ type (
 		// incremented in `Collect()`.
 		currentEpoch int64
 
-		// batcher is the configured batcher+configuration.
-		batcher export.Batcher
+		// integrator is the configured integrator+configuration.
+		integrator export.Integrator
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -188,14 +188,14 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
-			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
+			lrec.recorder = a.meter.integrator.AggregatorFor(&a.descriptor)
 		} else {
 			lrec.observedEpoch = a.meter.currentEpoch
 		}
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.recorder
 	}
-	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
+	rec := a.meter.integrator.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
 		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
@@ -259,7 +259,7 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set)
 	}
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
-	rec.recorder = s.meter.batcher.AggregatorFor(&s.descriptor)
+	rec.recorder = s.meter.integrator.AggregatorFor(&s.descriptor)
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -301,23 +301,23 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number core.Number, kvs 
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new SDK for the given batcher.  This SDK supports
-// only a single batcher.
+// New constructs a new SDK for the given integrator.  This SDK supports
+// only a single integrator.
 //
 // The SDK does not start any background process to collect itself
-// periodically, this responsbility lies with the batcher, typically,
+// periodically, this responsbility lies with the integrator, typically,
 // depending on the type of export.  For example, a pull-based
-// batcher will call Collect() when it receives a request to scrape
-// current metric values.  A push-based batcher should configure its
+// integrator will call Collect() when it receives a request to scrape
+// current metric values.  A push-based integrator should configure its
 // own periodic collection.
-func New(batcher export.Batcher, opts ...Option) *SDK {
+func New(integrator export.Integrator, opts ...Option) *SDK {
 	c := &Config{ErrorHandler: DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
 	return &SDK{
-		batcher:      batcher,
+		integrator:   integrator,
 		errorHandler: c.ErrorHandler,
 	}
 }
@@ -351,7 +351,7 @@ func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(c
 // exports data for each active instrument.  Collect() may not be
 // called concurrently.
 //
-// During the collection pass, the export.Batcher will receive
+// During the collection pass, the export.Integrator will receive
 // one Export() call per current aggregation.
 //
 // Returns the number of records that were checkpointed.
@@ -455,7 +455,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 	recorder.Checkpoint(ctx, descriptor)
 
 	exportRecord := export.NewRecord(descriptor, labels, recorder)
-	err := m.batcher.Process(ctx, exportRecord)
+	err := m.integrator.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)
 	}
