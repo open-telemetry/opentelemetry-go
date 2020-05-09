@@ -30,7 +30,7 @@ import (
 type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
-	sdk          *sdk.SDK
+	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
 	uniq         metric.MeterImpl
 	named        map[string]metric.Meter
@@ -81,7 +81,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 
 	impl := sdk.New(integrator, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
-		sdk:          impl,
+		accumulator:  impl,
 		resource:     c.Resource,
 		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
 		named:        map[string]metric.Meter{},
@@ -106,7 +106,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.errorHandler = errorHandler
-	c.sdk.SetErrorHandler(errorHandler)
+	c.accumulator.SetErrorHandler(errorHandler)
 }
 
 // Meter returns a named Meter, satisifying the metric.Provider
@@ -190,7 +190,7 @@ func (c *Controller) collect(ctx context.Context) {
 	c.collectLock.Lock()
 	defer c.collectLock.Unlock()
 
-	c.sdk.Collect(ctx)
+	c.accumulator.Collect(ctx)
 }
 
 // syncCheckpointSet is a wrapper for a CheckpointSet to synchronize

@@ -157,7 +157,7 @@ func (f *testFixture) someLabels() []core.KeyValue {
 	}
 }
 
-func (f *testFixture) startWorker(impl *SDK, meter api.Meter, wg *sync.WaitGroup, i int) {
+func (f *testFixture) startWorker(impl *Accumulator, meter api.Meter, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
