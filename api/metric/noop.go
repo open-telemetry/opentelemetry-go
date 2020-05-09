@@ -21,7 +21,6 @@ import (
 )
 
 type NoopProvider struct{}
-type NoopMeter struct{}
 
 type noopInstrument struct{}
 type noopBoundInstrument struct{}
