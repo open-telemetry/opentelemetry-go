@@ -15,10 +15,12 @@ package grpctrace
 
 import (
 	"context"
-	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -26,10 +28,13 @@ import (
 )
 
 type testExporter struct {
+	mu      sync.Mutex
 	spanMap map[string][]*export.SpanData
 }
 
 func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.spanMap[s.Name] = append(t.spanMap[s.Name], s)
 }
 
@@ -55,7 +60,7 @@ func (mm *mockProtoMessage) ProtoMessage() {
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	exp := &testExporter{make(map[string][]*export.SpanData)}
+	exp := &testExporter{spanMap: make(map[string][]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{
 			DefaultSampler: sdktrace.AlwaysSample(),
@@ -127,8 +132,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		},
 	}
 
-	for idx, check := range checks {
-		fmt.Println("================", idx, "==================")
+	for _, check := range checks {
 		err = unaryInterceptor(context.Background(), check.name, req, reply, clientConn, uniInterceptorInvoker.invoker)
 		if err != nil {
 			t.Fatalf("failed to run unary interceptor: %v", err)
@@ -176,5 +180,126 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+type mockClientStream struct {
+	Desc *grpc.StreamDesc
+	Ctx  context.Context
+}
+
+func (mockClientStream) SendMsg(m interface{}) error  { return nil }
+func (mockClientStream) RecvMsg(m interface{}) error  { return nil }
+func (mockClientStream) CloseSend() error             { return nil }
+func (c mockClientStream) Context() context.Context   { return c.Ctx }
+func (mockClientStream) Header() (metadata.MD, error) { return nil, nil }
+func (mockClientStream) Trailer() metadata.MD         { return nil }
+
+func TestStreamClientInterceptor(t *testing.T) {
+	exp := &testExporter{spanMap: make(map[string][]*export.SpanData)}
+	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+		sdktrace.WithConfig(sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		},
+		))
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("failed to create client connection: %v", err)
+	}
+
+	// tracer
+	tracer := tp.Tracer("grpctrace/Server")
+	streamCI := StreamClientInterceptor(tracer)
+
+	var mockClStr mockClientStream
+	methodName := "/github.com.serviceName/bar"
+
+	streamClient, err := streamCI(context.Background(),
+		&grpc.StreamDesc{ServerStreams: true},
+		clientConn,
+		methodName,
+		func(ctx context.Context,
+			desc *grpc.StreamDesc,
+			cc *grpc.ClientConn,
+			method string,
+			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			mockClStr = mockClientStream{Desc: desc, Ctx: ctx}
+			return mockClStr, nil
+		})
+
+	if err != nil {
+		t.Fatalf("failed to initialize grpc stream client: %v", err)
+	}
+
+	// no span exported while stream is open
+	if _, ok := exp.spanMap[methodName]; ok {
+		t.Fatalf("span shouldn't end while stream is open")
+	}
+
+	req := &mockProtoMessage{}
+	reply := &mockProtoMessage{}
+
+	// send and receive fake data
+	for i := 0; i < 10; i++ {
+		_ = streamClient.SendMsg(req)
+		_ = streamClient.RecvMsg(reply)
+	}
+
+	// close client and server stream
+	_ = streamClient.CloseSend()
+	mockClStr.Desc.ServerStreams = false
+	_ = streamClient.RecvMsg(reply)
+
+	// added retry because span end is called in separate go routine
+	var spanData []*export.SpanData
+	for retry := 0; retry < 5; retry++ {
+		ok := false
+		exp.mu.Lock()
+		spanData, ok = exp.spanMap[methodName]
+		exp.mu.Unlock()
+		if ok {
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+	if len(spanData) == 0 {
+		t.Fatalf("no span data found for name < %s >", methodName)
+	}
+
+	attrs := spanData[0].Attributes
+	expectedAttr := map[core.Key]string{
+		rpcServiceKey:  "serviceName",
+		netPeerIPKey:   "fake",
+		netPeerPortKey: "connection",
+	}
+
+	for _, attr := range attrs {
+		expected, ok := expectedAttr[attr.Key]
+		if ok {
+			if expected != attr.Value.AsString() {
+				t.Errorf("name: %s invalid %s found. expected %s, actual %s", methodName, string(attr.Key),
+					expected, attr.Value.AsString())
+			}
+		}
+	}
+
+	events := spanData[0].MessageEvents
+	if len(events) != 20 {
+		t.Fatalf("incorrect number of events expected 20 got %d", len(events))
+	}
+	for i := 0; i < 20; i += 2 {
+		msgID := i/2 + 1
+		validate := func(eventName string, attrs []core.KeyValue) {
+			for _, attr := range attrs {
+				if attr.Key == messageTypeKey && attr.Value.AsString() != eventName {
+					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, attr.Value.AsString())
+				}
+				if attr.Key == messageIDKey && attr.Value != core.Int(msgID) {
+					t.Errorf("invalid id for message event expected %d received %d", msgID, attr.Value.AsInt32())
+				}
+			}
+		}
+		validate("SENT", events[i].Attributes)
+		validate("RECEIVED", events[i+1].Attributes)
 	}
 }
