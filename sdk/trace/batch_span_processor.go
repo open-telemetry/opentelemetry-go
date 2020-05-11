@@ -176,7 +176,7 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // processQueue removes spans from the `queue` channel until the queue
 // fills once or there is no more data.  It calls the exporter once with
-// a batch of up to MaxExportBatchSize.  It sends the `eof` boolean to
+// a batch of up to MaxExportBatchSize.  It sets the `eof` boolean to
 // true when a `nil` *SpanData is received, indicating that the processor
 // is flushing.
 func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
