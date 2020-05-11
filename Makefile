@@ -135,7 +135,11 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	done
 
 generate: $(TOOLS_DIR)/stringer
-	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "running generators in $${dir}"; \
+	  (cd "$${dir}" && \
+	    PATH="$(TOOLS_DIR):$${PATH}" go generate ./...); \
+	done
 
 .PHONY: license-check
 license-check:
