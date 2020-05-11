@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strconv"
 	"unsafe"
+
+	"go.opentelemetry.io/otel/api/internal"
 )
 
 // Key represents the key part in key-value pairs. It's a string. The
@@ -60,7 +62,7 @@ const (
 func Bool(v bool) Value {
 	return Value{
 		vtype:   BOOL,
-		numeric: boolToRaw(v),
+		numeric: internal.BoolToRaw(v),
 	}
 }
 
@@ -68,7 +70,7 @@ func Bool(v bool) Value {
 func Int64(v int64) Value {
 	return Value{
 		vtype:   INT64,
-		numeric: int64ToRaw(v),
+		numeric: internal.Int64ToRaw(v),
 	}
 }
 
@@ -76,7 +78,7 @@ func Int64(v int64) Value {
 func Uint64(v uint64) Value {
 	return Value{
 		vtype:   UINT64,
-		numeric: uint64ToRaw(v),
+		numeric: internal.Uint64ToRaw(v),
 	}
 }
 
@@ -84,7 +86,7 @@ func Uint64(v uint64) Value {
 func Float64(v float64) Value {
 	return Value{
 		vtype:   FLOAT64,
-		numeric: float64ToRaw(v),
+		numeric: internal.Float64ToRaw(v),
 	}
 }
 
@@ -92,7 +94,7 @@ func Float64(v float64) Value {
 func Int32(v int32) Value {
 	return Value{
 		vtype:   INT32,
-		numeric: int32ToRaw(v),
+		numeric: internal.Int32ToRaw(v),
 	}
 }
 
@@ -100,7 +102,7 @@ func Int32(v int32) Value {
 func Uint32(v uint32) Value {
 	return Value{
 		vtype:   UINT32,
-		numeric: uint32ToRaw(v),
+		numeric: internal.Uint32ToRaw(v),
 	}
 }
 
@@ -108,7 +110,7 @@ func Uint32(v uint32) Value {
 func Float32(v float32) Value {
 	return Value{
 		vtype:   FLOAT32,
-		numeric: float32ToRaw(v),
+		numeric: internal.Float32ToRaw(v),
 	}
 }
 
@@ -283,43 +285,43 @@ func (v Value) Type() ValueType {
 // AsBool returns the bool value. Make sure that the Value's type is
 // BOOL.
 func (v Value) AsBool() bool {
-	return rawToBool(v.numeric)
+	return internal.RawToBool(v.numeric)
 }
 
 // AsInt32 returns the int32 value. Make sure that the Value's type is
 // INT32.
 func (v Value) AsInt32() int32 {
-	return rawToInt32(v.numeric)
+	return internal.RawToInt32(v.numeric)
 }
 
 // AsInt64 returns the int64 value. Make sure that the Value's type is
 // INT64.
 func (v Value) AsInt64() int64 {
-	return rawToInt64(v.numeric)
+	return internal.RawToInt64(v.numeric)
 }
 
 // AsUint32 returns the uint32 value. Make sure that the Value's type
 // is UINT32.
 func (v Value) AsUint32() uint32 {
-	return rawToUint32(v.numeric)
+	return internal.RawToUint32(v.numeric)
 }
 
 // AsUint64 returns the uint64 value. Make sure that the Value's type is
 // UINT64.
 func (v Value) AsUint64() uint64 {
-	return rawToUint64(v.numeric)
+	return internal.RawToUint64(v.numeric)
 }
 
 // AsFloat32 returns the float32 value. Make sure that the Value's
 // type is FLOAT32.
 func (v Value) AsFloat32() float32 {
-	return rawToFloat32(v.numeric)
+	return internal.RawToFloat32(v.numeric)
 }
 
 // AsFloat64 returns the float64 value. Make sure that the Value's
 // type is FLOAT64.
 func (v Value) AsFloat64() float64 {
-	return rawToFloat64(v.numeric)
+	return internal.RawToFloat64(v.numeric)
 }
 
 // AsString returns the string value. Make sure that the Value's type

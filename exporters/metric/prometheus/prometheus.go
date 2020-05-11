@@ -20,10 +20,11 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/api/metric"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -46,7 +47,7 @@ type Exporter struct {
 	onError  func(error)
 
 	defaultSummaryQuantiles    []float64
-	defaultHistogramBoundaries []core.Number
+	defaultHistogramBoundaries []metric.Number
 }
 
 var _ export.Exporter = &Exporter{}
@@ -78,7 +79,7 @@ type Config struct {
 
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
-	DefaultHistogramBoundaries []core.Number
+	DefaultHistogramBoundaries []metric.Number
 
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
@@ -245,7 +246,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -260,7 +261,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -275,13 +276,13 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
-	var sum core.Number
+	var sum metric.Number
 	sum, err = dist.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving distribution sum: %w", err)
@@ -302,7 +303,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)

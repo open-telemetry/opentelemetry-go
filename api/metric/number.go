@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core
+package metric
 
 //go:generate stringer -type=NumberKind
 
@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math"
 	"sync/atomic"
+
+	"go.opentelemetry.io/otel/api/internal"
 )
 
 // NumberKind describes the data type of the Number.
@@ -92,17 +94,17 @@ func NewNumberFromRaw(r uint64) Number {
 
 // NewInt64Number creates an integral Number.
 func NewInt64Number(i int64) Number {
-	return NewNumberFromRaw(int64ToRaw(i))
+	return NewNumberFromRaw(internal.Int64ToRaw(i))
 }
 
 // NewFloat64Number creates a floating point Number.
 func NewFloat64Number(f float64) Number {
-	return NewNumberFromRaw(float64ToRaw(f))
+	return NewNumberFromRaw(internal.Float64ToRaw(f))
 }
 
 // NewInt64Number creates an integral Number.
 func NewUint64Number(u uint64) Number {
-	return NewNumberFromRaw(uint64ToRaw(u))
+	return NewNumberFromRaw(internal.Uint64ToRaw(u))
 }
 
 // - as x
@@ -121,19 +123,19 @@ func (n *Number) AsRaw() uint64 {
 // AsInt64 assumes that the value contains an int64 and returns it as
 // such.
 func (n *Number) AsInt64() int64 {
-	return rawToInt64(n.AsRaw())
+	return internal.RawToInt64(n.AsRaw())
 }
 
 // AsFloat64 assumes that the measurement value contains a float64 and
 // returns it as such.
 func (n *Number) AsFloat64() float64 {
-	return rawToFloat64(n.AsRaw())
+	return internal.RawToFloat64(n.AsRaw())
 }
 
 // AsUint64 assumes that the value contains an uint64 and returns it
 // as such.
 func (n *Number) AsUint64() uint64 {
-	return rawToUint64(n.AsRaw())
+	return internal.RawToUint64(n.AsRaw())
 }
 
 // - as x atomic
@@ -158,7 +160,7 @@ func (n *Number) AsInt64Atomic() int64 {
 // AsFloat64Atomic assumes that the measurement value contains a
 // float64 and returns it as such atomically.
 func (n *Number) AsFloat64Atomic() float64 {
-	return rawToFloat64(n.AsRawAtomic())
+	return internal.RawToFloat64(n.AsRawAtomic())
 }
 
 // AsUint64Atomic assumes that the number contains a uint64 and
@@ -178,19 +180,19 @@ func (n *Number) AsRawPtr() *uint64 {
 // AsInt64Ptr assumes that the number contains an int64 and returns a
 // pointer to it.
 func (n *Number) AsInt64Ptr() *int64 {
-	return rawPtrToInt64Ptr(n.AsRawPtr())
+	return internal.RawPtrToInt64Ptr(n.AsRawPtr())
 }
 
 // AsFloat64Ptr assumes that the number contains a float64 and returns a
 // pointer to it.
 func (n *Number) AsFloat64Ptr() *float64 {
-	return rawPtrToFloat64Ptr(n.AsRawPtr())
+	return internal.RawPtrToFloat64Ptr(n.AsRawPtr())
 }
 
 // AsUint64Ptr assumes that the number contains a uint64 and returns a
 // pointer to it.
 func (n *Number) AsUint64Ptr() *uint64 {
-	return rawPtrToUint64Ptr(n.AsRawPtr())
+	return internal.RawPtrToUint64Ptr(n.AsRawPtr())
 }
 
 // - coerce
@@ -299,7 +301,7 @@ func (n *Number) SetInt64Atomic(i int64) {
 // SetFloat64Atomic assumes that the number contains a float64 and
 // sets it to the passed value atomically.
 func (n *Number) SetFloat64Atomic(f float64) {
-	atomic.StoreUint64(n.AsRawPtr(), float64ToRaw(f))
+	atomic.StoreUint64(n.AsRawPtr(), internal.Float64ToRaw(f))
 }
 
 // SetUint64Atomic assumes that the number contains a uint64 and sets
@@ -378,7 +380,7 @@ func (n *Number) SwapInt64Atomic(i int64) int64 {
 // it to the passed value and returns the old float64 value
 // atomically.
 func (n *Number) SwapFloat64Atomic(f float64) float64 {
-	return rawToFloat64(atomic.SwapUint64(n.AsRawPtr(), float64ToRaw(f)))
+	return internal.RawToFloat64(atomic.SwapUint64(n.AsRawPtr(), internal.Float64ToRaw(f)))
 }
 
 // SwapUint64Atomic assumes that the number contains an uint64, sets
@@ -496,7 +498,7 @@ func (n *Number) CompareAndSwapInt64(oi, ni int64) bool {
 // CompareAndSwapFloat64 assumes that this number contains a float64 and
 // does the atomic CAS operation on it.
 func (n *Number) CompareAndSwapFloat64(of, nf float64) bool {
-	return atomic.CompareAndSwapUint64(n.AsRawPtr(), float64ToRaw(of), float64ToRaw(nf))
+	return atomic.CompareAndSwapUint64(n.AsRawPtr(), internal.Float64ToRaw(of), internal.Float64ToRaw(nf))
 }
 
 // CompareAndSwapUint64 assumes that this number contains a uint64 and

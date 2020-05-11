@@ -73,23 +73,23 @@ func (c Int64Counter) Measurement(value int64) Measurement {
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Float64Counter) Add(ctx context.Context, value float64, labels ...core.KeyValue) {
-	c.directRecord(ctx, core.NewFloat64Number(value), labels)
+	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Int64Counter) Add(ctx context.Context, value int64, labels ...core.KeyValue) {
-	c.directRecord(ctx, core.NewInt64Number(value), labels)
+	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
-	b.directRecord(ctx, core.NewFloat64Number(value))
+	b.directRecord(ctx, NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
-	b.directRecord(ctx, core.NewInt64Number(value))
+	b.directRecord(ctx, NewInt64Number(value))
 }

@@ -121,45 +121,45 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	type data struct {
 		iKind metric.Kind
-		nKind core.NumberKind
+		nKind metricapi.NumberKind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":    {metric.CounterKind, core.Int64NumberKind, 1},
-		"test-float64-counter":  {metric.CounterKind, core.Float64NumberKind, 1},
-		"test-int64-measure":    {metric.MeasureKind, core.Int64NumberKind, 2},
-		"test-float64-measure":  {metric.MeasureKind, core.Float64NumberKind, 2},
-		"test-int64-observer":   {metric.ObserverKind, core.Int64NumberKind, 3},
-		"test-float64-observer": {metric.ObserverKind, core.Float64NumberKind, 3},
+		"test-int64-counter":    {metric.CounterKind, metricapi.Int64NumberKind, 1},
+		"test-float64-counter":  {metric.CounterKind, metricapi.Float64NumberKind, 1},
+		"test-int64-measure":    {metric.MeasureKind, metricapi.Int64NumberKind, 2},
+		"test-float64-measure":  {metric.MeasureKind, metricapi.Float64NumberKind, 2},
+		"test-int64-observer":   {metric.ObserverKind, metricapi.Int64NumberKind, 3},
+		"test-float64-observer": {metric.ObserverKind, metricapi.Float64NumberKind, 3},
 	}
 	for name, data := range instruments {
 		switch data.iKind {
 		case metric.CounterKind:
 			switch data.nKind {
-			case core.Int64NumberKind:
+			case metricapi.Int64NumberKind:
 				metricapi.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
-			case core.Float64NumberKind:
+			case metricapi.Float64NumberKind:
 				metricapi.Must(meter).NewFloat64Counter(name).Add(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
 		case metric.MeasureKind:
 			switch data.nKind {
-			case core.Int64NumberKind:
+			case metricapi.Int64NumberKind:
 				metricapi.Must(meter).NewInt64Measure(name).Record(ctx, data.val, labels...)
-			case core.Float64NumberKind:
+			case metricapi.Float64NumberKind:
 				metricapi.Must(meter).NewFloat64Measure(name).Record(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
 		case metric.ObserverKind:
 			switch data.nKind {
-			case core.Int64NumberKind:
+			case metricapi.Int64NumberKind:
 				callback := func(v int64) metricapi.Int64ObserverCallback {
 					return metricapi.Int64ObserverCallback(func(result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
 				}(data.val)
 				metricapi.Must(meter).RegisterInt64Observer(name, callback)
-			case core.Float64NumberKind:
+			case metricapi.Float64NumberKind:
 				callback := func(v float64) metricapi.Float64ObserverCallback {
 					return metricapi.Float64ObserverCallback(func(result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
@@ -234,12 +234,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		switch data.iKind {
 		case metric.CounterKind:
 			switch data.nKind {
-			case core.Int64NumberKind:
+			case metricapi.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
 				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
 				}
-			case core.Float64NumberKind:
+			case metricapi.Float64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_DOUBLE.String(), desc.GetType().String())
 				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)

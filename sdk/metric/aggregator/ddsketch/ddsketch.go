@@ -20,7 +20,6 @@ import (
 
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -34,7 +33,7 @@ type Config = sdk.Config
 type Aggregator struct {
 	lock       sync.Mutex
 	cfg        *Config
-	kind       core.NumberKind
+	kind       metric.NumberKind
 	current    *sdk.DDSketch
 	checkpoint *sdk.DDSketch
 }
@@ -63,7 +62,7 @@ func NewDefaultConfig() *Config {
 }
 
 // Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (core.Number, error) {
+func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.toNumber(c.checkpoint.Sum()), nil
 }
 
@@ -73,33 +72,33 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (metric.Number, error) {
 	return c.Quantile(1)
 }
 
 // Min returns the minimum value in the checkpoint.
-func (c *Aggregator) Min() (core.Number, error) {
+func (c *Aggregator) Min() (metric.Number, error) {
 	return c.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of data in the checkpoint.
 // It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
 	if c.checkpoint.Count() == 0 {
-		return core.Number(0), aggregator.ErrNoData
+		return metric.Number(0), aggregator.ErrNoData
 	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
-		return core.Number(0), aggregator.ErrInvalidQuantile
+		return metric.Number(0), aggregator.ErrInvalidQuantile
 	}
 	return c.toNumber(f), nil
 }
 
-func (c *Aggregator) toNumber(f float64) core.Number {
-	if c.kind == core.Float64NumberKind {
-		return core.NewFloat64Number(f)
+func (c *Aggregator) toNumber(f float64) metric.Number {
+	if c.kind == metric.Float64NumberKind {
+		return metric.NewFloat64Number(f)
 	}
-	return core.NewInt64Number(int64(f))
+	return metric.NewInt64Number(int64(f))
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -116,7 +115,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))

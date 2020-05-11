@@ -15,7 +15,6 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
@@ -32,7 +31,7 @@ type (
 		config *ddsketch.Config
 	}
 	selectorHistogram struct {
-		boundaries []core.Number
+		boundaries []metric.Number
 	}
 )
 
@@ -76,7 +75,7 @@ func NewWithExactMeasure() export.AggregationSelector {
 // histogram, and histogram aggregators for the three kinds of metric. This
 // selector uses more memory than the NewWithInexpensiveMeasure because it
 // uses a counter per bucket.
-func NewWithHistogramMeasure(boundaries []core.Number) export.AggregationSelector {
+func NewWithHistogramMeasure(boundaries []metric.Number) export.AggregationSelector {
 	return selectorHistogram{boundaries: boundaries}
 }
 

@@ -20,7 +20,6 @@ import (
 	"time"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -43,7 +42,7 @@ type (
 		// value is the int64- or float64-encoded Set() data
 		//
 		// value needs to be aligned for 64-bit atomic operations.
-		value core.Number
+		value metric.Number
 
 		// timestamp indicates when this record was submitted.
 		// this can be used to pick a winner when multiple
@@ -72,10 +71,10 @@ func New() *Aggregator {
 // corresponding timestamp.  The error value aggregator.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
-func (g *Aggregator) LastValue() (core.Number, time.Time, error) {
+func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
 	gd := (*lastValueData)(g.checkpoint)
 	if gd == unsetLastValue {
-		return core.Number(0), time.Time{}, aggregator.ErrNoData
+		return metric.Number(0), time.Time{}, aggregator.ErrNoData
 	}
 	return gd.value.AsNumber(), gd.timestamp, nil
 }
@@ -86,7 +85,7 @@ func (g *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (g *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	ngd := &lastValueData{
 		value:     number,
 		timestamp: time.Now(),
