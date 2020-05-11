@@ -69,20 +69,17 @@ type testOption struct {
 	wantNumSpans   int
 	wantBatchCount int
 	genNumSpans    int
-	waitTime       time.Duration
 	parallel       bool
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
-	waitTime := schDelay + 100*time.Millisecond
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2048,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
-			waitTime:       5100 * time.Millisecond,
 		},
 		{
 			name: "non-default ScheduledDelayMillis",
@@ -92,7 +89,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   2048,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
-			waitTime:       waitTime,
 		},
 		{
 			name: "non-default MaxQueueSize and ScheduledDelayMillis",
@@ -103,7 +99,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   200,
 			wantBatchCount: 1,
 			genNumSpans:    205,
-			waitTime:       waitTime,
 		},
 		{
 			name: "non-default MaxQueueSize, ScheduledDelayMillis and MaxExportBatchSize",
@@ -115,7 +110,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   205,
 			wantBatchCount: 11,
 			genNumSpans:    210,
-			waitTime:       waitTime,
 		},
 		{
 			name: "blocking option",
@@ -128,7 +122,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   205,
 			wantBatchCount: 11,
 			genNumSpans:    205,
-			waitTime:       waitTime,
 		},
 		{
 			name: "parallel span generation",
@@ -139,7 +132,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   200,
 			wantBatchCount: 1,
 			genNumSpans:    205,
-			waitTime:       waitTime,
 			parallel:       true,
 		},
 		{
@@ -152,38 +144,39 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			wantNumSpans:   2000,
 			wantBatchCount: 10,
 			genNumSpans:    2000,
-			waitTime:       waitTime,
 			parallel:       true,
 		},
 	}
 	for _, option := range options {
-		te := testBatchExporter{}
-		tp := basicProvider(t)
-		ssp := createAndRegisterBatchSP(t, option, &te)
-		if ssp == nil {
-			t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
-		}
-		tp.RegisterSpanProcessor(ssp)
-		tr := tp.Tracer("BatchSpanProcessorWithOptions")
+		t.Run(option.name, func(t *testing.T) {
+			t.Parallel()
 
-		generateSpan(t, option.parallel, tr, option)
+			te := testBatchExporter{}
+			tp := basicProvider(t)
+			ssp := createAndRegisterBatchSP(t, option, &te)
+			if ssp == nil {
+				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+			}
+			tp.RegisterSpanProcessor(ssp)
+			tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-		time.Sleep(option.waitTime)
+			generateSpan(t, option.parallel, tr, option)
 
-		tp.UnregisterSpanProcessor(ssp)
+			tp.UnregisterSpanProcessor(ssp)
 
-		gotNumOfSpans := te.len()
-		if option.wantNumSpans != gotNumOfSpans {
-			t.Errorf("%s: number of exported span: got %+v, want %+v\n", option.name, gotNumOfSpans, option.wantNumSpans)
-		}
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("%s: number of exported span: got %+v, want %+v\n", option.name, gotNumOfSpans, option.wantNumSpans)
+			}
 
-		gotBatchCount := te.getBatchCount()
-		if gotBatchCount < option.wantBatchCount {
-			t.Errorf("%s: number batches: got %+v, want >= %+v\n", option.name, gotBatchCount, option.wantBatchCount)
-			t.Errorf("Batches %v\n", te.sizes)
-		}
+			gotBatchCount := te.getBatchCount()
+			if gotBatchCount < option.wantBatchCount {
+				t.Errorf("%s: number batches: got %+v, want >= %+v\n", option.name, gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
 
-		tp.UnregisterSpanProcessor(ssp)
+			tp.UnregisterSpanProcessor(ssp)
+		})
 	}
 }
 

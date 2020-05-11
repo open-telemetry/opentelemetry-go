@@ -69,6 +69,7 @@ type BatchSpanProcessor struct {
 
 	queue   chan *export.SpanData
 	dropped uint32
+	eof     bool
 
 	stopWait sync.WaitGroup
 	stopOnce sync.Once
@@ -112,7 +113,9 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 		for {
 			select {
 			case <-bsp.stopCh:
-				bsp.processQueue(&batch)
+				for !bsp.eof {
+					bsp.processQueue(&batch)
+				}
 				close(bsp.queue)
 				bsp.stopWait.Done()
 				return
@@ -131,13 +134,16 @@ func (bsp *BatchSpanProcessor) OnStart(sd *export.SpanData) {
 
 // OnEnd method enqueues export.SpanData for later processing.
 func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
-	bsp.enqueue(sd)
+	if sd != nil {
+		bsp.enqueue(sd)
+	}
 }
 
 // Shutdown flushes the queue and waits until all spans are processed.
 // It only executes once. Subsequent call does nothing.
 func (bsp *BatchSpanProcessor) Shutdown() {
 	bsp.stopOnce.Do(func() {
+		bsp.enqueue(nil)
 		close(bsp.stopCh)
 		bsp.stopWait.Wait()
 	})
@@ -169,27 +175,29 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // processQueue removes spans from the `queue` channel until the queue
 // fills once or there is no more data.  It calls the exporter once with
-// a batch of up to MaxExportBatchSize.
+// a batch of up to MaxExportBatchSize.  It returns true if the end-of-file
+// marker was received, indicating that the queue has been flushed.
 func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 	// Read spans until the buffer fills or there are no more spans.
-	for len(*batch) < bsp.o.MaxExportBatchSize {
+	done := false
+	for !done && len(*batch) < bsp.o.MaxExportBatchSize {
 		select {
 		case sd := <-bsp.queue:
-			if sd != nil && sd.SpanContext.IsSampled() {
+			if sd == nil {
+				done = true
+				bsp.eof = true
+			} else if sd.SpanContext.IsSampled() {
 				*batch = append(*batch, sd)
 			}
-			continue
 		default:
+			done = true
 		}
-		break
 	}
 
 	if len(*batch) == 0 {
 		return
 	}
-
-	// Send one batch, then continue reading until the
-	// buffer is empty.
+	// Send one batch
 	bsp.e.ExportSpans(context.Background(), *batch)
 	*batch = (*batch)[:0]
 }
@@ -200,7 +208,7 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		return
 	default:
 	}
-	if bsp.o.BlockOnQueueFull {
+	if sd == nil || bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 		return
 	}
