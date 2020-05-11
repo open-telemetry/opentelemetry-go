@@ -11,7 +11,7 @@ The demo assumes you already have both OpenTelemetry Collector and Jaeger up and
 * Jaeger: https://www.jaegertracing.io/docs/1.17/getting-started/
 * OpenTelemetry Collector: https://opentelemetry.io/docs/collector/about/
 
-Moreover, this demo is build against a microk8s cluster runnning both the OpenTelemetry Collector, and Jaeger. Therefor, the OpenTelemetry Collector configuration illustrated is a K8S ConfgurationMap. But the gist of it is there, so it shouldn't matter too much.
+Moreover, this demo is build against a microk8s cluster running both the OpenTelemetry Collector, and Jaeger. Therefor, the OpenTelemetry Collector configuration illustrated is a K8S ConfigurationMap. But the gist of it is there, so it shouldn't matter too much.
 
 # Configuring the OTEL Collector
 
