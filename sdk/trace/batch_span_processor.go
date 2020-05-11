@@ -167,33 +167,29 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
-// processQueue removes spans from the `queue` channel until there is
-// no more data.  It calls the exporter in batches of up to
-// MaxExportBatchSize until all the available data have been processed.
+// processQueue removes spans from the `queue` channel until the queue
+// fills once or there is no more data.  It calls the exporter once with
+// a batch of up to MaxExportBatchSize.
 func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
-	for {
-		// Read spans until either the buffer fills or the
-		// queue is empty.
-		for ok := true; ok && len(*batch) < bsp.o.MaxExportBatchSize; {
-			select {
-			case sd := <-bsp.queue:
-				if sd != nil && sd.SpanContext.IsSampled() {
-					*batch = append(*batch, sd)
-				}
-			default:
-				ok = false
+	// Read spans until the buffer fills or there are no more spans.
+	for len(*batch) < bsp.o.MaxExportBatchSize {
+		select {
+		case sd := <-bsp.queue:
+			if sd != nil && sd.SpanContext.IsSampled() {
+				*batch = append(*batch, sd)
 			}
+		default:
 		}
-
-		if len(*batch) == 0 {
-			return
-		}
-
-		// Send one batch, then continue reading until the
-		// buffer is empty.
-		bsp.e.ExportSpans(context.Background(), *batch)
-		*batch = (*batch)[:0]
 	}
+
+	if len(*batch) == 0 {
+		return
+	}
+
+	// Send one batch, then continue reading until the
+	// buffer is empty.
+	bsp.e.ExportSpans(context.Background(), *batch)
+	*batch = (*batch)[:0]
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
