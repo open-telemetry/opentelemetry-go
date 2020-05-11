@@ -33,12 +33,12 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	batchTest "go.opentelemetry.io/otel/sdk/metric/batcher/test"
+	batchTest "go.opentelemetry.io/otel/sdk/metric/integrator/test"
 )
 
 var Must = metric.Must
 
-type correctnessBatcher struct {
+type correctnessIntegrator struct {
 	newAggCount int64
 
 	t *testing.T
@@ -46,7 +46,7 @@ type correctnessBatcher struct {
 	records []export.Record
 }
 
-func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
+func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
 
 	switch {
@@ -63,25 +63,25 @@ func (cb *correctnessBatcher) AggregatorFor(descriptor *metric.Descriptor) (agg 
 	return
 }
 
-func (cb *correctnessBatcher) CheckpointSet() export.CheckpointSet {
+func (cb *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
 	cb.t.Fatal("Should not be called")
 	return nil
 }
 
-func (*correctnessBatcher) FinishedCollection() {
+func (*correctnessIntegrator) FinishedCollection() {
 }
 
-func (cb *correctnessBatcher) Process(_ context.Context, record export.Record) error {
+func (cb *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
 	cb.records = append(cb.records, record)
 	return nil
 }
 
 func TestInputRangeTestCounter(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -98,10 +98,10 @@ func TestInputRangeTestCounter(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	batcher.records = nil
+	integrator.records = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err := batcher.records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := integrator.records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -110,10 +110,10 @@ func TestInputRangeTestCounter(t *testing.T) {
 
 func TestInputRangeTestMeasure(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -133,10 +133,10 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	measure.Record(ctx, 1)
 	measure.Record(ctx, 2)
 
-	batcher.records = nil
+	integrator.records = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := batcher.records[0].Aggregator().(aggregator.Distribution).Count()
+	count, err := integrator.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, sdkErr)
@@ -145,10 +145,10 @@ func TestInputRangeTestMeasure(t *testing.T) {
 
 func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	measure := Must(meter).NewFloat64Measure("name.disabled")
@@ -157,16 +157,16 @@ func TestDisabledInstrument(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
-	require.Equal(t, 0, len(batcher.records))
+	require.Equal(t, 0, len(integrator.records))
 }
 
 func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
 
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -182,10 +182,10 @@ func TestRecordNaN(t *testing.T) {
 
 func TestSDKLabelsDeduplication(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter := Must(meter).NewInt64Counter("counter")
@@ -238,7 +238,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	sdk.Collect(ctx)
 
 	var actual [][]core.KeyValue
-	for _, rec := range batcher.records {
+	for _, rec := range integrator.records {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, metric.NewInt64Number(2))
 
@@ -285,11 +285,11 @@ func TestDefaultLabelEncoder(t *testing.T) {
 
 func TestObserverCollection(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
 
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
@@ -311,10 +311,10 @@ func TestObserverCollection(t *testing.T) {
 	collected := sdk.Collect(ctx)
 
 	require.Equal(t, 4, collected)
-	require.Equal(t, 4, len(batcher.records))
+	require.Equal(t, 4, len(integrator.records))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range batcher.records {
+	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
@@ -327,11 +327,11 @@ func TestObserverCollection(t *testing.T) {
 
 func TestRecordBatch(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
 
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
@@ -354,7 +354,7 @@ func TestRecordBatch(t *testing.T) {
 	sdk.Collect(ctx)
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range batcher.records {
+	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
@@ -370,11 +370,11 @@ func TestRecordBatch(t *testing.T) {
 // that its encoded labels will be cached across collection intervals.
 func TestRecordPersistence(t *testing.T) {
 	ctx := context.Background()
-	batcher := &correctnessBatcher{
+	integrator := &correctnessIntegrator{
 		t: t,
 	}
 
-	sdk := metricsdk.New(batcher)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	c := Must(meter).NewFloat64Counter("sum.name")
@@ -387,5 +387,5 @@ func TestRecordPersistence(t *testing.T) {
 		sdk.Collect(ctx)
 	}
 
-	require.Equal(t, int64(2), batcher.newAggCount)
+	require.Equal(t, int64(2), integrator.newAggCount)
 }

@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Batcher is responsible for deciding which kind of aggregation to
+// Integrator is responsible for deciding which kind of aggregation to
 // use (via AggregationSelector), gathering exported results from the
 // SDK during collection, and deciding over which dimensions to group
 // the exported data.
@@ -37,13 +37,13 @@ import (
 //
 // The `Process` method is called during collection in a
 // single-threaded context from the SDK, after the aggregator is
-// checkpointed, allowing the batcher to build the set of metrics
+// checkpointed, allowing the integrator to build the set of metrics
 // currently being exported.
 //
 // The `CheckpointSet` method is called during collection in a
 // single-threaded context from the Exporter, giving the exporter
 // access to a producer for iterating over the complete checkpoint.
-type Batcher interface {
+type Integrator interface {
 	// AggregationSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
 	//
@@ -77,8 +77,8 @@ type Batcher interface {
 	// The returned CheckpointSet is passed to the Exporter.
 	CheckpointSet() CheckpointSet
 
-	// FinishedCollection informs the Batcher that a complete
-	// collection round was completed.  Stateless batchers might
+	// FinishedCollection informs the Integrator that a complete
+	// collection round was completed.  Stateless integrators might
 	// reset state in this method, for example.
 	FinishedCollection()
 }
@@ -163,13 +163,13 @@ type Exporter interface {
 	// The Resource contains common attributes that apply to all
 	// metric events in the SDK.
 	//
-	// The CheckpointSet interface refers to the Batcher that just
+	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
 	Export(context.Context, *resource.Resource, CheckpointSet) error
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
-// aggregated metrics from the Batcher.  This is passed to the
+// aggregated metrics from the Integrator.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
 type CheckpointSet interface {
@@ -192,7 +192,7 @@ type Record struct {
 	aggregator Aggregator
 }
 
-// NewRecord allows Batcher implementations to construct export
+// NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
 func NewRecord(descriptor *metric.Descriptor, labels *label.Set, aggregator Aggregator) Record {

@@ -31,15 +31,16 @@ import (
 )
 
 type (
-	// SDK implements the OpenTelemetry Meter API.  The SDK is
-	// bound to a single export.Batcher in `New()`.
+	// Accumulator implements the OpenTelemetry Meter API.  The
+	// Accumulator is bound to a single export.Integrator in
+	// `NewAccumulator()`.
 	//
-	// The SDK supports a Collect() API to gather and export
+	// The Accumulator supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
-	// the batcher model.  Push-based batchers will setup a
-	// timer to call Collect() periodically.  Pull-based batchers
+	// the integrator model.  Push-based integrators will setup a
+	// timer to call Collect() periodically.  Pull-based integrators
 	// will call Collect() when a pull request arrives.
-	SDK struct {
+	Accumulator struct {
 		// current maps `mapkey` to *record.
 		current sync.Map
 
@@ -51,8 +52,8 @@ type (
 		// incremented in `Collect()`.
 		currentEpoch int64
 
-		// batcher is the configured batcher+configuration.
-		batcher export.Batcher
+		// integrator is the configured integrator+configuration.
+		integrator export.Integrator
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -80,10 +81,10 @@ type (
 	// record maintains the state of one metric instrument.  Due
 	// the use of lock-free algorithms, there may be more than one
 	// `record` in existence at a time, although at most one can
-	// be referenced from the `SDK.current` map.
+	// be referenced from the `Accumulator.current` map.
 	record struct {
 		// refMapped keeps track of refcounts and the mapping state to the
-		// SDK.current map.
+		// Accumulator.current map.
 		refMapped refcountMapped
 
 		// updateCount is incremented on every Update.
@@ -119,7 +120,7 @@ type (
 	}
 
 	instrument struct {
-		meter      *SDK
+		meter      *Accumulator
 		descriptor metric.Descriptor
 	}
 
@@ -142,7 +143,7 @@ type (
 )
 
 var (
-	_ api.MeterImpl     = &SDK{}
+	_ api.MeterImpl     = &Accumulator{}
 	_ api.AsyncImpl     = &asyncInstrument{}
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
@@ -188,14 +189,14 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
-			lrec.recorder = a.meter.batcher.AggregatorFor(&a.descriptor)
+			lrec.recorder = a.meter.integrator.AggregatorFor(&a.descriptor)
 		} else {
 			lrec.observedEpoch = a.meter.currentEpoch
 		}
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.recorder
 	}
-	rec := a.meter.batcher.AggregatorFor(&a.descriptor)
+	rec := a.meter.integrator.AggregatorFor(&a.descriptor)
 	if a.recorders == nil {
 		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
@@ -210,7 +211,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	return rec
 }
 
-func (m *SDK) SetErrorHandler(f ErrorHandler) {
+func (m *Accumulator) SetErrorHandler(f ErrorHandler) {
 	m.errorHandler = f
 }
 
@@ -259,7 +260,7 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set)
 	}
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
-	rec.recorder = s.meter.batcher.AggregatorFor(&s.descriptor)
+	rec.recorder = s.meter.integrator.AggregatorFor(&s.descriptor)
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -301,32 +302,32 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new SDK for the given batcher.  This SDK supports
-// only a single batcher.
+// NewAccumulator constructs a new Accumulator for the given
+// integrator.  This Accumulator supports only a single integrator.
 //
-// The SDK does not start any background process to collect itself
-// periodically, this responsbility lies with the batcher, typically,
+// The Accumulator does not start any background process to collect itself
+// periodically, this responsbility lies with the integrator, typically,
 // depending on the type of export.  For example, a pull-based
-// batcher will call Collect() when it receives a request to scrape
-// current metric values.  A push-based batcher should configure its
+// integrator will call Collect() when it receives a request to scrape
+// current metric values.  A push-based integrator should configure its
 // own periodic collection.
-func New(batcher export.Batcher, opts ...Option) *SDK {
+func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	c := &Config{ErrorHandler: DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	return &SDK{
-		batcher:      batcher,
+	return &Accumulator{
+		integrator:   integrator,
 		errorHandler: c.ErrorHandler,
 	}
 }
 
 func DefaultErrorHandler(err error) {
-	fmt.Fprintln(os.Stderr, "Metrics SDK error:", err)
+	fmt.Fprintln(os.Stderr, "Metrics Accumulator error:", err)
 }
 
-func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
+func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -335,7 +336,7 @@ func (m *SDK) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error)
 	}, nil
 }
 
-func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -351,11 +352,11 @@ func (m *SDK) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(a
 // exports data for each active instrument.  Collect() may not be
 // called concurrently.
 //
-// During the collection pass, the export.Batcher will receive
+// During the collection pass, the export.Integrator will receive
 // one Export() call per current aggregation.
 //
 // Returns the number of records that were checkpointed.
-func (m *SDK) Collect(ctx context.Context) int {
+func (m *Accumulator) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
@@ -365,7 +366,7 @@ func (m *SDK) Collect(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectRecords(ctx context.Context) int {
+func (m *Accumulator) collectRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -408,7 +409,7 @@ func (m *SDK) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) collectAsync(ctx context.Context) int {
+func (m *Accumulator) collectAsync(ctx context.Context) int {
 	checkpointed := 0
 
 	m.asyncInstruments.Range(func(key, value interface{}) bool {
@@ -421,11 +422,11 @@ func (m *SDK) collectAsync(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *SDK) checkpointRecord(ctx context.Context, r *record) int {
+func (m *Accumulator) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
+func (m *Accumulator) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	if len(a.recorders) == 0 {
 		return 0
 	}
@@ -448,14 +449,14 @@ func (m *SDK) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
 	return checkpointed
 }
 
-func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
+func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
 	if recorder == nil {
 		return 0
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
 	exportRecord := export.NewRecord(descriptor, labels, recorder)
-	err := m.batcher.Process(ctx, exportRecord)
+	err := m.integrator.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)
 	}
@@ -463,7 +464,7 @@ func (m *SDK) checkpoint(ctx context.Context, descriptor *metric.Descriptor, rec
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *SDK) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the

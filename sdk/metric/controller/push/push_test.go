@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type testBatcher struct {
+type testIntegrator struct {
 	t             *testing.T
 	lock          sync.Mutex
 	checkpointSet *test.CheckpointSet
@@ -52,7 +52,7 @@ type testExporter struct {
 
 type testFixture struct {
 	checkpointSet *test.CheckpointSet
-	batcher       *testBatcher
+	integrator    *testIntegrator
 	exporter      *testExporter
 }
 
@@ -70,7 +70,7 @@ var _ push.Ticker = mockTicker{}
 func newFixture(t *testing.T) testFixture {
 	checkpointSet := test.NewCheckpointSet()
 
-	batcher := &testBatcher{
+	integrator := &testIntegrator{
 		t:             t,
 		checkpointSet: checkpointSet,
 	}
@@ -79,29 +79,29 @@ func newFixture(t *testing.T) testFixture {
 	}
 	return testFixture{
 		checkpointSet: checkpointSet,
-		batcher:       batcher,
+		integrator:    integrator,
 		exporter:      exporter,
 	}
 }
 
-func (b *testBatcher) AggregatorFor(*metric.Descriptor) export.Aggregator {
+func (b *testIntegrator) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
-func (b *testBatcher) CheckpointSet() export.CheckpointSet {
+func (b *testIntegrator) CheckpointSet() export.CheckpointSet {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.checkpoints++
 	return b.checkpointSet
 }
 
-func (b *testBatcher) FinishedCollection() {
+func (b *testIntegrator) FinishedCollection() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.finishes++
 }
 
-func (b *testBatcher) Process(_ context.Context, record export.Record) error {
+func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	labels := record.Labels().ToSlice()
@@ -109,7 +109,7 @@ func (b *testBatcher) Process(_ context.Context, record export.Record) error {
 	return nil
 }
 
-func (b *testBatcher) getCounts() (checkpoints, finishes int) {
+func (b *testIntegrator) getCounts() (checkpoints, finishes int) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	return b.checkpoints, b.finishes
@@ -165,7 +165,7 @@ func (t mockTicker) C() <-chan time.Time {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.batcher, fix.exporter, time.Second)
+	p := push.New(fix.integrator, fix.exporter, time.Second)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -173,7 +173,7 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.batcher, fix.exporter, time.Second)
+	p := push.New(fix.integrator, fix.exporter, time.Second)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -182,7 +182,7 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
-	p := push.New(fix.batcher, fix.exporter, time.Second)
+	p := push.New(fix.integrator, fix.exporter, time.Second)
 	meter := p.Meter("name")
 
 	mock := mockClock{clock.NewMock()}
@@ -197,7 +197,7 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 3)
 
 	records, exports := fix.exporter.resetRecords()
-	checkpoints, finishes := fix.batcher.getCounts()
+	checkpoints, finishes := fix.integrator.getCounts()
 	require.Equal(t, 0, checkpoints)
 	require.Equal(t, 0, finishes)
 	require.Equal(t, 0, exports)
@@ -207,7 +207,7 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.batcher.getCounts()
+	checkpoints, finishes = fix.integrator.getCounts()
 	require.Equal(t, 1, checkpoints)
 	require.Equal(t, 1, finishes)
 	require.Equal(t, 1, exports)
@@ -226,7 +226,7 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.batcher.getCounts()
+	checkpoints, finishes = fix.integrator.getCounts()
 	require.Equal(t, 2, checkpoints)
 	require.Equal(t, 2, finishes)
 	require.Equal(t, 2, exports)
@@ -265,7 +265,7 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-			p := push.New(fix.batcher, fix.exporter, time.Second)
+			p := push.New(fix.integrator, fix.exporter, time.Second)
 
 			var err error
 			var lock sync.Mutex
@@ -297,7 +297,7 @@ func TestPushExportError(t *testing.T) {
 			runtime.Gosched()
 
 			records, exports := fix.exporter.resetRecords()
-			checkpoints, finishes := fix.batcher.getCounts()
+			checkpoints, finishes := fix.integrator.getCounts()
 			require.Equal(t, 1, exports)
 			require.Equal(t, 1, checkpoints)
 			require.Equal(t, 1, finishes)
