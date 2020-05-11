@@ -21,9 +21,10 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"go.opentelemetry.io/otel/exporters/otlp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"google.golang.org/grpc"
 )
 
 func main() {
