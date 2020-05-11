@@ -62,8 +62,8 @@ type meterImpl struct {
 }
 
 type meterEntry struct {
-	registry metric.MeterImpl
-	impl     meterImpl
+	unique metric.MeterImpl
+	impl   meterImpl
 }
 
 type instrument struct {
@@ -145,11 +145,11 @@ func (p *meterProvider) Meter(name string) metric.Meter {
 	entry, ok := p.meters[name]
 	if !ok {
 		entry = &meterEntry{}
-		entry.registry = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
+		entry.unique = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
 		p.meters[name] = entry
 
 	}
-	return metric.WrapMeterImpl(entry.registry, name)
+	return metric.WrapMeterImpl(entry.unique, name)
 }
 
 // Meter interface and delegation
