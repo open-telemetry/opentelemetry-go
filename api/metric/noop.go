@@ -44,7 +44,7 @@ func (noopInstrument) Descriptor() Descriptor {
 	return Descriptor{}
 }
 
-func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
+func (noopBoundInstrument) RecordOne(context.Context, Number) {
 }
 
 func (noopBoundInstrument) Unbind() {
@@ -54,5 +54,5 @@ func (NoopSync) Bind([]core.KeyValue) BoundSyncImpl {
 	return noopBoundInstrument{}
 }
 
-func (NoopSync) RecordOne(context.Context, core.Number, []core.KeyValue) {
+func (NoopSync) RecordOne(context.Context, Number, []core.KeyValue) {
 }

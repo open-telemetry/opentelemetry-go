@@ -38,7 +38,7 @@ type measured struct {
 	Name        string
 	LibraryName string
 	Labels      map[core.Key]core.Value
-	Number      core.Number
+	Number      metric.Number
 }
 
 func asStructs(batches []metrictest.Batch) []measured {
@@ -64,8 +64,8 @@ func asMap(kvs ...core.KeyValue) map[core.Key]core.Value {
 	return m
 }
 
-var asInt = core.NewInt64Number
-var asFloat = core.NewFloat64Number
+var asInt = metric.NewInt64Number
+var asFloat = metric.NewFloat64Number
 
 func TestDirect(t *testing.T) {
 	internal.ResetForTest()

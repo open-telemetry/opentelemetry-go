@@ -52,7 +52,7 @@ type (
 
 	Measurement struct {
 		// Number needs to be aligned for 64-bit atomic operations.
-		Number     core.Number
+		Number     apimetric.Number
 		Instrument apimetric.InstrumentImpl
 	}
 
@@ -64,7 +64,7 @@ type (
 	Async struct {
 		Instrument
 
-		callback func(func(core.Number, []core.KeyValue))
+		callback func(func(apimetric.Number, []core.KeyValue))
 	}
 
 	Sync struct {
@@ -98,18 +98,18 @@ func (s *Sync) Bind(labels []core.KeyValue) apimetric.BoundSyncImpl {
 	}
 }
 
-func (s *Sync) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
+func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []core.KeyValue) {
 	s.meter.doRecordSingle(ctx, labels, s, number)
 }
 
-func (h *Handle) RecordOne(ctx context.Context, number core.Number) {
+func (h *Handle) RecordOne(ctx context.Context, number apimetric.Number) {
 	h.Instrument.meter.doRecordSingle(ctx, h.Labels, h.Instrument, number)
 }
 
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number core.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
 	m.recordMockBatch(ctx, labels, Measurement{
 		Instrument: instrument,
 		Number:     number,
@@ -152,7 +152,7 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.S
 	}, nil
 }
 
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(core.Number, []core.KeyValue))) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(apimetric.Number, []core.KeyValue))) (apimetric.AsyncImpl, error) {
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
@@ -186,7 +186,7 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 
 func (m *MeterImpl) RunAsyncInstruments() {
 	for _, observer := range m.AsyncInstruments {
-		observer.callback(func(n core.Number, labels []core.KeyValue) {
+		observer.callback(func(n apimetric.Number, labels []core.KeyValue) {
 			m.doRecordSingle(context.Background(), labels, observer, n)
 		})
 	}

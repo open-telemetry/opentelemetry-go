@@ -81,7 +81,7 @@ type asyncImpl struct {
 
 	instrument
 
-	callback func(func(core.Number, []core.KeyValue))
+	callback func(func(metric.Number, []core.KeyValue))
 }
 
 // SyncImpler is implemented by all of the sync metric
@@ -240,7 +240,7 @@ func (bound *syncHandle) Unbind() {
 // Async delegation
 
 func (m *meterImpl) NewAsyncInstrument(desc metric.Descriptor,
-	callback func(func(core.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
+	callback func(func(metric.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -291,7 +291,7 @@ func (m *meterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 	}
 }
 
-func (inst *syncImpl) RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number metric.Number, labels []core.KeyValue) {
 	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
@@ -299,7 +299,7 @@ func (inst *syncImpl) RecordOne(ctx context.Context, number core.Number, labels 
 
 // Bound instrument initialization
 
-func (bound *syncHandle) RecordOne(ctx context.Context, number core.Number) {
+func (bound *syncHandle) RecordOne(ctx context.Context, number metric.Number) {
 	instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&bound.inst.delegate))
 	if instPtr == nil {
 		return

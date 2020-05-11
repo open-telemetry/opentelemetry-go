@@ -18,7 +18,6 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -31,14 +30,14 @@ type (
 		lock       sync.Mutex
 		current    state
 		checkpoint state
-		kind       core.NumberKind
+		kind       metric.NumberKind
 	}
 
 	state struct {
-		count core.Number
-		sum   core.Number
-		min   core.Number
-		max   core.Number
+		count metric.Number
+		sum   metric.Number
+		min   metric.Number
+		max   metric.Number
 	}
 )
 
@@ -54,7 +53,7 @@ func New(desc *metric.Descriptor) *Aggregator {
 	return &Aggregator{
 		kind: kind,
 		current: state{
-			count: core.NewUint64Number(0),
+			count: metric.NewUint64Number(0),
 			sum:   kind.Zero(),
 			min:   kind.Maximum(),
 			max:   kind.Minimum(),
@@ -63,7 +62,7 @@ func New(desc *metric.Descriptor) *Aggregator {
 }
 
 // Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (core.Number, error) {
+func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.checkpoint.sum, nil
@@ -73,16 +72,16 @@ func (c *Aggregator) Sum() (core.Number, error) {
 func (c *Aggregator) Count() (int64, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.checkpoint.count.CoerceToInt64(core.Uint64NumberKind), nil
+	return c.checkpoint.count.CoerceToInt64(metric.Uint64NumberKind), nil
 }
 
 // Min returns the minimum value in the checkpoint.
 // The error value aggregator.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Min() (core.Number, error) {
+func (c *Aggregator) Min() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(core.Uint64NumberKind) {
+	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
 		return c.kind.Zero(), aggregator.ErrNoData
 	}
 	return c.checkpoint.min, nil
@@ -91,10 +90,10 @@ func (c *Aggregator) Min() (core.Number, error) {
 // Max returns the maximum value in the checkpoint.
 // The error value aggregator.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(core.Uint64NumberKind) {
+	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
 		return c.kind.Zero(), aggregator.ErrNoData
 	}
 	return c.checkpoint.max, nil
@@ -111,7 +110,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 func (c *Aggregator) emptyState() state {
 	kind := c.kind
 	return state{
-		count: core.NewUint64Number(0),
+		count: metric.NewUint64Number(0),
 		sum:   kind.Zero(),
 		min:   kind.Maximum(),
 		max:   kind.Minimum(),
@@ -119,7 +118,7 @@ func (c *Aggregator) emptyState() state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
 	c.lock.Lock()
@@ -142,7 +141,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 
 	if c.checkpoint.min.CompareNumber(desc.NumberKind(), o.checkpoint.min) > 0 {

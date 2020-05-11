@@ -36,7 +36,7 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(core.Number, []core.KeyValue)),
+		callback func(func(Number, []core.KeyValue)),
 	) (AsyncImpl, error)
 }
 
@@ -62,7 +62,7 @@ type SyncImpl interface {
 	Bind(labels []core.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue)
+	RecordOne(ctx context.Context, number Number, labels []core.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a
@@ -70,7 +70,7 @@ type SyncImpl interface {
 type BoundSyncImpl interface {
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number core.Number)
+	RecordOne(ctx context.Context, number Number)
 
 	// Unbind frees the resources associated with this bound instrument. It
 	// does not affect the metric this bound instrument was created through.
@@ -86,13 +86,13 @@ type AsyncImpl interface {
 // Int64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous integer metric instrument.
 type Int64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
+	observe func(Number, []core.KeyValue)
 }
 
 // Float64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous floating point metric instrument.
 type Float64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
+	observe func(Number, []core.KeyValue)
 }
 
 // Configure is a helper that applies all the options to a Config.
@@ -119,7 +119,7 @@ func (m Meter) MeterImpl() MeterImpl {
 }
 
 // newSync constructs one new synchronous instrument.
-func (m Meter) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
+func (m Meter) newSync(name string, metricKind Kind, numberKind NumberKind, opts []Option) (SyncImpl, error) {
 	if m.impl == nil {
 		return NoopSync{}, nil
 	}
@@ -165,7 +165,7 @@ func wrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 }
 
 // newAsync constructs one new asynchronous instrument.
-func (m Meter) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
+func (m Meter) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, callback func(func(Number, []core.KeyValue))) (AsyncImpl, error) {
 	if m.impl == nil {
 		return NoopAsync{}, nil
 	}

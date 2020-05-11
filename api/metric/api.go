@@ -53,7 +53,7 @@ type Option interface {
 // (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
-	number     core.Number
+	number     Number
 	instrument SyncImpl
 }
 
@@ -65,7 +65,7 @@ func (m Measurement) SyncImpl() SyncImpl {
 }
 
 // Number returns a number recorded in this measurement.
-func (m Measurement) Number() core.Number {
+func (m Measurement) Number() Number {
 	return m.number
 }
 
@@ -87,12 +87,12 @@ const (
 type Descriptor struct {
 	name       string
 	kind       Kind
-	numberKind core.NumberKind
+	numberKind NumberKind
 	config     Config
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind core.NumberKind, opts ...Option) Descriptor {
+func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...Option) Descriptor {
 	return Descriptor{
 		name:       name,
 		kind:       mkind,
@@ -125,7 +125,7 @@ func (d Descriptor) Unit() unit.Unit {
 
 // NumberKind returns whether this instrument is declared over int64,
 // float64, or uint64 values.
-func (d Descriptor) NumberKind() core.NumberKind {
+func (d Descriptor) NumberKind() NumberKind {
 	return d.numberKind
 }
 
@@ -158,7 +158,7 @@ func (m Meter) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measur
 // duplicate registration).
 func (m Meter) NewInt64Counter(name string, options ...Option) (Int64Counter, error) {
 	return wrapInt64CounterInstrument(
-		m.newSync(name, CounterKind, core.Int64NumberKind, options))
+		m.newSync(name, CounterKind, Int64NumberKind, options))
 }
 
 // NewFloat64Counter creates a new floating point Counter with the
@@ -167,7 +167,7 @@ func (m Meter) NewInt64Counter(name string, options ...Option) (Int64Counter, er
 // duplicate registration).
 func (m Meter) NewFloat64Counter(name string, options ...Option) (Float64Counter, error) {
 	return wrapFloat64CounterInstrument(
-		m.newSync(name, CounterKind, core.Float64NumberKind, options))
+		m.newSync(name, CounterKind, Float64NumberKind, options))
 }
 
 // NewInt64Measure creates a new integer Measure instrument with the
@@ -176,7 +176,7 @@ func (m Meter) NewFloat64Counter(name string, options ...Option) (Float64Counter
 // duplicate registration).
 func (m Meter) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
 	return wrapInt64MeasureInstrument(
-		m.newSync(name, MeasureKind, core.Int64NumberKind, opts))
+		m.newSync(name, MeasureKind, Int64NumberKind, opts))
 }
 
 // NewFloat64Measure creates a new floating point Measure with the
@@ -185,7 +185,7 @@ func (m Meter) NewInt64Measure(name string, opts ...Option) (Int64Measure, error
 // duplicate registration).
 func (m Meter) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
 	return wrapFloat64MeasureInstrument(
-		m.newSync(name, MeasureKind, core.Float64NumberKind, opts))
+		m.newSync(name, MeasureKind, Float64NumberKind, opts))
 }
 
 // RegisterInt64Observer creates a new integer Observer instrument
@@ -197,8 +197,8 @@ func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback
 		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
+		m.newAsync(name, ObserverKind, Int64NumberKind, opts,
+			func(observe func(Number, []core.KeyValue)) {
 				callback(Int64ObserverResult{observe})
 			}))
 }
@@ -212,8 +212,8 @@ func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCall
 		return wrapFloat64ObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
+		m.newAsync(name, ObserverKind, Float64NumberKind, opts,
+			func(observe func(Number, []core.KeyValue)) {
 				callback(Float64ObserverResult{observe})
 			}))
 }
@@ -221,13 +221,13 @@ func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCall
 // Observe captures a single integer value from the associated
 // instrument callback, with the given labels.
 func (io Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	io.observe(core.NewInt64Number(value), labels)
+	io.observe(NewInt64Number(value), labels)
 }
 
 // Observe captures a single floating point value from the associated
 // instrument callback, with the given labels.
 func (fo Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fo.observe(core.NewFloat64Number(value), labels)
+	fo.observe(NewFloat64Number(value), labels)
 }
 
 // WithDescription applies provided description.

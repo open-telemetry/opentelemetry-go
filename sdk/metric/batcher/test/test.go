@@ -48,14 +48,14 @@ type (
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
-		"lastvalue.a", metric.ObserverKind, core.Int64NumberKind)
+		"lastvalue.a", metric.ObserverKind, metric.Int64NumberKind)
 	LastValueBDesc = metric.NewDescriptor(
-		"lastvalue.b", metric.ObserverKind, core.Int64NumberKind)
+		"lastvalue.b", metric.ObserverKind, metric.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = metric.NewDescriptor(
-		"sum.a", metric.CounterKind, core.Int64NumberKind)
+		"sum.a", metric.CounterKind, metric.Int64NumberKind)
 	CounterBDesc = metric.NewDescriptor(
-		"sum.b", metric.CounterKind, core.Int64NumberKind)
+		"sum.b", metric.CounterKind, metric.Int64NumberKind)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
@@ -127,7 +127,7 @@ func (Encoder) ID() label.EncoderID {
 func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := lastvalue.New()
-	_ = gagg.Update(ctx, core.NewInt64Number(v), desc)
+	_ = gagg.Update(ctx, metric.NewInt64Number(v), desc)
 	gagg.Checkpoint(ctx, desc)
 	return gagg
 }
@@ -146,7 +146,7 @@ func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) e
 func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := sum.New()
-	_ = cagg.Update(ctx, core.NewInt64Number(v), desc)
+	_ = cagg.Update(ctx, metric.NewInt64Number(v), desc)
 	cagg.Checkpoint(ctx, desc)
 	return cagg
 }
