@@ -131,7 +131,7 @@ checkpointed aggregators to the integrator, and a CheckpointSet() API
 for producing a complete checkpoint for the exporter.  Two default
 Integrator implementations are provided, the "defaultkeys" Integrator groups
 aggregate metrics by their recommended Descriptor.Keys(), the
-"ungrouped" Integrator aggregates metrics at full dimensionality.
+"simple" Integrator aggregates metrics at full dimensionality.
 
 LabelEncoder is an optional optimization that allows an exporter to
 provide the serialization logic for labels.  This allows avoiding

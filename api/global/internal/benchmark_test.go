@@ -51,7 +51,7 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.accumulator = sdk.New(bf)
+	bf.accumulator = sdk.NewAccumulator(bf)
 	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
 	return bf
 }

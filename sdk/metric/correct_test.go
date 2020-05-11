@@ -81,7 +81,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -113,7 +113,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -148,7 +148,7 @@ func TestDisabledInstrument(t *testing.T) {
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	measure := Must(meter).NewFloat64Measure("name.disabled")
@@ -166,7 +166,7 @@ func TestRecordNaN(t *testing.T) {
 		t: t,
 	}
 
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	var sdkErr error
@@ -185,7 +185,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter := Must(meter).NewInt64Counter("counter")
@@ -289,7 +289,7 @@ func TestObserverCollection(t *testing.T) {
 		t: t,
 	}
 
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
@@ -331,7 +331,7 @@ func TestRecordBatch(t *testing.T) {
 		t: t,
 	}
 
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
@@ -374,7 +374,7 @@ func TestRecordPersistence(t *testing.T) {
 		t: t,
 	}
 
-	sdk := metricsdk.New(integrator)
+	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	c := Must(meter).NewFloat64Counter("sum.name")

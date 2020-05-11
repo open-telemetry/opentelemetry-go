@@ -33,7 +33,7 @@ import (
 type (
 	// Accumulator implements the OpenTelemetry Meter API.  The
 	// Accumulator is bound to a single export.Integrator in
-	// `New()`.
+	// `NewAccumulator()`.
 	//
 	// The Accumulator supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
@@ -302,8 +302,8 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 	h.RecordOne(ctx, number)
 }
 
-// New constructs a new Accumulator for the given integrator.  This Accumulator supports
-// only a single integrator.
+// NewAccumulator constructs a new Accumulator for the given
+// integrator.  This Accumulator supports only a single integrator.
 //
 // The Accumulator does not start any background process to collect itself
 // periodically, this responsbility lies with the integrator, typically,
@@ -311,7 +311,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 // integrator will call Collect() when it receives a request to scrape
 // current metric values.  A push-based integrator should configure its
 // own periodic collection.
-func New(integrator export.Integrator, opts ...Option) *Accumulator {
+func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	c := &Config{ErrorHandler: DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)

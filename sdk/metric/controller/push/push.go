@@ -79,7 +79,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 		opt.Apply(c)
 	}
 
-	impl := sdk.New(integrator, sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		accumulator:  impl,
 		resource:     c.Resource,
