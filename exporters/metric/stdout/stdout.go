@@ -29,8 +29,8 @@ import (
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -131,15 +131,15 @@ func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, e
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selectors and batchers.
+// chaining a NewRawExporter into the recommended selectors and integrators.
 func NewExportPipeline(config Config, period time.Duration, opts ...push.Option) (*push.Controller, error) {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
-	batcher := ungrouped.New(selector, true)
-	pusher := push.New(batcher, exporter, period, opts...)
+	integrator := integrator.New(selector, true)
+	pusher := push.New(integrator, exporter, period, opts...)
 	pusher.Start()
 
 	return pusher, nil

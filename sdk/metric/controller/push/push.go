@@ -30,12 +30,12 @@ import (
 type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
-	sdk          *sdk.SDK
+	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
 	uniq         metric.MeterImpl
 	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
-	batcher      export.Batcher
+	integrator   export.Integrator
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	ch           chan struct{}
@@ -70,23 +70,23 @@ var _ Clock = realClock{}
 var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided batcher, exporter, collection period, and SDK
+// using the provided integrator, exporter, collection period, and SDK
 // configuration options to configure an SDK with periodic collection.
-// The batcher itself is configured with the aggregation selector policy.
-func New(batcher export.Batcher, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
+// The integrator itself is configured with the aggregation selector policy.
+func New(integrator export.Integrator, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
 	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	impl := sdk.New(batcher, sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
-		sdk:          impl,
+		accumulator:  impl,
 		resource:     c.Resource,
 		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
 		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
-		batcher:      batcher,
+		integrator:   integrator,
 		exporter:     exporter,
 		ch:           make(chan struct{}),
 		period:       period,
@@ -106,7 +106,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.errorHandler = errorHandler
-	c.sdk.SetErrorHandler(errorHandler)
+	c.accumulator.SetErrorHandler(errorHandler)
 }
 
 // Meter returns a named Meter, satisifying the metric.Provider
@@ -176,10 +176,10 @@ func (c *Controller) tick() {
 	c.collect(ctx)
 	checkpointSet := syncCheckpointSet{
 		mtx:      &c.collectLock,
-		delegate: c.batcher.CheckpointSet(),
+		delegate: c.integrator.CheckpointSet(),
 	}
 	err := c.exporter.Export(ctx, c.resource, checkpointSet)
-	c.batcher.FinishedCollection()
+	c.integrator.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)
@@ -190,7 +190,7 @@ func (c *Controller) collect(ctx context.Context) {
 	c.collectLock.Lock()
 	defer c.collectLock.Unlock()
 
-	c.sdk.Collect(ctx)
+	c.accumulator.Collect(ctx)
 }
 
 // syncCheckpointSet is a wrapper for a CheckpointSet to synchronize
