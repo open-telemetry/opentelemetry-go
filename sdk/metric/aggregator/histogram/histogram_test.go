@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -58,9 +57,9 @@ var (
 		},
 	}
 
-	boundaries = map[core.NumberKind][]core.Number{
-		core.Float64NumberKind: {core.NewFloat64Number(500), core.NewFloat64Number(250), core.NewFloat64Number(750)},
-		core.Int64NumberKind:   {core.NewInt64Number(500), core.NewInt64Number(250), core.NewInt64Number(750)},
+	boundaries = map[metric.NumberKind][]metric.Number{
+		metric.Float64NumberKind: {metric.NewFloat64Number(500), metric.NewFloat64Number(250), metric.NewFloat64Number(750)},
+		metric.Int64NumberKind:   {metric.NewInt64Number(500), metric.NewInt64Number(250), metric.NewInt64Number(750)},
 	}
 )
 
@@ -185,7 +184,7 @@ func TestHistogramNotSet(t *testing.T) {
 		agg.Checkpoint(ctx, descriptor)
 
 		asum, err := agg.Sum()
-		require.Equal(t, core.Number(0), asum, "Empty checkpoint sum = 0")
+		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
 		require.Nil(t, err)
 
 		count, err := agg.Count()
@@ -199,9 +198,9 @@ func TestHistogramNotSet(t *testing.T) {
 	})
 }
 
-func calcBuckets(points []core.Number, profile test.Profile) []uint64 {
+func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
 	sortedBoundaries := numbers{
-		numbers: make([]core.Number, len(boundaries[profile.NumberKind])),
+		numbers: make([]metric.Number, len(boundaries[profile.NumberKind])),
 		kind:    profile.NumberKind,
 	}
 

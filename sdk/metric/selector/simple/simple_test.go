@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -30,9 +29,9 @@ import (
 )
 
 var (
-	testCounterDesc  = metric.NewDescriptor("counter", metric.CounterKind, core.Int64NumberKind)
-	testMeasureDesc  = metric.NewDescriptor("measure", metric.MeasureKind, core.Int64NumberKind)
-	testObserverDesc = metric.NewDescriptor("observer", metric.ObserverKind, core.Int64NumberKind)
+	testCounterDesc  = metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
+	testMeasureDesc  = metric.NewDescriptor("measure", metric.MeasureKind, metric.Int64NumberKind)
+	testObserverDesc = metric.NewDescriptor("observer", metric.ObserverKind, metric.Int64NumberKind)
 )
 
 func TestInexpensiveMeasure(t *testing.T) {
@@ -57,7 +56,7 @@ func TestExactMeasure(t *testing.T) {
 }
 
 func TestHistogramMeasure(t *testing.T) {
-	ex := simple.NewWithHistogramMeasure([]core.Number{})
+	ex := simple.NewWithHistogramMeasure([]metric.Number{})
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testMeasureDesc).(*histogram.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testObserverDesc).(*histogram.Aggregator) })

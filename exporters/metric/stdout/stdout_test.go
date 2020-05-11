@@ -99,9 +99,9 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet()
 
 	ctx := context.Background()
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Int64NumberKind)
 	lvagg := lastvalue.New()
-	aggtest.CheckedUpdate(t, lvagg, core.NewInt64Number(321), &desc)
+	aggtest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
 	lvagg.Checkpoint(ctx, &desc)
 
 	checkpointSet.Add(&desc, lvagg)
@@ -144,9 +144,9 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 	cagg := sum.New()
-	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(123), &desc)
+	aggtest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
 	cagg.Checkpoint(fix.ctx, &desc)
 
 	checkpointSet.Add(&desc, cagg, key.String("A", "B"), key.String("C", "D"))
@@ -161,9 +161,9 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
-	aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), &desc)
+	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 	lvagg.Checkpoint(fix.ctx, &desc)
 
 	checkpointSet.Add(&desc, lvagg, key.String("A", "B"), key.String("C", "D"))
@@ -178,10 +178,10 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
-	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), &desc)
-	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), &desc)
+	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
+	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
 	magg.Checkpoint(fix.ctx, &desc)
 
 	checkpointSet.Add(&desc, magg, key.String("A", "B"), key.String("C", "D"))
@@ -198,11 +198,11 @@ func TestStdoutMeasureFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	magg := array.New()
 
 	for i := 0; i < 1000; i++ {
-		aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(float64(i)+0.5), &desc)
+		aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 
 	magg.Checkpoint(fix.ctx, &desc)
@@ -239,7 +239,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
 		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), &desc),
 		"minmaxsumcount": minmaxsumcount.New(&desc),
@@ -269,7 +269,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
 	lvagg.Checkpoint(fix.ctx, &desc)
 
@@ -319,9 +319,9 @@ func TestStdoutResource(t *testing.T) {
 
 		checkpointSet := test.NewCheckpointSet()
 
-		desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+		desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 		lvagg := lastvalue.New()
-		aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), &desc)
+		aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 		lvagg.Checkpoint(fix.ctx, &desc)
 
 		checkpointSet.Add(&desc, lvagg, tc.attrs...)

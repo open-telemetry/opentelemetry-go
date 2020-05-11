@@ -74,17 +74,17 @@ type (
 
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) SyncImpler
-		getUpdateValue func() core.Number
-		operate        func(interface{}, context.Context, core.Number, []core.KeyValue)
+		getUpdateValue func() api.Number
+		operate        func(interface{}, context.Context, api.Number, []core.KeyValue)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
 		// counters, different for lastValues, to ensure we are
 		// testing the timestamps correctly.
-		storeCollect func(store interface{}, value core.Number, ts time.Time)
-		storeExpect  func(store interface{}, value core.Number)
-		readStore    func(store interface{}) core.Number
-		equalValues  func(a, b core.Number) bool
+		storeCollect func(store interface{}, value api.Number, ts time.Time)
+		storeExpect  func(store interface{}, value api.Number)
+		readStore    func(store interface{}) api.Number
+		equalValues  func(a, b api.Number) bool
 	}
 
 	SyncImpler interface {
@@ -96,7 +96,7 @@ type (
 	// take the later timestamp.
 	lastValueState struct {
 		// raw has to be aligned for 64-bit atomic operations.
-		raw core.Number
+		raw api.Number
 		ts  time.Time
 	}
 )
@@ -340,11 +340,11 @@ func stressTest(t *testing.T, impl testImpl) {
 	fixture.assertTest(numCollect)
 }
 
-func int64sEqual(a, b core.Number) bool {
+func int64sEqual(a, b api.Number) bool {
 	return a.AsInt64() == b.AsInt64()
 }
 
-func float64sEqual(a, b core.Number) bool {
+func float64sEqual(a, b api.Number) bool {
 	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
 	return diff < math.Abs(a.AsFloat64())*epsilon
 }
@@ -356,30 +356,30 @@ func intCounterTestImpl() testImpl {
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Counter(name + ".counter")
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() api.Number {
 			for {
 				x := int64(rand.Intn(100))
 				if x != 0 {
-					return core.NewInt64Number(x)
+					return api.NewInt64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
 			counter := inst.(api.Int64Counter)
 			counter.Add(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
-			n := core.NewInt64Number(0)
+			n := api.NewInt64Number(0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		storeCollect: func(store interface{}, value api.Number, _ time.Time) {
+			store.(*api.Number).AddInt64Atomic(value.AsInt64())
 		},
-		storeExpect: func(store interface{}, value core.Number) {
-			store.(*core.Number).AddInt64Atomic(value.AsInt64())
+		storeExpect: func(store interface{}, value api.Number) {
+			store.(*api.Number).AddInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) core.Number {
-			return store.(*core.Number).AsNumberAtomic()
+		readStore: func(store interface{}) api.Number {
+			return store.(*api.Number).AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
 	}
@@ -394,30 +394,30 @@ func floatCounterTestImpl() testImpl {
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Counter(name + ".counter")
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() api.Number {
 			for {
 				x := rand.Float64()
 				if x != 0 {
-					return core.NewFloat64Number(x)
+					return api.NewFloat64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
 			counter := inst.(api.Float64Counter)
 			counter.Add(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
-			n := core.NewFloat64Number(0.0)
+			n := api.NewFloat64Number(0.0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value core.Number, _ time.Time) {
-			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		storeCollect: func(store interface{}, value api.Number, _ time.Time) {
+			store.(*api.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		storeExpect: func(store interface{}, value core.Number) {
-			store.(*core.Number).AddFloat64Atomic(value.AsFloat64())
+		storeExpect: func(store interface{}, value api.Number) {
+			store.(*api.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) core.Number {
-			return store.(*core.Number).AsNumberAtomic()
+		readStore: func(store interface{}) api.Number {
+			return store.(*api.Number).AsNumberAtomic()
 		},
 		equalValues: float64sEqual,
 	}
@@ -434,20 +434,20 @@ func intLastValueTestImpl() testImpl {
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Measure(name + ".lastvalue")
 		},
-		getUpdateValue: func() core.Number {
+		getUpdateValue: func() api.Number {
 			r1 := rand.Int63()
-			return core.NewInt64Number(rand.Int63() - r1)
+			return api.NewInt64Number(rand.Int63() - r1)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
 			measure := inst.(api.Int64Measure)
 			measure.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
-				raw: core.NewInt64Number(0),
+				raw: api.NewInt64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value api.Number, ts time.Time) {
 			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
@@ -455,11 +455,11 @@ func intLastValueTestImpl() testImpl {
 				gs.raw.SetInt64Atomic(value.AsInt64())
 			}
 		},
-		storeExpect: func(store interface{}, value core.Number) {
+		storeExpect: func(store interface{}, value api.Number) {
 			gs := store.(*lastValueState)
 			gs.raw.SetInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) core.Number {
+		readStore: func(store interface{}) api.Number {
 			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},
@@ -476,19 +476,19 @@ func floatLastValueTestImpl() testImpl {
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Measure(name + ".lastvalue")
 		},
-		getUpdateValue: func() core.Number {
-			return core.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
+		getUpdateValue: func() api.Number {
+			return api.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
-		operate: func(inst interface{}, ctx context.Context, value core.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
 			measure := inst.(api.Float64Measure)
 			measure.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
-				raw: core.NewFloat64Number(0),
+				raw: api.NewFloat64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value core.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value api.Number, ts time.Time) {
 			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
@@ -496,11 +496,11 @@ func floatLastValueTestImpl() testImpl {
 				gs.raw.SetFloat64Atomic(value.AsFloat64())
 			}
 		},
-		storeExpect: func(store interface{}, value core.Number) {
+		storeExpect: func(store interface{}, value api.Number) {
 			gs := store.(*lastValueState)
 			gs.raw.SetFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) core.Number {
+		readStore: func(store interface{}) api.Number {
 			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},

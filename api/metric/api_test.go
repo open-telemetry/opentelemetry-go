@@ -104,7 +104,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing float counter")
-		checkBatches(t, ctx, labels, mockSDK, core.Float64NumberKind, c.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, metric.Float64NumberKind, c.SyncImpl())
 	}
 	{
 		mockSDK, meter := mockTest.NewMeter()
@@ -116,7 +116,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument.Add(ctx, 42)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		t.Log("Testing int counter")
-		checkBatches(t, ctx, labels, mockSDK, core.Int64NumberKind, c.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, metric.Int64NumberKind, c.SyncImpl())
 	}
 }
 
@@ -131,7 +131,7 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing float measure")
-		checkBatches(t, ctx, labels, mockSDK, core.Float64NumberKind, m.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, metric.Float64NumberKind, m.SyncImpl())
 	}
 	{
 		mockSDK, meter := mockTest.NewMeter()
@@ -143,7 +143,7 @@ func TestMeasure(t *testing.T) {
 		boundInstrument.Record(ctx, 42)
 		meter.RecordBatch(ctx, labels, m.Measurement(42))
 		t.Log("Testing int measure")
-		checkBatches(t, ctx, labels, mockSDK, core.Int64NumberKind, m.SyncImpl())
+		checkBatches(t, ctx, labels, mockSDK, metric.Int64NumberKind, m.SyncImpl())
 	}
 }
 
@@ -157,7 +157,7 @@ func TestObserver(t *testing.T) {
 		t.Log("Testing float observer")
 
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, core.Float64NumberKind, o.AsyncImpl())
+		checkObserverBatch(t, labels, mockSDK, metric.Float64NumberKind, o.AsyncImpl())
 	}
 	{
 		labels := []core.KeyValue{}
@@ -167,11 +167,11 @@ func TestObserver(t *testing.T) {
 		})
 		t.Log("Testing int observer")
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, core.Int64NumberKind, o.AsyncImpl())
+		checkObserverBatch(t, labels, mockSDK, metric.Int64NumberKind, o.AsyncImpl())
 	}
 }
 
-func checkBatches(t *testing.T, ctx context.Context, labels []core.KeyValue, mock *mockTest.MeterImpl, kind core.NumberKind, instrument metric.InstrumentImpl) {
+func checkBatches(t *testing.T, ctx context.Context, labels []core.KeyValue, mock *mockTest.MeterImpl, kind metric.NumberKind, instrument metric.InstrumentImpl) {
 	t.Helper()
 	if len(mock.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))
@@ -211,7 +211,7 @@ func checkBatches(t *testing.T, ctx context.Context, labels []core.KeyValue, moc
 	}
 }
 
-func checkObserverBatch(t *testing.T, labels []core.KeyValue, mock *mockTest.MeterImpl, kind core.NumberKind, observer metric.AsyncImpl) {
+func checkObserverBatch(t *testing.T, labels []core.KeyValue, mock *mockTest.MeterImpl, kind metric.NumberKind, observer metric.AsyncImpl) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {
@@ -233,16 +233,16 @@ func checkObserverBatch(t *testing.T, labels []core.KeyValue, mock *mockTest.Met
 	assert.Equal(t, 0, measurement.Number.CompareNumber(kind, ft))
 }
 
-func fortyTwo(t *testing.T, kind core.NumberKind) core.Number {
+func fortyTwo(t *testing.T, kind metric.NumberKind) metric.Number {
 	t.Helper()
 	switch kind {
-	case core.Int64NumberKind:
-		return core.NewInt64Number(42)
-	case core.Float64NumberKind:
-		return core.NewFloat64Number(42)
+	case metric.Int64NumberKind:
+		return metric.NewInt64Number(42)
+	case metric.Float64NumberKind:
+		return metric.NewFloat64Number(42)
 	}
 	t.Errorf("Invalid value kind %q", kind)
-	return core.NewInt64Number(0)
+	return metric.NewInt64Number(0)
 }
 
 type testWrappedMeter struct {
@@ -257,7 +257,7 @@ func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl,
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(core.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(metric.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 

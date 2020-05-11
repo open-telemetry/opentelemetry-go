@@ -18,9 +18,10 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/metric"
+
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/test"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
@@ -123,8 +124,8 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1.Map, records2.Map)
 
 	// Update and re-checkpoint the original record.
-	_ = caggA.Update(ctx, core.NewInt64Number(20), &test.CounterADesc)
-	_ = caggB.Update(ctx, core.NewInt64Number(20), &test.CounterBDesc)
+	_ = caggA.Update(ctx, metric.NewInt64Number(20), &test.CounterADesc)
+	_ = caggB.Update(ctx, metric.NewInt64Number(20), &test.CounterBDesc)
 	caggA.Checkpoint(ctx, &test.CounterADesc)
 	caggB.Checkpoint(ctx, &test.CounterBDesc)
 

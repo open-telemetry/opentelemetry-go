@@ -17,7 +17,6 @@ package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -27,11 +26,11 @@ import (
 type Aggregator struct {
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
-	current core.Number
+	current metric.Number
 
 	// checkpoint is a temporary used during Checkpoint()
 	// checkpoint needs to be aligned for 64-bit atomic operations.
-	checkpoint core.Number
+	checkpoint metric.Number
 }
 
 var _ export.Aggregator = &Aggregator{}
@@ -46,18 +45,18 @@ func New() *Aggregator {
 
 // Sum returns the last-checkpointed sum.  This will never return an
 // error.
-func (c *Aggregator) Sum() (core.Number, error) {
+func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.checkpoint, nil
 }
 
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
 func (c *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
-	c.checkpoint = c.current.SwapNumberAtomic(core.Number(0))
+	c.checkpoint = c.current.SwapNumberAtomic(metric.Number(0))
 }
 
 // Update atomically adds to the current value.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.current.AddNumberAtomic(desc.NumberKind(), number)
 	return nil
 }

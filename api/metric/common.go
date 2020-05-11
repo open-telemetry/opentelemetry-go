@@ -40,14 +40,14 @@ func (s syncInstrument) bind(labels []core.KeyValue) syncBoundInstrument {
 }
 
 func (s syncInstrument) float64Measurement(value float64) Measurement {
-	return newMeasurement(s.instrument, core.NewFloat64Number(value))
+	return newMeasurement(s.instrument, NewFloat64Number(value))
 }
 
 func (s syncInstrument) int64Measurement(value int64) Measurement {
-	return newMeasurement(s.instrument, core.NewInt64Number(value))
+	return newMeasurement(s.instrument, NewInt64Number(value))
 }
 
-func (s syncInstrument) directRecord(ctx context.Context, number core.Number, labels []core.KeyValue) {
+func (s syncInstrument) directRecord(ctx context.Context, number Number, labels []core.KeyValue) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
 
@@ -55,7 +55,7 @@ func (s syncInstrument) SyncImpl() SyncImpl {
 	return s.instrument
 }
 
-func (h syncBoundInstrument) directRecord(ctx context.Context, number core.Number) {
+func (h syncBoundInstrument) directRecord(ctx context.Context, number Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
@@ -93,7 +93,7 @@ func newSyncBoundInstrument(boundInstrument BoundSyncImpl) syncBoundInstrument {
 	}
 }
 
-func newMeasurement(instrument SyncImpl, number core.Number) Measurement {
+func newMeasurement(instrument SyncImpl, number Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,

@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -40,10 +39,10 @@ func TestInconsistentMergeErr(t *testing.T) {
 
 func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
-	nan := core.NewFloat64Number(math.NaN())
+	nan := metric.NewFloat64Number(math.NaN())
 	err := aggregator.RangeTest(nan, desc)
 
-	if desc.NumberKind() == core.Float64NumberKind {
+	if desc.NumberKind() == metric.Float64NumberKind {
 		require.Equal(t, aggregator.ErrNaNInput, err)
 	} else {
 		require.Nil(t, err)
@@ -51,14 +50,14 @@ func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 }
 
 func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
-	var neg, pos core.Number
+	var neg, pos metric.Number
 
-	if desc.NumberKind() == core.Float64NumberKind {
-		pos = core.NewFloat64Number(+1)
-		neg = core.NewFloat64Number(-1)
+	if desc.NumberKind() == metric.Float64NumberKind {
+		pos = metric.NewFloat64Number(+1)
+		neg = metric.NewFloat64Number(-1)
 	} else {
-		pos = core.NewInt64Number(+1)
-		neg = core.NewInt64Number(-1)
+		pos = metric.NewInt64Number(+1)
+		neg = metric.NewInt64Number(-1)
 	}
 
 	posErr := aggregator.RangeTest(pos, desc)
@@ -70,7 +69,7 @@ func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
 
 func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
-	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
+	for _, nkind := range []metric.NumberKind{metric.Float64NumberKind, metric.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
 			desc := metric.NewDescriptor(
 				"name",
@@ -83,7 +82,7 @@ func TestRangeTest(t *testing.T) {
 }
 
 func TestNaNTest(t *testing.T) {
-	for _, nkind := range []core.NumberKind{core.Float64NumberKind, core.Int64NumberKind} {
+	for _, nkind := range []metric.NumberKind{metric.Float64NumberKind, metric.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
 			for _, mkind := range []metric.Kind{
 				metric.CounterKind,
