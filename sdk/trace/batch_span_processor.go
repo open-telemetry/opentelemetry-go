@@ -178,8 +178,10 @@ func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 			if sd != nil && sd.SpanContext.IsSampled() {
 				*batch = append(*batch, sd)
 			}
+			continue
 		default:
 		}
+		break
 	}
 
 	if len(*batch) == 0 {
@@ -200,16 +202,11 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 	}
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
-	} else {
-		var ok bool
-		select {
-		case bsp.queue <- sd:
-			ok = true
-		default:
-			ok = false
-		}
-		if !ok {
-			atomic.AddUint32(&bsp.dropped, 1)
-		}
+		return
+	}
+	select {
+	case bsp.queue <- sd:
+	default:
+		atomic.AddUint32(&bsp.dropped, 1)
 	}
 }
