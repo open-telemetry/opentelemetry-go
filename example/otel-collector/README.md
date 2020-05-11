@@ -53,6 +53,8 @@ defer func() {
 		_ = exp.Stop()
 	}()
 ```
+This will initialize the exporter with the default configuration. In this configuration, it will try to connect to an otlp receiver at the address `localhost:55680`. If your OpenTelemetry Collector is running at a different address, use the [otlp.WithAddress](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc#WithAddress) function to change the default address.
+
 Feel free to remove the blocking operation, but it might come in handy when testing the connection. Also, make sure to close the exporter before the app exits.
 
 The next steps are the same as for all other otel-go sdk uses:
