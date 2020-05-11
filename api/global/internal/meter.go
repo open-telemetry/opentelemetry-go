@@ -239,8 +239,10 @@ func (bound *syncHandle) Unbind() {
 
 // Async delegation
 
-func (m *meterImpl) NewAsyncInstrument(desc metric.Descriptor,
-	callback func(func(metric.Number, []core.KeyValue))) (metric.AsyncImpl, error) {
+func (m *meterImpl) NewAsyncInstrument(
+	desc metric.Descriptor,
+	callback func(func(metric.Number, []core.KeyValue)),
+) (metric.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
