@@ -38,9 +38,9 @@ var Must = metric.Must
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
-	sdk   *sdk.SDK
-	meter metric.Meter
-	B     *testing.B
+	accumulator *sdk.Accumulator
+	meter       metric.Meter
+	B           *testing.B
 }
 
 var _ metric.Provider = &benchFixture{}
@@ -51,8 +51,8 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.sdk = sdk.New(bf)
-	bf.meter = metric.WrapMeterImpl(bf.sdk, "test")
+	bf.accumulator = sdk.NewAccumulator(bf)
+	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
 	return bf
 }
 

@@ -36,10 +36,10 @@ import (
 type processFunc func(context.Context, export.Record) error
 
 type benchFixture struct {
-	meter metric.MeterMust
-	sdk   *sdk.SDK
-	B     *testing.B
-	pcb   processFunc
+	meter       metric.MeterMust
+	accumulator *sdk.Accumulator
+	B           *testing.B
+	pcb         processFunc
 }
 
 func newFixture(b *testing.B) *benchFixture {
@@ -48,8 +48,8 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.sdk = sdk.New(bf)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk, "benchmarks"))
+	bf.accumulator = sdk.NewAccumulator(bf)
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
 	return bf
 }
 
@@ -223,7 +223,7 @@ func benchmarkIterator(b *testing.B, n int) {
 	cnt.Add(ctx, 1, makeLabels(n)...)
 
 	b.ResetTimer()
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 func BenchmarkIterator_0(b *testing.B) {
@@ -447,7 +447,7 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 func BenchmarkObserverObservationFloat64(b *testing.B) {
@@ -462,7 +462,7 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 // MaxSumCount
@@ -536,7 +536,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.sdk.RecordBatch(ctx, labs, meas...)
+		fix.accumulator.RecordBatch(ctx, labs, meas...)
 	}
 }
 
@@ -574,7 +574,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		c.Add(ctx, 1, k)
-		fix.sdk.Collect(ctx)
+		fix.accumulator.Collect(ctx)
 	}
 }
 
@@ -595,7 +595,7 @@ func BenchmarkLabelIterator(b *testing.B) {
 	counter := fix.meter.NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, keyValues...)
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 
 	b.ResetTimer()
 
