@@ -49,7 +49,11 @@ import (
 type meterProvider struct {
 	delegate metric.Provider
 
-	lock   sync.Mutex
+	// lock protects `delegate` and `meters`.
+	lock sync.Mutex
+
+	// meters maintains a unique entry for every named Meter
+	// that has been registered through the global instance.
 	meters map[string]*meterEntry
 }
 
