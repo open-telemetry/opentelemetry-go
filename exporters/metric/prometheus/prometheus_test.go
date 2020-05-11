@@ -43,13 +43,13 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet()
 
 	counter := metric.NewDescriptor(
-		"counter", metric.CounterKind, core.Float64NumberKind)
+		"counter", metric.CounterKind, metric.Float64NumberKind)
 	lastValue := metric.NewDescriptor(
-		"lastvalue", metric.ObserverKind, core.Float64NumberKind)
+		"lastvalue", metric.ObserverKind, metric.Float64NumberKind)
 	measure := metric.NewDescriptor(
-		"measure", metric.MeasureKind, core.Float64NumberKind)
+		"measure", metric.MeasureKind, metric.Float64NumberKind)
 	histogramMeasure := metric.NewDescriptor(
-		"histogram_measure", metric.MeasureKind, core.Float64NumberKind)
+		"histogram_measure", metric.MeasureKind, metric.Float64NumberKind)
 
 	labels := []core.KeyValue{
 		key.New("A").String("B"),
@@ -71,7 +71,7 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
 	expected = append(expected, `measure_count{A="B",C="D"} 3`)
 
-	boundaries := []core.Number{core.NewFloat64Number(-0.5), core.NewFloat64Number(1)}
+	boundaries := []metric.Number{metric.NewFloat64Number(-0.5), metric.NewFloat64Number(1)}
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, labels...)
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, labels...)
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 0.6, labels...)
@@ -101,7 +101,7 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `measure_count{A="E",C=""} 1`)
 	expected = append(expected, `measure_sum{A="E",C=""} 19`)
 
-	boundaries = []core.Number{core.NewFloat64Number(0), core.NewFloat64Number(1)}
+	boundaries = []metric.Number{metric.NewFloat64Number(0), metric.NewFloat64Number(1)}
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, missingLabels...)
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, missingLabels...)
 	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.1, missingLabels...)

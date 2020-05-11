@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -218,10 +217,10 @@ func TestArrayErrors(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
 
-		test.CheckedUpdate(t, agg, core.Number(0), descriptor)
+		test.CheckedUpdate(t, agg, metric.Number(0), descriptor)
 
-		if profile.NumberKind == core.Float64NumberKind {
-			test.CheckedUpdate(t, agg, core.NewFloat64Number(math.NaN()), descriptor)
+		if profile.NumberKind == metric.Float64NumberKind {
+			test.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
 		}
 		agg.Checkpoint(ctx, descriptor)
 
@@ -231,7 +230,7 @@ func TestArrayErrors(t *testing.T) {
 
 		num, err := agg.Quantile(0)
 		require.Nil(t, err)
-		require.Equal(t, num, core.Number(0))
+		require.Equal(t, num, metric.Number(0))
 
 		_, err = agg.Quantile(-0.0001)
 		require.Error(t, err)
@@ -244,7 +243,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, core.Float64NumberKind)
+	descriptor := test.NewAggregatorTest(metric.MeasureKind, metric.Float64NumberKind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
@@ -274,19 +273,19 @@ func TestArrayFloat64(t *testing.T) {
 		}
 	}
 
-	all := test.NewNumbers(core.Float64NumberKind)
+	all := test.NewNumbers(metric.Float64NumberKind)
 
 	ctx := context.Background()
 	agg := New()
 
 	for _, f := range fpsf(1) {
-		all.Append(core.NewFloat64Number(f))
-		test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
+		all.Append(metric.NewFloat64Number(f))
+		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
-		all.Append(core.NewFloat64Number(f))
-		test.CheckedUpdate(t, agg, core.NewFloat64Number(f), descriptor)
+		all.Append(metric.NewFloat64Number(f))
+		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
 	agg.Checkpoint(ctx, descriptor)

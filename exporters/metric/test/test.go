@@ -73,11 +73,11 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 	return newAgg, true
 }
 
-func createNumber(desc *metric.Descriptor, v float64) core.Number {
-	if desc.NumberKind() == core.Float64NumberKind {
-		return core.NewFloat64Number(v)
+func createNumber(desc *metric.Descriptor, v float64) metric.Number {
+	if desc.NumberKind() == metric.Float64NumberKind {
+		return metric.NewFloat64Number(v)
 	}
-	return core.NewInt64Number(int64(v))
+	return metric.NewInt64Number(int64(v))
 }
 
 func (p *CheckpointSet) AddLastValue(desc *metric.Descriptor, v float64, labels ...core.KeyValue) {
@@ -92,7 +92,7 @@ func (p *CheckpointSet) AddMeasure(desc *metric.Descriptor, v float64, labels ..
 	p.updateAggregator(desc, array.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []core.Number, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...core.KeyValue) {
 	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
 }
 

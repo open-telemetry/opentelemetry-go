@@ -21,7 +21,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -30,13 +29,13 @@ import (
 type (
 	Aggregator struct {
 		// ckptSum needs to be aligned for 64-bit atomic operations.
-		ckptSum    core.Number
+		ckptSum    metric.Number
 		lock       sync.Mutex
 		current    points
 		checkpoint points
 	}
 
-	points []core.Number
+	points []metric.Number
 )
 
 var _ export.Aggregator = &Aggregator{}
@@ -52,7 +51,7 @@ func New() *Aggregator {
 }
 
 // Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (core.Number, error) {
+func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.ckptSum, nil
 }
 
@@ -62,23 +61,23 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (core.Number, error) {
+func (c *Aggregator) Max() (metric.Number, error) {
 	return c.checkpoint.Quantile(1)
 }
 
 // Min returns the mininum value in the checkpoint.
-func (c *Aggregator) Min() (core.Number, error) {
+func (c *Aggregator) Min() (metric.Number, error) {
 	return c.checkpoint.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of data in the checkpoint.
 // It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (core.Number, error) {
+func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
 	return c.checkpoint.Quantile(q)
 }
 
 // Points returns access to the raw data set.
-func (c *Aggregator) Points() ([]core.Number, error) {
+func (c *Aggregator) Points() ([]metric.Number, error) {
 	return c.checkpoint, nil
 }
 
@@ -97,7 +96,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	// received as an alternative to requesting quantile information.
 	c.sort(kind)
 
-	c.ckptSum = core.Number(0)
+	c.ckptSum = metric.Number(0)
 
 	for _, v := range c.checkpoint {
 		c.ckptSum.AddNumber(kind, v)
@@ -107,7 +106,7 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and Checkpoint()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
 	c.current = append(c.current, number)
 	c.lock.Unlock()
@@ -126,12 +125,12 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	return nil
 }
 
-func (c *Aggregator) sort(kind core.NumberKind) {
+func (c *Aggregator) sort(kind metric.NumberKind) {
 	switch kind {
-	case core.Float64NumberKind:
+	case metric.Float64NumberKind:
 		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint)))
 
-	case core.Int64NumberKind:
+	case metric.Int64NumberKind:
 		sort.Sort(&c.checkpoint)
 
 	default:
@@ -141,7 +140,7 @@ func (c *Aggregator) sort(kind core.NumberKind) {
 	}
 }
 
-func combine(a, b points, kind core.NumberKind) points {
+func combine(a, b points, kind metric.NumberKind) points {
 	result := make(points, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
@@ -176,13 +175,13 @@ func (p *points) Swap(i, j int) {
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
 // element of the data set.  This uses the "Nearest-Rank" definition
 // of a quantile.
-func (p *points) Quantile(q float64) (core.Number, error) {
+func (p *points) Quantile(q float64) (metric.Number, error) {
 	if len(*p) == 0 {
-		return core.Number(0), aggregator.ErrNoData
+		return metric.Number(0), aggregator.ErrNoData
 	}
 
 	if q < 0 || q > 1 {
-		return core.Number(0), aggregator.ErrInvalidQuantile
+		return metric.Number(0), aggregator.ErrInvalidQuantile
 	}
 
 	if q == 0 || len(*p) == 1 {

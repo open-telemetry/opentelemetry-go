@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
@@ -57,7 +56,7 @@ func TestCounterSum(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
-		sum := core.Number(0)
+		sum := metric.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
@@ -80,7 +79,7 @@ func TestMeasureSum(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
 
-		sum := core.Number(0)
+		sum := metric.Number(0)
 
 		for i := 0; i < count; i++ {
 			r1 := profile.Random(+1)
@@ -108,7 +107,7 @@ func TestCounterMerge(t *testing.T) {
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
-		sum := core.Number(0)
+		sum := metric.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)

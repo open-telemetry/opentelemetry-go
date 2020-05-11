@@ -38,7 +38,7 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(core.Number, []core.KeyValue)),
+		callback func(func(Number, []core.KeyValue)),
 	) (AsyncImpl, error)
 }
 
@@ -64,7 +64,7 @@ type SyncImpl interface {
 	Bind(labels []core.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number core.Number, labels []core.KeyValue)
+	RecordOne(ctx context.Context, number Number, labels []core.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a
@@ -72,7 +72,7 @@ type SyncImpl interface {
 type BoundSyncImpl interface {
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number core.Number)
+	RecordOne(ctx context.Context, number Number)
 
 	// Unbind frees the resources associated with this bound instrument. It
 	// does not affect the metric this bound instrument was created through.
@@ -97,13 +97,13 @@ type wrappedMeterImpl struct {
 // int64ObserverResult is an adapter for int64-valued asynchronous
 // callbacks.
 type int64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
+	observe func(Number, []core.KeyValue)
 }
 
 // float64ObserverResult is an adapter for float64-valued asynchronous
 // callbacks.
 type float64ObserverResult struct {
-	observe func(core.Number, []core.KeyValue)
+	observe func(Number, []core.KeyValue)
 }
 
 var (
@@ -134,7 +134,7 @@ func (m *wrappedMeterImpl) RecordBatch(ctx context.Context, ls []core.KeyValue, 
 	m.impl.RecordBatch(ctx, ls, ms...)
 }
 
-func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core.NumberKind, opts []Option) (SyncImpl, error) {
+func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind NumberKind, opts []Option) (SyncImpl, error) {
 	desc := NewDescriptor(name, metricKind, numberKind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewSyncInstrument(desc)
@@ -142,7 +142,7 @@ func (m *wrappedMeterImpl) newSync(name string, metricKind Kind, numberKind core
 
 func (m *wrappedMeterImpl) NewInt64Counter(name string, opts ...Option) (Int64Counter, error) {
 	return WrapInt64CounterInstrument(
-		m.newSync(name, CounterKind, core.Int64NumberKind, opts))
+		m.newSync(name, CounterKind, Int64NumberKind, opts))
 }
 
 // WrapInt64CounterInstrument returns an `Int64Counter` from a
@@ -156,7 +156,7 @@ func WrapInt64CounterInstrument(syncInst SyncImpl, err error) (Int64Counter, err
 
 func (m *wrappedMeterImpl) NewFloat64Counter(name string, opts ...Option) (Float64Counter, error) {
 	return WrapFloat64CounterInstrument(
-		m.newSync(name, CounterKind, core.Float64NumberKind, opts))
+		m.newSync(name, CounterKind, Float64NumberKind, opts))
 }
 
 // WrapFloat64CounterInstrument returns an `Float64Counter` from a
@@ -170,7 +170,7 @@ func WrapFloat64CounterInstrument(syncInst SyncImpl, err error) (Float64Counter,
 
 func (m *wrappedMeterImpl) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
 	return WrapInt64MeasureInstrument(
-		m.newSync(name, MeasureKind, core.Int64NumberKind, opts))
+		m.newSync(name, MeasureKind, Int64NumberKind, opts))
 }
 
 // WrapInt64MeasureInstrument returns an `Int64Measure` from a
@@ -184,7 +184,7 @@ func WrapInt64MeasureInstrument(syncInst SyncImpl, err error) (Int64Measure, err
 
 func (m *wrappedMeterImpl) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
 	return WrapFloat64MeasureInstrument(
-		m.newSync(name, MeasureKind, core.Float64NumberKind, opts))
+		m.newSync(name, MeasureKind, Float64NumberKind, opts))
 }
 
 // WrapFloat64MeasureInstrument returns an `Float64Measure` from a
@@ -196,7 +196,7 @@ func WrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 	return Float64Measure{syncInstrument: common}, err
 }
 
-func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind core.NumberKind, opts []Option, callback func(func(core.Number, []core.KeyValue))) (AsyncImpl, error) {
+func (m *wrappedMeterImpl) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, callback func(func(Number, []core.KeyValue))) (AsyncImpl, error) {
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
 	return m.impl.NewAsyncInstrument(desc, callback)
@@ -207,8 +207,8 @@ func (m *wrappedMeterImpl) RegisterInt64Observer(name string, callback Int64Obse
 		return NoopMeter{}.RegisterInt64Observer("", nil)
 	}
 	return WrapInt64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Int64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
+		m.newAsync(name, ObserverKind, Int64NumberKind, opts,
+			func(observe func(Number, []core.KeyValue)) {
 				// Note: this memory allocation could be avoided by
 				// using a pointer to this object and mutating it
 				// on each collection interval.
@@ -230,8 +230,8 @@ func (m *wrappedMeterImpl) RegisterFloat64Observer(name string, callback Float64
 		return NoopMeter{}.RegisterFloat64Observer("", nil)
 	}
 	return WrapFloat64ObserverInstrument(
-		m.newAsync(name, ObserverKind, core.Float64NumberKind, opts,
-			func(observe func(core.Number, []core.KeyValue)) {
+		m.newAsync(name, ObserverKind, Float64NumberKind, opts,
+			func(observe func(Number, []core.KeyValue)) {
 				callback(float64ObserverResult{observe})
 			}))
 }
@@ -246,9 +246,9 @@ func WrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Obser
 }
 
 func (io int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	io.observe(core.NewInt64Number(value), labels)
+	io.observe(NewInt64Number(value), labels)
 }
 
 func (fo float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fo.observe(core.NewFloat64Number(value), labels)
+	fo.observe(NewFloat64Number(value), labels)
 }

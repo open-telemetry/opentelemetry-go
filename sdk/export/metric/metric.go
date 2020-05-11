@@ -17,7 +17,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -127,7 +126,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for distributed or span context.
-	Update(context.Context, core.Number, *metric.Descriptor) error
+	Update(context.Context, metric.Number, *metric.Descriptor) error
 
 	// Checkpoint is called during collection to finish one period
 	// of aggregation by atomically saving the current value.

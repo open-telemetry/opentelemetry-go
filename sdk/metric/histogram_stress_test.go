@@ -20,14 +20,13 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 func TestStressInt64Histogram(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, core.Int64NumberKind)
-	h := histogram.New(&desc, []core.Number{core.NewInt64Number(25), core.NewInt64Number(50), core.NewInt64Number(75)})
+	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, metric.Int64NumberKind)
+	h := histogram.New(&desc, []metric.Number{metric.NewInt64Number(25), metric.NewInt64Number(50), metric.NewInt64Number(75)})
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -38,7 +37,7 @@ func TestStressInt64Histogram(t *testing.T) {
 			case <-ctx.Done():
 				return
 			default:
-				_ = h.Update(ctx, core.NewInt64Number(rnd.Int63()%100), &desc)
+				_ = h.Update(ctx, metric.NewInt64Number(rnd.Int63()%100), &desc)
 			}
 		}
 	}()

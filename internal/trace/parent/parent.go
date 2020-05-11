@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (core.SpanContext, bool, []trace.Link) {
+func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (trace.SpanContext, bool, []trace.Link) {
 	lsctx := trace.SpanFromContext(ctx).SpanContext()
 	rsctx := trace.RemoteSpanContextFromContext(ctx)
 
@@ -30,7 +30,7 @@ func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (core.SpanC
 		links := addLinkIfValid(nil, lsctx, "current")
 		links = addLinkIfValid(links, rsctx, "remote")
 
-		return core.EmptySpanContext(), false, links
+		return trace.EmptySpanContext(), false, links
 	}
 	if lsctx.IsValid() {
 		return lsctx, false, nil
@@ -38,10 +38,10 @@ func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (core.SpanC
 	if rsctx.IsValid() {
 		return rsctx, true, nil
 	}
-	return core.EmptySpanContext(), false, nil
+	return trace.EmptySpanContext(), false, nil
 }
 
-func addLinkIfValid(links []trace.Link, sc core.SpanContext, kind string) []trace.Link {
+func addLinkIfValid(links []trace.Link, sc trace.SpanContext, kind string) []trace.Link {
 	if !sc.IsValid() {
 		return links
 	}

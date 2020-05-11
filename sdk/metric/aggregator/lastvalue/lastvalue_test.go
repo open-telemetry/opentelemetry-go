@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -58,7 +57,7 @@ func TestLastValueUpdate(t *testing.T) {
 
 		record := test.NewAggregatorTest(metric.ObserverKind, profile.NumberKind)
 
-		var last core.Number
+		var last metric.Number
 		for i := 0; i < count; i++ {
 			x := profile.Random(rand.Intn(1)*2 - 1)
 			last = x
@@ -108,7 +107,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := test.NewAggregatorTest(metric.ObserverKind, core.Int64NumberKind)
+	descriptor := test.NewAggregatorTest(metric.ObserverKind, metric.Int64NumberKind)
 
 	g := New()
 	g.Checkpoint(context.Background(), descriptor)
@@ -116,5 +115,5 @@ func TestLastValueNotSet(t *testing.T) {
 	value, timestamp, err := g.LastValue()
 	require.Equal(t, aggregator.ErrNoData, err)
 	require.True(t, timestamp.IsZero())
-	require.Equal(t, core.Number(0), value)
+	require.Equal(t, metric.Number(0), value)
 }
