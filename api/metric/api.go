@@ -189,9 +189,9 @@ func (m Meter) NewFloat64Measure(name string, opts ...Option) (Float64Measure, e
 }
 
 // RegisterInt64Observer creates a new integer Observer instrument
-// with the given name, customized with options.  May return an error
-// if the name is invalid (e.g., empty) or improperly registered
-// (e.g., duplicate registration).
+// with the given name, running a given callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
 func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback, opts ...Option) (Int64Observer, error) {
 	if callback == nil {
 		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
@@ -204,9 +204,9 @@ func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback
 }
 
 // RegisterFloat64Observer creates a new floating point Observer with
-// the given name, customized with options.  May return an error if
-// the name is invalid (e.g., empty) or improperly registered (e.g.,
-// duplicate registration).
+// the given name, running a given callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
 func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCallback, opts ...Option) (Float64Observer, error) {
 	if callback == nil {
 		return wrapFloat64ObserverInstrument(NoopAsync{}, nil)
