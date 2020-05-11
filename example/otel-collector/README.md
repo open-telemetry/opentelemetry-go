@@ -22,16 +22,16 @@ receivers:
       otlp: {}
 ```
 
-This will create the receiver on the collector side, and open up port `55680` for receiving traces.
+This will create the receiver on the Collector side, and open up port `55680` for receiving traces.
 The rest of the configuration is quite standard, with the only mention that we need to create the Jaeger exporter:
 ```yml
 exporters:
       jaeger:
         # Replace with a real endpoint.
-        endpoint: "jaeger-service-url:14250"
+        endpoint: "<jaeger-service-url>:14250"
 ```
 
-After this, apply the configuration to your OpenTelemetry Collector instance (with `k apply -f otel-controller-config.yaml` for k8s users). You should see that the collector creates the otlp receiver:
+After this, apply the configuration to your OpenTelemetry Collector instance (with `k apply -f otel-controller-config.yaml` for k8s users). You should see that the Collector creates the otlp receiver:
 ```json
 {"level":"info","ts":1589184143.206609,"caller":"builder/receivers_builder.go:79","msg":"Receiver started.","component_kind":"receiver","component_type":"otlp","component_name":"otlp"}
 ```
@@ -79,4 +79,4 @@ The traces should now be visible from the Jaeger UI (if you have it installed).
 
 # Notes
 
-* There is an issue with the exporter/collector which causes Jaeger to throw errors when receiving spans from the OpenTelemetry Collector: https://github.com/open-telemetry/opentelemetry-collector/issues/815
+* There is an issue with the exporter/Collector which causes Jaeger to throw errors when receiving spans from the OpenTelemetry Collector: https://github.com/open-telemetry/opentelemetry-collector/issues/815
