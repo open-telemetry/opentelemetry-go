@@ -143,6 +143,7 @@ func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
 // It only executes once. Subsequent call does nothing.
 func (bsp *BatchSpanProcessor) Shutdown() {
 	bsp.stopOnce.Do(func() {
+		// Send `nil` to start flushing.
 		bsp.enqueue(nil)
 		close(bsp.stopCh)
 		bsp.stopWait.Wait()
@@ -175,8 +176,9 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // processQueue removes spans from the `queue` channel until the queue
 // fills once or there is no more data.  It calls the exporter once with
-// a batch of up to MaxExportBatchSize.  It returns true if the end-of-file
-// marker was received, indicating that the queue has been flushed.
+// a batch of up to MaxExportBatchSize.  It sends the `eof` boolean to
+// true when a `nil` *SpanData is received, indicating that the processor
+// is flushing.
 func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
 	// Read spans until the buffer fills or there are no more spans.
 	done := false
@@ -208,6 +210,7 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		return
 	default:
 	}
+	// Ensure that `nil` blocks the sender, since we are flushing.
 	if sd == nil || bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 		return
