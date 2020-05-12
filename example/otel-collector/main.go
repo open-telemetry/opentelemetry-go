@@ -37,7 +37,7 @@ func main() {
 		_ = exp.Stop()
 	}()
 
-	tp, _ := sdktrace.NewProvider(
+	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
 			sdktrace.WithScheduleDelayMillis(5),
