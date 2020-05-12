@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
+	internal "go.opentelemetry.io/otel/internal/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -46,7 +47,10 @@ type (
 
 		// asyncInstruments is a set of
 		// `*asyncInstrument` instances
-		asyncInstruments sync.Map
+		asyncLock        sync.Mutex
+		asyncInstruments *internal.AsyncInstrumentState
+		asyncContext     context.Context
+		asyncCollected   int
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -129,8 +133,6 @@ type (
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
 		recorders map[label.Distinct]*labeledRecorder
-
-		callback func(func(api.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
@@ -161,7 +163,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
+func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -178,12 +180,7 @@ func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
-	// We are in a single-threaded context.  Note: this assumption
-	// could be violated if the user added concurrency within
-	// their callback.
-	labels := label.NewSetWithSortable(kvs, &a.meter.asyncSortSlice)
-
+func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		if lrec.observedEpoch == a.meter.currentEpoch {
@@ -205,7 +202,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	// but will be revisited later.
 	a.recorders[labels.Equivalent()] = &labeledRecorder{
 		recorder:      rec,
-		labels:        &labels,
+		labels:        labels,
 		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
@@ -318,8 +315,9 @@ func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	}
 
 	return &Accumulator{
-		integrator:   integrator,
-		errorHandler: c.ErrorHandler,
+		integrator:       integrator,
+		errorHandler:     c.ErrorHandler,
+		asyncInstruments: internal.NewAsyncInstrumentState(),
 	}
 }
 
@@ -336,15 +334,16 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 	}, nil
 }
 
-func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metric.AsyncRunner) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-		callback: callback,
 	}
-	m.asyncInstruments.Store(a, nil)
+	m.asyncLock.Lock()
+	defer m.asyncLock.Unlock()
+	m.asyncInstruments.Register(a, runner)
 	return a, nil
 }
 
@@ -409,24 +408,49 @@ func (m *Accumulator) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
+func (m *Accumulator) CollectAsyncSingle(kv []core.KeyValue, obs metric.Observation) {
+	a := obs.AsyncImpl().Implementation().(*asyncInstrument)
+
+	// We are in a single-threaded context.  Note: this assumption
+	// could be violated if the user added concurrency within
+	// their callback.
+	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
+
+	a.observe(obs.Number(), &labels)
+}
+
+func (m *Accumulator) CollectAsyncBatch(kv []core.KeyValue, obs []metric.Observation) {
+	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
+
+	for _, ob := range obs {
+		a := ob.AsyncImpl().Implementation().(*asyncInstrument)
+		a.observe(ob.Number(), &labels)
+	}
+}
+
 func (m *Accumulator) collectAsync(ctx context.Context) int {
-	checkpointed := 0
+	m.asyncLock.Lock()
+	defer m.asyncLock.Unlock()
 
-	m.asyncInstruments.Range(func(key, value interface{}) bool {
-		a := key.(*asyncInstrument)
-		a.callback(a.observe)
-		checkpointed += m.checkpointAsync(ctx, a)
-		return true
-	})
+	m.asyncCollected = 0
+	m.asyncContext = ctx
 
-	return checkpointed
+	m.asyncInstruments.Run(m)
+	m.asyncContext = nil
+
+	for _, inst := range m.asyncInstruments.Instruments() {
+		a := inst.Implementation().(*asyncInstrument)
+		m.asyncCollected += m.checkpointAsync(a)
+	}
+
+	return m.asyncCollected
 }
 
 func (m *Accumulator) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *Accumulator) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
+func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 	if len(a.recorders) == 0 {
 		return 0
 	}
@@ -435,7 +459,7 @@ func (m *Accumulator) checkpointAsync(ctx context.Context, a *asyncInstrument) i
 		lrec := lrec
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
+			checkpointed += m.checkpoint(m.asyncContext, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
