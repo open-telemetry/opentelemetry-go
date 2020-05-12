@@ -28,6 +28,7 @@ receivers:
 
 This will create the receiver on the Collector side, and open up port `55680` for receiving traces.
 The rest of the configuration is quite standard, with the only mention that we need to create the Jaeger exporter:
+
 ```yml
 exporters:
       jaeger:
