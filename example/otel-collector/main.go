@@ -34,7 +34,10 @@ func main() {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		err := exp.Stop()
+		if err != nil {
+			log.Fatalf("Failed to stop the exporter: %v", err)
+		}
 	}()
 
 	tp, err := sdktrace.NewProvider(
