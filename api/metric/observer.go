@@ -14,13 +14,22 @@
 
 package metric
 
+import (
+	"go.opentelemetry.io/otel/api/core"
+)
+
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
-type Int64ObserverCallback func(result Int64ObserverResult)
+type Int64ObserverCallback func(Int64ObserverResult)
 
 // Float64ObserverCallback is a type of callback that floating point
 // observers run.
-type Float64ObserverCallback func(result Float64ObserverResult)
+type Float64ObserverCallback func(Float64ObserverResult)
+
+// BatchObserverCallback is a callback argument for use with any
+// Observer instrument that will be reported as a batch of
+// observations.
+type BatchObserverCallback func(BatchObserverResult)
 
 // Int64Observer is a metric that captures a set of int64 values at a
 // point in time.
@@ -32,4 +41,186 @@ type Int64Observer struct {
 // at a point in time.
 type Float64Observer struct {
 	asyncInstrument
+}
+
+// BatchObserver represents an Observer callback that can report
+// observations for multiple instruments.
+type BatchObserver struct {
+	meter  Meter
+	runner AsyncBatchRunner
+}
+
+// Int64ObserverResult is passed to an observer callback to capture
+// observations for one asynchronous integer metric instrument.
+type Int64ObserverResult struct {
+	instrument AsyncImpl
+	function   func([]core.KeyValue, Observation)
+}
+
+// Float64ObserverResult is passed to an observer callback to capture
+// observations for one asynchronous floating point metric instrument.
+type Float64ObserverResult struct {
+	instrument AsyncImpl
+	function   func([]core.KeyValue, Observation)
+}
+
+// BatchObserverResult is passed to a batch observer callback to
+// capture observations for multiple asynchronous instruments.
+type BatchObserverResult struct {
+	function func([]core.KeyValue, []Observation)
+}
+
+// AsyncRunner is an interface implemented by all Observer callbacks.
+// observers run.
+type AsyncRunner interface {
+	anyRunner()
+}
+
+// AsyncSingleRunner is an interface implemented by single-observer
+// callbacks.
+type AsyncSingleRunner interface {
+	Run(AsyncImpl, func([]core.KeyValue, Observation))
+	anyRunner()
+}
+
+// AsyncBatchRunner is an interface implemented by batch-observer
+// callbacks.
+type AsyncBatchRunner interface {
+	Run(func([]core.KeyValue, []Observation))
+	anyRunner()
+}
+
+// Observe captures a single integer value from the associated
+// instrument callback, with the given labels.
+func (ir Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
+	ir.function(labels, Observation{
+		instrument: ir.instrument,
+		number:     NewInt64Number(value),
+	})
+}
+
+// Observe captures a single floating point value from the associated
+// instrument callback, with the given labels.
+func (fr Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
+	fr.function(labels, Observation{
+		instrument: fr.instrument,
+		number:     NewFloat64Number(value),
+	})
+}
+
+// Observe captures a single floating point value from the associated
+// instrument callback, with the given labels.
+func (br BatchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
+	br.function(labels, obs)
+}
+
+// Observation is used for reporting a batch of metric
+// values. Instances of this type should be created by Observer
+// instruments (e.g., Int64Observer.Observation()).
+type Observation struct {
+	// number needs to be aligned for 64-bit atomic operations.
+	number     Number
+	instrument AsyncImpl
+}
+
+// AsyncImpl returns the instrument that created this observation.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (m Observation) AsyncImpl() AsyncImpl {
+	return m.instrument
+}
+
+// Number returns a number recorded in this observation.
+func (m Observation) Number() Number {
+	return m.number
+}
+
+// RegisterInt64Observer creates a new integer Observer instrument
+// with the given name, running in a batch callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
+func (b BatchObserver) RegisterInt64Observer(name string, opts ...Option) (Int64Observer, error) {
+	if b.runner == nil {
+		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
+	}
+	return wrapInt64ObserverInstrument(
+		b.meter.newAsync(name, ObserverKind, Int64NumberKind, opts, b.runner))
+}
+
+// RegisterFloat64Observer creates a new floating point Observer with
+// the given name, running in a batch callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
+func (b BatchObserver) RegisterFloat64Observer(name string, opts ...Option) (Float64Observer, error) {
+	if b.runner == nil {
+		return wrapFloat64ObserverInstrument(NoopAsync{}, nil)
+	}
+	return wrapFloat64ObserverInstrument(
+		b.meter.newAsync(name, ObserverKind, Float64NumberKind, opts,
+			b.runner))
+}
+
+// Observation returns BatchObserverCallback argument for an
+// asynchronous integer instrument.
+func (i Int64Observer) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns BatchObserverCallback argument for an
+// asynchronous floating point instrument.
+func (f Float64Observer) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
+}
+
+// newInt64AsyncRunner returns a single-observer callback for integer Observer instruments.
+func newInt64AsyncRunner(c Int64ObserverCallback) AsyncRunner {
+	return &c
+}
+
+// newFloat64AsyncRunner returns a single-observer callback for floating point Observer instruments.
+func newFloat64AsyncRunner(c Float64ObserverCallback) AsyncRunner {
+	return &c
+}
+
+// newBatchAsyncRunner returns a batch-observer callback use with multiple Observer instruments.
+func newBatchAsyncRunner(c BatchObserverCallback) AsyncBatchRunner {
+	return &c
+}
+
+// anyRunner implements AsyncRunner.
+func (*Int64ObserverCallback) anyRunner() {}
+
+// anyRunner implements AsyncRunner.
+func (*Float64ObserverCallback) anyRunner() {}
+
+// anyRunner implements AsyncRunner.
+func (*BatchObserverCallback) anyRunner() {}
+
+// Run implements AsyncSingleRunner.
+func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
+	(*i)(Int64ObserverResult{
+		instrument: impl,
+		function:   function,
+	})
+}
+
+// Run implements AsyncSingleRunner.
+func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
+	(*f)(Float64ObserverResult{
+		instrument: impl,
+		function:   function,
+	})
+}
+
+// Run implements AsyncBatchRunner.
+func (b *BatchObserverCallback) Run(function func([]core.KeyValue, []Observation)) {
+	(*b)(BatchObserverResult{
+		function: function,
+	})
 }
