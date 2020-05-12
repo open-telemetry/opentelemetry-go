@@ -1,6 +1,6 @@
 # OpenTelemetry Collector Traces Example
 
-This example illustrates how to export traces from the otel-go sdk to the Open Telemetry Collector, and from there to a Jaeger instance.
+This example illustrates how to export traces from the OpenTelemetry-Go SDK to the OpenTelemetry Collector, and from there to a Jaeger instance.
 The complete flow is:
 
 `otel-collector-demo -> otel-collector -> Jaeger`
