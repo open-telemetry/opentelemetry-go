@@ -36,7 +36,9 @@ exporters:
         endpoint: "<jaeger-service-url>:14250"
 ```
 
-After this, apply the configuration to your OpenTelemetry Collector instance (with `k apply -f otel-controller-config.yaml` for k8s users). You should see that the Collector creates the otlp receiver:
+After this, apply the configuration to your OpenTelemetry Collector instance (with `kubectl apply -f otel-controller-config.yaml` for k8s users).
+You should see that the Collector creates the otlp receiver:
+
 ```json
 {"level":"info","ts":1589184143.206609,"caller":"builder/receivers_builder.go:79","msg":"Receiver started.","component_kind":"receiver","component_type":"otlp","component_name":"otlp"}
 ```
