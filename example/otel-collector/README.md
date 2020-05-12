@@ -66,7 +66,7 @@ If your OpenTelemetry Collector is running at a different address, use the [`otl
 
 Feel free to remove the blocking operation, but it might come in handy when testing the connection. Also, make sure to close the exporter before the app exits.
 
-The next steps are the same as for all other otel-go sdk uses:
+The next steps are the same as for all other OpenTelemetry-Go SDK uses:
 1) Create a trace provider from the `otlp` exporter: 
 ```go
 tp, _ := sdktrace.NewProvider(
