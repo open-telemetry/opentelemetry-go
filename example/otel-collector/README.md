@@ -19,7 +19,7 @@ However, the main concepts should be transferable to any other platform you want
 
 # Configuring the OTEL Collector
 
-In order to enable our application to send traces to the OpenTelemetry Collector, we need to first open up the OTLP receiver:
+In order to enable our application to send traces to the OpenTelemetry Collector, we need to first configure the OTLP receiver:
 
 ```yml
 receivers:
