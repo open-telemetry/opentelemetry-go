@@ -7,7 +7,9 @@ The complete flow is:
 
 # Prerequisites
 
-The demo assumes you already have both OpenTelemetry Collector and Jaeger up and running. For setting these up, please follow the corresponding documentations:
+The demo assumes you already have both an instance of the OpenTelemetry Collector and Jaeger up and running.
+For information about how to set these up, please follow the corresponding documentation:
+
 * Jaeger: https://www.jaegertracing.io/docs/1.17/getting-started/
 * OpenTelemetry Collector: https://opentelemetry.io/docs/collector/about/
 
