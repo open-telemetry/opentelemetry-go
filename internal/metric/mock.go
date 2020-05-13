@@ -187,7 +187,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) CollectAsync(labels []core.KeyValue, obs []metric.Observation) {
+func (m *MeterImpl) CollectAsync(labels []core.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]

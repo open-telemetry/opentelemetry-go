@@ -362,13 +362,13 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectAsync(ctx)
+	checkpointed := m.collectSyncRecords(ctx)
+	checkpointed += m.observeAsyncInstruments(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
 
-func (m *Accumulator) collectRecords(ctx context.Context) int {
+func (m *Accumulator) collectSyncRecords(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -421,7 +421,7 @@ func (m *Accumulator) CollectAsync(kv []core.KeyValue, obs []metric.Observation)
 	}
 }
 
-func (m *Accumulator) collectAsync(ctx context.Context) int {
+func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 
