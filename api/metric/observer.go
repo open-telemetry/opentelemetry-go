@@ -124,7 +124,7 @@ func (fr Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) 
 	})
 }
 
-// Observe captures a single floating point value from the associated
+// Observe captures a multiple observations from the associated batch
 // instrument callback, with the given labels.
 func (br BatchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
 	br.function(labels, obs)
