@@ -37,10 +37,13 @@ func main() {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		err := exp.Stop()
+		if err != nil {
+			log.Fatalf("Failed to stop the exporter: %v", err)
+		}
 	}()
 
-	tp, _ := sdktrace.NewProvider(
+	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResourceAttributes(
 			core.Key(conventions.AttributeServiceName).String("test-service"),
