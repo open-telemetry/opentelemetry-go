@@ -85,7 +85,7 @@ type asyncImpl struct {
 
 	instrument
 
-	callback func(func(metric.Number, []kv.KeyValue))
+	runner metric.AsyncRunner
 }
 
 // SyncImpler is implemented by all of the sync metric
@@ -245,21 +245,21 @@ func (bound *syncHandle) Unbind() {
 
 func (m *meterImpl) NewAsyncInstrument(
 	desc metric.Descriptor,
-	callback func(func(metric.Number, []kv.KeyValue)),
+	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).NewAsyncInstrument(desc, callback)
+		return (*meterPtr).NewAsyncInstrument(desc, runner)
 	}
 
 	inst := &asyncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		callback: callback,
+		runner: runner,
 	}
 	m.asyncInsts = append(m.asyncInsts, inst)
 	return inst, nil
@@ -276,7 +276,7 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 	implPtr := new(metric.AsyncImpl)
 
 	var err error
-	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.callback)
+	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.runner)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.

@@ -210,6 +210,51 @@ func checkBatches(t *testing.T, ctx context.Context, labels []kv.KeyValue, mock 
 	}
 }
 
+func TestBatchObserver(t *testing.T) {
+	mockSDK, meter := mockTest.NewMeter()
+
+	var obs1 metric.Int64Observer
+	var obs2 metric.Float64Observer
+
+	labels := []kv.KeyValue{
+		kv.String("A", "B"),
+		kv.String("C", "D"),
+	}
+
+	cb := Must(meter).NewBatchObserver(
+		func(result metric.BatchObserverResult) {
+			result.Observe(labels,
+				obs1.Observation(42),
+				obs2.Observation(42.0),
+			)
+		},
+	)
+	obs1 = cb.RegisterInt64Observer("test.observer.int")
+	obs2 = cb.RegisterFloat64Observer("test.observer.float")
+
+	mockSDK.RunAsyncInstruments()
+
+	require.Len(t, mockSDK.MeasurementBatches, 1)
+
+	impl1 := obs1.AsyncImpl().Implementation().(*mockTest.Async)
+	impl2 := obs2.AsyncImpl().Implementation().(*mockTest.Async)
+
+	require.NotNil(t, impl1)
+	require.NotNil(t, impl2)
+
+	got := mockSDK.MeasurementBatches[0]
+	require.Equal(t, labels, got.Labels)
+	require.Len(t, got.Measurements, 2)
+
+	m1 := got.Measurements[0]
+	require.Equal(t, impl1, m1.Instrument.Implementation().(*mockTest.Async))
+	require.Equal(t, 0, m1.Number.CompareNumber(metric.Int64NumberKind, fortyTwo(t, metric.Int64NumberKind)))
+
+	m2 := got.Measurements[1]
+	require.Equal(t, impl2, m2.Instrument.Implementation().(*mockTest.Async))
+	require.Equal(t, 0, m2.Number.CompareNumber(metric.Float64NumberKind, fortyTwo(t, metric.Float64NumberKind)))
+}
+
 func checkObserverBatch(t *testing.T, labels []kv.KeyValue, mock *mockTest.MeterImpl, kind metric.NumberKind, observer metric.AsyncImpl) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
@@ -256,7 +301,7 @@ func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl,
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ func(func(metric.Number, []kv.KeyValue))) (metric.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 

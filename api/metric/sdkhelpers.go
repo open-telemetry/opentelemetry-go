@@ -36,7 +36,7 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(Number, []kv.KeyValue)),
+		runner AsyncRunner,
 	) (AsyncImpl, error)
 }
 
@@ -81,18 +81,6 @@ type BoundSyncImpl interface {
 // asynchronous instrument (e.g., Observer instruments).
 type AsyncImpl interface {
 	InstrumentImpl
-}
-
-// Int64ObserverResult is passed to an observer callback to capture
-// observations for one asynchronous integer metric instrument.
-type Int64ObserverResult struct {
-	observe func(Number, []kv.KeyValue)
-}
-
-// Float64ObserverResult is passed to an observer callback to capture
-// observations for one asynchronous floating point metric instrument.
-type Float64ObserverResult struct {
-	observe func(Number, []kv.KeyValue)
 }
 
 // Configure is a helper that applies all the options to a Config.
@@ -165,13 +153,13 @@ func wrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 }
 
 // newAsync constructs one new asynchronous instrument.
-func (m Meter) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, callback func(func(Number, []kv.KeyValue))) (AsyncImpl, error) {
+func (m Meter) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, runner AsyncRunner) (AsyncImpl, error) {
 	if m.impl == nil {
 		return NoopAsync{}, nil
 	}
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
-	return m.impl.NewAsyncInstrument(desc, callback)
+	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
 // wrapInt64ObserverInstrument returns an `Int64Observer` from a

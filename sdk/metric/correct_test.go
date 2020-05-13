@@ -324,6 +324,60 @@ func TestObserverCollection(t *testing.T) {
 	}, out.Map)
 }
 
+func TestObserverBatch(t *testing.T) {
+	ctx := context.Background()
+	integrator := &correctnessIntegrator{
+		t: t,
+	}
+
+	sdk := metricsdk.NewAccumulator(integrator)
+	meter := metric.WrapMeterImpl(sdk, "test")
+
+	var floatObs metric.Float64Observer
+	var intObs metric.Int64Observer
+	var batch = Must(meter).NewBatchObserver(
+		func(result metric.BatchObserverResult) {
+			result.Observe(
+				[]kv.KeyValue{
+					kv.String("A", "B"),
+				},
+				floatObs.Observation(1),
+				floatObs.Observation(-1),
+				intObs.Observation(-1),
+				intObs.Observation(1),
+			)
+			result.Observe(
+				[]kv.KeyValue{
+					kv.String("C", "D"),
+				},
+				floatObs.Observation(-1),
+			)
+			result.Observe(
+				nil,
+				intObs.Observation(1),
+				intObs.Observation(1),
+			)
+		})
+	floatObs = batch.RegisterFloat64Observer("float.observer")
+	intObs = batch.RegisterInt64Observer("int.observer")
+
+	collected := sdk.Collect(ctx)
+
+	require.Equal(t, 4, collected)
+	require.Equal(t, 4, len(integrator.records))
+
+	out := batchTest.NewOutput(label.DefaultEncoder())
+	for _, rec := range integrator.records {
+		_ = out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"float.observer/A=B": -1,
+		"float.observer/C=D": -1,
+		"int.observer/":      1,
+		"int.observer/A=B":   1,
+	}, out.Map)
+}
+
 func TestRecordBatch(t *testing.T) {
 	ctx := context.Background()
 	integrator := &correctnessIntegrator{
