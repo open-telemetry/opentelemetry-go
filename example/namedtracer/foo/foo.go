@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	lemonsKey = kv.NewKey("ex.com/lemons")
+	lemonsKey = kv.Key("ex.com/lemons")
 )
 
 // SubOperation is an example to demonstrate the use of named tracer.

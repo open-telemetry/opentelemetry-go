@@ -43,17 +43,17 @@ func TestNew(t *testing.T) {
 		want []kv.KeyValue
 	}{
 		{
-			name: "NewKey with common key order1",
+			name: "Key with common key order1",
 			in:   []kv.KeyValue{kv12, kv11, kv21},
 			want: []kv.KeyValue{kv11, kv21},
 		},
 		{
-			name: "NewKey with common key order2",
+			name: "Key with common key order2",
 			in:   []kv.KeyValue{kv11, kv12, kv21},
 			want: []kv.KeyValue{kv12, kv21},
 		},
 		{
-			name: "NewKey with nil",
+			name: "Key with nil",
 			in:   nil,
 			want: nil,
 		},

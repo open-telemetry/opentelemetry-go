@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	lemonsKey = kv.NewKey("ex.com/lemons")
+	lemonsKey = kv.Key("ex.com/lemons")
 )
 
 func initMeter() *push.Controller {

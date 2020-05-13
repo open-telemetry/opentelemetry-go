@@ -51,8 +51,8 @@ func TestPrometheusExporter(t *testing.T) {
 		"histogram_measure", metric.MeasureKind, metric.Float64NumberKind)
 
 	labels := []kv.KeyValue{
-		kv.NewKey("A").String("B"),
-		kv.NewKey("C").String("D"),
+		kv.Key("A").String("B"),
+		kv.Key("C").String("D"),
 	}
 
 	checkpointSet.AddCounter(&counter, 15.3, labels...)
@@ -83,8 +83,8 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `histogram_measure_sum{A="B",C="D"} 19.6`)
 
 	missingLabels := []kv.KeyValue{
-		kv.NewKey("A").String("E"),
-		kv.NewKey("C").String(""),
+		kv.Key("A").String("E"),
+		kv.Key("C").String(""),
 	}
 
 	checkpointSet.AddCounter(&counter, 12, missingLabels...)

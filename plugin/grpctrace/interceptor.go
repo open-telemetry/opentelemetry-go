@@ -34,13 +34,13 @@ import (
 )
 
 var (
-	rpcServiceKey  = kv.NewKey("rpc.service")
-	netPeerIPKey   = kv.NewKey("net.peer.ip")
-	netPeerPortKey = kv.NewKey("net.peer.port")
+	rpcServiceKey  = kv.Key("rpc.service")
+	netPeerIPKey   = kv.Key("net.peer.ip")
+	netPeerPortKey = kv.Key("net.peer.port")
 
-	messageTypeKey             = kv.NewKey("message.type")
-	messageIDKey               = kv.NewKey("message.id")
-	messageUncompressedSizeKey = kv.NewKey("message.uncompressed_size")
+	messageTypeKey             = kv.Key("message.type")
+	messageIDKey               = kv.Key("message.id")
+	messageUncompressedSizeKey = kv.Key("message.uncompressed_size")
 )
 
 const (

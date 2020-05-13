@@ -82,8 +82,8 @@ func NewOutput(labelEncoder label.Encoder) Output {
 }
 
 // NewAggregationSelector returns a policy that is consistent with the
-// test descriptors above.  I.e., it returns sum.NewKey() for counter
-// instruments and lastvalue.NewKey for lastValue instruments.
+// test descriptors above.  I.e., it returns sum.New() for counter
+// instruments and lastvalue.New() for lastValue instruments.
 func NewAggregationSelector() export.AggregationSelector {
 	return &testAggregationSelector{}
 }

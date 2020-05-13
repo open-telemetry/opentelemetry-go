@@ -142,7 +142,7 @@ func (f *testFixture) someLabels() []kv.KeyValue {
 					break
 				}
 			}
-			l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+			l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
 		lc := canonicalizeLabels(l)
 		f.lock.Lock()

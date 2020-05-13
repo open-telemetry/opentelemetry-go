@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	HostKey = kv.NewKey("http.host")
-	URLKey  = kv.NewKey("http.url")
+	HostKey = kv.Key("http.host")
+	URLKey  = kv.Key("http.url")
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
