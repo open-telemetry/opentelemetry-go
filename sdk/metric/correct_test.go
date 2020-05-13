@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -195,19 +195,19 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		keySets = 2
 		repeats = 3
 	)
-	var keysA []core.Key
-	var keysB []core.Key
+	var keysA []kv.Key
+	var keysB []kv.Key
 
 	for i := 0; i < maxKeys; i++ {
-		keysA = append(keysA, core.Key(fmt.Sprintf("A%03d", i)))
-		keysB = append(keysB, core.Key(fmt.Sprintf("B%03d", i)))
+		keysA = append(keysA, kv.Key(fmt.Sprintf("A%03d", i)))
+		keysB = append(keysB, kv.Key(fmt.Sprintf("B%03d", i)))
 	}
 
-	var allExpect [][]core.KeyValue
+	var allExpect [][]kv.KeyValue
 	for numKeys := 0; numKeys < maxKeys; numKeys++ {
 
-		var kvsA []core.KeyValue
-		var kvsB []core.KeyValue
+		var kvsA []kv.KeyValue
+		var kvsB []kv.KeyValue
 		for r := 0; r < repeats; r++ {
 			for i := 0; i < numKeys; i++ {
 				kvsA = append(kvsA, keysA[i].Int(r))
@@ -215,8 +215,8 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 			}
 		}
 
-		var expectA []core.KeyValue
-		var expectB []core.KeyValue
+		var expectA []kv.KeyValue
+		var expectB []kv.KeyValue
 		for i := 0; i < numKeys; i++ {
 			expectA = append(expectA, keysA[i].Int(repeats-1))
 			expectB = append(expectB, keysB[i].Int(repeats-1))
@@ -237,7 +237,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	var actual [][]core.KeyValue
+	var actual [][]kv.KeyValue
 	for _, rec := range integrator.records {
 		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
 		require.Equal(t, sum, metric.NewInt64Number(2))
@@ -249,7 +249,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	require.ElementsMatch(t, allExpect, actual)
 }
 
-func newSetIter(kvs ...core.KeyValue) label.Iterator {
+func newSetIter(kvs ...kv.KeyValue) label.Iterator {
 	labels := label.NewSet(kvs...)
 	return labels.Iter()
 }
@@ -341,7 +341,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.RecordBatch(
 		ctx,
-		[]core.KeyValue{
+		[]kv.KeyValue{
 			key.String("A", "B"),
 			key.String("C", "D"),
 		},

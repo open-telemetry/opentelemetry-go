@@ -28,9 +28,9 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -399,28 +399,28 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 	}
 }
 
-func peerInfoFromTarget(target string) []core.KeyValue {
+func peerInfoFromTarget(target string) []kv.KeyValue {
 	host, port, err := net.SplitHostPort(target)
 
 	if err != nil {
-		return []core.KeyValue{}
+		return []kv.KeyValue{}
 	}
 
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
-	return []core.KeyValue{
+	return []kv.KeyValue{
 		netPeerIPKey.String(host),
 		netPeerPortKey.String(port),
 	}
 }
 
-func peerInfoFromContext(ctx context.Context) []core.KeyValue {
+func peerInfoFromContext(ctx context.Context) []kv.KeyValue {
 	p, ok := peer.FromContext(ctx)
 
 	if !ok {
-		return []core.KeyValue{}
+		return []kv.KeyValue{}
 	}
 
 	return peerInfoFromTarget(p.Addr.String())

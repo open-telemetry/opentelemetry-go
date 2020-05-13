@@ -27,8 +27,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -81,7 +81,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSampled
 	}
-	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{key.Int("callCount", ts.callCount)}}
+	return SamplingResult{Decision: decision, Attributes: []kv.KeyValue{key.Int("callCount", ts.callCount)}}
 }
 
 func (ts testSampler) Description() string {
@@ -289,7 +289,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
+		Attributes: []kv.KeyValue{
 			key.String("key1", "value1"),
 			key.String("key2", "value2"),
 		},
@@ -318,7 +318,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
+		Attributes: []kv.KeyValue{
 			key.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
@@ -353,7 +353,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
+		Attributes: []kv.KeyValue{
 			key.Bool("key1", false),
 			key.Int64("key4", 4),
 		},
@@ -400,8 +400,8 @@ func TestEvents(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
-			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []kv.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -449,8 +449,8 @@ func TestEventsOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		MessageEvents: []export.Event{
-			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []kv.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
@@ -494,8 +494,8 @@ func TestLinks(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
+			{SpanContext: sc1, Attributes: []kv.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -536,8 +536,8 @@ func TestLinksOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []apitrace.Link{
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
+			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2}},
+			{SpanContext: sc3, Attributes: []kv.KeyValue{k3v3}},
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
@@ -600,7 +600,7 @@ func TestSetSpanStatus(t *testing.T) {
 
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
-		cmp.AllowUnexported(core.Value{}),
+		cmp.AllowUnexported(kv.Value{}),
 		cmp.AllowUnexported(export.Event{}))
 }
 
@@ -937,7 +937,7 @@ func TestRecordError(t *testing.T) {
 				{
 					Name: errorEventName,
 					Time: errTime,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						errorTypeKey.String(s.typ),
 						errorMessageKey.String(s.msg),
 					},
@@ -983,7 +983,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 			{
 				Name: errorEventName,
 				Time: errTime,
-				Attributes: []core.KeyValue{
+				Attributes: []kv.KeyValue{
 					errorTypeKey.String("go.opentelemetry.io/otel/internal/testing.TestError"),
 					errorMessageKey.String("test error"),
 				},
@@ -1081,7 +1081,7 @@ func TestWithResource(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
+		Attributes: []kv.KeyValue{
 			key.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,

@@ -18,10 +18,10 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
@@ -72,7 +72,7 @@ func main() {
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
-	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
+	commonLabels := []kv.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
 
 	oneMetricCB := func(result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)

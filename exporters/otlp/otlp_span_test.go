@@ -27,8 +27,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -90,7 +90,7 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						key.String("user", "alice"),
 						key.Bool("authenticated", true),
 					},
@@ -109,7 +109,7 @@ func TestExportSpans(t *testing.T) {
 					Name:         "internal process",
 					StartTime:    startTime,
 					EndTime:      endTime,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						key.String("user", "alice"),
 						key.Bool("authenticated", true),
 					},
@@ -127,7 +127,7 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						key.String("user", "bob"),
 						key.Bool("authenticated", false),
 					},

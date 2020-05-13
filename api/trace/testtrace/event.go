@@ -17,12 +17,12 @@ package testtrace
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // Event encapsulates the properties of calls to AddEvent or AddEventWithTimestamp.
 type Event struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes map[core.Key]core.Value
+	Attributes map[kv.Key]kv.Value
 }

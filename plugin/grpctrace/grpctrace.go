@@ -19,9 +19,9 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -54,14 +54,14 @@ func Inject(ctx context.Context, metadata *metadata.MD) {
 // Extract returns the correlation context and span context that
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
-func Extract(ctx context.Context, metadata *metadata.MD) ([]core.KeyValue, trace.SpanContext) {
+func Extract(ctx context.Context, metadata *metadata.MD) ([]kv.KeyValue, trace.SpanContext) {
 	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), &metadataSupplier{
 		metadata: metadata,
 	})
 
 	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	var correlationCtxKVs []core.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(kv core.KeyValue) bool {
+	var correlationCtxKVs []kv.KeyValue
+	correlation.MapFromContext(ctx).Foreach(func(kv kv.KeyValue) bool {
 		correlationCtxKVs = append(correlationCtxKVs, kv)
 		return true
 	})

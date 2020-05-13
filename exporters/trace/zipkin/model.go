@@ -21,7 +21,7 @@ import (
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -122,7 +122,7 @@ func toZipkinAnnotations(events []export.Event) []zkmodel.Annotation {
 	return annotations
 }
 
-func attributesToJSONMapString(attributes []core.KeyValue) string {
+func attributesToJSONMapString(attributes []kv.KeyValue) string {
 	m := make(map[string]interface{}, len(attributes))
 	for _, attribute := range attributes {
 		m[(string)(attribute.Key)] = attribute.Value.AsInterface()

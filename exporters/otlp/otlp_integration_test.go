@@ -26,8 +26,8 @@ import (
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -117,7 +117,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	ctx := context.Background()
 	meter := pusher.Meter("test-meter")
-	labels := []core.KeyValue{key.Bool("test", true)}
+	labels := []kv.KeyValue{key.Bool("test", true)}
 
 	type data struct {
 		iKind metric.Kind

@@ -23,9 +23,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelkey "go.opentelemetry.io/otel/api/key"
+	otelcore "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 

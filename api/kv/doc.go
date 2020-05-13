@@ -17,4 +17,4 @@
 //
 // See the api/key package for convenience functions for creating keys
 // and key-value pairs.
-package core // import "go.opentelemetry.io/otel/api/core"
+package kv // import "go.opentelemetry.io/otel/api/kv"

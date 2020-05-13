@@ -22,9 +22,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -33,12 +33,12 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name    string
 		header  string
-		wantKVs []core.KeyValue
+		wantKVs []kv.KeyValue
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -46,7 +46,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -54,7 +54,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2;prop=1"),
 			},
@@ -62,7 +62,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2,val3"),
 			},
@@ -70,7 +70,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -78,7 +78,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
-			wantKVs: []core.KeyValue{
+			wantKVs: []kv.KeyValue{
 				key.New("key1").String(""),
 				key.New("key2").String("val2"),
 			},
@@ -102,9 +102,9 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(kv core.KeyValue) bool {
-				val, _ := gotCorCtx.Value(kv.Key)
-				diff := cmp.Diff(kv, core.KeyValue{Key: kv.Key, Value: val}, cmp.AllowUnexported(core.Value{}))
+			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
+				val, _ := gotCorCtx.Value(keyValue.Key)
+				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(kv.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -149,13 +149,13 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
-		kvs          []core.KeyValue
+		kvs          []kv.KeyValue
 		wantInHeader []string
 		wantedLen    int
 	}{
 		{
 			name: "two simple values",
-			kvs: []core.KeyValue{
+			kvs: []kv.KeyValue{
 				key.New("key1").String("val1"),
 				key.New("key2").String("val2"),
 			},
@@ -163,7 +163,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "two values with escaped chars",
-			kvs: []core.KeyValue{
+			kvs: []kv.KeyValue{
 				key.New("key1").String("val1,val2"),
 				key.New("key2").String("val3=4"),
 			},
@@ -171,7 +171,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "values of non-string types",
-			kvs: []core.KeyValue{
+			kvs: []kv.KeyValue{
 				key.New("key1").Bool(true),
 				key.New("key2").Int(123),
 				key.New("key3").Int64(123),

@@ -23,9 +23,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -102,17 +102,17 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	testLen := []struct {
 		name       string
-		attributes []core.KeyValue
+		attributes []kv.KeyValue
 		parent     string
 	}{
 		{
 			name:       "http.connect",
-			attributes: []core.KeyValue{key.String("http.remote", address.String())},
+			attributes: []kv.KeyValue{key.String("http.remote", address.String())},
 			parent:     "http.getconn",
 		},
 		{
 			name: "http.getconn",
-			attributes: []core.KeyValue{
+			attributes: []kv.KeyValue{
 				key.String("http.remote", address.String()),
 				key.String("http.host", address.String()),
 			},
@@ -141,12 +141,12 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			}
 		}
 
-		actualAttrs := make(map[core.Key]string)
+		actualAttrs := make(map[kv.Key]string)
 		for _, attr := range span.Attributes {
 			actualAttrs[attr.Key] = attr.Value.Emit()
 		}
 
-		expectedAttrs := make(map[core.Key]string)
+		expectedAttrs := make(map[kv.Key]string)
 		for _, attr := range tl.attributes {
 			expectedAttrs[attr.Key] = attr.Value.Emit()
 		}

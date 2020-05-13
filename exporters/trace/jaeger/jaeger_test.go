@@ -25,9 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -94,7 +94,7 @@ func TestNewRawExporter(t *testing.T) {
 		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
+			Tags: []kv.KeyValue{
 				key.String(tagKey, tagVal),
 			},
 		}),
@@ -141,7 +141,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
+			Tags: []kv.KeyValue{
 				key.String(tagKey, tagVal),
 			},
 		}),
@@ -230,14 +230,14 @@ func Test_spanDataToThrift(t *testing.T) {
 						},
 					},
 				},
-				Attributes: []core.KeyValue{
+				Attributes: []kv.KeyValue{
 					key.String("key", keyValue),
 					key.Float64("double", doubleValue),
 					// Jaeger doesn't handle Uint tags, this should be ignored.
 					key.Uint64("ignored", 123),
 				},
 				MessageEvents: []export.Event{
-					{Name: eventNameValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []kv.KeyValue{key.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,

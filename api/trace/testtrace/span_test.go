@@ -24,8 +24,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/internal/matchers"
@@ -160,9 +160,9 @@ func TestSpan(t *testing.T) {
 				expectedEvents := []testtrace.Event{{
 					Timestamp: testTime,
 					Name:      "error",
-					Attributes: map[core.Key]core.Value{
-						core.Key("error.type"):    core.String(s.typ),
-						core.Key("error.message"): core.String(s.msg),
+					Attributes: map[kv.Key]kv.Value{
+						kv.Key("error.type"):    kv.String(s.typ),
+						kv.Key("error.message"): kv.String(s.msg),
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -191,9 +191,9 @@ func TestSpan(t *testing.T) {
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
 				Name:      "error",
-				Attributes: map[core.Key]core.Value{
-					core.Key("error.type"):    core.String("go.opentelemetry.io/otel/internal/testing.TestError"),
-					core.Key("error.message"): core.String(errMsg),
+				Attributes: map[kv.Key]kv.Value{
+					kv.Key("error.type"):    kv.String("go.opentelemetry.io/otel/internal/testing.TestError"),
+					kv.Key("error.message"): kv.String(errMsg),
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -326,7 +326,7 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.Attributes()).ToEqual(map[core.Key]core.Value{})
+			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]kv.Value{})
 		})
 
 		t.Run("returns the most recently set attributes", func(t *testing.T) {
@@ -452,7 +452,7 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			event1Name := "event1"
-			event1Attributes := []core.KeyValue{
+			event1Attributes := []kv.KeyValue{
 				key.String("event1Attr1", "foo"),
 				key.String("event1Attr2", "bar"),
 			}
@@ -463,7 +463,7 @@ func TestSpan(t *testing.T) {
 
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
 			event2Name := "event1"
-			event2Attributes := []core.KeyValue{
+			event2Attributes := []kv.KeyValue{
 				key.String("event2Attr", "abc"),
 			}
 

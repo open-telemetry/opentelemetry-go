@@ -27,10 +27,10 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkey "go.opentelemetry.io/otel/api/key"
+	otelcore "go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"

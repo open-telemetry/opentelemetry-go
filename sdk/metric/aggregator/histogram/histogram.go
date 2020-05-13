@@ -162,7 +162,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	return nil
 }
 
-// numbers is an auxiliary struct to order histogram bucket boundaries (slice of core.Number)
+// numbers is an auxiliary struct to order histogram bucket boundaries (slice of kv.Number)
 type numbers struct {
 	numbers []metric.Number
 	kind    metric.NumberKind

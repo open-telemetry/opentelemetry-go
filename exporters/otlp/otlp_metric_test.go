@@ -25,8 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -79,12 +79,12 @@ type record struct {
 	nKind    metric.NumberKind
 	resource *resource.Resource
 	opts     []metric.Option
-	labels   []core.KeyValue
+	labels   []kv.KeyValue
 }
 
 var (
-	baseKeyValues = []core.KeyValue{key.String("host", "test.com")}
-	cpuKey        = core.Key("CPU")
+	baseKeyValues = []kv.KeyValue{key.String("host", "test.com")}
+	cpuKey        = kv.Key("CPU")
 
 	testInstA = resource.New(key.String("instance", "tester-a"))
 	testInstB = resource.New(key.String("instance", "tester-b"))

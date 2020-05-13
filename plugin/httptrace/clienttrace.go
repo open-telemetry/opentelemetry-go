@@ -24,9 +24,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -90,7 +90,7 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	}
 }
 
-func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
+func (ct *clientTracer) start(hook, spanName string, attrs ...kv.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
@@ -110,7 +110,7 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...core.KeyValue) {
 	}
 }
 
-func (ct *clientTracer) end(hook string, err error, attrs ...core.KeyValue) {
+func (ct *clientTracer) end(hook string, err error, attrs ...kv.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ctx, ok := ct.activeHooks[hook]; ok {

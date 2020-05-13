@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -284,9 +284,9 @@ func TestStdoutResource(t *testing.T) {
 	type testCase struct {
 		expect string
 		res    *resource.Resource
-		attrs  []core.KeyValue
+		attrs  []kv.KeyValue
 	}
-	newCase := func(expect string, res *resource.Resource, attrs ...core.KeyValue) testCase {
+	newCase := func(expect string, res *resource.Resource, attrs ...kv.KeyValue) testCase {
 		return testCase{
 			expect: expect,
 			res:    res,

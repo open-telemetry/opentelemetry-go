@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -100,7 +100,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(labels ...core.KeyValue) *label.Set {
+func makeLabels(labels ...kv.KeyValue) *label.Set {
 	s := label.NewSet(labels...)
 	return &s
 }

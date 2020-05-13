@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
@@ -194,13 +194,13 @@ func TestTracer(t *testing.T) {
 			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						key.String("ignored-on-demand", "current"),
 					},
 				},
 				{
 					SpanContext: remoteParentSpanContext,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						key.String("ignored-on-demand", "remote"),
 					},
 				},
@@ -226,7 +226,7 @@ func TestTracer(t *testing.T) {
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []core.KeyValue{
+				Attributes: []kv.KeyValue{
 					key.String("a", "1"),
 				},
 			}
@@ -234,7 +234,7 @@ func TestTracer(t *testing.T) {
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []core.KeyValue{
+				Attributes: []kv.KeyValue{
 					key.String("b", "2"),
 				},
 			}

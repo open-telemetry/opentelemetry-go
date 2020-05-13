@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package core_test
+package kv_test
 
 import (
 	"encoding/json"
@@ -22,65 +22,65 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 func TestValue(t *testing.T) {
-	k := core.Key("test")
+	k := kv.Key("test")
 	bli := getBitlessInfo(42)
 	for _, testcase := range []struct {
 		name      string
-		value     core.Value
-		wantType  core.ValueType
+		value     kv.Value
+		wantType  kv.ValueType
 		wantValue interface{}
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
 			value:     k.Bool(true).Value,
-			wantType:  core.BOOL,
+			wantType:  kv.BOOL,
 			wantValue: true,
 		},
 		{
 			name:      "Key.Int64() correctly returns keys's internal int64 value",
 			value:     k.Int64(42).Value,
-			wantType:  core.INT64,
+			wantType:  kv.INT64,
 			wantValue: int64(42),
 		},
 		{
 			name:      "Key.Uint64() correctly returns keys's internal uint64 value",
 			value:     k.Uint64(42).Value,
-			wantType:  core.UINT64,
+			wantType:  kv.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			name:      "Key.Float64() correctly returns keys's internal float64 value",
 			value:     k.Float64(42.1).Value,
-			wantType:  core.FLOAT64,
+			wantType:  kv.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			name:      "Key.Int32() correctly returns keys's internal int32 value",
 			value:     k.Int32(42).Value,
-			wantType:  core.INT32,
+			wantType:  kv.INT32,
 			wantValue: int32(42),
 		},
 		{
 			name:      "Key.Uint32() correctly returns keys's internal uint32 value",
 			value:     k.Uint32(42).Value,
-			wantType:  core.UINT32,
+			wantType:  kv.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			name:      "Key.Float32() correctly returns keys's internal float32 value",
 			value:     k.Float32(42.1).Value,
-			wantType:  core.FLOAT32,
+			wantType:  kv.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			name:      "Key.String() correctly returns keys's internal string value",
 			value:     k.String("foo").Value,
-			wantType:  core.STRING,
+			wantType:  kv.STRING,
 			wantValue: "foo",
 		},
 		{
@@ -110,8 +110,8 @@ func TestValue(t *testing.T) {
 type bitlessInfo struct {
 	intValue      int
 	uintValue     uint
-	signedType    core.ValueType
-	unsignedType  core.ValueType
+	signedType    kv.ValueType
+	unsignedType  kv.ValueType
 	signedValue   interface{}
 	unsignedValue interface{}
 }
@@ -121,8 +121,8 @@ func getBitlessInfo(i int) bitlessInfo {
 		return bitlessInfo{
 			intValue:      i,
 			uintValue:     uint(i),
-			signedType:    core.INT32,
-			unsignedType:  core.UINT32,
+			signedType:    kv.INT32,
+			unsignedType:  kv.UINT32,
 			signedValue:   int32(i),
 			unsignedValue: uint32(i),
 		}
@@ -130,8 +130,8 @@ func getBitlessInfo(i int) bitlessInfo {
 	return bitlessInfo{
 		intValue:      i,
 		uintValue:     uint(i),
-		signedType:    core.INT64,
-		unsignedType:  core.UINT64,
+		signedType:    kv.INT64,
+		unsignedType:  kv.UINT64,
 		signedValue:   int64(i),
 		unsignedValue: uint64(i),
 	}
@@ -140,22 +140,22 @@ func getBitlessInfo(i int) bitlessInfo {
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		k    core.Key
+		k    kv.Key
 		want bool
 	}{
 		{
 			name: "Key.Defined() returns true when len(v.Name) != 0",
-			k:    core.Key("foo"),
+			k:    kv.Key("foo"),
 			want: true,
 		},
 		{
 			name: "Key.Defined() returns false when len(v.Name) == 0",
-			k:    core.Key(""),
+			k:    kv.Key(""),
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//func (k core.Key) Defined() bool {
+			//func (k kv.Key) Defined() bool {
 			have := testcase.k.Defined()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -165,7 +165,7 @@ func TestDefined(t *testing.T) {
 }
 
 func TestJSONValue(t *testing.T) {
-	var kvs interface{} = [2]core.KeyValue{
+	var kvs interface{} = [2]kv.KeyValue{
 		key.String("A", "B"),
 		key.Int64("C", 1),
 	}
@@ -180,52 +180,52 @@ func TestJSONValue(t *testing.T) {
 func TestEmit(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		v    core.Value
+		v    kv.Value
 		want string
 	}{
 		{
 			name: `test Key.Emit() can emit a string representing self.BOOL`,
-			v:    core.Bool(true),
+			v:    kv.Bool(true),
 			want: "true",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v:    core.Int32(42),
+			v:    kv.Int32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
-			v:    core.Int64(42),
+			v:    kv.Int64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v:    core.Uint32(42),
+			v:    kv.Uint32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v:    core.Uint64(42),
+			v:    kv.Uint64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v:    core.Float32(42.1),
+			v:    kv.Float32(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
-			v:    core.Float64(42.1),
+			v:    kv.Float64(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.STRING`,
-			v:    core.String("foo"),
+			v:    kv.String("foo"),
 			want: "foo",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (v core.Value) Emit() string {
+			//proto: func (v kv.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -237,7 +237,7 @@ func TestEmit(t *testing.T) {
 func BenchmarkEmitBool(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Bool(i%2 == 0)
+		n := kv.Bool(i%2 == 0)
 		_ = n.Emit()
 	}
 }
@@ -245,7 +245,7 @@ func BenchmarkEmitBool(b *testing.B) {
 func BenchmarkEmitInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Int64(int64(i))
+		n := kv.Int64(int64(i))
 		_ = n.Emit()
 	}
 }
@@ -253,7 +253,7 @@ func BenchmarkEmitInt64(b *testing.B) {
 func BenchmarkEmitUInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Uint64(uint64(i))
+		n := kv.Uint64(uint64(i))
 		_ = n.Emit()
 	}
 }
@@ -261,7 +261,7 @@ func BenchmarkEmitUInt64(b *testing.B) {
 func BenchmarkEmitFloat64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Float64(float64(i))
+		n := kv.Float64(float64(i))
 		_ = n.Emit()
 	}
 }
@@ -269,7 +269,7 @@ func BenchmarkEmitFloat64(b *testing.B) {
 func BenchmarkEmitFloat32(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := core.Float32(float32(i))
+		n := kv.Float32(float32(i))
 		_ = n.Emit()
 	}
 }

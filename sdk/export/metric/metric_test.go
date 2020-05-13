@@ -17,19 +17,19 @@ package metric
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 
 	"github.com/stretchr/testify/require"
 )
 
-var testSlice = []core.KeyValue{
+var testSlice = []kv.KeyValue{
 	key.String("bar", "baz"),
 	key.Int("foo", 42),
 }
 
-func newIter(slice []core.KeyValue) label.Iterator {
+func newIter(slice []kv.KeyValue) label.Iterator {
 	labels := label.NewSet(slice...)
 	return labels.Iter()
 }

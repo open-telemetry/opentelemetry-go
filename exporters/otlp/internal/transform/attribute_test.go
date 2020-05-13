@@ -20,18 +20,18 @@ import (
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 func TestAttributes(t *testing.T) {
 	for _, test := range []struct {
-		attrs    []core.KeyValue
+		attrs    []kv.KeyValue
 		expected []*commonpb.AttributeKeyValue
 	}{
 		{nil, nil},
 		{
-			[]core.KeyValue{
+			[]kv.KeyValue{
 				key.Int("int to int", 123),
 				key.Uint("uint to int", 1234),
 				key.Int32("int32 to int", 12345),
