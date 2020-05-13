@@ -176,8 +176,10 @@ func (b BatchObserver) RegisterFloat64Observer(name string, opts ...Option) (Flo
 			b.runner))
 }
 
-// Observation returns BatchObserverCallback argument for an
-// asynchronous integer instrument.
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
 func (i Int64Observer) Observation(v int64) Observation {
 	return Observation{
 		number:     NewInt64Number(v),
@@ -185,8 +187,10 @@ func (i Int64Observer) Observation(v int64) Observation {
 	}
 }
 
-// Observation returns BatchObserverCallback argument for an
-// asynchronous floating point instrument.
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
 func (f Float64Observer) Observation(v float64) Observation {
 	return Observation{
 		number:     NewFloat64Number(v),

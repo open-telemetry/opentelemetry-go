@@ -30,7 +30,7 @@ var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 // AsyncInstrumentState helper below.  This interface is implemented by
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
-	// CollectAsync passes a batch pf observations to the MeterImpl.
+	// CollectAsync passes a batch of observations to the MeterImpl.
 	CollectAsync([]core.KeyValue, []metric.Observation)
 }
 

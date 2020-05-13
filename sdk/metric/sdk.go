@@ -320,10 +320,13 @@ func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	}
 }
 
+// DefaultErrorHandler is used when the user does not configure an
+// error handler.  Prints messages to os.Stderr.
 func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics Accumulator error:", err)
 }
 
+// NewSyncInstrument implements api.MetricImpl.
 func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
@@ -333,6 +336,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 	}, nil
 }
 
+// NewAsyncInstrument implements api.MetricImpl.
 func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metric.AsyncRunner) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
@@ -407,6 +411,7 @@ func (m *Accumulator) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
+// CollectAsync implements internal.AsyncCollector.
 func (m *Accumulator) CollectAsync(kv []core.KeyValue, obs []metric.Observation) {
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
@@ -497,6 +502,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []core.KeyValue, meas
 	}
 }
 
+// RecordOne implements api.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
@@ -515,6 +521,7 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	atomic.AddInt64(&r.updateCount, 1)
 }
 
+// Unbind implements api.SyncImpl.
 func (r *record) Unbind() {
 	r.refMapped.unref()
 }
