@@ -23,8 +23,11 @@ import (
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
 )
 
 func main() {
@@ -39,6 +42,9 @@ func main() {
 
 	tp, _ := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithResourceAttributes(
+			core.Key(conventions.AttributeServiceName).String("test-service"),
+		),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
 			sdktrace.WithScheduleDelayMillis(5),
 			sdktrace.WithMaxExportBatchSize(2),
@@ -46,6 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error creating trace provider: %v\n", err)
 	}
+
 	tracer := tp.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
