@@ -83,7 +83,9 @@ func (a *AsyncInstrumentState) Instruments() []metric.AsyncImpl {
 }
 
 // Register adds a new asynchronous instrument to by managed by this
-// object.
+// object.  This should be called during NewAsyncInstrument() and
+// assumes that errors (e.g., duplicate registration) have already
+// been checked.
 func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.AsyncRunner) {
 	a.lock.Lock()
 	defer a.lock.Unlock()

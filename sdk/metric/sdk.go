@@ -50,7 +50,6 @@ type (
 		asyncLock        sync.Mutex
 		asyncInstruments *internal.AsyncInstrumentState
 		asyncContext     context.Context
-		asyncCollected   int
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -421,7 +420,7 @@ func (m *Accumulator) collectAsync(ctx context.Context) int {
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 
-	m.asyncCollected = 0
+	asyncCollected := 0
 	m.asyncContext = ctx
 
 	m.asyncInstruments.Run(m)
@@ -429,10 +428,10 @@ func (m *Accumulator) collectAsync(ctx context.Context) int {
 
 	for _, inst := range m.asyncInstruments.Instruments() {
 		a := inst.Implementation().(*asyncInstrument)
-		m.asyncCollected += m.checkpointAsync(a)
+		asyncCollected += m.checkpointAsync(a)
 	}
 
-	return m.asyncCollected
+	return asyncCollected
 }
 
 func (m *Accumulator) checkpointRecord(ctx context.Context, r *record) int {
