@@ -121,7 +121,7 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, 
 
 func NewProvider() (*MeterImpl, apimetric.Provider) {
 	impl := &MeterImpl{
-		asyncInstruments: NewAsyncInstrumentState(),
+		asyncInstruments: NewAsyncInstrumentState(nil),
 	}
 	p := &MeterProvider{
 		impl:       impl,

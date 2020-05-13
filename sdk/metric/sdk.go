@@ -316,7 +316,7 @@ func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	return &Accumulator{
 		integrator:       integrator,
 		errorHandler:     c.ErrorHandler,
-		asyncInstruments: internal.NewAsyncInstrumentState(),
+		asyncInstruments: internal.NewAsyncInstrumentState(c.ErrorHandler),
 	}
 }
 

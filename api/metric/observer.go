@@ -70,9 +70,11 @@ type BatchObserverResult struct {
 	function func([]core.KeyValue, []Observation)
 }
 
-// AsyncRunner is an interface implemented by all Observer callbacks.
-// observers run.
+// AsyncRunner is expected to convert into an AsyncSingleRunner or an
+// AsyncBatchRunner.
 type AsyncRunner interface {
+	// anyRunner() is a non-exported method with no functional use
+	// other than to make this a non-empty interface.
 	anyRunner()
 }
 
@@ -85,14 +87,16 @@ type AsyncSingleRunner interface {
 	// multiple observations so the same implementation can be
 	// used for batch runners.)
 	Run(AsyncImpl, func([]core.KeyValue, []Observation))
-	anyRunner()
+
+	AsyncRunner
 }
 
 // AsyncBatchRunner is an interface implemented by batch-observer
 // callbacks.
 type AsyncBatchRunner interface {
 	Run(func([]core.KeyValue, []Observation))
-	anyRunner()
+
+	AsyncRunner
 }
 
 // Observe captures a single integer value from the associated
