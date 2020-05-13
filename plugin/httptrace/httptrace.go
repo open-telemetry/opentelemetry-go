@@ -20,15 +20,14 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
-	HostKey = key.New("http.host")
-	URLKey  = key.New("http.url")
+	HostKey = kv.NewKey("http.host")
+	URLKey  = kv.NewKey("http.url")
 )
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.

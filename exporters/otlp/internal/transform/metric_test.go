@@ -23,7 +23,6 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -48,16 +47,16 @@ func TestStringKeyValues(t *testing.T) {
 		},
 		{
 			[]kv.KeyValue{
-				key.Bool("true", true),
-				key.Int64("one", 1),
-				key.Uint64("two", 2),
-				key.Float64("three", 3),
-				key.Int32("four", 4),
-				key.Uint32("five", 5),
-				key.Float32("six", 6),
-				key.Int("seven", 7),
-				key.Uint("eight", 8),
-				key.String("the", "final word"),
+				kv.Bool("true", true),
+				kv.Int64("one", 1),
+				kv.Uint64("two", 2),
+				kv.Float64("three", 3),
+				kv.Int32("four", 4),
+				kv.Uint32("five", 5),
+				kv.Float32("six", 6),
+				kv.Int("seven", 7),
+				kv.Uint("eight", 8),
+				kv.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{
 				{Key: "eight", Value: "8"},
@@ -131,7 +130,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Bytes,
 			metric.Float64NumberKind, // This shouldn't change anything.
-			[]kv.KeyValue{key.String("A", "1")},
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-b",
 				Description: "test-b-description",
@@ -233,7 +232,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Milliseconds,
 			metric.Float64NumberKind,
-			[]kv.KeyValue{key.String("A", "1")},
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-b",
 				Description: "test-b-description",

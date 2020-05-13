@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
@@ -30,7 +29,7 @@ import (
 )
 
 var (
-	lemonsKey = key.New("ex.com/lemons")
+	lemonsKey = kv.NewKey("ex.com/lemons")
 )
 
 func initMeter() *push.Controller {
@@ -67,7 +66,7 @@ func main() {
 	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
 	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
-	commonLabels := []kv.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
+	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 	notSoCommonLabels := []kv.KeyValue{lemonsKey.Int(13)}
 
 	ctx := context.Background()

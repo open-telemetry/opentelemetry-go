@@ -28,7 +28,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
@@ -75,9 +74,9 @@ func TestDirect(t *testing.T) {
 	ctx := context.Background()
 	meter1 := global.Meter("test1")
 	meter2 := global.Meter("test2")
-	labels1 := []kv.KeyValue{key.String("A", "B")}
-	labels2 := []kv.KeyValue{key.String("C", "D")}
-	labels3 := []kv.KeyValue{key.String("E", "F")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
+	labels2 := []kv.KeyValue{kv.String("C", "D")}
+	labels3 := []kv.KeyValue{kv.String("E", "F")}
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -168,7 +167,7 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.Meter("test")
-	labels1 := []kv.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -212,7 +211,7 @@ func TestUnbind(t *testing.T) {
 	internal.ResetForTest()
 
 	glob := global.Meter("test")
-	labels1 := []kv.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -229,7 +228,7 @@ func TestDefaultSDK(t *testing.T) {
 
 	ctx := context.Background()
 	meter1 := global.Meter("builtin")
-	labels1 := []kv.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(meter1).NewInt64Counter("test.builtin")
 	counter.Add(ctx, 1, labels1...)

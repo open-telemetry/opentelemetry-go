@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
@@ -52,8 +51,8 @@ func TestPrometheusExporter(t *testing.T) {
 		"histogram_measure", metric.MeasureKind, metric.Float64NumberKind)
 
 	labels := []kv.KeyValue{
-		key.New("A").String("B"),
-		key.New("C").String("D"),
+		kv.NewKey("A").String("B"),
+		kv.NewKey("C").String("D"),
 	}
 
 	checkpointSet.AddCounter(&counter, 15.3, labels...)
@@ -84,8 +83,8 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `histogram_measure_sum{A="B",C="D"} 19.6`)
 
 	missingLabels := []kv.KeyValue{
-		key.New("A").String("E"),
-		key.New("C").String(""),
+		kv.NewKey("A").String("E"),
+		kv.NewKey("C").String(""),
 	}
 
 	checkpointSet.AddCounter(&counter, 12, missingLabels...)

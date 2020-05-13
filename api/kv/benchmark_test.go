@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package key_test
+package kv_test
 
 import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -35,7 +36,7 @@ func getSpan() trace.Span {
 
 func BenchmarkKeyInfer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		key.Infer("Attr", int(256))
+		kv.Infer("Attr", int(256))
 	}
 }
 
@@ -46,7 +47,7 @@ func BenchmarkMultiNoKeyInference(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sp.SetAttributes(key.Int("Attr", 1))
+		sp.SetAttributes(kv.Int("Attr", 1))
 	}
 }
 
@@ -57,7 +58,7 @@ func BenchmarkMultiWithKeyInference(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sp.SetAttributes(key.Infer("Attr", 1))
+		sp.SetAttributes(kv.Infer("Attr", 1))
 	}
 }
 

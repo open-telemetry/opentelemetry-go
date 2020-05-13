@@ -17,9 +17,9 @@ package testtrace
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"go.opentelemetry.io/otel/api/kv"
+
+	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 // Event encapsulates the properties of calls to AddEvent or AddEventWithTimestamp.

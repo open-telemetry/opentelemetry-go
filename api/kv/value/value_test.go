@@ -18,9 +18,10 @@ import (
 	"testing"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
 )
 

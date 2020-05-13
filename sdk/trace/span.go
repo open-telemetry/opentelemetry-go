@@ -23,7 +23,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -102,7 +101,7 @@ func (s *span) SetAttributes(attributes ...kv.KeyValue) {
 }
 
 func (s *span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(key.Infer(k, v))
+	s.SetAttributes(kv.Infer(k, v))
 }
 
 func (s *span) End(options ...apitrace.EndOption) {

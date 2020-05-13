@@ -17,7 +17,6 @@ package metric
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 
@@ -25,8 +24,8 @@ import (
 )
 
 var testSlice = []kv.KeyValue{
-	key.String("bar", "baz"),
-	key.Int("foo", 42),
+	kv.String("bar", "baz"),
+	kv.Int("foo", 42),
 }
 
 func newIter(slice []kv.KeyValue) label.Iterator {
@@ -39,17 +38,17 @@ func TestLabelIterator(t *testing.T) {
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, key.String("bar", "baz"), iter.Label())
+	require.Equal(t, kv.String("bar", "baz"), iter.Label())
 	idx, label := iter.IndexedLabel()
 	require.Equal(t, 0, idx)
-	require.Equal(t, key.String("bar", "baz"), label)
+	require.Equal(t, kv.String("bar", "baz"), label)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, key.Int("foo", 42), iter.Label())
+	require.Equal(t, kv.Int("foo", 42), iter.Label())
 	idx, label = iter.IndexedLabel()
 	require.Equal(t, 1, idx)
-	require.Equal(t, key.Int("foo", 42), label)
+	require.Equal(t, kv.Int("foo", 42), label)
 	require.Equal(t, 2, iter.Len())
 
 	require.False(t, iter.Next())

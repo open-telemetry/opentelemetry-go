@@ -17,7 +17,6 @@ package label_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 
@@ -38,16 +37,16 @@ func expect(enc string, kvs ...kv.KeyValue) testCase {
 
 func TestSetDedup(t *testing.T) {
 	cases := []testCase{
-		expect("A=B", key.String("A", "2"), key.String("A", "B")),
-		expect("A=B", key.String("A", "2"), key.Int("A", 1), key.String("A", "B")),
-		expect("A=B", key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
+		expect("A=B", kv.String("A", "2"), kv.String("A", "B")),
+		expect("A=B", kv.String("A", "2"), kv.Int("A", 1), kv.String("A", "B")),
+		expect("A=B", kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
 
-		expect("A=B,C=D", key.String("A", "1"), key.String("C", "D"), key.String("A", "B")),
-		expect("A=B,C=D", key.String("A", "2"), key.String("A", "B"), key.String("C", "D")),
-		expect("A=B,C=D", key.Float64("C", 1.2), key.String("A", "2"), key.String("A", "B"), key.String("C", "D")),
-		expect("A=B,C=D", key.String("C", "D"), key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
-		expect("A=B,C=D", key.String("A", "B"), key.String("C", "D"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B")),
-		expect("A=B,C=D", key.String("A", "B"), key.String("A", "C"), key.String("A", "D"), key.String("A", "B"), key.String("C", "D")),
+		expect("A=B,C=D", kv.String("A", "1"), kv.String("C", "D"), kv.String("A", "B")),
+		expect("A=B,C=D", kv.String("A", "2"), kv.String("A", "B"), kv.String("C", "D")),
+		expect("A=B,C=D", kv.Float64("C", 1.2), kv.String("A", "2"), kv.String("A", "B"), kv.String("C", "D")),
+		expect("A=B,C=D", kv.String("C", "D"), kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
+		expect("A=B,C=D", kv.String("A", "B"), kv.String("C", "D"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
+		expect("A=B,C=D", kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B"), kv.String("C", "D")),
 	}
 	enc := label.DefaultEncoder()
 

@@ -21,7 +21,6 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -112,7 +111,7 @@ func makeLabels(n int) []kv.KeyValue {
 				break
 			}
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -568,7 +567,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	}
 
 	c := fix.meter.NewInt64Counter("int64.counter")
-	k := key.String("bench", "true")
+	k := kv.String("bench", "true")
 
 	b.ResetTimer()
 

@@ -31,7 +31,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
@@ -143,7 +142,7 @@ func (f *testFixture) someLabels() []kv.KeyValue {
 					break
 				}
 			}
-			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+			l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
 		lc := canonicalizeLabels(l)
 		f.lock.Lock()

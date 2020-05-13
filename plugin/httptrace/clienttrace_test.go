@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -107,14 +106,14 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	}{
 		{
 			name:       "http.connect",
-			attributes: []kv.KeyValue{key.String("http.remote", address.String())},
+			attributes: []kv.KeyValue{kv.String("http.remote", address.String())},
 			parent:     "http.getconn",
 		},
 		{
 			name: "http.getconn",
 			attributes: []kv.KeyValue{
-				key.String("http.remote", address.String()),
-				key.String("http.host", address.String()),
+				kv.String("http.remote", address.String()),
+				kv.String("http.host", address.String()),
 			},
 			parent: "test",
 		},
@@ -152,7 +151,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		}
 
 		if tl.name == "http.getconn" {
-			local := key.New("http.local")
+			local := kv.NewKey("http.local")
 			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
 			if _, ok := actualAttrs[local]; ok {
 				delete(actualAttrs, local)

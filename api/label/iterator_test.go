@@ -17,15 +17,16 @@ package label_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/label"
 )
 
 func TestIterator(t *testing.T) {
-	one := key.String("one", "1")
-	two := key.Int("two", 2)
+	one := kv.String("one", "1")
+	two := kv.Int("two", 2)
 	lbl := label.NewSet(one, two)
 	iter := lbl.Iter()
 	require.Equal(t, 2, iter.Len())

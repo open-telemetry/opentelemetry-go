@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -75,7 +74,7 @@ func TestEmptySpanEvent(t *testing.T) {
 }
 
 func TestSpanEvent(t *testing.T) {
-	attrs := []kv.KeyValue{key.Int("one", 1), key.Int("two", 2)}
+	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
 	now := time.Now()
 	got := spanEvents([]export.Event{
 		{
@@ -119,7 +118,7 @@ func TestEmptyLinks(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	attrs := []kv.KeyValue{key.Int("one", 1), key.Int("two", 2)}
+	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
 	l := []apitrace.Link{
 		{},
 		{
@@ -282,12 +281,12 @@ func TestSpanData(t *testing.T) {
 		MessageEvents: []export.Event{
 			{Time: startTime,
 				Attributes: []kv.KeyValue{
-					key.Uint64("CompressedByteSize", 512),
+					kv.Uint64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
 				Attributes: []kv.KeyValue{
-					key.String("MessageEventType", "Recv"),
+					kv.String("MessageEventType", "Recv"),
 				},
 			},
 		},
@@ -299,7 +298,7 @@ func TestSpanData(t *testing.T) {
 					TraceFlags: 0,
 				},
 				Attributes: []kv.KeyValue{
-					key.String("LinkType", "Parent"),
+					kv.String("LinkType", "Parent"),
 				},
 			},
 			{
@@ -309,7 +308,7 @@ func TestSpanData(t *testing.T) {
 					TraceFlags: 0,
 				},
 				Attributes: []kv.KeyValue{
-					key.String("LinkType", "Child"),
+					kv.String("LinkType", "Child"),
 				},
 			},
 		},
@@ -317,12 +316,12 @@ func TestSpanData(t *testing.T) {
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
 		Attributes: []kv.KeyValue{
-			key.Int64("timeout_ns", 12e9),
+			kv.Int64("timeout_ns", 12e9),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
-		Resource:                 resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5)),
+		Resource:                 resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
 	}
 
 	// Not checking resource as the underlying map of our Resource makes

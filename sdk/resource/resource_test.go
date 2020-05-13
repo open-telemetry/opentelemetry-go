@@ -24,17 +24,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
-	kv11 = key.String("k1", "v11")
-	kv12 = key.String("k1", "v12")
-	kv21 = key.String("k2", "v21")
-	kv31 = key.String("k3", "v31")
-	kv41 = key.String("k4", "v41")
+	kv11 = kv.String("k1", "v11")
+	kv12 = kv.String("k1", "v12")
+	kv21 = kv.String("k2", "v21")
+	kv31 = kv.String("k3", "v31")
+	kv41 = kv.String("k4", "v41")
 )
 
 func TestNew(t *testing.T) {
@@ -44,17 +43,17 @@ func TestNew(t *testing.T) {
 		want []kv.KeyValue
 	}{
 		{
-			name: "New with common key order1",
+			name: "NewKey with common key order1",
 			in:   []kv.KeyValue{kv12, kv11, kv21},
 			want: []kv.KeyValue{kv11, kv21},
 		},
 		{
-			name: "New with common key order2",
+			name: "NewKey with common key order2",
 			in:   []kv.KeyValue{kv11, kv12, kv21},
 			want: []kv.KeyValue{kv12, kv21},
 		},
 		{
-			name: "New with nil",
+			name: "NewKey with nil",
 			in:   nil,
 			want: nil,
 		},
@@ -190,23 +189,23 @@ func TestString(t *testing.T) {
 			want: "k1=v11,k2=v21,k3=v31",
 		},
 		{
-			kvs:  []kv.KeyValue{key.String("A", "a"), key.String("B", "b")},
+			kvs:  []kv.KeyValue{kv.String("A", "a"), kv.String("B", "b")},
 			want: "A=a,B=b",
 		},
 		{
-			kvs:  []kv.KeyValue{key.String("A", "a,B=b")},
+			kvs:  []kv.KeyValue{kv.String("A", "a,B=b")},
 			want: `A=a\,B\=b`,
 		},
 		{
-			kvs:  []kv.KeyValue{key.String("A", `a,B\=b`)},
+			kvs:  []kv.KeyValue{kv.String("A", `a,B\=b`)},
 			want: `A=a\,B\\\=b`,
 		},
 		{
-			kvs:  []kv.KeyValue{key.String("A=a,B", `b`)},
+			kvs:  []kv.KeyValue{kv.String("A=a,B", `b`)},
 			want: `A\=a\,B=b`,
 		},
 		{
-			kvs:  []kv.KeyValue{key.String(`A=a\,B`, `b`)},
+			kvs:  []kv.KeyValue{kv.String(`A=a\,B`, `b`)},
 			want: `A\=a\\\,B=b`,
 		},
 	} {
@@ -217,7 +216,7 @@ func TestString(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	r := resource.New(key.Int64("A", 1), key.String("C", "D"))
+	r := resource.New(kv.Int64("A", 1), kv.String("C", "D"))
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
 	require.Equal(t,

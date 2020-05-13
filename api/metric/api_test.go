@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
@@ -98,7 +97,7 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
-		labels := []kv.KeyValue{key.String("A", "B")}
+		labels := []kv.KeyValue{kv.String("A", "B")}
 		c.Add(ctx, 42, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 42)
@@ -110,7 +109,7 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
-		labels := []kv.KeyValue{key.String("A", "B"), key.String("C", "D")}
+		labels := []kv.KeyValue{kv.String("A", "B"), kv.String("C", "D")}
 		c.Add(ctx, 42, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 42)
@@ -137,7 +136,7 @@ func TestMeasure(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewInt64Measure("test.measure.int")
 		ctx := context.Background()
-		labels := []kv.KeyValue{key.Int("I", 1)}
+		labels := []kv.KeyValue{kv.Int("I", 1)}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 42)
@@ -149,7 +148,7 @@ func TestMeasure(t *testing.T) {
 
 func TestObserver(t *testing.T) {
 	{
-		labels := []kv.KeyValue{key.String("O", "P")}
+		labels := []kv.KeyValue{kv.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels...)

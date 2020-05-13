@@ -18,12 +18,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv/value"
-
-	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/api/kv"
 )
 
 func TestDefined(t *testing.T) {
@@ -55,8 +54,8 @@ func TestDefined(t *testing.T) {
 
 func TestJSONValue(t *testing.T) {
 	var kvs interface{} = [2]kv.KeyValue{
-		key.String("A", "B"),
-		key.Int64("C", 1),
+		kv.String("A", "B"),
+		kv.Int64("C", 1),
 	}
 
 	data, err := json.Marshal(kvs)

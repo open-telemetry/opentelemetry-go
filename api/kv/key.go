@@ -14,16 +14,17 @@
 
 package kv
 
-import "go.opentelemetry.io/otel/api/kv/value"
+import (
+	"go.opentelemetry.io/otel/api/kv/value"
+)
 
 // Key represents the key part in key-value pairs. It's a string. The
 // allowed character set in the key depends on the use of the key.
 type Key string
 
-// KeyValue holds a key and value pair.
-type KeyValue struct {
-	Key   Key
-	Value value.Value
+// NewKey creates a new key with a passed name.
+func NewKey(name string) Key {
+	return Key(name)
 }
 
 // Bool creates a KeyValue instance with a BOOL Value.

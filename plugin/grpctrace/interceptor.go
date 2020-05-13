@@ -29,19 +29,18 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
-	rpcServiceKey  = key.New("rpc.service")
-	netPeerIPKey   = key.New("net.peer.ip")
-	netPeerPortKey = key.New("net.peer.port")
+	rpcServiceKey  = kv.NewKey("rpc.service")
+	netPeerIPKey   = kv.NewKey("net.peer.ip")
+	netPeerPortKey = kv.NewKey("net.peer.port")
 
-	messageTypeKey             = key.New("message.type")
-	messageIDKey               = key.New("message.id")
-	messageUncompressedSizeKey = key.New("message.uncompressed_size")
+	messageTypeKey             = kv.NewKey("message.type")
+	messageIDKey               = kv.NewKey("message.id")
+	messageUncompressedSizeKey = kv.NewKey("message.uncompressed_size")
 )
 
 const (

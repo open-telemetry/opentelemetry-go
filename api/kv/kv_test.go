@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package key_test
+package kv_test
 
 import (
 	"strings"
 	"testing"
 
-	value2 "go.opentelemetry.io/otel/api/kv/value"
-
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
@@ -34,89 +32,89 @@ func TestKeyValueConstructors(t *testing.T) {
 	}{
 		{
 			name:   "Bool",
-			actual: key.Bool("k1", true),
+			actual: kv.Bool("k1", true),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Bool(true),
+				Value: value.Bool(true),
 			},
 		},
 		{
 			name:   "Int64",
-			actual: key.Int64("k1", 123),
+			actual: kv.Int64("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Int64(123),
+				Value: value.Int64(123),
 			},
 		},
 		{
 			name:   "Uint64",
-			actual: key.Uint64("k1", 1),
+			actual: kv.Uint64("k1", 1),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Uint64(1),
+				Value: value.Uint64(1),
 			},
 		},
 		{
 			name:   "Float64",
-			actual: key.Float64("k1", 123.5),
+			actual: kv.Float64("k1", 123.5),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Float64(123.5),
+				Value: value.Float64(123.5),
 			},
 		},
 		{
 			name:   "Int32",
-			actual: key.Int32("k1", 123),
+			actual: kv.Int32("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Int32(123),
+				Value: value.Int32(123),
 			},
 		},
 		{
 			name:   "Uint32",
-			actual: key.Uint32("k1", 123),
+			actual: kv.Uint32("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Uint32(123),
+				Value: value.Uint32(123),
 			},
 		},
 		{
 			name:   "Float32",
-			actual: key.Float32("k1", 123.5),
+			actual: kv.Float32("k1", 123.5),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Float32(123.5),
+				Value: value.Float32(123.5),
 			},
 		},
 		{
 			name:   "String",
-			actual: key.String("k1", "123.5"),
+			actual: kv.String("k1", "123.5"),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.String("123.5"),
+				Value: value.String("123.5"),
 			},
 		},
 		{
 			name:   "Int",
-			actual: key.Int("k1", 123),
+			actual: kv.Int("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Int(123),
+				Value: value.Int(123),
 			},
 		},
 		{
 			name:   "Uint",
-			actual: key.Uint("k1", 123),
+			actual: kv.Uint("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value2.Uint(123),
+				Value: value.Uint(123),
 			},
 		},
 	}
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(value2.Value{})); diff != "" {
+			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(value.Value{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -129,76 +127,76 @@ func TestInfer(t *testing.T) {
 	for _, testcase := range []struct {
 		key       string
 		value     interface{}
-		wantType  value2.Type
+		wantType  value.Type
 		wantValue interface{}
 	}{
 		{
 			key:       "bool type inferred",
 			value:     true,
-			wantType:  value2.BOOL,
+			wantType:  value.BOOL,
 			wantValue: true,
 		},
 		{
 			key:       "int64 type inferred",
 			value:     int64(42),
-			wantType:  value2.INT64,
+			wantType:  value.INT64,
 			wantValue: int64(42),
 		},
 		{
 			key:       "uint64 type inferred",
 			value:     uint64(42),
-			wantType:  value2.UINT64,
+			wantType:  value.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			key:       "float64 type inferred",
 			value:     float64(42.1),
-			wantType:  value2.FLOAT64,
+			wantType:  value.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			key:       "int32 type inferred",
 			value:     int32(42),
-			wantType:  value2.INT32,
+			wantType:  value.INT32,
 			wantValue: int32(42),
 		},
 		{
 			key:       "uint32 type inferred",
 			value:     uint32(42),
-			wantType:  value2.UINT32,
+			wantType:  value.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			key:       "float32 type inferred",
 			value:     float32(42.1),
-			wantType:  value2.FLOAT32,
+			wantType:  value.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			key:       "string type inferred",
 			value:     "foo",
-			wantType:  value2.STRING,
+			wantType:  value.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "stringer type inferred",
 			value:     builder,
-			wantType:  value2.STRING,
+			wantType:  value.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "unknown value serialized as %v",
 			value:     nil,
-			wantType:  value2.STRING,
+			wantType:  value.STRING,
 			wantValue: "<nil>",
 		},
 	} {
 		t.Logf("Running test case %s", testcase.key)
-		kv := key.Infer(testcase.key, testcase.value)
-		if kv.Value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", kv.Value.Type(), testcase.wantType)
+		keyValue := kv.Infer(testcase.key, testcase.value)
+		if keyValue.Value.Type() != testcase.wantType {
+			t.Errorf("wrong value type, got %#v, expected %#v", keyValue.Value.Type(), testcase.wantType)
 		}
-		got := kv.Value.AsInterface()
+		got := keyValue.Value.AsInterface()
 		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
 			t.Errorf("+got, -want: %s", diff)
 		}

@@ -19,7 +19,6 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 )
@@ -98,7 +97,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, kv.NewKey(trimmedName).String(trimmedValueWithProps.String()))
 	}
 	return ContextWithMap(ctx, NewMap(MapUpdate{
 		MultiKV: keyValues,

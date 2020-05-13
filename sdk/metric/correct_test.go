@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -257,28 +256,28 @@ func newSetIter(kvs ...kv.KeyValue) label.Iterator {
 func TestDefaultLabelEncoder(t *testing.T) {
 	encoder := label.DefaultEncoder()
 
-	encoded := encoder.Encode(newSetIter(key.String("A", "B"), key.String("C", "D")))
+	encoded := encoder.Encode(newSetIter(kv.String("A", "B"), kv.String("C", "D")))
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(newSetIter(key.String("A", "B,c=d"), key.String(`C\`, "D")))
+	encoded = encoder.Encode(newSetIter(kv.String("A", "B,c=d"), kv.String(`C\`, "D")))
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(newSetIter(key.String(`\`, `=`), key.String(`,`, `\`)))
+	encoded = encoder.Encode(newSetIter(kv.String(`\`, `=`), kv.String(`,`, `\`)))
 	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
 	encoded = encoder.Encode(newSetIter(
-		key.Int("I", 1),
-		key.Uint("U", 1),
-		key.Int32("I32", 1),
-		key.Uint32("U32", 1),
-		key.Int64("I64", 1),
-		key.Uint64("U64", 1),
-		key.Float64("F64", 1),
-		key.Float64("F64", 1),
-		key.String("S", "1"),
-		key.Bool("B", true),
+		kv.Int("I", 1),
+		kv.Uint("U", 1),
+		kv.Int32("I32", 1),
+		kv.Uint32("U32", 1),
+		kv.Int64("I64", 1),
+		kv.Uint64("U64", 1),
+		kv.Float64("F64", 1),
+		kv.Float64("F64", 1),
+		kv.String("S", "1"),
+		kv.Bool("B", true),
 	))
 	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
 }
@@ -293,16 +292,16 @@ func TestObserverCollection(t *testing.T) {
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
-		result.Observe(1, key.String("A", "B"))
+		result.Observe(1, kv.String("A", "B"))
 		// last value wins
-		result.Observe(-1, key.String("A", "B"))
-		result.Observe(-1, key.String("C", "D"))
+		result.Observe(-1, kv.String("A", "B"))
+		result.Observe(-1, kv.String("C", "D"))
 	})
 	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
-		result.Observe(-1, key.String("A", "B"))
+		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
-		result.Observe(1, key.String("A", "B"))
+		result.Observe(1, kv.String("A", "B"))
 		result.Observe(1)
 	})
 	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
@@ -342,8 +341,8 @@ func TestRecordBatch(t *testing.T) {
 	sdk.RecordBatch(
 		ctx,
 		[]kv.KeyValue{
-			key.String("A", "B"),
-			key.String("C", "D"),
+			kv.String("A", "B"),
+			kv.String("C", "D"),
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
@@ -378,8 +377,8 @@ func TestRecordPersistence(t *testing.T) {
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	c := Must(meter).NewFloat64Counter("sum.name")
-	b := c.Bind(key.String("bound", "true"))
-	uk := key.String("bound", "false")
+	b := c.Bind(kv.String("bound", "true"))
+	uk := kv.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)

@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/trace"
 )
 
