@@ -25,13 +25,8 @@ import (
 // AsyncInstrumentState helper below.  This interface is implemented by
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
-	// CollectAsyncSingle passes a single observation to the
-	// MeterImpl.
-	CollectAsyncSingle([]core.KeyValue, metric.Observation)
-
-	// CollectAsyncSingle passes a batch observation to the
-	// MeterImpl.
-	CollectAsyncBatch([]core.KeyValue, []metric.Observation)
+	// CollectAsync passes a batch pf observations to the MeterImpl.
+	CollectAsync([]core.KeyValue, []metric.Observation)
 }
 
 // AsyncInstrumentState manages an ordered set of asynchronous
@@ -125,12 +120,12 @@ func (a *AsyncInstrumentState) Run(collector AsyncCollector) {
 		// interface has un-exported methods.
 
 		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
-			singleRunner.Run(rp.inst, collector.CollectAsyncSingle)
+			singleRunner.Run(rp.inst, collector.CollectAsync)
 			continue
 		}
 
 		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
-			multiRunner.Run(collector.CollectAsyncBatch)
+			multiRunner.Run(collector.CollectAsync)
 			continue
 		}
 

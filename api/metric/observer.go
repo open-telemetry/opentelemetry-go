@@ -54,14 +54,14 @@ type BatchObserver struct {
 // observations for one asynchronous integer metric instrument.
 type Int64ObserverResult struct {
 	instrument AsyncImpl
-	function   func([]core.KeyValue, Observation)
+	function   func([]core.KeyValue, []Observation)
 }
 
 // Float64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous floating point metric instrument.
 type Float64ObserverResult struct {
 	instrument AsyncImpl
-	function   func([]core.KeyValue, Observation)
+	function   func([]core.KeyValue, []Observation)
 }
 
 // BatchObserverResult is passed to a batch observer callback to
@@ -79,7 +79,12 @@ type AsyncRunner interface {
 // AsyncSingleRunner is an interface implemented by single-observer
 // callbacks.
 type AsyncSingleRunner interface {
-	Run(AsyncImpl, func([]core.KeyValue, Observation))
+	// Run accepts a one instrument and function for capturing
+	// observations one that instrument.  Each call to the
+	// function receives one observation.  (The function accepts
+	// multiple observations so the same implementation can be
+	// used for batch runners.)
+	Run(AsyncImpl, func([]core.KeyValue, []Observation))
 	anyRunner()
 }
 
@@ -93,18 +98,22 @@ type AsyncBatchRunner interface {
 // Observe captures a single integer value from the associated
 // instrument callback, with the given labels.
 func (ir Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	ir.function(labels, Observation{
-		instrument: ir.instrument,
-		number:     NewInt64Number(value),
+	ir.function(labels, []Observation{
+		{
+			instrument: ir.instrument,
+			number:     NewInt64Number(value),
+		},
 	})
 }
 
 // Observe captures a single floating point value from the associated
 // instrument callback, with the given labels.
 func (fr Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fr.function(labels, Observation{
-		instrument: fr.instrument,
-		number:     NewFloat64Number(value),
+	fr.function(labels, []Observation{
+		{
+			instrument: fr.instrument,
+			number:     NewFloat64Number(value),
+		},
 	})
 }
 
@@ -178,13 +187,17 @@ func (f Float64Observer) Observation(v float64) Observation {
 	}
 }
 
+var _ AsyncSingleRunner = (*Int64ObserverCallback)(nil)
+var _ AsyncSingleRunner = (*Float64ObserverCallback)(nil)
+var _ AsyncBatchRunner = (*BatchObserverCallback)(nil)
+
 // newInt64AsyncRunner returns a single-observer callback for integer Observer instruments.
-func newInt64AsyncRunner(c Int64ObserverCallback) AsyncRunner {
+func newInt64AsyncRunner(c Int64ObserverCallback) AsyncSingleRunner {
 	return &c
 }
 
 // newFloat64AsyncRunner returns a single-observer callback for floating point Observer instruments.
-func newFloat64AsyncRunner(c Float64ObserverCallback) AsyncRunner {
+func newFloat64AsyncRunner(c Float64ObserverCallback) AsyncSingleRunner {
 	return &c
 }
 
@@ -203,7 +216,7 @@ func (*Float64ObserverCallback) anyRunner() {}
 func (*BatchObserverCallback) anyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
+func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, []Observation)) {
 	(*i)(Int64ObserverResult{
 		instrument: impl,
 		function:   function,
@@ -211,7 +224,7 @@ func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValu
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, Observation)) {
+func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, []Observation)) {
 	(*f)(Float64ObserverResult{
 		instrument: impl,
 		function:   function,

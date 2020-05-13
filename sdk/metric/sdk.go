@@ -408,18 +408,7 @@ func (m *Accumulator) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *Accumulator) CollectAsyncSingle(kv []core.KeyValue, obs metric.Observation) {
-	a := obs.AsyncImpl().Implementation().(*asyncInstrument)
-
-	// We are in a single-threaded context.  Note: this assumption
-	// could be violated if the user added concurrency within
-	// their callback.
-	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
-
-	a.observe(obs.Number(), &labels)
-}
-
-func (m *Accumulator) CollectAsyncBatch(kv []core.KeyValue, obs []metric.Observation) {
+func (m *Accumulator) CollectAsync(kv []core.KeyValue, obs []metric.Observation) {
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
