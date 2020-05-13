@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 )
@@ -280,7 +282,7 @@ func getTestCases() []testCase {
 func makeTestMap(ints []int) Map {
 	r := make(rawMap, len(ints))
 	for _, v := range ints {
-		r[kv.Key(fmt.Sprintf("key%d", v))] = kv.Int(v)
+		r[kv.Key(fmt.Sprintf("key%d", v))] = value.Int(v)
 	}
 	return newMap(r)
 }

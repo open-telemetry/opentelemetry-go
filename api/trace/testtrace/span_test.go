@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/key"
@@ -160,9 +162,9 @@ func TestSpan(t *testing.T) {
 				expectedEvents := []testtrace.Event{{
 					Timestamp: testTime,
 					Name:      "error",
-					Attributes: map[kv.Key]kv.Value{
-						kv.Key("error.type"):    kv.String(s.typ),
-						kv.Key("error.message"): kv.String(s.msg),
+					Attributes: map[kv.Key]value.Value{
+						kv.Key("error.type"):    value.String(s.typ),
+						kv.Key("error.message"): value.String(s.msg),
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -191,9 +193,9 @@ func TestSpan(t *testing.T) {
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
 				Name:      "error",
-				Attributes: map[kv.Key]kv.Value{
-					kv.Key("error.type"):    kv.String("go.opentelemetry.io/otel/internal/testing.TestError"),
-					kv.Key("error.message"): kv.String(errMsg),
+				Attributes: map[kv.Key]value.Value{
+					kv.Key("error.type"):    value.String("go.opentelemetry.io/otel/internal/testing.TestError"),
+					kv.Key("error.message"): value.String(errMsg),
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -326,7 +328,7 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]kv.Value{})
+			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]value.Value{})
 		})
 
 		t.Run("returns the most recently set attributes", func(t *testing.T) {

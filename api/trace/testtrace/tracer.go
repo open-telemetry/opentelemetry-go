@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 
@@ -80,7 +82,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 			SpanID:  spanID,
 		},
 		parentSpanID: parentSpanID,
-		attributes:   make(map[kv.Key]kv.Value),
+		attributes:   make(map[kv.Key]value.Value),
 		links:        make(map[trace.SpanContext][]kv.KeyValue),
 	}
 

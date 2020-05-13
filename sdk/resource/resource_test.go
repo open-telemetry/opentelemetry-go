@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
@@ -63,7 +65,7 @@ func TestNew(t *testing.T) {
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
-				cmp.AllowUnexported(kv.Value{})); diff != "" {
+				cmp.AllowUnexported(value.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})
@@ -143,7 +145,7 @@ func TestMerge(t *testing.T) {
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
-				cmp.AllowUnexported(kv.Value{})); diff != "" {
+				cmp.AllowUnexported(value.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})

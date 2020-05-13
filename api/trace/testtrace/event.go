@@ -17,6 +17,8 @@ package testtrace
 import (
 	"time"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"go.opentelemetry.io/otel/api/kv"
 )
 
@@ -24,5 +26,5 @@ import (
 type Event struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes map[kv.Key]kv.Value
+	Attributes map[kv.Key]value.Value
 }

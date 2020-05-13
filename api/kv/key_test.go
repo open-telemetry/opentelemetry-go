@@ -17,125 +17,14 @@ package kv_test
 import (
 	"encoding/json"
 	"testing"
-	"unsafe"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/api/kv/value"
 
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/kv"
 )
-
-func TestValue(t *testing.T) {
-	k := kv.Key("test")
-	bli := getBitlessInfo(42)
-	for _, testcase := range []struct {
-		name      string
-		value     kv.Value
-		wantType  kv.ValueType
-		wantValue interface{}
-	}{
-		{
-			name:      "Key.Bool() correctly returns keys's internal bool value",
-			value:     k.Bool(true).Value,
-			wantType:  kv.BOOL,
-			wantValue: true,
-		},
-		{
-			name:      "Key.Int64() correctly returns keys's internal int64 value",
-			value:     k.Int64(42).Value,
-			wantType:  kv.INT64,
-			wantValue: int64(42),
-		},
-		{
-			name:      "Key.Uint64() correctly returns keys's internal uint64 value",
-			value:     k.Uint64(42).Value,
-			wantType:  kv.UINT64,
-			wantValue: uint64(42),
-		},
-		{
-			name:      "Key.Float64() correctly returns keys's internal float64 value",
-			value:     k.Float64(42.1).Value,
-			wantType:  kv.FLOAT64,
-			wantValue: 42.1,
-		},
-		{
-			name:      "Key.Int32() correctly returns keys's internal int32 value",
-			value:     k.Int32(42).Value,
-			wantType:  kv.INT32,
-			wantValue: int32(42),
-		},
-		{
-			name:      "Key.Uint32() correctly returns keys's internal uint32 value",
-			value:     k.Uint32(42).Value,
-			wantType:  kv.UINT32,
-			wantValue: uint32(42),
-		},
-		{
-			name:      "Key.Float32() correctly returns keys's internal float32 value",
-			value:     k.Float32(42.1).Value,
-			wantType:  kv.FLOAT32,
-			wantValue: float32(42.1),
-		},
-		{
-			name:      "Key.String() correctly returns keys's internal string value",
-			value:     k.String("foo").Value,
-			wantType:  kv.STRING,
-			wantValue: "foo",
-		},
-		{
-			name:      "Key.Int() correctly returns keys's internal signed integral value",
-			value:     k.Int(bli.intValue).Value,
-			wantType:  bli.signedType,
-			wantValue: bli.signedValue,
-		},
-		{
-			name:      "Key.Uint() correctly returns keys's internal unsigned integral value",
-			value:     k.Uint(bli.uintValue).Value,
-			wantType:  bli.unsignedType,
-			wantValue: bli.unsignedValue,
-		},
-	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
-	}
-}
-
-type bitlessInfo struct {
-	intValue      int
-	uintValue     uint
-	signedType    kv.ValueType
-	unsignedType  kv.ValueType
-	signedValue   interface{}
-	unsignedValue interface{}
-}
-
-func getBitlessInfo(i int) bitlessInfo {
-	if unsafe.Sizeof(i) == 4 {
-		return bitlessInfo{
-			intValue:      i,
-			uintValue:     uint(i),
-			signedType:    kv.INT32,
-			unsignedType:  kv.UINT32,
-			signedValue:   int32(i),
-			unsignedValue: uint32(i),
-		}
-	}
-	return bitlessInfo{
-		intValue:      i,
-		uintValue:     uint(i),
-		signedType:    kv.INT64,
-		unsignedType:  kv.UINT64,
-		signedValue:   int64(i),
-		unsignedValue: uint64(i),
-	}
-}
 
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
@@ -180,47 +69,47 @@ func TestJSONValue(t *testing.T) {
 func TestEmit(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		v    kv.Value
+		v    value.Value
 		want string
 	}{
 		{
 			name: `test Key.Emit() can emit a string representing self.BOOL`,
-			v:    kv.Bool(true),
+			v:    value.Bool(true),
 			want: "true",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v:    kv.Int32(42),
+			v:    value.Int32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
-			v:    kv.Int64(42),
+			v:    value.Int64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v:    kv.Uint32(42),
+			v:    value.Uint32(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v:    kv.Uint64(42),
+			v:    value.Uint64(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v:    kv.Float32(42.1),
+			v:    value.Float32(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
-			v:    kv.Float64(42.1),
+			v:    value.Float64(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.STRING`,
-			v:    kv.String("foo"),
+			v:    value.String("foo"),
 			want: "foo",
 		},
 	} {
@@ -237,7 +126,7 @@ func TestEmit(t *testing.T) {
 func BenchmarkEmitBool(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := kv.Bool(i%2 == 0)
+		n := value.Bool(i%2 == 0)
 		_ = n.Emit()
 	}
 }
@@ -245,7 +134,7 @@ func BenchmarkEmitBool(b *testing.B) {
 func BenchmarkEmitInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := kv.Int64(int64(i))
+		n := value.Int64(int64(i))
 		_ = n.Emit()
 	}
 }
@@ -253,7 +142,7 @@ func BenchmarkEmitInt64(b *testing.B) {
 func BenchmarkEmitUInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := kv.Uint64(uint64(i))
+		n := value.Uint64(uint64(i))
 		_ = n.Emit()
 	}
 }
@@ -261,7 +150,7 @@ func BenchmarkEmitUInt64(b *testing.B) {
 func BenchmarkEmitFloat64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := kv.Float64(float64(i))
+		n := value.Float64(float64(i))
 		_ = n.Emit()
 	}
 }
@@ -269,7 +158,7 @@ func BenchmarkEmitFloat64(b *testing.B) {
 func BenchmarkEmitFloat32(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		n := kv.Float32(float32(i))
+		n := value.Float32(float32(i))
 		_ = n.Emit()
 	}
 }

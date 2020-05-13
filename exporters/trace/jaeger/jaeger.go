@@ -19,6 +19,8 @@ import (
 	"encoding/binary"
 	"log"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
@@ -274,42 +276,42 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 func keyValueToTag(keyValue kv.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch keyValue.Value.Type() {
-	case kv.STRING:
+	case value.STRING:
 		s := keyValue.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
-	case kv.BOOL:
+	case value.BOOL:
 		b := keyValue.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case kv.INT32:
+	case value.INT32:
 		i := int64(keyValue.Value.AsInt32())
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case kv.INT64:
+	case value.INT64:
 		i := keyValue.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case kv.FLOAT32:
+	case value.FLOAT32:
 		f := float64(keyValue.Value.AsFloat32())
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
 		}
-	case kv.FLOAT64:
+	case value.FLOAT64:
 		f := keyValue.Value.AsFloat64()
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),
