@@ -17,14 +17,14 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
 // implementation.
 type MeterImpl interface {
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
+	RecordBatch(context.Context, []kv.KeyValue, ...Measurement)
 
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
@@ -59,10 +59,10 @@ type SyncImpl interface {
 
 	// Bind creates an implementation-level bound instrument,
 	// binding a label set with this instrument implementation.
-	Bind(labels []core.KeyValue) BoundSyncImpl
+	Bind(labels []kv.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number Number, labels []core.KeyValue)
+	RecordOne(ctx context.Context, number Number, labels []kv.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a

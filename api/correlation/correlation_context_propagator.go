@@ -19,8 +19,7 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -44,7 +43,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	correlationCtx := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	correlationCtx.Foreach(func(kv kv.KeyValue) bool {
 		if !firstIter {
 			headerValueBuilder.WriteRune(',')
 		}
@@ -68,7 +67,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]core.KeyValue, 0, len(contextValues))
+	keyValues := make([]kv.KeyValue, 0, len(contextValues))
 	for _, contextValue := range contextValues {
 		valueAndProps := strings.Split(contextValue, ";")
 		if len(valueAndProps) < 1 {
@@ -98,7 +97,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, kv.NewKey(trimmedName).String(trimmedValueWithProps.String()))
 	}
 	return ContextWithMap(ctx, NewMap(MapUpdate{
 		MultiKV: keyValues,

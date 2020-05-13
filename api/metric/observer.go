@@ -14,9 +14,7 @@
 
 package metric
 
-import (
-	"go.opentelemetry.io/otel/api/core"
-)
+import "go.opentelemetry.io/otel/api/kv"
 
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
@@ -54,20 +52,20 @@ type BatchObserver struct {
 // observations for one asynchronous integer metric instrument.
 type Int64ObserverResult struct {
 	instrument AsyncImpl
-	function   func([]core.KeyValue, ...Observation)
+	function   func([]kv.KeyValue, ...Observation)
 }
 
 // Float64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous floating point metric instrument.
 type Float64ObserverResult struct {
 	instrument AsyncImpl
-	function   func([]core.KeyValue, ...Observation)
+	function   func([]kv.KeyValue, ...Observation)
 }
 
 // BatchObserverResult is passed to a batch observer callback to
 // capture observations for multiple asynchronous instruments.
 type BatchObserverResult struct {
-	function func([]core.KeyValue, ...Observation)
+	function func([]kv.KeyValue, ...Observation)
 }
 
 // AsyncRunner is expected to convert into an AsyncSingleRunner or an
@@ -87,7 +85,7 @@ type AsyncSingleRunner interface {
 	// receives one captured observation.  (The function accepts
 	// multiple observations so the same implementation can be
 	// used for batch runners.)
-	Run(single AsyncImpl, capture func([]core.KeyValue, ...Observation))
+	Run(single AsyncImpl, capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
@@ -97,14 +95,14 @@ type AsyncSingleRunner interface {
 type AsyncBatchRunner interface {
 	// Run accepts a function for capturing observations of
 	// multiple instruments.
-	Run(capture func([]core.KeyValue, ...Observation))
+	Run(capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
 
 // Observe captures a single integer value from the associated
 // instrument callback, with the given labels.
-func (ir Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
+func (ir Int64ObserverResult) Observe(value int64, labels ...kv.KeyValue) {
 	ir.function(labels, Observation{
 		instrument: ir.instrument,
 		number:     NewInt64Number(value),
@@ -113,7 +111,7 @@ func (ir Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
 
 // Observe captures a single floating point value from the associated
 // instrument callback, with the given labels.
-func (fr Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
+func (fr Float64ObserverResult) Observe(value float64, labels ...kv.KeyValue) {
 	fr.function(labels, Observation{
 		instrument: fr.instrument,
 		number:     NewFloat64Number(value),
@@ -122,7 +120,7 @@ func (fr Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) 
 
 // Observe captures a multiple observations from the associated batch
 // instrument callback, with the given labels.
-func (br BatchObserverResult) Observe(labels []core.KeyValue, obs ...Observation) {
+func (br BatchObserverResult) Observe(labels []kv.KeyValue, obs ...Observation) {
 	br.function(labels, obs...)
 }
 
@@ -223,7 +221,7 @@ func (*Float64ObserverCallback) anyRunner() {}
 func (*BatchObserverCallback) anyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, ...Observation)) {
+func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
 	(*i)(Int64ObserverResult{
 		instrument: impl,
 		function:   function,
@@ -231,7 +229,7 @@ func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValu
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyValue, ...Observation)) {
+func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
 	(*f)(Float64ObserverResult{
 		instrument: impl,
 		function:   function,
@@ -239,7 +237,7 @@ func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]core.KeyVa
 }
 
 // Run implements AsyncBatchRunner.
-func (b *BatchObserverCallback) Run(function func([]core.KeyValue, ...Observation)) {
+func (b *BatchObserverCallback) Run(function func([]kv.KeyValue, ...Observation)) {
 	(*b)(BatchObserverResult{
 		function: function,
 	})

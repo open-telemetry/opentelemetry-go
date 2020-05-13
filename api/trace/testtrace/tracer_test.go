@@ -20,8 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
@@ -61,8 +60,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := key.String("a", "1")
-			attr2 := key.String("b", "2")
+			attr1 := kv.String("a", "1")
+			attr2 := kv.String("b", "2")
 
 			subject := testtrace.NewTracer()
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
@@ -194,14 +193,14 @@ func TestTracer(t *testing.T) {
 			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
-					Attributes: []core.KeyValue{
-						key.String("ignored-on-demand", "current"),
+					Attributes: []kv.KeyValue{
+						kv.String("ignored-on-demand", "current"),
 					},
 				},
 				{
 					SpanContext: remoteParentSpanContext,
-					Attributes: []core.KeyValue{
-						key.String("ignored-on-demand", "remote"),
+					Attributes: []kv.KeyValue{
+						kv.String("ignored-on-demand", "remote"),
 					},
 				},
 			}
@@ -226,16 +225,16 @@ func TestTracer(t *testing.T) {
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []core.KeyValue{
-					key.String("a", "1"),
+				Attributes: []kv.KeyValue{
+					kv.String("a", "1"),
 				},
 			}
 
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []core.KeyValue{
-					key.String("b", "2"),
+				Attributes: []kv.KeyValue{
+					kv.String("b", "2"),
 				},
 			}
 
@@ -268,8 +267,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := key.String("a", "1")
-			attr2 := key.String("b", "2")
+			attr1 := kv.String("a", "1")
+			attr2 := kv.String("b", "2")
 
 			subject := testtrace.NewTracer()
 			var span trace.Span

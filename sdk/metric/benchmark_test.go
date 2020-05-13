@@ -21,8 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -90,8 +89,8 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func makeManyLabels(n int) [][]core.KeyValue {
-	r := make([][]core.KeyValue, n)
+func makeManyLabels(n int) [][]kv.KeyValue {
+	r := make([][]kv.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -100,9 +99,9 @@ func makeManyLabels(n int) [][]core.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []core.KeyValue {
+func makeLabels(n int) []kv.KeyValue {
 	used := map[string]bool{}
-	l := make([]core.KeyValue, n)
+	l := make([]kv.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -112,7 +111,7 @@ func makeLabels(n int) []core.KeyValue {
 				break
 			}
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -199,12 +198,12 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-var benchmarkIteratorVar core.KeyValue
+var benchmarkIteratorVar kv.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
 	fix := newFixture(b)
 	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
-		var kv core.KeyValue
+		var kv kv.KeyValue
 		li := rec.Labels().Iter()
 		fix.B.StartTimer()
 		for i := 0; i < fix.B.N; i++ {
@@ -568,7 +567,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	}
 
 	c := fix.meter.NewInt64Counter("int64.counter")
-	k := key.String("bench", "true")
+	k := kv.String("bench", "true")
 
 	b.ResetTimer()
 
@@ -601,7 +600,7 @@ func BenchmarkLabelIterator(b *testing.B) {
 
 	labels := rec.Labels()
 	iter := labels.Iter()
-	var val core.KeyValue
+	var val kv.KeyValue
 	for i := 0; i < b.N; i++ {
 		if !iter.Next() {
 			iter = labels.Iter()

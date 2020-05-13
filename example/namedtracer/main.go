@@ -18,9 +18,10 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/trace/stdout"
@@ -28,9 +29,9 @@ import (
 )
 
 var (
-	fooKey     = key.New("ex.com/foo")
-	barKey     = key.New("ex.com/bar")
-	anotherKey = key.New("ex.com/another")
+	fooKey     = kv.NewKey("ex.com/foo")
+	barKey     = kv.NewKey("ex.com/bar")
+	anotherKey = kv.NewKey("ex.com/another")
 )
 
 var tp *sdktrace.Provider
@@ -66,7 +67,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.NewKey("bogons").Int(100))
 
 		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
 
