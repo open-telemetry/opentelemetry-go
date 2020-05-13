@@ -29,13 +29,13 @@ import (
 
 type testExporter struct {
 	mu      sync.Mutex
-	spanMap map[string][]*export.SpanData
+	spanMap map[string]*export.SpanData
 }
 
 func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.spanMap[s.Name] = append(t.spanMap[s.Name], s)
+	t.spanMap[s.Name] = s
 }
 
 type mockUICInvoker struct {
@@ -60,7 +60,7 @@ func (mm *mockProtoMessage) ProtoMessage() {
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	exp := &testExporter{spanMap: make(map[string][]*export.SpanData)}
+	exp := &testExporter{spanMap: make(map[string]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{
 			DefaultSampler: sdktrace.AlwaysSample(),
@@ -135,15 +135,21 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	for _, check := range checks {
 		err = unaryInterceptor(context.Background(), check.name, req, reply, clientConn, uniInterceptorInvoker.invoker)
 		if err != nil {
-			t.Fatalf("failed to run unary interceptor: %v", err)
+			t.Errorf("failed to run unary interceptor: %v", err)
+			continue
 		}
 
 		spanData, ok := exp.spanMap[check.name]
-		if !ok || len(spanData) == 0 {
-			t.Fatalf("no span data found for name < %s >", check.name)
+		if !ok {
+			t.Errorf("no span data found for name < %s >", check.name)
+			continue
 		}
 
-		attrs := spanData[0].Attributes
+		attrs := spanData.Attributes
+		if len(check.expectedAttr) > len(attrs) {
+			t.Errorf("attributes received are less than expected attributes, received %d, expected %d",
+				len(attrs), len(check.expectedAttr))
+		}
 		for _, attr := range attrs {
 			expectedAttr, ok := check.expectedAttr[attr.Key]
 			if ok {
@@ -162,7 +168,11 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			}
 		}
 
-		events := spanData[0].MessageEvents
+		events := spanData.MessageEvents
+		if len(check.eventsAttr) > len(events) {
+			t.Errorf("events received are less than expected events, received %d, expected %d",
+				len(events), len(check.eventsAttr))
+		}
 		for event := 0; event < len(check.eventsAttr); event++ {
 			for _, attr := range events[event].Attributes {
 				expectedAttr, ok := check.eventsAttr[event][attr.Key]
@@ -196,7 +206,7 @@ func (mockClientStream) Header() (metadata.MD, error) { return nil, nil }
 func (mockClientStream) Trailer() metadata.MD         { return nil }
 
 func TestStreamClientInterceptor(t *testing.T) {
-	exp := &testExporter{spanMap: make(map[string][]*export.SpanData)}
+	exp := &testExporter{spanMap: make(map[string]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{
 			DefaultSampler: sdktrace.AlwaysSample(),
@@ -251,7 +261,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	_ = streamClient.RecvMsg(reply)
 
 	// added retry because span end is called in separate go routine
-	var spanData []*export.SpanData
+	var spanData *export.SpanData
 	for retry := 0; retry < 5; retry++ {
 		ok := false
 		exp.mu.Lock()
@@ -262,11 +272,11 @@ func TestStreamClientInterceptor(t *testing.T) {
 		}
 		time.Sleep(time.Second * 1)
 	}
-	if len(spanData) == 0 {
+	if spanData == nil {
 		t.Fatalf("no span data found for name < %s >", methodName)
 	}
 
-	attrs := spanData[0].Attributes
+	attrs := spanData.Attributes
 	expectedAttr := map[core.Key]string{
 		rpcServiceKey:  "serviceName",
 		netPeerIPKey:   "fake",
@@ -283,7 +293,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 		}
 	}
 
-	events := spanData[0].MessageEvents
+	events := spanData.MessageEvents
 	if len(events) != 20 {
 		t.Fatalf("incorrect number of events expected 20 got %d", len(events))
 	}
