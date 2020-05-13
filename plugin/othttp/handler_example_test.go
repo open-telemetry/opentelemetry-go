@@ -22,8 +22,9 @@ import (
 	"net/http"
 	"strings"
 
+	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/plugin/othttp"
@@ -65,7 +66,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.SpanFromContext(ctx).SetAttributes(key.String("name", pp[1]))
+			trace.SpanFromContext(ctx).SetAttributes(kv.String("name", pp[1]))
 		}
 		return pp[1], err
 	}

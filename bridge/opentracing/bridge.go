@@ -27,10 +27,9 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelkey "go.opentelemetry.io/otel/api/key"
+	otelcore "go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
@@ -67,12 +66,12 @@ func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelkey.New(crk).String(value)})
+	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelcore.NewKey(crk).String(value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	val, _ := c.baggageItems.Value(otelkey.New(crk))
+	val, _ := c.baggageItems.Value(otelcore.NewKey(crk))
 	return val.Emit()
 }
 
@@ -373,7 +372,7 @@ func (t *BridgeTracer) correlationGetHook(ctx context.Context, m otelcorrelation
 	}
 	kv := make([]otelcore.KeyValue, 0, len(items))
 	for k, v := range items {
-		kv = append(kv, otelkey.String(k, v))
+		kv = append(kv, otelcore.String(k, v))
 	}
 	return m.Apply(otelcorrelation.MapUpdate{MultiKV: kv})
 }
@@ -559,7 +558,7 @@ func otSpanReferenceToOtelLink(bridgeSC *bridgeSpanContext, refType ot.SpanRefer
 
 func otSpanReferenceTypeToOtelLinkAttributes(refType ot.SpanReferenceType) []otelcore.KeyValue {
 	return []otelcore.KeyValue{
-		otelkey.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
+		otelcore.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
 	}
 }
 

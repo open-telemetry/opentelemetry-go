@@ -17,12 +17,14 @@ package transform
 import (
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv/value"
+
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
-func Attributes(attrs []core.KeyValue) []*commonpb.AttributeKeyValue {
+func Attributes(attrs []kv.KeyValue) []*commonpb.AttributeKeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
@@ -48,33 +50,33 @@ func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyVal
 	return out
 }
 
-func toAttribute(v core.KeyValue) *commonpb.AttributeKeyValue {
+func toAttribute(v kv.KeyValue) *commonpb.AttributeKeyValue {
 	switch v.Value.Type() {
-	case core.BOOL:
+	case value.BOOL:
 		return &commonpb.AttributeKeyValue{
 			Key:       string(v.Key),
 			Type:      commonpb.AttributeKeyValue_BOOL,
 			BoolValue: v.Value.AsBool(),
 		}
-	case core.INT64, core.INT32, core.UINT32, core.UINT64:
+	case value.INT64, value.INT32, value.UINT32, value.UINT64:
 		return &commonpb.AttributeKeyValue{
 			Key:      string(v.Key),
 			Type:     commonpb.AttributeKeyValue_INT,
 			IntValue: v.Value.AsInt64(),
 		}
-	case core.FLOAT32:
+	case value.FLOAT32:
 		return &commonpb.AttributeKeyValue{
 			Key:         string(v.Key),
 			Type:        commonpb.AttributeKeyValue_DOUBLE,
 			DoubleValue: float64(v.Value.AsFloat32()),
 		}
-	case core.FLOAT64:
+	case value.FLOAT64:
 		return &commonpb.AttributeKeyValue{
 			Key:         string(v.Key),
 			Type:        commonpb.AttributeKeyValue_DOUBLE,
 			DoubleValue: v.Value.AsFloat64(),
 		}
-	case core.STRING:
+	case value.STRING:
 		return &commonpb.AttributeKeyValue{
 			Key:         string(v.Key),
 			Type:        commonpb.AttributeKeyValue_STRING,

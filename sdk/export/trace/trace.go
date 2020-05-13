@@ -20,7 +20,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -56,7 +56,7 @@ type SpanData struct {
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
 	EndTime                  time.Time
-	Attributes               []core.KeyValue
+	Attributes               []kv.KeyValue
 	MessageEvents            []Event
 	Links                    []apitrace.Link
 	StatusCode               codes.Code
@@ -79,8 +79,8 @@ type Event struct {
 	// Name is the name of this event
 	Name string
 
-	// Attributes contains a list of keyvalue pairs.
-	Attributes []core.KeyValue
+	// Attributes contains a list of kv pairs.
+	Attributes []kv.KeyValue
 
 	// Time is the time at which this event was recorded.
 	Time time.Time

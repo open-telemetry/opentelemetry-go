@@ -23,9 +23,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -102,19 +101,19 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	testLen := []struct {
 		name       string
-		attributes []core.KeyValue
+		attributes []kv.KeyValue
 		parent     string
 	}{
 		{
 			name:       "http.connect",
-			attributes: []core.KeyValue{key.String("http.remote", address.String())},
+			attributes: []kv.KeyValue{kv.String("http.remote", address.String())},
 			parent:     "http.getconn",
 		},
 		{
 			name: "http.getconn",
-			attributes: []core.KeyValue{
-				key.String("http.remote", address.String()),
-				key.String("http.host", address.String()),
+			attributes: []kv.KeyValue{
+				kv.String("http.remote", address.String()),
+				kv.String("http.host", address.String()),
 			},
 			parent: "test",
 		},
@@ -141,18 +140,18 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			}
 		}
 
-		actualAttrs := make(map[core.Key]string)
+		actualAttrs := make(map[kv.Key]string)
 		for _, attr := range span.Attributes {
 			actualAttrs[attr.Key] = attr.Value.Emit()
 		}
 
-		expectedAttrs := make(map[core.Key]string)
+		expectedAttrs := make(map[kv.Key]string)
 		for _, attr := range tl.attributes {
 			expectedAttrs[attr.Key] = attr.Value.Emit()
 		}
 
 		if tl.name == "http.getconn" {
-			local := key.New("http.local")
+			local := kv.NewKey("http.local")
 			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
 			if _, ok := actualAttrs[local]; ok {
 				delete(actualAttrs, local)

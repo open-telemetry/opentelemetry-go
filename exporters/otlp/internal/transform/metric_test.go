@@ -23,8 +23,7 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
@@ -35,7 +34,7 @@ import (
 
 func TestStringKeyValues(t *testing.T) {
 	tests := []struct {
-		kvs      []core.KeyValue
+		kvs      []kv.KeyValue
 		expected []*commonpb.StringKeyValue
 	}{
 		{
@@ -43,21 +42,21 @@ func TestStringKeyValues(t *testing.T) {
 			nil,
 		},
 		{
-			[]core.KeyValue{},
+			[]kv.KeyValue{},
 			nil,
 		},
 		{
-			[]core.KeyValue{
-				key.Bool("true", true),
-				key.Int64("one", 1),
-				key.Uint64("two", 2),
-				key.Float64("three", 3),
-				key.Int32("four", 4),
-				key.Uint32("five", 5),
-				key.Float32("six", 6),
-				key.Int("seven", 7),
-				key.Uint("eight", 8),
-				key.String("the", "final word"),
+			[]kv.KeyValue{
+				kv.Bool("true", true),
+				kv.Int64("one", 1),
+				kv.Uint64("two", 2),
+				kv.Float64("three", 3),
+				kv.Int32("four", 4),
+				kv.Uint32("five", 5),
+				kv.Float32("six", 6),
+				kv.Int("seven", 7),
+				kv.Uint("eight", 8),
+				kv.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{
 				{Key: "eight", Value: "8"},
@@ -107,7 +106,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		description string
 		unit        unit.Unit
 		numberKind  metric.NumberKind
-		labels      []core.KeyValue
+		labels      []kv.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
@@ -116,7 +115,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			"test-a-description",
 			unit.Dimensionless,
 			metric.Int64NumberKind,
-			[]core.KeyValue{},
+			[]kv.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-a",
 				Description: "test-a-description",
@@ -131,7 +130,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Bytes,
 			metric.Float64NumberKind, // This shouldn't change anything.
-			[]core.KeyValue{key.String("A", "1")},
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-b",
 				Description: "test-b-description",
@@ -209,7 +208,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 		description string
 		unit        unit.Unit
 		numberKind  metric.NumberKind
-		labels      []core.KeyValue
+		labels      []kv.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
@@ -218,7 +217,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			"test-a-description",
 			unit.Dimensionless,
 			metric.Int64NumberKind,
-			[]core.KeyValue{},
+			[]kv.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-a",
 				Description: "test-a-description",
@@ -233,7 +232,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			"test-b-description",
 			unit.Milliseconds,
 			metric.Float64NumberKind,
-			[]core.KeyValue{key.String("A", "1")},
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-b",
 				Description: "test-b-description",

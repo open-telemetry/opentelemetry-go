@@ -31,8 +31,7 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -75,7 +74,7 @@ type (
 	testImpl struct {
 		newInstrument  func(meter api.Meter, name string) SyncImpler
 		getUpdateValue func() api.Number
-		operate        func(interface{}, context.Context, api.Number, []core.KeyValue)
+		operate        func(interface{}, context.Context, api.Number, []kv.KeyValue)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
@@ -105,7 +104,7 @@ func concurrency() int {
 	return concurrencyPerCPU * runtime.NumCPU()
 }
 
-func canonicalizeLabels(ls []core.KeyValue) string {
+func canonicalizeLabels(ls []kv.KeyValue) string {
 	copy := append(ls[0:0:0], ls...)
 	sort.SliceStable(copy, func(i, j int) bool {
 		return copy[i].Key < copy[j].Key
@@ -128,9 +127,9 @@ func getPeriod() time.Duration {
 	return time.Duration(dur)
 }
 
-func (f *testFixture) someLabels() []core.KeyValue {
+func (f *testFixture) someLabels() []kv.KeyValue {
 	n := 1 + rand.Intn(3)
-	l := make([]core.KeyValue, n)
+	l := make([]kv.KeyValue, n)
 
 	for {
 		oused := map[string]bool{}
@@ -143,7 +142,7 @@ func (f *testFixture) someLabels() []core.KeyValue {
 					break
 				}
 			}
-			l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+			l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
 		lc := canonicalizeLabels(l)
 		f.lock.Lock()
@@ -364,7 +363,7 @@ func intCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
 			counter := inst.(api.Int64Counter)
 			counter.Add(ctx, value.AsInt64(), labels...)
 		},
@@ -402,7 +401,7 @@ func floatCounterTestImpl() testImpl {
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
 			counter := inst.(api.Float64Counter)
 			counter.Add(ctx, value.AsFloat64(), labels...)
 		},
@@ -438,7 +437,7 @@ func intLastValueTestImpl() testImpl {
 			r1 := rand.Int63()
 			return api.NewInt64Number(rand.Int63() - r1)
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
 			measure := inst.(api.Int64Measure)
 			measure.Record(ctx, value.AsInt64(), labels...)
 		},
@@ -479,7 +478,7 @@ func floatLastValueTestImpl() testImpl {
 		getUpdateValue: func() api.Number {
 			return api.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []core.KeyValue) {
+		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
 			measure := inst.(api.Float64Measure)
 			measure.Record(ctx, value.AsFloat64(), labels...)
 		},

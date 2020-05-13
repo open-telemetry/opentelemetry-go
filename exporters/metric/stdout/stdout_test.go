@@ -24,8 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -149,7 +148,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 	aggtest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
 	cagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, cagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, cagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -166,7 +165,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 	lvagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, lvagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, lvagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -184,7 +183,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
 	magg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, magg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -207,7 +206,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 
 	magg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, magg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -273,7 +272,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 	lvagg := lastvalue.New()
 	lvagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, lvagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, lvagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -284,9 +283,9 @@ func TestStdoutResource(t *testing.T) {
 	type testCase struct {
 		expect string
 		res    *resource.Resource
-		attrs  []core.KeyValue
+		attrs  []kv.KeyValue
 	}
-	newCase := func(expect string, res *resource.Resource, attrs ...core.KeyValue) testCase {
+	newCase := func(expect string, res *resource.Resource, attrs ...kv.KeyValue) testCase {
 		return testCase{
 			expect: expect,
 			res:    res,
@@ -295,23 +294,23 @@ func TestStdoutResource(t *testing.T) {
 	}
 	testCases := []testCase{
 		newCase("R1=V1,R2=V2,A=B,C=D",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
-			key.String("A", "B"),
-			key.String("C", "D")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
+			kv.String("A", "B"),
+			kv.String("C", "D")),
 		newCase("R1=V1,R2=V2",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
 		),
 		newCase("A=B,C=D",
 			nil,
-			key.String("A", "B"),
-			key.String("C", "D"),
+			kv.String("A", "B"),
+			kv.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
 		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
-			key.String("R1", "V3"),
-			key.String("R2", "V4")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
+			kv.String("R1", "V3"),
+			kv.String("R2", "V4")),
 	}
 
 	for _, tc := range testCases {

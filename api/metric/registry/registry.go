@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 )
 
@@ -54,7 +54,7 @@ func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 }
 
 // RecordBatch implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, ms ...metric.Measurement) {
+func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
@@ -125,7 +125,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 // NewAsyncInstrument implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	descriptor metric.Descriptor,
-	callback func(func(metric.Number, []core.KeyValue)),
+	callback func(func(metric.Number, []kv.KeyValue)),
 ) (metric.AsyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()

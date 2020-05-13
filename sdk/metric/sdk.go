@@ -22,7 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
@@ -130,7 +130,7 @@ type (
 		// labelset and recorder
 		recorders map[label.Distinct]*labeledRecorder
 
-		callback func(func(api.Number, []core.KeyValue))
+		callback func(func(api.Number, []kv.KeyValue))
 	}
 
 	labeledRecorder struct {
@@ -161,7 +161,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
+func (a *asyncInstrument) observe(number api.Number, labels []kv.KeyValue) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -178,7 +178,7 @@ func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
+func (a *asyncInstrument) getRecorder(kvs []kv.KeyValue) export.Aggregator {
 	// We are in a single-threaded context.  Note: this assumption
 	// could be violated if the user added concurrency within
 	// their callback.
@@ -220,7 +220,7 @@ func (m *Accumulator) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *record {
 	var rec *record
 	var equiv label.Distinct
 
@@ -292,11 +292,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set)
 	}
 }
 
-func (s *syncInstrument) Bind(kvs []core.KeyValue) api.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []kv.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []core.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []kv.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
@@ -336,7 +336,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 	}, nil
 }
 
-func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []kv.KeyValue))) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -464,7 +464,7 @@ func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descrip
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the

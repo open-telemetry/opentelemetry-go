@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -56,7 +56,7 @@ func (p *CheckpointSet) Reset() {
 //
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
-func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...core.KeyValue) (agg export.Aggregator, added bool) {
+func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...kv.KeyValue) (agg export.Aggregator, added bool) {
 	elabels := label.NewSet(labels...)
 
 	key := mapkey{
@@ -80,23 +80,23 @@ func createNumber(desc *metric.Descriptor, v float64) metric.Number {
 	return metric.NewInt64Number(int64(v))
 }
 
-func (p *CheckpointSet) AddLastValue(desc *metric.Descriptor, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) AddLastValue(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, lastvalue.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, sum.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddMeasure(desc *metric.Descriptor, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) AddMeasure(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, array.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
 }
 
-func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.Aggregator, v float64, labels ...core.KeyValue) {
+func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.Aggregator, v float64, labels ...kv.KeyValue) {
 	ctx := context.Background()
 	// Updates and checkpoint the new aggregator
 	_ = newAgg.Update(ctx, createNumber(desc, v), desc)

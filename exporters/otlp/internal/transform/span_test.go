@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -75,12 +74,12 @@ func TestEmptySpanEvent(t *testing.T) {
 }
 
 func TestSpanEvent(t *testing.T) {
-	attrs := []core.KeyValue{key.Int("one", 1), key.Int("two", 2)}
+	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
 	now := time.Now()
 	got := spanEvents([]export.Event{
 		{
 			Name:       "test 1",
-			Attributes: []core.KeyValue{},
+			Attributes: []kv.KeyValue{},
 			Time:       now,
 		},
 		{
@@ -119,7 +118,7 @@ func TestEmptyLinks(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	attrs := []core.KeyValue{key.Int("one", 1), key.Int("two", 2)}
+	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
 	l := []apitrace.Link{
 		{},
 		{
@@ -281,13 +280,13 @@ func TestSpanData(t *testing.T) {
 		EndTime:      endTime,
 		MessageEvents: []export.Event{
 			{Time: startTime,
-				Attributes: []core.KeyValue{
-					key.Uint64("CompressedByteSize", 512),
+				Attributes: []kv.KeyValue{
+					kv.Uint64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
-				Attributes: []core.KeyValue{
-					key.String("MessageEventType", "Recv"),
+				Attributes: []kv.KeyValue{
+					kv.String("MessageEventType", "Recv"),
 				},
 			},
 		},
@@ -298,8 +297,8 @@ func TestSpanData(t *testing.T) {
 					SpanID:     apitrace.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
 					TraceFlags: 0,
 				},
-				Attributes: []core.KeyValue{
-					key.String("LinkType", "Parent"),
+				Attributes: []kv.KeyValue{
+					kv.String("LinkType", "Parent"),
 				},
 			},
 			{
@@ -308,21 +307,21 @@ func TestSpanData(t *testing.T) {
 					SpanID:     apitrace.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
 					TraceFlags: 0,
 				},
-				Attributes: []core.KeyValue{
-					key.String("LinkType", "Child"),
+				Attributes: []kv.KeyValue{
+					kv.String("LinkType", "Child"),
 				},
 			},
 		},
 		StatusCode:      codes.Internal,
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
-		Attributes: []core.KeyValue{
-			key.Int64("timeout_ns", 12e9),
+		Attributes: []kv.KeyValue{
+			kv.Int64("timeout_ns", 12e9),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
-		Resource:                 resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5)),
+		Resource:                 resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
 	}
 
 	// Not checking resource as the underlying map of our Resource makes

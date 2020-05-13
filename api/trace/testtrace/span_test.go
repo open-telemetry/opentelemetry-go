@@ -22,10 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/internal/matchers"
@@ -160,9 +161,9 @@ func TestSpan(t *testing.T) {
 				expectedEvents := []testtrace.Event{{
 					Timestamp: testTime,
 					Name:      "error",
-					Attributes: map[core.Key]core.Value{
-						core.Key("error.type"):    core.String(s.typ),
-						core.Key("error.message"): core.String(s.msg),
+					Attributes: map[kv.Key]value.Value{
+						kv.Key("error.type"):    value.String(s.typ),
+						kv.Key("error.message"): value.String(s.msg),
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -191,9 +192,9 @@ func TestSpan(t *testing.T) {
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
 				Name:      "error",
-				Attributes: map[core.Key]core.Value{
-					core.Key("error.type"):    core.String("go.opentelemetry.io/otel/internal/testing.TestError"),
-					core.Key("error.message"): core.String(errMsg),
+				Attributes: map[kv.Key]value.Value{
+					kv.Key("error.type"):    value.String("go.opentelemetry.io/otel/internal/testing.TestError"),
+					kv.Key("error.message"): value.String(errMsg),
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -326,7 +327,7 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.Attributes()).ToEqual(map[core.Key]core.Value{})
+			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]value.Value{})
 		})
 
 		t.Run("returns the most recently set attributes", func(t *testing.T) {
@@ -340,9 +341,9 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			attr1 := key.String("key1", "value1")
-			attr2 := key.String("key2", "value2")
-			attr3 := key.String("key3", "value3")
+			attr1 := kv.String("key1", "value1")
+			attr2 := kv.String("key2", "value2")
+			attr3 := kv.String("key3", "value3")
 			unexpectedAttr := attr2.Key.String("unexpected")
 
 			subject.SetAttributes(attr1, unexpectedAttr, attr3)
@@ -366,7 +367,7 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			expectedAttr := key.String("key", "value")
+			expectedAttr := kv.String("key", "value")
 			subject.SetAttributes(expectedAttr)
 			subject.End()
 
@@ -396,7 +397,7 @@ func TestSpan(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				subject.SetAttributes(key.String("key", "value"))
+				subject.SetAttributes(kv.String("key", "value"))
 			}()
 
 			go func() {
@@ -452,9 +453,9 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			event1Name := "event1"
-			event1Attributes := []core.KeyValue{
-				key.String("event1Attr1", "foo"),
-				key.String("event1Attr2", "bar"),
+			event1Attributes := []kv.KeyValue{
+				kv.String("event1Attr1", "foo"),
+				kv.String("event1Attr2", "bar"),
 			}
 
 			event1Start := time.Now()
@@ -463,8 +464,8 @@ func TestSpan(t *testing.T) {
 
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
 			event2Name := "event1"
-			event2Attributes := []core.KeyValue{
-				key.String("event2Attr", "abc"),
+			event2Attributes := []kv.KeyValue{
+				kv.String("event2Attr", "abc"),
 			}
 
 			subject.AddEventWithTimestamp(context.Background(), event2Timestamp, event2Name, event2Attributes...)
