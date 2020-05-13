@@ -32,12 +32,12 @@ import (
 )
 
 var (
-	ComponentKey     = otelcore.NewKey("component")
-	ServiceKey       = otelcore.NewKey("service")
-	StatusCodeKey    = otelcore.NewKey("status.code")
-	StatusMessageKey = otelcore.NewKey("status.message")
-	ErrorKey         = otelcore.NewKey("error")
-	NameKey          = otelcore.NewKey("name")
+	ComponentKey     = otelcore.Key("component")
+	ServiceKey       = otelcore.Key("service")
+	StatusCodeKey    = otelcore.Key("status.code")
+	StatusMessageKey = otelcore.Key("status.message")
+	ErrorKey         = otelcore.Key("error")
+	NameKey          = otelcore.Key("name")
 )
 
 type MockContextKeyValue struct {

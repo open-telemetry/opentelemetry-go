@@ -151,7 +151,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		}
 
 		if tl.name == "http.getconn" {
-			local := kv.NewKey("http.local")
+			local := kv.Key("http.local")
 			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
 			if _, ok := actualAttrs[local]; ok {
 				delete(actualAttrs, local)

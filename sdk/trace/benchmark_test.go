@@ -43,10 +43,10 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				kv.NewKey("key1").Bool(false),
-				kv.NewKey("key2").String("hello"),
-				kv.NewKey("key3").Uint64(123),
-				kv.NewKey("key4").Float64(123.456),
+				kv.Key("key1").Bool(false),
+				kv.Key("key2").String("hello"),
+				kv.Key("key3").Uint64(123),
+				kv.Key("key4").Float64(123.456),
 			)
 			span.End()
 		}
@@ -61,14 +61,14 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				kv.NewKey("key1").Bool(false),
-				kv.NewKey("key2").String("hello"),
-				kv.NewKey("key3").Uint64(123),
-				kv.NewKey("key4").Float64(123.456),
-				kv.NewKey("key21").Bool(false),
-				kv.NewKey("key22").String("hello"),
-				kv.NewKey("key23").Uint64(123),
-				kv.NewKey("key24").Float64(123.456),
+				kv.Key("key1").Bool(false),
+				kv.Key("key2").String("hello"),
+				kv.Key("key3").Uint64(123),
+				kv.Key("key4").Float64(123.456),
+				kv.Key("key21").Bool(false),
+				kv.Key("key22").String("hello"),
+				kv.Key("key23").Uint64(123),
+				kv.Key("key24").Float64(123.456),
 			)
 			span.End()
 		}
@@ -83,16 +83,16 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				kv.NewKey("key1").Bool(false),
-				kv.NewKey("key2").String("hello"),
-				kv.NewKey("key3").Int64(123),
-				kv.NewKey("key4").Uint64(123),
-				kv.NewKey("key5").Int32(123),
-				kv.NewKey("key6").Uint32(123),
-				kv.NewKey("key7").Float64(123.456),
-				kv.NewKey("key8").Float32(123.456),
-				kv.NewKey("key9").Int(123),
-				kv.NewKey("key10").Uint(123),
+				kv.Key("key1").Bool(false),
+				kv.Key("key2").String("hello"),
+				kv.Key("key3").Int64(123),
+				kv.Key("key4").Uint64(123),
+				kv.Key("key5").Int32(123),
+				kv.Key("key6").Uint32(123),
+				kv.Key("key7").Float64(123.456),
+				kv.Key("key8").Float32(123.456),
+				kv.Key("key9").Int(123),
+				kv.Key("key10").Uint(123),
 			)
 			span.End()
 		}
@@ -107,26 +107,26 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				kv.NewKey("key1").Bool(false),
-				kv.NewKey("key2").String("hello"),
-				kv.NewKey("key3").Int64(123),
-				kv.NewKey("key4").Uint64(123),
-				kv.NewKey("key5").Int32(123),
-				kv.NewKey("key6").Uint32(123),
-				kv.NewKey("key7").Float64(123.456),
-				kv.NewKey("key8").Float32(123.456),
-				kv.NewKey("key10").Int(123),
-				kv.NewKey("key11").Uint(123),
-				kv.NewKey("key21").Bool(false),
-				kv.NewKey("key22").String("hello"),
-				kv.NewKey("key23").Int64(123),
-				kv.NewKey("key24").Uint64(123),
-				kv.NewKey("key25").Int32(123),
-				kv.NewKey("key26").Uint32(123),
-				kv.NewKey("key27").Float64(123.456),
-				kv.NewKey("key28").Float32(123.456),
-				kv.NewKey("key210").Int(123),
-				kv.NewKey("key211").Uint(123),
+				kv.Key("key1").Bool(false),
+				kv.Key("key2").String("hello"),
+				kv.Key("key3").Int64(123),
+				kv.Key("key4").Uint64(123),
+				kv.Key("key5").Int32(123),
+				kv.Key("key6").Uint32(123),
+				kv.Key("key7").Float64(123.456),
+				kv.Key("key8").Float32(123.456),
+				kv.Key("key10").Int(123),
+				kv.Key("key11").Uint(123),
+				kv.Key("key21").Bool(false),
+				kv.Key("key22").String("hello"),
+				kv.Key("key23").Int64(123),
+				kv.Key("key24").Uint64(123),
+				kv.Key("key25").Int32(123),
+				kv.Key("key26").Uint32(123),
+				kv.Key("key27").Float64(123.456),
+				kv.Key("key28").Float32(123.456),
+				kv.Key("key210").Int(123),
+				kv.Key("key211").Uint(123),
 			)
 			span.End()
 		}

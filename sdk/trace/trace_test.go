@@ -306,7 +306,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttributes(kv.NewKey("key1").String("value1"))
+	span.SetAttributes(kv.Key("key1").String("value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -372,11 +372,11 @@ func TestEvents(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "Events")
-	k1v1 := kv.NewKey("key1").String("value1")
+	k1v1 := kv.Key("key1").String("value1")
 	k2v2 := kv.Bool("key2", true)
 	k3v3 := kv.Int64("key3", 3)
 
-	span.AddEvent(context.Background(), "foo", kv.NewKey("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
 		kv.Bool("key2", true),
 		kv.Int64("key3", 3),
@@ -417,19 +417,19 @@ func TestEventsOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
-	k1v1 := kv.NewKey("key1").String("value1")
+	k1v1 := kv.Key("key1").String("value1")
 	k2v2 := kv.Bool("key2", false)
-	k3v3 := kv.NewKey("key3").String("value3")
+	k3v3 := kv.Key("key3").String("value3")
 
-	span.AddEvent(context.Background(), "fooDrop", kv.NewKey("key1").String("value1"))
+	span.AddEvent(context.Background(), "fooDrop", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "barDrop",
 		kv.Bool("key2", true),
-		kv.NewKey("key3").String("value3"),
+		kv.Key("key3").String("value3"),
 	)
-	span.AddEvent(context.Background(), "foo", kv.NewKey("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
 		kv.Bool("key2", false),
-		kv.NewKey("key3").String("value3"),
+		kv.Key("key3").String("value3"),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -466,18 +466,18 @@ func TestLinks(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 
-	k1v1 := kv.NewKey("key1").String("value1")
-	k2v2 := kv.NewKey("key2").String("value2")
-	k3v3 := kv.NewKey("key3").String("value3")
+	k1v1 := kv.Key("key1").String("value1")
+	k2v2 := kv.Key("key2").String("value2")
+	k3v3 := kv.Key("key3").String("value3")
 
 	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	span := startSpan(tp, "Links",
-		apitrace.LinkedTo(sc1, kv.NewKey("key1").String("value1")),
+		apitrace.LinkedTo(sc1, kv.Key("key1").String("value1")),
 		apitrace.LinkedTo(sc2,
-			kv.NewKey("key2").String("value2"),
-			kv.NewKey("key3").String("value3"),
+			kv.Key("key2").String("value2"),
+			kv.Key("key3").String("value3"),
 		),
 	)
 
@@ -516,13 +516,13 @@ func TestLinksOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
-		apitrace.LinkedTo(sc1, kv.NewKey("key1").String("value1")),
-		apitrace.LinkedTo(sc2, kv.NewKey("key2").String("value2")),
-		apitrace.LinkedTo(sc3, kv.NewKey("key3").String("value3")),
+		apitrace.LinkedTo(sc1, kv.Key("key1").String("value1")),
+		apitrace.LinkedTo(sc2, kv.Key("key2").String("value2")),
+		apitrace.LinkedTo(sc3, kv.Key("key3").String("value3")),
 	)
 
-	k2v2 := kv.NewKey("key2").String("value2")
-	k3v3 := kv.NewKey("key3").String("value3")
+	k2v2 := kv.Key("key2").String("value2")
+	k3v3 := kv.Key("key3").String("value3")
 
 	got, err := endSpan(te, span)
 	if err != nil {

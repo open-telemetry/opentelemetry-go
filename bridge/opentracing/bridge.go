@@ -66,12 +66,12 @@ func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelcore.NewKey(crk).String(value)})
+	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelcore.Key(crk).String(value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	val, _ := c.baggageItems.Value(otelcore.NewKey(crk))
+	val, _ := c.baggageItems.Value(otelcore.Key(crk))
 	return val.Emit()
 }
 

@@ -30,10 +30,10 @@ import (
 )
 
 var (
-	HTTPStatus     = kv.NewKey("http.status")
-	HTTPHeaderMIME = kv.NewKey("http.mime")
-	HTTPRemoteAddr = kv.NewKey("http.remote")
-	HTTPLocalAddr  = kv.NewKey("http.local")
+	HTTPStatus     = kv.Key("http.status")
+	HTTPHeaderMIME = kv.Key("http.mime")
+	HTTPRemoteAddr = kv.Key("http.remote")
+	HTTPLocalAddr  = kv.Key("http.local")
 )
 
 var (
