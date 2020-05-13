@@ -40,48 +40,48 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2;prop=1"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2;prop=1"),
 			},
 		},
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2,val3"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2,val3"),
 			},
 		},
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
 			wantKVs: []kv.KeyValue{
-				kv.NewKey("key1").String(""),
-				kv.NewKey("key2").String("val2"),
+				kv.Key("key1").String(""),
+				kv.Key("key2").String("val2"),
 			},
 		},
 	}
@@ -157,31 +157,31 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 		{
 			name: "two simple values",
 			kvs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1"),
-				kv.NewKey("key2").String("val2"),
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 			wantInHeader: []string{"key1=val1", "key2=val2"},
 		},
 		{
 			name: "two values with escaped chars",
 			kvs: []kv.KeyValue{
-				kv.NewKey("key1").String("val1,val2"),
-				kv.NewKey("key2").String("val3=4"),
+				kv.Key("key1").String("val1,val2"),
+				kv.Key("key2").String("val3=4"),
 			},
 			wantInHeader: []string{"key1=val1%2Cval2", "key2=val3%3D4"},
 		},
 		{
 			name: "values of non-string types",
 			kvs: []kv.KeyValue{
-				kv.NewKey("key1").Bool(true),
-				kv.NewKey("key2").Int(123),
-				kv.NewKey("key3").Int64(123),
-				kv.NewKey("key4").Int32(123),
-				kv.NewKey("key5").Uint(123),
-				kv.NewKey("key6").Uint32(123),
-				kv.NewKey("key7").Uint64(123),
-				kv.NewKey("key8").Float64(123.567),
-				kv.NewKey("key9").Float32(123.567),
+				kv.Key("key1").Bool(true),
+				kv.Key("key2").Int(123),
+				kv.Key("key3").Int64(123),
+				kv.Key("key4").Int32(123),
+				kv.Key("key5").Uint(123),
+				kv.Key("key6").Uint32(123),
+				kv.Key("key7").Uint64(123),
+				kv.Key("key8").Float64(123.567),
+				kv.Key("key9").Float32(123.567),
 			},
 			wantInHeader: []string{
 				"key1=true",

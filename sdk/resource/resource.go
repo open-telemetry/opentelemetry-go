@@ -34,7 +34,7 @@ type Resource struct {
 
 var emptyResource Resource
 
-// NewKey creates a resource from a set of attributes.  If there are
+// Key creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
 func New(kvs ...kv.KeyValue) *Resource {
@@ -96,7 +96,7 @@ func Merge(a, b *Resource) *Resource {
 		b = Empty()
 	}
 	// Note: 'b' is listed first so that 'a' will overwrite with
-	// last-value-wins in label.NewKey()
+	// last-value-wins in label.Key()
 	combine := append(b.Attributes(), a.Attributes()...)
 	return New(combine...)
 }

@@ -30,10 +30,10 @@ import (
 )
 
 var (
-	fooKey     = kv.NewKey("ex.com/foo")
-	barKey     = kv.NewKey("ex.com/bar")
-	lemonsKey  = kv.NewKey("ex.com/lemons")
-	anotherKey = kv.NewKey("ex.com/another")
+	fooKey     = kv.Key("ex.com/foo")
+	barKey     = kv.Key("ex.com/bar")
+	lemonsKey  = kv.Key("ex.com/lemons")
+	anotherKey = kv.Key("ex.com/another")
 )
 
 // initTracer creates and registers trace provider instance.
@@ -94,7 +94,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.NewKey("bogons").Int(100))
+		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
 
 		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
 

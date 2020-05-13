@@ -37,7 +37,7 @@ func ExampleNewExportPipeline() {
 
 	ctx := context.Background()
 
-	key := kv.NewKey("key")
+	key := kv.Key("key")
 	meter := pusher.Meter("example")
 
 	// Create and update a single counter:

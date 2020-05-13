@@ -97,7 +97,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, kv.NewKey(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, kv.Key(trimmedName).String(trimmedValueWithProps.String()))
 	}
 	return ContextWithMap(ctx, NewMap(MapUpdate{
 		MultiKV: keyValues,

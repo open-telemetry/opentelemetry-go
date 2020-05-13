@@ -111,7 +111,7 @@ func makeLabels(n int) []kv.KeyValue {
 				break
 			}
 		}
-		l[i] = kv.NewKey(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
