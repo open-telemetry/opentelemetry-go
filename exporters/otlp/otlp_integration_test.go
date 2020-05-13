@@ -32,8 +32,8 @@ import (
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -111,8 +111,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	selector := simple.NewWithExactMeasure()
-	batcher := ungrouped.New(selector, true)
-	pusher := push.New(batcher, exp, 60*time.Second)
+	integrator := integrator.New(selector, true)
+	pusher := push.New(integrator, exp, 60*time.Second)
 	pusher.Start()
 
 	ctx := context.Background()
