@@ -34,6 +34,15 @@ type Option interface {
 	Apply(*Config)
 }
 
+// Configure is a helper that applies all the options to a Config.
+func Configure(opts []Option) Config {
+	var config Config
+	for _, o := range opts {
+		o.Apply(&config)
+	}
+	return config
+}
+
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
 	return descriptionOption(desc)

@@ -21,14 +21,42 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 )
 
-// Measurement is used for reporting a batch of metric
-// values. Instances of this type should be created by instruments
-// (e.g., Int64Counter.Measurement()).
+// Measurement is used for reporting a synchronous batch of metric
+// values. Instances of this type should be created by synchronous
+// instruments (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     Number
 	instrument SyncImpl
 }
+
+// Observation is used for reporting an asynchronous  batch of metric
+// values. Instances of this type should be created by asynchronous
+// instruments (e.g., Int64Observer.Observation()).
+type Observation struct {
+	// number needs to be aligned for 64-bit atomic operations.
+	number     Number
+	instrument AsyncImpl
+}
+
+// syncInstrument contains a SyncImpl.
+type syncInstrument struct {
+	instrument SyncImpl
+}
+
+// syncBoundInstrument contains a BoundSyncImpl.
+type syncBoundInstrument struct {
+	boundInstrument BoundSyncImpl
+}
+
+// asyncInstrument contains a AsyncImpl.
+type asyncInstrument struct {
+	instrument AsyncImpl
+}
+
+// ErrSDKReturnedNilImpl is used when one of the `MeterImpl` New
+// methods returns nil.
+var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 // SyncImpl returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
@@ -40,15 +68,6 @@ func (m Measurement) SyncImpl() SyncImpl {
 // Number returns a number recorded in this measurement.
 func (m Measurement) Number() Number {
 	return m.number
-}
-
-// Observation is used for reporting a batch of metric
-// values. Instances of this type should be created by Observer
-// instruments (e.g., Int64Observer.Observation()).
-type Observation struct {
-	// number needs to be aligned for 64-bit atomic operations.
-	number     Number
-	instrument AsyncImpl
 }
 
 // AsyncImpl returns the instrument that created this observation.
@@ -63,19 +82,15 @@ func (m Observation) Number() Number {
 	return m.number
 }
 
-type syncInstrument struct {
-	instrument SyncImpl
+// AsyncImpl implements AsyncImpl.
+func (a asyncInstrument) AsyncImpl() AsyncImpl {
+	return a.instrument
 }
 
-type syncBoundInstrument struct {
-	boundInstrument BoundSyncImpl
+// SyncImpl returns the implementation object for synchronous instruments.
+func (s syncInstrument) SyncImpl() SyncImpl {
+	return s.instrument
 }
-
-type asyncInstrument struct {
-	instrument AsyncImpl
-}
-
-var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 func (s syncInstrument) bind(labels []kv.KeyValue) syncBoundInstrument {
 	return newSyncBoundInstrument(s.instrument.Bind(labels))
@@ -93,20 +108,13 @@ func (s syncInstrument) directRecord(ctx context.Context, number Number, labels 
 	s.instrument.RecordOne(ctx, number, labels)
 }
 
-func (s syncInstrument) SyncImpl() SyncImpl {
-	return s.instrument
-}
-
 func (h syncBoundInstrument) directRecord(ctx context.Context, number Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
+// Unbind calls SyncImpl.Unbind.
 func (h syncBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
-}
-
-func (a asyncInstrument) AsyncImpl() AsyncImpl {
-	return a.instrument
 }
 
 // checkNewSync receives an SyncImpl and potential
@@ -155,4 +163,58 @@ func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 	return asyncInstrument{
 		instrument: instrument,
 	}, err
+}
+
+// wrapInt64CounterInstrument returns an `Int64Counter` from a
+// `SyncImpl`.  An error will be generated if the
+// `SyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapInt64CounterInstrument(syncInst SyncImpl, err error) (Int64Counter, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Int64Counter{syncInstrument: common}, err
+}
+
+// wrapFloat64CounterInstrument returns an `Float64Counter` from a
+// `SyncImpl`.  An error will be generated if the
+// `SyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapFloat64CounterInstrument(syncInst SyncImpl, err error) (Float64Counter, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Float64Counter{syncInstrument: common}, err
+}
+
+// wrapInt64MeasureInstrument returns an `Int64Measure` from a
+// `SyncImpl`.  An error will be generated if the
+// `SyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapInt64MeasureInstrument(syncInst SyncImpl, err error) (Int64Measure, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Int64Measure{syncInstrument: common}, err
+}
+
+// wrapFloat64MeasureInstrument returns an `Float64Measure` from a
+// `SyncImpl`.  An error will be generated if the
+// `SyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Float64Measure{syncInstrument: common}, err
+}
+
+// wrapInt64ObserverInstrument returns an `Int64Observer` from a
+// `AsyncImpl`.  An error will be generated if the
+// `AsyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapInt64ObserverInstrument(asyncInst AsyncImpl, err error) (Int64Observer, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64Observer{asyncInstrument: common}, err
+}
+
+// wrapFloat64ObserverInstrument returns an `Float64Observer` from a
+// `AsyncImpl`.  An error will be generated if the
+// `AsyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Observer, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64Observer{asyncInstrument: common}, err
 }

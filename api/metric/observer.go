@@ -23,6 +23,9 @@ import "go.opentelemetry.io/otel/api/kv"
 //  - Three kinds of Observer result (int64, float64, batch)
 //  - Three kinds of Observe() function (int64, float64, batch)
 //  - Three kinds of AsyncRunner interface (abstract, single, batch)
+//  - Two kinds of Observer constructor (int64, float64)
+//  - Two kinds of Observation() function (int64, float64)
+//  - Various internals
 
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
@@ -104,9 +107,9 @@ func (br BatchObserverResult) Observe(labels []kv.KeyValue, obs ...Observation) 
 // AsyncBatchRunner.  SDKs will encounter an error if the AsyncRunner
 // does not satisfy one of these interfaces.
 type AsyncRunner interface {
-	// anyRunner() is a non-exported method with no functional use
+	// AnyRunner() is a non-exported method with no functional use
 	// other than to make this a non-empty interface.
-	anyRunner()
+	AnyRunner()
 }
 
 // AsyncSingleRunner is an interface implemented by single-observer
@@ -131,6 +134,10 @@ type AsyncBatchRunner interface {
 
 	AsyncRunner
 }
+
+var _ AsyncSingleRunner = (*Int64ObserverCallback)(nil)
+var _ AsyncSingleRunner = (*Float64ObserverCallback)(nil)
+var _ AsyncBatchRunner = (*BatchObserverCallback)(nil)
 
 // RegisterInt64Observer creates a new integer Observer instrument
 // with the given name, running in a batch callback, and customized with
@@ -179,10 +186,6 @@ func (f Float64Observer) Observation(v float64) Observation {
 	}
 }
 
-var _ AsyncSingleRunner = (*Int64ObserverCallback)(nil)
-var _ AsyncSingleRunner = (*Float64ObserverCallback)(nil)
-var _ AsyncBatchRunner = (*BatchObserverCallback)(nil)
-
 // newInt64AsyncRunner returns a single-observer callback for integer Observer instruments.
 func newInt64AsyncRunner(c Int64ObserverCallback) AsyncSingleRunner {
 	return &c
@@ -198,14 +201,14 @@ func newBatchAsyncRunner(c BatchObserverCallback) AsyncBatchRunner {
 	return &c
 }
 
-// anyRunner implements AsyncRunner.
-func (*Int64ObserverCallback) anyRunner() {}
+// AnyRunner implements AsyncRunner.
+func (*Int64ObserverCallback) AnyRunner() {}
 
-// anyRunner implements AsyncRunner.
-func (*Float64ObserverCallback) anyRunner() {}
+// AnyRunner implements AsyncRunner.
+func (*Float64ObserverCallback) AnyRunner() {}
 
-// anyRunner implements AsyncRunner.
-func (*BatchObserverCallback) anyRunner() {}
+// AnyRunner implements AsyncRunner.
+func (*BatchObserverCallback) AnyRunner() {}
 
 // Run implements AsyncSingleRunner.
 func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {

@@ -22,6 +22,20 @@ type Meter struct {
 	libraryName string
 }
 
+// WrapMeterImpl constructs a `Meter` implementation from a
+// `MeterImpl` implementation.
+func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
+	return Meter{
+		impl:        impl,
+		libraryName: libraryName,
+	}
+}
+
+// MeterImpl returns the underlying MeterImpl of this Meter.
+func (m Meter) MeterImpl() MeterImpl {
+	return m.impl
+}
+
 // RecordBatch atomically records a batch of measurements.
 func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
