@@ -82,3 +82,12 @@ type BoundSyncImpl interface {
 type AsyncImpl interface {
 	InstrumentImpl
 }
+
+// WrapMeterImpl constructs a `Meter` implementation from a
+// `MeterImpl` implementation.
+func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
+	return Meter{
+		impl:        impl,
+		libraryName: libraryName,
+	}
+}

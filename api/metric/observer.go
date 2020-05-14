@@ -139,31 +139,6 @@ var _ AsyncSingleRunner = (*Int64ObserverCallback)(nil)
 var _ AsyncSingleRunner = (*Float64ObserverCallback)(nil)
 var _ AsyncBatchRunner = (*BatchObserverCallback)(nil)
 
-// RegisterInt64Observer creates a new integer Observer instrument
-// with the given name, running in a batch callback, and customized with
-// options.  May return an error if the name is invalid (e.g., empty)
-// or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) RegisterInt64Observer(name string, opts ...Option) (Int64Observer, error) {
-	if b.runner == nil {
-		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
-	}
-	return wrapInt64ObserverInstrument(
-		b.meter.newAsync(name, ObserverKind, Int64NumberKind, opts, b.runner))
-}
-
-// RegisterFloat64Observer creates a new floating point Observer with
-// the given name, running in a batch callback, and customized with
-// options.  May return an error if the name is invalid (e.g., empty)
-// or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) RegisterFloat64Observer(name string, opts ...Option) (Float64Observer, error) {
-	if b.runner == nil {
-		return wrapFloat64ObserverInstrument(NoopAsync{}, nil)
-	}
-	return wrapFloat64ObserverInstrument(
-		b.meter.newAsync(name, ObserverKind, Float64NumberKind, opts,
-			b.runner))
-}
-
 // Observation returns an Observation, a BatchObserverCallback
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,

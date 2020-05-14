@@ -20,6 +20,17 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 )
 
+// The file is organized as follows:
+//
+//  - Provider interface
+//  - Meter struct
+//  - RecordBatch
+//  - BatchObserver
+//  - Synchronous instrument constructors (2 x int64,float64)
+//  - Asynchronous instrument constructors (1 x int64,float64)
+//  - Batch asynchronous constructors (1 x int64,float64)
+//  - Internals
+
 // Provider supports named Meter instances.
 type Provider interface {
 	// Meter gets a named Meter interface.  If the name is an
@@ -36,63 +47,21 @@ type Meter struct {
 	libraryName string
 }
 
-// WrapMeterImpl constructs a `Meter` implementation from a
-// `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
-	return Meter{
-		impl:        impl,
-		libraryName: libraryName,
-	}
-}
-
-// MeterImpl returns the underlying MeterImpl of this Meter.
-func (m Meter) MeterImpl() MeterImpl {
-	return m.impl
-}
-
-// newAsync constructs one new asynchronous instrument.
-func (m Meter) newAsync(
-	name string,
-	mkind Kind,
-	nkind NumberKind,
-	opts []Option,
-	runner AsyncRunner,
-) (
-	AsyncImpl,
-	error,
-) {
-	if m.impl == nil {
-		return NoopAsync{}, nil
-	}
-	desc := NewDescriptor(name, mkind, nkind, opts...)
-	desc.config.LibraryName = m.libraryName
-	return m.impl.NewAsyncInstrument(desc, runner)
-}
-
-// newSync constructs one new synchronous instrument.
-func (m Meter) newSync(
-	name string,
-	metricKind Kind,
-	numberKind NumberKind,
-	opts []Option,
-) (
-	SyncImpl,
-	error,
-) {
-	if m.impl == nil {
-		return NoopSync{}, nil
-	}
-	desc := NewDescriptor(name, metricKind, numberKind, opts...)
-	desc.config.LibraryName = m.libraryName
-	return m.impl.NewSyncInstrument(desc)
-}
-
 // RecordBatch atomically records a batch of measurements.
 func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
 		return
 	}
 	m.impl.RecordBatch(ctx, ls, ms...)
+}
+
+// NewBatchObserver creates a new BatchObserver that supports
+// making batches of observations for multiple instruments.
+func (m Meter) NewBatchObserver(callback BatchObserverCallback) BatchObserver {
+	return BatchObserver{
+		meter:  m,
+		runner: newBatchAsyncRunner(callback),
+	}
 }
 
 // NewInt64Counter creates a new integer Counter instrument with the
@@ -157,11 +126,69 @@ func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCall
 			newFloat64AsyncRunner(callback)))
 }
 
-// NewBatchObserver creates a new BatchObserver that supports
-// making batches of observations for multiple instruments.
-func (m Meter) NewBatchObserver(callback BatchObserverCallback) BatchObserver {
-	return BatchObserver{
-		meter:  m,
-		runner: newBatchAsyncRunner(callback),
+// RegisterInt64Observer creates a new integer Observer instrument
+// with the given name, running in a batch callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
+func (b BatchObserver) RegisterInt64Observer(name string, opts ...Option) (Int64Observer, error) {
+	if b.runner == nil {
+		return wrapInt64ObserverInstrument(NoopAsync{}, nil)
 	}
+	return wrapInt64ObserverInstrument(
+		b.meter.newAsync(name, ObserverKind, Int64NumberKind, opts, b.runner))
+}
+
+// RegisterFloat64Observer creates a new floating point Observer with
+// the given name, running in a batch callback, and customized with
+// options.  May return an error if the name is invalid (e.g., empty)
+// or improperly registered (e.g., duplicate registration).
+func (b BatchObserver) RegisterFloat64Observer(name string, opts ...Option) (Float64Observer, error) {
+	if b.runner == nil {
+		return wrapFloat64ObserverInstrument(NoopAsync{}, nil)
+	}
+	return wrapFloat64ObserverInstrument(
+		b.meter.newAsync(name, ObserverKind, Float64NumberKind, opts,
+			b.runner))
+}
+
+// MeterImpl returns the underlying MeterImpl of this Meter.
+func (m Meter) MeterImpl() MeterImpl {
+	return m.impl
+}
+
+// newAsync constructs one new asynchronous instrument.
+func (m Meter) newAsync(
+	name string,
+	mkind Kind,
+	nkind NumberKind,
+	opts []Option,
+	runner AsyncRunner,
+) (
+	AsyncImpl,
+	error,
+) {
+	if m.impl == nil {
+		return NoopAsync{}, nil
+	}
+	desc := NewDescriptor(name, mkind, nkind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewAsyncInstrument(desc, runner)
+}
+
+// newSync constructs one new synchronous instrument.
+func (m Meter) newSync(
+	name string,
+	metricKind Kind,
+	numberKind NumberKind,
+	opts []Option,
+) (
+	SyncImpl,
+	error,
+) {
+	if m.impl == nil {
+		return NoopSync{}, nil
+	}
+	desc := NewDescriptor(name, metricKind, numberKind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewSyncInstrument(desc)
 }
