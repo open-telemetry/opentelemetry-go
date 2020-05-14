@@ -52,7 +52,7 @@ func main() {
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]kv.KeyValue)
-	cb := func(result metric.Float64ObserverResult) {
+	cb := func(_ context.Context, result metric.Float64ObserverResult) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
 		labels := *observerLabelsToReport

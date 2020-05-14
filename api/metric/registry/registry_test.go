@@ -15,6 +15,7 @@
 package registry_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -44,10 +45,10 @@ var (
 			return unwrap(m.NewFloat64Measure(name))
 		},
 		"observer.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+			return unwrap(m.RegisterInt64Observer(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
 		"observer.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
+			return unwrap(m.RegisterFloat64Observer(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )

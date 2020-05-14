@@ -291,20 +291,20 @@ func TestObserverCollection(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64Observer("float.observer", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 		// last value wins
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(-1, kv.String("C", "D"))
 	})
-	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64Observer("int.observer", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
 		result.Observe(1, kv.String("A", "B"))
 		result.Observe(1)
 	})
-	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64Observer("empty.observer", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
@@ -336,7 +336,7 @@ func TestObserverBatch(t *testing.T) {
 	var floatObs metric.Float64Observer
 	var intObs metric.Int64Observer
 	var batch = Must(meter).NewBatchObserver(
-		func(result metric.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(
 				[]kv.KeyValue{
 					kv.String("A", "B"),

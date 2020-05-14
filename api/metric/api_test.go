@@ -150,7 +150,7 @@ func TestObserver(t *testing.T) {
 	{
 		labels := []kv.KeyValue{kv.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42, labels...)
 		})
 		t.Log("Testing float observer")
@@ -161,7 +161,7 @@ func TestObserver(t *testing.T) {
 	{
 		labels := []kv.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64Observer("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(42, labels...)
 		})
 		t.Log("Testing int observer")
@@ -222,7 +222,7 @@ func TestBatchObserver(t *testing.T) {
 	}
 
 	cb := Must(meter).NewBatchObserver(
-		func(result metric.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(labels,
 				obs1.Observation(42),
 				obs2.Observation(42.0),
@@ -314,7 +314,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, measure.SyncImpl())
 
-	observer, err := meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {})
+	observer, err := meter.RegisterInt64Observer("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())

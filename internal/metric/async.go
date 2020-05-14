@@ -15,6 +15,7 @@
 package metric
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -133,7 +134,7 @@ func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.Asy
 }
 
 // Run executes the complete set of observer callbacks.
-func (a *AsyncInstrumentState) Run(collector AsyncCollector) {
+func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector) {
 	a.lock.Lock()
 	runners := a.runners
 	a.lock.Unlock()
@@ -144,12 +145,12 @@ func (a *AsyncInstrumentState) Run(collector AsyncCollector) {
 		// interface has un-exported methods.
 
 		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
-			singleRunner.Run(rp.inst, collector.CollectAsync)
+			singleRunner.Run(ctx, rp.inst, collector.CollectAsync)
 			continue
 		}
 
 		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
-			multiRunner.Run(collector.CollectAsync)
+			multiRunner.Run(ctx, collector.CollectAsync)
 			continue
 		}
 
