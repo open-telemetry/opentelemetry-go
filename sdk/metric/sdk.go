@@ -22,10 +22,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
+	internal "go.opentelemetry.io/otel/internal/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
@@ -46,7 +47,9 @@ type (
 
 		// asyncInstruments is a set of
 		// `*asyncInstrument` instances
-		asyncInstruments sync.Map
+		asyncLock        sync.Mutex
+		asyncInstruments *internal.AsyncInstrumentState
+		asyncContext     context.Context
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -129,8 +132,6 @@ type (
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
 		recorders map[label.Distinct]*labeledRecorder
-
-		callback func(func(api.Number, []core.KeyValue))
 	}
 
 	labeledRecorder struct {
@@ -161,7 +162,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
+func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
@@ -178,12 +179,7 @@ func (a *asyncInstrument) observe(number api.Number, labels []core.KeyValue) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
-	// We are in a single-threaded context.  Note: this assumption
-	// could be violated if the user added concurrency within
-	// their callback.
-	labels := label.NewSetWithSortable(kvs, &a.meter.asyncSortSlice)
-
+func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		if lrec.observedEpoch == a.meter.currentEpoch {
@@ -205,7 +201,7 @@ func (a *asyncInstrument) getRecorder(kvs []core.KeyValue) export.Aggregator {
 	// but will be revisited later.
 	a.recorders[labels.Equivalent()] = &labeledRecorder{
 		recorder:      rec,
-		labels:        &labels,
+		labels:        labels,
 		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
@@ -220,7 +216,7 @@ func (m *Accumulator) SetErrorHandler(f ErrorHandler) {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *record {
 	var rec *record
 	var equiv label.Distinct
 
@@ -292,11 +288,11 @@ func (s *syncInstrument) acquireHandle(kvs []core.KeyValue, labelPtr *label.Set)
 	}
 }
 
-func (s *syncInstrument) Bind(kvs []core.KeyValue) api.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []kv.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []core.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []kv.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
@@ -318,15 +314,19 @@ func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 	}
 
 	return &Accumulator{
-		integrator:   integrator,
-		errorHandler: c.ErrorHandler,
+		integrator:       integrator,
+		errorHandler:     c.ErrorHandler,
+		asyncInstruments: internal.NewAsyncInstrumentState(c.ErrorHandler),
 	}
 }
 
+// DefaultErrorHandler is used when the user does not configure an
+// error handler.  Prints messages to os.Stderr.
 func DefaultErrorHandler(err error) {
 	fmt.Fprintln(os.Stderr, "Metrics Accumulator error:", err)
 }
 
+// NewSyncInstrument implements api.MetricImpl.
 func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
@@ -336,15 +336,17 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 	}, nil
 }
 
-func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, callback func(func(api.Number, []core.KeyValue))) (api.AsyncImpl, error) {
+// NewAsyncInstrument implements api.MetricImpl.
+func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metric.AsyncRunner) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-		callback: callback,
 	}
-	m.asyncInstruments.Store(a, nil)
+	m.asyncLock.Lock()
+	defer m.asyncLock.Unlock()
+	m.asyncInstruments.Register(a, runner)
 	return a, nil
 }
 
@@ -360,13 +362,13 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.collectRecords(ctx)
-	checkpointed += m.collectAsync(ctx)
+	checkpointed := m.collectSyncInstruments(ctx)
+	checkpointed += m.observeAsyncInstruments(ctx)
 	m.currentEpoch++
 	return checkpointed
 }
 
-func (m *Accumulator) collectRecords(ctx context.Context) int {
+func (m *Accumulator) collectSyncInstruments(ctx context.Context) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -409,24 +411,39 @@ func (m *Accumulator) collectRecords(ctx context.Context) int {
 	return checkpointed
 }
 
-func (m *Accumulator) collectAsync(ctx context.Context) int {
-	checkpointed := 0
+// CollectAsync implements internal.AsyncCollector.
+func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) {
+	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
-	m.asyncInstruments.Range(func(key, value interface{}) bool {
-		a := key.(*asyncInstrument)
-		a.callback(a.observe)
-		checkpointed += m.checkpointAsync(ctx, a)
-		return true
-	})
+	for _, ob := range obs {
+		a := ob.AsyncImpl().Implementation().(*asyncInstrument)
+		a.observe(ob.Number(), &labels)
+	}
+}
 
-	return checkpointed
+func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
+	m.asyncLock.Lock()
+	defer m.asyncLock.Unlock()
+
+	asyncCollected := 0
+	m.asyncContext = ctx
+
+	m.asyncInstruments.Run(m)
+	m.asyncContext = nil
+
+	for _, inst := range m.asyncInstruments.Instruments() {
+		a := inst.Implementation().(*asyncInstrument)
+		asyncCollected += m.checkpointAsync(a)
+	}
+
+	return asyncCollected
 }
 
 func (m *Accumulator) checkpointRecord(ctx context.Context, r *record) int {
 	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
 }
 
-func (m *Accumulator) checkpointAsync(ctx context.Context, a *asyncInstrument) int {
+func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 	if len(a.recorders) == 0 {
 		return 0
 	}
@@ -435,7 +452,7 @@ func (m *Accumulator) checkpointAsync(ctx context.Context, a *asyncInstrument) i
 		lrec := lrec
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(ctx, &a.descriptor, lrec.recorder, lrec.labels)
+			checkpointed += m.checkpoint(m.asyncContext, &a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -464,7 +481,7 @@ func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descrip
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []core.KeyValue, measurements ...api.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
@@ -485,6 +502,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []core.KeyValue, meas
 	}
 }
 
+// RecordOne implements api.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	if r.recorder == nil {
 		// The instrument is disabled according to the AggregationSelector.
@@ -503,6 +521,7 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	atomic.AddInt64(&r.updateCount, 1)
 }
 
+// Unbind implements api.SyncImpl.
 func (r *record) Unbind() {
 	r.refMapped.unref()
 }

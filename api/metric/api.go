@@ -19,7 +19,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/unit"
 )
 
@@ -145,7 +145,7 @@ type Meter struct {
 }
 
 // RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []core.KeyValue, ms ...Measurement) {
+func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
 		return
 	}
@@ -198,9 +198,7 @@ func (m Meter) RegisterInt64Observer(name string, callback Int64ObserverCallback
 	}
 	return wrapInt64ObserverInstrument(
 		m.newAsync(name, ObserverKind, Int64NumberKind, opts,
-			func(observe func(Number, []core.KeyValue)) {
-				callback(Int64ObserverResult{observe})
-			}))
+			newInt64AsyncRunner(callback)))
 }
 
 // RegisterFloat64Observer creates a new floating point Observer with
@@ -213,21 +211,16 @@ func (m Meter) RegisterFloat64Observer(name string, callback Float64ObserverCall
 	}
 	return wrapFloat64ObserverInstrument(
 		m.newAsync(name, ObserverKind, Float64NumberKind, opts,
-			func(observe func(Number, []core.KeyValue)) {
-				callback(Float64ObserverResult{observe})
-			}))
+			newFloat64AsyncRunner(callback)))
 }
 
-// Observe captures a single integer value from the associated
-// instrument callback, with the given labels.
-func (io Int64ObserverResult) Observe(value int64, labels ...core.KeyValue) {
-	io.observe(NewInt64Number(value), labels)
-}
-
-// Observe captures a single floating point value from the associated
-// instrument callback, with the given labels.
-func (fo Float64ObserverResult) Observe(value float64, labels ...core.KeyValue) {
-	fo.observe(NewFloat64Number(value), labels)
+// NewBatchObserver creates a new BatchObserver that supports
+// making batches of observations for multiple instruments.
+func (m Meter) NewBatchObserver(callback BatchObserverCallback) BatchObserver {
+	return BatchObserver{
+		meter:  m,
+		runner: newBatchAsyncRunner(callback),
+	}
 }
 
 // WithDescription applies provided description.

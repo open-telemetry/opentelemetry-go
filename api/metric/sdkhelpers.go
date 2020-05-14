@@ -17,14 +17,14 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
 // implementation.
 type MeterImpl interface {
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, []core.KeyValue, ...Measurement)
+	RecordBatch(context.Context, []kv.KeyValue, ...Measurement)
 
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
@@ -36,7 +36,7 @@ type MeterImpl interface {
 	// one occur.
 	NewAsyncInstrument(
 		descriptor Descriptor,
-		callback func(func(Number, []core.KeyValue)),
+		runner AsyncRunner,
 	) (AsyncImpl, error)
 }
 
@@ -59,10 +59,10 @@ type SyncImpl interface {
 
 	// Bind creates an implementation-level bound instrument,
 	// binding a label set with this instrument implementation.
-	Bind(labels []core.KeyValue) BoundSyncImpl
+	Bind(labels []kv.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number Number, labels []core.KeyValue)
+	RecordOne(ctx context.Context, number Number, labels []kv.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a
@@ -81,18 +81,6 @@ type BoundSyncImpl interface {
 // asynchronous instrument (e.g., Observer instruments).
 type AsyncImpl interface {
 	InstrumentImpl
-}
-
-// Int64ObserverResult is passed to an observer callback to capture
-// observations for one asynchronous integer metric instrument.
-type Int64ObserverResult struct {
-	observe func(Number, []core.KeyValue)
-}
-
-// Float64ObserverResult is passed to an observer callback to capture
-// observations for one asynchronous floating point metric instrument.
-type Float64ObserverResult struct {
-	observe func(Number, []core.KeyValue)
 }
 
 // Configure is a helper that applies all the options to a Config.
@@ -165,13 +153,13 @@ func wrapFloat64MeasureInstrument(syncInst SyncImpl, err error) (Float64Measure,
 }
 
 // newAsync constructs one new asynchronous instrument.
-func (m Meter) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, callback func(func(Number, []core.KeyValue))) (AsyncImpl, error) {
+func (m Meter) newAsync(name string, mkind Kind, nkind NumberKind, opts []Option, runner AsyncRunner) (AsyncImpl, error) {
 	if m.impl == nil {
 		return NoopAsync{}, nil
 	}
 	desc := NewDescriptor(name, mkind, nkind, opts...)
 	desc.config.LibraryName = m.libraryName
-	return m.impl.NewAsyncInstrument(desc, callback)
+	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
 // wrapInt64ObserverInstrument returns an `Int64Observer` from a

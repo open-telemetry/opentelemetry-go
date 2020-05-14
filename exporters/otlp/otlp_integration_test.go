@@ -26,8 +26,7 @@ import (
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -87,13 +86,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		),
 	}
 	tp1, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(key.String("rk1", "rv11)"),
-			key.Int64("rk2", 5)))...)
+		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11)"),
+			kv.Int64("rk2", 5)))...)
 	assert.NoError(t, err)
 
 	tp2, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(key.String("rk1", "rv12)"),
-			key.Float32("rk3", 6.5)))...)
+		sdktrace.WithResourceAttributes(kv.String("rk1", "rv12)"),
+			kv.Float32("rk3", 6.5)))...)
 	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
@@ -102,11 +101,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	m := 4
 	for i := 0; i < m; i++ {
 		_, span := tr1.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(key.Int64("i", int64(i)))
+		span.SetAttributes(kv.Int64("i", int64(i)))
 		span.End()
 
 		_, span = tr2.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(key.Int64("i", int64(i)))
+		span.SetAttributes(kv.Int64("i", int64(i)))
 		span.End()
 	}
 
@@ -117,7 +116,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	ctx := context.Background()
 	meter := pusher.Meter("test-meter")
-	labels := []core.KeyValue{key.Bool("test", true)}
+	labels := []kv.KeyValue{kv.Bool("test", true)}
 
 	type data struct {
 		iKind metric.Kind

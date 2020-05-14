@@ -19,8 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -66,9 +65,9 @@ var (
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(key.String("G", "H"), key.String("C", "D"))
+	Labels1 = makeLabels(kv.String("G", "H"), kv.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
+	Labels2 = makeLabels(kv.String("C", "D"), kv.String("E", "F"))
 	// Labels3 is the empty set
 	Labels3 = makeLabels()
 
@@ -84,7 +83,7 @@ func NewOutput(labelEncoder label.Encoder) Output {
 
 // NewAggregationSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
-// instruments and lastvalue.New for lastValue instruments.
+// instruments and lastvalue.New() for lastValue instruments.
 func NewAggregationSelector() export.AggregationSelector {
 	return &testAggregationSelector{}
 }
@@ -100,7 +99,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(labels ...core.KeyValue) *label.Set {
+func makeLabels(labels ...kv.KeyValue) *label.Set {
 	s := label.NewSet(labels...)
 	return &s
 }

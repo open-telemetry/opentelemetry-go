@@ -17,7 +17,7 @@
 package resource
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 )
 
@@ -34,10 +34,10 @@ type Resource struct {
 
 var emptyResource Resource
 
-// New creates a resource from a set of attributes.  If there are
+// Key creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
-func New(kvs ...core.KeyValue) *Resource {
+func New(kvs ...kv.KeyValue) *Resource {
 	return &Resource{
 		labels: label.NewSet(kvs...),
 	}
@@ -57,7 +57,7 @@ func (r *Resource) String() string {
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 // To avoid allocating a new slice, use an iterator.
-func (r *Resource) Attributes() []core.KeyValue {
+func (r *Resource) Attributes() []kv.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
@@ -96,7 +96,7 @@ func Merge(a, b *Resource) *Resource {
 		b = Empty()
 	}
 	// Note: 'b' is listed first so that 'a' will overwrite with
-	// last-value-wins in label.New()
+	// last-value-wins in label.Key()
 	combine := append(b.Attributes(), a.Attributes()...)
 	return New(combine...)
 }

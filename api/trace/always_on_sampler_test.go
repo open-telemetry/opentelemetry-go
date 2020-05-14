@@ -19,12 +19,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 func TestAlwaysOnSamplerShouldSample(t *testing.T) {
 	gotD := AlwaysOnSampler().ShouldSample(
-		SpanContext{}, false, ID{}, SpanID{}, "span", SpanKindClient, []core.KeyValue{}, []Link{})
+		SpanContext{}, false, ID{}, SpanID{}, "span", SpanKindClient, []kv.KeyValue{}, []Link{})
 	wantD := Decision{Sampled: true}
 	if diff := cmp.Diff(wantD, gotD); diff != "" {
 		t.Errorf("Decision: +got, -want%v", diff)

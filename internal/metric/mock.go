@@ -18,7 +18,7 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
@@ -27,14 +27,14 @@ import (
 type (
 	Handle struct {
 		Instrument *Sync
-		Labels     []core.KeyValue
+		Labels     []kv.KeyValue
 	}
 
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context
-		Labels       []core.KeyValue
+		Labels       []kv.KeyValue
 		LibraryName  string
 	}
 
@@ -46,8 +46,11 @@ type (
 	}
 
 	MeterImpl struct {
+		lock sync.Mutex
+
 		MeasurementBatches []Batch
-		AsyncInstruments   []*Async
+
+		asyncInstruments *AsyncInstrumentState
 	}
 
 	Measurement struct {
@@ -64,7 +67,7 @@ type (
 	Async struct {
 		Instrument
 
-		callback func(func(apimetric.Number, []core.KeyValue))
+		runner apimetric.AsyncRunner
 	}
 
 	Sync struct {
@@ -91,14 +94,14 @@ func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Sync) Bind(labels []core.KeyValue) apimetric.BoundSyncImpl {
+func (s *Sync) Bind(labels []kv.KeyValue) apimetric.BoundSyncImpl {
 	return &Handle{
 		Instrument: s,
 		Labels:     labels,
 	}
 }
 
-func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []core.KeyValue) {
+func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []kv.KeyValue) {
 	s.meter.doRecordSingle(ctx, labels, s, number)
 }
 
@@ -109,15 +112,17 @@ func (h *Handle) RecordOne(ctx context.Context, number apimetric.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []core.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
-	m.recordMockBatch(ctx, labels, Measurement{
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []kv.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
+	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
-	})
+	}})
 }
 
 func NewProvider() (*MeterImpl, apimetric.Provider) {
-	impl := &MeterImpl{}
+	impl := &MeterImpl{
+		asyncInstruments: NewAsyncInstrumentState(nil),
+	}
 	p := &MeterProvider{
 		impl:       impl,
 		unique:     registry.NewUniqueInstrumentMeterImpl(impl),
@@ -144,6 +149,9 @@ func NewMeter() (*MeterImpl, apimetric.Meter) {
 }
 
 func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -152,19 +160,22 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.S
 	}, nil
 }
 
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, callback func(func(apimetric.Number, []core.KeyValue))) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (apimetric.AsyncImpl, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-		callback: callback,
+		runner: runner,
 	}
-	m.AsyncInstruments = append(m.AsyncInstruments, a)
+	m.asyncInstruments.Register(a, runner)
 	return a, nil
 }
 
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...apimetric.Measurement) {
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, measurements ...apimetric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -173,10 +184,25 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, mea
 			Number:     m.Number(),
 		}
 	}
-	m.recordMockBatch(ctx, labels, mm...)
+	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue, measurements ...Measurement) {
+func (m *MeterImpl) CollectAsync(labels []kv.KeyValue, obs ...metric.Observation) {
+	mm := make([]Measurement, len(obs))
+	for i := 0; i < len(obs); i++ {
+		o := obs[i]
+		mm[i] = Measurement{
+			Instrument: o.AsyncImpl(),
+			Number:     o.Number(),
+		}
+	}
+	m.collect(context.Background(), labels, mm)
+}
+
+func (m *MeterImpl) collect(ctx context.Context, labels []kv.KeyValue, measurements []Measurement) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
 		Ctx:          ctx,
 		Labels:       labels,
@@ -185,9 +211,5 @@ func (m *MeterImpl) recordMockBatch(ctx context.Context, labels []core.KeyValue,
 }
 
 func (m *MeterImpl) RunAsyncInstruments() {
-	for _, observer := range m.AsyncInstruments {
-		observer.callback(func(n apimetric.Number, labels []core.KeyValue) {
-			m.doRecordSingle(context.Background(), labels, observer, n)
-		})
-	}
+	m.asyncInstruments.Run(m)
 }

@@ -23,9 +23,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
-	otelkey "go.opentelemetry.io/otel/api/key"
+	otelcore "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
@@ -33,12 +32,12 @@ import (
 )
 
 var (
-	ComponentKey     = otelkey.New("component")
-	ServiceKey       = otelkey.New("service")
-	StatusCodeKey    = otelkey.New("status.code")
-	StatusMessageKey = otelkey.New("status.message")
-	ErrorKey         = otelkey.New("error")
-	NameKey          = otelkey.New("name")
+	ComponentKey     = otelcore.Key("component")
+	ServiceKey       = otelcore.Key("service")
+	StatusCodeKey    = otelcore.Key("status.code")
+	StatusMessageKey = otelcore.Key("status.message")
+	ErrorKey         = otelcore.Key("error")
+	NameKey          = otelcore.Key("name")
 )
 
 type MockContextKeyValue struct {
@@ -240,7 +239,7 @@ func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
 }
 
 func (s *MockSpan) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(otelkey.Infer(k, v))
+	s.SetAttributes(otelcore.Infer(k, v))
 }
 
 func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
@@ -289,8 +288,8 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 	}
 
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
-		otelkey.String("error.type", reflect.TypeOf(err).String()),
-		otelkey.String("error.message", err.Error()),
+		otelcore.String("error.type", reflect.TypeOf(err).String()),
+		otelcore.String("error.message", err.Error()),
 	)
 }
 

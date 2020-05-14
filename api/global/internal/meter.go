@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
 )
@@ -85,7 +85,7 @@ type asyncImpl struct {
 
 	instrument
 
-	callback func(func(metric.Number, []core.KeyValue))
+	runner metric.AsyncRunner
 }
 
 // SyncImpler is implemented by all of the sync metric
@@ -104,7 +104,7 @@ type syncHandle struct {
 	delegate unsafe.Pointer // (*metric.HandleImpl)
 
 	inst   *syncImpl
-	labels []core.KeyValue
+	labels []kv.KeyValue
 
 	initialize sync.Once
 }
@@ -219,7 +219,7 @@ func (inst *syncImpl) Implementation() interface{} {
 	return inst
 }
 
-func (inst *syncImpl) Bind(labels []core.KeyValue) metric.BoundSyncImpl {
+func (inst *syncImpl) Bind(labels []kv.KeyValue) metric.BoundSyncImpl {
 	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
 	}
@@ -245,21 +245,21 @@ func (bound *syncHandle) Unbind() {
 
 func (m *meterImpl) NewAsyncInstrument(
 	desc metric.Descriptor,
-	callback func(func(metric.Number, []core.KeyValue)),
+	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).NewAsyncInstrument(desc, callback)
+		return (*meterPtr).NewAsyncInstrument(desc, runner)
 	}
 
 	inst := &asyncImpl{
 		instrument: instrument{
 			descriptor: desc,
 		},
-		callback: callback,
+		runner: runner,
 	}
 	m.asyncInsts = append(m.asyncInsts, inst)
 	return inst, nil
@@ -276,7 +276,7 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 	implPtr := new(metric.AsyncImpl)
 
 	var err error
-	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.callback)
+	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.runner)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -291,13 +291,13 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []core.KeyValue, measurements ...metric.Measurement) {
+func (m *meterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, measurements ...metric.Measurement) {
 	if delegatePtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
 
-func (inst *syncImpl) RecordOne(ctx context.Context, number metric.Number, labels []core.KeyValue) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number metric.Number, labels []kv.KeyValue) {
 	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}

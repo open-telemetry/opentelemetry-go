@@ -12,9 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides basic types used in OpenTelemetry - keys,
-// values, numbers and span contexts.
-//
-// See the api/key package for convenience functions for creating keys
-// and key-value pairs.
-package core // import "go.opentelemetry.io/otel/api/core"
+// package kv provides basic key and value types.
+package kv // import "go.opentelemetry.io/otel/api/kv"

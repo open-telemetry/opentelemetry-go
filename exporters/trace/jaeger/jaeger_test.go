@@ -25,9 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -94,8 +93,8 @@ func TestNewRawExporter(t *testing.T) {
 		WithCollectorEndpoint(collectorEndpoint),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
-				key.String(tagKey, tagVal),
+			Tags: []kv.KeyValue{
+				kv.String(tagKey, tagVal),
 			},
 		}),
 	)
@@ -141,8 +140,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []core.KeyValue{
-				key.String(tagKey, tagVal),
+			Tags: []kv.KeyValue{
+				kv.String(tagKey, tagVal),
 			},
 		}),
 	)
@@ -230,19 +229,19 @@ func Test_spanDataToThrift(t *testing.T) {
 						},
 					},
 				},
-				Attributes: []core.KeyValue{
-					key.String("key", keyValue),
-					key.Float64("double", doubleValue),
+				Attributes: []kv.KeyValue{
+					kv.String("key", keyValue),
+					kv.Float64("double", doubleValue),
 					// Jaeger doesn't handle Uint tags, this should be ignored.
-					key.Uint64("ignored", 123),
+					kv.Uint64("ignored", 123),
 				},
 				MessageEvents: []export.Event{
-					{Name: eventNameValue, Attributes: []core.KeyValue{key.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []kv.KeyValue{kv.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,
 				SpanKind:      apitrace.SpanKindClient,
-				Resource:      resource.New(key.String("rk1", rv1), key.Int64("rk2", rv2)),
+				Resource:      resource.New(kv.String("rk1", rv1), kv.Int64("rk2", rv2)),
 			},
 			want: &gen.Span{
 				TraceIdLow:    651345242494996240,

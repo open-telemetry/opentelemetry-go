@@ -15,7 +15,7 @@
 package trace
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 const (
@@ -36,7 +36,7 @@ func (ns alwaysOffSampler) ShouldSample(
 	_ SpanID,
 	_ string,
 	_ SpanKind,
-	_ []core.KeyValue,
+	_ []kv.KeyValue,
 	_ []Link,
 ) Decision {
 	return alwaysOffSamplerDecision

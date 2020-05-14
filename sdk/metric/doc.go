@@ -28,7 +28,7 @@ boilerplate.  The API and SDK are separated such that an event reaching
 the SDK has a uniform structure: an instrument, a label set, and a
 numerical value.
 
-To this end, the API uses a core.Number type to represent either an int64
+To this end, the API uses a kv.Number type to represent either an int64
 or a float64, depending on the instrument's definition.  A single
 implementation interface is used for counter and measure instruments,
 metric.InstrumentImpl, and a single implementation interface is used for

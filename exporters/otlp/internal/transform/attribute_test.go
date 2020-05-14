@@ -20,28 +20,27 @@ import (
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 func TestAttributes(t *testing.T) {
 	for _, test := range []struct {
-		attrs    []core.KeyValue
+		attrs    []kv.KeyValue
 		expected []*commonpb.AttributeKeyValue
 	}{
 		{nil, nil},
 		{
-			[]core.KeyValue{
-				key.Int("int to int", 123),
-				key.Uint("uint to int", 1234),
-				key.Int32("int32 to int", 12345),
-				key.Uint32("uint32 to int", 123456),
-				key.Int64("int64 to int64", 1234567),
-				key.Uint64("uint64 to int64", 12345678),
-				key.Float32("float32 to double", 3.14),
-				key.Float32("float64 to double", 1.61),
-				key.String("string to string", "string"),
-				key.Bool("bool to bool", true),
+			[]kv.KeyValue{
+				kv.Int("int to int", 123),
+				kv.Uint("uint to int", 1234),
+				kv.Int32("int32 to int", 12345),
+				kv.Uint32("uint32 to int", 123456),
+				kv.Int64("int64 to int64", 1234567),
+				kv.Uint64("uint64 to int64", 12345678),
+				kv.Float32("float32 to double", 3.14),
+				kv.Float32("float64 to double", 1.61),
+				kv.String("string to string", "string"),
+				kv.Bool("bool to bool", true),
 			},
 			[]*commonpb.AttributeKeyValue{
 				{

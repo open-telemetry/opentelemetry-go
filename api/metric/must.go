@@ -20,6 +20,12 @@ type MeterMust struct {
 	meter Meter
 }
 
+// BatchObserverMust is a wrapper for BatchObserver that panics when
+// any instrument constructor encounters an error.
+type BatchObserverMust struct {
+	batch BatchObserver
+}
+
 // Must constructs a MeterMust implementation from a Meter, allowing
 // the application to panic when any instrument constructor yields an
 // error.
@@ -81,6 +87,34 @@ func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCal
 // returns the instrument, panicking if it encounters an error.
 func (mm MeterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...Option) Float64Observer {
 	if inst, err := mm.meter.RegisterFloat64Observer(name, callback, oos...); err != nil {
+		panic(err)
+	} else {
+		return inst
+	}
+}
+
+// NewBatchObserver returns a wrapper around BatchObserver that panics
+// when any instrument constructor returns an error.
+func (mm MeterMust) NewBatchObserver(callback BatchObserverCallback) BatchObserverMust {
+	return BatchObserverMust{
+		batch: mm.meter.NewBatchObserver(callback),
+	}
+}
+
+// RegisterInt64Observer calls `BatchObserver.RegisterInt64Observer` and
+// returns the instrument, panicking if it encounters an error.
+func (bm BatchObserverMust) RegisterInt64Observer(name string, oos ...Option) Int64Observer {
+	if inst, err := bm.batch.RegisterInt64Observer(name, oos...); err != nil {
+		panic(err)
+	} else {
+		return inst
+	}
+}
+
+// RegisterFloat64Observer calls `BatchObserver.RegisterFloat64Observer` and
+// returns the instrument, panicking if it encounters an error.
+func (bm BatchObserverMust) RegisterFloat64Observer(name string, oos ...Option) Float64Observer {
+	if inst, err := bm.batch.RegisterFloat64Observer(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst

@@ -23,16 +23,15 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 const (
-	errorTypeKey    = core.Key("error.type")
-	errorMessageKey = core.Key("error.message")
+	errorTypeKey    = kv.Key("error.type")
+	errorMessageKey = kv.Key("error.message")
 	errorEventName  = "error"
 )
 
@@ -94,7 +93,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 	s.mu.Unlock()
 }
 
-func (s *span) SetAttributes(attributes ...core.KeyValue) {
+func (s *span) SetAttributes(attributes ...kv.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
@@ -102,7 +101,7 @@ func (s *span) SetAttributes(attributes ...core.KeyValue) {
 }
 
 func (s *span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(key.Infer(k, v))
+	s.SetAttributes(kv.Infer(k, v))
 }
 
 func (s *span) End(options ...apitrace.EndOption) {
@@ -177,21 +176,21 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(time.Now(), name, attrs...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(timestamp, name, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...core.KeyValue) {
+func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...kv.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
@@ -286,7 +285,7 @@ func (s *span) interfaceArrayToMessageEventArray() []export.Event {
 	return messageEventArr
 }
 
-func (s *span) copyToCappedAttributes(attributes ...core.KeyValue) {
+func (s *span) copyToCappedAttributes(attributes ...kv.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
@@ -374,7 +373,7 @@ type samplingData struct {
 	name         string
 	cfg          *Config
 	span         *span
-	attributes   []core.KeyValue
+	attributes   []kv.KeyValue
 	links        []apitrace.Link
 	kind         apitrace.SpanKind
 }

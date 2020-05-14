@@ -24,11 +24,12 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -81,7 +82,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSampled
 	}
-	return SamplingResult{Decision: decision, Attributes: []core.KeyValue{key.Int("callCount", ts.callCount)}}
+	return SamplingResult{Decision: decision, Attributes: []kv.KeyValue{kv.Int("callCount", ts.callCount)}}
 }
 
 func (ts testSampler) Description() string {
@@ -274,8 +275,8 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp,
 		"StartSpanAttribute",
-		apitrace.WithAttributes(key.String("key1", "value1")),
-		apitrace.WithAttributes(key.String("key2", "value2")),
+		apitrace.WithAttributes(kv.String("key1", "value1")),
+		apitrace.WithAttributes(kv.String("key2", "value2")),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -289,9 +290,9 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.String("key1", "value1"),
-			key.String("key2", "value2"),
+		Attributes: []kv.KeyValue{
+			kv.String("key1", "value1"),
+			kv.String("key2", "value2"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
@@ -305,7 +306,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttributes(key.New("key1").String("value1"))
+	span.SetAttributes(kv.Key("key1").String("value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -318,8 +319,8 @@ func TestSetSpanAttributes(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.String("key1", "value1"),
+		Attributes: []kv.KeyValue{
+			kv.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
@@ -336,10 +337,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
-		key.Bool("key1", true),
-		key.String("key2", "value2"),
-		key.Bool("key1", false), // Replace key1.
-		key.Int64("key4", 4),    // Remove key2 and add key4
+		kv.Bool("key1", true),
+		kv.String("key2", "value2"),
+		kv.Bool("key1", false), // Replace key1.
+		kv.Int64("key4", 4),    // Remove key2 and add key4
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -353,9 +354,9 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.Bool("key1", false),
-			key.Int64("key4", 4),
+		Attributes: []kv.KeyValue{
+			kv.Bool("key1", false),
+			kv.Int64("key4", 4),
 		},
 		SpanKind:              apitrace.SpanKindInternal,
 		HasRemoteParent:       true,
@@ -371,14 +372,14 @@ func TestEvents(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "Events")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.Bool("key2", true)
-	k3v3 := key.Int64("key3", 3)
+	k1v1 := kv.Key("key1").String("value1")
+	k2v2 := kv.Bool("key2", true)
+	k3v3 := kv.Int64("key3", 3)
 
-	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.Bool("key2", true),
-		key.Int64("key3", 3),
+		kv.Bool("key2", true),
+		kv.Int64("key3", 3),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -400,8 +401,8 @@ func TestEvents(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
-			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []kv.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -416,19 +417,19 @@ func TestEventsOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.Bool("key2", false)
-	k3v3 := key.New("key3").String("value3")
+	k1v1 := kv.Key("key1").String("value1")
+	k2v2 := kv.Bool("key2", false)
+	k3v3 := kv.Key("key3").String("value3")
 
-	span.AddEvent(context.Background(), "fooDrop", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "fooDrop", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "barDrop",
-		key.Bool("key2", true),
-		key.New("key3").String("value3"),
+		kv.Bool("key2", true),
+		kv.Key("key3").String("value3"),
 	)
-	span.AddEvent(context.Background(), "foo", key.New("key1").String("value1"))
+	span.AddEvent(context.Background(), "foo", kv.Key("key1").String("value1"))
 	span.AddEvent(context.Background(), "bar",
-		key.Bool("key2", false),
-		key.New("key3").String("value3"),
+		kv.Bool("key2", false),
+		kv.Key("key3").String("value3"),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -449,8 +450,8 @@ func TestEventsOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		MessageEvents: []export.Event{
-			{Name: "foo", Attributes: []core.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []core.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []kv.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
@@ -465,18 +466,18 @@ func TestLinks(t *testing.T) {
 	te := &testExporter{}
 	tp, _ := NewProvider(WithSyncer(te))
 
-	k1v1 := key.New("key1").String("value1")
-	k2v2 := key.New("key2").String("value2")
-	k3v3 := key.New("key3").String("value3")
+	k1v1 := kv.Key("key1").String("value1")
+	k2v2 := kv.Key("key2").String("value2")
+	k3v3 := kv.Key("key3").String("value3")
 
 	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
 	span := startSpan(tp, "Links",
-		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
+		apitrace.LinkedTo(sc1, kv.Key("key1").String("value1")),
 		apitrace.LinkedTo(sc2,
-			key.New("key2").String("value2"),
-			key.New("key3").String("value3"),
+			kv.Key("key2").String("value2"),
+			kv.Key("key3").String("value3"),
 		),
 	)
 
@@ -494,8 +495,8 @@ func TestLinks(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []core.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2, k3v3}},
+			{SpanContext: sc1, Attributes: []kv.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind: apitrace.SpanKindInternal,
 	}
@@ -515,13 +516,13 @@ func TestLinksOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
-		apitrace.LinkedTo(sc1, key.New("key1").String("value1")),
-		apitrace.LinkedTo(sc2, key.New("key2").String("value2")),
-		apitrace.LinkedTo(sc3, key.New("key3").String("value3")),
+		apitrace.LinkedTo(sc1, kv.Key("key1").String("value1")),
+		apitrace.LinkedTo(sc2, kv.Key("key2").String("value2")),
+		apitrace.LinkedTo(sc3, kv.Key("key3").String("value3")),
 	)
 
-	k2v2 := key.New("key2").String("value2")
-	k3v3 := key.New("key3").String("value3")
+	k2v2 := kv.Key("key2").String("value2")
+	k3v3 := kv.Key("key3").String("value3")
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -536,8 +537,8 @@ func TestLinksOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []apitrace.Link{
-			{SpanContext: sc2, Attributes: []core.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []core.KeyValue{k3v3}},
+			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2}},
+			{SpanContext: sc3, Attributes: []kv.KeyValue{k3v3}},
 		},
 		DroppedLinkCount: 1,
 		HasRemoteParent:  true,
@@ -600,7 +601,7 @@ func TestSetSpanStatus(t *testing.T) {
 
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
-		cmp.AllowUnexported(core.Value{}),
+		cmp.AllowUnexported(value.Value{}),
 		cmp.AllowUnexported(export.Event{}))
 }
 
@@ -937,7 +938,7 @@ func TestRecordError(t *testing.T) {
 				{
 					Name: errorEventName,
 					Time: errTime,
-					Attributes: []core.KeyValue{
+					Attributes: []kv.KeyValue{
 						errorTypeKey.String(s.typ),
 						errorMessageKey.String(s.msg),
 					},
@@ -983,7 +984,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 			{
 				Name: errorEventName,
 				Time: errTime,
-				Attributes: []core.KeyValue{
+				Attributes: []kv.KeyValue{
 					errorTypeKey.String("go.opentelemetry.io/otel/internal/testing.TestError"),
 					errorMessageKey.String("test error"),
 				},
@@ -1066,9 +1067,9 @@ func TestWithResource(t *testing.T) {
 	var te testExporter
 	tp, _ := NewProvider(WithSyncer(&te),
 		WithConfig(Config{DefaultSampler: AlwaysSample()}),
-		WithResourceAttributes(key.String("rk1", "rv1"), key.Int64("rk2", 5)))
+		WithResourceAttributes(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)))
 	span := startSpan(tp, "WithResource")
-	span.SetAttributes(key.String("key1", "value1"))
+	span.SetAttributes(kv.String("key1", "value1"))
 	got, err := endSpan(&te, span)
 	if err != nil {
 		t.Error(err.Error())
@@ -1081,12 +1082,12 @@ func TestWithResource(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []core.KeyValue{
-			key.String("key1", "value1"),
+		Attributes: []kv.KeyValue{
+			kv.String("key1", "value1"),
 		},
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Resource:        resource.New(key.String("rk1", "rv1"), key.Int64("rk2", 5)),
+		Resource:        resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("WithResource:\n  -got +want %s", diff)
