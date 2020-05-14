@@ -185,11 +185,9 @@ loop:
 		case <-timer.C:
 			exportSpans()
 		case sd := <-bsp.queue:
-			if sd.SpanContext.IsSampled() {
-				batch = append(batch, sd)
-				if len(batch) == bsp.o.MaxExportBatchSize {
-					exportSpans()
-				}
+			batch = append(batch, sd)
+			if len(batch) == bsp.o.MaxExportBatchSize {
+				exportSpans()
 			}
 		}
 	}
@@ -213,11 +211,9 @@ loop:
 				return
 			}
 
-			if sd.SpanContext.IsSampled() {
-				batch = append(batch, sd)
-				if len(batch) == bsp.o.MaxExportBatchSize {
-					exportSpans()
-				}
+			batch = append(batch, sd)
+			if len(batch) == bsp.o.MaxExportBatchSize {
+				exportSpans()
 			}
 		case <-timer.C:
 			log.Println("bsp.enqueueWait timeout")
@@ -228,6 +224,10 @@ loop:
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
+	if !sd.SpanContext.IsSampled() {
+		return
+	}
+
 	bsp.enqueueWait.Add(1)
 
 	select {
