@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package metric
 
 import (
@@ -34,6 +48,43 @@ func WrapMeterImpl(impl MeterImpl, libraryName string) Meter {
 // MeterImpl returns the underlying MeterImpl of this Meter.
 func (m Meter) MeterImpl() MeterImpl {
 	return m.impl
+}
+
+// newAsync constructs one new asynchronous instrument.
+func (m Meter) newAsync(
+	name string,
+	mkind Kind,
+	nkind NumberKind,
+	opts []Option,
+	runner AsyncRunner,
+) (
+	AsyncImpl,
+	error,
+) {
+	if m.impl == nil {
+		return NoopAsync{}, nil
+	}
+	desc := NewDescriptor(name, mkind, nkind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewAsyncInstrument(desc, runner)
+}
+
+// newSync constructs one new synchronous instrument.
+func (m Meter) newSync(
+	name string,
+	metricKind Kind,
+	numberKind NumberKind,
+	opts []Option,
+) (
+	SyncImpl,
+	error,
+) {
+	if m.impl == nil {
+		return NoopSync{}, nil
+	}
+	desc := NewDescriptor(name, metricKind, numberKind, opts...)
+	desc.config.LibraryName = m.libraryName
+	return m.impl.NewSyncInstrument(desc)
 }
 
 // RecordBatch atomically records a batch of measurements.

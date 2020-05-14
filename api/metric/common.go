@@ -117,6 +117,21 @@ func (h syncBoundInstrument) Unbind() {
 	h.boundInstrument.Unbind()
 }
 
+// checkNewAsync receives an AsyncImpl and potential
+// error, and returns the same types, checking for and ensuring that
+// the returned interface is not nil.
+func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
+	if instrument == nil {
+		if err == nil {
+			err = ErrSDKReturnedNilImpl
+		}
+		instrument = NoopAsync{}
+	}
+	return asyncInstrument{
+		instrument: instrument,
+	}, err
+}
+
 // checkNewSync receives an SyncImpl and potential
 // error, and returns the same types, checking for and ensuring that
 // the returned interface is not nil.
@@ -148,21 +163,6 @@ func newMeasurement(instrument SyncImpl, number Number) Measurement {
 		instrument: instrument,
 		number:     number,
 	}
-}
-
-// checkNewAsync receives an AsyncImpl and potential
-// error, and returns the same types, checking for and ensuring that
-// the returned interface is not nil.
-func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
-	if instrument == nil {
-		if err == nil {
-			err = ErrSDKReturnedNilImpl
-		}
-		instrument = NoopAsync{}
-	}
-	return asyncInstrument{
-		instrument: instrument,
-	}, err
 }
 
 // wrapInt64CounterInstrument returns an `Int64Counter` from a
