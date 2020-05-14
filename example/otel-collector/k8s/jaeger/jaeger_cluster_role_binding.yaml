@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: jaeger-operator
+subjects:
+- kind: ServiceAccount
+  name: jaeger-operator
+  namespace: "observability" # change to point to the namespace you installed your operator
+roleRef:
+  kind: ClusterRole
+  name: jaeger-operator
+  apiGroup: rbac.authorization.k8s.io

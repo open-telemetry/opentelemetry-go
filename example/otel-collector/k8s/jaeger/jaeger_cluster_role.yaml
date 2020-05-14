@@ -1,0 +1,189 @@
+## When using the operator in cluster-wide mode, this ClusterRole has to be created and bound to the jaeger-operator service account,
+## so that the operator can watch and create resources in every namespace in the cluster.
+## An alternative to this cluster role is to create one role binding for each namespace that the operator should watch
+## in that case, don't forget to add a comma-separated list of namespaces as WATCH_NAMESPACE in the operator's deployment.
+## Further down in this file there's another set of rules, with extra optional permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jaeger-operator
+rules:
+
+## our own custom resources
+- apiGroups:
+  - jaegertracing.io
+  resources:
+  - '*'
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+
+## for the operator's own deployment
+- apiGroups:
+  - apps
+  resourceNames:
+  - jaeger-operator
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+
+## regular things the operator manages for an instance, as the result of processing CRs
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - pods
+  - secrets
+  - serviceaccounts
+  - services
+  - services/finalizers
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+
+## needed if you want the operator to create service monitors for the Jaeger instances
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+
+## for the Elasticsearch auto-provisioning
+- apiGroups:
+  - logging.openshift.io
+  resources:
+  - elasticsearches
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+
+## for the Kafka auto-provisioning
+- apiGroups:
+  - kafka.strimzi.io
+  resources:
+  - kafkas
+  - kafkausers
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
+
+## Extra permissions
+## This is an extra set of permissions that the Jaeger Operator might make use of if granted
+
+## needed if support for injecting sidecars based on namespace annotation is required
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - 'get'
+  - 'list'
+  - 'watch'
+
+## needed if support for injecting sidecars based on deployment annotation is required, across all namespaces
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'watch'
+
+## needed only when .Spec.Ingress.Openshift.DelegateUrls is used
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - 'get'
+  - 'list'
+  - 'create'
+  - 'update'
+  - 'delete'
+  - 'watch'
