@@ -16,6 +16,14 @@ package metric
 
 import "go.opentelemetry.io/otel/api/kv"
 
+// The file is organized as follows:
+//
+//  - Three kinds of Observer callback (int64, float64, batch)
+//  - Three kinds of Observer instrument (int64, float64, batch)
+//  - Three kinds of Observer result (int64, float64, batch)
+//  - Three kinds of Observe() function (int64, float64, batch)
+//  - Three kinds of AsyncRunner interface (abstract, single, batch)
+
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
 type Int64ObserverCallback func(Int64ObserverResult)
@@ -68,6 +76,30 @@ type BatchObserverResult struct {
 	function func([]kv.KeyValue, ...Observation)
 }
 
+// Observe captures a single integer value from the associated
+// instrument callback, with the given labels.
+func (ir Int64ObserverResult) Observe(value int64, labels ...kv.KeyValue) {
+	ir.function(labels, Observation{
+		instrument: ir.instrument,
+		number:     NewInt64Number(value),
+	})
+}
+
+// Observe captures a single floating point value from the associated
+// instrument callback, with the given labels.
+func (fr Float64ObserverResult) Observe(value float64, labels ...kv.KeyValue) {
+	fr.function(labels, Observation{
+		instrument: fr.instrument,
+		number:     NewFloat64Number(value),
+	})
+}
+
+// Observe captures a multiple observations from the associated batch
+// instrument callback, with the given labels.
+func (br BatchObserverResult) Observe(labels []kv.KeyValue, obs ...Observation) {
+	br.function(labels, obs...)
+}
+
 // AsyncRunner is expected to convert into an AsyncSingleRunner or an
 // AsyncBatchRunner.  SDKs will encounter an error if the AsyncRunner
 // does not satisfy one of these interfaces.
@@ -98,51 +130,6 @@ type AsyncBatchRunner interface {
 	Run(capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
-}
-
-// Observe captures a single integer value from the associated
-// instrument callback, with the given labels.
-func (ir Int64ObserverResult) Observe(value int64, labels ...kv.KeyValue) {
-	ir.function(labels, Observation{
-		instrument: ir.instrument,
-		number:     NewInt64Number(value),
-	})
-}
-
-// Observe captures a single floating point value from the associated
-// instrument callback, with the given labels.
-func (fr Float64ObserverResult) Observe(value float64, labels ...kv.KeyValue) {
-	fr.function(labels, Observation{
-		instrument: fr.instrument,
-		number:     NewFloat64Number(value),
-	})
-}
-
-// Observe captures a multiple observations from the associated batch
-// instrument callback, with the given labels.
-func (br BatchObserverResult) Observe(labels []kv.KeyValue, obs ...Observation) {
-	br.function(labels, obs...)
-}
-
-// Observation is used for reporting a batch of metric
-// values. Instances of this type should be created by Observer
-// instruments (e.g., Int64Observer.Observation()).
-type Observation struct {
-	// number needs to be aligned for 64-bit atomic operations.
-	number     Number
-	instrument AsyncImpl
-}
-
-// AsyncImpl returns the instrument that created this observation.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (m Observation) AsyncImpl() AsyncImpl {
-	return m.instrument
-}
-
-// Number returns a number recorded in this observation.
-func (m Observation) Number() Number {
-	return m.number
 }
 
 // RegisterInt64Observer creates a new integer Observer instrument
