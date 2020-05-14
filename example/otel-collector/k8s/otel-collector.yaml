@@ -11,7 +11,8 @@ data:
     receivers:
       # Make sure to add the otlp receiver. 
       # This will use the default configuration, and open up the receiver on port 55680
-      otlp: {}
+      otlp:
+        endpoint: 0.0.0.0:55680
     processors:
     extensions:
       health_check: {}

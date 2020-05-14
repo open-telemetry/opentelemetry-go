@@ -32,6 +32,8 @@ import (
 
 func main() {
 	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+		// Replace the address with the actual address of the collector service
+		otlp.WithAddress("10.152.183.133:55680"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()))
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
