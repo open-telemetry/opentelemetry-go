@@ -158,12 +158,17 @@ func WithBlocking() BatchSpanProcessorOption {
 // is shut down. It calls the exporter in batches of up to MaxExportBatchSize
 // waiting up to ScheduledDelayMillis to form a batch.
 func (bsp *BatchSpanProcessor) processQueue() {
-	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
-	defer ticker.Stop()
+	timer := time.NewTimer(bsp.o.ScheduledDelayMillis)
+	defer timer.Stop()
 
 	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
 
 	exportSpans := func() {
+		if !timer.Stop() {
+			<-timer.C
+		}
+		timer.Reset(bsp.o.ScheduledDelayMillis)
+
 		if len(batch) > 0 {
 			bsp.e.ExportSpans(context.Background(), batch)
 			batch = batch[:0]
@@ -175,13 +180,12 @@ loop:
 		select {
 		case <-bsp.stopCh:
 			break loop
-		case <-ticker.C:
+		case <-timer.C:
 			exportSpans()
 		case sd := <-bsp.queue:
 			if sd.SpanContext.IsSampled() {
 				batch = append(batch, sd)
 				if len(batch) == bsp.o.MaxExportBatchSize {
-					ticker.Reset(bsp.o.ScheduledDelayMillis)
 					exportSpans()
 				}
 			}
