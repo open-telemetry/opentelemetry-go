@@ -19,7 +19,6 @@ import "go.opentelemetry.io/otel/api/kv"
 // The file is organized as follows:
 //
 //  - Three kinds of Observer callback (int64, float64, batch)
-//  - Three kinds of Observer instrument (int64, float64, batch)
 //  - Three kinds of Observer result (int64, float64, batch)
 //  - Three kinds of Observe() function (int64, float64, batch)
 //  - Three kinds of AsyncRunner interface (abstract, single, batch)
@@ -39,25 +38,6 @@ type Float64ObserverCallback func(Float64ObserverResult)
 // Observer instrument that will be reported as a batch of
 // observations.
 type BatchObserverCallback func(BatchObserverResult)
-
-// Int64Observer is a metric that captures a set of int64 values at a
-// point in time.
-type Int64Observer struct {
-	asyncInstrument
-}
-
-// Float64Observer is a metric that captures a set of float64 values
-// at a point in time.
-type Float64Observer struct {
-	asyncInstrument
-}
-
-// BatchObserver represents an Observer callback that can report
-// observations for multiple instruments.
-type BatchObserver struct {
-	meter  Meter
-	runner AsyncBatchRunner
-}
 
 // Int64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous integer metric instrument.
@@ -138,28 +118,6 @@ type AsyncBatchRunner interface {
 var _ AsyncSingleRunner = (*Int64ObserverCallback)(nil)
 var _ AsyncSingleRunner = (*Float64ObserverCallback)(nil)
 var _ AsyncBatchRunner = (*BatchObserverCallback)(nil)
-
-// Observation returns an Observation, a BatchObserverCallback
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (i Int64Observer) Observation(v int64) Observation {
-	return Observation{
-		number:     NewInt64Number(v),
-		instrument: i.instrument,
-	}
-}
-
-// Observation returns an Observation, a BatchObserverCallback
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (f Float64Observer) Observation(v float64) Observation {
-	return Observation{
-		number:     NewFloat64Number(v),
-		instrument: f.instrument,
-	}
-}
 
 // newInt64AsyncRunner returns a single-observer callback for integer Observer instruments.
 func newInt64AsyncRunner(c Int64ObserverCallback) AsyncSingleRunner {
