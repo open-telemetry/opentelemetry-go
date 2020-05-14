@@ -30,15 +30,6 @@ type Measurement struct {
 	instrument SyncImpl
 }
 
-// Observation is used for reporting an asynchronous  batch of metric
-// values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64Observer.Observation()).
-type Observation struct {
-	// number needs to be aligned for 64-bit atomic operations.
-	number     Number
-	instrument AsyncImpl
-}
-
 // syncInstrument contains a SyncImpl.
 type syncInstrument struct {
 	instrument SyncImpl

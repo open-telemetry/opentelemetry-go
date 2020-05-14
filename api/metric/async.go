@@ -18,6 +18,7 @@ import "go.opentelemetry.io/otel/api/kv"
 
 // The file is organized as follows:
 //
+//  - Observation type
 //  - Three kinds of Observer callback (int64, float64, batch)
 //  - Three kinds of Observer result (int64, float64, batch)
 //  - Three kinds of Observe() function (int64, float64, batch)
@@ -25,6 +26,15 @@ import "go.opentelemetry.io/otel/api/kv"
 //  - Two kinds of Observer constructor (int64, float64)
 //  - Two kinds of Observation() function (int64, float64)
 //  - Various internals
+
+// Observation is used for reporting an asynchronous  batch of metric
+// values. Instances of this type should be created by asynchronous
+// instruments (e.g., Int64Observer.Observation()).
+type Observation struct {
+	// number needs to be aligned for 64-bit atomic operations.
+	number     Number
+	instrument AsyncImpl
+}
 
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
