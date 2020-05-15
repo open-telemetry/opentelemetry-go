@@ -139,7 +139,6 @@ https://github.com/open-telemetry/opentelemetry-specification/issues/165
 
 Approvers:
 
-- [Krzesimir Nowak](https://github.com/krnowak), Kinvolk
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Anthony Mirabella](https://github.com/Aneurysm9), Centene
