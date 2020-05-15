@@ -31,9 +31,12 @@ import (
 )
 
 func main() {
+	// If the OpenTelemetry Collector is running on a local cluster (minikube or microk8s),
+	// it should be accessible through the NodePort service at the `localhost:30080` address.
+	// Otherwise, replace `localhost` with the address of your cluster.
+	// If you run the app inside k8s, then you can probably connect directly to the service through dns
 	exp, err := otlp.NewExporter(otlp.WithInsecure(),
-		// Replace the address with the actual address of the collector service
-		otlp.WithAddress("10.152.183.133:55680"),
+		otlp.WithAddress("localhost:30080"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()))
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
@@ -48,6 +51,7 @@ func main() {
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResourceAttributes(
+			// the service name used to display traces in Jaeger
 			core.Key(conventions.AttributeServiceName).String("test-service"),
 		),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
