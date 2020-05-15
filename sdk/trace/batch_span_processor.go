@@ -216,6 +216,7 @@ loop:
 				exportSpans()
 			}
 		case <-timer.C:
+			//TODO: use error callback - see issue #174
 			log.Println("bsp.enqueueWait timeout")
 			exportSpans()
 			return
