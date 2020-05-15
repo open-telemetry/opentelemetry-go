@@ -23,7 +23,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -82,106 +83,106 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	checks := []struct {
 		name         string
-		expectedAttr map[core.Key]core.Value
-		eventsAttr   []map[core.Key]core.Value
+		expectedAttr map[kv.Key]value.Value
+		eventsAttr   []map[kv.Key]value.Value
 	}{
 		{
 			name: "/github.com.serviceName/bar",
-			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey:  core.String("serviceName"),
-				netPeerIPKey:   core.String("fake"),
-				netPeerPortKey: core.String("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				rpcServiceKey:  value.String("serviceName"),
+				netPeerIPKey:   value.String("fake"),
+				netPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[core.Key]core.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					messageTypeKey:             core.String("SENT"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+					messageTypeKey:             value.String("SENT"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey:             core.String("RECEIVED"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+					messageTypeKey:             value.String("RECEIVED"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			name: "/serviceName/bar",
-			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey:  core.String("serviceName"),
-				netPeerIPKey:   core.String("fake"),
-				netPeerPortKey: core.String("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				rpcServiceKey:  value.String("serviceName"),
+				netPeerIPKey:   value.String("fake"),
+				netPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[core.Key]core.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					messageTypeKey:             core.String("SENT"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+					messageTypeKey:             value.String("SENT"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey:             core.String("RECEIVED"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+					messageTypeKey:             value.String("RECEIVED"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			name: "serviceName/bar",
-			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey:  core.String("serviceName"),
-				netPeerIPKey:   core.String("fake"),
-				netPeerPortKey: core.String("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				rpcServiceKey:  value.String("serviceName"),
+				netPeerIPKey:   value.String("fake"),
+				netPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[core.Key]core.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					messageTypeKey:             core.String("SENT"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+					messageTypeKey:             value.String("SENT"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey:             core.String("RECEIVED"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+					messageTypeKey:             value.String("RECEIVED"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			name: "invalidName",
-			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey:  core.String(""),
-				netPeerIPKey:   core.String("fake"),
-				netPeerPortKey: core.String("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				rpcServiceKey:  value.String(""),
+				netPeerIPKey:   value.String("fake"),
+				netPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[core.Key]core.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					messageTypeKey:             core.String("SENT"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+					messageTypeKey:             value.String("SENT"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey:             core.String("RECEIVED"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+					messageTypeKey:             value.String("RECEIVED"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			name: "/github.com.foo.serviceName_123/method",
-			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey:  core.String("serviceName_123"),
-				netPeerIPKey:   core.String("fake"),
-				netPeerPortKey: core.String("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				rpcServiceKey:  value.String("serviceName_123"),
+				netPeerIPKey:   value.String("fake"),
+				netPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[core.Key]core.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					messageTypeKey:             core.String("SENT"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+					messageTypeKey:             value.String("SENT"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey:             core.String("RECEIVED"),
-					messageIDKey:               core.Int(1),
-					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+					messageTypeKey:             value.String("RECEIVED"),
+					messageIDKey:               value.Int(1),
+					messageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -336,7 +337,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 
 	attrs := spanData.Attributes
-	expectedAttr := map[core.Key]string{
+	expectedAttr := map[kv.Key]string{
 		rpcServiceKey:  "serviceName",
 		netPeerIPKey:   "fake",
 		netPeerPortKey: "connection",
@@ -358,12 +359,12 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 	for i := 0; i < 20; i += 2 {
 		msgID := i/2 + 1
-		validate := func(eventName string, attrs []core.KeyValue) {
+		validate := func(eventName string, attrs []kv.KeyValue) {
 			for _, attr := range attrs {
 				if attr.Key == messageTypeKey && attr.Value.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, attr.Value.AsString())
 				}
-				if attr.Key == messageIDKey && attr.Value != core.Int(msgID) {
+				if attr.Key == messageIDKey && attr.Value != value.Int(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, attr.Value.AsInt32())
 				}
 			}
