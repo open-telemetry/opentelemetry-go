@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package standard contains standard resource attribute keys as defined
-// by the OpenTelemetry specification
-// (https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/resource/semantic_conventions).
 package standard // import "go.opentelemetry.io/otel/api/standard"
 
 import "go.opentelemetry.io/otel/api/kv"
