@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // Float64Counter is a metric that accumulates float64 values.
@@ -46,14 +46,14 @@ type BoundInt64Counter struct {
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Float64Counter) Bind(labels ...core.KeyValue) (h BoundFloat64Counter) {
+func (c Float64Counter) Bind(labels ...kv.KeyValue) (h BoundFloat64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Int64Counter) Bind(labels ...core.KeyValue) (h BoundInt64Counter) {
+func (c Int64Counter) Bind(labels ...kv.KeyValue) (h BoundInt64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
@@ -72,24 +72,24 @@ func (c Int64Counter) Measurement(value int64) Measurement {
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Float64Counter) Add(ctx context.Context, value float64, labels ...core.KeyValue) {
-	c.directRecord(ctx, core.NewFloat64Number(value), labels)
+func (c Float64Counter) Add(ctx context.Context, value float64, labels ...kv.KeyValue) {
+	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Int64Counter) Add(ctx context.Context, value int64, labels ...core.KeyValue) {
-	c.directRecord(ctx, core.NewInt64Number(value), labels)
+func (c Int64Counter) Add(ctx context.Context, value int64, labels ...kv.KeyValue) {
+	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
-	b.directRecord(ctx, core.NewFloat64Number(value))
+	b.directRecord(ctx, NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
-	b.directRecord(ctx, core.NewInt64Number(value))
+	b.directRecord(ctx, NewInt64Number(value))
 }

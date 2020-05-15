@@ -19,7 +19,6 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -32,8 +31,8 @@ type (
 		lock       sync.Mutex
 		current    state
 		checkpoint state
-		boundaries []core.Number
-		kind       core.NumberKind
+		boundaries []metric.Number
+		kind       metric.NumberKind
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -42,8 +41,8 @@ type (
 	state struct {
 		// all fields have to be aligned for 64-bit atomic operations.
 		buckets aggregator.Buckets
-		count   core.Number
-		sum     core.Number
+		count   metric.Number
+		sum     metric.Number
 	}
 )
 
@@ -60,11 +59,11 @@ var _ aggregator.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
+func New(desc *metric.Descriptor, boundaries []metric.Number) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := numbers{
-		numbers: make([]core.Number, len(boundaries)),
+		numbers: make([]metric.Number, len(boundaries)),
 		kind:    desc.NumberKind(),
 	}
 
@@ -78,7 +77,7 @@ func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
 		current: state{
 			buckets: aggregator.Buckets{
 				Boundaries: boundaries,
-				Counts:     make([]core.Number, len(boundaries)+1),
+				Counts:     make([]metric.Number, len(boundaries)+1),
 			},
 		},
 	}
@@ -86,7 +85,7 @@ func New(desc *metric.Descriptor, boundaries []core.Number) *Aggregator {
 }
 
 // Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (core.Number, error) {
+func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.checkpoint.sum, nil
@@ -120,13 +119,13 @@ func (c *Aggregator) emptyState() state {
 	return state{
 		buckets: aggregator.Buckets{
 			Boundaries: c.boundaries,
-			Counts:     make([]core.Number, len(c.boundaries)+1),
+			Counts:     make([]metric.Number, len(c.boundaries)+1),
 		},
 	}
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number core.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
 	bucketID := len(c.boundaries)
@@ -155,18 +154,18 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	}
 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(core.Uint64NumberKind, o.checkpoint.count)
+	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
 
 	for i := 0; i < len(c.checkpoint.buckets.Counts); i++ {
-		c.checkpoint.buckets.Counts[i].AddNumber(core.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
+		c.checkpoint.buckets.Counts[i].AddNumber(metric.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
 	}
 	return nil
 }
 
-// numbers is an auxiliary struct to order histogram bucket boundaries (slice of core.Number)
+// numbers is an auxiliary struct to order histogram bucket boundaries (slice of kv.Number)
 type numbers struct {
-	numbers []core.Number
-	kind    core.NumberKind
+	numbers []metric.Number
+	kind    metric.NumberKind
 }
 
 var _ sort.Interface = (*numbers)(nil)

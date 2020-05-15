@@ -23,8 +23,7 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
@@ -35,7 +34,7 @@ import (
 
 func TestStringKeyValues(t *testing.T) {
 	tests := []struct {
-		kvs      []core.KeyValue
+		kvs      []kv.KeyValue
 		expected []*commonpb.StringKeyValue
 	}{
 		{
@@ -43,21 +42,21 @@ func TestStringKeyValues(t *testing.T) {
 			nil,
 		},
 		{
-			[]core.KeyValue{},
+			[]kv.KeyValue{},
 			nil,
 		},
 		{
-			[]core.KeyValue{
-				key.Bool("true", true),
-				key.Int64("one", 1),
-				key.Uint64("two", 2),
-				key.Float64("three", 3),
-				key.Int32("four", 4),
-				key.Uint32("five", 5),
-				key.Float32("six", 6),
-				key.Int("seven", 7),
-				key.Uint("eight", 8),
-				key.String("the", "final word"),
+			[]kv.KeyValue{
+				kv.Bool("true", true),
+				kv.Int64("one", 1),
+				kv.Uint64("two", 2),
+				kv.Float64("three", 3),
+				kv.Int32("four", 4),
+				kv.Uint32("five", 5),
+				kv.Float32("six", 6),
+				kv.Int("seven", 7),
+				kv.Uint("eight", 8),
+				kv.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{
 				{Key: "eight", Value: "8"},
@@ -93,9 +92,9 @@ func TestMinMaxSumCountValue(t *testing.T) {
 	mmsc.Checkpoint(context.Background(), &metric.Descriptor{})
 	min, max, sum, count, err := minMaxSumCountValues(mmsc)
 	if assert.NoError(t, err) {
-		assert.Equal(t, min, core.NewInt64Number(1))
-		assert.Equal(t, max, core.NewInt64Number(10))
-		assert.Equal(t, sum, core.NewInt64Number(11))
+		assert.Equal(t, min, metric.NewInt64Number(1))
+		assert.Equal(t, max, metric.NewInt64Number(10))
+		assert.Equal(t, sum, metric.NewInt64Number(11))
 		assert.Equal(t, count, int64(2))
 	}
 }
@@ -106,8 +105,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		metricKind  metric.Kind
 		description string
 		unit        unit.Unit
-		numberKind  core.NumberKind
-		labels      []core.KeyValue
+		numberKind  metric.NumberKind
+		labels      []kv.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
@@ -115,8 +114,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.MeasureKind,
 			"test-a-description",
 			unit.Dimensionless,
-			core.Int64NumberKind,
-			[]core.KeyValue{},
+			metric.Int64NumberKind,
+			[]kv.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-a",
 				Description: "test-a-description",
@@ -130,8 +129,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.CounterKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Bytes,
-			core.Float64NumberKind, // This shouldn't change anything.
-			[]core.KeyValue{key.String("A", "1")},
+			metric.Float64NumberKind, // This shouldn't change anything.
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-b",
 				Description: "test-b-description",
@@ -161,7 +160,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
@@ -208,8 +207,8 @@ func TestSumMetricDescriptor(t *testing.T) {
 		metricKind  metric.Kind
 		description string
 		unit        unit.Unit
-		numberKind  core.NumberKind
-		labels      []core.KeyValue
+		numberKind  metric.NumberKind
+		labels      []kv.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
@@ -217,8 +216,8 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.CounterKind,
 			"test-a-description",
 			unit.Dimensionless,
-			core.Int64NumberKind,
-			[]core.KeyValue{},
+			metric.Int64NumberKind,
+			[]kv.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-a",
 				Description: "test-a-description",
@@ -232,8 +231,8 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.MeasureKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Milliseconds,
-			core.Float64NumberKind,
-			[]core.KeyValue{key.String("A", "1")},
+			metric.Float64NumberKind,
+			[]kv.KeyValue{kv.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-b",
 				Description: "test-b-description",
@@ -258,10 +257,10 @@ func TestSumMetricDescriptor(t *testing.T) {
 }
 
 func TestSumInt64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	s := sumAgg.New()
-	assert.NoError(t, s.Update(context.Background(), core.Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
 	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
@@ -272,10 +271,10 @@ func TestSumInt64DataPoints(t *testing.T) {
 }
 
 func TestSumFloat64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Float64NumberKind)
 	labels := label.NewSet()
 	s := sumAgg.New()
-	assert.NoError(t, s.Update(context.Background(), core.NewFloat64Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	s.Checkpoint(context.Background(), &desc)
 	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
@@ -286,7 +285,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, core.NumberKind(-1))
+	desc := metric.NewDescriptor("", metric.MeasureKind, metric.NumberKind(-1))
 	labels := label.NewSet()
 	s := sumAgg.New()
 	_, err := sum(&desc, &labels, s)

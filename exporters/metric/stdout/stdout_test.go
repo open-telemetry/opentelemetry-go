@@ -24,8 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
@@ -99,9 +98,9 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet()
 
 	ctx := context.Background()
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Int64NumberKind)
 	lvagg := lastvalue.New()
-	aggtest.CheckedUpdate(t, lvagg, core.NewInt64Number(321), &desc)
+	aggtest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
 	lvagg.Checkpoint(ctx, &desc)
 
 	checkpointSet.Add(&desc, lvagg)
@@ -144,12 +143,12 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 	cagg := sum.New()
-	aggtest.CheckedUpdate(fix.t, cagg, core.NewInt64Number(123), &desc)
+	aggtest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
 	cagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, cagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, cagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -161,12 +160,12 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
-	aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), &desc)
+	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 	lvagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, lvagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, lvagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -178,13 +177,13 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
-	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(123.456), &desc)
-	aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(876.543), &desc)
+	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
+	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
 	magg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, magg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -198,16 +197,16 @@ func TestStdoutMeasureFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	magg := array.New()
 
 	for i := 0; i < 1000; i++ {
-		aggtest.CheckedUpdate(fix.t, magg, core.NewFloat64Number(float64(i)+0.5), &desc)
+		aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 
 	magg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, magg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, magg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -239,7 +238,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
 		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), &desc),
 		"minmaxsumcount": minmaxsumcount.New(&desc),
@@ -269,11 +268,11 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
 	lvagg.Checkpoint(fix.ctx, &desc)
 
-	checkpointSet.Add(&desc, lvagg, key.String("A", "B"), key.String("C", "D"))
+	checkpointSet.Add(&desc, lvagg, kv.String("A", "B"), kv.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -284,9 +283,9 @@ func TestStdoutResource(t *testing.T) {
 	type testCase struct {
 		expect string
 		res    *resource.Resource
-		attrs  []core.KeyValue
+		attrs  []kv.KeyValue
 	}
-	newCase := func(expect string, res *resource.Resource, attrs ...core.KeyValue) testCase {
+	newCase := func(expect string, res *resource.Resource, attrs ...kv.KeyValue) testCase {
 		return testCase{
 			expect: expect,
 			res:    res,
@@ -295,23 +294,23 @@ func TestStdoutResource(t *testing.T) {
 	}
 	testCases := []testCase{
 		newCase("R1=V1,R2=V2,A=B,C=D",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
-			key.String("A", "B"),
-			key.String("C", "D")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
+			kv.String("A", "B"),
+			kv.String("C", "D")),
 		newCase("R1=V1,R2=V2",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
 		),
 		newCase("A=B,C=D",
 			nil,
-			key.String("A", "B"),
-			key.String("C", "D"),
+			kv.String("A", "B"),
+			kv.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
 		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
-			resource.New(key.String("R1", "V1"), key.String("R2", "V2")),
-			key.String("R1", "V3"),
-			key.String("R2", "V4")),
+			resource.New(kv.String("R1", "V1"), kv.String("R2", "V2")),
+			kv.String("R1", "V3"),
+			kv.String("R2", "V4")),
 	}
 
 	for _, tc := range testCases {
@@ -319,9 +318,9 @@ func TestStdoutResource(t *testing.T) {
 
 		checkpointSet := test.NewCheckpointSet()
 
-		desc := metric.NewDescriptor("test.name", metric.ObserverKind, core.Float64NumberKind)
+		desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
 		lvagg := lastvalue.New()
-		aggtest.CheckedUpdate(fix.t, lvagg, core.NewFloat64Number(123.456), &desc)
+		aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 		lvagg.Checkpoint(fix.ctx, &desc)
 
 		checkpointSet.Add(&desc, lvagg, tc.attrs...)

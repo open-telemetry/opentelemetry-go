@@ -28,7 +28,7 @@ boilerplate.  The API and SDK are separated such that an event reaching
 the SDK has a uniform structure: an instrument, a label set, and a
 numerical value.
 
-To this end, the API uses a core.Number type to represent either an int64
+To this end, the API uses a kv.Number type to represent either an int64
 or a float64, depending on the instrument's definition.  A single
 implementation interface is used for counter and measure instruments,
 metric.InstrumentImpl, and a single implementation interface is used for
@@ -124,22 +124,22 @@ Aggregators implement a Merge method, also called in collection
 context, that combines state from two aggregators into one.  Each SDK
 record has an associated aggregator.
 
-Batcher is an interface which sits between the SDK and an exporter.
-The Batcher embeds an AggregationSelector, used by the SDK to assign
-new Aggregators.  The Batcher supports a Process() API for submitting
-checkpointed aggregators to the batcher, and a CheckpointSet() API
+Integrator is an interface which sits between the SDK and an exporter.
+The Integrator embeds an AggregationSelector, used by the SDK to assign
+new Aggregators.  The Integrator supports a Process() API for submitting
+checkpointed aggregators to the integrator, and a CheckpointSet() API
 for producing a complete checkpoint for the exporter.  Two default
-Batcher implementations are provided, the "defaultkeys" Batcher groups
+Integrator implementations are provided, the "defaultkeys" Integrator groups
 aggregate metrics by their recommended Descriptor.Keys(), the
-"ungrouped" Batcher aggregates metrics at full dimensionality.
+"simple" Integrator aggregates metrics at full dimensionality.
 
 LabelEncoder is an optional optimization that allows an exporter to
 provide the serialization logic for labels.  This allows avoiding
 duplicate serialization of labels, once as a unique key in the SDK (or
-Batcher) and once in the exporter.
+Integrator) and once in the exporter.
 
-CheckpointSet is an interface between the Batcher and the Exporter.
-After completing a collection pass, the Batcher.CheckpointSet() method
+CheckpointSet is an interface between the Integrator and the Exporter.
+After completing a collection pass, the Integrator.CheckpointSet() method
 returns a CheckpointSet, which the Exporter uses to iterate over all
 the updated metrics.
 

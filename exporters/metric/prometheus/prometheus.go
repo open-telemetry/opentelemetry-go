@@ -20,16 +20,17 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/api/metric"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -46,7 +47,7 @@ type Exporter struct {
 	onError  func(error)
 
 	defaultSummaryQuantiles    []float64
-	defaultHistogramBoundaries []core.Number
+	defaultHistogramBoundaries []metric.Number
 }
 
 var _ export.Exporter = &Exporter{}
@@ -78,7 +79,7 @@ type Config struct {
 
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
-	DefaultHistogramBoundaries []core.Number
+	DefaultHistogramBoundaries []metric.Number
 
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
@@ -144,7 +145,7 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selectors and batchers.
+// chaining a NewRawExporter into the recommended selectors and integrators.
 func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
 	selector := simple.NewWithHistogramMeasure(config.DefaultHistogramBoundaries)
 	exporter, err := NewRawExporter(config)
@@ -152,7 +153,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 		return nil, nil, err
 	}
 
-	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
+	// Prometheus needs to use a stateful integrator since counters (and histogram since they are a collection of Counters)
 	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
@@ -160,8 +161,8 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := ungrouped.New(selector, true)
-	pusher := push.New(batcher, exporter, period)
+	integrator := integrator.New(selector, true)
+	pusher := push.New(integrator, exporter, period)
 	pusher.Start()
 
 	return pusher, exporter.ServeHTTP, nil
@@ -245,7 +246,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -260,7 +261,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -275,13 +276,13 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
-	var sum core.Number
+	var sum metric.Number
 	sum, err = dist.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving distribution sum: %w", err)
@@ -302,7 +303,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)

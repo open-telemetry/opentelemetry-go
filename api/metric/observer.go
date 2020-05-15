@@ -14,27 +14,12 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/core"
-
-// Int64ObserverResult is an interface for reporting integral
-// observations.
-type Int64ObserverResult interface {
-	Observe(value int64, labels ...core.KeyValue)
+// BatchObserver represents an Observer callback that can report
+// observations for multiple instruments.
+type BatchObserver struct {
+	meter  Meter
+	runner AsyncBatchRunner
 }
-
-// Float64ObserverResult is an interface for reporting floating point
-// observations.
-type Float64ObserverResult interface {
-	Observe(value float64, labels ...core.KeyValue)
-}
-
-// Int64ObserverCallback is a type of callback that integral
-// observers run.
-type Int64ObserverCallback func(result Int64ObserverResult)
-
-// Float64ObserverCallback is a type of callback that floating point
-// observers run.
-type Float64ObserverCallback func(result Float64ObserverResult)
 
 // Int64Observer is a metric that captures a set of int64 values at a
 // point in time.
@@ -46,4 +31,26 @@ type Int64Observer struct {
 // at a point in time.
 type Float64Observer struct {
 	asyncInstrument
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64Observer) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64Observer) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
 }

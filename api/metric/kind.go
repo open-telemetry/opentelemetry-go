@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides convenience functions for creating keys and
-// key-value pairs.
-package key // import "go.opentelemetry.io/otel/api/key"
+//go:generate stringer -type=Kind
+
+package metric
+
+// Kind describes the kind of instrument.
+type Kind int8
+
+const (
+	// MeasureKind indicates a Measure instrument.
+	MeasureKind Kind = iota
+	// ObserverKind indicates an Observer instrument.
+	ObserverKind
+	// CounterKind indicates a Counter instrument.
+	CounterKind
+)

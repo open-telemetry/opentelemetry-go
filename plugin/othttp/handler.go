@@ -18,8 +18,8 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -29,7 +29,7 @@ var _ http.Handler = &Handler{}
 // Handler is http middleware that corresponds to the http.Handler interface and
 // is designed to wrap a http.Mux (or equivalent), while individual routes on
 // the mux are wrapped with WithRouteTag. A Handler will add various attributes
-// to the span using the core.Keys defined in this package.
+// to the span using the kv.Keys defined in this package.
 type Handler struct {
 	operation string
 	handler   http.Handler
@@ -121,7 +121,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote, statusCode int64, rerr, werr error) {
-	kv := make([]core.KeyValue, 0, 5)
+	kv := make([]kv.KeyValue, 0, 5)
 	// TODO: Consider adding an event after each read and write, possibly as an
 	// option (defaulting to off), so as to not create needlessly verbose spans.
 	if read > 0 {

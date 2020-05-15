@@ -19,8 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -41,21 +40,21 @@ type (
 
 	// testAggregationSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
-	// batchers, which clone Aggregators using AggregatorFor(desc).
+	// integrators, which clone Aggregators using AggregatorFor(desc).
 	testAggregationSelector struct{}
 )
 
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
-		"lastvalue.a", metric.ObserverKind, core.Int64NumberKind)
+		"lastvalue.a", metric.ObserverKind, metric.Int64NumberKind)
 	LastValueBDesc = metric.NewDescriptor(
-		"lastvalue.b", metric.ObserverKind, core.Int64NumberKind)
+		"lastvalue.b", metric.ObserverKind, metric.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = metric.NewDescriptor(
-		"sum.a", metric.CounterKind, core.Int64NumberKind)
+		"sum.a", metric.CounterKind, metric.Int64NumberKind)
 	CounterBDesc = metric.NewDescriptor(
-		"sum.b", metric.CounterKind, core.Int64NumberKind)
+		"sum.b", metric.CounterKind, metric.Int64NumberKind)
 
 	// SdkEncoder uses a non-standard encoder like K1~V1&K2~V2
 	SdkEncoder = &Encoder{}
@@ -66,9 +65,9 @@ var (
 	// Counter groups are (labels1+labels2), (labels3)
 
 	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(key.String("G", "H"), key.String("C", "D"))
+	Labels1 = makeLabels(kv.String("G", "H"), kv.String("C", "D"))
 	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(key.String("C", "D"), key.String("E", "F"))
+	Labels2 = makeLabels(kv.String("C", "D"), kv.String("E", "F"))
 	// Labels3 is the empty set
 	Labels3 = makeLabels()
 
@@ -84,7 +83,7 @@ func NewOutput(labelEncoder label.Encoder) Output {
 
 // NewAggregationSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
-// instruments and lastvalue.New for lastValue instruments.
+// instruments and lastvalue.New() for lastValue instruments.
 func NewAggregationSelector() export.AggregationSelector {
 	return &testAggregationSelector{}
 }
@@ -100,7 +99,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	}
 }
 
-func makeLabels(labels ...core.KeyValue) *label.Set {
+func makeLabels(labels ...kv.KeyValue) *label.Set {
 	s := label.NewSet(labels...)
 	return &s
 }
@@ -127,7 +126,7 @@ func (Encoder) ID() label.EncoderID {
 func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := lastvalue.New()
-	_ = gagg.Update(ctx, core.NewInt64Number(v), desc)
+	_ = gagg.Update(ctx, metric.NewInt64Number(v), desc)
 	gagg.Checkpoint(ctx, desc)
 	return gagg
 }
@@ -146,7 +145,7 @@ func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) e
 func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := sum.New()
-	_ = cagg.Update(ctx, core.NewInt64Number(v), desc)
+	_ = cagg.Update(ctx, metric.NewInt64Number(v), desc)
 	cagg.Checkpoint(ctx, desc)
 	return cagg
 }

@@ -19,10 +19,9 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -38,9 +37,9 @@ var Must = metric.Must
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
-	sdk   *sdk.SDK
-	meter metric.Meter
-	B     *testing.B
+	accumulator *sdk.Accumulator
+	meter       metric.Meter
+	B           *testing.B
 }
 
 var _ metric.Provider = &benchFixture{}
@@ -51,8 +50,8 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.sdk = sdk.New(bf)
-	bf.meter = metric.WrapMeterImpl(bf.sdk, "test")
+	bf.accumulator = sdk.NewAccumulator(bf)
+	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
 	return bf
 }
 
@@ -91,7 +90,7 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	internal.ResetForTest()
 	ctx := context.Background()
 	sdk := global.Meter("test")
-	labs := []core.KeyValue{key.String("A", "B")}
+	labs := []kv.KeyValue{kv.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
@@ -110,7 +109,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 
 	global.SetMeterProvider(fix)
 
-	labs := []core.KeyValue{key.String("A", "B")}
+	labs := []kv.KeyValue{kv.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()

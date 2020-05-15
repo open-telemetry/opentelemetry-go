@@ -15,7 +15,7 @@
 package label
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // Iterator allows iterating over the set of labels in order,
@@ -32,26 +32,26 @@ func (i *Iterator) Next() bool {
 	return i.idx < i.Len()
 }
 
-// Label returns current core.KeyValue. Must be called only after Next returns
+// Label returns current kv.KeyValue. Must be called only after Next returns
 // true.
-func (i *Iterator) Label() core.KeyValue {
+func (i *Iterator) Label() kv.KeyValue {
 	kv, _ := i.storage.Get(i.idx)
 	return kv
 }
 
 // Attribute is a synonym for Label().
-func (i *Iterator) Attribute() core.KeyValue {
+func (i *Iterator) Attribute() kv.KeyValue {
 	return i.Label()
 }
 
 // IndexedLabel returns current index and label. Must be called only
 // after Next returns true.
-func (i *Iterator) IndexedLabel() (int, core.KeyValue) {
+func (i *Iterator) IndexedLabel() (int, kv.KeyValue) {
 	return i.idx, i.Label()
 }
 
 // IndexedAttribute is a synonym for IndexedLabel().
-func (i *Iterator) IndexedAttribute() (int, core.KeyValue) {
+func (i *Iterator) IndexedAttribute() (int, kv.KeyValue) {
 	return i.IndexedLabel()
 }
 
@@ -63,13 +63,13 @@ func (i *Iterator) Len() int {
 // ToSlice is a convenience function that creates a slice of labels
 // from the passed iterator. The iterator is set up to start from the
 // beginning before creating the slice.
-func (i *Iterator) ToSlice() []core.KeyValue {
+func (i *Iterator) ToSlice() []kv.KeyValue {
 	l := i.Len()
 	if l == 0 {
 		return nil
 	}
 	i.idx = -1
-	slice := make([]core.KeyValue, 0, l)
+	slice := make([]kv.KeyValue, 0, l)
 	for i.Next() {
 		slice = append(slice, i.Label())
 	}

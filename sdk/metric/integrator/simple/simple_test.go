@@ -12,25 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ungrouped_test
+package simple_test
 
 import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/metric"
+
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/test"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 )
 
 // These tests use the ../test label encoding.
 
 func TestUngroupedStateless(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), false)
+	b := simple.New(test.NewAggregationSelector(), false)
 
 	// Set initial lastValue values
 	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
@@ -92,7 +93,7 @@ func TestUngroupedStateless(t *testing.T) {
 
 func TestUngroupedStateful(t *testing.T) {
 	ctx := context.Background()
-	b := ungrouped.New(test.NewAggregationSelector(), true)
+	b := simple.New(test.NewAggregationSelector(), true)
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
@@ -123,12 +124,12 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1.Map, records2.Map)
 
 	// Update and re-checkpoint the original record.
-	_ = caggA.Update(ctx, core.NewInt64Number(20), &test.CounterADesc)
-	_ = caggB.Update(ctx, core.NewInt64Number(20), &test.CounterBDesc)
+	_ = caggA.Update(ctx, metric.NewInt64Number(20), &test.CounterADesc)
+	_ = caggB.Update(ctx, metric.NewInt64Number(20), &test.CounterBDesc)
 	caggA.Checkpoint(ctx, &test.CounterADesc)
 	caggB.Checkpoint(ctx, &test.CounterBDesc)
 
-	// As yet cagg has not been passed to Batcher.Process.  Should
+	// As yet cagg has not been passed to Integrator.Process.  Should
 	// not see an update.
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()

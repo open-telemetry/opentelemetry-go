@@ -18,10 +18,9 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
@@ -31,10 +30,10 @@ import (
 )
 
 var (
-	fooKey     = key.New("ex.com/foo")
-	barKey     = key.New("ex.com/bar")
-	lemonsKey  = key.New("ex.com/lemons")
-	anotherKey = key.New("ex.com/another")
+	fooKey     = kv.Key("ex.com/foo")
+	barKey     = kv.Key("ex.com/bar")
+	lemonsKey  = kv.Key("ex.com/lemons")
+	anotherKey = kv.Key("ex.com/another")
 )
 
 // initTracer creates and registers trace provider instance.
@@ -47,7 +46,7 @@ func initTracer() {
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(key.String("rk1", "rv11"), key.Int64("rk2", 5)))
+		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11"), kv.Int64("rk2", 5)))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
@@ -72,7 +71,7 @@ func main() {
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
-	commonLabels := []core.KeyValue{lemonsKey.Int(10), key.String("A", "1"), key.String("B", "2"), key.String("C", "3")}
+	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 
 	oneMetricCB := func(result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
@@ -95,7 +94,7 @@ func main() {
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", key.New("bogons").Int(100))
+		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
 
 		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
 

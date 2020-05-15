@@ -22,12 +22,13 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
@@ -37,8 +38,8 @@ import (
 type measured struct {
 	Name        string
 	LibraryName string
-	Labels      map[core.Key]core.Value
-	Number      core.Number
+	Labels      map[kv.Key]value.Value
+	Number      metric.Number
 }
 
 func asStructs(batches []metrictest.Batch) []measured {
@@ -56,16 +57,16 @@ func asStructs(batches []metrictest.Batch) []measured {
 	return r
 }
 
-func asMap(kvs ...core.KeyValue) map[core.Key]core.Value {
-	m := map[core.Key]core.Value{}
+func asMap(kvs ...kv.KeyValue) map[kv.Key]value.Value {
+	m := map[kv.Key]value.Value{}
 	for _, kv := range kvs {
 		m[kv.Key] = kv.Value
 	}
 	return m
 }
 
-var asInt = core.NewInt64Number
-var asFloat = core.NewFloat64Number
+var asInt = metric.NewInt64Number
+var asFloat = metric.NewFloat64Number
 
 func TestDirect(t *testing.T) {
 	internal.ResetForTest()
@@ -73,9 +74,9 @@ func TestDirect(t *testing.T) {
 	ctx := context.Background()
 	meter1 := global.Meter("test1")
 	meter2 := global.Meter("test2")
-	labels1 := []core.KeyValue{key.String("A", "B")}
-	labels2 := []core.KeyValue{key.String("C", "D")}
-	labels3 := []core.KeyValue{key.String("E", "F")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
+	labels2 := []kv.KeyValue{kv.String("C", "D")}
+	labels3 := []kv.KeyValue{kv.String("E", "F")}
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -166,7 +167,7 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.Meter("test")
-	labels1 := []core.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -210,7 +211,7 @@ func TestUnbind(t *testing.T) {
 	internal.ResetForTest()
 
 	glob := global.Meter("test")
-	labels1 := []core.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -227,7 +228,7 @@ func TestDefaultSDK(t *testing.T) {
 
 	ctx := context.Background()
 	meter1 := global.Meter("builtin")
-	labels1 := []core.KeyValue{key.String("A", "B")}
+	labels1 := []kv.KeyValue{kv.String("A", "B")}
 
 	counter := Must(meter1).NewInt64Counter("test.builtin")
 	counter.Add(ctx, 1, labels1...)
@@ -280,15 +281,15 @@ type meterProviderWithConstructorError struct {
 }
 
 type meterWithConstructorError struct {
-	metric.Meter
+	metric.MeterImpl
 }
 
 func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
-	return &meterWithConstructorError{m.Provider.Meter(name)}
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(name).MeterImpl()}, name)
 }
 
-func (m *meterWithConstructorError) NewInt64Counter(name string, opts ...metric.Option) (metric.Int64Counter, error) {
-	return metric.Int64Counter{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
+	return metric.NoopSync{}, errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {

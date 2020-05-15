@@ -19,7 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 type (
@@ -111,18 +111,18 @@ func (d *defaultLabelEncoder) Encode(iter Iterator) string {
 	buf.Reset()
 
 	for iter.Next() {
-		i, kv := iter.IndexedLabel()
+		i, keyValue := iter.IndexedLabel()
 		if i > 0 {
 			_, _ = buf.WriteRune(',')
 		}
-		copyAndEscape(buf, string(kv.Key))
+		copyAndEscape(buf, string(keyValue.Key))
 
 		_, _ = buf.WriteRune('=')
 
-		if kv.Value.Type() == core.STRING {
-			copyAndEscape(buf, kv.Value.AsString())
+		if keyValue.Value.Type() == value.STRING {
+			copyAndEscape(buf, keyValue.Value.AsString())
 		} else {
-			_, _ = buf.WriteString(kv.Value.Emit())
+			_, _ = buf.WriteString(keyValue.Value.Emit())
 		}
 	}
 	return buf.String()

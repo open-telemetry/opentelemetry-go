@@ -21,8 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -36,10 +35,10 @@ import (
 type processFunc func(context.Context, export.Record) error
 
 type benchFixture struct {
-	meter metric.MeterMust
-	sdk   *sdk.SDK
-	B     *testing.B
-	pcb   processFunc
+	meter       metric.MeterMust
+	accumulator *sdk.Accumulator
+	B           *testing.B
+	pcb         processFunc
 }
 
 func newFixture(b *testing.B) *benchFixture {
@@ -48,8 +47,8 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.sdk = sdk.New(bf)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk, "benchmarks"))
+	bf.accumulator = sdk.NewAccumulator(bf)
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
 	return bf
 }
 
@@ -90,8 +89,8 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func makeManyLabels(n int) [][]core.KeyValue {
-	r := make([][]core.KeyValue, n)
+func makeManyLabels(n int) [][]kv.KeyValue {
+	r := make([][]kv.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -100,9 +99,9 @@ func makeManyLabels(n int) [][]core.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []core.KeyValue {
+func makeLabels(n int) []kv.KeyValue {
 	used := map[string]bool{}
-	l := make([]core.KeyValue, n)
+	l := make([]kv.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -112,7 +111,7 @@ func makeLabels(n int) []core.KeyValue {
 				break
 			}
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -199,12 +198,12 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-var benchmarkIteratorVar core.KeyValue
+var benchmarkIteratorVar kv.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
 	fix := newFixture(b)
 	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
-		var kv core.KeyValue
+		var kv kv.KeyValue
 		li := rec.Labels().Iter()
 		fix.B.StartTimer()
 		for i := 0; i < fix.B.N; i++ {
@@ -223,7 +222,7 @@ func benchmarkIterator(b *testing.B, n int) {
 	cnt.Add(ctx, 1, makeLabels(n)...)
 
 	b.ResetTimer()
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 func BenchmarkIterator_0(b *testing.B) {
@@ -447,7 +446,7 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 func BenchmarkObserverObservationFloat64(b *testing.B) {
@@ -462,7 +461,7 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 // MaxSumCount
@@ -536,7 +535,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.sdk.RecordBatch(ctx, labs, meas...)
+		fix.accumulator.RecordBatch(ctx, labs, meas...)
 	}
 }
 
@@ -568,13 +567,13 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	}
 
 	c := fix.meter.NewInt64Counter("int64.counter")
-	k := key.String("bench", "true")
+	k := kv.String("bench", "true")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		c.Add(ctx, 1, k)
-		fix.sdk.Collect(ctx)
+		fix.accumulator.Collect(ctx)
 	}
 }
 
@@ -595,13 +594,13 @@ func BenchmarkLabelIterator(b *testing.B) {
 	counter := fix.meter.NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, keyValues...)
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 
 	b.ResetTimer()
 
 	labels := rec.Labels()
 	iter := labels.Iter()
-	var val core.KeyValue
+	var val kv.KeyValue
 	for i := 0; i < b.N; i++ {
 		if !iter.Next() {
 			iter = labels.Iter()

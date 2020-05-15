@@ -21,7 +21,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -94,7 +94,7 @@ func (mockSpan) SetError(v bool) {
 }
 
 // SetAttributes does nothing.
-func (mockSpan) SetAttributes(attributes ...core.KeyValue) {
+func (mockSpan) SetAttributes(attributes ...kv.KeyValue) {
 }
 
 // SetAttribute does nothing.
@@ -115,9 +115,9 @@ func (mockSpan) Tracer() trace.Tracer {
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...core.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
 }

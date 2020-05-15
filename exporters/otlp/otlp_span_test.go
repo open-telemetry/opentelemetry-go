@@ -27,8 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -90,13 +89,13 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []core.KeyValue{
-						key.String("user", "alice"),
-						key.Bool("authenticated", true),
+					Attributes: []kv.KeyValue{
+						kv.String("user", "alice"),
+						kv.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(key.String("instance", "tester-a")),
+					Resource:      resource.New(kv.String("instance", "tester-a")),
 				},
 				{
 					SpanContext: apitrace.SpanContext{
@@ -109,13 +108,13 @@ func TestExportSpans(t *testing.T) {
 					Name:         "internal process",
 					StartTime:    startTime,
 					EndTime:      endTime,
-					Attributes: []core.KeyValue{
-						key.String("user", "alice"),
-						key.Bool("authenticated", true),
+					Attributes: []kv.KeyValue{
+						kv.String("user", "alice"),
+						kv.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(key.String("instance", "tester-a")),
+					Resource:      resource.New(kv.String("instance", "tester-a")),
 				},
 				{
 					SpanContext: apitrace.SpanContext{
@@ -127,13 +126,13 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []core.KeyValue{
-						key.String("user", "bob"),
-						key.Bool("authenticated", false),
+					Attributes: []kv.KeyValue{
+						kv.String("user", "bob"),
+						kv.Bool("authenticated", false),
 					},
 					StatusCode:    codes.Unauthenticated,
 					StatusMessage: "Unauthenticated",
-					Resource:      resource.New(key.String("instance", "tester-b")),
+					Resource:      resource.New(kv.String("instance", "tester-b")),
 				},
 			},
 			[]tracepb.ResourceSpans{
