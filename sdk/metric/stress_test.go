@@ -438,8 +438,8 @@ func intLastValueTestImpl() testImpl {
 			return api.NewInt64Number(rand.Int63() - r1)
 		},
 		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
-			measure := inst.(api.Int64ValueRecorder)
-			measure.Record(ctx, value.AsInt64(), labels...)
+			valuerecorder := inst.(api.Int64ValueRecorder)
+			valuerecorder.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
@@ -479,8 +479,8 @@ func floatLastValueTestImpl() testImpl {
 			return api.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
 		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
-			measure := inst.(api.Float64ValueRecorder)
-			measure.Record(ctx, value.AsFloat64(), labels...)
+			valuerecorder := inst.(api.Float64ValueRecorder)
+			valuerecorder.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{

@@ -44,8 +44,9 @@ type (
 var _ export.Aggregator = &Aggregator{}
 var _ aggregator.MinMaxSumCount = &Aggregator{}
 
-// New returns a new measure aggregator for computing min, max, sum, and
-// count.  It does not compute quantile information other than Min and Max.
+// New returns a new aggregator for computing the min, max, sum, and
+// count.  It does not compute quantile information other than Min and
+// Max.
 //
 // This type uses a mutex for Update() and Checkpoint() concurrency.
 func New(desc *metric.Descriptor) *Aggregator {

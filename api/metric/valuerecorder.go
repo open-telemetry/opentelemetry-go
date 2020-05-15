@@ -44,14 +44,14 @@ type BoundInt64ValueRecorder struct {
 	syncBoundInstrument
 }
 
-// Bind creates a bound instrument for this measure. The labels are
+// Bind creates a bound instrument for this ValueRecorder. The labels are
 // associated with values recorded via subsequent calls to Record.
 func (c Float64ValueRecorder) Bind(labels ...kv.KeyValue) (h BoundFloat64ValueRecorder) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
-// Bind creates a bound instrument for this measure. The labels are
+// Bind creates a bound instrument for this ValueRecorder. The labels are
 // associated with values recorded via subsequent calls to Record.
 func (c Int64ValueRecorder) Bind(labels ...kv.KeyValue) (h BoundInt64ValueRecorder) {
 	h.syncBoundInstrument = c.bind(labels)
@@ -70,28 +70,28 @@ func (c Int64ValueRecorder) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
-// Record adds a new value to the list of measure's records. The
+// Record adds a new value to the list of ValueRecorder's records. The
 // labels should contain the keys and values to be associated with
 // this value.
 func (c Float64ValueRecorder) Record(ctx context.Context, value float64, labels ...kv.KeyValue) {
 	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
-// Record adds a new value to the list of measure's records. The
+// Record adds a new value to the ValueRecorder's distribution. The
 // labels should contain the keys and values to be associated with
 // this value.
 func (c Int64ValueRecorder) Record(ctx context.Context, value int64, labels ...kv.KeyValue) {
 	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 
-// Record adds a new value to the list of measure's records using the labels
-// previously bound to the measure via Bind()
+// Record adds a new value to the ValueRecorder's distribution using the labels
+// previously bound to the ValueRecorder via Bind().
 func (b BoundFloat64ValueRecorder) Record(ctx context.Context, value float64) {
 	b.directRecord(ctx, NewFloat64Number(value))
 }
 
-// Record adds a new value to the list of measure's records using the labels
-// previously bound to the measure via Bind()
+// Record adds a new value to the ValueRecorder's distribution using the labels
+// previously bound to the ValueRecorder via Bind().
 func (b BoundInt64ValueRecorder) Record(ctx context.Context, value int64) {
 	b.directRecord(ctx, NewInt64Number(value))
 }
