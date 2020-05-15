@@ -23,7 +23,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -52,7 +52,7 @@ func main() {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResourceAttributes(
 			// the service name used to display traces in Jaeger
-			core.Key(conventions.AttributeServiceName).String("test-service"),
+			kv.Key(conventions.AttributeServiceName).String("test-service"),
 		),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
 			sdktrace.WithScheduleDelayMillis(5),
