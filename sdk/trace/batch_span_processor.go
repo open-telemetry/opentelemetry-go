@@ -201,6 +201,8 @@ loop:
 		if !timer.Stop() {
 			<-timer.C
 		}
+		// This is not needed normally, but use some timeout so we are not stuck
+		// waiting for enqueueWait forever.
 		const waitTimeout = 30 * time.Second
 		timer.Reset(waitTimeout)
 
