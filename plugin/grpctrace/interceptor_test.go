@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -93,42 +94,96 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[core.Key]core.Value{
 				{
-					messageTypeKey: core.String("SENT"),
-					messageIDKey:   core.Int(1),
+					messageTypeKey:             core.String("SENT"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey: core.String("RECEIVED"),
-					messageIDKey:   core.Int(1),
+					messageTypeKey:             core.String("RECEIVED"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			name: "/serviceName/bar",
 			expectedAttr: map[core.Key]core.Value{
-				rpcServiceKey: core.String("serviceName"),
+				rpcServiceKey:  core.String("serviceName"),
+				netPeerIPKey:   core.String("fake"),
+				netPeerPortKey: core.String("connection"),
 			},
 			eventsAttr: []map[core.Key]core.Value{
 				{
-					messageTypeKey: core.String("SENT"),
-					messageIDKey:   core.Int(1),
+					messageTypeKey:             core.String("SENT"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					messageTypeKey: core.String("RECEIVED"),
-					messageIDKey:   core.Int(1),
+					messageTypeKey:             core.String("RECEIVED"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
-			name:         "serviceName/bar",
-			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("serviceName")},
+			name: "serviceName/bar",
+			expectedAttr: map[core.Key]core.Value{
+				rpcServiceKey:  core.String("serviceName"),
+				netPeerIPKey:   core.String("fake"),
+				netPeerPortKey: core.String("connection"),
+			},
+			eventsAttr: []map[core.Key]core.Value{
+				{
+					messageTypeKey:             core.String("SENT"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+				},
+				{
+					messageTypeKey:             core.String("RECEIVED"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+				},
+			},
 		},
 		{
-			name:         "invalidName",
-			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("")},
+			name: "invalidName",
+			expectedAttr: map[core.Key]core.Value{
+				rpcServiceKey:  core.String(""),
+				netPeerIPKey:   core.String("fake"),
+				netPeerPortKey: core.String("connection"),
+			},
+			eventsAttr: []map[core.Key]core.Value{
+				{
+					messageTypeKey:             core.String("SENT"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+				},
+				{
+					messageTypeKey:             core.String("RECEIVED"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+				},
+			},
 		},
 		{
-			name:         "/github.com.foo.serviceName_123/method",
-			expectedAttr: map[core.Key]core.Value{rpcServiceKey: core.String("serviceName_123")},
+			name: "/github.com.foo.serviceName_123/method",
+			expectedAttr: map[core.Key]core.Value{
+				rpcServiceKey:  core.String("serviceName_123"),
+				netPeerIPKey:   core.String("fake"),
+				netPeerPortKey: core.String("connection"),
+			},
+			eventsAttr: []map[core.Key]core.Value{
+				{
+					messageTypeKey:             core.String("SENT"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(req))),
+				},
+				{
+					messageTypeKey:             core.String("RECEIVED"),
+					messageIDKey:               core.Int(1),
+					messageUncompressedSizeKey: core.Int(proto.Size(proto.Message(reply))),
+				},
+			},
 		},
 	}
 
@@ -158,6 +213,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 						expectedAttr.AsString(), attr.Value.AsString())
 				}
 				delete(check.expectedAttr, attr.Key)
+			} else {
+				t.Errorf("attribute %s not found in expected attributes map", string(attr.Key))
 			}
 		}
 
@@ -182,6 +239,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 							string(attr.Key), attr.Value.AsString(), expectedAttr.AsString())
 					}
 					delete(check.eventsAttr[event], attr.Key)
+				} else {
+					t.Errorf("attribute in event %s not found in expected attributes map", string(attr.Key))
 				}
 			}
 			if len(check.eventsAttr[event]) > 0 {
