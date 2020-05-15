@@ -23,7 +23,9 @@ import (
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
-const correlationContextHeader = "Correlation-Context"
+// Temporary header name until W3C finalizes format.
+// https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
+const correlationContextHeader = "otcorrelations"
 
 // CorrelationContext propagates Key:Values in W3C CorrelationContext
 // format.
