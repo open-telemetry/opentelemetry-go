@@ -188,10 +188,10 @@ func TestNoGroupingExport(t *testing.T) {
 	)
 }
 
-func TestMeasureMetricGroupingExport(t *testing.T) {
+func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
-		"measure",
-		metric.MeasureKind,
+		"valuerecorder",
+		metric.ValueRecorderKind,
 		metric.Int64NumberKind,
 		nil,
 		nil,
@@ -205,7 +205,7 @@ func TestMeasureMetricGroupingExport(t *testing.T) {
 					Metrics: []*metricpb.Metric{
 						{
 							MetricDescriptor: &metricpb.MetricDescriptor{
-								Name: "measure",
+								Name: "valuerecorder",
 								Type: metricpb.MetricDescriptor_SUMMARY,
 								Labels: []*commonpb.StringKeyValue{
 									{

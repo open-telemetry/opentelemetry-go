@@ -82,7 +82,7 @@ func TestDirect(t *testing.T) {
 	counter.Add(ctx, 1, labels1...)
 	counter.Add(ctx, 1, labels1...)
 
-	measure := Must(meter1).NewFloat64Measure("test.measure")
+	measure := Must(meter1).NewFloat64ValueRecorder("test.measure")
 	measure.Record(ctx, 1, labels1...)
 	measure.Record(ctx, 2, labels1...)
 
@@ -96,7 +96,7 @@ func TestDirect(t *testing.T) {
 		result.Observe(2, labels2...)
 	})
 
-	second := Must(meter2).NewFloat64Measure("test.second")
+	second := Must(meter2).NewFloat64ValueRecorder("test.second")
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
@@ -174,7 +174,7 @@ func TestBound(t *testing.T) {
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
-	measure := Must(glob).NewInt64Measure("test.measure")
+	measure := Must(glob).NewInt64ValueRecorder("test.measure")
 	boundM := measure.Bind(labels1...)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
@@ -216,7 +216,7 @@ func TestUnbind(t *testing.T) {
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
 
-	measure := Must(glob).NewInt64Measure("test.measure")
+	measure := Must(glob).NewInt64ValueRecorder("test.measure")
 	boundM := measure.Bind(labels1...)
 
 	boundC.Unbind()

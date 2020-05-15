@@ -84,7 +84,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 // Validates count, sum and buckets for a given profile and policy
 func histogram(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg := New(descriptor, boundaries[profile.NumberKind])
 
@@ -126,7 +126,7 @@ func TestHistogramMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg1 := New(descriptor, boundaries[profile.NumberKind])
 		agg2 := New(descriptor, boundaries[profile.NumberKind])
@@ -178,7 +178,7 @@ func TestHistogramNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg := New(descriptor, boundaries[profile.NumberKind])
 		agg.Checkpoint(ctx, descriptor)

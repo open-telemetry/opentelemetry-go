@@ -77,7 +77,7 @@ func TestMeasureSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 

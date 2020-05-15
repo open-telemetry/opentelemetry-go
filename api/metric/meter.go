@@ -82,22 +82,22 @@ func (m Meter) NewFloat64Counter(name string, options ...Option) (Float64Counter
 		m.newSync(name, CounterKind, Float64NumberKind, options))
 }
 
-// NewInt64Measure creates a new integer Measure instrument with the
+// NewInt64ValueRecorder creates a new integer ValueRecorder instrument with the
 // given name, customized with options.  May return an error if the
 // name is invalid (e.g., empty) or improperly registered (e.g.,
 // duplicate registration).
-func (m Meter) NewInt64Measure(name string, opts ...Option) (Int64Measure, error) {
-	return wrapInt64MeasureInstrument(
-		m.newSync(name, MeasureKind, Int64NumberKind, opts))
+func (m Meter) NewInt64ValueRecorder(name string, opts ...Option) (Int64ValueRecorder, error) {
+	return wrapInt64ValueRecorderInstrument(
+		m.newSync(name, ValueRecorderKind, Int64NumberKind, opts))
 }
 
-// NewFloat64Measure creates a new floating point Measure with the
+// NewFloat64ValueRecorder creates a new floating point ValueRecorder with the
 // given name, customized with options.  May return an error if the
 // name is invalid (e.g., empty) or improperly registered (e.g.,
 // duplicate registration).
-func (m Meter) NewFloat64Measure(name string, opts ...Option) (Float64Measure, error) {
-	return wrapFloat64MeasureInstrument(
-		m.newSync(name, MeasureKind, Float64NumberKind, opts))
+func (m Meter) NewFloat64ValueRecorder(name string, opts ...Option) (Float64ValueRecorder, error) {
+	return wrapFloat64ValueRecorderInstrument(
+		m.newSync(name, ValueRecorderKind, Float64NumberKind, opts))
 }
 
 // RegisterInt64Observer creates a new integer Observer instrument

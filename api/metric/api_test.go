@@ -119,10 +119,10 @@ func TestCounter(t *testing.T) {
 	}
 }
 
-func TestMeasure(t *testing.T) {
+func TestValueRecorder(t *testing.T) {
 	{
 		mockSDK, meter := mockTest.NewMeter()
-		m := Must(meter).NewFloat64Measure("test.measure.float")
+		m := Must(meter).NewFloat64ValueRecorder("test.measure.float")
 		ctx := context.Background()
 		labels := []kv.KeyValue{}
 		m.Record(ctx, 42, labels...)
@@ -134,7 +134,7 @@ func TestMeasure(t *testing.T) {
 	}
 	{
 		mockSDK, meter := mockTest.NewMeter()
-		m := Must(meter).NewInt64Measure("test.measure.int")
+		m := Must(meter).NewInt64ValueRecorder("test.measure.int")
 		ctx := context.Background()
 		labels := []kv.KeyValue{kv.Int("I", 1)}
 		m.Record(ctx, 42, labels...)
@@ -309,7 +309,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
 	meter := metric.WrapMeterImpl(impl, "test")
 
-	measure, err := meter.NewInt64Measure("test.measure")
+	measure, err := meter.NewInt64ValueRecorder("test.measure")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, measure.SyncImpl())

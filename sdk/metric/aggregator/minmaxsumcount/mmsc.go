@@ -24,8 +24,8 @@ import (
 )
 
 type (
-	// Aggregator aggregates measure events, keeping only the min, max,
-	// sum, and count.
+	// Aggregator aggregates events that form a distribution,
+	// keeping only the min, max, sum, and count.
 	Aggregator struct {
 		lock       sync.Mutex
 		current    state

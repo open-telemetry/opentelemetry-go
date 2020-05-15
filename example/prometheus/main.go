@@ -60,11 +60,11 @@ func main() {
 		result.Observe(value, labels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
-		metric.WithDescription("A measure set to 1.0"),
+		metric.WithDescription("A valuerecorder set to 1.0"),
 	)
 
-	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
-	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
+	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	valuerecorderThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 	notSoCommonLabels := []kv.KeyValue{lemonsKey.Int(13)}
@@ -78,8 +78,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		measureTwo.Measurement(2.0),
-		measureThree.Measurement(12.0),
+		valuerecorderTwo.Measurement(2.0),
+		valuerecorderThree.Measurement(12.0),
 	)
 
 	time.Sleep(5 * time.Second)
@@ -91,8 +91,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		notSoCommonLabels,
-		measureTwo.Measurement(2.0),
-		measureThree.Measurement(22.0),
+		valuerecorderTwo.Measurement(2.0),
+		valuerecorderThree.Measurement(22.0),
 	)
 
 	time.Sleep(5 * time.Second)
@@ -104,8 +104,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		measureTwo.Measurement(12.0),
-		measureThree.Measurement(13.0),
+		valuerecorderTwo.Measurement(12.0),
+		valuerecorderThree.Measurement(13.0),
 	)
 
 	time.Sleep(100 * time.Second)

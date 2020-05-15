@@ -27,6 +27,8 @@ import (
 )
 
 type (
+	// Aggregator aggregates events that form a distribution, keeping
+	// an array with the exact set of values.
 	Aggregator struct {
 		// ckptSum needs to be aligned for 64-bit atomic operations.
 		ckptSum    metric.Number

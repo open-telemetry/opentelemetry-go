@@ -311,7 +311,7 @@ func BenchmarkInt64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure("int64.lastvalue")
+	mea := fix.meter.NewInt64ValueRecorder("int64.lastvalue")
 
 	b.ResetTimer()
 
@@ -324,7 +324,7 @@ func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure("int64.lastvalue")
+	mea := fix.meter.NewInt64ValueRecorder("int64.lastvalue")
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -338,7 +338,7 @@ func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
+	mea := fix.meter.NewFloat64ValueRecorder("float64.lastvalue")
 
 	b.ResetTimer()
 
@@ -351,7 +351,7 @@ func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
+	mea := fix.meter.NewFloat64ValueRecorder("float64.lastvalue")
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -361,13 +361,13 @@ func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	}
 }
 
-// Measures
+// ValueRecorders
 
-func benchmarkInt64MeasureAdd(b *testing.B, name string) {
+func benchmarkInt64ValueRecorderAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure(name)
+	mea := fix.meter.NewInt64ValueRecorder(name)
 
 	b.ResetTimer()
 
@@ -376,11 +376,11 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
+func benchmarkInt64ValueRecorderHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure(name)
+	mea := fix.meter.NewInt64ValueRecorder(name)
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -390,11 +390,11 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
+func benchmarkFloat64ValueRecorderAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure(name)
+	mea := fix.meter.NewFloat64ValueRecorder(name)
 
 	b.ResetTimer()
 
@@ -403,11 +403,11 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
+func benchmarkFloat64ValueRecorderHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure(name)
+	mea := fix.meter.NewFloat64ValueRecorder(name)
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -467,55 +467,55 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 // MaxSumCount
 
 func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.minmaxsumcount")
+	benchmarkInt64ValueRecorderAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.minmaxsumcount")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.minmaxsumcount")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.minmaxsumcount")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.minmaxsumcount")
 }
 
 // DDSketch
 
 func BenchmarkInt64DDSketchAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.ddsketch")
+	benchmarkInt64ValueRecorderAdd(b, "int64.ddsketch")
 }
 
 func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.ddsketch")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.ddsketch")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.ddsketch")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.ddsketch")
 }
 
 // Array
 
 func BenchmarkInt64ArrayAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.array")
+	benchmarkInt64ValueRecorderAdd(b, "int64.array")
 }
 
 func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.array")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.array")
 }
 
 func BenchmarkFloat64ArrayAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.array")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.array")
 }
 
 func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.array")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.array")
 }
 
 // BatchRecord

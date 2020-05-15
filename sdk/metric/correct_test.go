@@ -120,7 +120,7 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(meter).NewFloat64Measure("name.measure")
+	measure := Must(meter).NewFloat64ValueRecorder("name.measure")
 
 	measure.Record(ctx, math.NaN())
 	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
@@ -150,7 +150,7 @@ func TestDisabledInstrument(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	measure := Must(meter).NewFloat64Measure("name.disabled")
+	measure := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
 	measure.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
@@ -389,8 +389,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
 	counter2 := Must(meter).NewFloat64Counter("float64.counter")
-	measure1 := Must(meter).NewInt64Measure("int64.measure")
-	measure2 := Must(meter).NewFloat64Measure("float64.measure")
+	measure1 := Must(meter).NewInt64ValueRecorder("int64.measure")
+	measure2 := Must(meter).NewFloat64ValueRecorder("float64.measure")
 
 	sdk.RecordBatch(
 		ctx,

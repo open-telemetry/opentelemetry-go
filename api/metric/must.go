@@ -53,20 +53,20 @@ func (mm MeterMust) NewFloat64Counter(name string, cos ...Option) Float64Counter
 	}
 }
 
-// NewInt64Measure calls `Meter.NewInt64Measure` and returns the
+// NewInt64ValueRecorder calls `Meter.NewInt64ValueRecorder` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64Measure(name string, mos ...Option) Int64Measure {
-	if inst, err := mm.meter.NewInt64Measure(name, mos...); err != nil {
+func (mm MeterMust) NewInt64ValueRecorder(name string, mos ...Option) Int64ValueRecorder {
+	if inst, err := mm.meter.NewInt64ValueRecorder(name, mos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64Measure calls `Meter.NewFloat64Measure` and returns the
+// NewFloat64ValueRecorder calls `Meter.NewFloat64ValueRecorder` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64Measure(name string, mos ...Option) Float64Measure {
-	if inst, err := mm.meter.NewFloat64Measure(name, mos...); err != nil {
+func (mm MeterMust) NewFloat64ValueRecorder(name string, mos ...Option) Float64ValueRecorder {
+	if inst, err := mm.meter.NewFloat64ValueRecorder(name, mos...); err != nil {
 		panic(err)
 	} else {
 		return inst
