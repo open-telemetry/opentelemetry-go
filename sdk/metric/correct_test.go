@@ -107,7 +107,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 	require.Nil(t, sdkErr)
 }
 
-func TestInputRangeTestMeasure(t *testing.T) {
+func TestInputRangeTestValueRecorder(t *testing.T) {
 	ctx := context.Background()
 	integrator := &correctnessIntegrator{
 		t: t,

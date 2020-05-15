@@ -71,7 +71,7 @@ func TestCounterSum(t *testing.T) {
 	})
 }
 
-func TestMeasureSum(t *testing.T) {
+func TestValueRecorderSum(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
