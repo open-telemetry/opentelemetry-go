@@ -16,61 +16,137 @@ package standard // import "go.opentelemetry.io/otel/api/standard"
 
 import "go.opentelemetry.io/otel/api/kv"
 
-// Constants for Service resources.
+// Standard service resource attribute keys.
 const (
-	// A uniquely identifying name for a Service.
-	ServiceName       = kv.Key("service.name")
-	ServiceNamespace  = kv.Key("service.namespace")
-	ServiceInstanceID = kv.Key("service.instance.id")
-	ServiceVersion    = kv.Key("service.version")
+	// Name of the service.
+	ServiceNameKey = kv.Key("service.name")
+
+	// A namespace for `service.name`. This needs to have meaning that helps
+	// to distinguish a group of services. For example, the team name that
+	// owns a group of services. `service.name` is expected to be unique
+	// within the same namespace.
+	ServiceNamespaceKey = kv.Key("service.namespace")
+
+	// A unique identifier of the service instance. In conjunction with the
+	// `service.name` and `service.namespace` this must be unique.
+	ServiceInstanceIDKey = kv.Key("service.instance.id")
+
+	// The version of the service API.
+	ServiceVersionKey = kv.Key("service.version")
 )
 
-// Constants for Library resources.
+// Standard telemetry SDK resource attribute keys.
 const (
-	// A uniquely identifying name for a Library.
-	LibraryName     = kv.Key("library.name")
-	LibraryLanguage = kv.Key("library.language")
-	LibraryVersion  = kv.Key("library.version")
+	// The name of the telemetry SDK.
+	//
+	// The default OpenTelemetry SDK provided by the OpenTelemetry project
+	// MUST set telemetry.sdk.name to the value `opentelemetry`.
+	//
+	// If another SDK is used, this attribute MUST be set to the import path
+	// of that SDK's package.
+	//
+	// The value `opentelemetry` is reserved and MUST NOT be used by
+	// non-OpenTelemetry SDKs.
+	TelemetrySDKNameKey = kv.Key("telemetry.sdk.name")
+
+	// The language of the telemetry SDK.
+	TelemetrySDKLanguageKey = kv.Key("telemetry.sdk.language")
+
+	// The version string of the telemetry SDK.
+	TelemetrySDKVersionKey = kv.Key("telemetry.sdk.version")
 )
 
-// Constants for Kubernetes resources.
+// Standard telemetry SDK resource attributes.
+var (
+	TelemetrySDKLanguageGo = TelemetrySDKLanguageKey.String("go")
+)
+
+// Standard container resource attribute keys.
+const (
+	// A uniquely identifying name for the Container.
+	ContainerNameKey = kv.Key("container.name")
+
+	// Name of the image the container was built on.
+	ContainerImageNameKey = kv.Key("container.image.name")
+
+	// Container image tag.
+	ContainerImageTagKey = kv.Key("container.image.tag")
+)
+
+// Standard Function-as-a-Service resource attribute keys.
+const (
+	// A uniquely identifying name for the FaaS.
+	FaaSName = kv.Key("faas.name")
+
+	// The unique name of the function being executed.
+	FaaSID = kv.Key("faas.id")
+
+	// The version of the function being executed.
+	FaaSVersion = kv.Key("faas.version")
+
+	// The execution environment identifier.
+	FaaSInstance = kv.Key("faas.instance")
+)
+
+// Standard Kubernetes resource attribute keys.
 const (
 	// A uniquely identifying name for the Kubernetes cluster. Kubernetes
 	// does not have cluster names as an internal concept so this may be
 	// set to any meaningful value within the environment. For example,
 	// GKE clusters have a name which can be used for this label.
-	K8SClusterName    = kv.Key("k8s.cluster.name")
-	K8SNamespaceName  = kv.Key("k8s.namespace.name")
-	K8SPodName        = kv.Key("k8s.pod.name")
-	K8SDeploymentName = kv.Key("k8s.deployment.name")
+	K8SClusterNameKey = kv.Key("k8s.cluster.name")
+
+	// The name of the namespace that the pod is running in.
+	K8SNamespaceNameKey = kv.Key("k8s.namespace.name")
+
+	// The name of the pod.
+	K8SPodNameKey = kv.Key("k8s.pod.name")
+
+	// The name of the deployment.
+	K8SDeploymentNameKey = kv.Key("k8s.deployment.name")
 )
 
-// Constants for Container resources.
-const (
-	// A uniquely identifying name for the Container.
-	ContainerName      = kv.Key("container.name")
-	ContainerImageName = kv.Key("container.image.name")
-	ContainerImageTag  = kv.Key("container.image.tag")
-)
-
-// Constants for Cloud resources.
-const (
-	CloudProvider  = kv.Key("cloud.provider")
-	CloudAccountID = kv.Key("cloud.account.id")
-	CloudRegion    = kv.Key("cloud.region")
-	CloudZone      = kv.Key("cloud.zone")
-)
-
-// Constants for Host resources.
+// Standard host resource attribute keys.
 const (
 	// A uniquely identifying name for the host.
-	HostName = kv.Key("host.name")
+	HostNameKey = kv.Key("host.name")
 
 	// A hostname as returned by the 'hostname' command on host machine.
-	HostHostName     = kv.Key("host.hostname")
-	HostID           = kv.Key("host.id")
-	HostType         = kv.Key("host.type")
-	HostImageName    = kv.Key("host.image.name")
-	HostImageID      = kv.Key("host.image.id")
-	HostImageVersion = kv.Key("host.image.version")
+	HostHostNameKey = kv.Key("host.hostname")
+
+	// Unique host ID. For cloud environments this will be the instance ID.
+	HostIDKey = kv.Key("host.id")
+
+	// Type of host. For cloud environments this will be the machine type.
+	HostTypeKey = kv.Key("host.type")
+
+	// Name of the OS or VM image the host is running.
+	HostImageNameKey = kv.Key("host.image.name")
+
+	// Identifier of the image the host is running.
+	HostImageIDKey = kv.Key("host.image.id")
+
+	// Version of the image the host is running.
+	HostImageVersionKey = kv.Key("host.image.version")
+)
+
+// Standard cloud environment resource attribute keys.
+const (
+	// Name of the cloud provider.
+	CloudProviderKey = kv.Key("cloud.provider")
+
+	// The account ID from the cloud provider used for authorization.
+	CloudAccountIDKey = kv.Key("cloud.account.id")
+
+	// Geographical region where this resource is.
+	CloudRegionKey = kv.Key("cloud.region")
+
+	// Zone of the region where this resource is.
+	CloudZoneKey = kv.Key("cloud.zone")
+)
+
+var (
+	CloudProviderAWS   = CloudProviderKey.String("aws")
+	CloudProviderAzure = CloudProviderKey.String("azure")
+	CloudProviderGCP   = CloudProviderKey.String("gcp")
 )
