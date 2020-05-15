@@ -17,21 +17,23 @@
 // (https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/resource/semantic_conventions).
 package resourcekey // import "go.opentelemetry.io/otel/sdk/resource/resourcekey"
 
+import "go.opentelemetry.io/otel/api/kv"
+
 // Constants for Service resources.
 const (
 	// A uniquely identifying name for a Service.
-	ServiceName       = "service.name"
-	ServiceNamespace  = "service.namespace"
-	ServiceInstanceID = "service.instance.id"
-	ServiceVersion    = "service.version"
+	ServiceName       = kv.Key("service.name")
+	ServiceNamespace  = kv.Key("service.namespace")
+	ServiceInstanceID = kv.Key("service.instance.id")
+	ServiceVersion    = kv.Key("service.version")
 )
 
 // Constants for Library resources.
 const (
 	// A uniquely identifying name for a Library.
-	LibraryName     = "library.name"
-	LibraryLanguage = "library.language"
-	LibraryVersion  = "library.version"
+	LibraryName     = kv.Key("library.name")
+	LibraryLanguage = kv.Key("library.language")
+	LibraryVersion  = kv.Key("library.version")
 )
 
 // Constants for Kubernetes resources.
@@ -40,43 +42,38 @@ const (
 	// does not have cluster names as an internal concept so this may be
 	// set to any meaningful value within the environment. For example,
 	// GKE clusters have a name which can be used for this label.
-	K8SClusterName    = "k8s.cluster.name"
-	K8SNamespaceName  = "k8s.namespace.name"
-	K8SPodName        = "k8s.pod.name"
-	K8SDeploymentName = "k8s.deployment.name"
+	K8SClusterName    = kv.Key("k8s.cluster.name")
+	K8SNamespaceName  = kv.Key("k8s.namespace.name")
+	K8SPodName        = kv.Key("k8s.pod.name")
+	K8SDeploymentName = kv.Key("k8s.deployment.name")
 )
 
 // Constants for Container resources.
 const (
 	// A uniquely identifying name for the Container.
-	ContainerName      = "container.name"
-	ContainerImageName = "container.image.name"
-	ContainerImageTag  = "container.image.tag"
+	ContainerName      = kv.Key("container.name")
+	ContainerImageName = kv.Key("container.image.name")
+	ContainerImageTag  = kv.Key("container.image.tag")
 )
 
 // Constants for Cloud resources.
 const (
-	CloudProvider  = "cloud.provider"
-	CloudAccountID = "cloud.account.id"
-	CloudRegion    = "cloud.region"
-	CloudZone      = "cloud.zone"
-
-	// Cloud Providers
-	CloudProviderAWS   = "aws"
-	CloudProviderGCP   = "gcp"
-	CloudProviderAZURE = "azure"
+	CloudProvider  = kv.Key("cloud.provider")
+	CloudAccountID = kv.Key("cloud.account.id")
+	CloudRegion    = kv.Key("cloud.region")
+	CloudZone      = kv.Key("cloud.zone")
 )
 
 // Constants for Host resources.
 const (
 	// A uniquely identifying name for the host.
-	HostName = "host.name"
+	HostName = kv.Key("host.name")
 
 	// A hostname as returned by the 'hostname' command on host machine.
-	HostHostName     = "host.hostname"
-	HostID           = "host.id"
-	HostType         = "host.type"
-	HostImageName    = "host.image.name"
-	HostImageID      = "host.image.id"
-	HostImageVersion = "host.image.version"
+	HostHostName     = kv.Key("host.hostname")
+	HostID           = kv.Key("host.id")
+	HostType         = kv.Key("host.type")
+	HostImageName    = kv.Key("host.image.name")
+	HostImageID      = kv.Key("host.image.id")
+	HostImageVersion = kv.Key("host.image.version")
 )
