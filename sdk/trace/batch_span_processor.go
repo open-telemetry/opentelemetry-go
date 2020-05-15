@@ -166,9 +166,6 @@ func (bsp *BatchSpanProcessor) processQueue() {
 	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
 
 	exportSpans := func() {
-		if !timer.Stop() {
-			<-timer.C
-		}
 		timer.Reset(bsp.o.ScheduledDelayMillis)
 
 		if len(batch) > 0 {
@@ -187,6 +184,9 @@ loop:
 		case sd := <-bsp.queue:
 			batch = append(batch, sd)
 			if len(batch) == bsp.o.MaxExportBatchSize {
+				if !timer.Stop() {
+					<-timer.C
+				}
 				exportSpans()
 			}
 		}
@@ -201,6 +201,7 @@ loop:
 		if !timer.Stop() {
 			<-timer.C
 		}
+
 		// This is not needed normally, but use some timeout so we are not stuck
 		// waiting for enqueueWait forever.
 		const waitTimeout = 30 * time.Second
@@ -208,7 +209,7 @@ loop:
 
 		select {
 		case sd := <-bsp.queue:
-			if sd == nil {
+			if sd == nil { // queue is closed
 				exportSpans()
 				return
 			}
