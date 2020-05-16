@@ -54,21 +54,3 @@ func (f Float64ValueObserver) Observation(v float64) Observation {
 		instrument: f.instrument,
 	}
 }
-
-// wrapInt64ValueObserverInstrument returns an `Int64ValueObserver` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
-func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Int64ValueObserver{asyncInstrument: common}, err
-}
-
-// wrapFloat64ValueObserverInstrument returns an `Float64ValueObserver` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
-func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Float64ValueObserver{asyncInstrument: common}, err
-}
