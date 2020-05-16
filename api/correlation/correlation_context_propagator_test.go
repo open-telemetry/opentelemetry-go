@@ -89,7 +89,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("Correlation-Context", tt.header)
+			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
@@ -133,7 +133,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("Correlation-Context", tt.header)
+			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
@@ -202,17 +202,17 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 			ctx := correlation.ContextWithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
 			propagation.InjectHTTP(ctx, props, req.Header)
 
-			gotHeader := req.Header.Get("Correlation-Context")
+			gotHeader := req.Header.Get("otcorrelations")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
 			if wantedLen != len(gotHeader) {
 				t.Errorf(
-					"%s: Inject Correlation-Context incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
+					"%s: Inject otcorrelations incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
 				)
 			}
 			for _, inHeader := range tt.wantInHeader {
 				if !strings.Contains(gotHeader, inHeader) {
 					t.Errorf(
-						"%s: Inject Correlation-Context missing part of header: %s in %s", tt.name, inHeader, gotHeader,
+						"%s: Inject otcorrelations missing part of header: %s in %s", tt.name, inHeader, gotHeader,
 					)
 				}
 			}
@@ -222,7 +222,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator correlation.CorrelationContext
-	want := []string{"Correlation-Context"}
+	want := []string{"otcorrelations"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
