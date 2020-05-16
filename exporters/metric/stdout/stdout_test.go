@@ -177,7 +177,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
 	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
 	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
@@ -190,14 +190,14 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
-func TestStdoutMeasureFormat(t *testing.T) {
+func TestStdoutValueRecorderFormat(t *testing.T) {
 	fix := newFixture(t, nil, stdout.Config{
 		PrettyPrint: true,
 	})
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	magg := array.New()
 
 	for i := 0; i < 1000; i++ {
@@ -238,7 +238,7 @@ func TestStdoutMeasureFormat(t *testing.T) {
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := metric.NewDescriptor("test.name", metric.MeasureKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
 		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), &desc),
 		"minmaxsumcount": minmaxsumcount.New(&desc),

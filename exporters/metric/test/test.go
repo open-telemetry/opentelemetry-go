@@ -88,11 +88,11 @@ func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ..
 	p.updateAggregator(desc, sum.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddMeasure(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
+func (p *CheckpointSet) AddValueRecorder(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, array.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddHistogramMeasure(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...kv.KeyValue) {
+func (p *CheckpointSet) AddHistogramValueRecorder(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
 }
 

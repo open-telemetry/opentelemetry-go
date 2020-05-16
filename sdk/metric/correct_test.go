@@ -107,7 +107,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 	require.Nil(t, sdkErr)
 }
 
-func TestInputRangeTestMeasure(t *testing.T) {
+func TestInputRangeTestValueRecorder(t *testing.T) {
 	ctx := context.Background()
 	integrator := &correctnessIntegrator{
 		t: t,
@@ -120,17 +120,17 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(meter).NewFloat64Measure("name.measure")
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.valuerecorder")
 
-	measure.Record(ctx, math.NaN())
+	valuerecorder.Record(ctx, math.NaN())
 	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	measure.Record(ctx, 1)
-	measure.Record(ctx, 2)
+	valuerecorder.Record(ctx, 1)
+	valuerecorder.Record(ctx, 2)
 
 	integrator.records = nil
 	checkpointed = sdk.Collect(ctx)
@@ -150,9 +150,9 @@ func TestDisabledInstrument(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	measure := Must(meter).NewFloat64Measure("name.disabled")
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
-	measure.Record(ctx, -1)
+	valuerecorder.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
@@ -389,8 +389,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
 	counter2 := Must(meter).NewFloat64Counter("float64.counter")
-	measure1 := Must(meter).NewInt64Measure("int64.measure")
-	measure2 := Must(meter).NewFloat64Measure("float64.measure")
+	valuerecorder1 := Must(meter).NewInt64ValueRecorder("int64.valuerecorder")
+	valuerecorder2 := Must(meter).NewFloat64ValueRecorder("float64.valuerecorder")
 
 	sdk.RecordBatch(
 		ctx,
@@ -400,8 +400,8 @@ func TestRecordBatch(t *testing.T) {
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
-		measure1.Measurement(3),
-		measure2.Measurement(4),
+		valuerecorder1.Measurement(3),
+		valuerecorder2.Measurement(4),
 	)
 
 	sdk.Collect(ctx)
@@ -411,10 +411,10 @@ func TestRecordBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"int64.counter/A=B,C=D":   1,
-		"float64.counter/A=B,C=D": 2,
-		"int64.measure/A=B,C=D":   3,
-		"float64.measure/A=B,C=D": 4,
+		"int64.counter/A=B,C=D":         1,
+		"float64.counter/A=B,C=D":       2,
+		"int64.valuerecorder/A=B,C=D":   3,
+		"float64.valuerecorder/A=B,C=D": 4,
 	}, out.Map)
 }
 

@@ -100,22 +100,16 @@ type AggregationSelector interface {
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to a counter, a measure, or
-// an observer instrument.  For the most part, counter semantics are
-// fixed and the provided implementation should be used.  Measure and
-// observer metrics offer a wide range of potential tradeoffs and
-// several implementations are provided.
-//
-// Aggregators are meant to compute the change (i.e., delta) in state
-// from one checkpoint to the next, with the exception of LastValue
-// aggregators.  LastValue aggregators are required to maintain the last
-// value across checkpoints.
+// behavior to track a sequence of updates to an instrument.  Sum-only
+// instruments commonly use a simple Sum aggregator, but for the
+// distribution instruments (ValueRecorder, ValueObserver) there are a
+// number of possible aggregators with different cost and accuracy
+// tradeoffs.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a counter aggregator to a Measure instrument (to compute
-// a simple sum) or a LastValue aggregator to a measure instrument (to
-// compute the last value).
+// to attach a Sum aggregator to a ValueRecorder instrument or a
+// MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may arrive
