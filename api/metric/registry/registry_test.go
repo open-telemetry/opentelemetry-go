@@ -43,11 +43,11 @@ var (
 		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64ValueRecorder(name))
 		},
-		"observer.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterInt64ValueObserver(name, func(metric.Int64ObserverResult) {}))
 		},
-		"observer.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
+		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterFloat64ValueObserver(name, func(metric.Float64ObserverResult) {}))
 		},
 	}
 )

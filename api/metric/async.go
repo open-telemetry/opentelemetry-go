@@ -29,7 +29,7 @@ import "go.opentelemetry.io/otel/api/kv"
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64Observer.Observation()).
+// instruments (e.g., Int64ValueObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     Number

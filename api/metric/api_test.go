@@ -146,11 +146,11 @@ func TestValueRecorder(t *testing.T) {
 	}
 }
 
-func TestObserver(t *testing.T) {
+func TestObserverInstruments(t *testing.T) {
 	{
 		labels := []kv.KeyValue{kv.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64ValueObserver("test.observer.float", func(result metric.Float64ObserverResult) {
 			result.Observe(42, labels...)
 		})
 		t.Log("Testing float observer")
@@ -161,7 +161,7 @@ func TestObserver(t *testing.T) {
 	{
 		labels := []kv.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64ValueObserver("test.observer.int", func(result metric.Int64ObserverResult) {
 			result.Observe(42, labels...)
 		})
 		t.Log("Testing int observer")
@@ -210,11 +210,11 @@ func checkBatches(t *testing.T, ctx context.Context, labels []kv.KeyValue, mock 
 	}
 }
 
-func TestBatchObserver(t *testing.T) {
+func TestBatchObserverInstruments(t *testing.T) {
 	mockSDK, meter := mockTest.NewMeter()
 
-	var obs1 metric.Int64Observer
-	var obs2 metric.Float64Observer
+	var obs1 metric.Int64ValueObserver
+	var obs2 metric.Float64ValueObserver
 
 	labels := []kv.KeyValue{
 		kv.String("A", "B"),
@@ -229,8 +229,8 @@ func TestBatchObserver(t *testing.T) {
 			)
 		},
 	)
-	obs1 = cb.RegisterInt64Observer("test.observer.int")
-	obs2 = cb.RegisterFloat64Observer("test.observer.float")
+	obs1 = cb.RegisterInt64ValueObserver("test.observer.int")
+	obs2 = cb.RegisterFloat64ValueObserver("test.observer.float")
 
 	mockSDK.RunAsyncInstruments()
 
@@ -314,7 +314,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())
 
-	observer, err := meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {})
+	observer, err := meter.RegisterInt64ValueObserver("test.observer", func(result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())
@@ -324,7 +324,7 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 	// Tests that a nil callback yields a no-op observer without error.
 	_, meter := mockTest.NewMeter()
 
-	observer := Must(meter).RegisterInt64Observer("test.observer", nil)
+	observer := Must(meter).RegisterInt64ValueObserver("test.observer", nil)
 
 	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)
