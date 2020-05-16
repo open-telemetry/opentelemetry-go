@@ -53,8 +53,8 @@ type Config struct {
 	// useful to create deterministic test conditions.
 	DoNotPrintTime bool
 
-	// Quantiles are the desired aggregation quantiles for measure
-	// metric data, used when the configured aggregator supports
+	// Quantiles are the desired aggregation quantiles for distribution
+	// summaries, used when the configured aggregator supports
 	// quantiles.
 	//
 	// Note: this exporter is meant as a demonstration; a real
@@ -133,7 +133,7 @@ func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, e
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
 func NewExportPipeline(config Config, period time.Duration, opts ...push.Option) (*push.Controller, error) {
-	selector := simple.NewWithExactMeasure()
+	selector := simple.NewWithExactDistribution()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err

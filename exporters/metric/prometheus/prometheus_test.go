@@ -45,10 +45,10 @@ func TestPrometheusExporter(t *testing.T) {
 		"counter", metric.CounterKind, metric.Float64NumberKind)
 	lastValue := metric.NewDescriptor(
 		"lastvalue", metric.ObserverKind, metric.Float64NumberKind)
-	measure := metric.NewDescriptor(
-		"measure", metric.MeasureKind, metric.Float64NumberKind)
-	histogramMeasure := metric.NewDescriptor(
-		"histogram_measure", metric.MeasureKind, metric.Float64NumberKind)
+	valuerecorder := metric.NewDescriptor(
+		"valuerecorder", metric.ValueRecorderKind, metric.Float64NumberKind)
+	histogramValueRecorder := metric.NewDescriptor(
+		"histogram_valuerecorder", metric.ValueRecorderKind, metric.Float64NumberKind)
 
 	labels := []kv.KeyValue{
 		kv.Key("A").String("B"),
@@ -61,26 +61,26 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet.AddLastValue(&lastValue, 13.2, labels...)
 	expected = append(expected, `lastvalue{A="B",C="D"} 13.2`)
 
-	checkpointSet.AddMeasure(&measure, 13, labels...)
-	checkpointSet.AddMeasure(&measure, 15, labels...)
-	checkpointSet.AddMeasure(&measure, 17, labels...)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
-	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
-	expected = append(expected, `measure_count{A="B",C="D"} 3`)
+	checkpointSet.AddValueRecorder(&valuerecorder, 13, labels...)
+	checkpointSet.AddValueRecorder(&valuerecorder, 15, labels...)
+	checkpointSet.AddValueRecorder(&valuerecorder, 17, labels...)
+	expected = append(expected, `valuerecorder{A="B",C="D",quantile="0.5"} 15`)
+	expected = append(expected, `valuerecorder{A="B",C="D",quantile="0.9"} 17`)
+	expected = append(expected, `valuerecorder{A="B",C="D",quantile="0.99"} 17`)
+	expected = append(expected, `valuerecorder_sum{A="B",C="D"} 45`)
+	expected = append(expected, `valuerecorder_count{A="B",C="D"} 3`)
 
 	boundaries := []metric.Number{metric.NewFloat64Number(-0.5), metric.NewFloat64Number(1)}
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 0.6, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 20, labels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, -0.6, labels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, -0.4, labels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, 0.6, labels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, 20, labels...)
 
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="+Inf"} 4`)
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="-0.5"} 1`)
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="1"} 3`)
-	expected = append(expected, `histogram_measure_count{A="B",C="D"} 4`)
-	expected = append(expected, `histogram_measure_sum{A="B",C="D"} 19.6`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="B",C="D",le="+Inf"} 4`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="B",C="D",le="-0.5"} 1`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="B",C="D",le="1"} 3`)
+	expected = append(expected, `histogram_valuerecorder_count{A="B",C="D"} 4`)
+	expected = append(expected, `histogram_valuerecorder_sum{A="B",C="D"} 19.6`)
 
 	missingLabels := []kv.KeyValue{
 		kv.Key("A").String("E"),
@@ -93,25 +93,25 @@ func TestPrometheusExporter(t *testing.T) {
 	checkpointSet.AddLastValue(&lastValue, 32, missingLabels...)
 	expected = append(expected, `lastvalue{A="E",C=""} 32`)
 
-	checkpointSet.AddMeasure(&measure, 19, missingLabels...)
-	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)
-	expected = append(expected, `measure{A="E",C="",quantile="0.9"} 19`)
-	expected = append(expected, `measure{A="E",C="",quantile="0.99"} 19`)
-	expected = append(expected, `measure_count{A="E",C=""} 1`)
-	expected = append(expected, `measure_sum{A="E",C=""} 19`)
+	checkpointSet.AddValueRecorder(&valuerecorder, 19, missingLabels...)
+	expected = append(expected, `valuerecorder{A="E",C="",quantile="0.5"} 19`)
+	expected = append(expected, `valuerecorder{A="E",C="",quantile="0.9"} 19`)
+	expected = append(expected, `valuerecorder{A="E",C="",quantile="0.99"} 19`)
+	expected = append(expected, `valuerecorder_count{A="E",C=""} 1`)
+	expected = append(expected, `valuerecorder_sum{A="E",C=""} 19`)
 
 	boundaries = []metric.Number{metric.NewFloat64Number(0), metric.NewFloat64Number(1)}
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.1, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 15, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 15, missingLabels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, -0.6, missingLabels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, -0.4, missingLabels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, -0.1, missingLabels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, 15, missingLabels...)
+	checkpointSet.AddHistogramValueRecorder(&histogramValueRecorder, boundaries, 15, missingLabels...)
 
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="+Inf"} 5`)
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="0"} 3`)
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="1"} 3`)
-	expected = append(expected, `histogram_measure_count{A="E",C=""} 5`)
-	expected = append(expected, `histogram_measure_sum{A="E",C=""} 28.9`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="E",C="",le="+Inf"} 5`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="E",C="",le="0"} 3`)
+	expected = append(expected, `histogram_valuerecorder_bucket{A="E",C="",le="1"} 3`)
+	expected = append(expected, `histogram_valuerecorder_count{A="E",C=""} 5`)
+	expected = append(expected, `histogram_valuerecorder_sum{A="E",C=""} 28.9`)
 
 	compareExport(t, exporter, checkpointSet, expected)
 }

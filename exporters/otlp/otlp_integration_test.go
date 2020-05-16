@@ -109,7 +109,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		span.End()
 	}
 
-	selector := simple.NewWithExactMeasure()
+	selector := simple.NewWithExactDistribution()
 	integrator := integrator.New(selector, true)
 	pusher := push.New(integrator, exp, 60*time.Second)
 	pusher.Start()
@@ -124,12 +124,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":    {metric.CounterKind, metricapi.Int64NumberKind, 1},
-		"test-float64-counter":  {metric.CounterKind, metricapi.Float64NumberKind, 1},
-		"test-int64-measure":    {metric.MeasureKind, metricapi.Int64NumberKind, 2},
-		"test-float64-measure":  {metric.MeasureKind, metricapi.Float64NumberKind, 2},
-		"test-int64-observer":   {metric.ObserverKind, metricapi.Int64NumberKind, 3},
-		"test-float64-observer": {metric.ObserverKind, metricapi.Float64NumberKind, 3},
+		"test-int64-counter":         {metric.CounterKind, metricapi.Int64NumberKind, 1},
+		"test-float64-counter":       {metric.CounterKind, metricapi.Float64NumberKind, 1},
+		"test-int64-valuerecorder":   {metric.ValueRecorderKind, metricapi.Int64NumberKind, 2},
+		"test-float64-valuerecorder": {metric.ValueRecorderKind, metricapi.Float64NumberKind, 2},
+		"test-int64-observer":        {metric.ObserverKind, metricapi.Int64NumberKind, 3},
+		"test-float64-observer":      {metric.ObserverKind, metricapi.Float64NumberKind, 3},
 	}
 	for name, data := range instruments {
 		switch data.iKind {
@@ -142,12 +142,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metric.MeasureKind:
+		case metric.ValueRecorderKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				metricapi.Must(meter).NewInt64Measure(name).Record(ctx, data.val, labels...)
+				metricapi.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
 			case metricapi.Float64NumberKind:
-				metricapi.Must(meter).NewFloat64Measure(name).Record(ctx, float64(data.val), labels...)
+				metricapi.Must(meter).NewFloat64ValueRecorder(name).Record(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -246,7 +246,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metric.MeasureKind, metric.ObserverKind:
+		case metric.ValueRecorderKind, metric.ObserverKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
 			m.GetSummaryDataPoints()
 			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {

@@ -29,7 +29,7 @@ import (
 // Config is an alias for the underlying DDSketch config object.
 type Config = sdk.Config
 
-// Aggregator aggregates measure events.
+// Aggregator aggregates events into a distribution.
 type Aggregator struct {
 	lock       sync.Mutex
 	cfg        *Config

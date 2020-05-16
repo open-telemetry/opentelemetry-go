@@ -20,8 +20,8 @@ package metric
 type Kind int8
 
 const (
-	// MeasureKind indicates a Measure instrument.
-	MeasureKind Kind = iota
+	// ValueRecorderKind indicates a ValueRecorder instrument.
+	ValueRecorderKind Kind = iota
 	// ObserverKind indicates an Observer instrument.
 	ObserverKind
 	// CounterKind indicates a Counter instrument.

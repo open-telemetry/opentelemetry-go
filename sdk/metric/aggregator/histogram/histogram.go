@@ -51,7 +51,7 @@ var _ aggregator.Sum = &Aggregator{}
 var _ aggregator.Count = &Aggregator{}
 var _ aggregator.Histogram = &Aggregator{}
 
-// New returns a new measure aggregator for computing Histograms.
+// New returns a new aggregator for computing Histograms.
 //
 // A Histogram observe events and counts them in pre-defined buckets.
 // And also provides the total sum and count of all observations.

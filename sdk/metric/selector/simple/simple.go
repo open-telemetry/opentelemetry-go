@@ -42,40 +42,40 @@ var (
 	_ export.AggregationSelector = selectorHistogram{}
 )
 
-// NewWithInexpensiveMeasure returns a simple aggregation selector
+// NewWithInexpensiveDistribution returns a simple aggregation selector
 // that uses counter, minmaxsumcount and minmaxsumcount aggregators
 // for the three kinds of metric.  This selector is faster and uses
 // less memory than the others because minmaxsumcount does not
 // aggregate quantile information.
-func NewWithInexpensiveMeasure() export.AggregationSelector {
+func NewWithInexpensiveDistribution() export.AggregationSelector {
 	return selectorInexpensive{}
 }
 
-// NewWithSketchMeasure returns a simple aggregation selector that
+// NewWithSketchDistribution returns a simple aggregation selector that
 // uses counter, ddsketch, and ddsketch aggregators for the three
 // kinds of metric.  This selector uses more cpu and memory than the
-// NewWithInexpensiveMeasure because it uses one DDSketch per distinct
-// measure/observer and labelset.
-func NewWithSketchMeasure(config *ddsketch.Config) export.AggregationSelector {
+// NewWithInexpensiveDistribution because it uses one DDSketch per distinct
+// instrument and label set.
+func NewWithSketchDistribution(config *ddsketch.Config) export.AggregationSelector {
 	return selectorSketch{
 		config: config,
 	}
 }
 
-// NewWithExactMeasure returns a simple aggregation selector that uses
+// NewWithExactDistribution returns a simple aggregation selector that uses
 // counter, array, and array aggregators for the three kinds of metric.
-// This selector uses more memory than the NewWithSketchMeasure
+// This selector uses more memory than the NewWithSketchDistribution
 // because it aggregates an array of all values, therefore is able to
 // compute exact quantiles.
-func NewWithExactMeasure() export.AggregationSelector {
+func NewWithExactDistribution() export.AggregationSelector {
 	return selectorExact{}
 }
 
-// NewWithHistogramMeasure returns a simple aggregation selector that uses counter,
+// NewWithHistogramDistribution returns a simple aggregation selector that uses counter,
 // histogram, and histogram aggregators for the three kinds of metric. This
-// selector uses more memory than the NewWithInexpensiveMeasure because it
+// selector uses more memory than the NewWithInexpensiveDistribution because it
 // uses a counter per bucket.
-func NewWithHistogramMeasure(boundaries []metric.Number) export.AggregationSelector {
+func NewWithHistogramDistribution(boundaries []metric.Number) export.AggregationSelector {
 	return selectorHistogram{boundaries: boundaries}
 }
 
@@ -83,7 +83,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.A
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		return minmaxsumcount.New(descriptor)
 	default:
 		return sum.New()
@@ -94,7 +94,7 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggr
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
 		return sum.New()
@@ -105,7 +105,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		return array.New()
 	default:
 		return sum.New()
@@ -116,7 +116,7 @@ func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor) export.A
 	switch descriptor.MetricKind() {
 	case metric.ObserverKind:
 		fallthrough
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		return histogram.New(descriptor, s.boundaries)
 	default:
 		return sum.New()
