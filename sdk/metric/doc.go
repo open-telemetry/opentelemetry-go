@@ -24,7 +24,7 @@ per instrument for the two kinds of number (int64, float64).
 
 Synchronous instruments are managed by a sync.Map containing a *record
 with the current state for each synchronous instrument.  A bound
-instrument encapsulates a direct poinnter to the record, allowing
+instrument encapsulates a direct pointer to the record, allowing
 bound metric events to bypass a sync.Map lookup.  A lock-free
 algorithm is used to protect against races when adding and removing
 items from the sync.Map.
@@ -70,10 +70,9 @@ where a system-level thread performs a collection pass through the
 SDK.
 
 Descriptor is a struct that describes the metric instrument to the
-export pipeline, containing the name, recommended aggregation keys,
-units, description, metric kind, number kind (int64 or float64).  A
-Descriptor accompanies metric data as it passes through the export
-pipeline.
+export pipeline, containing the name, units, description, metric kind,
+number kind (int64 or float64).  A Descriptor accompanies metric data
+as it passes through the export pipeline.
 
 The AggregationSelector interface supports choosing the method of
 aggregation to apply to a particular instrument.  Given the Descriptor,
