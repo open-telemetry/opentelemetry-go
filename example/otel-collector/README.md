@@ -48,15 +48,15 @@ k apply -f k8s/namespace.yaml
 Jaeger is then deployed via the operator, and the demo follows [these steps](https://github.com/jaegertracing/jaeger-operator#getting-started) to create it:
 ```bash
 # Create the jaeger operator and necessary artifacts in ns observability
-kubectl apply -f k8s/jaeger/jaegertracing.io_jaegers_crd.yaml
-kubectl apply -f k8s/jaeger/jaeger_service_account.yaml
-kubectl apply -f k8s/jaeger/jaeger_role.yaml
-kubectl apply -f k8s/jaeger/jaeger_role_binding.yaml
-kubectl apply -f k8s/jaeger/jaeger_operator.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/service_account.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role_binding.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/operator.yaml
 
 # Create the cluster role & bindings
-kubectl apply -f k8s/jaeger/jaeger_cluster_role.yaml
-kubectl apply -f k8s/jaeger/jaeger_cluster_role_binding.yaml
+kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role.yaml
+kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role_binding.yaml
 
 # Create the Jaeger instance itself:
 kubectl apply -f k8s/jaeger/jaeger.yaml
