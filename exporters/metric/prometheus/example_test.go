@@ -22,7 +22,7 @@ import (
 //   1. The default boundaries are difficult to pass, should be []float instead of []metric.Number
 //   2. The push controller doesn't make sense b/c Prometheus is pull-bsaed
 //
-// TODO: Address these issues.
+// TODO: Address these issues; add Resources to the test.
 
 func ExampleNewExportPipeline() {
 	// Create a meter
@@ -52,7 +52,10 @@ func ExampleNewExportPipeline() {
 
 	// Simulate a push
 	meterImpl.Collect(ctx)
-	exporter.Export(ctx, nil, integrator.CheckpointSet())
+	err = exporter.Export(ctx, nil, integrator.CheckpointSet())
+	if err != nil {
+		panic(err)
+	}
 
 	// GET the HTTP endpoint
 	var input bytes.Buffer
@@ -63,6 +66,9 @@ func ExampleNewExportPipeline() {
 	}
 	exporter.ServeHTTP(resp, req)
 	data, err := ioutil.ReadAll(resp.Result().Body)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Print(string(data))
 
 	// Output:

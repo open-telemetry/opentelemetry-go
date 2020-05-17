@@ -4,7 +4,6 @@ replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.3 // indirect
 	github.com/open-telemetry/opentelemetry-proto v0.3.0
