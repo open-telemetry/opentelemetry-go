@@ -113,12 +113,12 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
-	require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+	require.Equal(t, len(agg.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 	counts := calcBuckets(all.Points(), profile)
 	for i, v := range counts {
-		bCount := agg.checkpoint.buckets.Counts[i].AsUint64()
-		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint.buckets.Counts)
+		bCount := agg.checkpoint.bucketCounts[i].AsUint64()
+		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint.bucketCounts)
 	}
 }
 
@@ -164,12 +164,12 @@ func TestHistogramMerge(t *testing.T) {
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg1.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		require.Equal(t, len(agg1.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 		counts := calcBuckets(all.Points(), profile)
 		for i, v := range counts {
-			bCount := agg1.checkpoint.buckets.Counts[i].AsUint64()
-			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint.buckets.Counts)
+			bCount := agg1.checkpoint.bucketCounts[i].AsUint64()
+			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint.bucketCounts)
 		}
 	})
 }
@@ -191,8 +191,8 @@ func TestHistogramNotSet(t *testing.T) {
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.Nil(t, err)
 
-		require.Equal(t, len(agg.checkpoint.buckets.Counts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
-		for i, bCount := range agg.checkpoint.buckets.Counts {
+		require.Equal(t, len(agg.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		for i, bCount := range agg.checkpoint.bucketCounts {
 			require.Equal(t, uint64(0), bCount.AsUint64(), "Bucket #%d must have 0 observed values", i)
 		}
 	})
@@ -200,13 +200,13 @@ func TestHistogramNotSet(t *testing.T) {
 
 func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
 	sortedBoundaries := numbers{
-		numbers: make([]metric.Number, len(boundaries[profile.NumberKind])),
-		kind:    profile.NumberKind,
+		values: make([]metric.Number, len(boundaries[profile.NumberKind])),
+		kind:   profile.NumberKind,
 	}
 
-	copy(sortedBoundaries.numbers, boundaries[profile.NumberKind])
+	copy(sortedBoundaries.values, boundaries[profile.NumberKind])
 	sort.Sort(&sortedBoundaries)
-	boundaries := sortedBoundaries.numbers
+	boundaries := sortedBoundaries.values
 
 	counts := make([]uint64, len(boundaries)+1)
 	idx := 0

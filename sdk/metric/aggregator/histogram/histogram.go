@@ -24,6 +24,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 )
 
+// Note: This code uses a Mutex to govern access to the exclusive
+// aggregator state.  This is in contrast to a lock-free approach
+// (as in the Go prometheus client) that was reverted here:
+// https://github.com/open-telemetry/opentelemetry-go/pull/669
+
 type (
 	// Aggregator observe events and counts them in pre-determined buckets.
 	// It also calculates the sum and count of all events.
@@ -39,10 +44,9 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		// all fields have to be aligned for 64-bit atomic operations.
-		buckets aggregator.Buckets
-		count   metric.Number
-		sum     metric.Number
+		bucketCounts []metric.Number
+		count        metric.Number
+		sum          metric.Number
 	}
 )
 
@@ -63,25 +67,20 @@ func New(desc *metric.Descriptor, boundaries []metric.Number) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := numbers{
-		numbers: make([]metric.Number, len(boundaries)),
-		kind:    desc.NumberKind(),
+		values: make([]metric.Number, len(boundaries)),
+		kind:   desc.NumberKind(),
 	}
 
-	copy(sortedBoundaries.numbers, boundaries)
+	copy(sortedBoundaries.values, boundaries)
 	sort.Sort(&sortedBoundaries)
-	boundaries = sortedBoundaries.numbers
+	boundaries = sortedBoundaries.values
 
-	agg := Aggregator{
+	return &Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: boundaries,
-		current: state{
-			buckets: aggregator.Buckets{
-				Boundaries: boundaries,
-				Counts:     make([]metric.Number, len(boundaries)+1),
-			},
-		},
+		current:    emptyState(boundaries),
+		checkpoint: emptyState(boundaries),
 	}
-	return &agg
 }
 
 // Sum returns the sum of all values in the checkpoint.
@@ -102,7 +101,10 @@ func (c *Aggregator) Count() (int64, error) {
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.checkpoint.buckets, nil
+	return aggregator.Buckets{
+		Boundaries: c.boundaries,
+		Counts:     c.checkpoint.bucketCounts,
+	}, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -111,16 +113,18 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, c.emptyState()
+	c.checkpoint, c.current = c.current, c.checkpoint
+	for i := range c.current.bucketCounts {
+		c.current.bucketCounts[i] = 0
+	}
+	c.current.count = 0
+	c.current.sum = 0
 	c.lock.Unlock()
 }
 
-func (c *Aggregator) emptyState() state {
+func emptyState(boundaries []metric.Number) state {
 	return state{
-		buckets: aggregator.Buckets{
-			Boundaries: c.boundaries,
-			Counts:     make([]metric.Number, len(c.boundaries)+1),
-		},
+		bucketCounts: make([]metric.Number, len(boundaries)+1),
 	}
 }
 
@@ -141,7 +145,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 
 	c.current.count.AddInt64(1)
 	c.current.sum.AddNumber(kind, number)
-	c.current.buckets.Counts[bucketID].AddUint64(1)
+	c.current.bucketCounts[bucketID].AddUint64(1)
 
 	return nil
 }
@@ -156,28 +160,28 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
 
-	for i := 0; i < len(c.checkpoint.buckets.Counts); i++ {
-		c.checkpoint.buckets.Counts[i].AddNumber(metric.Uint64NumberKind, o.checkpoint.buckets.Counts[i])
+	for i := 0; i < len(c.checkpoint.bucketCounts); i++ {
+		c.checkpoint.bucketCounts[i].AddNumber(metric.Uint64NumberKind, o.checkpoint.bucketCounts[i])
 	}
 	return nil
 }
 
 // numbers is an auxiliary struct to order histogram bucket boundaries (slice of kv.Number)
 type numbers struct {
-	numbers []metric.Number
-	kind    metric.NumberKind
+	values []metric.Number
+	kind   metric.NumberKind
 }
 
 var _ sort.Interface = (*numbers)(nil)
 
 func (n *numbers) Len() int {
-	return len(n.numbers)
+	return len(n.values)
 }
 
 func (n *numbers) Less(i, j int) bool {
-	return -1 == n.numbers[i].CompareNumber(n.kind, n.numbers[j])
+	return -1 == n.values[i].CompareNumber(n.kind, n.values[j])
 }
 
 func (n *numbers) Swap(i, j int) {
-	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
+	n.values[i], n.values[j] = n.values[j], n.values[i]
 }
