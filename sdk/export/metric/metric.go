@@ -39,10 +39,6 @@ import (
 // single-threaded context from the SDK, after the aggregator is
 // checkpointed, allowing the integrator to build the set of metrics
 // currently being exported.
-//
-// The `CheckpointSet` method is called during collection in a
-// single-threaded context from the Exporter, giving the exporter
-// access to a producer for iterating over the complete checkpoint.
 type Integrator interface {
 	// AggregationSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
@@ -70,17 +66,6 @@ type Integrator interface {
 	// The Context argument originates from the controller that
 	// orchestrates collection.
 	Process(ctx context.Context, record Record) error
-
-	// CheckpointSet is the interface used by the controller to
-	// access the fully aggregated checkpoint after collection.
-	//
-	// The returned CheckpointSet is passed to the Exporter.
-	CheckpointSet() CheckpointSet
-
-	// FinishedCollection informs the Integrator that a complete
-	// collection round was completed.  Stateless integrators might
-	// reset state in this method, for example.
-	FinishedCollection()
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to

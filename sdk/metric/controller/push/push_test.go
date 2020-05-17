@@ -34,14 +34,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type testIntegrator struct {
-	t             *testing.T
-	lock          sync.Mutex
-	checkpointSet *test.CheckpointSet
-	checkpoints   int
-	finishes      int
-}
-
 type testExporter struct {
 	t         *testing.T
 	lock      sync.Mutex
@@ -86,19 +78,6 @@ func newFixture(t *testing.T) testFixture {
 
 func (b *testIntegrator) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
-}
-
-func (b *testIntegrator) CheckpointSet() export.CheckpointSet {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.checkpoints++
-	return b.checkpointSet
-}
-
-func (b *testIntegrator) FinishedCollection() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.finishes++
 }
 
 func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
@@ -165,7 +144,7 @@ func (t mockTicker) C() <-chan time.Time {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter, time.Second)
+	p := push.New(fix.integrator, fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -173,7 +152,7 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter, time.Second)
+	p := push.New(fix.integrator, fix.exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -182,7 +161,7 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
-	p := push.New(fix.integrator, fix.exporter, time.Second)
+	p := push.New(fix.selector, fix.exporter, push.WithPeriod(time.Second))
 	meter := p.Meter("name")
 
 	mock := mockClock{clock.NewMock()}
@@ -205,6 +184,8 @@ func TestPushTicker(t *testing.T) {
 
 	mock.Add(time.Second)
 	runtime.Gosched()
+
+	fmt.Println("NOW")
 
 	records, exports = fix.exporter.resetRecords()
 	checkpoints, finishes = fix.integrator.getCounts()
@@ -265,7 +246,7 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-			p := push.New(fix.integrator, fix.exporter, time.Second)
+			p := push.New(fix.integrator, fix.exporter, push.WithPeriod(time.Second))
 
 			var err error
 			var lock sync.Mutex

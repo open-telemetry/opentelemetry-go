@@ -16,6 +16,7 @@ package push // import "go.opentelemetry.io/otel/sdk/metric/controller/push"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -35,7 +37,7 @@ type Controller struct {
 	uniq         metric.MeterImpl
 	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
-	integrator   export.Integrator
+	integrator   *simple.Integrator
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	ch           chan struct{}
@@ -70,15 +72,18 @@ var _ Clock = realClock{}
 var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided integrator, exporter, collection period, and SDK
-// configuration options to configure an SDK with periodic collection.
-// The integrator itself is configured with the aggregation selector policy.
-func New(integrator export.Integrator, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
-	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
+// using the provided exporter and options to configure an SDK with
+// periodic collection.
+func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
+	c := &Config{
+		ErrorHandler: sdk.DefaultErrorHandler,
+		Period:       10 * time.Second,
+	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
+	integrator := simple.New(selector, c.Stateful)
 	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
 		accumulator:  impl,
@@ -89,7 +94,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 		integrator:   integrator,
 		exporter:     exporter,
 		ch:           make(chan struct{}),
-		period:       period,
+		period:       c.Period,
 		clock:        realClock{},
 	}
 }
@@ -170,6 +175,7 @@ func (c *Controller) run(ch chan struct{}) {
 }
 
 func (c *Controller) tick() {
+	fmt.Println("TICK")
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()
