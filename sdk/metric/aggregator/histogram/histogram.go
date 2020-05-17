@@ -67,13 +67,13 @@ func New(desc *metric.Descriptor, boundaries []metric.Number) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := numbers{
-		values: make([]metric.Number, len(boundaries)),
-		kind:   desc.NumberKind(),
+		numbers: make([]metric.Number, len(boundaries)),
+		kind:    desc.NumberKind(),
 	}
 
-	copy(sortedBoundaries.values, boundaries)
+	copy(sortedBoundaries.numbers, boundaries)
 	sort.Sort(&sortedBoundaries)
-	boundaries = sortedBoundaries.values
+	boundaries = sortedBoundaries.numbers
 
 	return &Aggregator{
 		kind:       desc.NumberKind(),
@@ -163,20 +163,20 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 
 // numbers is an auxiliary struct to order histogram bucket boundaries (slice of kv.Number)
 type numbers struct {
-	values []metric.Number
-	kind   metric.NumberKind
+	numbers []metric.Number
+	kind    metric.NumberKind
 }
 
 var _ sort.Interface = (*numbers)(nil)
 
 func (n *numbers) Len() int {
-	return len(n.values)
+	return len(n.numbers)
 }
 
 func (n *numbers) Less(i, j int) bool {
-	return -1 == n.values[i].CompareNumber(n.kind, n.values[j])
+	return -1 == n.numbers[i].CompareNumber(n.kind, n.numbers[j])
 }
 
 func (n *numbers) Swap(i, j int) {
-	n.values[i], n.values[j] = n.values[j], n.values[i]
+	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }

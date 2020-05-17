@@ -213,13 +213,13 @@ func TestHistogramNotSet(t *testing.T) {
 
 func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
 	sortedBoundaries := numbers{
-		values: make([]metric.Number, len(boundaries[profile.NumberKind])),
-		kind:   profile.NumberKind,
+		numbers: make([]metric.Number, len(boundaries[profile.NumberKind])),
+		kind:    profile.NumberKind,
 	}
 
-	copy(sortedBoundaries.values, boundaries[profile.NumberKind])
+	copy(sortedBoundaries.numbers, boundaries[profile.NumberKind])
 	sort.Sort(&sortedBoundaries)
-	boundaries := sortedBoundaries.values
+	boundaries := sortedBoundaries.numbers
 
 	counts := make([]uint64, len(boundaries)+1)
 	idx := 0
