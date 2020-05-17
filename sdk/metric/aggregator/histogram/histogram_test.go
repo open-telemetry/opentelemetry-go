@@ -122,6 +122,19 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 	}
 }
 
+func TestHistogramInitial(t *testing.T) {
+	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+
+		agg := New(descriptor, boundaries[profile.NumberKind])
+		buckets, err := agg.Histogram()
+
+		require.NoError(t, err)
+		require.Equal(t, len(buckets.Counts), len(boundaries[profile.NumberKind])+1)
+		require.Equal(t, len(buckets.Boundaries), len(boundaries[profile.NumberKind]))
+	})
+}
+
 func TestHistogramMerge(t *testing.T) {
 	ctx := context.Background()
 
