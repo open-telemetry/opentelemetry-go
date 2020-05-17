@@ -16,6 +16,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
+// This test demonstrates that it is relatively difficult to setup a
+// Prometheus export pipeline:
+//
+//   1. The default boundaries are difficult to pass, should be []float instead of []metric.Number
+//   2. The push controller doesn't make sense b/c Prometheus is pull-bsaed
+//
+// TODO: Address these issues.
+
 func ExampleNewExportPipeline() {
 	// Create a meter
 	selector := simple.NewWithHistogramDistribution(nil)
@@ -30,8 +38,14 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	// Use two instruments
-	counter := metric.Must(meter).NewInt64Counter("a.counter")
-	recorder := metric.Must(meter).NewInt64ValueRecorder("a.valuerecorder")
+	counter := metric.Must(meter).NewInt64Counter(
+		"a.counter",
+		metric.WithDescription("Counts things"),
+	)
+	recorder := metric.Must(meter).NewInt64ValueRecorder(
+		"a.valuerecorder",
+		metric.WithDescription("Records values"),
+	)
 
 	counter.Add(ctx, 100, kv.String("key", "value"))
 	recorder.Record(ctx, 100, kv.String("key", "value"))
@@ -52,10 +66,10 @@ func ExampleNewExportPipeline() {
 	fmt.Print(string(data))
 
 	// Output:
-	// # HELP a_counter
+	// # HELP a_counter Counts things
 	// # TYPE a_counter counter
 	// a_counter{key="value"} 100
-	// # HELP a_valuerecorder
+	// # HELP a_valuerecorder Records values
 	// # TYPE a_valuerecorder histogram
 	// a_valuerecorder_bucket{key="value",le="+Inf"} 1
 	// a_valuerecorder_sum{key="value"} 100
