@@ -113,12 +113,7 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // other.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, c.checkpoint
-	for i := range c.current.bucketCounts {
-		c.current.bucketCounts[i] = 0
-	}
-	c.current.count = 0
-	c.current.sum = 0
+	c.checkpoint, c.current = c.current, emptyState(c.boundaries)
 	c.lock.Unlock()
 }
 
