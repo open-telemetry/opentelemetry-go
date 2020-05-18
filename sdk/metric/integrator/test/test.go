@@ -47,9 +47,9 @@ type (
 var (
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
-		"lastvalue.a", metric.ObserverKind, metric.Int64NumberKind)
+		"lastvalue.a", metric.ValueObserverKind, metric.Int64NumberKind)
 	LastValueBDesc = metric.NewDescriptor(
-		"lastvalue.b", metric.ObserverKind, metric.Int64NumberKind)
+		"lastvalue.b", metric.ValueObserverKind, metric.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = metric.NewDescriptor(
 		"sum.a", metric.CounterKind, metric.Int64NumberKind)
@@ -92,7 +92,7 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor) export.Ag
 	switch desc.MetricKind() {
 	case metric.CounterKind:
 		return sum.New()
-	case metric.ObserverKind:
+	case metric.ValueObserverKind:
 		return lastvalue.New()
 	default:
 		panic("Invalid descriptor MetricKind for this test")

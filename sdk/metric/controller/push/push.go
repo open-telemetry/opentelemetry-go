@@ -32,8 +32,6 @@ type Controller struct {
 	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
-	uniq         metric.MeterImpl
-	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
 	integrator   export.Integrator
 	exporter     export.Exporter
@@ -42,9 +40,8 @@ type Controller struct {
 	period       time.Duration
 	ticker       Ticker
 	clock        Clock
+	provider     *registry.Provider
 }
-
-var _ metric.Provider = &Controller{}
 
 // Several types below are created to match "github.com/benbjohnson/clock"
 // so that it remains a test-only dependency.
@@ -83,8 +80,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 	return &Controller{
 		accumulator:  impl,
 		resource:     c.Resource,
-		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
-		named:        map[string]metric.Meter{},
+		provider:     registry.NewProvider(impl),
 		errorHandler: c.ErrorHandler,
 		integrator:   integrator,
 		exporter:     exporter,
@@ -102,6 +98,8 @@ func (c *Controller) SetClock(clock Clock) {
 	c.clock = clock
 }
 
+// SetErrorHandler sets the handler for errors.  If none has been set, the
+// SDK default error handler is used.
 func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -109,19 +107,9 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	c.accumulator.SetErrorHandler(errorHandler)
 }
 
-// Meter returns a named Meter, satisifying the metric.Provider
-// interface.
-func (c *Controller) Meter(name string) metric.Meter {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if meter, ok := c.named[name]; ok {
-		return meter
-	}
-
-	meter := metric.WrapMeterImpl(c.uniq, name)
-	c.named[name] = meter
-	return meter
+// Provider returns a metric.Provider instance for this controller.
+func (c *Controller) Provider() metric.Provider {
+	return c.provider
 }
 
 // Start begins a ticker that periodically collects and exports
