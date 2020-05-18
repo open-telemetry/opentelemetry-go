@@ -118,3 +118,14 @@ func TestRegistryDiffInstruments(t *testing.T) {
 		}
 	}
 }
+
+func TestProvider(t *testing.T) {
+	impl, _ := mockTest.NewMeter()
+	p := registry.NewProvider(impl)
+	m1 := p.Meter("m1")
+	m1p := p.Meter("m1")
+	m2 := p.Meter("m2")
+
+	require.Equal(t, m1, m1p)
+	require.NotEqual(t, m1, m2)
+}
