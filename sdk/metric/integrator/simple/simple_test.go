@@ -60,7 +60,6 @@ func TestSimpleStateless(t *testing.T) {
 	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 50))
 
 	checkpointSet := b.CheckpointSet()
-	b.FinishedCollection()
 
 	records := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records.AddTo)
@@ -81,14 +80,15 @@ func TestSimpleStateless(t *testing.T) {
 		"lastvalue.b/C~D&E~F": 20, // labels2
 		"lastvalue.b/":        30, // labels3
 	}, records.Map)
+	b.FinishedCollection()
 
 	// Verify that state was reset
 	checkpointSet = b.CheckpointSet()
-	b.FinishedCollection()
 	_ = checkpointSet.ForEach(func(rec export.Record) error {
 		t.Fatal("Unexpected call")
 		return nil
 	})
+	b.FinishedCollection()
 }
 
 func TestSimpleStateful(t *testing.T) {
@@ -116,12 +116,12 @@ func TestSimpleStateful(t *testing.T) {
 
 	// Test that state was NOT reset
 	checkpointSet = b.CheckpointSet()
-	b.FinishedCollection()
 
 	records2 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records2.AddTo)
 
 	require.EqualValues(t, records1.Map, records2.Map)
+	b.FinishedCollection()
 
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, metric.NewInt64Number(20), &test.CounterADesc)
@@ -132,19 +132,18 @@ func TestSimpleStateful(t *testing.T) {
 	// As yet cagg has not been passed to Integrator.Process.  Should
 	// not see an update.
 	checkpointSet = b.CheckpointSet()
-	b.FinishedCollection()
 
 	records3 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records3.AddTo)
 
 	require.EqualValues(t, records1.Map, records3.Map)
+	b.FinishedCollection()
 
 	// Now process the second update
 	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, caggA))
 	_ = b.Process(ctx, export.NewRecord(&test.CounterBDesc, test.Labels1, caggB))
 
 	checkpointSet = b.CheckpointSet()
-	b.FinishedCollection()
 
 	records4 := test.NewOutput(test.SdkEncoder)
 	_ = checkpointSet.ForEach(records4.AddTo)
@@ -153,4 +152,5 @@ func TestSimpleStateful(t *testing.T) {
 		"sum.a/C~D&G~H": 30,
 		"sum.b/C~D&G~H": 30,
 	}, records4.Map)
+	b.FinishedCollection()
 }

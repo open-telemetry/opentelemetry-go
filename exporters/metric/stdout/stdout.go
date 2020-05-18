@@ -120,8 +120,8 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	}
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, opts...)
+func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+	controller, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return controller, err
 	}
@@ -131,12 +131,16 @@ func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, e
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
-func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
-	pusher := push.New(simple.NewWithExactDistribution(), exporter, append(opts, push.WithStateful(true))...)
+	pusher := push.New(
+		simple.NewWithExactDistribution(),
+		exporter,
+		append(options, push.WithStateful(true))...,
+	)
 	pusher.Start()
 
 	return pusher, nil

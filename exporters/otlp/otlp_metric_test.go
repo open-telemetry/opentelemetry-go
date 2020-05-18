@@ -16,6 +16,7 @@ package otlp
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
@@ -60,10 +61,11 @@ func (m *metricsServiceClientStub) Reset() {
 }
 
 type checkpointSet struct {
+	sync.RWMutex
 	records []metricsdk.Record
 }
 
-func (m checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
+func (m *checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
 	for _, r := range m.records {
 		if err := fn(r); err != nil && err != aggregator.ErrNoData {
 			return err
@@ -663,7 +665,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	}
 	for equiv, records := range recs {
 		resource := resources[equiv]
-		assert.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: records}))
+		assert.NoError(t, exp.Export(context.Background(), resource, &checkpointSet{records: records}))
 	}
 
 	// assert.ElementsMatch does not equate nested slices of different order,
@@ -729,7 +731,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		msc.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: test.records}))
+		require.NoError(t, exp.Export(context.Background(), resource, &checkpointSet{records: test.records}))
 		assert.Equal(t, test.want, msc.ResourceMetrics())
 	}
 }

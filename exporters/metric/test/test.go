@@ -36,7 +36,7 @@ type mapkey struct {
 }
 
 type CheckpointSet struct {
-	sync.Mutex
+	sync.RWMutex
 	records map[mapkey]export.Record
 	updates []export.Record
 }

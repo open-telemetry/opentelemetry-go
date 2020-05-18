@@ -170,6 +170,8 @@ type CheckpointSet interface {
 	// The Integrator attached to the Accumulator MUST be called
 	// in with the lock held.
 	sync.Locker
+	RLock()
+	RUnlock()
 }
 
 // Record contains the exported data for a single metric instrument

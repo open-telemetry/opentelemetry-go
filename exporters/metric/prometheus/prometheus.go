@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/metric"
 
@@ -41,11 +42,13 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	snapshot export.CheckpointSet
-	onError  func(error)
+	onError func(error)
 
 	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []metric.Number
+
+	lock     sync.RWMutex
+	snapshot export.CheckpointSet
 }
 
 var _ export.Exporter = &Exporter{}
@@ -83,6 +86,13 @@ type Config struct {
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
 	OnError func(error)
 }
+
+// collector implements prometheus.Collector interface.
+type collector struct {
+	exp *Exporter
+}
+
+var _ prometheus.Collector = (*collector)(nil)
 
 // NewRawExporter returns a new prometheus exporter for prometheus metrics
 // for use in a pipeline.
@@ -134,7 +144,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
-	controller, exp, err := NewExportPipeline(config)
+	controller, exp, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return controller, exp, err
 	}
@@ -174,16 +184,11 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
 	// TODO: Use the resource value in this exporter.
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	e.snapshot = checkpointSet
 	return nil
 }
-
-// collector implements prometheus.Collector interface.
-type collector struct {
-	exp *Exporter
-}
-
-var _ prometheus.Collector = (*collector)(nil)
 
 func newCollector(exporter *Exporter) *collector {
 	return &collector{
@@ -192,9 +197,15 @@ func newCollector(exporter *Exporter) *collector {
 }
 
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
+
 	if c.exp.snapshot == nil {
 		return
 	}
+
+	c.exp.snapshot.Lock()
+	defer c.exp.snapshot.Unlock()
 
 	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
 		ch <- c.toDesc(&record)
@@ -207,9 +218,15 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
+
 	if c.exp.snapshot == nil {
 		return
 	}
+
+	c.exp.snapshot.Lock()
+	defer c.exp.snapshot.Unlock()
 
 	err := c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()

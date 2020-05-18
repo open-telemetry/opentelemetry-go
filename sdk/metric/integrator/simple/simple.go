@@ -45,7 +45,7 @@ type (
 	batchMap map[batchKey]batchValue
 
 	batch struct {
-		sync.Mutex
+		sync.RWMutex
 		batchMap
 	}
 )
