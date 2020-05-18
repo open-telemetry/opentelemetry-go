@@ -33,7 +33,6 @@ type Controller struct {
 	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
 	uniq         metric.MeterImpl
-	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
 	integrator   export.Integrator
 	exporter     export.Exporter
@@ -84,7 +83,6 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 		accumulator:  impl,
 		resource:     c.Resource,
 		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
-		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
 		integrator:   integrator,
 		exporter:     exporter,
@@ -112,16 +110,7 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 // Meter returns a named Meter, satisifying the metric.Provider
 // interface.
 func (c *Controller) Meter(name string) metric.Meter {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if meter, ok := c.named[name]; ok {
-		return meter
-	}
-
-	meter := metric.WrapMeterImpl(c.uniq, name)
-	c.named[name] = meter
-	return meter
+	return metric.WrapMeterImpl(c.uniq, name)
 }
 
 // Start begins a ticker that periodically collects and exports
