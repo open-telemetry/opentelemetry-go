@@ -44,9 +44,10 @@ type testExporter struct {
 
 type testFixture struct {
 	checkpointSet *test.CheckpointSet
-	integrator    *testIntegrator
 	exporter      *testExporter
 }
+
+type testSelector struct{}
 
 type mockClock struct {
 	mock *clock.Mock
@@ -62,37 +63,32 @@ var _ push.Ticker = mockTicker{}
 func newFixture(t *testing.T) testFixture {
 	checkpointSet := test.NewCheckpointSet()
 
-	integrator := &testIntegrator{
-		t:             t,
-		checkpointSet: checkpointSet,
-	}
 	exporter := &testExporter{
 		t: t,
 	}
 	return testFixture{
 		checkpointSet: checkpointSet,
-		integrator:    integrator,
 		exporter:      exporter,
 	}
 }
 
-func (b *testIntegrator) AggregatorFor(*metric.Descriptor) export.Aggregator {
+func (testSelector) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
-func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	labels := record.Labels().ToSlice()
-	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
-	return nil
-}
+// func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
+// 	b.lock.Lock()
+// 	defer b.lock.Unlock()
+// 	labels := record.Labels().ToSlice()
+// 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
+// 	return nil
+// }
 
-func (b *testIntegrator) getCounts() (checkpoints, finishes int) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	return b.checkpoints, b.finishes
-}
+// func (b *testIntegrator) getCounts() (checkpoints, finishes int) {
+// 	b.lock.Lock()
+// 	defer b.lock.Unlock()
+// 	return b.checkpoints, b.finishes
+// }
 
 func (e *testExporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
@@ -144,7 +140,7 @@ func (t mockTicker) C() <-chan time.Time {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter)
+	p := push.New(testSelector{}, fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -152,7 +148,7 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter)
+	p := push.New(testSelector{}, fix.exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -161,7 +157,7 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
-	p := push.New(fix.selector, fix.exporter, push.WithPeriod(time.Second))
+	p := push.New(testSelector{}, fix.exporter, push.WithPeriod(time.Second))
 	meter := p.Meter("name")
 
 	mock := mockClock{clock.NewMock()}
@@ -176,9 +172,6 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 3)
 
 	records, exports := fix.exporter.resetRecords()
-	checkpoints, finishes := fix.integrator.getCounts()
-	require.Equal(t, 0, checkpoints)
-	require.Equal(t, 0, finishes)
 	require.Equal(t, 0, exports)
 	require.Equal(t, 0, len(records))
 
@@ -188,9 +181,6 @@ func TestPushTicker(t *testing.T) {
 	fmt.Println("NOW")
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.integrator.getCounts()
-	require.Equal(t, 1, checkpoints)
-	require.Equal(t, 1, finishes)
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
@@ -207,9 +197,6 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.integrator.getCounts()
-	require.Equal(t, 2, checkpoints)
-	require.Equal(t, 2, finishes)
 	require.Equal(t, 2, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
@@ -246,7 +233,7 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-			p := push.New(fix.integrator, fix.exporter, push.WithPeriod(time.Second))
+			p := push.New(testSelector{}, fix.exporter, push.WithPeriod(time.Second))
 
 			var err error
 			var lock sync.Mutex
@@ -278,10 +265,7 @@ func TestPushExportError(t *testing.T) {
 			runtime.Gosched()
 
 			records, exports := fix.exporter.resetRecords()
-			checkpoints, finishes := fix.integrator.getCounts()
 			require.Equal(t, 1, exports)
-			require.Equal(t, 1, checkpoints)
-			require.Equal(t, 1, finishes)
 			lock.Lock()
 			if tt.expectedError == nil {
 				require.NoError(t, err)

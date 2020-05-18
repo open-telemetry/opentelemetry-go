@@ -16,7 +16,6 @@ package push // import "go.opentelemetry.io/otel/sdk/metric/controller/push"
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -175,7 +174,6 @@ func (c *Controller) run(ch chan struct{}) {
 }
 
 func (c *Controller) tick() {
-	fmt.Println("TICK")
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()

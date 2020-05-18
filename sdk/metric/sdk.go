@@ -365,7 +365,6 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	checkpointed := m.collectSyncInstruments(ctx)
 	checkpointed += m.observeAsyncInstruments(ctx)
 	m.currentEpoch++
-	fmt.Println("UOERKW", checkpointed)
 
 	return checkpointed
 }

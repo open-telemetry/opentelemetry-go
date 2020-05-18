@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
 
@@ -30,7 +29,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -135,8 +133,8 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(config, time.Minute)
+func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, http.HandlerFunc, error) {
+	controller, hf, err := NewExportPipeline(config)
 	if err != nil {
 		return controller, hf, err
 	}
@@ -146,8 +144,7 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
-func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
-	selector := simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries)
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, http.HandlerFunc, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
@@ -161,8 +158,11 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	integrator := integrator.New(selector, true)
-	pusher := push.New(integrator, exporter, period)
+	pusher := push.New(
+		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+		exporter,
+		options...,
+	)
 	pusher.Start()
 
 	return pusher, exporter.ServeHTTP, nil
