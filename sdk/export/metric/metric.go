@@ -170,7 +170,10 @@ type CheckpointSet interface {
 	// The Integrator attached to the Accumulator MUST be called
 	// in with the lock held.
 	sync.Locker
+
+	// RLock acquires a read lock corresponding to this Locker.
 	RLock()
+	// RUnlock releases a read lock corresponding to this Locker.
 	RUnlock()
 }
 

@@ -42,13 +42,12 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	onError func(error)
+	lock     sync.RWMutex
+	snapshot export.CheckpointSet
+	onError  func(error)
 
 	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []metric.Number
-
-	lock     sync.RWMutex
-	snapshot export.CheckpointSet
 }
 
 var _ export.Exporter = &Exporter{}
@@ -86,13 +85,6 @@ type Config struct {
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
 	OnError func(error)
 }
-
-// collector implements prometheus.Collector interface.
-type collector struct {
-	exp *Exporter
-}
-
-var _ prometheus.Collector = (*collector)(nil)
 
 // NewRawExporter returns a new prometheus exporter for prometheus metrics
 // for use in a pipeline.
@@ -190,6 +182,13 @@ func (e *Exporter) Export(_ context.Context, _ *resource.Resource, checkpointSet
 	return nil
 }
 
+// collector implements prometheus.Collector interface.
+type collector struct {
+	exp *Exporter
+}
+
+var _ prometheus.Collector = (*collector)(nil)
+
 func newCollector(exporter *Exporter) *collector {
 	return &collector{
 		exp: exporter,
@@ -204,8 +203,8 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 		return
 	}
 
-	c.exp.snapshot.Lock()
-	defer c.exp.snapshot.Unlock()
+	c.exp.snapshot.RLock()
+	defer c.exp.snapshot.RUnlock()
 
 	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
 		ch <- c.toDesc(&record)
@@ -225,8 +224,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	c.exp.snapshot.Lock()
-	defer c.exp.snapshot.Unlock()
+	c.exp.snapshot.RLock()
+	defer c.exp.snapshot.RUnlock()
 
 	err := c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
