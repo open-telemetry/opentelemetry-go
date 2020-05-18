@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -161,6 +162,14 @@ type CheckpointSet interface {
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
 	ForEach(func(Record) error) error
+
+	// Locker supports locking the checkpoint set.  Collection
+	// into the checkpoint set cannot take place (in case of a
+	// stateful integrator) while it is locked.
+	//
+	// The Integrator attached to the Accumulator MUST be called
+	// in with the lock held.
+	sync.Locker
 }
 
 // Record contains the exported data for a single metric instrument

@@ -15,19 +15,26 @@
 package prometheus_test
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/exporters/metric/test"
+	exportTest "go.opentelemetry.io/otel/exporters/metric/test"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -39,7 +46,7 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := exportTest.NewCheckpointSet()
 
 	counter := metric.NewDescriptor(
 		"counter", metric.CounterKind, metric.Float64NumberKind)
@@ -116,7 +123,7 @@ func TestPrometheusExporter(t *testing.T) {
 	compareExport(t, exporter, checkpointSet, expected)
 }
 
-func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *test.CheckpointSet, expected []string) {
+func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *exportTest.CheckpointSet, expected []string) {
 	err := exporter.Export(context.Background(), nil, checkpointSet)
 	require.Nil(t, err)
 
@@ -137,4 +144,63 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *t
 	sort.Strings(expected)
 
 	require.Equal(t, strings.Join(expected, "\n"), strings.Join(metricsOnly, "\n"))
+}
+
+func TestPrometheusStatefulness(t *testing.T) {
+	// Create a meter
+	controller, exporter, err := prometheus.NewExportPipeline(prometheus.Config{}, push.WithPeriod(time.Minute))
+	if err != nil {
+		panic(err)
+	}
+
+	meter := controller.Meter("test")
+	mock := controllerTest.NewMockClock()
+	controller.SetClock(mock)
+	controller.Start()
+
+	// GET the HTTP endpoint
+	scrape := func() string {
+		var input bytes.Buffer
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/", &input)
+		if err != nil {
+			panic(err)
+		}
+		exporter.ServeHTTP(resp, req)
+		data, err := ioutil.ReadAll(resp.Result().Body)
+		if err != nil {
+			panic(err)
+		}
+		return string(data)
+	}
+
+	ctx := context.Background()
+
+	counter := metric.Must(meter).NewInt64Counter(
+		"a.counter",
+		metric.WithDescription("Counts things"),
+	)
+
+	counter.Add(ctx, 100, kv.String("key", "value"))
+
+	// Trigger a push
+	mock.Add(time.Minute)
+	runtime.Gosched()
+
+	require.Equal(t, `# HELP a_counter Counts things
+# TYPE a_counter counter
+a_counter{key="value"} 100
+`, scrape())
+
+	counter.Add(ctx, 100, kv.String("key", "value"))
+
+	// Again, now expect cumulative count
+	mock.Add(time.Minute)
+	runtime.Gosched()
+
+	require.Equal(t, `# HELP a_counter Counts things
+# TYPE a_counter counter
+a_counter{key="value"} 200
+`, scrape())
+
 }

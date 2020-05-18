@@ -23,9 +23,12 @@ import (
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const DefaultPushPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
@@ -41,34 +44,11 @@ type Controller struct {
 	wg           sync.WaitGroup
 	ch           chan struct{}
 	period       time.Duration
-	ticker       Ticker
-	clock        Clock
+	ticker       controllerTime.Ticker
+	clock        controllerTime.Clock
 }
 
 var _ metric.Provider = &Controller{}
-
-// Several types below are created to match "github.com/benbjohnson/clock"
-// so that it remains a test-only dependency.
-
-type Clock interface {
-	Now() time.Time
-	Ticker(time.Duration) Ticker
-}
-
-type Ticker interface {
-	Stop()
-	C() <-chan time.Time
-}
-
-type realClock struct {
-}
-
-type realTicker struct {
-	ticker *time.Ticker
-}
-
-var _ Clock = realClock{}
-var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provided exporter and options to configure an SDK with
@@ -76,7 +56,7 @@ var _ Ticker = realTicker{}
 func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		ErrorHandler: sdk.DefaultErrorHandler,
-		Period:       10 * time.Second,
+		Period:       DefaultPushPeriod,
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
@@ -94,13 +74,13 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 		exporter:     exporter,
 		ch:           make(chan struct{}),
 		period:       c.Period,
-		clock:        realClock{},
+		clock:        controllerTime.RealClock{},
 	}
 }
 
 // SetClock supports setting a mock clock for testing.  This must be
 // called before Start().
-func (c *Controller) SetClock(clock Clock) {
+func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.clock = clock
@@ -177,53 +157,15 @@ func (c *Controller) tick() {
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()
-	c.collect(ctx)
-	checkpointSet := syncCheckpointSet{
-		mtx:      &c.collectLock,
-		delegate: c.integrator.CheckpointSet(),
-	}
-	err := c.exporter.Export(ctx, c.resource, checkpointSet)
+	c.collectLock.Lock()
+	defer c.collectLock.Unlock()
+
+	c.accumulator.Collect(ctx)
+
+	err := c.exporter.Export(ctx, c.resource, c.integrator.CheckpointSet())
 	c.integrator.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)
 	}
-}
-
-func (c *Controller) collect(ctx context.Context) {
-	c.collectLock.Lock()
-	defer c.collectLock.Unlock()
-
-	c.accumulator.Collect(ctx)
-}
-
-// syncCheckpointSet is a wrapper for a CheckpointSet to synchronize
-// SDK's collection and reads of a CheckpointSet by an exporter.
-type syncCheckpointSet struct {
-	mtx      *sync.Mutex
-	delegate export.CheckpointSet
-}
-
-var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
-
-func (c syncCheckpointSet) ForEach(fn func(export.Record) error) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	return c.delegate.ForEach(fn)
-}
-
-func (realClock) Now() time.Time {
-	return time.Now()
-}
-
-func (realClock) Ticker(period time.Duration) Ticker {
-	return realTicker{time.NewTicker(period)}
-}
-
-func (t realTicker) Stop() {
-	t.ticker.Stop()
-}
-
-func (t realTicker) C() <-chan time.Time {
-	return t.ticker.C
 }

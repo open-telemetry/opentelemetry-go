@@ -29,7 +29,7 @@ import (
 
 // These tests use the ../test label encoding.
 
-func TestUngroupedStateless(t *testing.T) {
+func TestSimpleStateless(t *testing.T) {
 	ctx := context.Background()
 	b := simple.New(test.NewAggregationSelector(), false)
 
@@ -91,7 +91,7 @@ func TestUngroupedStateless(t *testing.T) {
 	})
 }
 
-func TestUngroupedStateful(t *testing.T) {
+func TestSimpleStateful(t *testing.T) {
 	ctx := context.Background()
 	b := simple.New(test.NewAggregationSelector(), true)
 

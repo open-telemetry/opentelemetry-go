@@ -133,25 +133,29 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(config)
+func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
+	controller, exp, err := NewExportPipeline(config)
 	if err != nil {
-		return controller, hf, err
+		return controller, exp, err
 	}
+	controller.Start()
 	global.SetMeterProvider(controller)
-	return controller, hf, err
+	return controller, exp, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, http.HandlerFunc, error) {
+//
+// The returned Controller implements `metric.Provider`.  The controller is
+// returned unstarted and should be started by the caller to begin collection.
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Prometheus needs to use a stateful integrator since counters (and histogram since they are a collection of Counters)
-	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	// Prometheus uses a stateful push controller since instruments are
+	// cumulative and should not be reset after each collection interval.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
 	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
@@ -162,11 +166,9 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
 		exporter,
 		append(options, push.WithStateful(true))...,
-	// TODO: @@@ test that WithStateful takes effect
 	)
-	pusher.Start()
 
-	return pusher, exporter.ServeHTTP, nil
+	return pusher, exporter, nil
 }
 
 // Export exports the provide metric record to prometheus.

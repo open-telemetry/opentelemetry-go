@@ -33,11 +33,11 @@ var (
 )
 
 func initMeter() *push.Controller {
-	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	pusher, exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	http.HandleFunc("/", hf)
+	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()

@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
@@ -31,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -48,17 +48,6 @@ type testFixture struct {
 }
 
 type testSelector struct{}
-
-type mockClock struct {
-	mock *clock.Mock
-}
-
-type mockTicker struct {
-	ticker *clock.Ticker
-}
-
-var _ push.Clock = mockClock{}
-var _ push.Ticker = mockTicker{}
 
 func newFixture(t *testing.T) testFixture {
 	checkpointSet := test.NewCheckpointSet()
@@ -104,26 +93,6 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 	return r, e.exports
 }
 
-func (c mockClock) Now() time.Time {
-	return c.mock.Now()
-}
-
-func (c mockClock) Ticker(period time.Duration) push.Ticker {
-	return mockTicker{c.mock.Ticker(period)}
-}
-
-func (c mockClock) Add(d time.Duration) {
-	c.mock.Add(d)
-}
-
-func (t mockTicker) Stop() {
-	t.ticker.Stop()
-}
-
-func (t mockTicker) C() <-chan time.Time {
-	return t.ticker.C
-}
-
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
 	p := push.New(testSelector{}, fix.exporter)
@@ -146,7 +115,7 @@ func TestPushTicker(t *testing.T) {
 	p := push.New(testSelector{}, fix.exporter, push.WithPeriod(time.Second))
 	meter := p.Meter("name")
 
-	mock := mockClock{clock.NewMock()}
+	mock := controllerTest.NewMockClock()
 	p.SetClock(mock)
 
 	ctx := context.Background()
@@ -163,8 +132,6 @@ func TestPushTicker(t *testing.T) {
 
 	mock.Add(time.Second)
 	runtime.Gosched()
-
-	fmt.Println("NOW")
 
 	records, exports = fix.exporter.resetRecords()
 	require.Equal(t, 1, exports)
@@ -229,7 +196,7 @@ func TestPushExportError(t *testing.T) {
 				err = sdkErr
 			})
 
-			mock := mockClock{clock.NewMock()}
+			mock := controllerTest.NewMockClock()
 			p.SetClock(mock)
 
 			ctx := context.Background()
