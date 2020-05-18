@@ -40,6 +40,8 @@ type Controller struct {
 	period       time.Duration
 	ticker       Ticker
 	clock        Clock
+
+	*registry.Provider
 }
 
 var _ metric.Provider = &Controller{}
@@ -81,7 +83,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 	return &Controller{
 		accumulator:  impl,
 		resource:     c.Resource,
-		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
+		Provider:     registry.NewProvider(impl),
 		errorHandler: c.ErrorHandler,
 		integrator:   integrator,
 		exporter:     exporter,
@@ -104,12 +106,6 @@ func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
 	defer c.lock.Unlock()
 	c.errorHandler = errorHandler
 	c.accumulator.SetErrorHandler(errorHandler)
-}
-
-// Meter returns a named Meter, satisifying the metric.Provider
-// interface.
-func (c *Controller) Meter(name string) metric.Meter {
-	return metric.WrapMeterImpl(c.uniq, name)
 }
 
 // Start begins a ticker that periodically collects and exports
