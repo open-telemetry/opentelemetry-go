@@ -40,6 +40,7 @@ type Controller struct {
 	wg           sync.WaitGroup
 	ch           chan struct{}
 	period       time.Duration
+	timeout      time.Duration
 	ticker       Ticker
 	clock        Clock
 }
@@ -78,6 +79,9 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
+	if c.Timeout == 0 {
+		c.Timeout = period
+	}
 
 	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
 	return &Controller{
@@ -90,6 +94,7 @@ func New(integrator export.Integrator, exporter export.Exporter, period time.Dur
 		exporter:     exporter,
 		ch:           make(chan struct{}),
 		period:       period,
+		timeout:      c.Timeout,
 		clock:        realClock{},
 	}
 }
@@ -170,9 +175,9 @@ func (c *Controller) run(ch chan struct{}) {
 }
 
 func (c *Controller) tick() {
-	// TODO: either remove the context argument from Export() or
-	// configure a timeout here?
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
 	c.collect(ctx)
 	checkpointSet := syncCheckpointSet{
 		mtx:      &c.collectLock,

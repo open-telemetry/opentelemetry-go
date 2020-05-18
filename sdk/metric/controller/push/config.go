@@ -15,6 +15,8 @@
 package push
 
 import (
+	"time"
+
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -30,6 +32,11 @@ type Config struct {
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
 	Resource *resource.Resource
+
+	// Timeout is the duration a collection (i.e. collect, accumulate,
+	// integrate, and export) can last before it is canceled. Defaults to
+	// the controller push period.
+	Timeout time.Duration
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -58,4 +65,15 @@ type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
+}
+
+// WithTimeout sets the Timeout configuration option of a Config.
+func WithTimeout(timeout time.Duration) Option {
+	return timeoutOption(timeout)
+}
+
+type timeoutOption time.Duration
+
+func (o timeoutOption) Apply(config *Config) {
+	config.Timeout = time.Duration(o)
 }
