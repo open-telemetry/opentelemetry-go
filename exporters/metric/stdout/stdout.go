@@ -25,7 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/label"
-	"go.opentelemetry.io/otel/sdk/resource"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -145,18 +144,18 @@ func NewExportPipeline(config Config, period time.Duration, opts ...push.Option)
 	return pusher, nil
 }
 
-func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkpointSet export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
 	if !e.config.DoNotPrintTime {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	encodedResource := resource.Encoded(e.config.LabelEncoder)
 	aggError = checkpointSet.ForEach(func(record export.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()
+		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 
 		var expose expoLine
 

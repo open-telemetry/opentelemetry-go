@@ -133,12 +133,12 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 
 // Convenience method for building a test exported lastValue record.
 func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, LastValueAgg(desc, value))
+	return export.NewRecord(desc, labels, nil, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
 func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, CounterAgg(desc, value))
+	return export.NewRecord(desc, labels, nil, CounterAgg(desc, value))
 }
 
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.

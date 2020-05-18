@@ -74,15 +74,17 @@ var _ Ticker = realTicker{}
 // configuration options to configure an SDK with periodic collection.
 // The integrator itself is configured with the aggregation selector policy.
 func New(integrator export.Integrator, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
-	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
+	c := &Config{
+		ErrorHandler: sdk.DefaultErrorHandler,
+		Resource:     resource.Empty(),
+	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler), sdk.WithResource(c.Resource))
 	return &Controller{
 		accumulator:  impl,
-		resource:     c.Resource,
 		uniq:         registry.NewUniqueInstrumentMeterImpl(impl),
 		named:        map[string]metric.Meter{},
 		errorHandler: c.ErrorHandler,
@@ -178,7 +180,7 @@ func (c *Controller) tick() {
 		mtx:      &c.collectLock,
 		delegate: c.integrator.CheckpointSet(),
 	}
-	err := c.exporter.Export(ctx, c.resource, checkpointSet)
+	err := c.exporter.Export(ctx, checkpointSet)
 	c.integrator.FinishedCollection()
 
 	if err != nil {
