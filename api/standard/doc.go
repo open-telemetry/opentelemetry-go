@@ -12,18 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Kind
-
-package metric
-
-// Kind describes the kind of instrument.
-type Kind int8
-
-const (
-	// ValueRecorderKind indicates a ValueRecorder instrument.
-	ValueRecorderKind Kind = iota
-	// ValueObserverKind indicates an ValueObserver instrument.
-	ValueObserverKind
-	// CounterKind indicates a Counter instrument.
-	CounterKind
-)
+// Package standard contains keys and values that have been standardized for
+// use in OpenTelemetry. These standardizations are specified in the
+// OpenTelemetry specification:
+//
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/resource/semantic_conventions
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/trace/semantic_conventions
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/metrics/semantic_conventions
+package standard

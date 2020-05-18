@@ -140,14 +140,14 @@ func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, erro
 	if err != nil {
 		return controller, hf, err
 	}
-	global.SetMeterProvider(controller)
+	global.SetMeterProvider(controller.Provider())
 	return controller, hf, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
 func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
-	selector := simple.NewWithHistogramMeasure(config.DefaultHistogramBoundaries)
+	selector := simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries)
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
@@ -220,7 +220,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		} else if dist, ok := agg.(aggregator.Distribution); ok {
 			// TODO: summaries values are never being resetted.
-			//  As measures are recorded, new records starts to have less impact on these summaries.
+			//  As measurements are recorded, new records starts to have less impact on these summaries.
 			//  We should implement an solution that is similar to the Prometheus Clients
 			//  using a rolling window for summaries could be a solution.
 			//

@@ -183,7 +183,7 @@ func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(fix.integrator, fix.exporter, time.Second)
-	meter := p.Meter("name")
+	meter := p.Provider().Meter("name")
 
 	mock := mockClock{clock.NewMock()}
 	p.SetClock(mock)
@@ -280,7 +280,7 @@ func TestPushExportError(t *testing.T) {
 
 			ctx := context.Background()
 
-			meter := p.Meter("name")
+			meter := p.Provider().Meter("name")
 			counter1 := metric.Must(meter).NewInt64Counter("counter1")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2")
 

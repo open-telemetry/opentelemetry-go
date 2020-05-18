@@ -107,7 +107,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 	require.Nil(t, sdkErr)
 }
 
-func TestInputRangeTestMeasure(t *testing.T) {
+func TestInputRangeTestValueRecorder(t *testing.T) {
 	ctx := context.Background()
 	integrator := &correctnessIntegrator{
 		t: t,
@@ -120,17 +120,17 @@ func TestInputRangeTestMeasure(t *testing.T) {
 		sdkErr = handleErr
 	})
 
-	measure := Must(meter).NewFloat64Measure("name.measure")
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.valuerecorder")
 
-	measure.Record(ctx, math.NaN())
+	valuerecorder.Record(ctx, math.NaN())
 	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
 	sdkErr = nil
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	measure.Record(ctx, 1)
-	measure.Record(ctx, 2)
+	valuerecorder.Record(ctx, 1)
+	valuerecorder.Record(ctx, 2)
 
 	integrator.records = nil
 	checkpointed = sdk.Collect(ctx)
@@ -150,9 +150,9 @@ func TestDisabledInstrument(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	measure := Must(meter).NewFloat64Measure("name.disabled")
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
-	measure.Record(ctx, -1)
+	valuerecorder.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
@@ -291,20 +291,20 @@ func TestObserverCollection(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64ValueObserver("float.valueobserver", func(result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 		// last value wins
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(-1, kv.String("C", "D"))
 	})
-	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("int.valueobserver", func(result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
 		result.Observe(1, kv.String("A", "B"))
 		result.Observe(1)
 	})
-	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
@@ -317,10 +317,10 @@ func TestObserverCollection(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.observer/A=B": -1,
-		"float.observer/C=D": -1,
-		"int.observer/":      1,
-		"int.observer/A=B":   1,
+		"float.valueobserver/A=B": -1,
+		"float.valueobserver/C=D": -1,
+		"int.valueobserver/":      1,
+		"int.valueobserver/A=B":   1,
 	}, out.Map)
 }
 
@@ -333,8 +333,8 @@ func TestObserverBatch(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	var floatObs metric.Float64Observer
-	var intObs metric.Int64Observer
+	var floatObs metric.Float64ValueObserver
+	var intObs metric.Int64ValueObserver
 	var batch = Must(meter).NewBatchObserver(
 		func(result metric.BatchObserverResult) {
 			result.Observe(
@@ -358,8 +358,8 @@ func TestObserverBatch(t *testing.T) {
 				intObs.Observation(1),
 			)
 		})
-	floatObs = batch.RegisterFloat64Observer("float.observer")
-	intObs = batch.RegisterInt64Observer("int.observer")
+	floatObs = batch.RegisterFloat64ValueObserver("float.valueobserver")
+	intObs = batch.RegisterInt64ValueObserver("int.valueobserver")
 
 	collected := sdk.Collect(ctx)
 
@@ -371,10 +371,10 @@ func TestObserverBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.observer/A=B": -1,
-		"float.observer/C=D": -1,
-		"int.observer/":      1,
-		"int.observer/A=B":   1,
+		"float.valueobserver/A=B": -1,
+		"float.valueobserver/C=D": -1,
+		"int.valueobserver/":      1,
+		"int.valueobserver/A=B":   1,
 	}, out.Map)
 }
 
@@ -389,8 +389,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
 	counter2 := Must(meter).NewFloat64Counter("float64.counter")
-	measure1 := Must(meter).NewInt64Measure("int64.measure")
-	measure2 := Must(meter).NewFloat64Measure("float64.measure")
+	valuerecorder1 := Must(meter).NewInt64ValueRecorder("int64.valuerecorder")
+	valuerecorder2 := Must(meter).NewFloat64ValueRecorder("float64.valuerecorder")
 
 	sdk.RecordBatch(
 		ctx,
@@ -400,8 +400,8 @@ func TestRecordBatch(t *testing.T) {
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
-		measure1.Measurement(3),
-		measure2.Measurement(4),
+		valuerecorder1.Measurement(3),
+		valuerecorder2.Measurement(4),
 	)
 
 	sdk.Collect(ctx)
@@ -411,10 +411,10 @@ func TestRecordBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"int64.counter/A=B,C=D":   1,
-		"float64.counter/A=B,C=D": 2,
-		"int64.measure/A=B,C=D":   3,
-		"float64.measure/A=B,C=D": 4,
+		"int64.counter/A=B,C=D":         1,
+		"float64.counter/A=B,C=D":       2,
+		"int64.valuerecorder/A=B,C=D":   3,
+		"float64.valuerecorder/A=B,C=D": 4,
 	}, out.Map)
 }
 
