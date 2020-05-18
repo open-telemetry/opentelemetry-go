@@ -68,18 +68,18 @@ func TestUngroupedStateless(t *testing.T) {
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C~D&G~H":       60, // labels1
-		"sum.a/C~D&E~F":       20, // labels2
-		"sum.a/":              40, // labels3
-		"sum.b/C~D&G~H":       60, // labels1
-		"sum.b/C~D&E~F":       20, // labels2
-		"sum.b/":              40, // labels3
-		"lastvalue.a/C~D&G~H": 50, // labels1
-		"lastvalue.a/C~D&E~F": 20, // labels2
-		"lastvalue.a/":        30, // labels3
-		"lastvalue.b/C~D&G~H": 50, // labels1
-		"lastvalue.b/C~D&E~F": 20, // labels2
-		"lastvalue.b/":        30, // labels3
+		"sum.a/C~D&G~H/R~V":       60, // labels1
+		"sum.a/C~D&E~F/R~V":       20, // labels2
+		"sum.a//R~V":              40, // labels3
+		"sum.b/C~D&G~H/R~V":       60, // labels1
+		"sum.b/C~D&E~F/R~V":       20, // labels2
+		"sum.b//R~V":              40, // labels3
+		"lastvalue.a/C~D&G~H/R~V": 50, // labels1
+		"lastvalue.a/C~D&E~F/R~V": 20, // labels2
+		"lastvalue.a//R~V":        30, // labels3
+		"lastvalue.b/C~D&G~H/R~V": 50, // labels1
+		"lastvalue.b/C~D&E~F/R~V": 20, // labels2
+		"lastvalue.b//R~V":        30, // labels3
 	}, records.Map)
 
 	// Verify that state was reset
@@ -110,8 +110,8 @@ func TestUngroupedStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C~D&G~H": 10, // labels1
-		"sum.b/C~D&G~H": 10, // labels1
+		"sum.a/C~D&G~H/R~V": 10, // labels1
+		"sum.b/C~D&G~H/R~V": 10, // labels1
 	}, records1.Map)
 
 	// Test that state was NOT reset
@@ -140,8 +140,8 @@ func TestUngroupedStateful(t *testing.T) {
 	require.EqualValues(t, records1.Map, records3.Map)
 
 	// Now process the second update
-	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, caggA))
-	_ = b.Process(ctx, export.NewRecord(&test.CounterBDesc, test.Labels1, caggB))
+	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))
+	_ = b.Process(ctx, export.NewRecord(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
 
 	checkpointSet = b.CheckpointSet()
 	b.FinishedCollection()
@@ -150,7 +150,7 @@ func TestUngroupedStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C~D&G~H": 30,
-		"sum.b/C~D&G~H": 30,
+		"sum.a/C~D&G~H/R~V": 30,
+		"sum.b/C~D&G~H/R~V": 30,
 	}, records4.Map)
 }

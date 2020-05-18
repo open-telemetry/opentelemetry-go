@@ -39,7 +39,7 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(nil)
 
 	counter := metric.NewDescriptor(
 		"counter", metric.CounterKind, metric.Float64NumberKind)
@@ -117,7 +117,7 @@ func TestPrometheusExporter(t *testing.T) {
 }
 
 func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *test.CheckpointSet, expected []string) {
-	err := exporter.Export(context.Background(), nil, checkpointSet)
+	err := exporter.Export(context.Background(), checkpointSet)
 	require.Nil(t, err)
 
 	rec := httptest.NewRecorder()

@@ -31,7 +31,6 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
-	resource     *resource.Resource
 	uniq         metric.MeterImpl
 	named        map[string]metric.Meter
 	errorHandler sdk.ErrorHandler
