@@ -32,7 +32,6 @@ type Controller struct {
 	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
-	uniq         metric.MeterImpl
 	errorHandler sdk.ErrorHandler
 	integrator   export.Integrator
 	exporter     export.Exporter
