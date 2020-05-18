@@ -115,7 +115,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	pusher.Start()
 
 	ctx := context.Background()
-	meter := pusher.Meter("test-meter")
+	meter := pusher.Provider().Meter("test-meter")
 	labels := []kv.KeyValue{kv.Bool("test", true)}
 
 	type data struct {

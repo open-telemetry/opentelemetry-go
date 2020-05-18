@@ -126,7 +126,7 @@ func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, e
 	if err != nil {
 		return controller, err
 	}
-	global.SetMeterProvider(controller)
+	global.SetMeterProvider(controller.Provider())
 	return controller, err
 }
 
