@@ -73,20 +73,20 @@ func (mm MeterMust) NewFloat64ValueRecorder(name string, mos ...Option) Float64V
 	}
 }
 
-// RegisterInt64Observer calls `Meter.RegisterInt64Observer` and
+// RegisterInt64ValueObserver calls `Meter.RegisterInt64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterInt64Observer(name string, callback Int64ObserverCallback, oos ...Option) Int64Observer {
-	if inst, err := mm.meter.RegisterInt64Observer(name, callback, oos...); err != nil {
+func (mm MeterMust) RegisterInt64ValueObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64ValueObserver {
+	if inst, err := mm.meter.RegisterInt64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64Observer calls `Meter.RegisterFloat64Observer` and
+// RegisterFloat64ValueObserver calls `Meter.RegisterFloat64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterFloat64Observer(name string, callback Float64ObserverCallback, oos ...Option) Float64Observer {
-	if inst, err := mm.meter.RegisterFloat64Observer(name, callback, oos...); err != nil {
+func (mm MeterMust) RegisterFloat64ValueObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64ValueObserver {
+	if inst, err := mm.meter.RegisterFloat64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
@@ -101,20 +101,20 @@ func (mm MeterMust) NewBatchObserver(callback BatchObserverCallback) BatchObserv
 	}
 }
 
-// RegisterInt64Observer calls `BatchObserver.RegisterInt64Observer` and
+// RegisterInt64ValueObserver calls `BatchObserver.RegisterInt64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterInt64Observer(name string, oos ...Option) Int64Observer {
-	if inst, err := bm.batch.RegisterInt64Observer(name, oos...); err != nil {
+func (bm BatchObserverMust) RegisterInt64ValueObserver(name string, oos ...Option) Int64ValueObserver {
+	if inst, err := bm.batch.RegisterInt64ValueObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64Observer calls `BatchObserver.RegisterFloat64Observer` and
+// RegisterFloat64ValueObserver calls `BatchObserver.RegisterFloat64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterFloat64Observer(name string, oos ...Option) Float64Observer {
-	if inst, err := bm.batch.RegisterFloat64Observer(name, oos...); err != nil {
+func (bm BatchObserverMust) RegisterFloat64ValueObserver(name string, oos ...Option) Float64ValueObserver {
+	if inst, err := bm.batch.RegisterFloat64ValueObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst

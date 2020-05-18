@@ -29,7 +29,7 @@ import "go.opentelemetry.io/otel/api/kv"
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64Observer.Observation()).
+// instruments (e.g., Int64ValueObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     Number
@@ -174,4 +174,22 @@ func (b *BatchObserverCallback) Run(function func([]kv.KeyValue, ...Observation)
 	(*b)(BatchObserverResult{
 		function: function,
 	})
+}
+
+// wrapInt64ValueObserverInstrument returns an `Int64ValueObserver` from a
+// `AsyncImpl`.  An error will be generated if the
+// `AsyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64ValueObserverInstrument returns an `Float64ValueObserver` from a
+// `AsyncImpl`.  An error will be generated if the
+// `AsyncImpl` is nil (in which case a No-op is substituted),
+// otherwise the error passes through.
+func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64ValueObserver{asyncInstrument: common}, err
 }

@@ -291,20 +291,20 @@ func TestObserverCollection(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	_ = Must(meter).RegisterFloat64Observer("float.observer", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64ValueObserver("float.valueobserver", func(result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 		// last value wins
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(-1, kv.String("C", "D"))
 	})
-	_ = Must(meter).RegisterInt64Observer("int.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("int.valueobserver", func(result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
 		result.Observe(1, kv.String("A", "B"))
 		result.Observe(1)
 	})
-	_ = Must(meter).RegisterInt64Observer("empty.observer", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
@@ -317,10 +317,10 @@ func TestObserverCollection(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.observer/A=B": -1,
-		"float.observer/C=D": -1,
-		"int.observer/":      1,
-		"int.observer/A=B":   1,
+		"float.valueobserver/A=B": -1,
+		"float.valueobserver/C=D": -1,
+		"int.valueobserver/":      1,
+		"int.valueobserver/A=B":   1,
 	}, out.Map)
 }
 
@@ -333,8 +333,8 @@ func TestObserverBatch(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(integrator)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
-	var floatObs metric.Float64Observer
-	var intObs metric.Int64Observer
+	var floatObs metric.Float64ValueObserver
+	var intObs metric.Int64ValueObserver
 	var batch = Must(meter).NewBatchObserver(
 		func(result metric.BatchObserverResult) {
 			result.Observe(
@@ -358,8 +358,8 @@ func TestObserverBatch(t *testing.T) {
 				intObs.Observation(1),
 			)
 		})
-	floatObs = batch.RegisterFloat64Observer("float.observer")
-	intObs = batch.RegisterInt64Observer("int.observer")
+	floatObs = batch.RegisterFloat64ValueObserver("float.valueobserver")
+	intObs = batch.RegisterInt64ValueObserver("int.valueobserver")
 
 	collected := sdk.Collect(ctx)
 
@@ -371,10 +371,10 @@ func TestObserverBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.observer/A=B": -1,
-		"float.observer/C=D": -1,
-		"int.observer/":      1,
-		"int.observer/A=B":   1,
+		"float.valueobserver/A=B": -1,
+		"float.valueobserver/C=D": -1,
+		"int.valueobserver/":      1,
+		"int.valueobserver/A=B":   1,
 	}, out.Map)
 }
 

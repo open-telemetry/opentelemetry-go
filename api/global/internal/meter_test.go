@@ -86,12 +86,12 @@ func TestDirect(t *testing.T) {
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+	_ = Must(meter1).RegisterFloat64ValueObserver("test.valueobserver.float", func(result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+	_ = Must(meter1).RegisterInt64ValueObserver("test.valueobserver.int", func(result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
@@ -132,25 +132,25 @@ func TestDirect(t *testing.T) {
 				Number:      asFloat(3),
 			},
 			{
-				Name:        "test.observer.float",
+				Name:        "test.valueobserver.float",
 				LibraryName: "test1",
 				Labels:      asMap(labels1...),
 				Number:      asFloat(1),
 			},
 			{
-				Name:        "test.observer.float",
+				Name:        "test.valueobserver.float",
 				LibraryName: "test1",
 				Labels:      asMap(labels2...),
 				Number:      asFloat(2),
 			},
 			{
-				Name:        "test.observer.int",
+				Name:        "test.valueobserver.int",
 				LibraryName: "test1",
 				Labels:      asMap(labels1...),
 				Number:      asInt(1),
 			},
 			{
-				Name:        "test.observer.int",
+				Name:        "test.valueobserver.int",
 				LibraryName: "test1",
 				Labels:      asMap(labels2...),
 				Number:      asInt(2),
@@ -331,12 +331,12 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Async: no SDK yet
-	observer := Must(meter1).RegisterFloat64Observer(
-		"interface.observer",
+	valueobserver := Must(meter1).RegisterFloat64ValueObserver(
+		"interface.valueobserver",
 		func(result metric.Float64ObserverResult) {},
 	)
 
-	ival = observer.AsyncImpl().Implementation()
+	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
@@ -356,7 +356,7 @@ func TestImplementationIndirection(t *testing.T) {
 	require.True(t, ok)
 
 	// Async
-	ival = observer.AsyncImpl().Implementation()
+	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
