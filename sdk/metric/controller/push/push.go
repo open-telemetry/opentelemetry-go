@@ -33,7 +33,6 @@ const DefaultPushPeriod = 10 * time.Second
 // Controller organizes a periodic push of metric data.
 type Controller struct {
 	lock         sync.Mutex
-	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
 	resource     *resource.Resource
 	uniq         metric.MeterImpl
@@ -157,8 +156,8 @@ func (c *Controller) tick() {
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()
-	c.collectLock.Lock()
-	defer c.collectLock.Unlock()
+	c.integrator.Lock()
+	defer c.integrator.Unlock()
 
 	c.accumulator.Collect(ctx)
 

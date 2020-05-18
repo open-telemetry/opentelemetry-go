@@ -28,8 +28,8 @@ import (
 type (
 	Integrator struct {
 		export.AggregationSelector
-		batch    batch
 		stateful bool
+		batch
 	}
 
 	batchKey struct {
