@@ -76,20 +76,6 @@ func (testSelector) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
-// func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
-// 	b.lock.Lock()
-// 	defer b.lock.Unlock()
-// 	labels := record.Labels().ToSlice()
-// 	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
-// 	return nil
-// }
-
-// func (b *testIntegrator) getCounts() (checkpoints, finishes int) {
-// 	b.lock.Lock()
-// 	defer b.lock.Unlock()
-// 	return b.checkpoints, b.finishes
-// }
-
 func (e *testExporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()

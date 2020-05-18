@@ -161,7 +161,8 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	pusher := push.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
 		exporter,
-		options...,
+		append(options, push.WithStateful(true))...,
+	// TODO: @@@ test that WithStateful takes effect
 	)
 	pusher.Start()
 
