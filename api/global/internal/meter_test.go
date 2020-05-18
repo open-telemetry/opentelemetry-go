@@ -407,7 +407,7 @@ func TestRecordBatchRealSDK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	global.SetMeterProvider(pusher)
+	global.SetMeterProvider(pusher.Provider())
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	pusher.Stop()
