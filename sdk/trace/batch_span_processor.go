@@ -103,23 +103,10 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 
 	bsp.stopCh = make(chan struct{})
 
-	// Start timer to export spans.
-	ticker := time.NewTicker(bsp.o.ScheduledDelayMillis)
 	bsp.stopWait.Add(1)
 	go func() {
-		defer ticker.Stop()
-		batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
-		for {
-			select {
-			case <-bsp.stopCh:
-				bsp.processQueue(&batch)
-				close(bsp.queue)
-				bsp.stopWait.Done()
-				return
-			case <-ticker.C:
-				bsp.processQueue(&batch)
-			}
-		}
+		defer bsp.stopWait.Done()
+		bsp.processQueue()
 	}()
 
 	return bsp, nil
@@ -167,52 +154,89 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
-// processQueue removes spans from the `queue` channel until there is
-// no more data.  It calls the exporter in batches of up to
-// MaxExportBatchSize until all the available data have been processed.
-func (bsp *BatchSpanProcessor) processQueue(batch *[]*export.SpanData) {
+// processQueue removes spans from the `queue` channel until processor
+// is shut down. It calls the exporter in batches of up to MaxExportBatchSize
+// waiting up to ScheduledDelayMillis to form a batch.
+func (bsp *BatchSpanProcessor) processQueue() {
+	timer := time.NewTimer(bsp.o.ScheduledDelayMillis)
+	defer timer.Stop()
+
+	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
+
+	exportSpans := func() {
+		timer.Reset(bsp.o.ScheduledDelayMillis)
+
+		if len(batch) > 0 {
+			bsp.e.ExportSpans(context.Background(), batch)
+			batch = batch[:0]
+		}
+	}
+
+loop:
 	for {
-		// Read spans until either the buffer fills or the
-		// queue is empty.
-		for ok := true; ok && len(*batch) < bsp.o.MaxExportBatchSize; {
-			select {
-			case sd := <-bsp.queue:
-				if sd != nil && sd.SpanContext.IsSampled() {
-					*batch = append(*batch, sd)
+		select {
+		case <-bsp.stopCh:
+			break loop
+		case <-timer.C:
+			exportSpans()
+		case sd := <-bsp.queue:
+			batch = append(batch, sd)
+			if len(batch) == bsp.o.MaxExportBatchSize {
+				if !timer.Stop() {
+					<-timer.C
 				}
-			default:
-				ok = false
+				exportSpans()
 			}
 		}
+	}
 
-		if len(*batch) == 0 {
+	for {
+		select {
+		case sd := <-bsp.queue:
+			if sd == nil { // queue is closed
+				go throwAwayFutureSends(bsp.queue)
+				exportSpans()
+				return
+			}
+
+			batch = append(batch, sd)
+			if len(batch) == bsp.o.MaxExportBatchSize {
+				exportSpans()
+			}
+		default:
+			// Send nil instead of closing to prevent "send on closed channel".
+			bsp.queue <- nil
+		}
+	}
+}
+
+func throwAwayFutureSends(ch <-chan *export.SpanData) {
+	for {
+		select {
+		case <-ch:
+		case <-time.After(time.Minute):
 			return
 		}
-
-		// Send one batch, then continue reading until the
-		// buffer is empty.
-		bsp.e.ExportSpans(context.Background(), *batch)
-		*batch = (*batch)[:0]
 	}
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
+	if !sd.SpanContext.IsSampled() {
+		return
+	}
+
 	select {
 	case <-bsp.stopCh:
 		return
 	default:
 	}
+
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
 	} else {
-		var ok bool
 		select {
 		case bsp.queue <- sd:
-			ok = true
 		default:
-			ok = false
-		}
-		if !ok {
 			atomic.AddUint32(&bsp.dropped, 1)
 		}
 	}

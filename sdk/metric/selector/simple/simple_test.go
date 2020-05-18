@@ -31,33 +31,33 @@ import (
 var (
 	testCounterDesc       = metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
 	testValueRecorderDesc = metric.NewDescriptor("valuerecorder", metric.ValueRecorderKind, metric.Int64NumberKind)
-	testObserverDesc      = metric.NewDescriptor("observer", metric.ObserverKind, metric.Int64NumberKind)
+	testValueObserverDesc = metric.NewDescriptor("valueobserver", metric.ValueObserverKind, metric.Int64NumberKind)
 )
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = inex.AggregatorFor(&testValueRecorderDesc).(*minmaxsumcount.Aggregator) })
-	require.NotPanics(t, func() { _ = inex.AggregatorFor(&testObserverDesc).(*minmaxsumcount.Aggregator) })
+	require.NotPanics(t, func() { _ = inex.AggregatorFor(&testValueObserverDesc).(*minmaxsumcount.Aggregator) })
 }
 
 func TestSketchDistribution(t *testing.T) {
 	sk := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
 	require.NotPanics(t, func() { _ = sk.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = sk.AggregatorFor(&testValueRecorderDesc).(*ddsketch.Aggregator) })
-	require.NotPanics(t, func() { _ = sk.AggregatorFor(&testObserverDesc).(*ddsketch.Aggregator) })
+	require.NotPanics(t, func() { _ = sk.AggregatorFor(&testValueObserverDesc).(*ddsketch.Aggregator) })
 }
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueRecorderDesc).(*array.Aggregator) })
-	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testObserverDesc).(*array.Aggregator) })
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueObserverDesc).(*array.Aggregator) })
 }
 
 func TestHistogramDistribution(t *testing.T) {
 	ex := simple.NewWithHistogramDistribution([]metric.Number{})
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueRecorderDesc).(*histogram.Aggregator) })
-	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testObserverDesc).(*histogram.Aggregator) })
+	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueObserverDesc).(*histogram.Aggregator) })
 }

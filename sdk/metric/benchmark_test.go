@@ -423,22 +423,22 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	fix := newFixture(b)
 	names := make([]string, 0, b.N)
 	for i := 0; i < b.N; i++ {
-		names = append(names, fmt.Sprintf("test.observer.%d", i))
+		names = append(names, fmt.Sprintf("test.valueobserver.%d", i))
 	}
 	cb := func(result metric.Int64ObserverResult) {}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.meter.RegisterInt64Observer(names[i], cb)
+		fix.meter.RegisterInt64ValueObserver(names[i], cb)
 	}
 }
 
-func BenchmarkObserverObservationInt64(b *testing.B) {
+func BenchmarkValueObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
+	_ = fix.meter.RegisterInt64ValueObserver("test.valueobserver", func(result metric.Int64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
@@ -449,11 +449,11 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 	fix.accumulator.Collect(ctx)
 }
 
-func BenchmarkObserverObservationFloat64(b *testing.B) {
+func BenchmarkValueObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
+	_ = fix.meter.RegisterFloat64ValueObserver("test.valueobserver", func(result metric.Float64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}
