@@ -24,6 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -33,6 +35,8 @@ import (
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+var testResource = resource.New(kv.String("R", "V"))
 
 type testExporter struct {
 	t         *testing.T
@@ -50,7 +54,7 @@ type testFixture struct {
 type testSelector struct{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	exporter := &testExporter{
 		t: t,
@@ -65,7 +69,7 @@ func (testSelector) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
-func (e *testExporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
+func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
@@ -112,7 +116,12 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
-	p := push.New(testSelector{}, fix.exporter, push.WithPeriod(time.Second))
+	p := push.New(
+		testSelector{},
+		fix.exporter,
+		push.WithPeriod(time.Second),
+		push.WithResource(testResource),
+	)
 	meter := p.Provider().Meter("name")
 
 	mock := controllerTest.NewMockClock()
@@ -137,6 +146,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
@@ -153,6 +163,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 2, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err = records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())
@@ -177,8 +188,8 @@ func TestPushExportError(t *testing.T) {
 		expectedDescriptors []string
 		expectedError       error
 	}{
-		{"errNone", nil, []string{"counter1", "counter2"}, nil},
-		{"errNoData", aggregator.ErrNoData, []string{"counter2"}, nil},
+		{"errNone", nil, []string{"counter1{R=V,X=Y}", "counter2{R=V,}"}, nil},
+		{"errNoData", aggregator.ErrNoData, []string{"counter2{R=V,}"}, nil},
 		{"errUnexpected", errAggregator, []string{}, errAggregator},
 	}
 	for _, tt := range tests {
@@ -186,7 +197,12 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-			p := push.New(testSelector{}, fix.exporter, push.WithPeriod(time.Second))
+			p := push.New(
+				testSelector{},
+				fix.exporter,
+				push.WithPeriod(time.Second),
+				push.WithResource(testResource),
+			)
 
 			var err error
 			var lock sync.Mutex
@@ -208,7 +224,7 @@ func TestPushExportError(t *testing.T) {
 			p.Start()
 			runtime.Gosched()
 
-			counter1.Add(ctx, 3)
+			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, fix.exporter.exports)
@@ -229,11 +245,16 @@ func TestPushExportError(t *testing.T) {
 			lock.Unlock()
 			require.Equal(t, len(tt.expectedDescriptors), len(records))
 			for _, r := range records {
-				require.Contains(t, tt.expectedDescriptors, r.Descriptor().Name())
+				require.Contains(t, tt.expectedDescriptors,
+					fmt.Sprintf("%s{%s,%s}",
+						r.Descriptor().Name(),
+						r.Resource().Encoded(label.DefaultEncoder()),
+						r.Labels().Encoded(label.DefaultEncoder()),
+					),
+				)
 			}
 
 			p.Stop()
-
 		})
 	}
 }

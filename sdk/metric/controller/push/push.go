@@ -25,7 +25,6 @@ import (
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const DefaultPushPeriod = 10 * time.Second
@@ -34,7 +33,7 @@ const DefaultPushPeriod = 10 * time.Second
 type Controller struct {
 	lock         sync.Mutex
 	accumulator  *sdk.Accumulator
-	resource     *resource.Resource
+	provider     *registry.Provider
 	errorHandler sdk.ErrorHandler
 	integrator   *simple.Integrator
 	exporter     export.Exporter
@@ -43,7 +42,6 @@ type Controller struct {
 	period       time.Duration
 	clock        controllerTime.Clock
 	ticker       controllerTime.Ticker
-	provider     *registry.Provider
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -59,14 +57,17 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 	}
 
 	integrator := simple.New(selector, c.Stateful)
-	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.NewAccumulator(
+		integrator,
+		sdk.WithErrorHandler(c.ErrorHandler),
+		sdk.WithResource(c.Resource),
+	)
 	return &Controller{
-		accumulator:  impl,
-		resource:     c.Resource,
 		provider:     registry.NewProvider(impl),
-		errorHandler: c.ErrorHandler,
+		accumulator:  impl,
 		integrator:   integrator,
 		exporter:     exporter,
+		errorHandler: c.ErrorHandler,
 		ch:           make(chan struct{}),
 		period:       c.Period,
 		clock:        controllerTime.RealClock{},
@@ -149,7 +150,7 @@ func (c *Controller) tick() {
 
 	c.accumulator.Collect(ctx)
 
-	err := c.exporter.Export(ctx, c.resource, c.integrator.CheckpointSet())
+	err := c.exporter.Export(ctx, c.integrator.CheckpointSet())
 	c.integrator.FinishedCollection()
 
 	if err != nil {

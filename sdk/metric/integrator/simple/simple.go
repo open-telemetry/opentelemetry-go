@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -35,11 +36,13 @@ type (
 	batchKey struct {
 		descriptor *metric.Descriptor
 		distinct   label.Distinct
+		resource   label.Distinct
 	}
 
 	batchValue struct {
 		aggregator export.Aggregator
 		labels     *label.Set
+		resource   *resource.Resource
 	}
 
 	batchMap map[batchKey]batchValue
@@ -72,6 +75,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 	key := batchKey{
 		descriptor: desc,
 		distinct:   record.Labels().Equivalent(),
+		resource:   record.Resource().Equivalent(),
 	}
 	agg := record.Aggregator()
 	value, ok := b.batch.batchMap[key]
@@ -99,6 +103,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 	b.batch.batchMap[key] = batchValue{
 		aggregator: agg,
 		labels:     record.Labels(),
+		resource:   record.Resource(),
 	}
 	return nil
 }
@@ -118,6 +123,7 @@ func (b *batch) ForEach(f func(export.Record) error) error {
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
+			value.resource,
 			value.aggregator,
 		)); err != nil && !errors.Is(err, aggregator.ErrNoData) {
 			return err
