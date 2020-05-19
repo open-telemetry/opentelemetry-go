@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	defaultMaxQueueSize       = 2048
-	defaultScheduledDelay     = 5000 * time.Millisecond
-	defaultMaxExportBatchSize = 512
+	DefaultMaxQueueSize       = 2048
+	DefaultScheduledDelay     = 5000 * time.Millisecond
+	DefaultMaxExportBatchSize = 512
 )
 
 var (
@@ -70,12 +70,11 @@ type BatchSpanProcessor struct {
 	queue   chan *export.SpanData
 	dropped uint32
 
-	batch     []*export.SpanData
-	timer     *time.Timer
-	stopWait  sync.WaitGroup
-	stopDrain sync.WaitGroup
-	stopOnce  sync.Once
-	stopCh    chan struct{}
+	batch    []*export.SpanData
+	timer    *time.Timer
+	stopWait sync.WaitGroup
+	stopOnce sync.Once
+	stopCh   chan struct{}
 }
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
@@ -90,9 +89,9 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 	}
 
 	o := BatchSpanProcessorOptions{
-		ScheduledDelayMillis: defaultScheduledDelay,
-		MaxQueueSize:         defaultMaxQueueSize,
-		MaxExportBatchSize:   defaultMaxExportBatchSize,
+		ScheduledDelayMillis: DefaultScheduledDelay,
+		MaxQueueSize:         DefaultMaxQueueSize,
+		MaxExportBatchSize:   DefaultMaxExportBatchSize,
 	}
 	for _, opt := range opts {
 		opt(&o)
@@ -106,7 +105,6 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 		stopCh: make(chan struct{}),
 	}
 	bsp.stopWait.Add(1)
-	bsp.stopDrain.Add(1)
 
 	go func() {
 		bsp.processQueue()
@@ -132,7 +130,7 @@ func (bsp *BatchSpanProcessor) Shutdown() {
 		close(bsp.stopCh)
 		bsp.stopWait.Wait()
 		close(bsp.queue)
-		bsp.stopDrain.Wait()
+
 	})
 }
 
@@ -198,7 +196,6 @@ func (bsp *BatchSpanProcessor) processQueue() {
 // drainQueue awaits the any caller that had added to bsp.stopWait
 // to finish the enqueue, then exports the final batch.
 func (bsp *BatchSpanProcessor) drainQueue() {
-	defer bsp.stopDrain.Done()
 	for sd := range bsp.queue {
 		bsp.batch = append(bsp.batch, sd)
 		if len(bsp.batch) == bsp.o.MaxExportBatchSize {
@@ -212,9 +209,6 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 	if !sd.SpanContext.IsSampled() {
 		return
 	}
-
-	bsp.stopWait.Add(1)
-	defer bsp.stopWait.Done()
 
 	// This ensures the bsp.queue<- below does not panic as the
 	// processor shuts down.
