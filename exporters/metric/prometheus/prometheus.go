@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/metric"
 
@@ -30,7 +30,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -42,6 +41,7 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
+	lock     sync.RWMutex
 	snapshot export.CheckpointSet
 	onError  func(error)
 
@@ -134,41 +134,49 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(config, time.Minute)
+func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
+	controller, exp, err := NewExportPipeline(config, options...)
 	if err != nil {
-		return controller, hf, err
+		return controller, exp, err
 	}
 	global.SetMeterProvider(controller.Provider())
-	return controller, hf, err
+	return controller, exp, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
-func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
-	selector := simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries)
+//
+// The returned Controller contains an implementation of
+// `metric.Provider`.  The controller is returned unstarted and should
+// be started by the caller to begin collection.
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Prometheus needs to use a stateful integrator since counters (and histogram since they are a collection of Counters)
-	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+	// Prometheus uses a stateful push controller since instruments are
+	// cumulative and should not be reset after each collection interval.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
 	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	integrator := integrator.New(selector, true)
-	pusher := push.New(integrator, exporter, period)
-	pusher.Start()
+	pusher := push.New(
+		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+		exporter,
+		append(options, push.WithStateful(true))...,
+	)
 
-	return pusher, exporter.ServeHTTP, nil
+	return pusher, exporter, nil
 }
 
 // Export exports the provide metric record to prometheus.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+	// TODO: Use the resource value in this exporter.
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	e.snapshot = checkpointSet
 	return nil
 }
@@ -187,9 +195,15 @@ func newCollector(exporter *Exporter) *collector {
 }
 
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
+
 	if c.exp.snapshot == nil {
 		return
 	}
+
+	c.exp.snapshot.RLock()
+	defer c.exp.snapshot.RUnlock()
 
 	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
 		ch <- c.toDesc(&record)
@@ -202,9 +216,15 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
+
 	if c.exp.snapshot == nil {
 		return
 	}
+
+	c.exp.snapshot.RLock()
+	defer c.exp.snapshot.RUnlock()
 
 	err := c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()

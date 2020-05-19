@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -36,9 +37,10 @@ type mapkey struct {
 }
 
 type CheckpointSet struct {
+	sync.RWMutex
 	records  map[mapkey]export.Record
-	resource *resource.Resource
 	updates  []export.Record
+	resource *resource.Resource
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.

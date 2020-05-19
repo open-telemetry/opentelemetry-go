@@ -23,77 +23,61 @@ import (
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
+	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 )
+
+// DefaultPushPeriod is the default time interval between pushes.
+const DefaultPushPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
 	lock         sync.Mutex
-	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
 	provider     *registry.Provider
 	errorHandler sdk.ErrorHandler
-	integrator   export.Integrator
+	integrator   *simple.Integrator
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	ch           chan struct{}
 	period       time.Duration
-	ticker       Ticker
-	clock        Clock
+	clock        controllerTime.Clock
+	ticker       controllerTime.Ticker
 }
-
-// Several types below are created to match "github.com/benbjohnson/clock"
-// so that it remains a test-only dependency.
-
-type Clock interface {
-	Now() time.Time
-	Ticker(time.Duration) Ticker
-}
-
-type Ticker interface {
-	Stop()
-	C() <-chan time.Time
-}
-
-type realClock struct {
-}
-
-type realTicker struct {
-	ticker *time.Ticker
-}
-
-var _ Clock = realClock{}
-var _ Ticker = realTicker{}
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided integrator, exporter, collection period, and SDK
-// configuration options to configure an SDK with periodic collection.
-// The integrator itself is configured with the aggregation selector policy.
-func New(integrator export.Integrator, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
+// using the provided exporter and options to configure an SDK with
+// periodic collection.
+func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		ErrorHandler: sdk.DefaultErrorHandler,
-		Resource:     resource.Empty(),
+		Period:       DefaultPushPeriod,
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler), sdk.WithResource(c.Resource))
+	integrator := simple.New(selector, c.Stateful)
+	impl := sdk.NewAccumulator(
+		integrator,
+		sdk.WithErrorHandler(c.ErrorHandler),
+		sdk.WithResource(c.Resource),
+	)
 	return &Controller{
-		accumulator:  impl,
 		provider:     registry.NewProvider(impl),
-		errorHandler: c.ErrorHandler,
+		accumulator:  impl,
 		integrator:   integrator,
 		exporter:     exporter,
+		errorHandler: c.ErrorHandler,
 		ch:           make(chan struct{}),
-		period:       period,
-		clock:        realClock{},
+		period:       c.Period,
+		clock:        controllerTime.RealClock{},
 	}
 }
 
 // SetClock supports setting a mock clock for testing.  This must be
 // called before Start().
-func (c *Controller) SetClock(clock Clock) {
+func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.clock = clock
@@ -162,53 +146,15 @@ func (c *Controller) tick() {
 	// TODO: either remove the context argument from Export() or
 	// configure a timeout here?
 	ctx := context.Background()
-	c.collect(ctx)
-	checkpointSet := syncCheckpointSet{
-		mtx:      &c.collectLock,
-		delegate: c.integrator.CheckpointSet(),
-	}
-	err := c.exporter.Export(ctx, checkpointSet)
+	c.integrator.Lock()
+	defer c.integrator.Unlock()
+
+	c.accumulator.Collect(ctx)
+
+	err := c.exporter.Export(ctx, c.integrator.CheckpointSet())
 	c.integrator.FinishedCollection()
 
 	if err != nil {
 		c.errorHandler(err)
 	}
-}
-
-func (c *Controller) collect(ctx context.Context) {
-	c.collectLock.Lock()
-	defer c.collectLock.Unlock()
-
-	c.accumulator.Collect(ctx)
-}
-
-// syncCheckpointSet is a wrapper for a CheckpointSet to synchronize
-// SDK's collection and reads of a CheckpointSet by an exporter.
-type syncCheckpointSet struct {
-	mtx      *sync.Mutex
-	delegate export.CheckpointSet
-}
-
-var _ export.CheckpointSet = (*syncCheckpointSet)(nil)
-
-func (c syncCheckpointSet) ForEach(fn func(export.Record) error) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	return c.delegate.ForEach(fn)
-}
-
-func (realClock) Now() time.Time {
-	return time.Now()
-}
-
-func (realClock) Ticker(period time.Duration) Ticker {
-	return realTicker{time.NewTicker(period)}
-}
-
-func (t realTicker) Stop() {
-	t.ticker.Stop()
-}
-
-func (t realTicker) C() <-chan time.Time {
-	return t.ticker.C
 }

@@ -111,7 +111,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	selector := simple.NewWithExactDistribution()
 	integrator := integrator.New(selector, true)
-	pusher := push.New(integrator, exp, 60*time.Second)
+	pusher := push.New(integrator, exp)
 	pusher.Start()
 
 	ctx := context.Background()

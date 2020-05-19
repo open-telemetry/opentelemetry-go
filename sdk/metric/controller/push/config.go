@@ -15,6 +15,8 @@
 package push
 
 import (
+	"time"
+
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -30,6 +32,14 @@ type Config struct {
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
 	Resource *resource.Resource
+
+	// Stateful causes the controller to maintain state across
+	// collection events, so that records in the exported
+	// checkpoint set are cumulative.
+	Stateful bool
+
+	// Period is the interval between calls to Collect a checkpoint.
+	Period time.Duration
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -58,4 +68,26 @@ type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
+}
+
+// WithStateful sets the Stateful configuration option of a Config.
+func WithStateful(stateful bool) Option {
+	return statefulOption(stateful)
+}
+
+type statefulOption bool
+
+func (o statefulOption) Apply(config *Config) {
+	config.Stateful = bool(o)
+}
+
+// WithPeriod sets the Period configuration option of a Config.
+func WithPeriod(period time.Duration) Option {
+	return periodOption(period)
+}
+
+type periodOption time.Duration
+
+func (o periodOption) Apply(config *Config) {
+	config.Period = time.Duration(o)
 }

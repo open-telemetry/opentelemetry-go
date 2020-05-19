@@ -29,7 +29,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -120,8 +119,8 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	}
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, time.Minute, opts...)
+func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+	controller, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return controller, err
 	}
@@ -129,16 +128,22 @@ func InstallNewPipeline(config Config, opts ...push.Option) (*push.Controller, e
 	return controller, err
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selectors and integrators.
-func NewExportPipeline(config Config, period time.Duration, opts ...push.Option) (*push.Controller, error) {
-	selector := simple.NewWithExactDistribution()
+// NewExportPipeline sets up a complete export pipeline with the
+// recommended setup, chaining a NewRawExporter into the recommended
+// selectors and integrators.
+//
+// The pipeline is configured with a stateful integrator unless the
+// push.WithStateful(false) option is used.
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
-	integrator := integrator.New(selector, true)
-	pusher := push.New(integrator, exporter, period, opts...)
+	pusher := push.New(
+		simple.NewWithExactDistribution(),
+		exporter,
+		append([]push.Option{push.WithStateful(true)}, options...)...,
+	)
 	pusher.Start()
 
 	return pusher, nil

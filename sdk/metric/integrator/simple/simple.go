@@ -17,6 +17,7 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -27,9 +28,9 @@ import (
 
 type (
 	Integrator struct {
-		selector export.AggregationSelector
-		batchMap batchMap
+		export.AggregationSelector
 		stateful bool
+		batch
 	}
 
 	batchKey struct {
@@ -44,22 +45,24 @@ type (
 		resource   *resource.Resource
 	}
 
-	batchMap map[batchKey]batchValue
+	batch struct {
+		// RWMutex implements locking for the `CheckpoingSet` interface.
+		sync.RWMutex
+		values map[batchKey]batchValue
+	}
 )
 
 var _ export.Integrator = &Integrator{}
-var _ export.CheckpointSet = batchMap{}
+var _ export.CheckpointSet = &batch{}
 
 func New(selector export.AggregationSelector, stateful bool) *Integrator {
 	return &Integrator{
-		selector: selector,
-		batchMap: batchMap{},
-		stateful: stateful,
+		AggregationSelector: selector,
+		stateful:            stateful,
+		batch: batch{
+			values: map[batchKey]batchValue{},
+		},
 	}
-}
-
-func (b *Integrator) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	return b.selector.AggregatorFor(descriptor)
 }
 
 func (b *Integrator) Process(_ context.Context, record export.Record) error {
@@ -70,7 +73,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		resource:   record.Resource().Equivalent(),
 	}
 	agg := record.Aggregator()
-	value, ok := b.batchMap[key]
+	value, ok := b.batch.values[key]
 	if ok {
 		// Note: The call to Merge here combines only
 		// identical records.  It is required even for a
@@ -92,7 +95,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 			return err
 		}
 	}
-	b.batchMap[key] = batchValue{
+	b.batch.values[key] = batchValue{
 		aggregator: agg,
 		labels:     record.Labels(),
 		resource:   record.Resource(),
@@ -101,17 +104,17 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
-	return b.batchMap
+	return &b.batch
 }
 
 func (b *Integrator) FinishedCollection() {
 	if !b.stateful {
-		b.batchMap = batchMap{}
+		b.batch.values = map[batchKey]batchValue{}
 	}
 }
 
-func (c batchMap) ForEach(f func(export.Record) error) error {
-	for key, value := range c {
+func (b *batch) ForEach(f func(export.Record) error) error {
+	for key, value := range b.values {
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
