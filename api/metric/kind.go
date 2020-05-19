@@ -24,6 +24,9 @@ const (
 	ValueRecorderKind Kind = iota
 	// ValueObserverKind indicates an ValueObserver instrument.
 	ValueObserverKind
+
 	// CounterKind indicates a Counter instrument.
 	CounterKind
+	// UpDownCounterKind indicates a UpDownCounter instrument.
+	UpDownCounterKind
 )
