@@ -45,28 +45,23 @@ type (
 		resource   *resource.Resource
 	}
 
-	batchMap map[batchKey]batchValue
-
 	batch struct {
+		// RWMutex implements locking for the `CheckpoingSet` interface.
 		sync.RWMutex
-		batchMap
+		values map[batchKey]batchValue
 	}
 )
 
 var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &batch{}
 
-func newBatch() batch {
-	return batch{
-		batchMap: batchMap{},
-	}
-}
-
 func New(selector export.AggregationSelector, stateful bool) *Integrator {
 	return &Integrator{
 		AggregationSelector: selector,
-		batch:               newBatch(),
 		stateful:            stateful,
+		batch: batch{
+			values: map[batchKey]batchValue{},
+		},
 	}
 }
 
@@ -78,7 +73,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		resource:   record.Resource().Equivalent(),
 	}
 	agg := record.Aggregator()
-	value, ok := b.batch.batchMap[key]
+	value, ok := b.batch.values[key]
 	if ok {
 		// Note: The call to Merge here combines only
 		// identical records.  It is required even for a
@@ -100,7 +95,7 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 			return err
 		}
 	}
-	b.batch.batchMap[key] = batchValue{
+	b.batch.values[key] = batchValue{
 		aggregator: agg,
 		labels:     record.Labels(),
 		resource:   record.Resource(),
@@ -114,12 +109,12 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 
 func (b *Integrator) FinishedCollection() {
 	if !b.stateful {
-		b.batch.batchMap = batchMap{}
+		b.batch.values = map[batchKey]batchValue{}
 	}
 }
 
 func (b *batch) ForEach(f func(export.Record) error) error {
-	for key, value := range b.batchMap {
+	for key, value := range b.values {
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,

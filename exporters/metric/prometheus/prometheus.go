@@ -146,8 +146,9 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and integrators.
 //
-// The returned Controller implements `metric.Provider`.  The controller is
-// returned unstarted and should be started by the caller to begin collection.
+// The returned Controller contains an implementation of
+// `metric.Provider`.  The controller is returned unstarted and should
+// be started by the caller to begin collection.
 func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {

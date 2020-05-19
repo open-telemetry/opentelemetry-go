@@ -165,7 +165,7 @@ type CheckpointSet interface {
 	// stateful integrator) while it is locked.
 	//
 	// The Integrator attached to the Accumulator MUST be called
-	// in with the lock held.
+	// with the lock held.
 	sync.Locker
 
 	// RLock acquires a read lock corresponding to this Locker.

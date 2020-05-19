@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
@@ -41,9 +40,7 @@ func TestPrometheusExporter(t *testing.T) {
 	exporter, err := prometheus.NewRawExporter(prometheus.Config{
 		DefaultSummaryQuantiles: []float64{0.5, 0.9, 0.99},
 	})
-	if err != nil {
-		log.Panicf("failed to initialize prometheus exporter %v", err)
-	}
+	require.NoError(t, err)
 
 	var expected []string
 	checkpointSet := exportTest.NewCheckpointSet(nil)
@@ -149,9 +146,7 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *e
 func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
 	controller, exporter, err := prometheus.NewExportPipeline(prometheus.Config{}, push.WithPeriod(time.Minute))
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	meter := controller.Provider().Meter("test")
 	mock := controllerTest.NewMockClock()
@@ -163,14 +158,12 @@ func TestPrometheusStatefulness(t *testing.T) {
 		var input bytes.Buffer
 		resp := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", &input)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
+
 		exporter.ServeHTTP(resp, req)
 		data, err := ioutil.ReadAll(resp.Result().Body)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
+
 		return string(data)
 	}
 

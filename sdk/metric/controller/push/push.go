@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 )
 
+// DefaultPushPeriod is the default time interval between pushes.
 const DefaultPushPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
