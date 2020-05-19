@@ -29,4 +29,7 @@ const (
 	CounterKind
 	// UpDownCounterKind indicates a UpDownCounter instrument.
 	UpDownCounterKind
+
+	// SumObserverKind indicates a SumObserver instrument.
+	SumObserverKind
 )
