@@ -40,6 +40,11 @@ type Config struct {
 
 	// Period is the interval between calls to Collect a checkpoint.
 	Period time.Duration
+
+	// Timeout is the duration a collection (i.e. collect, accumulate,
+	// integrate, and export) can last before it is canceled. Defaults to
+	// the controller push period.
+	Timeout time.Duration
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -90,4 +95,15 @@ type periodOption time.Duration
 
 func (o periodOption) Apply(config *Config) {
 	config.Period = time.Duration(o)
+}
+
+// WithTimeout sets the Timeout configuration option of a Config.
+func WithTimeout(timeout time.Duration) Option {
+	return timeoutOption(timeout)
+}
+
+type timeoutOption time.Duration
+
+func (o timeoutOption) Apply(config *Config) {
+	config.Timeout = time.Duration(o)
 }
