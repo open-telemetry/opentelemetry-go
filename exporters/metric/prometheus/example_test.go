@@ -66,7 +66,7 @@ func ExampleNewExportPipeline() {
 
 	// Simulate a push
 	meterImpl.Collect(ctx)
-	err = exporter.Export(ctx, nil, integrator.CheckpointSet())
+	err = exporter.Export(ctx, integrator.CheckpointSet())
 	if err != nil {
 		panic(err)
 	}

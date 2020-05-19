@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -39,10 +40,6 @@ import (
 // single-threaded context from the SDK, after the aggregator is
 // checkpointed, allowing the integrator to build the set of metrics
 // currently being exported.
-//
-// The `CheckpointSet` method is called during collection in a
-// single-threaded context from the Exporter, giving the exporter
-// access to a producer for iterating over the complete checkpoint.
 type Integrator interface {
 	// AggregationSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
@@ -70,17 +67,6 @@ type Integrator interface {
 	// The Context argument originates from the controller that
 	// orchestrates collection.
 	Process(ctx context.Context, record Record) error
-
-	// CheckpointSet is the interface used by the controller to
-	// access the fully aggregated checkpoint after collection.
-	//
-	// The returned CheckpointSet is passed to the Exporter.
-	CheckpointSet() CheckpointSet
-
-	// FinishedCollection informs the Integrator that a complete
-	// collection round was completed.  Stateless integrators might
-	// reset state in this method, for example.
-	FinishedCollection()
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -154,12 +140,9 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The Resource contains common attributes that apply to all
-	// metric events in the SDK.
-	//
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
-	Export(context.Context, *resource.Resource, CheckpointSet) error
+	Export(context.Context, CheckpointSet) error
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -176,6 +159,19 @@ type CheckpointSet interface {
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
 	ForEach(func(Record) error) error
+
+	// Locker supports locking the checkpoint set.  Collection
+	// into the checkpoint set cannot take place (in case of a
+	// stateful integrator) while it is locked.
+	//
+	// The Integrator attached to the Accumulator MUST be called
+	// with the lock held.
+	sync.Locker
+
+	// RLock acquires a read lock corresponding to this Locker.
+	RLock()
+	// RUnlock releases a read lock corresponding to this Locker.
+	RUnlock()
 }
 
 // Record contains the exported data for a single metric instrument
@@ -183,16 +179,18 @@ type CheckpointSet interface {
 type Record struct {
 	descriptor *metric.Descriptor
 	labels     *label.Set
+	resource   *resource.Resource
 	aggregator Aggregator
 }
 
 // NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
+		resource:   resource,
 		aggregator: aggregator,
 	}
 }
@@ -212,4 +210,9 @@ func (r Record) Descriptor() *metric.Descriptor {
 // aggregated data.
 func (r Record) Labels() *label.Set {
 	return r.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (r Record) Resource() *resource.Resource {
+	return r.resource
 }

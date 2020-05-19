@@ -20,8 +20,12 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
@@ -372,4 +376,38 @@ func TestStreamClientInterceptor(t *testing.T) {
 		validate("SENT", events[i].Attributes)
 		validate("RECEIVED", events[i+1].Attributes)
 	}
+}
+
+func TestServerInterceptorError(t *testing.T) {
+	exp := &testExporter{spanMap: make(map[string]*export.SpanData)}
+	tp, err := sdktrace.NewProvider(
+		sdktrace.WithSyncer(exp),
+		sdktrace.WithConfig(sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		}),
+	)
+	require.NoError(t, err)
+
+	tracer := tp.Tracer("grpctrace/Server")
+	usi := UnaryServerInterceptor(tracer)
+	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
+	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
+		return nil, deniedErr
+	}
+	_, err = usi(context.Background(), &mockProtoMessage{}, &grpc.UnaryServerInfo{}, handler)
+	require.Error(t, err)
+	assert.Equal(t, err, deniedErr)
+
+	span, ok := exp.spanMap[""]
+	if !ok {
+		t.Fatalf("failed to export error span")
+	}
+	assert.Equal(t, span.StatusCode, codes.PermissionDenied)
+	assert.Contains(t, deniedErr.Error(), span.StatusMessage)
+	assert.Len(t, span.MessageEvents, 2)
+	assert.Equal(t, []kv.KeyValue{
+		kv.String("message.type", "SENT"),
+		kv.Int("message.id", 1),
+		kv.Int("message.uncompressed_size", 26),
+	}, span.MessageEvents[1].Attributes)
 }
