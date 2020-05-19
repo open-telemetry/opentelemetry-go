@@ -17,7 +17,6 @@ package metric_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 
@@ -29,7 +28,7 @@ func ExampleNew() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true, // This makes the output deterministic
-	}, time.Minute)
+	})
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
@@ -38,7 +37,7 @@ func ExampleNew() {
 	ctx := context.Background()
 
 	key := kv.Key("key")
-	meter := pusher.Meter("example")
+	meter := pusher.Provider().Meter("example")
 
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
 

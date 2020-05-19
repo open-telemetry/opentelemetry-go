@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -27,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type mapkey struct {
@@ -35,15 +37,18 @@ type mapkey struct {
 }
 
 type CheckpointSet struct {
-	records map[mapkey]export.Record
-	updates []export.Record
+	sync.RWMutex
+	records  map[mapkey]export.Record
+	updates  []export.Record
+	resource *resource.Resource
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
 // Records are grouped by their encoded labels.
-func NewCheckpointSet() *CheckpointSet {
+func NewCheckpointSet(resource *resource.Resource) *CheckpointSet {
 	return &CheckpointSet{
-		records: make(map[mapkey]export.Record),
+		records:  make(map[mapkey]export.Record),
+		resource: resource,
 	}
 }
 
@@ -67,7 +72,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		return record.Aggregator(), false
 	}
 
-	rec := export.NewRecord(desc, &elabels, newAgg)
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

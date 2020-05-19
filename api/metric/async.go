@@ -33,7 +33,7 @@ import (
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64Observer.Observation()).
+// instruments (e.g., Int64ValueObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     Number
@@ -178,4 +178,28 @@ func (b *BatchObserverCallback) Run(ctx context.Context, function func([]kv.KeyV
 	(*b)(ctx, BatchObserverResult{
 		function: function,
 	})
+}
+
+// wrapInt64ValueObserverInstrument converts an AsyncImpl into Int64ValueObserver.
+func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64ValueObserverInstrument converts an AsyncImpl into Float64ValueObserver.
+func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapInt64SumObserverInstrument converts an AsyncImpl into Int64SumObserver.
+func wrapInt64SumObserverInstrument(asyncInst AsyncImpl, err error) (Int64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64SumObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64SumObserverInstrument converts an AsyncImpl into Float64SumObserver.
+func wrapFloat64SumObserverInstrument(asyncInst AsyncImpl, err error) (Float64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64SumObserver{asyncInstrument: common}, err
 }

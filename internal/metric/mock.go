@@ -38,13 +38,6 @@ type (
 		LibraryName  string
 	}
 
-	MeterProvider struct {
-		lock       sync.Mutex
-		impl       *MeterImpl
-		unique     metric.MeterImpl
-		registered map[string]apimetric.Meter
-	}
-
 	MeterImpl struct {
 		lock sync.Mutex
 
@@ -123,24 +116,7 @@ func NewProvider() (*MeterImpl, apimetric.Provider) {
 	impl := &MeterImpl{
 		asyncInstruments: NewAsyncInstrumentState(nil),
 	}
-	p := &MeterProvider{
-		impl:       impl,
-		unique:     registry.NewUniqueInstrumentMeterImpl(impl),
-		registered: map[string]apimetric.Meter{},
-	}
-	return impl, p
-}
-
-func (p *MeterProvider) Meter(name string) apimetric.Meter {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	if lookup, ok := p.registered[name]; ok {
-		return lookup
-	}
-	m := apimetric.WrapMeterImpl(p.unique, name)
-	p.registered[name] = m
-	return m
+	return impl, registry.NewProvider(impl)
 }
 
 func NewMeter() (*MeterImpl, apimetric.Meter) {
