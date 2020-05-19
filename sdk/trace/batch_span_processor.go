@@ -213,12 +213,6 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		return
 	}
 
-	select {
-	case <-bsp.stopCh:
-		return
-	default:
-	}
-
 	bsp.stopWait.Add(1)
 	defer bsp.stopWait.Done()
 
@@ -229,12 +223,16 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 	}()
 
 	if bsp.o.BlockOnQueueFull {
-		bsp.queue <- sd
+		select {
+		case bsp.queue <- sd:
+		case <-bsp.stopCh:
+		}
 		return
 	}
 
 	select {
 	case bsp.queue <- sd:
+	case <-bsp.stopCh:
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
