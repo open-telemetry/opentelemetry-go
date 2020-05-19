@@ -70,9 +70,12 @@ type BatchSpanProcessor struct {
 	queue   chan *export.SpanData
 	dropped uint32
 
-	stopWait sync.WaitGroup
-	stopOnce sync.Once
-	stopCh   chan struct{}
+	batch     []*export.SpanData
+	timer     *time.Timer
+	stopWait  sync.WaitGroup
+	stopDrain sync.WaitGroup
+	stopOnce  sync.Once
+	stopCh    chan struct{}
 }
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
@@ -95,18 +98,19 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 		opt(&o)
 	}
 	bsp := &BatchSpanProcessor{
-		e: e,
-		o: o,
+		e:      e,
+		o:      o,
+		batch:  make([]*export.SpanData, 0, o.MaxExportBatchSize),
+		timer:  time.NewTimer(o.ScheduledDelayMillis),
+		queue:  make(chan *export.SpanData, o.MaxQueueSize),
+		stopCh: make(chan struct{}),
 	}
-
-	bsp.queue = make(chan *export.SpanData, bsp.o.MaxQueueSize)
-
-	bsp.stopCh = make(chan struct{})
-
 	bsp.stopWait.Add(1)
+	bsp.stopDrain.Add(1)
+
 	go func() {
-		defer bsp.stopWait.Done()
 		bsp.processQueue()
+		bsp.drainQueue()
 	}()
 
 	return bsp, nil
@@ -127,6 +131,8 @@ func (bsp *BatchSpanProcessor) Shutdown() {
 	bsp.stopOnce.Do(func() {
 		close(bsp.stopCh)
 		bsp.stopWait.Wait()
+		close(bsp.queue)
+		bsp.stopDrain.Wait()
 	})
 }
 
@@ -154,68 +160,54 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
+func (bsp *BatchSpanProcessor) exportSpans() {
+	bsp.timer.Reset(bsp.o.ScheduledDelayMillis)
+
+	if len(bsp.batch) > 0 {
+		bsp.e.ExportSpans(context.Background(), bsp.batch)
+		bsp.batch = bsp.batch[:0]
+	}
+}
+
 // processQueue removes spans from the `queue` channel until processor
 // is shut down. It calls the exporter in batches of up to MaxExportBatchSize
 // waiting up to ScheduledDelayMillis to form a batch.
 func (bsp *BatchSpanProcessor) processQueue() {
-	timer := time.NewTimer(bsp.o.ScheduledDelayMillis)
-	defer timer.Stop()
+	defer bsp.stopWait.Done()
+	defer bsp.timer.Stop()
 
-	batch := make([]*export.SpanData, 0, bsp.o.MaxExportBatchSize)
-
-	exportSpans := func() {
-		timer.Reset(bsp.o.ScheduledDelayMillis)
-
-		if len(batch) > 0 {
-			bsp.e.ExportSpans(context.Background(), batch)
-			batch = batch[:0]
-		}
-	}
-
-loop:
 	for {
 		select {
 		case <-bsp.stopCh:
-			break loop
-		case <-timer.C:
-			exportSpans()
+			return
+		case <-bsp.timer.C:
+			bsp.exportSpans()
 		case sd := <-bsp.queue:
-			batch = append(batch, sd)
-			if len(batch) == bsp.o.MaxExportBatchSize {
-				if !timer.Stop() {
-					<-timer.C
+			bsp.batch = append(bsp.batch, sd)
+			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+				if !bsp.timer.Stop() {
+					<-bsp.timer.C
 				}
-				exportSpans()
+				bsp.exportSpans()
 			}
-		}
-	}
-
-	for {
-		select {
-		case sd := <-bsp.queue:
-			if sd == nil { // queue is closed
-				go throwAwayFutureSends(bsp.queue)
-				exportSpans()
-				return
-			}
-
-			batch = append(batch, sd)
-			if len(batch) == bsp.o.MaxExportBatchSize {
-				exportSpans()
-			}
-		default:
-			// Send nil instead of closing to prevent "send on closed channel".
-			bsp.queue <- nil
 		}
 	}
 }
 
-func throwAwayFutureSends(ch <-chan *export.SpanData) {
+func (bsp *BatchSpanProcessor) drainQueue() {
+	defer bsp.stopDrain.Done()
 	for {
 		select {
-		case <-ch:
-		case <-time.After(time.Minute):
-			return
+		case sd := <-bsp.queue:
+			if sd == nil { // queue is closed
+				bsp.exportSpans()
+				return
+			}
+
+			bsp.batch = append(bsp.batch, sd)
+			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+				bsp.exportSpans()
+			}
 		}
 	}
 }
@@ -225,6 +217,9 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		return
 	}
 
+	bsp.stopWait.Add(1)
+	defer bsp.stopWait.Done()
+
 	select {
 	case <-bsp.stopCh:
 		return
@@ -233,11 +228,12 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 
 	if bsp.o.BlockOnQueueFull {
 		bsp.queue <- sd
-	} else {
-		select {
-		case bsp.queue <- sd:
-		default:
-			atomic.AddUint32(&bsp.dropped, 1)
-		}
+		return
+	}
+
+	select {
+	case bsp.queue <- sd:
+	default:
+		atomic.AddUint32(&bsp.dropped, 1)
 	}
 }
