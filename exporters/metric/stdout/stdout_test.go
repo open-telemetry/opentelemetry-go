@@ -98,7 +98,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet()
 
 	ctx := context.Background()
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Int64NumberKind)
 	lvagg := lastvalue.New()
 	aggtest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
 	lvagg.Checkpoint(ctx, &desc)
@@ -160,7 +160,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
 	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 	lvagg.Checkpoint(fix.ctx, &desc)
@@ -268,7 +268,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := test.NewCheckpointSet()
 
-	desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
 	lvagg.Checkpoint(fix.ctx, &desc)
 
@@ -318,7 +318,7 @@ func TestStdoutResource(t *testing.T) {
 
 		checkpointSet := test.NewCheckpointSet()
 
-		desc := metric.NewDescriptor("test.name", metric.ObserverKind, metric.Float64NumberKind)
+		desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 		lvagg := lastvalue.New()
 		aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 		lvagg.Checkpoint(fix.ctx, &desc)

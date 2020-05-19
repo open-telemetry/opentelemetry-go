@@ -9,13 +9,13 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[ValueRecorderKind-0]
-	_ = x[ObserverKind-1]
+	_ = x[ValueObserverKind-1]
 	_ = x[CounterKind-2]
 }
 
-const _Kind_name = "ValueRecorderKindObserverKindCounterKind"
+const _Kind_name = "ValueRecorderKindValueObserverKindCounterKind"
 
-var _Kind_index = [...]uint8{0, 17, 29, 40}
+var _Kind_index = [...]uint8{0, 17, 34, 45}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {

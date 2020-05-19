@@ -140,8 +140,7 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 	if err != nil {
 		return controller, exp, err
 	}
-	controller.Start()
-	global.SetMeterProvider(controller)
+	global.SetMeterProvider(controller.Provider())
 	return controller, exp, err
 }
 

@@ -59,8 +59,8 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
-		metric.WithDescription("An observer set to 1.0"),
+	_ = metric.Must(meter).RegisterFloat64ValueObserver("ex.com.one", cb,
+		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
 	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")

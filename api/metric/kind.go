@@ -22,8 +22,8 @@ type Kind int8
 const (
 	// ValueRecorderKind indicates a ValueRecorder instrument.
 	ValueRecorderKind Kind = iota
-	// ObserverKind indicates an Observer instrument.
-	ObserverKind
+	// ValueObserverKind indicates an ValueObserver instrument.
+	ValueObserverKind
 	// CounterKind indicates a Counter instrument.
 	CounterKind
 )
