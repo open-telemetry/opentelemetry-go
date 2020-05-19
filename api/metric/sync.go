@@ -156,37 +156,37 @@ func newMeasurement(instrument SyncImpl, number Number) Measurement {
 	}
 }
 
-// wrapInt64CounterInstrument returns an `Int64Counter` from a
-// `SyncImpl`.  An error will be generated if the
-// `SyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapInt64CounterInstrument converts a SyncImpl into Int64Counter.
 func wrapInt64CounterInstrument(syncInst SyncImpl, err error) (Int64Counter, error) {
 	common, err := checkNewSync(syncInst, err)
 	return Int64Counter{syncInstrument: common}, err
 }
 
-// wrapFloat64CounterInstrument returns an `Float64Counter` from a
-// `SyncImpl`.  An error will be generated if the
-// `SyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapFloat64CounterInstrument converts a SyncImpl into Float64Counter.
 func wrapFloat64CounterInstrument(syncInst SyncImpl, err error) (Float64Counter, error) {
 	common, err := checkNewSync(syncInst, err)
 	return Float64Counter{syncInstrument: common}, err
 }
 
-// wrapInt64ValueRecorderInstrument returns an `Int64ValueRecorder` from a
-// `SyncImpl`.  An error will be generated if the
-// `SyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapInt64UpDownCounterInstrument converts a SyncImpl into Int64UpDownCounter.
+func wrapInt64UpDownCounterInstrument(syncInst SyncImpl, err error) (Int64UpDownCounter, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Int64UpDownCounter{syncInstrument: common}, err
+}
+
+// wrapFloat64UpDownCounterInstrument converts a SyncImpl into Float64UpDownCounter.
+func wrapFloat64UpDownCounterInstrument(syncInst SyncImpl, err error) (Float64UpDownCounter, error) {
+	common, err := checkNewSync(syncInst, err)
+	return Float64UpDownCounter{syncInstrument: common}, err
+}
+
+// wrapInt64ValueRecorderInstrument converts a SyncImpl into Int64ValueRecorder.
 func wrapInt64ValueRecorderInstrument(syncInst SyncImpl, err error) (Int64ValueRecorder, error) {
 	common, err := checkNewSync(syncInst, err)
 	return Int64ValueRecorder{syncInstrument: common}, err
 }
 
-// wrapFloat64ValueRecorderInstrument returns an `Float64ValueRecorder` from a
-// `SyncImpl`.  An error will be generated if the
-// `SyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapFloat64ValueRecorderInstrument converts a SyncImpl into Float64ValueRecorder.
 func wrapFloat64ValueRecorderInstrument(syncInst SyncImpl, err error) (Float64ValueRecorder, error) {
 	common, err := checkNewSync(syncInst, err)
 	return Float64ValueRecorder{syncInstrument: common}, err

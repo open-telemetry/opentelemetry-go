@@ -86,7 +86,7 @@ func (cb *correctnessIntegrator) Process(_ context.Context, record export.Record
 	return nil
 }
 
-func TestInputRangeTestCounter(t *testing.T) {
+func TestInputRangeCounter(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
@@ -114,7 +114,31 @@ func TestInputRangeTestCounter(t *testing.T) {
 	require.Nil(t, sdkErr)
 }
 
-func TestInputRangeTestValueRecorder(t *testing.T) {
+func TestInputRangeUpDownCounter(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, integrator := newSDK(t)
+
+	var sdkErr error
+	sdk.SetErrorHandler(func(handleErr error) {
+		sdkErr = handleErr
+	})
+
+	counter := Must(meter).NewInt64UpDownCounter("name.updowncounter")
+
+	counter.Add(ctx, -1)
+	counter.Add(ctx, -1)
+	counter.Add(ctx, 2)
+	counter.Add(ctx, 1)
+
+	checkpointed := sdk.Collect(ctx)
+	sum, err := integrator.records[0].Aggregator().(aggregator.Sum).Sum()
+	require.Equal(t, int64(1), sum.AsInt64())
+	require.Equal(t, 1, checkpointed)
+	require.Nil(t, err)
+	require.Nil(t, sdkErr)
+}
+
+func TestInputRangeValueRecorder(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
