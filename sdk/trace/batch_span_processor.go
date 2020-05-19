@@ -160,6 +160,7 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
+// exportSpans is a subroutine of processing and draining the queue.
 func (bsp *BatchSpanProcessor) exportSpans() {
 	bsp.timer.Reset(bsp.o.ScheduledDelayMillis)
 
@@ -194,20 +195,18 @@ func (bsp *BatchSpanProcessor) processQueue() {
 	}
 }
 
+// drainQueue awaits the
 func (bsp *BatchSpanProcessor) drainQueue() {
 	defer bsp.stopDrain.Done()
-	for {
-		select {
-		case sd := <-bsp.queue:
-			if sd == nil { // queue is closed
-				bsp.exportSpans()
-				return
-			}
+	for sd := range bsp.queue {
+		if sd == nil { // queue is closed
+			bsp.exportSpans()
+			return
+		}
 
-			bsp.batch = append(bsp.batch, sd)
-			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
-				bsp.exportSpans()
-			}
+		bsp.batch = append(bsp.batch, sd)
+		if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+			bsp.exportSpans()
 		}
 	}
 }
