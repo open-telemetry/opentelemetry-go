@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -45,18 +46,37 @@ type correctnessIntegrator struct {
 	t *testing.T
 
 	records []export.Record
+
+	sync.Mutex
+	err error
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessIntegrator) {
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
-	accum := metricsdk.NewAccumulator(integrator, metricsdk.WithResource(testResource))
+	accum := metricsdk.NewAccumulator(
+		integrator,
+		metricsdk.WithResource(testResource),
+		metricsdk.WithErrorHandler(func(err error) {
+			integrator.Lock()
+			defer integrator.Unlock()
+			integrator.err = err
+		}),
+	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, integrator
 }
 
-func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
+func (ci *correctnessIntegrator) sdkErr() error {
+	ci.Lock()
+	defer ci.Unlock()
+	t := ci.err
+	ci.err = nil
+	return t
+}
+
+func (ci *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
 
 	switch {
@@ -68,21 +88,21 @@ func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (a
 		agg = array.New()
 	}
 	if agg != nil {
-		atomic.AddInt64(&cb.newAggCount, 1)
+		atomic.AddInt64(&ci.newAggCount, 1)
 	}
 	return
 }
 
-func (cb *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
-	cb.t.Fatal("Should not be called")
+func (ci *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
+	ci.t.Fatal("Should not be called")
 	return nil
 }
 
 func (*correctnessIntegrator) FinishedCollection() {
 }
 
-func (cb *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
-	cb.records = append(cb.records, record)
+func (ci *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
+	ci.records = append(ci.records, record)
 	return nil
 }
 
@@ -313,19 +333,37 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1, kv.String("A", "B"))
 		result.Observe(1)
 	})
+
+	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(result metric.Float64ObserverResult) {
+		result.Observe(1, kv.String("A", "B"))
+		result.Observe(2, kv.String("A", "B"))
+		result.Observe(1, kv.String("C", "D"))
+	})
+	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(result metric.Int64ObserverResult) {
+		result.Observe(2, kv.String("A", "B"))
+		result.Observe(1)
+		// last value wins
+		result.Observe(1, kv.String("A", "B"))
+		result.Observe(1)
+	})
+
 	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, 4, collected)
-	require.Equal(t, 4, len(integrator.records))
+	require.Equal(t, 8, collected)
+	require.Equal(t, 8, len(integrator.records))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
+		"float.sumobserver/A=B/R=V":   2,
+		"float.sumobserver/C=D/R=V":   1,
+		"int.sumobserver//R=V":        1,
+		"int.sumobserver/A=B/R=V":     1,
 		"float.valueobserver/A=B/R=V": -1,
 		"float.valueobserver/C=D/R=V": -1,
 		"int.valueobserver//R=V":      1,
@@ -333,48 +371,88 @@ func TestObserverCollection(t *testing.T) {
 	}, out.Map)
 }
 
+func TestSumObserverInputRange(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, integrator := newSDK(t)
+
+	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(result metric.Float64ObserverResult) {
+		result.Observe(-2, kv.String("A", "B"))
+		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		result.Observe(-1, kv.String("C", "D"))
+		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+	})
+	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(result metric.Int64ObserverResult) {
+		result.Observe(-1, kv.String("A", "B"))
+		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		result.Observe(-1)
+		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+	})
+
+	collected := sdk.Collect(ctx)
+
+	require.Equal(t, 0, collected)
+	require.Equal(t, 0, len(integrator.records))
+
+	// check that the error condition was reset
+	require.NoError(t, integrator.sdkErr())
+}
+
 func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	var floatObs metric.Float64ValueObserver
-	var intObs metric.Int64ValueObserver
+	var floatValueObs metric.Float64ValueObserver
+	var intValueObs metric.Int64ValueObserver
+	var floatSumObs metric.Float64SumObserver
+	var intSumObs metric.Int64SumObserver
+
 	var batch = Must(meter).NewBatchObserver(
 		func(result metric.BatchObserverResult) {
 			result.Observe(
 				[]kv.KeyValue{
 					kv.String("A", "B"),
 				},
-				floatObs.Observation(1),
-				floatObs.Observation(-1),
-				intObs.Observation(-1),
-				intObs.Observation(1),
+				floatValueObs.Observation(1),
+				floatValueObs.Observation(-1),
+				intValueObs.Observation(-1),
+				intValueObs.Observation(1),
+				floatSumObs.Observation(1000),
+				intSumObs.Observation(100),
 			)
 			result.Observe(
 				[]kv.KeyValue{
 					kv.String("C", "D"),
 				},
-				floatObs.Observation(-1),
+				floatValueObs.Observation(-1),
+				floatSumObs.Observation(-1),
 			)
 			result.Observe(
 				nil,
-				intObs.Observation(1),
-				intObs.Observation(1),
+				intValueObs.Observation(1),
+				intValueObs.Observation(1),
+				intSumObs.Observation(10),
+				floatSumObs.Observation(1.1),
 			)
 		})
-	floatObs = batch.RegisterFloat64ValueObserver("float.valueobserver")
-	intObs = batch.RegisterInt64ValueObserver("int.valueobserver")
+	floatValueObs = batch.RegisterFloat64ValueObserver("float.valueobserver")
+	intValueObs = batch.RegisterInt64ValueObserver("int.valueobserver")
+	floatSumObs = batch.RegisterFloat64SumObserver("float.sumobserver")
+	intSumObs = batch.RegisterInt64SumObserver("int.sumobserver")
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, 4, collected)
-	require.Equal(t, 4, len(integrator.records))
+	require.Equal(t, 8, collected)
+	require.Equal(t, 8, len(integrator.records))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
+		"float.sumobserver//R=V":      1.1,
+		"float.sumobserver/A=B/R=V":   1000,
+		"int.sumobserver//R=V":        10,
+		"int.sumobserver/A=B/R=V":     100,
 		"float.valueobserver/A=B/R=V": -1,
 		"float.valueobserver/C=D/R=V": -1,
 		"int.valueobserver//R=V":      1,

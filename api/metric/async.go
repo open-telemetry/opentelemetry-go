@@ -176,20 +176,26 @@ func (b *BatchObserverCallback) Run(function func([]kv.KeyValue, ...Observation)
 	})
 }
 
-// wrapInt64ValueObserverInstrument returns an `Int64ValueObserver` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapInt64ValueObserverInstrument converts an AsyncImpl into Int64ValueObserver.
 func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
 	return Int64ValueObserver{asyncInstrument: common}, err
 }
 
-// wrapFloat64ValueObserverInstrument returns an `Float64ValueObserver` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
+// wrapFloat64ValueObserverInstrument converts an AsyncImpl into Float64ValueObserver.
 func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
 	return Float64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapInt64SumObserverInstrument converts an AsyncImpl into Int64SumObserver.
+func wrapInt64SumObserverInstrument(asyncInst AsyncImpl, err error) (Int64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64SumObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64SumObserverInstrument converts an AsyncImpl into Float64SumObserver.
+func wrapFloat64SumObserverInstrument(asyncInst AsyncImpl, err error) (Float64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64SumObserver{asyncInstrument: common}, err
 }

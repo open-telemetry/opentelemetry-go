@@ -12,11 +12,12 @@ func _() {
 	_ = x[ValueObserverKind-1]
 	_ = x[CounterKind-2]
 	_ = x[UpDownCounterKind-3]
+	_ = x[SumObserverKind-4]
 }
 
-const _Kind_name = "ValueRecorderKindValueObserverKindCounterKindUpDownCounterKind"
+const _Kind_name = "ValueRecorderKindValueObserverKindCounterKindUpDownCounterKindSumObserverKind"
 
-var _Kind_index = [...]uint8{0, 17, 34, 45, 62}
+var _Kind_index = [...]uint8{0, 17, 34, 45, 62, 77}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {
