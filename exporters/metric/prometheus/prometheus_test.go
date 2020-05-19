@@ -44,7 +44,7 @@ func TestPrometheusExporter(t *testing.T) {
 	counter := metric.NewDescriptor(
 		"counter", metric.CounterKind, metric.Float64NumberKind)
 	lastValue := metric.NewDescriptor(
-		"lastvalue", metric.ObserverKind, metric.Float64NumberKind)
+		"lastvalue", metric.ValueObserverKind, metric.Float64NumberKind)
 	valuerecorder := metric.NewDescriptor(
 		"valuerecorder", metric.ValueRecorderKind, metric.Float64NumberKind)
 	histogramValueRecorder := metric.NewDescriptor(

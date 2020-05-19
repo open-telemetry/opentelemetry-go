@@ -43,11 +43,11 @@ var (
 		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64ValueRecorder(name))
 		},
-		"observer.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterInt64ValueObserver(name, func(metric.Int64ObserverResult) {}))
 		},
-		"observer.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
+		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.RegisterFloat64ValueObserver(name, func(metric.Float64ObserverResult) {}))
 		},
 	}
 )
@@ -117,4 +117,15 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 		}
 	}
+}
+
+func TestProvider(t *testing.T) {
+	impl, _ := mockTest.NewMeter()
+	p := registry.NewProvider(impl)
+	m1 := p.Meter("m1")
+	m1p := p.Meter("m1")
+	m2 := p.Meter("m2")
+
+	require.Equal(t, m1, m1p)
+	require.NotEqual(t, m1, m2)
 }

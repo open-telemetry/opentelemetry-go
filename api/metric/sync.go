@@ -191,21 +191,3 @@ func wrapFloat64ValueRecorderInstrument(syncInst SyncImpl, err error) (Float64Va
 	common, err := checkNewSync(syncInst, err)
 	return Float64ValueRecorder{syncInstrument: common}, err
 }
-
-// wrapInt64ObserverInstrument returns an `Int64Observer` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
-func wrapInt64ObserverInstrument(asyncInst AsyncImpl, err error) (Int64Observer, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Int64Observer{asyncInstrument: common}, err
-}
-
-// wrapFloat64ObserverInstrument returns an `Float64Observer` from a
-// `AsyncImpl`.  An error will be generated if the
-// `AsyncImpl` is nil (in which case a No-op is substituted),
-// otherwise the error passes through.
-func wrapFloat64ObserverInstrument(asyncInst AsyncImpl, err error) (Float64Observer, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Float64Observer{asyncInstrument: common}, err
-}
