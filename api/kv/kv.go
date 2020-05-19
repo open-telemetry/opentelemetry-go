@@ -128,7 +128,7 @@ func Infer(k string, value interface{}) KeyValue {
 	case reflect.Float64:
 		return Float64(k, rv.Float())
 	case reflect.String:
-		return String(k, rv.Interface().(string))
+		return String(k, rv.String())
 	}
-	return String(k, fmt.Sprint(rv.Interface()))
+	return String(k, fmt.Sprint(value))
 }
