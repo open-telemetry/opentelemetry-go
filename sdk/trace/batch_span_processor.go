@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -213,7 +214,16 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 	// This ensures the bsp.queue<- below does not panic as the
 	// processor shuts down.
 	defer func() {
-		_ = recover()
+		x := recover()
+		switch err := x.(type) {
+		case nil:
+			return
+		case runtime.Error:
+			if err.Error() == "send on closed channel" {
+				return
+			}
+		}
+		panic(x)
 	}()
 
 	if bsp.o.BlockOnQueueFull {
