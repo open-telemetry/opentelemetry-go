@@ -213,13 +213,17 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		return
 	}
 
+	bsp.stopWait.Add(1)
+	defer bsp.stopWait.Done()
+
 	select {
 	case <-bsp.stopCh:
 		return
 	default:
 	}
 
-	// This ensures the <- does not panic as the processor shuts down.
+	// This ensures the bsp.queue<- below does not panic as the
+	// processor shuts down.
 	defer func() {
 		_ = recover()
 	}()
