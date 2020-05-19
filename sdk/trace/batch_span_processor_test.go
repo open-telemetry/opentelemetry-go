@@ -76,10 +76,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
 	options := []testOption{
 		{
-			name: "default BatchSpanProcessorOptions",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBlocking(),
-			},
+			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
@@ -88,7 +85,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			name: "non-default ScheduledDelayMillis",
 			o: []sdktrace.BatchSpanProcessorOption{
 				sdktrace.WithScheduleDelayMillis(schDelay),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
@@ -99,7 +95,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			o: []sdktrace.BatchSpanProcessorOption{
 				sdktrace.WithScheduleDelayMillis(schDelay),
 				sdktrace.WithMaxQueueSize(200),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 1,
@@ -111,7 +106,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 				sdktrace.WithScheduleDelayMillis(schDelay),
 				sdktrace.WithMaxQueueSize(205),
 				sdktrace.WithMaxExportBatchSize(20),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   210,
 			wantBatchCount: 11,
@@ -170,6 +164,8 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 
 			// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/741)
 			// Restore some sort of test here.
+			_ = option.wantNumSpans
+			_ = option.wantBatchCount
 			_ = te.len()           // gotNumOfSpans
 			_ = te.getBatchCount() // gotBatchCount
 		})
