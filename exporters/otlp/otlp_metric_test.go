@@ -659,11 +659,10 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, agg))
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, agg))
 	}
-	for equiv, records := range recs {
-		resource := resources[equiv]
-		assert.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: records}))
+	for _, records := range recs {
+		assert.NoError(t, exp.Export(context.Background(), checkpointSet{records: records}))
 	}
 
 	// assert.ElementsMatch does not equate nested slices of different order,
@@ -713,8 +712,6 @@ func TestEmptyMetricExport(t *testing.T) {
 	exp.metricExporter = msc
 	exp.started = true
 
-	resource := resource.New(kv.String("R", "S"))
-
 	for _, test := range []struct {
 		records []metricsdk.Record
 		want    []metricpb.ResourceMetrics
@@ -729,7 +726,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		msc.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource, checkpointSet{records: test.records}))
+		require.NoError(t, exp.Export(context.Background(), checkpointSet{records: test.records}))
 		assert.Equal(t, test.want, msc.ResourceMetrics())
 	}
 }

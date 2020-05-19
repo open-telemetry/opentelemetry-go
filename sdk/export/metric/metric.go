@@ -154,12 +154,9 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The Resource contains common attributes that apply to all
-	// metric events in the SDK.
-	//
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
-	Export(context.Context, *resource.Resource, CheckpointSet) error
+	Export(context.Context, CheckpointSet) error
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -183,16 +180,18 @@ type CheckpointSet interface {
 type Record struct {
 	descriptor *metric.Descriptor
 	labels     *label.Set
+	resource   *resource.Resource
 	aggregator Aggregator
 }
 
 // NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
+		resource:   resource,
 		aggregator: aggregator,
 	}
 }
@@ -212,4 +211,9 @@ func (r Record) Descriptor() *metric.Descriptor {
 // aggregated data.
 func (r Record) Labels() *label.Set {
 	return r.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (r Record) Resource() *resource.Resource {
+	return r.resource
 }

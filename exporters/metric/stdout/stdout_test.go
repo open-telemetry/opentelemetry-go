@@ -44,10 +44,11 @@ type testFixture struct {
 	ctx      context.Context
 	exporter *stdout.Exporter
 	output   *bytes.Buffer
-	resource *resource.Resource
 }
 
-func newFixture(t *testing.T, resource *resource.Resource, config stdout.Config) testFixture {
+var testResource = resource.New(kv.String("R", "V"))
+
+func newFixture(t *testing.T, config stdout.Config) testFixture {
 	buf := &bytes.Buffer{}
 	config.Writer = buf
 	config.DoNotPrintTime = true
@@ -60,7 +61,6 @@ func newFixture(t *testing.T, resource *resource.Resource, config stdout.Config)
 		ctx:      context.Background(),
 		exporter: exp,
 		output:   buf,
-		resource: resource,
 	}
 }
 
@@ -69,7 +69,7 @@ func (fix testFixture) Output() string {
 }
 
 func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
-	err := fix.exporter.Export(fix.ctx, fix.resource, checkpointSet)
+	err := fix.exporter.Export(fix.ctx, checkpointSet)
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
@@ -95,7 +95,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	before := time.Now()
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	ctx := context.Background()
 	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Int64NumberKind)
@@ -105,7 +105,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	checkpointSet.Add(&desc, lvagg)
 
-	if err := exporter.Export(ctx, nil, checkpointSet); err != nil {
+	if err := exporter.Export(ctx, checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
@@ -139,9 +139,9 @@ func TestStdoutTimestamp(t *testing.T) {
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
-	fix := newFixture(t, nil, stdout.Config{})
+	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 	cagg := sum.New()
@@ -152,13 +152,13 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","sum":123}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","sum":123}]}`, fix.Output())
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
-	fix := newFixture(t, nil, stdout.Config{})
+	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -169,13 +169,13 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","last":123.456}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","last":123.456}]}`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t, nil, stdout.Config{})
+	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	magg := minmaxsumcount.New(&desc)
@@ -187,15 +187,15 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
-	fix := newFixture(t, nil, stdout.Config{
+	fix := newFixture(t, stdout.Config{
 		PrettyPrint: true,
 	})
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	magg := array.New()
@@ -213,7 +213,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 	require.Equal(t, `{
 	"updates": [
 		{
-			"name": "test.name{A=B,C=D}",
+			"name": "test.name{R=V,A=B,C=D}",
 			"min": 0.5,
 			"max": 999.5,
 			"sum": 500000,
@@ -247,9 +247,9 @@ func TestStdoutNoData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fix := newFixture(t, nil, stdout.Config{})
+			fix := newFixture(t, stdout.Config{})
 
-			checkpointSet := test.NewCheckpointSet()
+			checkpointSet := test.NewCheckpointSet(testResource)
 
 			magg := tc
 			magg.Checkpoint(fix.ctx, &desc)
@@ -264,9 +264,9 @@ func TestStdoutNoData(t *testing.T) {
 }
 
 func TestStdoutLastValueNotSet(t *testing.T) {
-	fix := newFixture(t, nil, stdout.Config{})
+	fix := newFixture(t, stdout.Config{})
 
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 	lvagg := lastvalue.New()
@@ -314,9 +314,9 @@ func TestStdoutResource(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		fix := newFixture(t, tc.res, stdout.Config{})
+		fix := newFixture(t, stdout.Config{})
 
-		checkpointSet := test.NewCheckpointSet()
+		checkpointSet := test.NewCheckpointSet(tc.res)
 
 		desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 		lvagg := lastvalue.New()

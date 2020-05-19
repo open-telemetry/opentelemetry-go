@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
@@ -169,8 +168,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, h
 }
 
 // Export exports the provide metric record to prometheus.
-func (e *Exporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
-	// TODO: Use the resource value in this exporter.
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.snapshot = checkpointSet
 	return nil
 }
@@ -211,6 +209,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := c.exp.snapshot.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
+		// TODO: Use the resource value in this record.
 		labels := labelValues(record.Labels())
 		desc := c.toDesc(&record)
 

@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -45,6 +46,9 @@ type (
 )
 
 var (
+	// Resource is applied to all test records built in this package.
+	Resource = resource.New(kv.String("R", "V"))
+
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
 		"lastvalue.a", metric.ValueObserverKind, metric.Int64NumberKind)
@@ -133,12 +137,12 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 
 // Convenience method for building a test exported lastValue record.
 func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, LastValueAgg(desc, value))
+	return export.NewRecord(desc, labels, Resource, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
 func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, CounterAgg(desc, value))
+	return export.NewRecord(desc, labels, Resource, CounterAgg(desc, value))
 }
 
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
@@ -154,7 +158,8 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 // value to the output map.
 func (o Output) AddTo(rec export.Record) error {
 	encoded := rec.Labels().Encoded(o.labelEncoder)
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded)
+	rencoded := rec.Resource().Encoded(o.labelEncoder)
+	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
 	if s, ok := rec.Aggregator().(aggregator.Sum); ok {

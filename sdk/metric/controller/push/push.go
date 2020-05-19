@@ -31,7 +31,7 @@ type Controller struct {
 	lock         sync.Mutex
 	collectLock  sync.Mutex
 	accumulator  *sdk.Accumulator
-	resource     *resource.Resource
+	provider     *registry.Provider
 	errorHandler sdk.ErrorHandler
 	integrator   export.Integrator
 	exporter     export.Exporter
@@ -40,7 +40,6 @@ type Controller struct {
 	period       time.Duration
 	ticker       Ticker
 	clock        Clock
-	provider     *registry.Provider
 }
 
 // Several types below are created to match "github.com/benbjohnson/clock"
@@ -71,15 +70,17 @@ var _ Ticker = realTicker{}
 // configuration options to configure an SDK with periodic collection.
 // The integrator itself is configured with the aggregation selector policy.
 func New(integrator export.Integrator, exporter export.Exporter, period time.Duration, opts ...Option) *Controller {
-	c := &Config{ErrorHandler: sdk.DefaultErrorHandler}
+	c := &Config{
+		ErrorHandler: sdk.DefaultErrorHandler,
+		Resource:     resource.Empty(),
+	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler))
+	impl := sdk.NewAccumulator(integrator, sdk.WithErrorHandler(c.ErrorHandler), sdk.WithResource(c.Resource))
 	return &Controller{
 		accumulator:  impl,
-		resource:     c.Resource,
 		provider:     registry.NewProvider(impl),
 		errorHandler: c.ErrorHandler,
 		integrator:   integrator,
@@ -166,7 +167,7 @@ func (c *Controller) tick() {
 		mtx:      &c.collectLock,
 		delegate: c.integrator.CheckpointSet(),
 	}
-	err := c.exporter.Export(ctx, c.resource, checkpointSet)
+	err := c.exporter.Export(ctx, checkpointSet)
 	c.integrator.FinishedCollection()
 
 	if err != nil {
