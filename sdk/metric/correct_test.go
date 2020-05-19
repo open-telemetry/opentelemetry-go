@@ -33,9 +33,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	batchTest "go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var Must = metric.Must
+var testResource = resource.New(kv.String("R", "V"))
 
 type correctnessIntegrator struct {
 	newAggCount int64
@@ -43,6 +45,15 @@ type correctnessIntegrator struct {
 	t *testing.T
 
 	records []export.Record
+}
+
+func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessIntegrator) {
+	integrator := &correctnessIntegrator{
+		t: t,
+	}
+	accum := metricsdk.NewAccumulator(integrator, metricsdk.WithResource(testResource))
+	meter := metric.WrapMeterImpl(accum, "test")
+	return meter, accum, integrator
 }
 
 func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
@@ -77,11 +88,7 @@ func (cb *correctnessIntegrator) Process(_ context.Context, record export.Record
 
 func TestInputRangeTestCounter(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -109,11 +116,7 @@ func TestInputRangeTestCounter(t *testing.T) {
 
 func TestInputRangeTestValueRecorder(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -144,11 +147,7 @@ func TestInputRangeTestValueRecorder(t *testing.T) {
 
 func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
@@ -161,12 +160,7 @@ func TestDisabledInstrument(t *testing.T) {
 
 func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, _ := newSDK(t)
 
 	var sdkErr error
 	sdk.SetErrorHandler(func(handleErr error) {
@@ -181,11 +175,7 @@ func TestRecordNaN(t *testing.T) {
 
 func TestSDKLabelsDeduplication(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	counter := Must(meter).NewInt64Counter("counter")
 
@@ -284,12 +274,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 
 func TestObserverCollection(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	_ = Must(meter).RegisterFloat64ValueObserver("float.valueobserver", func(result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
@@ -317,21 +302,16 @@ func TestObserverCollection(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.valueobserver/A=B": -1,
-		"float.valueobserver/C=D": -1,
-		"int.valueobserver/":      1,
-		"int.valueobserver/A=B":   1,
+		"float.valueobserver/A=B/R=V": -1,
+		"float.valueobserver/C=D/R=V": -1,
+		"int.valueobserver//R=V":      1,
+		"int.valueobserver/A=B/R=V":   1,
 	}, out.Map)
 }
 
 func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	var floatObs metric.Float64ValueObserver
 	var intObs metric.Int64ValueObserver
@@ -371,21 +351,16 @@ func TestObserverBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.valueobserver/A=B": -1,
-		"float.valueobserver/C=D": -1,
-		"int.valueobserver/":      1,
-		"int.valueobserver/A=B":   1,
+		"float.valueobserver/A=B/R=V": -1,
+		"float.valueobserver/C=D/R=V": -1,
+		"int.valueobserver//R=V":      1,
+		"int.valueobserver/A=B/R=V":   1,
 	}, out.Map)
 }
 
 func TestRecordBatch(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	counter1 := Must(meter).NewInt64Counter("int64.counter")
 	counter2 := Must(meter).NewFloat64Counter("float64.counter")
@@ -411,10 +386,10 @@ func TestRecordBatch(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"int64.counter/A=B,C=D":         1,
-		"float64.counter/A=B,C=D":       2,
-		"int64.valuerecorder/A=B,C=D":   3,
-		"float64.valuerecorder/A=B,C=D": 4,
+		"int64.counter/A=B,C=D/R=V":         1,
+		"float64.counter/A=B,C=D/R=V":       2,
+		"int64.valuerecorder/A=B,C=D/R=V":   3,
+		"float64.valuerecorder/A=B,C=D/R=V": 4,
 	}, out.Map)
 }
 
@@ -423,12 +398,7 @@ func TestRecordBatch(t *testing.T) {
 // that its encoded labels will be cached across collection intervals.
 func TestRecordPersistence(t *testing.T) {
 	ctx := context.Background()
-	integrator := &correctnessIntegrator{
-		t: t,
-	}
-
-	sdk := metricsdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(sdk, "test")
+	meter, sdk, integrator := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("sum.name")
 	b := c.Bind(kv.String("bound", "true"))
