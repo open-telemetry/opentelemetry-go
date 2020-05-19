@@ -82,6 +82,24 @@ func (m Meter) NewFloat64Counter(name string, options ...Option) (Float64Counter
 		m.newSync(name, CounterKind, Float64NumberKind, options))
 }
 
+// NewInt64UpDownCounter creates a new integer UpDownCounter instrument with the
+// given name, customized with options.  May return an error if the
+// name is invalid (e.g., empty) or improperly registered (e.g.,
+// duplicate registration).
+func (m Meter) NewInt64UpDownCounter(name string, options ...Option) (Int64UpDownCounter, error) {
+	return wrapInt64UpDownCounterInstrument(
+		m.newSync(name, UpDownCounterKind, Int64NumberKind, options))
+}
+
+// NewFloat64UpDownCounter creates a new floating point UpDownCounter with the
+// given name, customized with options.  May return an error if the
+// name is invalid (e.g., empty) or improperly registered (e.g.,
+// duplicate registration).
+func (m Meter) NewFloat64UpDownCounter(name string, options ...Option) (Float64UpDownCounter, error) {
+	return wrapFloat64UpDownCounterInstrument(
+		m.newSync(name, UpDownCounterKind, Float64NumberKind, options))
+}
+
 // NewInt64ValueRecorder creates a new integer ValueRecorder instrument with the
 // given name, customized with options.  May return an error if the
 // name is invalid (e.g., empty) or improperly registered (e.g.,

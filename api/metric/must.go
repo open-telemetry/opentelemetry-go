@@ -53,6 +53,26 @@ func (mm MeterMust) NewFloat64Counter(name string, cos ...Option) Float64Counter
 	}
 }
 
+// NewInt64UpDownCounter calls `Meter.NewInt64UpDownCounter` and returns the
+// instrument, panicking if it encounters an error.
+func (mm MeterMust) NewInt64UpDownCounter(name string, cos ...Option) Int64UpDownCounter {
+	if inst, err := mm.meter.NewInt64UpDownCounter(name, cos...); err != nil {
+		panic(err)
+	} else {
+		return inst
+	}
+}
+
+// NewFloat64UpDownCounter calls `Meter.NewFloat64UpDownCounter` and returns the
+// instrument, panicking if it encounters an error.
+func (mm MeterMust) NewFloat64UpDownCounter(name string, cos ...Option) Float64UpDownCounter {
+	if inst, err := mm.meter.NewFloat64UpDownCounter(name, cos...); err != nil {
+		panic(err)
+	} else {
+		return inst
+	}
+}
+
 // NewInt64ValueRecorder calls `Meter.NewInt64ValueRecorder` and returns the
 // instrument, panicking if it encounters an error.
 func (mm MeterMust) NewInt64ValueRecorder(name string, mos ...Option) Int64ValueRecorder {
