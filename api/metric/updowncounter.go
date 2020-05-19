@@ -20,14 +20,13 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 )
 
-// Float64UpDownCounter is a metric instrument that sums positive and
-// negative floating point values.
+// Float64UpDownCounter is a metric instrument that sums floating
+// point values.
 type Float64UpDownCounter struct {
 	syncInstrument
 }
 
-// Int64UpDownCounter is a metric instrument that sums non-negative
-// integer values.
+// Int64UpDownCounter is a metric instrument that sums integer values.
 type Int64UpDownCounter struct {
 	syncInstrument
 }
