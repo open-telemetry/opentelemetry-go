@@ -1,5 +1,5 @@
 namespace-k8s:
-	k apply -f k8s/namespace.yaml
+	kubectl apply -f k8s/namespace.yaml
 
 jaeger-operator-k8s:
 	# Create the jaeger operator and necessary artifacts in ns observability
