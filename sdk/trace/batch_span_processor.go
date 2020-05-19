@@ -195,20 +195,17 @@ func (bsp *BatchSpanProcessor) processQueue() {
 	}
 }
 
-// drainQueue awaits the
+// drainQueue awaits the any caller that had added to bsp.stopWait
+// to finish the enqueue, then exports the final batch.
 func (bsp *BatchSpanProcessor) drainQueue() {
 	defer bsp.stopDrain.Done()
 	for sd := range bsp.queue {
-		if sd == nil { // queue is closed
-			bsp.exportSpans()
-			return
-		}
-
 		bsp.batch = append(bsp.batch, sd)
 		if len(bsp.batch) == bsp.o.MaxExportBatchSize {
 			bsp.exportSpans()
 		}
 	}
+	bsp.exportSpans()
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
