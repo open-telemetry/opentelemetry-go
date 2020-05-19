@@ -514,3 +514,27 @@ func TestRecordPersistence(t *testing.T) {
 
 	require.Equal(t, int64(2), integrator.newAggCount)
 }
+
+func TestSyncInAsync(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, integrator := newSDK(t)
+
+	counter := Must(meter).NewFloat64Counter("counter")
+	_ = Must(meter).RegisterInt64ValueObserver("observer",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			result.Observe(10)
+			counter.Add(ctx, 100)
+		},
+	)
+
+	sdk.Collect(ctx)
+
+	out := batchTest.NewOutput(label.DefaultEncoder())
+	for _, rec := range integrator.records {
+		_ = out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"counter//R=V":  100,
+		"observer//R=V": 10,
+	}, out.Map)
+}
