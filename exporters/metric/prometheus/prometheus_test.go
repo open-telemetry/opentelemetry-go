@@ -20,11 +20,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -32,8 +30,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	exportTest "go.opentelemetry.io/otel/exporters/metric/test"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -145,13 +141,10 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *e
 
 func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
-	controller, exporter, err := prometheus.NewExportPipeline(prometheus.Config{}, push.WithPeriod(time.Minute))
+	controller, exporter, err := prometheus.NewExportPipeline(prometheus.Config{})
 	require.NoError(t, err)
 
 	meter := controller.Provider().Meter("test")
-	mock := controllerTest.NewMockClock()
-	controller.SetClock(mock)
-	controller.Start()
 
 	// GET the HTTP endpoint
 	scrape := func() string {
@@ -176,20 +169,12 @@ func TestPrometheusStatefulness(t *testing.T) {
 
 	counter.Add(ctx, 100, kv.String("key", "value"))
 
-	// Trigger a push
-	mock.Add(time.Minute)
-	runtime.Gosched()
-
 	require.Equal(t, `# HELP a_counter Counts things
 # TYPE a_counter counter
 a_counter{key="value"} 100
 `, scrape())
 
 	counter.Add(ctx, 100, kv.String("key", "value"))
-
-	// Again, now expect cumulative count
-	mock.Add(time.Minute)
-	runtime.Gosched()
 
 	require.Equal(t, `# HELP a_counter Counts things
 # TYPE a_counter counter

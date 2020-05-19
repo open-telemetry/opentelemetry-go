@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -134,7 +134,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
+func InstallNewPipeline(config Config, options ...pull.Option) (*pull.Controller, *Exporter, error) {
 	controller, exp, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return controller, exp, err
@@ -149,13 +149,13 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 // The returned Controller contains an implementation of
 // `metric.Provider`.  The controller is returned unstarted and should
 // be started by the caller to begin collection.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
+func NewExportPipeline(config Config, options ...pull.Option) (*pull.Controller, *Exporter, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Prometheus uses a stateful push controller since instruments are
+	// Prometheus uses a stateful pull controller since instruments are
 	// cumulative and should not be reset after each collection interval.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
@@ -163,13 +163,12 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	pusher := push.New(
+	puller := pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		exporter,
-		append(options, push.WithStateful(true))...,
+		append(options, pull.WithStateful(true))...,
 	)
 
-	return pusher, exporter, nil
+	return puller, exporter, nil
 }
 
 // Export exports the provide metric record to prometheus.
