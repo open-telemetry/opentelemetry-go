@@ -68,15 +68,15 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessInt
 	return meter, accum, integrator
 }
 
-func (c *correctnessIntegrator) sdkErr() error {
-	c.Lock()
-	defer c.Unlock()
-	t := c.err
-	c.err = nil
+func (ci *correctnessIntegrator) sdkErr() error {
+	ci.Lock()
+	defer ci.Unlock()
+	t := ci.err
+	ci.err = nil
 	return t
 }
 
-func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
+func (ci *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
 	name := descriptor.Name()
 
 	switch {
@@ -88,21 +88,21 @@ func (cb *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (a
 		agg = array.New()
 	}
 	if agg != nil {
-		atomic.AddInt64(&cb.newAggCount, 1)
+		atomic.AddInt64(&ci.newAggCount, 1)
 	}
 	return
 }
 
-func (cb *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
-	cb.t.Fatal("Should not be called")
+func (ci *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
+	ci.t.Fatal("Should not be called")
 	return nil
 }
 
 func (*correctnessIntegrator) FinishedCollection() {
 }
 
-func (cb *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
-	cb.records = append(cb.records, record)
+func (ci *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
+	ci.records = append(ci.records, record)
 	return nil
 }
 
