@@ -81,7 +81,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	pOpts := []sdktrace.ProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithScheduleDelayMillis(15),
+			sdktrace.WithBatchTimeout(15),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
