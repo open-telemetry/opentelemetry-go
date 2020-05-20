@@ -93,7 +93,7 @@ type Config struct {
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selector and standard integrator.
+// using the recommended selector and standard integrator.  See the pull.Options.
 func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()

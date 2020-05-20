@@ -33,7 +33,7 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewRawExporter(prometheus.Config{
+	exporter, err := prometheus.NewExportPipeline(prometheus.Config{
 		DefaultHistogramBoundaries: []metric.Number{metric.NewFloat64Number(-0.5), metric.NewFloat64Number(1)},
 	})
 	require.NoError(t, err)
