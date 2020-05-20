@@ -23,32 +23,47 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // DefaultCachePeriod determines how long a recently-computed result
-// will be returned without gathering metric data again.
-const DefaultCachePeriod = 10 * time.Second
+// will be returned without gathering metric data again.  If the period
+// is zero, caching of the result is disabled.
+const DefaultCachePeriod time.Duration = 0
 
 type Controller struct {
 	accumulator *sdk.Accumulator
 	integrator  *integrator.Integrator
 	provider    *registry.Provider
+	period      time.Duration
+	lastCollect time.Time
+	checkpoint  export.CheckpointSet
 }
-
-// TODO: Options: cached result period, resource, stateful, error handler.
 
 func New(selector export.AggregationSelector, options ...Option) *Controller {
 	config := &Config{
+		Resource:     resource.Empty(),
 		ErrorHandler: sdk.DefaultErrorHandler,
 		CachePeriod:  DefaultCachePeriod,
 	}
 	integrator := integrator.New(selector, config.Stateful)
-	accum := sdk.NewAccumulator(integrator)
+	accum := sdk.NewAccumulator(
+		integrator,
+		sdk.WithResource(config.Resource),
+		sdk.WithErrorHandler(config.ErrorHandler),
+	)
 	return &Controller{
 		accumulator: accum,
 		integrator:  integrator,
 		provider:    registry.NewProvider(accum),
+		period:      config.CachePeriod,
+		checkpoint:  integrator.CheckpointSet(),
 	}
+}
+
+func (c *Controller) Stop() error {
+	*c = Controller{}
+	return nil
 }
 
 func (c *Controller) Provider() metric.Provider {
@@ -59,12 +74,23 @@ func (c *Controller) ForEach(f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
 
-	return c.integrator.CheckpointSet().ForEach(f)
+	return c.checkpoint.ForEach(f)
 }
 
 func (c *Controller) Collect(ctx context.Context) {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
 
+	if c.period > 0 {
+		now := time.Now()
+		elapsed := now.Sub(c.lastCollect)
+
+		if elapsed < c.period {
+			return
+		}
+		c.lastCollect = now
+	}
+
 	c.accumulator.Collect(ctx)
+	c.checkpoint = c.integrator.CheckpointSet()
 }
