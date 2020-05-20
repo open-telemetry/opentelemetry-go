@@ -116,7 +116,7 @@ func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
 // RangeTest is a commmon routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
-// monotonic counter metrics and absolute measure metrics.
+// monotonic counter metrics and absolute ValueRecorder metrics.
 func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
@@ -125,7 +125,7 @@ func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
 	}
 
 	switch descriptor.MetricKind() {
-	case metric.CounterKind:
+	case metric.CounterKind, metric.SumObserverKind:
 		if number.IsNegative(numberKind) {
 			return ErrNegativeInput
 		}

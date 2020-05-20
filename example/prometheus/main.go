@@ -33,11 +33,11 @@ var (
 )
 
 func initMeter() *push.Controller {
-	pusher, hf, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	pusher, exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	http.HandleFunc("/", hf)
+	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()
@@ -52,19 +52,19 @@ func main() {
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]kv.KeyValue)
-	cb := func(result metric.Float64ObserverResult) {
+	cb := func(_ context.Context, result metric.Float64ObserverResult) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
 		labels := *observerLabelsToReport
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", cb,
-		metric.WithDescription("A measure set to 1.0"),
+	_ = metric.Must(meter).RegisterFloat64ValueObserver("ex.com.one", cb,
+		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
-	measureThree := metric.Must(meter).NewFloat64Counter("ex.com.three")
+	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	counter := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 	notSoCommonLabels := []kv.KeyValue{lemonsKey.Int(13)}
@@ -78,8 +78,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		measureTwo.Measurement(2.0),
-		measureThree.Measurement(12.0),
+		valuerecorder.Measurement(2.0),
+		counter.Measurement(12.0),
 	)
 
 	time.Sleep(5 * time.Second)
@@ -91,8 +91,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		notSoCommonLabels,
-		measureTwo.Measurement(2.0),
-		measureThree.Measurement(22.0),
+		valuerecorder.Measurement(2.0),
+		counter.Measurement(22.0),
 	)
 
 	time.Sleep(5 * time.Second)
@@ -104,8 +104,8 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		measureTwo.Measurement(12.0),
-		measureThree.Measurement(13.0),
+		valuerecorder.Measurement(12.0),
+		counter.Measurement(13.0),
 	)
 
 	time.Sleep(100 * time.Second)

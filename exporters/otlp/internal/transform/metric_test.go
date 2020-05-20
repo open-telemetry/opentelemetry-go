@@ -111,7 +111,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	}{
 		{
 			"mmsc-test-a",
-			metric.MeasureKind,
+			metric.ValueRecorderKind,
 			"test-a-description",
 			unit.Dimensionless,
 			metric.Int64NumberKind,
@@ -160,7 +160,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
@@ -228,7 +228,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 		},
 		{
 			"sum-test-b",
-			metric.MeasureKind, // This shouldn't change anything.
+			metric.ValueRecorderKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Milliseconds,
 			metric.Float64NumberKind,
@@ -257,7 +257,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 }
 
 func TestSumInt64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
@@ -271,7 +271,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 }
 
 func TestSumFloat64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Float64NumberKind)
 	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
@@ -285,7 +285,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.MeasureKind, metric.NumberKind(-1))
+	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.NumberKind(-1))
 	labels := label.NewSet()
 	s := sumAgg.New()
 	_, err := sum(&desc, &labels, s)

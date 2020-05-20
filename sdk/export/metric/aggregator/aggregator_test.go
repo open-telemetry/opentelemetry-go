@@ -86,8 +86,8 @@ func TestNaNTest(t *testing.T) {
 		t.Run(nkind.String(), func(t *testing.T) {
 			for _, mkind := range []metric.Kind{
 				metric.CounterKind,
-				metric.MeasureKind,
-				metric.ObserverKind,
+				metric.ValueRecorderKind,
+				metric.ValueObserverKind,
 			} {
 				desc := metric.NewDescriptor(
 					"name",

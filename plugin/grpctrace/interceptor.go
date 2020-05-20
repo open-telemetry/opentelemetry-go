@@ -43,9 +43,29 @@ var (
 	messageUncompressedSizeKey = kv.Key("message.uncompressed_size")
 )
 
+type messageType string
+
+// Event adds an event of the messageType to the span associated with the
+// passed context with id and size (if message is a proto message).
+func (m messageType) Event(ctx context.Context, id int, message interface{}) {
+	span := trace.SpanFromContext(ctx)
+	if p, ok := message.(proto.Message); ok {
+		span.AddEvent(ctx, "message",
+			messageTypeKey.String(string(m)),
+			messageIDKey.Int(id),
+			messageUncompressedSizeKey.Int(proto.Size(p)),
+		)
+	} else {
+		span.AddEvent(ctx, "message",
+			messageTypeKey.String(string(m)),
+			messageIDKey.Int(id),
+		)
+	}
+}
+
 const (
-	messageTypeSent     = "SENT"
-	messageTypeReceived = "RECEIVED"
+	messageSent     messageType = "SENT"
+	messageReceived messageType = "RECEIVED"
 )
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
@@ -80,11 +100,11 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		Inject(ctx, &metadataCopy)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
-		addEventForMessageSent(ctx, 1, req)
+		messageSent.Event(ctx, 1, req)
 
 		err := invoker(ctx, method, req, reply, cc, opts...)
 
-		addEventForMessageReceived(ctx, 1, reply)
+		messageReceived.Event(ctx, 1, reply)
 
 		if err != nil {
 			s, _ := status.FromError(err)
@@ -134,7 +154,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 		w.events <- streamEvent{errorEvent, err}
 	} else {
 		w.receivedMessageID++
-		addEventForMessageReceived(w.Context(), w.receivedMessageID, m)
+		messageReceived.Event(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -144,7 +164,7 @@ func (w *clientStream) SendMsg(m interface{}) error {
 	err := w.ClientStream.SendMsg(m)
 
 	w.sentMessageID++
-	addEventForMessageSent(w.Context(), w.sentMessageID, m)
+	messageSent.Event(w.Context(), w.sentMessageID, m)
 
 	if err != nil {
 		w.events <- streamEvent{errorEvent, err}
@@ -297,15 +317,15 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 		)
 		defer span.End()
 
-		addEventForMessageReceived(ctx, 1, req)
+		messageReceived.Event(ctx, 1, req)
 
 		resp, err := handler(ctx, req)
-
-		addEventForMessageSent(ctx, 1, resp)
-
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(s.Code(), s.Message())
+			messageSent.Event(ctx, 1, s.Proto())
+		} else {
+			messageSent.Event(ctx, 1, resp)
 		}
 
 		return resp, err
@@ -331,7 +351,7 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 
 	if err == nil {
 		w.receivedMessageID++
-		addEventForMessageReceived(w.Context(), w.receivedMessageID, m)
+		messageReceived.Event(w.Context(), w.receivedMessageID, m)
 	}
 
 	return err
@@ -341,7 +361,7 @@ func (w *serverStream) SendMsg(m interface{}) error {
 	err := w.ServerStream.SendMsg(m)
 
 	w.sentMessageID++
-	addEventForMessageSent(w.Context(), w.sentMessageID, m)
+	messageSent.Event(w.Context(), w.sentMessageID, m)
 
 	return err
 }
@@ -434,26 +454,4 @@ func serviceFromFullMethod(method string) string {
 	}
 
 	return match[1]
-}
-
-func addEventForMessageReceived(ctx context.Context, id int, m interface{}) {
-	size := proto.Size(m.(proto.Message))
-
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent(ctx, "message",
-		messageTypeKey.String(messageTypeReceived),
-		messageIDKey.Int(id),
-		messageUncompressedSizeKey.Int(size),
-	)
-}
-
-func addEventForMessageSent(ctx context.Context, id int, m interface{}) {
-	size := proto.Size(m.(proto.Message))
-
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent(ctx, "message",
-		messageTypeKey.String(messageTypeSent),
-		messageIDKey.Int(id),
-		messageUncompressedSizeKey.Int(size),
-	)
 }

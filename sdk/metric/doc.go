@@ -13,57 +13,34 @@
 // limitations under the License.
 
 /*
-Package metric implements the OpenTelemetry metric.Meter API.  The SDK
-supports configurable metrics export behavior through a collection of
-export interfaces that support various export strategies, described below.
+Package metric implements the OpenTelemetry metric.MeterImpl
+interface.  The Accumulator type supports configurable metrics export
+behavior through a collection of export interfaces that support
+various export strategies, described below.
 
-The metric.Meter API consists of methods for constructing each of the basic
-kinds of metric instrument.  There are six types of instrument available to
-the end user, comprised of three basic kinds of metric instrument (Counter,
-Measure, Observer) crossed with two kinds of number (int64, float64).
+The metric.MeterImpl API consists of methods for constructing
+synchronous and asynchronous instruments.  There are two constructors
+per instrument for the two kinds of number (int64, float64).
 
-The API assists the SDK by consolidating the variety of metric instruments
-into a narrower interface, allowing the SDK to avoid repetition of
-boilerplate.  The API and SDK are separated such that an event reaching
-the SDK has a uniform structure: an instrument, a label set, and a
-numerical value.
+Synchronous instruments are managed by a sync.Map containing a *record
+with the current state for each synchronous instrument.  A bound
+instrument encapsulates a direct pointer to the record, allowing
+bound metric events to bypass a sync.Map lookup.  A lock-free
+algorithm is used to protect against races when adding and removing
+items from the sync.Map.
 
-To this end, the API uses a kv.Number type to represent either an int64
-or a float64, depending on the instrument's definition.  A single
-implementation interface is used for counter and measure instruments,
-metric.InstrumentImpl, and a single implementation interface is used for
-their handles, metric.HandleImpl. For observers, the API defines
-interfaces, for which the SDK provides an implementation.
-
-There are four entry points for events in the Metrics API - three for
-synchronous instruments (counters and measures) and one for asynchronous
-instruments (observers). The entry points for synchronous instruments are:
-via instrument handles, via direct instrument calls, and via BatchRecord.
-The SDK is designed with handles as the primary entry point, the other two
-entry points are implemented in terms of short-lived handles.  For example,
-the implementation of a direct call allocates a handle, operates on the
-handle, and releases the handle. Similarly, the implementation of
-RecordBatch uses a short-lived handle for each measurement in the batch.
-The entry point for asynchronous instruments is via observer callbacks.
-Observer callbacks behave like a set of instrument handles - one for each
-observation for a distinct label set.  The observer handles are alive as
-long as they are used.  If the callback stops reporting values for a
-certain label set, the associated handle is dropped.
+Asynchronous instruments are managed by an internal
+AsyncInstrumentState, which coordinates calling batch and single
+instrument callbacks.
 
 Internal Structure
-
-The SDK is designed with minimal use of locking, to avoid adding
-contention for user-level code.  For each handle, whether it is held by
-user-level code or a short-lived device, there exists an internal record
-managed by the SDK.  Each internal record corresponds to a specific
-instrument and label set combination.
 
 Each observer also has its own kind of record stored in the SDK. This
 record contains a set of recorders for every specific label set used in the
 callback.
 
 A sync.Map maintains the mapping of current instruments and label sets to
-internal records.  To create a new handle, the SDK consults the Map to
+internal records.  To create a new bound instrument, the SDK consults the Map to
 locate an existing record, otherwise it constructs a new record.  The SDK
 maintains a count of the number of references to each record, ensuring
 that records are not reclaimed from the Map while they are still active
@@ -74,12 +51,7 @@ sweeps through all records in the SDK, checkpointing their state.  When a
 record is discovered that has no references and has not been updated since
 the prior collection pass, it is removed from the Map.
 
-The SDK maintains a current epoch number, corresponding to the number of
-completed collections.  Each recorder of an observer record contains the
-last epoch during which it was updated.  This variable allows the collection
-code path to detect stale recorders and remove them.
-
-Each record of a handle and recorder of an observer has an associated
+Both synchronous and asynchronous instruments have an associated
 aggregator, which maintains the current state resulting from all metric
 events since its last checkpoint.  Aggregators may be lock-free or they may
 use locking, but they should expect to be called concurrently.  Aggregators
@@ -97,21 +69,18 @@ enters the SDK resulting in a new record, and collection context,
 where a system-level thread performs a collection pass through the
 SDK.
 
-Descriptor is a struct that describes the metric instrument to the export
-pipeline, containing the name, recommended aggregation keys, units,
-description, metric kind (counter or measure), number kind (int64 or
-float64), and whether the instrument has alternate semantics or not (i.e.,
-monotonic=false counter, absolute=false measure).  A Descriptor accompanies
-metric data as it passes through the export pipeline.
+Descriptor is a struct that describes the metric instrument to the
+export pipeline, containing the name, units, description, metric kind,
+number kind (int64 or float64).  A Descriptor accompanies metric data
+as it passes through the export pipeline.
 
 The AggregationSelector interface supports choosing the method of
 aggregation to apply to a particular instrument.  Given the Descriptor,
 this AggregatorFor method returns an implementation of Aggregator.  If this
 interface returns nil, the metric will be disabled.  The aggregator should
 be matched to the capabilities of the exporter.  Selecting the aggregator
-for counter instruments is relatively straightforward, but for measure and
-observer instruments there are numerous choices with different cost and
-quality tradeoffs.
+for sum-only instruments is relatively straightforward, but many options
+are available for aggregating distributions from ValueRecorder instruments.
 
 Aggregator is an interface which implements a concrete strategy for
 aggregating metric updates.  Several Aggregator implementations are

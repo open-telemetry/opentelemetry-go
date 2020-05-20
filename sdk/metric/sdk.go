@@ -29,6 +29,7 @@ import (
 	internal "go.opentelemetry.io/otel/internal/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -68,6 +69,9 @@ type (
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
 		asyncSortSlice label.Sortable
+
+		// resource is applied to all records in this Accumulator.
+		resource *resource.Resource
 	}
 
 	syncInstrument struct {
@@ -317,6 +321,7 @@ func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
 		integrator:       integrator,
 		errorHandler:     c.ErrorHandler,
 		asyncInstruments: internal.NewAsyncInstrumentState(c.ErrorHandler),
+		resource:         c.Resource,
 	}
 }
 
@@ -362,9 +367,10 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.collectSyncInstruments(ctx)
-	checkpointed += m.observeAsyncInstruments(ctx)
+	checkpointed := m.observeAsyncInstruments(ctx)
+	checkpointed += m.collectSyncInstruments(ctx)
 	m.currentEpoch++
+
 	return checkpointed
 }
 
@@ -428,7 +434,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	asyncCollected := 0
 	m.asyncContext = ctx
 
-	m.asyncInstruments.Run(m)
+	m.asyncInstruments.Run(context.Background(), m)
 	m.asyncContext = nil
 
 	for _, inst := range m.asyncInstruments.Instruments() {
@@ -472,7 +478,7 @@ func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descrip
 	}
 	recorder.Checkpoint(ctx, descriptor)
 
-	exportRecord := export.NewRecord(descriptor, labels, recorder)
+	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
 	err := m.integrator.Process(ctx, exportRecord)
 	if err != nil {
 		m.errorHandler(err)
