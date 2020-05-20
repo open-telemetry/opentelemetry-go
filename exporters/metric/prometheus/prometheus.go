@@ -92,9 +92,9 @@ type Config struct {
 	OnError func(error)
 }
 
-// NewRawExporter returns a new prometheus exporter for prometheus metrics
-// for use in a pipeline.
-func NewRawExporter(config Config, options ...pull.Option) (*Exporter, error) {
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// chaining a NewRawExporter into the recommended selector and standard integrator.
+func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -135,18 +135,6 @@ func NewRawExporter(config Config, options ...pull.Option) (*Exporter, error) {
 	return e, nil
 }
 
-// Provider returns the metric.Provider of this exporter.
-func (e *Exporter) Provider() metric.Provider {
-	return e.controller.Provider()
-}
-
-// Controller returns the controller object that coordinates collection for the SDK.
-func (e *Exporter) Controller() *pull.Controller {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
-	return e.controller
-}
-
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
 //
@@ -165,12 +153,6 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	}
 	global.SetMeterProvider(exp.Provider())
 	return exp, nil
-}
-
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selector and standard integrator.
-func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
-	return NewRawExporter(config, options...)
 }
 
 // SetController sets up a standard *pull.Controller as the metric provider
@@ -194,6 +176,22 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) error {
 		append(options, pull.WithStateful(true))...,
 	)
 	return nil
+}
+
+// Provider returns the metric.Provider of this exporter.
+func (e *Exporter) Provider() metric.Provider {
+	return e.controller.Provider()
+}
+
+// Controller returns the controller object that coordinates collection for the SDK.
+func (e *Exporter) Controller() *pull.Controller {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.controller
+}
+
+func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e.handler.ServeHTTP(w, r)
 }
 
 // collector implements prometheus.Collector interface.
@@ -355,10 +353,6 @@ func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
 	desc := record.Descriptor()
 	labels := labelsKeys(record.Labels())
 	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
-}
-
-func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	e.handler.ServeHTTP(w, r)
 }
 
 func labelsKeys(labels *label.Set) []string {

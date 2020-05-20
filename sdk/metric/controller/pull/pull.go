@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -39,6 +40,7 @@ type Controller struct {
 	provider    *registry.Provider
 	period      time.Duration
 	lastCollect time.Time
+	clock       controllerTime.Clock
 	checkpoint  export.CheckpointSet
 }
 
@@ -64,7 +66,15 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 		provider:    registry.NewProvider(accum),
 		period:      config.CachePeriod,
 		checkpoint:  integrator.CheckpointSet(),
+		clock:       controllerTime.RealClock{},
 	}
+}
+
+// SetClock sets the clock used for caching.  For testing purposes.
+func (c *Controller) SetClock(clock controllerTime.Clock) {
+	c.integrator.Lock()
+	defer c.integrator.Unlock()
+	c.clock = clock
 }
 
 // Provider implements metric.Provider.
@@ -88,7 +98,7 @@ func (c *Controller) Collect(ctx context.Context) {
 	defer c.integrator.Unlock()
 
 	if c.period > 0 {
-		now := time.Now()
+		now := c.clock.Now()
 		elapsed := now.Sub(c.lastCollect)
 
 		if elapsed < c.period {
