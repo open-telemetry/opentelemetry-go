@@ -81,9 +81,7 @@ func NewWithHistogramDistribution(boundaries []metric.Number) export.Aggregation
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
-		fallthrough
-	case metric.ValueRecorderKind:
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
 		return minmaxsumcount.New(descriptor)
 	default:
 		return sum.New()
@@ -92,9 +90,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.A
 
 func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
-		fallthrough
-	case metric.ValueRecorderKind:
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
 		return ddsketch.New(s.config, descriptor)
 	default:
 		return sum.New()
@@ -103,9 +99,7 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggr
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
-		fallthrough
-	case metric.ValueRecorderKind:
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
 		return array.New()
 	default:
 		return sum.New()
@@ -114,9 +108,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
-		fallthrough
-	case metric.ValueRecorderKind:
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
 		return histogram.New(descriptor, s.boundaries)
 	default:
 		return sum.New()

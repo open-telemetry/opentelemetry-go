@@ -25,30 +25,22 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // This test demonstrates that it is relatively difficult to setup a
 // Prometheus export pipeline:
 //
 //   1. The default boundaries are difficult to pass, should be []float instead of []metric.Number
-//   2. The push controller doesn't make sense b/c Prometheus is pull-bsaed
 //
-// TODO: Address these issues; add Resources to the test.
+// TODO: Address this issue; add Resources to the test.
 
 func ExampleNewExportPipeline() {
 	// Create a meter
-	selector := simple.NewWithHistogramDistribution(nil)
-	exporter, err := prometheus.NewRawExporter(prometheus.Config{})
+	exporter, err := prometheus.NewExportPipeline(prometheus.Config{})
 	if err != nil {
 		panic(err)
 	}
-	integrator := integrator.New(selector, true)
-	meterImpl := sdk.NewAccumulator(integrator)
-	meter := metric.WrapMeterImpl(meterImpl, "example")
-
+	meter := exporter.Provider().Meter("example")
 	ctx := context.Background()
 
 	// Use two instruments
@@ -63,13 +55,6 @@ func ExampleNewExportPipeline() {
 
 	counter.Add(ctx, 100, kv.String("key", "value"))
 	recorder.Record(ctx, 100, kv.String("key", "value"))
-
-	// Simulate a push
-	meterImpl.Collect(ctx)
-	err = exporter.Export(ctx, integrator.CheckpointSet())
-	if err != nil {
-		panic(err)
-	}
 
 	// GET the HTTP endpoint
 	var input bytes.Buffer

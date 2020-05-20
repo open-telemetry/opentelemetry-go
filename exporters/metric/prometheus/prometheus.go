@@ -29,27 +29,34 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
+//
+// This exporter supports Prometheus pulls, as such it does not
+// implement the export.Exporter interface.
 type Exporter struct {
 	handler http.Handler
 
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	lock     sync.RWMutex
-	snapshot export.CheckpointSet
-	onError  func(error)
+	// lock protects access to the controller. The controller
+	// exposes its own lock, but using a dedicated lock in this
+	// struct allows the exporter to potentially support multiple
+	// controllers (e.g., with different resources).
+	lock       sync.RWMutex
+	controller *pull.Controller
+
+	onError func(error)
 
 	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []metric.Number
 }
 
-var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
 
 // Config is a set of configs for the tally reporter.
@@ -85,9 +92,9 @@ type Config struct {
 	OnError func(error)
 }
 
-// NewRawExporter returns a new prometheus exporter for prometheus metrics
-// for use in a pipeline.
-func NewRawExporter(config Config) (*Exporter, error) {
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// using the recommended selector and standard integrator.  See the pull.Options.
+func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -115,9 +122,12 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		onError:                    config.OnError,
 	}
 
-	c := newCollector(e)
+	c := &collector{
+		exp: e,
+	}
+	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
-		config.OnError(fmt.Errorf("cannot register the collector: %w", err))
+		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
 
 	return e, nil
@@ -126,7 +136,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
 //
-// 	pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
+// 	hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
 //
 // 	if err != nil {
 // 		...
@@ -134,28 +144,21 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
-	controller, exp, err := NewExportPipeline(config, options...)
+func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+	exp, err := NewExportPipeline(config, options...)
 	if err != nil {
-		return controller, exp, err
+		return nil, err
 	}
-	global.SetMeterProvider(controller.Provider())
-	return controller, exp, err
+	global.SetMeterProvider(exp.Provider())
+	return exp, nil
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selectors and integrators.
-//
-// The returned Controller contains an implementation of
-// `metric.Provider`.  The controller is returned unstarted and should
-// be started by the caller to begin collection.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, *Exporter, error) {
-	exporter, err := NewRawExporter(config)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Prometheus uses a stateful push controller since instruments are
+// SetController sets up a standard *pull.Controller as the metric provider
+// for this exporter.
+func (e *Exporter) SetController(config Config, options ...pull.Option) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	// Prometheus uses a stateful pull controller since instruments are
 	// cumulative and should not be reset after each collection interval.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
@@ -163,22 +166,29 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	pusher := push.New(
+	//
+	// TODO: Prometheus supports "Gauge Histogram" which are
+	// expressed as delta histograms.
+	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		exporter,
-		append(options, push.WithStateful(true))...,
+		append(options, pull.WithStateful(true))...,
 	)
-
-	return pusher, exporter, nil
 }
 
-// Export exports the provide metric record to prometheus.
-func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	// TODO: Use the resource value in this exporter.
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	e.snapshot = checkpointSet
-	return nil
+// Provider returns the metric.Provider of this exporter.
+func (e *Exporter) Provider() metric.Provider {
+	return e.controller.Provider()
+}
+
+// Controller returns the controller object that coordinates collection for the SDK.
+func (e *Exporter) Controller() *pull.Controller {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.controller
+}
+
+func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e.handler.ServeHTTP(w, r)
 }
 
 // collector implements prometheus.Collector interface.
@@ -188,24 +198,11 @@ type collector struct {
 
 var _ prometheus.Collector = (*collector)(nil)
 
-func newCollector(exporter *Exporter) *collector {
-	return &collector{
-		exp: exporter,
-	}
-}
-
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	if c.exp.snapshot == nil {
-		return
-	}
-
-	c.exp.snapshot.RLock()
-	defer c.exp.snapshot.RUnlock()
-
-	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
+	_ = c.exp.Controller().ForEach(func(record export.Record) error {
 		ch <- c.toDesc(&record)
 		return nil
 	})
@@ -219,14 +216,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	if c.exp.snapshot == nil {
-		return
-	}
+	ctrl := c.exp.Controller()
+	ctrl.Collect(context.Background())
 
-	c.exp.snapshot.RLock()
-	defer c.exp.snapshot.RUnlock()
-
-	err := c.exp.snapshot.ForEach(func(record export.Record) error {
+	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
 		// TODO: Use the resource value in this record.
@@ -357,10 +350,6 @@ func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
 	desc := record.Descriptor()
 	labels := labelsKeys(record.Labels())
 	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
-}
-
-func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	e.handler.ServeHTTP(w, r)
 }
 
 func labelsKeys(labels *label.Set) []string {

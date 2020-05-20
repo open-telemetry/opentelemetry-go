@@ -25,15 +25,14 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )
 
 var (
 	lemonsKey = kv.Key("ex.com/lemons")
 )
 
-func initMeter() *push.Controller {
-	pusher, exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+func initMeter() {
+	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
@@ -41,12 +40,10 @@ func initMeter() *push.Controller {
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()
-
-	return pusher
 }
 
 func main() {
-	defer initMeter().Stop()
+	initMeter()
 
 	meter := global.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
