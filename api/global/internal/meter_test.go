@@ -86,12 +86,12 @@ func TestDirect(t *testing.T) {
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).RegisterFloat64ValueObserver("test.valueobserver.float", func(result metric.Float64ObserverResult) {
+	_ = Must(meter1).RegisterFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).RegisterInt64ValueObserver("test.valueobserver.int", func(result metric.Int64ObserverResult) {
+	_ = Must(meter1).RegisterInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
@@ -333,7 +333,7 @@ func TestImplementationIndirection(t *testing.T) {
 	// Async: no SDK yet
 	valueobserver := Must(meter1).RegisterFloat64ValueObserver(
 		"interface.valueobserver",
-		func(result metric.Float64ObserverResult) {},
+		func(_ context.Context, result metric.Float64ObserverResult) {},
 	)
 
 	ival = valueobserver.AsyncImpl().Implementation()

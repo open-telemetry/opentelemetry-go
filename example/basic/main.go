@@ -73,7 +73,7 @@ func main() {
 
 	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 
-	oneMetricCB := func(result metric.Float64ObserverResult) {
+	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
 	}
 	_ = metric.Must(meter).RegisterFloat64ValueObserver("ex.com.one", oneMetricCB,
