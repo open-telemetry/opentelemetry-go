@@ -153,7 +153,7 @@ var (
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
 
-	ErrUninitializedInstrument = fmt.Errorf("Use of an uninitialized instrument")
+	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
