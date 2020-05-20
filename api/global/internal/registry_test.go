@@ -15,6 +15,7 @@
 package internal
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -43,10 +44,10 @@ var (
 			return unwrap(MeterProvider().Meter(libraryName).NewFloat64ValueRecorder(name))
 		},
 		"valueobserver.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).RegisterInt64ValueObserver(name, func(metric.Int64ObserverResult) {}))
+			return unwrap(MeterProvider().Meter(libraryName).RegisterInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
 		"valueobserver.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).RegisterFloat64ValueObserver(name, func(metric.Float64ObserverResult) {}))
+			return unwrap(MeterProvider().Meter(libraryName).RegisterFloat64ValueObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )

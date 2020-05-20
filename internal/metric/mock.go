@@ -187,5 +187,5 @@ func (m *MeterImpl) collect(ctx context.Context, labels []kv.KeyValue, measureme
 }
 
 func (m *MeterImpl) RunAsyncInstruments() {
-	m.asyncInstruments.Run(m)
+	m.asyncInstruments.Run(context.Background(), m)
 }
