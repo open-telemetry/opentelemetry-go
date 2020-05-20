@@ -43,6 +43,8 @@ func initMeter() {
 }
 
 func main() {
+	initMeter()
+
 	meter := global.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
