@@ -26,6 +26,7 @@ import (
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -46,7 +47,7 @@ func initTracer() {
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11"), kv.Int64("rk2", 5)))
+		sdktrace.WithResource(resource.New(kv.String("rk1", "rv11"), kv.Int64("rk2", 5))))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}

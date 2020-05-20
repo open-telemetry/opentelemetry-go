@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -86,13 +87,17 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		),
 	}
 	tp1, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11)"),
-			kv.Int64("rk2", 5)))...)
+		sdktrace.WithResource(resource.New(
+			kv.String("rk1", "rv11)"),
+			kv.Int64("rk2", 5),
+		)))...)
 	assert.NoError(t, err)
 
 	tp2, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv12)"),
-			kv.Float32("rk3", 6.5)))...)
+		sdktrace.WithResource(resource.New(
+			kv.String("rk1", "rv12)"),
+			kv.Float32("rk3", 6.5),
+		)))...)
 	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
