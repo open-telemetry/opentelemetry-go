@@ -40,6 +40,8 @@ type Config struct {
 
 	// CachePeriod is the period which a recently-computed result
 	// will be returned without gathering metric data again.
+	//
+	// If the period is zero, caching of the result is disabled.
 	CachePeriod time.Duration
 }
 

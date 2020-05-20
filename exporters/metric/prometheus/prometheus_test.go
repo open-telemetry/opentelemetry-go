@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -92,7 +93,10 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, expected []strin
 
 func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
-	exporter, err := prometheus.NewExportPipeline(prometheus.Config{})
+	exporter, err := prometheus.NewExportPipeline(
+		prometheus.Config{},
+		pull.WithCachePeriod(0),
+	)
 	require.NoError(t, err)
 
 	meter := exporter.Provider().Meter("test")

@@ -189,9 +189,6 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) error {
 	//
 	// TODO: Prometheus supports "Gauge Histogram" which are
 	// expressed as delta histograms.
-	if e.controller != nil {
-		e.controller.Stop()
-	}
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
 		append(options, pull.WithStateful(true))...,

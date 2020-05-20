@@ -41,7 +41,6 @@ func ExampleNewExportPipeline() {
 		panic(err)
 	}
 	meter := exporter.Provider().Meter("example")
-
 	ctx := context.Background()
 
 	// Use two instruments

@@ -27,10 +27,12 @@ import (
 )
 
 // DefaultCachePeriod determines how long a recently-computed result
-// will be returned without gathering metric data again.  If the period
-// is zero, caching of the result is disabled.
-const DefaultCachePeriod time.Duration = 0
+// will be returned without gathering metric data again.
+const DefaultCachePeriod time.Duration = 10 * time.Second
 
+// Controller manages access to a *sdk.Accumulator and
+// *simple.Integrator.  Use Provider() for obtaining Meters.  Use
+// Foreach() for accessing current records.
 type Controller struct {
 	accumulator *sdk.Accumulator
 	integrator  *integrator.Integrator
@@ -40,11 +42,15 @@ type Controller struct {
 	checkpoint  export.CheckpointSet
 }
 
+// New returns a *Controller configured with an aggregation selector and options.
 func New(selector export.AggregationSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:     resource.Empty(),
 		ErrorHandler: sdk.DefaultErrorHandler,
 		CachePeriod:  DefaultCachePeriod,
+	}
+	for _, opt := range options {
+		opt.Apply(config)
 	}
 	integrator := integrator.New(selector, config.Stateful)
 	accum := sdk.NewAccumulator(
@@ -61,15 +67,13 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	}
 }
 
-func (c *Controller) Stop() error {
-	*c = Controller{}
-	return nil
-}
-
+// Provider implements metric.Provider.
 func (c *Controller) Provider() metric.Provider {
 	return c.provider
 }
 
+// Foreach gives the caller read-locked access to the current
+// export.CheckpointSet.
 func (c *Controller) ForEach(f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
@@ -77,6 +81,8 @@ func (c *Controller) ForEach(f func(export.Record) error) error {
 	return c.checkpoint.ForEach(f)
 }
 
+// Collect requests a collection.  The collection will be skipped if
+// the last collection is aged less than the CachePeriod.
 func (c *Controller) Collect(ctx context.Context) {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
