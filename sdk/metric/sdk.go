@@ -367,8 +367,8 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.collectSyncInstruments(ctx)
-	checkpointed += m.observeAsyncInstruments(ctx)
+	checkpointed := m.observeAsyncInstruments(ctx)
+	checkpointed += m.collectSyncInstruments(ctx)
 	m.currentEpoch++
 
 	return checkpointed
@@ -434,7 +434,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	asyncCollected := 0
 	m.asyncContext = ctx
 
-	m.asyncInstruments.Run(m)
+	m.asyncInstruments.Run(context.Background(), m)
 	m.asyncContext = nil
 
 	for _, inst := range m.asyncInstruments.Instruments() {

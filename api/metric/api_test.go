@@ -183,7 +183,7 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("float valueobserver", func(t *testing.T) {
 		labels := []kv.KeyValue{kv.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterFloat64ValueObserver("test.valueobserver.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -194,7 +194,7 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("int valueobserver", func(t *testing.T) {
 		labels := []kv.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterInt64ValueObserver("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64ValueObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -205,7 +205,7 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("float sumobserver", func(t *testing.T) {
 		labels := []kv.KeyValue{kv.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterFloat64SumObserver("test.sumobserver.float", func(result metric.Float64ObserverResult) {
+		o := Must(meter).RegisterFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -216,7 +216,7 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("int sumobserver", func(t *testing.T) {
 		labels := []kv.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
-		o := Must(meter).RegisterInt64SumObserver("test.observer.int", func(result metric.Int64ObserverResult) {
+		o := Must(meter).RegisterInt64SumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -280,7 +280,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	}
 
 	cb := Must(meter).NewBatchObserver(
-		func(result metric.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(labels,
 				obs1.Observation(42),
 				obs2.Observation(42.0),
@@ -372,7 +372,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())
 
-	observer, err := meter.RegisterInt64ValueObserver("test.observer", func(result metric.Int64ObserverResult) {})
+	observer, err := meter.RegisterInt64ValueObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())

@@ -320,13 +320,13 @@ func TestObserverCollection(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	_ = Must(meter).RegisterFloat64ValueObserver("float.valueobserver", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64ValueObserver("float.valueobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 		// last value wins
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(-1, kv.String("C", "D"))
 	})
-	_ = Must(meter).RegisterInt64ValueObserver("int.valueobserver", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("int.valueobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
@@ -334,12 +334,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1)
 	})
 
-	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 		result.Observe(2, kv.String("A", "B"))
 		result.Observe(1, kv.String("C", "D"))
 	})
-	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(2, kv.String("A", "B"))
 		result.Observe(1)
 		// last value wins
@@ -347,7 +347,7 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1)
 	})
 
-	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
@@ -375,13 +375,13 @@ func TestSumObserverInputRange(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(result metric.Float64ObserverResult) {
+	_ = Must(meter).RegisterFloat64SumObserver("float.sumobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, kv.String("A", "B"))
 		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
 		result.Observe(-1, kv.String("C", "D"))
 		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
 	})
-	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(result metric.Int64ObserverResult) {
+	_ = Must(meter).RegisterInt64SumObserver("int.sumobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
 		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
 		result.Observe(-1)
@@ -407,7 +407,7 @@ func TestObserverBatch(t *testing.T) {
 	var intSumObs metric.Int64SumObserver
 
 	var batch = Must(meter).NewBatchObserver(
-		func(result metric.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(
 				[]kv.KeyValue{
 					kv.String("A", "B"),
@@ -513,4 +513,28 @@ func TestRecordPersistence(t *testing.T) {
 	}
 
 	require.Equal(t, int64(2), integrator.newAggCount)
+}
+
+func TestSyncInAsync(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, integrator := newSDK(t)
+
+	counter := Must(meter).NewFloat64Counter("counter")
+	_ = Must(meter).RegisterInt64ValueObserver("observer",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			result.Observe(10)
+			counter.Add(ctx, 100)
+		},
+	)
+
+	sdk.Collect(ctx)
+
+	out := batchTest.NewOutput(label.DefaultEncoder())
+	for _, rec := range integrator.records {
+		_ = out.AddTo(rec)
+	}
+	require.EqualValues(t, map[string]float64{
+		"counter//R=V":  100,
+		"observer//R=V": 10,
+	}, out.Map)
 }

@@ -14,7 +14,11 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/kv"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/api/kv"
+)
 
 // The file is organized as follows:
 //
@@ -38,16 +42,16 @@ type Observation struct {
 
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
-type Int64ObserverCallback func(Int64ObserverResult)
+type Int64ObserverCallback func(context.Context, Int64ObserverResult)
 
 // Float64ObserverCallback is a type of callback that floating point
 // observers run.
-type Float64ObserverCallback func(Float64ObserverResult)
+type Float64ObserverCallback func(context.Context, Float64ObserverResult)
 
 // BatchObserverCallback is a callback argument for use with any
 // Observer instrument that will be reported as a batch of
 // observations.
-type BatchObserverCallback func(BatchObserverResult)
+type BatchObserverCallback func(context.Context, BatchObserverResult)
 
 // Int64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous integer metric instrument.
@@ -110,7 +114,7 @@ type AsyncSingleRunner interface {
 	// receives one captured observation.  (The function accepts
 	// multiple observations so the same implementation can be
 	// used for batch runners.)
-	Run(single AsyncImpl, capture func([]kv.KeyValue, ...Observation))
+	Run(ctx context.Context, single AsyncImpl, capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
@@ -120,7 +124,7 @@ type AsyncSingleRunner interface {
 type AsyncBatchRunner interface {
 	// Run accepts a function for capturing observations of
 	// multiple instruments.
-	Run(capture func([]kv.KeyValue, ...Observation))
+	Run(ctx context.Context, capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
@@ -154,24 +158,24 @@ func (*Float64ObserverCallback) AnyRunner() {}
 func (*BatchObserverCallback) AnyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
-	(*i)(Int64ObserverResult{
+func (i *Int64ObserverCallback) Run(ctx context.Context, impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
+	(*i)(ctx, Int64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
-	(*f)(Float64ObserverResult{
+func (f *Float64ObserverCallback) Run(ctx context.Context, impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
+	(*f)(ctx, Float64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncBatchRunner.
-func (b *BatchObserverCallback) Run(function func([]kv.KeyValue, ...Observation)) {
-	(*b)(BatchObserverResult{
+func (b *BatchObserverCallback) Run(ctx context.Context, function func([]kv.KeyValue, ...Observation)) {
+	(*b)(ctx, BatchObserverResult{
 		function: function,
 	})
 }
