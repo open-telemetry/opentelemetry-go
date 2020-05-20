@@ -8,3 +8,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp v0.5.0
 	google.golang.org/grpc v1.29.1
 )
+
+replace (
+	go.opentelemetry.io/otel => ../..
+	go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
+)
