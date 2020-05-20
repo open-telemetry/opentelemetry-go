@@ -49,7 +49,7 @@ func initTracer(url string) {
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exporter,
-			sdktrace.WithScheduleDelayMillis(5),
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)

@@ -39,7 +39,7 @@ func Example_insecure() {
 	tp, _ := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithScheduleDelayMillis(5),
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	if err != nil {
@@ -80,7 +80,7 @@ func Example_withTLS() {
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithScheduleDelayMillis(5),
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	if err != nil {
