@@ -32,4 +32,6 @@ const (
 
 	// SumObserverKind indicates a SumObserver instrument.
 	SumObserverKind
+	// UpDownSumObserverKind indicates a UpDownSumObserver instrument.
+	UpDownSumObserverKind
 )
