@@ -66,11 +66,14 @@ func main() {
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
-	defer span.End()
 
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		<-time.After(time.Second)
 		iSpan.End()
 	}
+
+	span.End()
+	// Wait 1 second before ending
+	<-time.After(time.Second)
 }
