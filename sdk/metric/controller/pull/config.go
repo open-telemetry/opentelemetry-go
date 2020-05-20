@@ -42,6 +42,7 @@ type Config struct {
 	// will be returned without gathering metric data again.
 	//
 	// If the period is zero, caching of the result is disabled.
+	// The default value is 10 seconds.
 	CachePeriod time.Duration
 }
 

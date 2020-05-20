@@ -44,7 +44,7 @@ type Exporter struct {
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	// lock protects access to the controller.  the controller
+	// lock protects access to the controller. The controller
 	// exposes its own lock, but using a dedicated lock in this
 	// struct allows the exporter to potentially support multiple
 	// controllers (e.g., with different resources).
@@ -125,9 +125,7 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 	c := &collector{
 		exp: e,
 	}
-	if err := e.SetController(config, options...); err != nil {
-		return nil, fmt.Errorf("cannot set controller: %w", err)
-	}
+	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
@@ -157,7 +155,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 
 // SetController sets up a standard *pull.Controller as the metric provider
 // for this exporter.
-func (e *Exporter) SetController(config Config, options ...pull.Option) error {
+func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	// Prometheus uses a stateful pull controller since instruments are
@@ -175,7 +173,6 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) error {
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
 		append(options, pull.WithStateful(true))...,
 	)
-	return nil
 }
 
 // Provider returns the metric.Provider of this exporter.

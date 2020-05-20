@@ -77,7 +77,8 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// Provider implements metric.Provider.
+// Provider returns a metric.Provider for the implementation managed
+// by this controller.
 func (c *Controller) Provider() metric.Provider {
 	return c.provider
 }
