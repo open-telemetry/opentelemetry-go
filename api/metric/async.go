@@ -203,3 +203,15 @@ func wrapFloat64SumObserverInstrument(asyncInst AsyncImpl, err error) (Float64Su
 	common, err := checkNewAsync(asyncInst, err)
 	return Float64SumObserver{asyncInstrument: common}, err
 }
+
+// wrapInt64UpDownSumObserverInstrument converts an AsyncImpl into Int64UpDownSumObserver.
+func wrapInt64UpDownSumObserverInstrument(asyncInst AsyncImpl, err error) (Int64UpDownSumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64UpDownSumObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64UpDownSumObserverInstrument converts an AsyncImpl into Float64UpDownSumObserver.
+func wrapFloat64UpDownSumObserverInstrument(asyncInst AsyncImpl, err error) (Float64UpDownSumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64UpDownSumObserver{asyncInstrument: common}, err
+}

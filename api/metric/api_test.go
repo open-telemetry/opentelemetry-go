@@ -224,6 +224,28 @@ func TestObserverInstruments(t *testing.T) {
 			-142,
 		)
 	})
+	t.Run("float updownsumobserver", func(t *testing.T) {
+		labels := []kv.KeyValue{kv.String("O", "P")}
+		mockSDK, meter := mockTest.NewMeter()
+		o := Must(meter).RegisterFloat64UpDownSumObserver("test.updownsumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+			result.Observe(42.1, labels...)
+		})
+		mockSDK.RunAsyncInstruments()
+		checkObserverBatch(t, labels, mockSDK, metric.Float64NumberKind, metric.UpDownSumObserverKind, o.AsyncImpl(),
+			42.1,
+		)
+	})
+	t.Run("int updownsumobserver", func(t *testing.T) {
+		labels := []kv.KeyValue{}
+		mockSDK, meter := mockTest.NewMeter()
+		o := Must(meter).RegisterInt64UpDownSumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+			result.Observe(-142, labels...)
+		})
+		mockSDK.RunAsyncInstruments()
+		checkObserverBatch(t, labels, mockSDK, metric.Int64NumberKind, metric.UpDownSumObserverKind, o.AsyncImpl(),
+			-142,
+		)
+	})
 }
 
 func checkSyncBatches(t *testing.T, ctx context.Context, labels []kv.KeyValue, mock *mockTest.MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
