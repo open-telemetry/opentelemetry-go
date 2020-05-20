@@ -152,6 +152,8 @@ var (
 	_ api.AsyncImpl     = &asyncInstrument{}
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
+
+	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -422,8 +424,9 @@ func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) 
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
-		a := ob.AsyncImpl().Implementation().(*asyncInstrument)
-		a.observe(ob.Number(), &labels)
+		if a := m.fromAsync(ob.AsyncImpl()); a != nil {
+			a.observe(ob.Number(), &labels)
+		}
 	}
 }
 
@@ -438,8 +441,9 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	m.asyncContext = nil
 
 	for _, inst := range m.asyncInstruments.Instruments() {
-		a := inst.Implementation().(*asyncInstrument)
-		asyncCollected += m.checkpointAsync(a)
+		if a := m.fromAsync(inst); a != nil {
+			asyncCollected += m.checkpointAsync(a)
+		}
 	}
 
 	return asyncCollected
@@ -494,8 +498,10 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measur
 	// ordered labels.
 	var labelsPtr *label.Set
 	for i, meas := range measurements {
-		s := meas.SyncImpl().Implementation().(*syncInstrument)
-
+		s := m.fromSync(meas.SyncImpl())
+		if s == nil {
+			continue
+		}
 		h := s.acquireHandle(kvs, labelsPtr)
 
 		// Re-use labels for the next measurement.
@@ -537,4 +543,28 @@ func (r *record) mapkey() mapkey {
 		descriptor: &r.inst.descriptor,
 		ordered:    r.labels.Equivalent(),
 	}
+}
+
+// fromSync gets a sync implementation object, checking for
+// uninitialized instruments and instruments created by another SDK.
+func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
+	if sync != nil {
+		if inst, ok := sync.Implementation().(*syncInstrument); ok {
+			return inst
+		}
+	}
+	m.errorHandler(ErrUninitializedInstrument)
+	return nil
+}
+
+// fromSync gets an async implementation object, checking for
+// uninitialized instruments and instruments created by another SDK.
+func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
+	if async != nil {
+		if inst, ok := async.Implementation().(*asyncInstrument); ok {
+			return inst
+		}
+	}
+	m.errorHandler(ErrUninitializedInstrument)
+	return nil
 }

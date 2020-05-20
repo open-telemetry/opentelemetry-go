@@ -347,27 +347,45 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1)
 	})
 
+	_ = Must(meter).RegisterFloat64UpDownSumObserver("float.updownsumobserver", func(_ context.Context, result metric.Float64ObserverResult) {
+		result.Observe(1, kv.String("A", "B"))
+		result.Observe(-2, kv.String("A", "B"))
+		result.Observe(1, kv.String("C", "D"))
+	})
+	_ = Must(meter).RegisterInt64UpDownSumObserver("int.updownsumobserver", func(_ context.Context, result metric.Int64ObserverResult) {
+		result.Observe(2, kv.String("A", "B"))
+		result.Observe(1)
+		// last value wins
+		result.Observe(1, kv.String("A", "B"))
+		result.Observe(-1)
+	})
+
 	_ = Must(meter).RegisterInt64ValueObserver("empty.valueobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, 8, collected)
-	require.Equal(t, 8, len(integrator.records))
+	require.Equal(t, collected, len(integrator.records))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.sumobserver/A=B/R=V":   2,
-		"float.sumobserver/C=D/R=V":   1,
-		"int.sumobserver//R=V":        1,
-		"int.sumobserver/A=B/R=V":     1,
 		"float.valueobserver/A=B/R=V": -1,
 		"float.valueobserver/C=D/R=V": -1,
 		"int.valueobserver//R=V":      1,
 		"int.valueobserver/A=B/R=V":   1,
+
+		"float.sumobserver/A=B/R=V": 2,
+		"float.sumobserver/C=D/R=V": 1,
+		"int.sumobserver//R=V":      1,
+		"int.sumobserver/A=B/R=V":   1,
+
+		"float.updownsumobserver/A=B/R=V": -2,
+		"float.updownsumobserver/C=D/R=V": 1,
+		"int.updownsumobserver//R=V":      -1,
+		"int.updownsumobserver/A=B/R=V":   1,
 	}, out.Map)
 }
 
@@ -405,6 +423,8 @@ func TestObserverBatch(t *testing.T) {
 	var intValueObs metric.Int64ValueObserver
 	var floatSumObs metric.Float64SumObserver
 	var intSumObs metric.Int64SumObserver
+	var floatUpDownSumObs metric.Float64UpDownSumObserver
+	var intUpDownSumObs metric.Int64UpDownSumObserver
 
 	var batch = Must(meter).NewBatchObserver(
 		func(_ context.Context, result metric.BatchObserverResult) {
@@ -418,6 +438,8 @@ func TestObserverBatch(t *testing.T) {
 				intValueObs.Observation(1),
 				floatSumObs.Observation(1000),
 				intSumObs.Observation(100),
+				floatUpDownSumObs.Observation(-1000),
+				intUpDownSumObs.Observation(-100),
 			)
 			result.Observe(
 				[]kv.KeyValue{
@@ -425,6 +447,7 @@ func TestObserverBatch(t *testing.T) {
 				},
 				floatValueObs.Observation(-1),
 				floatSumObs.Observation(-1),
+				floatUpDownSumObs.Observation(-1),
 			)
 			result.Observe(
 				nil,
@@ -432,27 +455,35 @@ func TestObserverBatch(t *testing.T) {
 				intValueObs.Observation(1),
 				intSumObs.Observation(10),
 				floatSumObs.Observation(1.1),
+				intUpDownSumObs.Observation(10),
 			)
 		})
 	floatValueObs = batch.RegisterFloat64ValueObserver("float.valueobserver")
 	intValueObs = batch.RegisterInt64ValueObserver("int.valueobserver")
 	floatSumObs = batch.RegisterFloat64SumObserver("float.sumobserver")
 	intSumObs = batch.RegisterInt64SumObserver("int.sumobserver")
+	floatUpDownSumObs = batch.RegisterFloat64UpDownSumObserver("float.updownsumobserver")
+	intUpDownSumObs = batch.RegisterInt64UpDownSumObserver("int.updownsumobserver")
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, 8, collected)
-	require.Equal(t, 8, len(integrator.records))
+	require.Equal(t, collected, len(integrator.records))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.sumobserver//R=V":      1.1,
-		"float.sumobserver/A=B/R=V":   1000,
-		"int.sumobserver//R=V":        10,
-		"int.sumobserver/A=B/R=V":     100,
+		"float.sumobserver//R=V":    1.1,
+		"float.sumobserver/A=B/R=V": 1000,
+		"int.sumobserver//R=V":      10,
+		"int.sumobserver/A=B/R=V":   100,
+
+		"int.updownsumobserver/A=B/R=V":   -100,
+		"float.updownsumobserver/A=B/R=V": -1000,
+		"int.updownsumobserver//R=V":      10,
+		"float.updownsumobserver/C=D/R=V": -1,
+
 		"float.valueobserver/A=B/R=V": -1,
 		"float.valueobserver/C=D/R=V": -1,
 		"int.valueobserver//R=V":      1,
@@ -513,6 +544,42 @@ func TestRecordPersistence(t *testing.T) {
 	}
 
 	require.Equal(t, int64(2), integrator.newAggCount)
+}
+
+func TestIncorrectInstruments(t *testing.T) {
+	// The Batch observe/record APIs are susceptible to
+	// uninitialized instruments.
+	var counter metric.Int64Counter
+	var observer metric.Int64ValueObserver
+
+	ctx := context.Background()
+	meter, sdk, integrator := newSDK(t)
+
+	// Now try with uninitialized instruments.
+	meter.RecordBatch(ctx, nil, counter.Measurement(1))
+	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
+		result.Observe(nil, observer.Observation(1))
+	})
+
+	collected := sdk.Collect(ctx)
+	require.Equal(t, metricsdk.ErrUninitializedInstrument, integrator.sdkErr())
+	require.Equal(t, 0, collected)
+
+	// Now try with instruments from another SDK.
+	var noopMeter metric.Meter
+	counter = metric.Must(noopMeter).NewInt64Counter("counter")
+	observer = metric.Must(noopMeter).NewBatchObserver(
+		func(context.Context, metric.BatchObserverResult) {},
+	).RegisterInt64ValueObserver("observer")
+
+	meter.RecordBatch(ctx, nil, counter.Measurement(1))
+	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
+		result.Observe(nil, observer.Observation(1))
+	})
+
+	collected = sdk.Collect(ctx)
+	require.Equal(t, 0, collected)
+	require.Equal(t, metricsdk.ErrUninitializedInstrument, integrator.sdkErr())
 }
 
 func TestSyncInAsync(t *testing.T) {
