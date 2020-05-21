@@ -36,7 +36,7 @@ type (
 		lock       sync.Mutex
 		current    state
 		checkpoint state
-		boundaries []metric.Number
+		boundaries []float64
 		kind       metric.NumberKind
 	}
 
@@ -44,7 +44,7 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		bucketCounts []metric.Number
+		bucketCounts []float64
 		count        metric.Number
 		sum          metric.Number
 	}
@@ -63,23 +63,19 @@ var _ aggregator.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *metric.Descriptor, boundaries []metric.Number) *Aggregator {
+func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := numbers{
-		numbers: make([]metric.Number, len(boundaries)),
-		kind:    desc.NumberKind(),
-	}
+	sortedBoundaries := make([]float64, len(boundaries))
 
-	copy(sortedBoundaries.numbers, boundaries)
-	sort.Sort(&sortedBoundaries)
-	boundaries = sortedBoundaries.numbers
+	copy(sortedBoundaries, boundaries)
+	sort.Float64s(sortedBoundaries)
 
 	return &Aggregator{
 		kind:       desc.NumberKind(),
-		boundaries: boundaries,
-		current:    emptyState(boundaries),
-		checkpoint: emptyState(boundaries),
+		boundaries: sortedBoundaries,
+		current:    emptyState(sortedBoundaries),
+		checkpoint: emptyState(sortedBoundaries),
 	}
 }
 
@@ -117,30 +113,42 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Unlock()
 }
 
-func emptyState(boundaries []metric.Number) state {
+func emptyState(boundaries []float64) state {
 	return state{
-		bucketCounts: make([]metric.Number, len(boundaries)+1),
+		bucketCounts: make([]float64, len(boundaries)+1),
 	}
 }
 
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
+	asFloat := number.CoerceToFloat64(kind)
 
 	bucketID := len(c.boundaries)
 	for i, boundary := range c.boundaries {
-		if number.CompareNumber(kind, boundary) < 0 {
+		if asFloat < boundary {
 			bucketID = i
 			break
 		}
 	}
+	// Note: Binary-search was compared using the benchmarks. The following
+	// code is equivalent to the linear search above:
+	//
+	//     bucketID := sort.Search(len(c.boundaries), func(i int) bool {
+	//         return asFloat < c.boundaries[i]
+	//     })
+	//
+	// The binary search wins for very large boundary sets, but
+	// the linear search performs better up through arrays between
+	// 256 and 512 elements, which is a relatively large histogram, so we
+	// continue to prefer linear search.
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.current.count.AddInt64(1)
 	c.current.sum.AddNumber(kind, number)
-	c.current.bucketCounts[bucketID].AddUint64(1)
+	c.current.bucketCounts[bucketID]++
 
 	return nil
 }
@@ -156,27 +164,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
 
 	for i := 0; i < len(c.checkpoint.bucketCounts); i++ {
-		c.checkpoint.bucketCounts[i].AddNumber(metric.Uint64NumberKind, o.checkpoint.bucketCounts[i])
+		c.checkpoint.bucketCounts[i] += o.checkpoint.bucketCounts[i]
 	}
 	return nil
-}
-
-// numbers is an auxiliary struct to order histogram bucket boundaries (slice of kv.Number)
-type numbers struct {
-	numbers []metric.Number
-	kind    metric.NumberKind
-}
-
-var _ sort.Interface = (*numbers)(nil)
-
-func (n *numbers) Len() int {
-	return len(n.numbers)
-}
-
-func (n *numbers) Less(i, j int) bool {
-	return -1 == n.numbers[i].CompareNumber(n.kind, n.numbers[j])
-}
-
-func (n *numbers) Swap(i, j int) {
-	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }

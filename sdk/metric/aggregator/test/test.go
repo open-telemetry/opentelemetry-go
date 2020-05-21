@@ -81,6 +81,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// TODO: Expose Numbers in api/metric for sorting support
+
 type Numbers struct {
 	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []metric.Number
