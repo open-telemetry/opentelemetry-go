@@ -16,86 +16,17 @@ package otlp_testing
 
 import (
 	"context"
-	"net"
 	"sort"
 	"sync"
-	"time"
 
-	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
-	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"google.golang.org/grpc"
 )
-
-// Let the system define the port
-const defaultServerAddr = "127.0.0.1:0"
-
-type ServerSuite struct {
-	suite.Suite
-
-	ServerOpts     []grpc.ServerOption
-	serverAddr     string
-	ServerListener net.Listener
-	Server         *grpc.Server
-
-	ExporterOpts []otlp.ExporterOption
-	Exporter     *otlp.Exporter
-}
-
-func (s *ServerSuite) SetupSuite() {
-	s.serverAddr = defaultServerAddr
-
-	var err error
-	s.ServerListener, err = net.Listen("tcp", s.serverAddr)
-	s.serverAddr = s.ServerListener.Addr().String()
-	require.NoError(s.T(), err, "failed to allocate a port for server")
-
-	s.Server = grpc.NewServer(s.ServerOpts...)
-}
-
-func (s *ServerSuite) StartServer() {
-	go func() {
-		s.Server.Serve(s.ServerListener)
-	}()
-
-	if s.Exporter == nil {
-		s.Exporter = s.NewExporter()
-	}
-}
-
-func (s *ServerSuite) ServerAddr() string {
-	return s.serverAddr
-}
-
-func (s *ServerSuite) NewExporter() *otlp.Exporter {
-	opts := []otlp.ExporterOption{
-		otlp.WithInsecure(),
-		otlp.WithAddress(s.serverAddr),
-		otlp.WithReconnectionPeriod(10 * time.Millisecond),
-	}
-	exp, err := otlp.NewExporter(append(opts, s.ExporterOpts...)...)
-	require.NoError(s.T(), err, "failed to create exporter")
-	return exp
-}
-
-func (s *ServerSuite) TearDownSuite() {
-	if s.ServerListener != nil {
-		s.Server.GracefulStop()
-		s.T().Logf("stopped grpc.Server at: %v", s.ServerAddr())
-	}
-	s.Exporter.Stop()
-}
 
 type TraceSuite struct {
 	ServerSuite
@@ -202,61 +133,4 @@ func sortedAttributes(attrs []*commonpb.AttributeKeyValue) []*commonpb.Attribute
 		return attrs[i].Key < attrs[j].Key
 	})
 	return attrs
-}
-
-type MetricSuite struct {
-	ServerSuite
-
-	MetricProvider   metric.Provider
-	metricController *push.Controller
-
-	mu      sync.RWMutex
-	metrics []*metricpb.Metric
-}
-
-func (ms *MetricSuite) SetupSuite() {
-	ms.ServerSuite.SetupSuite()
-
-	colmetricpb.RegisterMetricsServiceServer(ms.Server, ms)
-
-	ms.ServerSuite.StartServer()
-
-	if ms.MetricProvider == nil {
-		ms.metricController = ms.NewPushController(ms.Exporter, nil)
-		ms.metricController.SetErrorHandler(func(err error) {
-			ms.T().Errorf("testing push controller: %w", err)
-		})
-		ms.metricController.Start()
-		ms.MetricProvider = ms.metricController.Provider()
-	}
-}
-
-func (ms *MetricSuite) NewPushController(exp *otlp.Exporter, opts []push.Option) *push.Controller {
-	integrator := integrator.New(simple.NewWithExactDistribution(), true)
-	pusher := push.New(integrator, exp, opts...)
-	return pusher
-}
-
-func (ms *MetricSuite) GetMetrics() []*metricpb.Metric {
-	// copy in order to not change.
-	m := make([]*metricpb.Metric, 0, len(ms.metrics))
-	ms.mu.RLock()
-	defer ms.mu.RUnlock()
-	return append(m, ms.metrics...)
-}
-
-func (ms *MetricSuite) Export(ctx context.Context, exp *colmetricpb.ExportMetricsServiceRequest) (*colmetricpb.ExportMetricsServiceResponse, error) {
-	ms.mu.Lock()
-	for _, rm := range exp.GetResourceMetrics() {
-		// TODO (rghetia) handle multiple resource and library info.
-		if len(rm.InstrumentationLibraryMetrics) > 0 {
-			ms.metrics = append(ms.metrics, rm.InstrumentationLibraryMetrics[0].Metrics...)
-		}
-	}
-	ms.mu.Unlock()
-	return &colmetricpb.ExportMetricsServiceResponse{}, nil
-}
-func (ms *MetricSuite) TearDownSuite() {
-	ms.metricController.Stop()
-	ms.ServerSuite.TearDownSuite()
 }
