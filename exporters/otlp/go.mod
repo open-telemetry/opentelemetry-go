@@ -10,6 +10,7 @@ require (
 	github.com/open-telemetry/opentelemetry-proto v0.3.0
 	github.com/stretchr/testify v1.4.0
 	go.opentelemetry.io/otel v0.5.0
+	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/grpc v1.27.1
 )

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
@@ -30,12 +31,35 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	otlp_testing "go.opentelemetry.io/otel/exporters/otlp/testing"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+func TestIntegrationTestSuite(t *testing.T) {
+	s := &IntegrationTestSuite{
+		CollectorTestSuite: &otlp_testing.CollectorTestSuite{},
+	}
+	suite.Run(t, s)
+}
+
+type IntegrationTestSuite struct {
+	*otlp_testing.CollectorTestSuite
+}
+
+func (s *IntegrationTestSuite) TestSpanExport() {
+	tracer := s.TraceProvider.Tracer("test")
+	_, span := tracer.Start(context.Background(), "test/span")
+	span.End()
+	s.Len(s.TraceService.GetResourceSpans(), 1)
+	/* TODO:
+	* Maybe do a TraceSuite and a MetricSuite (embeed a generic suite).
+	* Have a failure server that can fail on a modulo of calls: https://github.com/grpc/grpc-go/blob/master/examples/features/retry/server/main.go
+	 */
+}
 
 func TestNewExporter_endToEnd(t *testing.T) {
 	tests := []struct {
@@ -55,7 +79,7 @@ func TestNewExporter_endToEnd(t *testing.T) {
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
-	mc := runMockColAtAddr(t, "localhost:56561")
+	mc := runMockColAtAddr(t, "127.0.0.1:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -304,7 +328,9 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	reconnectionPeriod := 20 * time.Millisecond
 	exp, err := otlp.NewExporter(otlp.WithInsecure(),
 		otlp.WithAddress(mc.address),
-		otlp.WithReconnectionPeriod(reconnectionPeriod))
+		otlp.WithReconnectionPeriod(reconnectionPeriod),
+		otlp.WithGRPCServiceConfig(""),
+	)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

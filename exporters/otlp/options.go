@@ -25,6 +25,43 @@ const (
 	DefaultCollectorPort uint16 = 55680
 	DefaultCollectorHost string = "localhost"
 	DefaultNumWorkers    uint   = 1
+
+	// For more info on gRPC service configs:
+	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md
+	//
+	// For more info on the RetryableStatusCodes we allow here:
+	// https://github.com/open-telemetry/oteps/blob/be2a3fcbaa417ebbf5845cd485d34fdf0ab4a2a4/text/0035-opentelemetry-protocol.md#export-response
+	DefaultGRPCServiceConfig = `{
+   "methodConfig":[
+      {
+         "name":[
+            {
+               "service":"opentelemetry.proto.collector.metrics.v1.MetricsService"
+            },
+            {
+               "service":"opentelemetry.proto.collector.trace.v1.TraceService"
+            }
+         ],
+		 "waitForReady": true,
+         "retryPolicy":{
+            "MaxAttempts":4,
+            "InitialBackoff":".01s",
+            "MaxBackoff":"1.0s",
+            "BackoffMultiplier":1.0,
+            "RetryableStatusCodes":[
+               "UNAVAILABLE",
+			   "CANCELLED",
+               "DEADLINE_EXCEEDED",
+               "RESOURCE_EXHAUSTED",
+               "ABORTED",
+               "OUT_OF_RANGE",
+               "UNAVAILABLE",
+               "DATA_LOSS"
+            ]
+         }
+      }
+   ]
+}`
 )
 
 type ExporterOption func(*Config)
@@ -34,6 +71,7 @@ type Config struct {
 	collectorAddr      string
 	compressor         string
 	reconnectionPeriod time.Duration
+	grpcServiceConfig  string
 	grpcDialOptions    []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
@@ -103,6 +141,13 @@ func WithHeaders(headers map[string]string) ExporterOption {
 func WithTLSCredentials(creds credentials.TransportCredentials) ExporterOption {
 	return func(cfg *Config) {
 		cfg.clientCredentials = creds
+	}
+}
+
+// WithGRPCServiceConfig defines the default gRPC service config used.
+func WithGRPCServiceConfig(serviceConfig string) ExporterOption {
+	return func(cfg *Config) {
+		cfg.grpcServiceConfig = serviceConfig
 	}
 }
 
