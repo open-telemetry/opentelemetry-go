@@ -93,60 +93,60 @@ func (mm MeterMust) NewFloat64ValueRecorder(name string, mos ...Option) Float64V
 	}
 }
 
-// RegisterInt64ValueObserver calls `Meter.RegisterInt64ValueObserver` and
+// NewInt64ValueObserver calls `Meter.NewInt64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterInt64ValueObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64ValueObserver {
-	if inst, err := mm.meter.RegisterInt64ValueObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewInt64ValueObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64ValueObserver {
+	if inst, err := mm.meter.NewInt64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64ValueObserver calls `Meter.RegisterFloat64ValueObserver` and
+// NewFloat64ValueObserver calls `Meter.NewFloat64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterFloat64ValueObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64ValueObserver {
-	if inst, err := mm.meter.RegisterFloat64ValueObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewFloat64ValueObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64ValueObserver {
+	if inst, err := mm.meter.NewFloat64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterInt64SumObserver calls `Meter.RegisterInt64SumObserver` and
+// NewInt64SumObserver calls `Meter.NewInt64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterInt64SumObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64SumObserver {
-	if inst, err := mm.meter.RegisterInt64SumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewInt64SumObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64SumObserver {
+	if inst, err := mm.meter.NewInt64SumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64SumObserver calls `Meter.RegisterFloat64SumObserver` and
+// NewFloat64SumObserver calls `Meter.NewFloat64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterFloat64SumObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64SumObserver {
-	if inst, err := mm.meter.RegisterFloat64SumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewFloat64SumObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64SumObserver {
+	if inst, err := mm.meter.NewFloat64SumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterInt64UpDownSumObserver calls `Meter.RegisterInt64UpDownSumObserver` and
+// NewInt64UpDownSumObserver calls `Meter.NewInt64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterInt64UpDownSumObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64UpDownSumObserver {
-	if inst, err := mm.meter.RegisterInt64UpDownSumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewInt64UpDownSumObserver(name string, callback Int64ObserverCallback, oos ...Option) Int64UpDownSumObserver {
+	if inst, err := mm.meter.NewInt64UpDownSumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64UpDownSumObserver calls `Meter.RegisterFloat64UpDownSumObserver` and
+// NewFloat64UpDownSumObserver calls `Meter.NewFloat64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) RegisterFloat64UpDownSumObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64UpDownSumObserver {
-	if inst, err := mm.meter.RegisterFloat64UpDownSumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewFloat64UpDownSumObserver(name string, callback Float64ObserverCallback, oos ...Option) Float64UpDownSumObserver {
+	if inst, err := mm.meter.NewFloat64UpDownSumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
@@ -161,60 +161,60 @@ func (mm MeterMust) NewBatchObserver(callback BatchObserverCallback) BatchObserv
 	}
 }
 
-// RegisterInt64ValueObserver calls `BatchObserver.RegisterInt64ValueObserver` and
+// NewInt64ValueObserver calls `BatchObserver.NewInt64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterInt64ValueObserver(name string, oos ...Option) Int64ValueObserver {
-	if inst, err := bm.batch.RegisterInt64ValueObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewInt64ValueObserver(name string, oos ...Option) Int64ValueObserver {
+	if inst, err := bm.batch.NewInt64ValueObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64ValueObserver calls `BatchObserver.RegisterFloat64ValueObserver` and
+// NewFloat64ValueObserver calls `BatchObserver.NewFloat64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterFloat64ValueObserver(name string, oos ...Option) Float64ValueObserver {
-	if inst, err := bm.batch.RegisterFloat64ValueObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewFloat64ValueObserver(name string, oos ...Option) Float64ValueObserver {
+	if inst, err := bm.batch.NewFloat64ValueObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterInt64SumObserver calls `BatchObserver.RegisterInt64SumObserver` and
+// NewInt64SumObserver calls `BatchObserver.NewInt64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterInt64SumObserver(name string, oos ...Option) Int64SumObserver {
-	if inst, err := bm.batch.RegisterInt64SumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewInt64SumObserver(name string, oos ...Option) Int64SumObserver {
+	if inst, err := bm.batch.NewInt64SumObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64SumObserver calls `BatchObserver.RegisterFloat64SumObserver` and
+// NewFloat64SumObserver calls `BatchObserver.NewFloat64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterFloat64SumObserver(name string, oos ...Option) Float64SumObserver {
-	if inst, err := bm.batch.RegisterFloat64SumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewFloat64SumObserver(name string, oos ...Option) Float64SumObserver {
+	if inst, err := bm.batch.NewFloat64SumObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterInt64UpDownSumObserver calls `BatchObserver.RegisterInt64UpDownSumObserver` and
+// NewInt64UpDownSumObserver calls `BatchObserver.NewInt64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterInt64UpDownSumObserver(name string, oos ...Option) Int64UpDownSumObserver {
-	if inst, err := bm.batch.RegisterInt64UpDownSumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewInt64UpDownSumObserver(name string, oos ...Option) Int64UpDownSumObserver {
+	if inst, err := bm.batch.NewInt64UpDownSumObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// RegisterFloat64UpDownSumObserver calls `BatchObserver.RegisterFloat64UpDownSumObserver` and
+// NewFloat64UpDownSumObserver calls `BatchObserver.NewFloat64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) RegisterFloat64UpDownSumObserver(name string, oos ...Option) Float64UpDownSumObserver {
-	if inst, err := bm.batch.RegisterFloat64UpDownSumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewFloat64UpDownSumObserver(name string, oos ...Option) Float64UpDownSumObserver {
+	if inst, err := bm.batch.NewFloat64UpDownSumObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
