@@ -376,6 +376,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 		validate("SENT", events[i].Attributes)
 		validate("RECEIVED", events[i+1].Attributes)
 	}
+
+	// ensure CloseSend can be subsequently called
+	_ = streamClient.CloseSend()
 }
 
 func TestServerInterceptorError(t *testing.T) {
