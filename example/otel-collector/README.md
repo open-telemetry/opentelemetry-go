@@ -156,14 +156,11 @@ The next step is to create the TraceProvider:
 ```go
 tp, err := sdktrace.NewProvider(
         sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-        sdktrace.WithResourceAttributes(
+        sdktrace.WithResource(resource.New(
                 // the service name used to display traces in Jaeger
-                core.Key(conventions.AttributeServiceName).String("test-service"), 
-        ),
-        sdktrace.WithBatcher(exp, // add following two options to ensure flush
-                sdktrace.WithScheduleDelayMillis(5),
-                sdktrace.WithMaxExportBatchSize(2),
-        ))
+                kv.Key(conventions.AttributeServiceName).String("test-service"),
+        )),
+        sdktrace.WithSyncer(exp))
 if err != nil {
         log.Fatalf("error creating trace provider: %v\n", err)
 }
@@ -175,7 +172,7 @@ After this, you can simply start sending traces:
 ```go
 tracer := tp.Tracer("test-tracer")
 ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
-	defer span.End()
+defer span.End()
 ```
 
 The traces should now be visible from the Jaeger UI (if you have it installed), or thorough the jaeger-query service, under the name `test-service`.
