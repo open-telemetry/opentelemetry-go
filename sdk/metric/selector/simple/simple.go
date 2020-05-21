@@ -31,7 +31,7 @@ type (
 		config *ddsketch.Config
 	}
 	selectorHistogram struct {
-		boundaries []metric.Number
+		boundaries []float64
 	}
 )
 
@@ -75,7 +75,7 @@ func NewWithExactDistribution() export.AggregationSelector {
 // histogram, and histogram aggregators for the three kinds of metric. This
 // selector uses more memory than the NewWithInexpensiveDistribution because it
 // uses a counter per bucket.
-func NewWithHistogramDistribution(boundaries []metric.Number) export.AggregationSelector {
+func NewWithHistogramDistribution(boundaries []float64) export.AggregationSelector {
 	return selectorHistogram{boundaries: boundaries}
 }
 

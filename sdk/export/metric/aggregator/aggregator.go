@@ -68,8 +68,8 @@ type (
 	// For a Histogram with N defined boundaries, e.g, [x, y, z].
 	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
 	Buckets struct {
-		Boundaries []metric.Number
-		Counts     []metric.Number
+		Boundaries []float64
+		Counts     []float64
 	}
 
 	// Histogram returns the count of events in pre-determined buckets.

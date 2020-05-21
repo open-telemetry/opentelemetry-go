@@ -54,7 +54,7 @@ type Exporter struct {
 	onError func(error)
 
 	defaultSummaryQuantiles    []float64
-	defaultHistogramBoundaries []metric.Number
+	defaultHistogramBoundaries []float64
 }
 
 var _ http.Handler = &Exporter{}
@@ -85,7 +85,7 @@ type Config struct {
 
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
-	DefaultHistogramBoundaries []metric.Number
+	DefaultHistogramBoundaries []float64
 
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
@@ -330,12 +330,12 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	// The bucket with upper-bound +inf is not included.
 	counts := make(map[float64]uint64, len(buckets.Boundaries))
 	for i := range buckets.Boundaries {
-		boundary := buckets.Boundaries[i].CoerceToFloat64(kind)
-		totalCount += buckets.Counts[i].AsUint64()
+		boundary := buckets.Boundaries[i]
+		totalCount += uint64(buckets.Counts[i])
 		counts[boundary] = totalCount
 	}
 	// Include the +inf bucket in the total count.
-	totalCount += buckets.Counts[len(buckets.Counts)-1].AsUint64()
+	totalCount += uint64(buckets.Counts[len(buckets.Counts)-1])
 
 	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, labels...)
 	if err != nil {

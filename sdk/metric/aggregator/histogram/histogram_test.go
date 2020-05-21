@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package histogram
+package histogram_test
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -57,36 +58,33 @@ var (
 		},
 	}
 
-	boundaries = map[metric.NumberKind][]metric.Number{
-		metric.Float64NumberKind: {metric.NewFloat64Number(500), metric.NewFloat64Number(250), metric.NewFloat64Number(750)},
-		metric.Int64NumberKind:   {metric.NewInt64Number(500), metric.NewInt64Number(250), metric.NewInt64Number(750)},
-	}
+	boundaries = []float64{500, 250, 750}
 )
 
 func TestHistogramAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		histogram(t, profile, positiveOnly)
+		testHistogram(t, profile, positiveOnly)
 	})
 }
 
 func TestHistogramNegativeOnly(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		histogram(t, profile, negativeOnly)
+		testHistogram(t, profile, negativeOnly)
 	})
 }
 
 func TestHistogramPositiveAndNegative(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		histogram(t, profile, positiveAndNegative)
+		testHistogram(t, profile, positiveAndNegative)
 	})
 }
 
 // Validates count, sum and buckets for a given profile and policy
-func histogram(t *testing.T, profile test.Profile, policy policy) {
+func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := New(descriptor, boundaries[profile.NumberKind])
+	agg := histogram.New(descriptor, boundaries)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -107,18 +105,21 @@ func histogram(t *testing.T, profile test.Profile, policy policy) {
 		asum.CoerceToFloat64(profile.NumberKind),
 		0.000000001,
 		"Same sum - "+policy.name)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	count, err := agg.Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
-	require.Equal(t, len(agg.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+	buckets, err := agg.Histogram()
+	require.NoError(t, err)
+
+	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 	counts := calcBuckets(all.Points(), profile)
 	for i, v := range counts {
-		bCount := agg.checkpoint.bucketCounts[i].AsUint64()
-		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg.checkpoint.bucketCounts)
+		bCount := uint64(buckets.Counts[i])
+		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, buckets.Counts)
 	}
 }
 
@@ -126,12 +127,12 @@ func TestHistogramInitial(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := New(descriptor, boundaries[profile.NumberKind])
+		agg := histogram.New(descriptor, boundaries)
 		buckets, err := agg.Histogram()
 
 		require.NoError(t, err)
-		require.Equal(t, len(buckets.Counts), len(boundaries[profile.NumberKind])+1)
-		require.Equal(t, len(buckets.Boundaries), len(boundaries[profile.NumberKind]))
+		require.Equal(t, len(buckets.Counts), len(boundaries)+1)
+		require.Equal(t, len(buckets.Boundaries), len(boundaries))
 	})
 }
 
@@ -141,8 +142,8 @@ func TestHistogramMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg1 := New(descriptor, boundaries[profile.NumberKind])
-		agg2 := New(descriptor, boundaries[profile.NumberKind])
+		agg1 := histogram.New(descriptor, boundaries)
+		agg2 := histogram.New(descriptor, boundaries)
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -171,18 +172,21 @@ func TestHistogramMerge(t *testing.T) {
 			asum.CoerceToFloat64(profile.NumberKind),
 			0.000000001,
 			"Same sum - absolute")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		count, err := agg1.Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
-		require.Equal(t, len(agg1.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
+		buckets, err := agg1.Histogram()
+		require.NoError(t, err)
+
+		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
 
 		counts := calcBuckets(all.Points(), profile)
 		for i, v := range counts {
-			bCount := agg1.checkpoint.bucketCounts[i].AsUint64()
-			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, agg1.checkpoint.bucketCounts)
+			bCount := uint64(buckets.Counts[i])
+			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, buckets.Counts)
 		}
 	})
 }
@@ -193,38 +197,37 @@ func TestHistogramNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := New(descriptor, boundaries[profile.NumberKind])
+		agg := histogram.New(descriptor, boundaries)
 		agg.Checkpoint(ctx, descriptor)
 
 		asum, err := agg.Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		count, err := agg.Count()
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
-		require.Equal(t, len(agg.checkpoint.bucketCounts), len(boundaries[profile.NumberKind])+1, "There should be b + 1 counts, where b is the number of boundaries")
-		for i, bCount := range agg.checkpoint.bucketCounts {
-			require.Equal(t, uint64(0), bCount.AsUint64(), "Bucket #%d must have 0 observed values", i)
+		buckets, err := agg.Histogram()
+		require.NoError(t, err)
+
+		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
+		for i, bCount := range buckets.Counts {
+			require.Equal(t, uint64(0), uint64(bCount), "Bucket #%d must have 0 observed values", i)
 		}
 	})
 }
 
 func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
-	sortedBoundaries := numbers{
-		numbers: make([]metric.Number, len(boundaries[profile.NumberKind])),
-		kind:    profile.NumberKind,
-	}
+	sortedBoundaries := make([]float64, len(boundaries))
 
-	copy(sortedBoundaries.numbers, boundaries[profile.NumberKind])
-	sort.Sort(&sortedBoundaries)
-	boundaries := sortedBoundaries.numbers
+	copy(sortedBoundaries, boundaries)
+	sort.Float64s(sortedBoundaries)
 
-	counts := make([]uint64, len(boundaries)+1)
+	counts := make([]uint64, len(sortedBoundaries)+1)
 	idx := 0
 	for _, p := range points {
-		for idx < len(boundaries) && p.CompareNumber(profile.NumberKind, boundaries[idx]) != -1 {
+		for idx < len(sortedBoundaries) && p.CoerceToFloat64(profile.NumberKind) >= boundaries[idx] {
 			idx++
 		}
 		counts[idx]++
