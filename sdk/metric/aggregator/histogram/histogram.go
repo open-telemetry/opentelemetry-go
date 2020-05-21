@@ -127,13 +127,9 @@ func emptyState(boundaries []metric.Number) state {
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
-	bucketID := len(c.boundaries)
-	for i, boundary := range c.boundaries {
-		if number.CompareNumber(kind, boundary) < 0 {
-			bucketID = i
-			break
-		}
-	}
+	bucketID := sort.Search(len(c.boundaries), func(i int) bool {
+		return number.CompareNumber(kind, c.boundaries[i]) < 0
+	})
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
