@@ -136,7 +136,7 @@ func TestMergedIterator(t *testing.T) {
 			set1 := label.NewSet(labels1...)
 			set2 := label.NewSet(labels2...)
 
-			merge := label.NewMergeIterator(set1.Iter(), set2.Iter())
+			merge := label.NewMergeIterator(&set1, &set2)
 
 			var result []string
 
