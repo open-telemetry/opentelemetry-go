@@ -24,7 +24,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -40,14 +43,17 @@ import (
 )
 
 func TestIntegrationTestSuite(t *testing.T) {
-	s := &TraceIntegrationTestSuite{
-		TraceSuite: &otlp_testing.TraceSuite{},
+	ts := &TraceIntegrationTestSuite{}
+	suite.Run(t, ts)
+
+	fts := &FailingTraceIntegrationTestSuite{
+		reqModulo: 14,
 	}
-	suite.Run(t, s)
+	suite.Run(t, fts)
 }
 
 type TraceIntegrationTestSuite struct {
-	*otlp_testing.TraceSuite
+	otlp_testing.TraceSuite
 }
 
 func (s *TraceIntegrationTestSuite) TestSpanExport() {
@@ -59,6 +65,41 @@ func (s *TraceIntegrationTestSuite) TestSpanExport() {
 	* Maybe do a TraceSuite and a MetricSuite (embeed a generic suite).
 	* Have a failure server that can fail on a modulo of calls: https://github.com/grpc/grpc-go/blob/master/examples/features/retry/server/main.go
 	 */
+}
+
+type FailingTraceIntegrationTestSuite struct {
+	otlp_testing.TraceSuite
+
+	reqCounter uint
+	reqModulo  uint
+}
+
+// FIXME: doesn't get used! the embedded is registered not this.
+// probaly need to move this lower in the stack.
+func (s *FailingTraceIntegrationTestSuite) Export(ctx context.Context, req *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
+
+	s.T().Logf("deciding: count %d, modulo %d", s.reqCounter, s.reqModulo)
+	s.reqCounter++
+	if (s.reqModulo > 0) && (s.reqCounter%s.reqModulo == 0) {
+		return s.TraceSuite.Export(ctx, req)
+	}
+
+	s.T().Logf("failing: count %d, modulo %d", s.reqCounter, s.reqModulo)
+
+	// TODO: make the return code configuable.
+	return &coltracepb.ExportTraceServiceResponse{}, status.Errorf(
+		codes.Unavailable,
+		"FailingTraceIntegrationTestSuite: count %d, modulo %d",
+		s.reqCounter, s.reqModulo,
+	)
+}
+
+func (s *FailingTraceIntegrationTestSuite) TestSpanExport() {
+	tracer := s.TraceProvider.Tracer("test")
+	_, span := tracer.Start(context.Background(), "test/span")
+	span.End()
+	s.Len(s.GetResourceSpans(), 1)
+	s.Fail("here")
 }
 
 func TestNewExporter_endToEnd(t *testing.T) {

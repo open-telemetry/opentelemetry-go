@@ -54,6 +54,7 @@ func (s *ServerSuite) StartServer() {
 	go func() {
 		s.Server.Serve(s.ServerListener)
 	}()
+	s.T().Logf("started grpc.Server at: %v", s.ServerAddr())
 
 	if s.Exporter == nil {
 		s.Exporter = s.NewExporter()
