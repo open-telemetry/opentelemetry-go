@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -201,7 +202,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	defer c.exp.lock.RUnlock()
 
 	_ = c.exp.Controller().ForEach(func(record export.Record) error {
-		ch <- c.toDesc(record)
+		var labelKeys []string
+		mergeLabels(record, &labelKeys, nil)
+		ch <- c.toDesc(record, labelKeys)
 		return nil
 	})
 }
@@ -220,8 +223,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
-		labels := labelValues(record)
-		desc := c.toDesc(record)
+
+		var labelKeys, labels []string
+		mergeLabels(record, &labelKeys, &labels)
+
+		desc := c.toDesc(record, labelKeys)
 
 		if hist, ok := agg.(aggregator.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
@@ -343,35 +349,29 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	return nil
 }
 
-func (c *collector) toDesc(record export.Record) *prometheus.Desc {
+func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus.Desc {
 	desc := record.Descriptor()
-	labels := labelsKeys(record)
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
 }
 
-func labelsKeys(record export.Record) []string {
-	iter1 := record.Resource().Iter()
-	iter2 := record.Labels().Iter()
-	keys := make([]string, 0, iter1.Len()+iter2.Len())
-	for iter1.Next() {
-		keys = append(keys, sanitize(string(iter1.Label().Key)))
+func mergeLabels(record export.Record, keys, values *[]string) {
+	if keys != nil {
+		*keys = make([]string, 0, record.Labels().Len()+record.Resource().Len())
 	}
-	for iter2.Next() {
-		keys = append(keys, sanitize(string(iter2.Label().Key)))
-	}
-	return keys
-}
-
-func labelValues(record export.Record) []string {
-	iter1 := record.Resource().Iter()
-	iter2 := record.Labels().Iter()
-	values := make([]string, 0, iter1.Len()+iter2.Len())
-	for iter1.Next() {
-		values = append(values, iter1.Label().Value.Emit())
-	}
-	for iter2.Next() {
-		values = append(values, iter2.Label().Value.Emit())
+	if values != nil {
+		*values = make([]string, 0, record.Labels().Len()+record.Resource().Len())
 	}
 
-	return values
+	// Duplicate keys are resolved by taking the record label value over
+	// the resource value.
+	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	for mi.Next() {
+		label := mi.Label()
+		if keys != nil {
+			*keys = append(*keys, sanitize(string(label.Key)))
+		}
+		if values != nil {
+			*values = append(*values, label.Value.Emit())
+		}
+	}
 }
