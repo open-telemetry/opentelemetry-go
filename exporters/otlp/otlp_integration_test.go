@@ -40,21 +40,21 @@ import (
 )
 
 func TestIntegrationTestSuite(t *testing.T) {
-	s := &IntegrationTestSuite{
-		CollectorTestSuite: &otlp_testing.CollectorTestSuite{},
+	s := &TraceIntegrationTestSuite{
+		TraceSuite: &otlp_testing.TraceSuite{},
 	}
 	suite.Run(t, s)
 }
 
-type IntegrationTestSuite struct {
-	*otlp_testing.CollectorTestSuite
+type TraceIntegrationTestSuite struct {
+	*otlp_testing.TraceSuite
 }
 
-func (s *IntegrationTestSuite) TestSpanExport() {
+func (s *TraceIntegrationTestSuite) TestSpanExport() {
 	tracer := s.TraceProvider.Tracer("test")
 	_, span := tracer.Start(context.Background(), "test/span")
 	span.End()
-	s.Len(s.TraceService.GetResourceSpans(), 1)
+	s.Len(s.GetResourceSpans(), 1)
 	/* TODO:
 	* Maybe do a TraceSuite and a MetricSuite (embeed a generic suite).
 	* Have a failure server that can fail on a modulo of calls: https://github.com/grpc/grpc-go/blob/master/examples/features/retry/server/main.go
