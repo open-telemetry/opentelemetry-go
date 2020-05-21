@@ -354,6 +354,11 @@ func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus
 	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
 }
 
+// mergeLabels merges the export.Record's labels and resources into a
+// single set, giving precedence to the record's labels in case of
+// duplicate keys.  This outputs one or both of the keys and the
+// values as a slice, and either argument may be nil to avoid
+// allocating an unnecessary slice.
 func mergeLabels(record export.Record, keys, values *[]string) {
 	if keys != nil {
 		*keys = make([]string, 0, record.Labels().Len()+record.Resource().Len())

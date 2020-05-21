@@ -99,9 +99,8 @@ func Merge(a, b *Resource) *Resource {
 		return a
 	}
 
-	// Note: 'b' is listed first so that 'a' will overwrite with
-	// last-value-wins in label.Key()
-	// combine := append(b.Attributes(), a.Attributes()...)
+	// Note: 'a' labels will overwrite 'b' with last-value-wins in label.Key()
+	// Meaning this is equivalent to: append(b.Attributes(), a.Attributes()...)
 	mi := label.NewMergeIterator(a.LabelSet(), b.LabelSet())
 	combine := make([]kv.KeyValue, 0, a.Len()+b.Len())
 	for mi.Next() {
