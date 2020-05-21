@@ -20,13 +20,11 @@ import (
 	"net/http"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/metric"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -203,7 +201,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	defer c.exp.lock.RUnlock()
 
 	_ = c.exp.Controller().ForEach(func(record export.Record) error {
-		ch <- c.toDesc(&record)
+		ch <- c.toDesc(record)
 		return nil
 	})
 }
@@ -222,9 +220,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
-		// TODO: Use the resource value in this record.
-		labels := labelValues(record.Labels())
-		desc := c.toDesc(&record)
+		labels := labelValues(record)
+		desc := c.toDesc(record)
 
 		if hist, ok := agg.(aggregator.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
@@ -346,30 +343,35 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	return nil
 }
 
-func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
+func (c *collector) toDesc(record export.Record) *prometheus.Desc {
 	desc := record.Descriptor()
-	labels := labelsKeys(record.Labels())
+	labels := labelsKeys(record)
 	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
 }
 
-func labelsKeys(labels *label.Set) []string {
-	iter := labels.Iter()
-	keys := make([]string, 0, iter.Len())
-	for iter.Next() {
-		kv := iter.Label()
-		keys = append(keys, sanitize(string(kv.Key)))
+func labelsKeys(record export.Record) []string {
+	iter1 := record.Resource().Iter()
+	iter2 := record.Labels().Iter()
+	keys := make([]string, 0, iter1.Len()+iter2.Len())
+	for iter1.Next() {
+		keys = append(keys, sanitize(string(iter1.Label().Key)))
+	}
+	for iter2.Next() {
+		keys = append(keys, sanitize(string(iter2.Label().Key)))
 	}
 	return keys
 }
 
-func labelValues(labels *label.Set) []string {
-	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
-	//  this would avoid unnecessary allocations.
-	iter := labels.Iter()
-	values := make([]string, 0, iter.Len())
-	for iter.Next() {
-		label := iter.Label()
-		values = append(values, label.Value.Emit())
+func labelValues(record export.Record) []string {
+	iter1 := record.Resource().Iter()
+	iter2 := record.Labels().Iter()
+	values := make([]string, 0, iter1.Len()+iter2.Len())
+	for iter1.Next() {
+		values = append(values, iter1.Label().Value.Emit())
 	}
+	for iter2.Next() {
+		values = append(values, iter2.Label().Value.Emit())
+	}
+
 	return values
 }
