@@ -30,12 +30,13 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestPrometheusExporter(t *testing.T) {
 	exporter, err := prometheus.NewExportPipeline(prometheus.Config{
 		DefaultHistogramBoundaries: []float64{-0.5, 1},
-	})
+	}, pull.WithResource(resource.New(kv.String("R", "V"))))
 	require.NoError(t, err)
 
 	meter := exporter.Provider().Meter("test")
@@ -54,18 +55,18 @@ func TestPrometheusExporter(t *testing.T) {
 	counter.Add(ctx, 10, labels...)
 	counter.Add(ctx, 5.3, labels...)
 
-	expected = append(expected, `counter{A="B",C="D"} 15.3`)
+	expected = append(expected, `counter{A="B",C="D",R="V"} 15.3`)
 
 	valuerecorder.Record(ctx, -0.6, labels...)
 	valuerecorder.Record(ctx, -0.4, labels...)
 	valuerecorder.Record(ctx, 0.6, labels...)
 	valuerecorder.Record(ctx, 20, labels...)
 
-	expected = append(expected, `valuerecorder_bucket{A="B",C="D",le="+Inf"} 4`)
-	expected = append(expected, `valuerecorder_bucket{A="B",C="D",le="-0.5"} 1`)
-	expected = append(expected, `valuerecorder_bucket{A="B",C="D",le="1"} 3`)
-	expected = append(expected, `valuerecorder_count{A="B",C="D"} 4`)
-	expected = append(expected, `valuerecorder_sum{A="B",C="D"} 19.6`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="+Inf"} 4`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="-0.5"} 1`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="1"} 3`)
+	expected = append(expected, `valuerecorder_count{A="B",C="D",R="V"} 4`)
+	expected = append(expected, `valuerecorder_sum{A="B",C="D",R="V"} 19.6`)
 
 	compareExport(t, exporter, expected)
 }

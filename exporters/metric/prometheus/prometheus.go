@@ -20,13 +20,12 @@ import (
 	"net/http"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/metric"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -203,7 +202,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	defer c.exp.lock.RUnlock()
 
 	_ = c.exp.Controller().ForEach(func(record export.Record) error {
-		ch <- c.toDesc(&record)
+		var labelKeys []string
+		mergeLabels(record, &labelKeys, nil)
+		ch <- c.toDesc(record, labelKeys)
 		return nil
 	})
 }
@@ -222,9 +223,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
-		// TODO: Use the resource value in this record.
-		labels := labelValues(record.Labels())
-		desc := c.toDesc(&record)
+
+		var labelKeys, labels []string
+		mergeLabels(record, &labelKeys, &labels)
+
+		desc := c.toDesc(record, labelKeys)
 
 		if hist, ok := agg.(aggregator.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
@@ -346,30 +349,34 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	return nil
 }
 
-func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
+func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus.Desc {
 	desc := record.Descriptor()
-	labels := labelsKeys(record.Labels())
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
 }
 
-func labelsKeys(labels *label.Set) []string {
-	iter := labels.Iter()
-	keys := make([]string, 0, iter.Len())
-	for iter.Next() {
-		kv := iter.Label()
-		keys = append(keys, sanitize(string(kv.Key)))
+// mergeLabels merges the export.Record's labels and resources into a
+// single set, giving precedence to the record's labels in case of
+// duplicate keys.  This outputs one or both of the keys and the
+// values as a slice, and either argument may be nil to avoid
+// allocating an unnecessary slice.
+func mergeLabels(record export.Record, keys, values *[]string) {
+	if keys != nil {
+		*keys = make([]string, 0, record.Labels().Len()+record.Resource().Len())
 	}
-	return keys
-}
+	if values != nil {
+		*values = make([]string, 0, record.Labels().Len()+record.Resource().Len())
+	}
 
-func labelValues(labels *label.Set) []string {
-	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
-	//  this would avoid unnecessary allocations.
-	iter := labels.Iter()
-	values := make([]string, 0, iter.Len())
-	for iter.Next() {
-		label := iter.Label()
-		values = append(values, label.Value.Emit())
+	// Duplicate keys are resolved by taking the record label value over
+	// the resource value.
+	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	for mi.Next() {
+		label := mi.Label()
+		if keys != nil {
+			*keys = append(*keys, sanitize(string(label.Key)))
+		}
+		if values != nil {
+			*values = append(*values, label.Value.Emit())
+		}
 	}
-	return values
 }

@@ -25,6 +25,8 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // This test demonstrates that it is relatively difficult to setup a
@@ -32,11 +34,14 @@ import (
 //
 //   1. The default boundaries are difficult to pass, should be []float instead of []metric.Number
 //
-// TODO: Address this issue; add Resources to the test.
+// TODO: Address this issue.
 
 func ExampleNewExportPipeline() {
 	// Create a meter
-	exporter, err := prometheus.NewExportPipeline(prometheus.Config{})
+	exporter, err := prometheus.NewExportPipeline(
+		prometheus.Config{},
+		pull.WithResource(resource.New(kv.String("R", "V"))),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -73,10 +78,10 @@ func ExampleNewExportPipeline() {
 	// Output:
 	// # HELP a_counter Counts things
 	// # TYPE a_counter counter
-	// a_counter{key="value"} 100
+	// a_counter{R="V",key="value"} 100
 	// # HELP a_valuerecorder Records values
 	// # TYPE a_valuerecorder histogram
-	// a_valuerecorder_bucket{key="value",le="+Inf"} 1
-	// a_valuerecorder_sum{key="value"} 100
-	// a_valuerecorder_count{key="value"} 1
+	// a_valuerecorder_bucket{R="V",key="value",le="+Inf"} 1
+	// a_valuerecorder_sum{R="V",key="value"} 100
+	// a_valuerecorder_count{R="V",key="value"} 1
 }
