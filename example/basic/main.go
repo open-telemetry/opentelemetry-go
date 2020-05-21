@@ -77,7 +77,7 @@ func main() {
 	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
 	}
-	_ = metric.Must(meter).RegisterFloat64ValueObserver("ex.com.one", oneMetricCB,
+	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
 		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
