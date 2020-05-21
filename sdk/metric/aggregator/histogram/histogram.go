@@ -66,22 +66,16 @@ var _ aggregator.Histogram = &Aggregator{}
 func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	// metric.SortNumbers(desc.NumberKind(), boundaries)
-	// sortedBoundaries := numbers{
-	// 	numbers: make([]metric.Number, len(boundaries)),
-	// 	kind:    desc.NumberKind(),
-	// }
-	sort.Float64s(boundaries)
+	sortedBoundaries := make([]float64, len(boundaries))
 
-	// copy(sortedBoundaries.numbers, boundaries)
-	// sort.Sort(&sortedBoundaries)
-	// boundaries = sortedBoundaries.numbers
+	copy(sortedBoundaries, boundaries)
+	sort.Float64s(sortedBoundaries)
 
 	return &Aggregator{
 		kind:       desc.NumberKind(),
-		boundaries: boundaries,
-		current:    emptyState(boundaries),
-		checkpoint: emptyState(boundaries),
+		boundaries: sortedBoundaries,
+		current:    emptyState(sortedBoundaries),
+		checkpoint: emptyState(sortedBoundaries),
 	}
 }
 
