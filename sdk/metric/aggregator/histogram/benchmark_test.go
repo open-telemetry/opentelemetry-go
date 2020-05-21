@@ -45,7 +45,7 @@ func benchmarkHistogramSearchFloat64(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		agg.Update(ctx, metric.NewFloat64Number(rand.Float64()*inputRange), desc)
+		_ = agg.Update(ctx, metric.NewFloat64Number(rand.Float64()*inputRange), desc)
 	}
 }
 
@@ -96,7 +96,7 @@ func benchmarkHistogramSearchInt64(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		agg.Update(ctx, metric.NewInt64Number(int64(rand.Float64()*inputRange)), desc)
+		_ = agg.Update(ctx, metric.NewInt64Number(int64(rand.Float64()*inputRange)), desc)
 	}
 }
 
