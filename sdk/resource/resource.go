@@ -89,15 +89,24 @@ func (r *Resource) Equal(eq *Resource) bool {
 // If there are common keys between resource a and b, then the value
 // from resource a is preserved.
 func Merge(a, b *Resource) *Resource {
+	if a == nil && b == nil {
+		return Empty()
+	}
 	if a == nil {
-		a = Empty()
+		return b
 	}
 	if b == nil {
-		b = Empty()
+		return a
 	}
+
 	// Note: 'b' is listed first so that 'a' will overwrite with
 	// last-value-wins in label.Key()
-	combine := append(b.Attributes(), a.Attributes()...)
+	// combine := append(b.Attributes(), a.Attributes()...)
+	mi := label.NewMergeIterator(a.LabelSet(), b.LabelSet())
+	combine := make([]kv.KeyValue, 0, a.Len()+b.Len())
+	for mi.Next() {
+		combine = append(combine, mi.Label())
+	}
 	return New(combine...)
 }
 
@@ -111,10 +120,15 @@ func Empty() *Resource {
 // between two resources.  This value is suitable for use as a key in
 // a map.
 func (r *Resource) Equivalent() label.Distinct {
+	return r.LabelSet().Equivalent()
+}
+
+// LabelSet returns the equivalent *label.Set.
+func (r *Resource) LabelSet() *label.Set {
 	if r == nil {
 		r = Empty()
 	}
-	return r.labels.Equivalent()
+	return &r.labels
 }
 
 // MarshalJSON encodes labels as a JSON list of { "Key": "...", "Value": ... }

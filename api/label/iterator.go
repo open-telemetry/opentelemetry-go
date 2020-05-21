@@ -91,13 +91,12 @@ func (i *Iterator) ToSlice() []kv.KeyValue {
 	return slice
 }
 
-// NewMergeIterator returns a MergeIterator for merging two label set
-// iterators.  Duplicates are resolved by taking the value from the
-// first iterator.
-func NewMergeIterator(iter1, iter2 Iterator) MergeItererator {
+// NewMergeIterator returns a MergeIterator for merging two label sets
+// Duplicates are resolved by taking the value from the first set.
+func NewMergeIterator(s1, s2 *Set) MergeItererator {
 	mi := MergeItererator{
-		one: makeOne(iter1),
-		two: makeOne(iter2),
+		one: makeOne(s1.Iter()),
+		two: makeOne(s2.Iter()),
 	}
 	return mi
 }
