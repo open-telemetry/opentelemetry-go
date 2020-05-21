@@ -122,10 +122,26 @@ func emptyState(boundaries []float64) state {
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
+	asFloat := number.CoerceToFloat64(kind)
 
-	bucketID := sort.Search(len(c.boundaries), func(i int) bool {
-		return number.CoerceToFloat64(kind) < c.boundaries[i]
-	})
+	bucketID := len(c.boundaries)
+	for i, boundary := range c.boundaries {
+		if asFloat < boundary {
+			bucketID = i
+			break
+		}
+	}
+	// Note: Binary-search was compared using the benchmarks. The following
+	// code is equivalent to the linear search above:
+	//
+	//     bucketID := sort.Search(len(c.boundaries), func(i int) bool {
+	//         return asFloat < c.boundaries[i]
+	//     })
+	//
+	// The binary search wins for very large boundary sets, but
+	// the linear search performs better up through arrays between
+	// 256 and 512 elements, which is a relatively large histogram, so we
+	// continue to prefer linear search.
 
 	c.lock.Lock()
 	defer c.lock.Unlock()

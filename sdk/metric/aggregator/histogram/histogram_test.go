@@ -227,7 +227,7 @@ func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
 	counts := make([]uint64, len(sortedBoundaries)+1)
 	idx := 0
 	for _, p := range points {
-		for idx < len(sortedBoundaries) && p.CoerceToFloat64(profile.NumberKind) >= boundaries[idx] {
+		for idx < len(sortedBoundaries) && p.CoerceToFloat64(profile.NumberKind) >= sortedBoundaries[idx] {
 			idx++
 		}
 		counts[idx]++
