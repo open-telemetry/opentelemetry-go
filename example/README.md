@@ -1,4 +1,9 @@
 # Example
+Here is a collection of OpenTelemtry-Go examples showcasing basic functionality.
+
+## OTLP
+This example demonstrates how to export trace and metric data from an
+application using OpenTelemetry's own wire protocal OTLP. 
 
 ## HTTP
 This is a simple example that demonstrates tracing http request from client to server. The example
