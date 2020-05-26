@@ -63,16 +63,15 @@ for dir in $PACKAGE_DIRS; do
 	 # strip double quotes
 	 replaces=("${replaces[@]%\"}") && \
 	 replaces=("${replaces[@]#\"}") && \
-	 # make an array (-dropreplace=mod1 -dropreplace=mod2 …) 
+	 # make an array (-dropreplace=mod1 -dropreplace=mod2 …)
 	 dropreplaces=("${replaces[@]/#/-dropreplace=}") && \
 	 go mod edit -module "oteltmp/${dir}" "${dropreplaces[@]}" && \
 	 go mod tidy)
 done
 printf "Update done:\n\n"
 
-# Build directories that contain main package. These directories are different than 
+# Build directories that contain main package. These directories are different than
 # directories that contain go.mod files.
-# 
 printf "Build examples:\n"
 EXAMPLES=$(./get_main_pkgs.sh ./example)
 for ex in $EXAMPLES; do
