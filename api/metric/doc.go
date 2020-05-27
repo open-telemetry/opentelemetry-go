@@ -33,7 +33,7 @@
 // and the asynchronous instruments are:
 //
 //   SumObserver:       additive, monotonic
-//   UpDownSumOnserver: additive
+//   UpDownSumObserver: additive
 //   ValueObserver:     non-additive
 //
 // All instruments are provided with support for either float64 or
