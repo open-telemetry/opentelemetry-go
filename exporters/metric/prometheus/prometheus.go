@@ -18,38 +18,44 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Exporter is an implementation of metric.Exporter that sends metrics to
 // Prometheus.
+//
+// This exporter supports Prometheus pulls, as such it does not
+// implement the export.Exporter interface.
 type Exporter struct {
 	handler http.Handler
 
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	snapshot export.CheckpointSet
-	onError  func(error)
+	// lock protects access to the controller. The controller
+	// exposes its own lock, but using a dedicated lock in this
+	// struct allows the exporter to potentially support multiple
+	// controllers (e.g., with different resources).
+	lock       sync.RWMutex
+	controller *pull.Controller
+
+	onError func(error)
 
 	defaultSummaryQuantiles    []float64
-	defaultHistogramBoundaries []core.Number
+	defaultHistogramBoundaries []float64
 }
 
-var _ export.Exporter = &Exporter{}
 var _ http.Handler = &Exporter{}
 
 // Config is a set of configs for the tally reporter.
@@ -78,16 +84,16 @@ type Config struct {
 
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
-	DefaultHistogramBoundaries []core.Number
+	DefaultHistogramBoundaries []float64
 
 	// OnError is a function that handle errors that may occur while exporting metrics.
 	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
 	OnError func(error)
 }
 
-// NewRawExporter returns a new prometheus exporter for prometheus metrics
-// for use in a pipeline.
-func NewRawExporter(config Config) (*Exporter, error) {
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// using the recommended selector and standard integrator.  See the pull.Options.
+func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -115,9 +121,12 @@ func NewRawExporter(config Config) (*Exporter, error) {
 		onError:                    config.OnError,
 	}
 
-	c := newCollector(e)
+	c := &collector{
+		exp: e,
+	}
+	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
-		config.OnError(fmt.Errorf("cannot register the collector: %w", err))
+		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
 
 	return e, nil
@@ -126,7 +135,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
 // Typically called as:
 //
-// 	pipeline, hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
+// 	hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
 //
 // 	if err != nil {
 // 		...
@@ -134,44 +143,51 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config) (*push.Controller, http.HandlerFunc, error) {
-	controller, hf, err := NewExportPipeline(config, time.Minute)
+func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+	exp, err := NewExportPipeline(config, options...)
 	if err != nil {
-		return controller, hf, err
+		return nil, err
 	}
-	global.SetMeterProvider(controller)
-	return controller, hf, err
+	global.SetMeterProvider(exp.Provider())
+	return exp, nil
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, period time.Duration) (*push.Controller, http.HandlerFunc, error) {
-	selector := simple.NewWithHistogramMeasure(config.DefaultHistogramBoundaries)
-	exporter, err := NewRawExporter(config)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Prometheus needs to use a stateful batcher since counters (and histogram since they are a collection of Counters)
-	// are cumulative (i.e., monotonically increasing values) and should not be resetted after each export.
+// SetController sets up a standard *pull.Controller as the metric provider
+// for this exporter.
+func (e *Exporter) SetController(config Config, options ...pull.Option) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	// Prometheus uses a stateful pull controller since instruments are
+	// cumulative and should not be reset after each collection interval.
 	//
 	// Prometheus uses this approach to be resilient to scrape failures.
 	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
 	// it could try again on the next scrape and no data would be lost, only resolution.
 	//
 	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	batcher := ungrouped.New(selector, true)
-	pusher := push.New(batcher, exporter, period)
-	pusher.Start()
-
-	return pusher, exporter.ServeHTTP, nil
+	//
+	// TODO: Prometheus supports "Gauge Histogram" which are
+	// expressed as delta histograms.
+	e.controller = pull.New(
+		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+		append(options, pull.WithStateful(true))...,
+	)
 }
 
-// Export exports the provide metric record to prometheus.
-func (e *Exporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
-	// TODO: Use the resource value in this exporter.
-	e.snapshot = checkpointSet
-	return nil
+// Provider returns the metric.Provider of this exporter.
+func (e *Exporter) Provider() metric.Provider {
+	return e.controller.Provider()
+}
+
+// Controller returns the controller object that coordinates collection for the SDK.
+func (e *Exporter) Controller() *pull.Controller {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.controller
+}
+
+func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e.handler.ServeHTTP(w, r)
 }
 
 // collector implements prometheus.Collector interface.
@@ -181,19 +197,14 @@ type collector struct {
 
 var _ prometheus.Collector = (*collector)(nil)
 
-func newCollector(exporter *Exporter) *collector {
-	return &collector{
-		exp: exporter,
-	}
-}
-
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	if c.exp.snapshot == nil {
-		return
-	}
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.snapshot.ForEach(func(record export.Record) error {
-		ch <- c.toDesc(&record)
+	_ = c.exp.Controller().ForEach(func(record export.Record) error {
+		var labelKeys []string
+		mergeLabels(record, &labelKeys, nil)
+		ch <- c.toDesc(record, labelKeys)
 		return nil
 	})
 }
@@ -203,15 +214,20 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	if c.exp.snapshot == nil {
-		return
-	}
+	c.exp.lock.RLock()
+	defer c.exp.lock.RUnlock()
 
-	err := c.exp.snapshot.ForEach(func(record export.Record) error {
+	ctrl := c.exp.Controller()
+	ctrl.Collect(context.Background())
+
+	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
-		labels := labelValues(record.Labels())
-		desc := c.toDesc(&record)
+
+		var labelKeys, labels []string
+		mergeLabels(record, &labelKeys, &labels)
+
+		desc := c.toDesc(record, labelKeys)
 
 		if hist, ok := agg.(aggregator.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
@@ -219,7 +235,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		} else if dist, ok := agg.(aggregator.Distribution); ok {
 			// TODO: summaries values are never being resetted.
-			//  As measures are recorded, new records starts to have less impact on these summaries.
+			//  As measurements are recorded, new records starts to have less impact on these summaries.
 			//  We should implement an solution that is similar to the Prometheus Clients
 			//  using a rolling window for summaries could be a solution.
 			//
@@ -245,7 +261,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -260,7 +276,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -275,13 +291,13 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
-	var sum core.Number
+	var sum metric.Number
 	sum, err = dist.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving distribution sum: %w", err)
@@ -302,7 +318,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind core.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)
@@ -317,12 +333,12 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	// The bucket with upper-bound +inf is not included.
 	counts := make(map[float64]uint64, len(buckets.Boundaries))
 	for i := range buckets.Boundaries {
-		boundary := buckets.Boundaries[i].CoerceToFloat64(kind)
-		totalCount += buckets.Counts[i].AsUint64()
+		boundary := buckets.Boundaries[i]
+		totalCount += uint64(buckets.Counts[i])
 		counts[boundary] = totalCount
 	}
 	// Include the +inf bucket in the total count.
-	totalCount += buckets.Counts[len(buckets.Counts)-1].AsUint64()
+	totalCount += uint64(buckets.Counts[len(buckets.Counts)-1])
 
 	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, labels...)
 	if err != nil {
@@ -333,34 +349,34 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator
 	return nil
 }
 
-func (c *collector) toDesc(record *export.Record) *prometheus.Desc {
+func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus.Desc {
 	desc := record.Descriptor()
-	labels := labelsKeys(record.Labels())
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labels, nil)
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
 }
 
-func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	e.handler.ServeHTTP(w, r)
-}
-
-func labelsKeys(labels *label.Set) []string {
-	iter := labels.Iter()
-	keys := make([]string, 0, iter.Len())
-	for iter.Next() {
-		kv := iter.Label()
-		keys = append(keys, sanitize(string(kv.Key)))
+// mergeLabels merges the export.Record's labels and resources into a
+// single set, giving precedence to the record's labels in case of
+// duplicate keys.  This outputs one or both of the keys and the
+// values as a slice, and either argument may be nil to avoid
+// allocating an unnecessary slice.
+func mergeLabels(record export.Record, keys, values *[]string) {
+	if keys != nil {
+		*keys = make([]string, 0, record.Labels().Len()+record.Resource().Len())
 	}
-	return keys
-}
-
-func labelValues(labels *label.Set) []string {
-	// TODO(paivagustavo): parse the labels.Encoded() instead of calling `Emit()` directly
-	//  this would avoid unnecessary allocations.
-	iter := labels.Iter()
-	values := make([]string, 0, iter.Len())
-	for iter.Next() {
-		label := iter.Label()
-		values = append(values, label.Value.Emit())
+	if values != nil {
+		*values = make([]string, 0, record.Labels().Len()+record.Resource().Len())
 	}
-	return values
+
+	// Duplicate keys are resolved by taking the record label value over
+	// the resource value.
+	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	for mi.Next() {
+		label := mi.Label()
+		if keys != nil {
+			*keys = append(*keys, sanitize(string(label.Key)))
+		}
+		if values != nil {
+			*values = append(*values, label.Value.Emit())
+		}
+	}
 }

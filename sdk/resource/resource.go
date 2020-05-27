@@ -17,7 +17,7 @@
 package resource
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 )
 
@@ -34,10 +34,10 @@ type Resource struct {
 
 var emptyResource Resource
 
-// New creates a resource from a set of attributes.  If there are
+// Key creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
-func New(kvs ...core.KeyValue) *Resource {
+func New(kvs ...kv.KeyValue) *Resource {
 	return &Resource{
 		labels: label.NewSet(kvs...),
 	}
@@ -57,7 +57,7 @@ func (r *Resource) String() string {
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 // To avoid allocating a new slice, use an iterator.
-func (r *Resource) Attributes() []core.KeyValue {
+func (r *Resource) Attributes() []kv.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
@@ -89,15 +89,23 @@ func (r *Resource) Equal(eq *Resource) bool {
 // If there are common keys between resource a and b, then the value
 // from resource a is preserved.
 func Merge(a, b *Resource) *Resource {
+	if a == nil && b == nil {
+		return Empty()
+	}
 	if a == nil {
-		a = Empty()
+		return b
 	}
 	if b == nil {
-		b = Empty()
+		return a
 	}
-	// Note: 'b' is listed first so that 'a' will overwrite with
-	// last-value-wins in label.New()
-	combine := append(b.Attributes(), a.Attributes()...)
+
+	// Note: 'a' labels will overwrite 'b' with last-value-wins in label.Key()
+	// Meaning this is equivalent to: append(b.Attributes(), a.Attributes()...)
+	mi := label.NewMergeIterator(a.LabelSet(), b.LabelSet())
+	combine := make([]kv.KeyValue, 0, a.Len()+b.Len())
+	for mi.Next() {
+		combine = append(combine, mi.Label())
+	}
 	return New(combine...)
 }
 
@@ -111,10 +119,15 @@ func Empty() *Resource {
 // between two resources.  This value is suitable for use as a key in
 // a map.
 func (r *Resource) Equivalent() label.Distinct {
+	return r.LabelSet().Equivalent()
+}
+
+// LabelSet returns the equivalent *label.Set.
+func (r *Resource) LabelSet() *label.Set {
 	if r == nil {
 		r = Empty()
 	}
-	return r.labels.Equivalent()
+	return &r.labels
 }
 
 // MarshalJSON encodes labels as a JSON list of { "Key": "...", "Value": ... }

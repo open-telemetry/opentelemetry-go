@@ -27,7 +27,6 @@ import (
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -62,7 +61,7 @@ type result struct {
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, resource *resource.Resource, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
 	records, errc := source(ctx, cps)
 
 	// Start a fixed number of goroutines to transform records.
@@ -72,7 +71,7 @@ func CheckpointSet(ctx context.Context, resource *resource.Resource, cps export.
 	for i := uint(0); i < numWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			transformer(ctx, resource, records, transformed)
+			transformer(ctx, records, transformed)
 		}()
 	}
 	go func() {
@@ -117,7 +116,7 @@ func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record
 
 // transformer transforms records read from the passed in chan into
 // OTLP Metrics which are sent on the out chan.
-func transformer(ctx context.Context, resource *resource.Resource, in <-chan export.Record, out chan<- result) {
+func transformer(ctx context.Context, in <-chan export.Record, out chan<- result) {
 	for r := range in {
 		m, err := Record(r)
 		// Propagate errors, but do not send empty results.
@@ -125,7 +124,7 @@ func transformer(ctx context.Context, resource *resource.Resource, in <-chan exp
 			continue
 		}
 		res := result{
-			Resource: resource,
+			Resource: r.Resource(),
 			Library:  r.Descriptor().LibraryName(),
 			Metric:   m,
 			Err:      err,
@@ -257,12 +256,12 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 	}
 
 	switch n := desc.NumberKind(); n {
-	case core.Int64NumberKind, core.Uint64NumberKind:
+	case metric.Int64NumberKind, metric.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{Value: sum.CoerceToInt64(n)},
 		}
-	case core.Float64NumberKind:
+	case metric.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{Value: sum.CoerceToFloat64(n)},
@@ -276,7 +275,7 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.
-func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum core.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}

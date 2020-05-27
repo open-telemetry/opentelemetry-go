@@ -14,36 +14,111 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/core"
-
-// Int64ObserverResult is an interface for reporting integral
-// observations.
-type Int64ObserverResult interface {
-	Observe(value int64, labels ...core.KeyValue)
+// BatchObserver represents an Observer callback that can report
+// observations for multiple instruments.
+type BatchObserver struct {
+	meter  Meter
+	runner AsyncBatchRunner
 }
 
-// Float64ObserverResult is an interface for reporting floating point
-// observations.
-type Float64ObserverResult interface {
-	Observe(value float64, labels ...core.KeyValue)
-}
-
-// Int64ObserverCallback is a type of callback that integral
-// observers run.
-type Int64ObserverCallback func(result Int64ObserverResult)
-
-// Float64ObserverCallback is a type of callback that floating point
-// observers run.
-type Float64ObserverCallback func(result Float64ObserverResult)
-
-// Int64Observer is a metric that captures a set of int64 values at a
+// Int64ValueObserver is a metric that captures a set of int64 values at a
 // point in time.
-type Int64Observer struct {
+type Int64ValueObserver struct {
 	asyncInstrument
 }
 
-// Float64Observer is a metric that captures a set of float64 values
+// Float64ValueObserver is a metric that captures a set of float64 values
 // at a point in time.
-type Float64Observer struct {
+type Float64ValueObserver struct {
 	asyncInstrument
+}
+
+// Int64SumObserver is a metric that captures a precomputed sum of
+// int64 values at a point in time.
+type Int64SumObserver struct {
+	asyncInstrument
+}
+
+// Float64SumObserver is a metric that captures a precomputed sum of
+// float64 values at a point in time.
+type Float64SumObserver struct {
+	asyncInstrument
+}
+
+// Int64UpDownSumObserver is a metric that captures a precomputed sum of
+// int64 values at a point in time.
+type Int64UpDownSumObserver struct {
+	asyncInstrument
+}
+
+// Float64UpDownSumObserver is a metric that captures a precomputed sum of
+// float64 values at a point in time.
+type Float64UpDownSumObserver struct {
+	asyncInstrument
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64ValueObserver) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64ValueObserver) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64SumObserver) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64SumObserver) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64UpDownSumObserver) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64UpDownSumObserver) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
 }

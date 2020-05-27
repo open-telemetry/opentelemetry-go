@@ -20,7 +20,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 type Provider interface {
@@ -92,10 +92,10 @@ type Span interface {
 	End(options ...EndOption)
 
 	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, name string, attrs ...core.KeyValue)
+	AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue)
 	// AddEventWithTimestamp adds an event with a custom timestamp
 	// to the span.
-	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...core.KeyValue)
+	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue)
 
 	// IsRecording returns true if the span is active and recording events is enabled.
 	IsRecording() bool
@@ -120,7 +120,7 @@ type Span interface {
 	SetName(name string)
 
 	// Set span attributes
-	SetAttributes(...core.KeyValue)
+	SetAttributes(...kv.KeyValue)
 
 	// Set singular span attribute, with type inference.
 	SetAttribute(string, interface{})
@@ -132,7 +132,7 @@ type StartOption func(*StartConfig)
 // StartConfig provides options to set properties of span at the time of starting
 // a new span.
 type StartConfig struct {
-	Attributes []core.KeyValue
+	Attributes []kv.KeyValue
 	StartTime  time.Time
 	Links      []Link
 	Record     bool
@@ -153,7 +153,7 @@ type StartConfig struct {
 //      be correlated.
 type Link struct {
 	SpanContext
-	Attributes []core.KeyValue
+	Attributes []kv.KeyValue
 }
 
 // SpanKind represents the role of a Span inside a Trace. Often, this defines how a Span
@@ -221,7 +221,7 @@ func WithStartTime(t time.Time) StartOption {
 // WithAttributes sets attributes to span. These attributes provides additional
 // data about the span.
 // Multiple `WithAttributes` options appends the attributes preserving the order.
-func WithAttributes(attrs ...core.KeyValue) StartOption {
+func WithAttributes(attrs ...kv.KeyValue) StartOption {
 	return func(c *StartConfig) {
 		c.Attributes = append(c.Attributes, attrs...)
 	}
@@ -248,7 +248,7 @@ func WithNewRoot() StartOption {
 }
 
 // LinkedTo allows instantiating a Span with initial Links.
-func LinkedTo(sc SpanContext, attrs ...core.KeyValue) StartOption {
+func LinkedTo(sc SpanContext, attrs ...kv.KeyValue) StartOption {
 	return func(c *StartConfig) {
 		c.Links = append(c.Links, Link{sc, attrs})
 	}

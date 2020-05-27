@@ -17,24 +17,25 @@ package othttp
 import (
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 // Attribute keys that can be added to a span.
 const (
-	HostKey       = core.Key("http.host")        // the HTTP host (http.Request.Host)
-	MethodKey     = core.Key("http.method")      // the HTTP method (http.Request.Method)
-	PathKey       = core.Key("http.path")        // the HTTP path (http.Request.URL.Path)
-	URLKey        = core.Key("http.url")         // the HTTP URL (http.Request.URL.String())
-	UserAgentKey  = core.Key("http.user_agent")  // the HTTP user agent (http.Request.UserAgent())
-	RouteKey      = core.Key("http.route")       // the HTTP route (ex: /users/:id)
-	RemoteAddrKey = core.Key("http.remote_addr") // the network address of the client that sent the HTTP request (http.Request.RemoteAddr)
-	StatusCodeKey = core.Key("http.status_code") // if set, the HTTP status
-	ReadBytesKey  = core.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
-	ReadErrorKey  = core.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
-	WroteBytesKey = core.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
-	WriteErrorKey = core.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
+	HostKey       = kv.Key("http.host")        // the HTTP host (http.Request.Host)
+	MethodKey     = kv.Key("http.method")      // the HTTP method (http.Request.Method)
+	PathKey       = kv.Key("http.path")        // the HTTP path (http.Request.URL.Path)
+	URLKey        = kv.Key("http.url")         // the HTTP URL (http.Request.URL.String())
+	UserAgentKey  = kv.Key("http.user_agent")  // the HTTP user agent (http.Request.UserAgent())
+	RouteKey      = kv.Key("http.route")       // the HTTP route (ex: /users/:id)
+	RemoteAddrKey = kv.Key("http.remote_addr") // the network address of the client that sent the HTTP request (http.Request.RemoteAddr)
+	StatusCodeKey = kv.Key("http.status_code") // if set, the HTTP status
+	ReadBytesKey  = kv.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
+	ReadErrorKey  = kv.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
+	WroteBytesKey = kv.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
+	WriteErrorKey = kv.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
 )
 
 // Filter is a predicate used to determine whether a given http.request should

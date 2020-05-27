@@ -19,7 +19,6 @@ import (
 	"math"
 	"time"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
@@ -30,7 +29,7 @@ import (
 type (
 	// Sum returns an aggregated sum.
 	Sum interface {
-		Sum() (core.Number, error)
+		Sum() (metric.Number, error)
 	}
 
 	// Sum returns the number of values that were aggregated.
@@ -40,28 +39,28 @@ type (
 
 	// Min returns the minimum value over the set of values that were aggregated.
 	Min interface {
-		Min() (core.Number, error)
+		Min() (metric.Number, error)
 	}
 
 	// Max returns the maximum value over the set of values that were aggregated.
 	Max interface {
-		Max() (core.Number, error)
+		Max() (metric.Number, error)
 	}
 
 	// Quantile returns an exact or estimated quantile over the
 	// set of values that were aggregated.
 	Quantile interface {
-		Quantile(float64) (core.Number, error)
+		Quantile(float64) (metric.Number, error)
 	}
 
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
-		LastValue() (core.Number, time.Time, error)
+		LastValue() (metric.Number, time.Time, error)
 	}
 
 	// Points returns the raw set of values that were aggregated.
 	Points interface {
-		Points() ([]core.Number, error)
+		Points() ([]metric.Number, error)
 	}
 
 	// Buckets represents histogram buckets boundaries and counts.
@@ -69,8 +68,14 @@ type (
 	// For a Histogram with N defined boundaries, e.g, [x, y, z].
 	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
 	Buckets struct {
-		Boundaries []core.Number
-		Counts     []core.Number
+		// Boundaries are floating point numbers, even when
+		// aggregating integers.
+		Boundaries []float64
+
+		// Counts are floating point numbers to account for
+		// the possibility of sampling which allows for
+		// non-integer count values.
+		Counts []float64
 	}
 
 	// Histogram returns the count of events in pre-determined buckets.
@@ -117,16 +122,16 @@ func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
 // RangeTest is a commmon routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
-// monotonic counter metrics and absolute measure metrics.
-func RangeTest(number core.Number, descriptor *metric.Descriptor) error {
+// monotonic counter metrics and absolute ValueRecorder metrics.
+func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
-	if numberKind == core.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
+	if numberKind == metric.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
 		return ErrNaNInput
 	}
 
 	switch descriptor.MetricKind() {
-	case metric.CounterKind:
+	case metric.CounterKind, metric.SumObserverKind:
 		if number.IsNegative(numberKind) {
 			return ErrNegativeInput
 		}

@@ -15,7 +15,7 @@
 package label
 
 import (
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // Iterator allows iterating over the set of labels in order,
@@ -25,6 +25,21 @@ type Iterator struct {
 	idx     int
 }
 
+// MergeIterator supports iterating over two sets of labels while
+// eliminating duplicate values from the combined set.  The first
+// iterator value takes precedence.
+type MergeItererator struct {
+	one     oneIterator
+	two     oneIterator
+	current kv.KeyValue
+}
+
+type oneIterator struct {
+	iter  Iterator
+	done  bool
+	label kv.KeyValue
+}
+
 // Next moves the iterator to the next position. Returns false if there
 // are no more labels.
 func (i *Iterator) Next() bool {
@@ -32,26 +47,26 @@ func (i *Iterator) Next() bool {
 	return i.idx < i.Len()
 }
 
-// Label returns current core.KeyValue. Must be called only after Next returns
+// Label returns current kv.KeyValue. Must be called only after Next returns
 // true.
-func (i *Iterator) Label() core.KeyValue {
+func (i *Iterator) Label() kv.KeyValue {
 	kv, _ := i.storage.Get(i.idx)
 	return kv
 }
 
 // Attribute is a synonym for Label().
-func (i *Iterator) Attribute() core.KeyValue {
+func (i *Iterator) Attribute() kv.KeyValue {
 	return i.Label()
 }
 
 // IndexedLabel returns current index and label. Must be called only
 // after Next returns true.
-func (i *Iterator) IndexedLabel() (int, core.KeyValue) {
+func (i *Iterator) IndexedLabel() (int, kv.KeyValue) {
 	return i.idx, i.Label()
 }
 
 // IndexedAttribute is a synonym for IndexedLabel().
-func (i *Iterator) IndexedAttribute() (int, core.KeyValue) {
+func (i *Iterator) IndexedAttribute() (int, kv.KeyValue) {
 	return i.IndexedLabel()
 }
 
@@ -63,15 +78,75 @@ func (i *Iterator) Len() int {
 // ToSlice is a convenience function that creates a slice of labels
 // from the passed iterator. The iterator is set up to start from the
 // beginning before creating the slice.
-func (i *Iterator) ToSlice() []core.KeyValue {
+func (i *Iterator) ToSlice() []kv.KeyValue {
 	l := i.Len()
 	if l == 0 {
 		return nil
 	}
 	i.idx = -1
-	slice := make([]core.KeyValue, 0, l)
+	slice := make([]kv.KeyValue, 0, l)
 	for i.Next() {
 		slice = append(slice, i.Label())
 	}
 	return slice
+}
+
+// NewMergeIterator returns a MergeIterator for merging two label sets
+// Duplicates are resolved by taking the value from the first set.
+func NewMergeIterator(s1, s2 *Set) MergeItererator {
+	mi := MergeItererator{
+		one: makeOne(s1.Iter()),
+		two: makeOne(s2.Iter()),
+	}
+	return mi
+}
+
+func makeOne(iter Iterator) oneIterator {
+	oi := oneIterator{
+		iter: iter,
+	}
+	oi.advance()
+	return oi
+}
+
+func (oi *oneIterator) advance() {
+	if oi.done = !oi.iter.Next(); !oi.done {
+		oi.label = oi.iter.Label()
+	}
+}
+
+// Next returns true if there is another label available.
+func (m *MergeItererator) Next() bool {
+	if m.one.done && m.two.done {
+		return false
+	}
+	if m.one.done {
+		m.current = m.two.label
+		m.two.advance()
+		return true
+	}
+	if m.two.done {
+		m.current = m.one.label
+		m.one.advance()
+		return true
+	}
+	if m.one.label.Key == m.two.label.Key {
+		m.current = m.one.label // first iterator label value wins
+		m.one.advance()
+		m.two.advance()
+		return true
+	}
+	if m.one.label.Key < m.two.label.Key {
+		m.current = m.one.label
+		m.one.advance()
+		return true
+	}
+	m.current = m.two.label
+	m.two.advance()
+	return true
+}
+
+// Label returns the current value after Next() returns true.
+func (m *MergeItererator) Label() kv.KeyValue {
+	return m.current
 }

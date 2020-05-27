@@ -17,11 +17,10 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 type NoopProvider struct{}
-type NoopMeter struct{}
 
 type noopInstrument struct{}
 type noopBoundInstrument struct{}
@@ -29,13 +28,12 @@ type NoopSync struct{ noopInstrument }
 type NoopAsync struct{ noopInstrument }
 
 var _ Provider = NoopProvider{}
-var _ Meter = NoopMeter{}
 var _ SyncImpl = NoopSync{}
 var _ BoundSyncImpl = noopBoundInstrument{}
 var _ AsyncImpl = NoopAsync{}
 
 func (NoopProvider) Meter(name string) Meter {
-	return NoopMeter{}
+	return Meter{}
 }
 
 func (noopInstrument) Implementation() interface{} {
@@ -46,42 +44,15 @@ func (noopInstrument) Descriptor() Descriptor {
 	return Descriptor{}
 }
 
-func (noopBoundInstrument) RecordOne(context.Context, core.Number) {
+func (noopBoundInstrument) RecordOne(context.Context, Number) {
 }
 
 func (noopBoundInstrument) Unbind() {
 }
 
-func (NoopSync) Bind([]core.KeyValue) BoundSyncImpl {
+func (NoopSync) Bind([]kv.KeyValue) BoundSyncImpl {
 	return noopBoundInstrument{}
 }
 
-func (NoopSync) RecordOne(context.Context, core.Number, []core.KeyValue) {
-}
-
-func (NoopMeter) RecordBatch(context.Context, []core.KeyValue, ...Measurement) {
-}
-
-func (NoopMeter) NewInt64Counter(string, ...Option) (Int64Counter, error) {
-	return Int64Counter{syncInstrument{NoopSync{}}}, nil
-}
-
-func (NoopMeter) NewFloat64Counter(string, ...Option) (Float64Counter, error) {
-	return Float64Counter{syncInstrument{NoopSync{}}}, nil
-}
-
-func (NoopMeter) NewInt64Measure(string, ...Option) (Int64Measure, error) {
-	return Int64Measure{syncInstrument{NoopSync{}}}, nil
-}
-
-func (NoopMeter) NewFloat64Measure(string, ...Option) (Float64Measure, error) {
-	return Float64Measure{syncInstrument{NoopSync{}}}, nil
-}
-
-func (NoopMeter) RegisterInt64Observer(string, Int64ObserverCallback, ...Option) (Int64Observer, error) {
-	return Int64Observer{asyncInstrument{NoopAsync{}}}, nil
-}
-
-func (NoopMeter) RegisterFloat64Observer(string, Float64ObserverCallback, ...Option) (Float64Observer, error) {
-	return Float64Observer{asyncInstrument{NoopAsync{}}}, nil
+func (NoopSync) RecordOne(context.Context, Number, []kv.KeyValue) {
 }

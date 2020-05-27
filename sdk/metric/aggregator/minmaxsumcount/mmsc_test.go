@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
@@ -80,7 +79,7 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg := New(descriptor)
 
@@ -128,7 +127,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg1 := New(descriptor)
 		agg2 := New(descriptor)
@@ -186,13 +185,13 @@ func TestMaxSumCountNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg := New(descriptor)
 		agg.Checkpoint(ctx, descriptor)
 
 		asum, err := agg.Sum()
-		require.Equal(t, core.Number(0), asum, "Empty checkpoint sum = 0")
+		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
 		require.Nil(t, err)
 
 		count, err := agg.Count()
@@ -201,6 +200,6 @@ func TestMaxSumCountNotSet(t *testing.T) {
 
 		max, err := agg.Max()
 		require.Equal(t, aggregator.ErrNoData, err)
-		require.Equal(t, core.Number(0), max)
+		require.Equal(t, metric.Number(0), max)
 	})
 }

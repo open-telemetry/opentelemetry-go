@@ -21,8 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -36,10 +35,10 @@ import (
 type processFunc func(context.Context, export.Record) error
 
 type benchFixture struct {
-	meter metric.MeterMust
-	sdk   *sdk.SDK
-	B     *testing.B
-	pcb   processFunc
+	meter       metric.MeterMust
+	accumulator *sdk.Accumulator
+	B           *testing.B
+	pcb         processFunc
 }
 
 func newFixture(b *testing.B) *benchFixture {
@@ -48,8 +47,8 @@ func newFixture(b *testing.B) *benchFixture {
 		B: b,
 	}
 
-	bf.sdk = sdk.New(bf)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.sdk, "benchmarks"))
+	bf.accumulator = sdk.NewAccumulator(bf)
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
 	return bf
 }
 
@@ -90,8 +89,8 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func makeManyLabels(n int) [][]core.KeyValue {
-	r := make([][]core.KeyValue, n)
+func makeManyLabels(n int) [][]kv.KeyValue {
+	r := make([][]kv.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -100,9 +99,9 @@ func makeManyLabels(n int) [][]core.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []core.KeyValue {
+func makeLabels(n int) []kv.KeyValue {
 	used := map[string]bool{}
-	l := make([]core.KeyValue, n)
+	l := make([]kv.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -112,7 +111,7 @@ func makeLabels(n int) []core.KeyValue {
 				break
 			}
 		}
-		l[i] = key.New(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -199,12 +198,12 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-var benchmarkIteratorVar core.KeyValue
+var benchmarkIteratorVar kv.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
 	fix := newFixture(b)
 	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
-		var kv core.KeyValue
+		var kv kv.KeyValue
 		li := rec.Labels().Iter()
 		fix.B.StartTimer()
 		for i := 0; i < fix.B.N; i++ {
@@ -223,7 +222,7 @@ func benchmarkIterator(b *testing.B, n int) {
 	cnt.Add(ctx, 1, makeLabels(n)...)
 
 	b.ResetTimer()
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 func BenchmarkIterator_0(b *testing.B) {
@@ -312,7 +311,7 @@ func BenchmarkInt64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure("int64.lastvalue")
+	mea := fix.meter.NewInt64ValueRecorder("int64.lastvalue")
 
 	b.ResetTimer()
 
@@ -325,7 +324,7 @@ func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure("int64.lastvalue")
+	mea := fix.meter.NewInt64ValueRecorder("int64.lastvalue")
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -339,7 +338,7 @@ func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
+	mea := fix.meter.NewFloat64ValueRecorder("float64.lastvalue")
 
 	b.ResetTimer()
 
@@ -352,7 +351,7 @@ func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure("float64.lastvalue")
+	mea := fix.meter.NewFloat64ValueRecorder("float64.lastvalue")
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -362,13 +361,13 @@ func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
 	}
 }
 
-// Measures
+// ValueRecorders
 
-func benchmarkInt64MeasureAdd(b *testing.B, name string) {
+func benchmarkInt64ValueRecorderAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure(name)
+	mea := fix.meter.NewInt64ValueRecorder(name)
 
 	b.ResetTimer()
 
@@ -377,11 +376,11 @@ func benchmarkInt64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
+func benchmarkInt64ValueRecorderHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewInt64Measure(name)
+	mea := fix.meter.NewInt64ValueRecorder(name)
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -391,11 +390,11 @@ func benchmarkInt64MeasureHandleAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
+func benchmarkFloat64ValueRecorderAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure(name)
+	mea := fix.meter.NewFloat64ValueRecorder(name)
 
 	b.ResetTimer()
 
@@ -404,11 +403,11 @@ func benchmarkFloat64MeasureAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64MeasureHandleAdd(b *testing.B, name string) {
+func benchmarkFloat64ValueRecorderHandleAdd(b *testing.B, name string) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meter.NewFloat64Measure(name)
+	mea := fix.meter.NewFloat64ValueRecorder(name)
 	handle := mea.Bind(labs...)
 
 	b.ResetTimer()
@@ -424,22 +423,22 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	fix := newFixture(b)
 	names := make([]string, 0, b.N)
 	for i := 0; i < b.N; i++ {
-		names = append(names, fmt.Sprintf("test.observer.%d", i))
+		names = append(names, fmt.Sprintf("test.valueobserver.%d", i))
 	}
-	cb := func(result metric.Int64ObserverResult) {}
+	cb := func(_ context.Context, result metric.Int64ObserverResult) {}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.meter.RegisterInt64Observer(names[i], cb)
+		fix.meter.NewInt64ValueObserver(names[i], cb)
 	}
 }
 
-func BenchmarkObserverObservationInt64(b *testing.B) {
+func BenchmarkValueObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterInt64Observer("test.observer", func(result metric.Int64ObserverResult) {
+	_ = fix.meter.NewInt64ValueObserver("test.valueobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
@@ -447,14 +446,14 @@ func BenchmarkObserverObservationInt64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
-func BenchmarkObserverObservationFloat64(b *testing.B) {
+func BenchmarkValueObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meter.RegisterFloat64Observer("test.observer", func(result metric.Float64ObserverResult) {
+	_ = fix.meter.NewFloat64ValueObserver("test.valueobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}
@@ -462,61 +461,61 @@ func BenchmarkObserverObservationFloat64(b *testing.B) {
 
 	b.ResetTimer()
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 }
 
 // MaxSumCount
 
 func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.minmaxsumcount")
+	benchmarkInt64ValueRecorderAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.minmaxsumcount")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.minmaxsumcount")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.minmaxsumcount")
 }
 
 func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.minmaxsumcount")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.minmaxsumcount")
 }
 
 // DDSketch
 
 func BenchmarkInt64DDSketchAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.ddsketch")
+	benchmarkInt64ValueRecorderAdd(b, "int64.ddsketch")
 }
 
 func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.ddsketch")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.ddsketch")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.ddsketch")
 }
 
 func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.ddsketch")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.ddsketch")
 }
 
 // Array
 
 func BenchmarkInt64ArrayAdd(b *testing.B) {
-	benchmarkInt64MeasureAdd(b, "int64.array")
+	benchmarkInt64ValueRecorderAdd(b, "int64.array")
 }
 
 func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
-	benchmarkInt64MeasureHandleAdd(b, "int64.array")
+	benchmarkInt64ValueRecorderHandleAdd(b, "int64.array")
 }
 
 func BenchmarkFloat64ArrayAdd(b *testing.B) {
-	benchmarkFloat64MeasureAdd(b, "float64.array")
+	benchmarkFloat64ValueRecorderAdd(b, "float64.array")
 }
 
 func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
-	benchmarkFloat64MeasureHandleAdd(b, "float64.array")
+	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.array")
 }
 
 // BatchRecord
@@ -536,7 +535,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.sdk.RecordBatch(ctx, labs, meas...)
+		fix.accumulator.RecordBatch(ctx, labs, meas...)
 	}
 }
 
@@ -568,13 +567,13 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	}
 
 	c := fix.meter.NewInt64Counter("int64.counter")
-	k := key.String("bench", "true")
+	k := kv.String("bench", "true")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		c.Add(ctx, 1, k)
-		fix.sdk.Collect(ctx)
+		fix.accumulator.Collect(ctx)
 	}
 }
 
@@ -595,13 +594,13 @@ func BenchmarkLabelIterator(b *testing.B) {
 	counter := fix.meter.NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, keyValues...)
 
-	fix.sdk.Collect(ctx)
+	fix.accumulator.Collect(ctx)
 
 	b.ResetTimer()
 
 	labels := rec.Labels()
 	iter := labels.Iter()
-	var val core.KeyValue
+	var val kv.KeyValue
 	for i := 0; i < b.N; i++ {
 		if !iter.Next() {
 			iter = labels.Iter()

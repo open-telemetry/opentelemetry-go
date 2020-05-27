@@ -20,11 +20,12 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/kv/value"
+
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -33,54 +34,54 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name    string
 		header  string
-		wantKVs []core.KeyValue
+		wantKVs []kv.KeyValue
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2;prop=1"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2;prop=1"),
 			},
 		},
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2,val3"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2,val3"),
 			},
 		},
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 		},
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
-			wantKVs: []core.KeyValue{
-				key.New("key1").String(""),
-				key.New("key2").String("val2"),
+			wantKVs: []kv.KeyValue{
+				kv.Key("key1").String(""),
+				kv.Key("key2").String("val2"),
 			},
 		},
 	}
@@ -88,7 +89,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("Correlation-Context", tt.header)
+			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
@@ -102,9 +103,9 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(kv core.KeyValue) bool {
-				val, _ := gotCorCtx.Value(kv.Key)
-				diff := cmp.Diff(kv, core.KeyValue{Key: kv.Key, Value: val}, cmp.AllowUnexported(core.Value{}))
+			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
+				val, _ := gotCorCtx.Value(keyValue.Key)
+				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(value.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -132,7 +133,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("Correlation-Context", tt.header)
+			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
@@ -149,38 +150,38 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
-		kvs          []core.KeyValue
+		kvs          []kv.KeyValue
 		wantInHeader []string
 		wantedLen    int
 	}{
 		{
 			name: "two simple values",
-			kvs: []core.KeyValue{
-				key.New("key1").String("val1"),
-				key.New("key2").String("val2"),
+			kvs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
 			},
 			wantInHeader: []string{"key1=val1", "key2=val2"},
 		},
 		{
 			name: "two values with escaped chars",
-			kvs: []core.KeyValue{
-				key.New("key1").String("val1,val2"),
-				key.New("key2").String("val3=4"),
+			kvs: []kv.KeyValue{
+				kv.Key("key1").String("val1,val2"),
+				kv.Key("key2").String("val3=4"),
 			},
 			wantInHeader: []string{"key1=val1%2Cval2", "key2=val3%3D4"},
 		},
 		{
 			name: "values of non-string types",
-			kvs: []core.KeyValue{
-				key.New("key1").Bool(true),
-				key.New("key2").Int(123),
-				key.New("key3").Int64(123),
-				key.New("key4").Int32(123),
-				key.New("key5").Uint(123),
-				key.New("key6").Uint32(123),
-				key.New("key7").Uint64(123),
-				key.New("key8").Float64(123.567),
-				key.New("key9").Float32(123.567),
+			kvs: []kv.KeyValue{
+				kv.Key("key1").Bool(true),
+				kv.Key("key2").Int(123),
+				kv.Key("key3").Int64(123),
+				kv.Key("key4").Int32(123),
+				kv.Key("key5").Uint(123),
+				kv.Key("key6").Uint32(123),
+				kv.Key("key7").Uint64(123),
+				kv.Key("key8").Float64(123.567),
+				kv.Key("key9").Float32(123.567),
 			},
 			wantInHeader: []string{
 				"key1=true",
@@ -201,17 +202,17 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 			ctx := correlation.ContextWithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
 			propagation.InjectHTTP(ctx, props, req.Header)
 
-			gotHeader := req.Header.Get("Correlation-Context")
+			gotHeader := req.Header.Get("otcorrelations")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
 			if wantedLen != len(gotHeader) {
 				t.Errorf(
-					"%s: Inject Correlation-Context incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
+					"%s: Inject otcorrelations incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
 				)
 			}
 			for _, inHeader := range tt.wantInHeader {
 				if !strings.Contains(gotHeader, inHeader) {
 					t.Errorf(
-						"%s: Inject Correlation-Context missing part of header: %s in %s", tt.name, inHeader, gotHeader,
+						"%s: Inject otcorrelations missing part of header: %s in %s", tt.name, inHeader, gotHeader,
 					)
 				}
 			}
@@ -221,7 +222,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator correlation.CorrelationContext
-	want := []string{"Correlation-Context"}
+	want := []string{"otcorrelations"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)

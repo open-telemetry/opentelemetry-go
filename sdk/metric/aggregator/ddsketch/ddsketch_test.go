@@ -33,7 +33,7 @@ type updateTest struct {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 	agg := New(NewDefaultConfig(), descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
@@ -92,7 +92,7 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
-	descriptor := test.NewAggregatorTest(metric.MeasureKind, profile.NumberKind)
+	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg1 := New(NewDefaultConfig(), descriptor)
 	agg2 := New(NewDefaultConfig(), descriptor)

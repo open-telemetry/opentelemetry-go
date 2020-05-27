@@ -19,12 +19,13 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
-const correlationContextHeader = "Correlation-Context"
+// Temporary header name until W3C finalizes format.
+// https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
+const correlationContextHeader = "otcorrelations"
 
 // CorrelationContext propagates Key:Values in W3C CorrelationContext
 // format.
@@ -44,7 +45,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	correlationCtx := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv core.KeyValue) bool {
+	correlationCtx.Foreach(func(kv kv.KeyValue) bool {
 		if !firstIter {
 			headerValueBuilder.WriteRune(',')
 		}
@@ -68,7 +69,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]core.KeyValue, 0, len(contextValues))
+	keyValues := make([]kv.KeyValue, 0, len(contextValues))
 	for _, contextValue := range contextValues {
 		valueAndProps := strings.Split(contextValue, ";")
 		if len(valueAndProps) < 1 {
@@ -98,7 +99,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, key.New(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, kv.Key(trimmedName).String(trimmedValueWithProps.String()))
 	}
 	return ContextWithMap(ctx, NewMap(MapUpdate{
 		MultiKV: keyValues,

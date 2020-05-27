@@ -37,7 +37,7 @@ func (*testTraceProvider) Tracer(_ string) trace.Tracer {
 }
 
 func (*testMeterProvider) Meter(_ string) metric.Meter {
-	return &metric.NoopMeter{}
+	return metric.Meter{}
 }
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {

@@ -15,8 +15,10 @@
 package prometheus_test
 
 import (
+	"bytes"
 	"context"
-	"log"
+	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"sort"
 	"strings"
@@ -24,109 +26,59 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/exporters/metric/test"
+	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewRawExporter(prometheus.Config{
-		DefaultSummaryQuantiles: []float64{0.5, 0.9, 0.99},
-	})
-	if err != nil {
-		log.Panicf("failed to initialize prometheus exporter %v", err)
+	exporter, err := prometheus.NewExportPipeline(prometheus.Config{
+		DefaultHistogramBoundaries: []float64{-0.5, 1},
+	}, pull.WithResource(resource.New(kv.String("R", "V"))))
+	require.NoError(t, err)
+
+	meter := exporter.Provider().Meter("test")
+
+	counter := metric.Must(meter).NewFloat64Counter("counter")
+	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
+
+	labels := []kv.KeyValue{
+		kv.Key("A").String("B"),
+		kv.Key("C").String("D"),
 	}
+	ctx := context.Background()
 
 	var expected []string
-	checkpointSet := test.NewCheckpointSet()
 
-	counter := metric.NewDescriptor(
-		"counter", metric.CounterKind, core.Float64NumberKind)
-	lastValue := metric.NewDescriptor(
-		"lastvalue", metric.ObserverKind, core.Float64NumberKind)
-	measure := metric.NewDescriptor(
-		"measure", metric.MeasureKind, core.Float64NumberKind)
-	histogramMeasure := metric.NewDescriptor(
-		"histogram_measure", metric.MeasureKind, core.Float64NumberKind)
+	counter.Add(ctx, 10, labels...)
+	counter.Add(ctx, 5.3, labels...)
 
-	labels := []core.KeyValue{
-		key.New("A").String("B"),
-		key.New("C").String("D"),
-	}
+	expected = append(expected, `counter{A="B",C="D",R="V"} 15.3`)
 
-	checkpointSet.AddCounter(&counter, 15.3, labels...)
-	expected = append(expected, `counter{A="B",C="D"} 15.3`)
+	valuerecorder.Record(ctx, -0.6, labels...)
+	valuerecorder.Record(ctx, -0.4, labels...)
+	valuerecorder.Record(ctx, 0.6, labels...)
+	valuerecorder.Record(ctx, 20, labels...)
 
-	checkpointSet.AddLastValue(&lastValue, 13.2, labels...)
-	expected = append(expected, `lastvalue{A="B",C="D"} 13.2`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="+Inf"} 4`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="-0.5"} 1`)
+	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="1"} 3`)
+	expected = append(expected, `valuerecorder_count{A="B",C="D",R="V"} 4`)
+	expected = append(expected, `valuerecorder_sum{A="B",C="D",R="V"} 19.6`)
 
-	checkpointSet.AddMeasure(&measure, 13, labels...)
-	checkpointSet.AddMeasure(&measure, 15, labels...)
-	checkpointSet.AddMeasure(&measure, 17, labels...)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.5"} 15`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.9"} 17`)
-	expected = append(expected, `measure{A="B",C="D",quantile="0.99"} 17`)
-	expected = append(expected, `measure_sum{A="B",C="D"} 45`)
-	expected = append(expected, `measure_count{A="B",C="D"} 3`)
-
-	boundaries := []core.Number{core.NewFloat64Number(-0.5), core.NewFloat64Number(1)}
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 0.6, labels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 20, labels...)
-
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="+Inf"} 4`)
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="-0.5"} 1`)
-	expected = append(expected, `histogram_measure_bucket{A="B",C="D",le="1"} 3`)
-	expected = append(expected, `histogram_measure_count{A="B",C="D"} 4`)
-	expected = append(expected, `histogram_measure_sum{A="B",C="D"} 19.6`)
-
-	missingLabels := []core.KeyValue{
-		key.New("A").String("E"),
-		key.New("C").String(""),
-	}
-
-	checkpointSet.AddCounter(&counter, 12, missingLabels...)
-	expected = append(expected, `counter{A="E",C=""} 12`)
-
-	checkpointSet.AddLastValue(&lastValue, 32, missingLabels...)
-	expected = append(expected, `lastvalue{A="E",C=""} 32`)
-
-	checkpointSet.AddMeasure(&measure, 19, missingLabels...)
-	expected = append(expected, `measure{A="E",C="",quantile="0.5"} 19`)
-	expected = append(expected, `measure{A="E",C="",quantile="0.9"} 19`)
-	expected = append(expected, `measure{A="E",C="",quantile="0.99"} 19`)
-	expected = append(expected, `measure_count{A="E",C=""} 1`)
-	expected = append(expected, `measure_sum{A="E",C=""} 19`)
-
-	boundaries = []core.Number{core.NewFloat64Number(0), core.NewFloat64Number(1)}
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.6, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.4, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, -0.1, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 15, missingLabels...)
-	checkpointSet.AddHistogramMeasure(&histogramMeasure, boundaries, 15, missingLabels...)
-
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="+Inf"} 5`)
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="0"} 3`)
-	expected = append(expected, `histogram_measure_bucket{A="E",C="",le="1"} 3`)
-	expected = append(expected, `histogram_measure_count{A="E",C=""} 5`)
-	expected = append(expected, `histogram_measure_sum{A="E",C=""} 28.9`)
-
-	compareExport(t, exporter, checkpointSet, expected)
+	compareExport(t, exporter, expected)
 }
 
-func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *test.CheckpointSet, expected []string) {
-	err := exporter.Export(context.Background(), nil, checkpointSet)
-	require.Nil(t, err)
-
+func compareExport(t *testing.T, exporter *prometheus.Exporter, expected []string) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	exporter.ServeHTTP(rec, req)
 
 	output := rec.Body.String()
 	lines := strings.Split(output, "\n")
+
 	var metricsOnly []string
 	for _, line := range lines {
 		if !strings.HasPrefix(line, "#") && line != "" {
@@ -138,4 +90,51 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, checkpointSet *t
 	sort.Strings(expected)
 
 	require.Equal(t, strings.Join(expected, "\n"), strings.Join(metricsOnly, "\n"))
+}
+
+func TestPrometheusStatefulness(t *testing.T) {
+	// Create a meter
+	exporter, err := prometheus.NewExportPipeline(
+		prometheus.Config{},
+		pull.WithCachePeriod(0),
+	)
+	require.NoError(t, err)
+
+	meter := exporter.Provider().Meter("test")
+
+	// GET the HTTP endpoint
+	scrape := func() string {
+		var input bytes.Buffer
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/", &input)
+		require.NoError(t, err)
+
+		exporter.ServeHTTP(resp, req)
+		data, err := ioutil.ReadAll(resp.Result().Body)
+		require.NoError(t, err)
+
+		return string(data)
+	}
+
+	ctx := context.Background()
+
+	counter := metric.Must(meter).NewInt64Counter(
+		"a.counter",
+		metric.WithDescription("Counts things"),
+	)
+
+	counter.Add(ctx, 100, kv.String("key", "value"))
+
+	require.Equal(t, `# HELP a_counter Counts things
+# TYPE a_counter counter
+a_counter{key="value"} 100
+`, scrape())
+
+	counter.Add(ctx, 100, kv.String("key", "value"))
+
+	require.Equal(t, `# HELP a_counter Counts things
+# TYPE a_counter counter
+a_counter{key="value"} 200
+`, scrape())
+
 }
