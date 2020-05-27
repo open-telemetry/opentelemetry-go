@@ -26,7 +26,7 @@ go run main.go
 ```
 
 The application is currently configured to transmit exported data to
-`localhost:55680`. See [main.go](example/otlp/main.go) for full details.
+`localhost:55680`. See [main.go](otlp/main.go) for full details.
 
 Note, if you don't have a receiver configured to take in metric data, the
 application will complain about being unable to connect.
@@ -68,7 +68,7 @@ service:
 ```
 
 An example config has been provided at
-[example-otlp-config.yaml](example/otlp/example-otlp-config.yaml).
+[example-otlp-config.yaml](otlp/example-otlp-config.yaml).
 
 Then to run:
 ```sh
