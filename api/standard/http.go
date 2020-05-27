@@ -129,35 +129,38 @@ func EndUserAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	return nil
 }
 
-// HTTPServerAttributesFromHTTPRequest generates attributes of the
+// HTTPClientAttributesFromHTTPRequest generates attributes of the
 // http namespace as specified by the OpenTelemetry specification for
-// a span on the server side. Currently, only basic authentication is
-// supported.
-func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{
-		HTTPMethodKey.String(request.Method),
-		HTTPTargetKey.String(request.RequestURI),
+// a span on the client side.
+func HTTPClientAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+	attrs := []kv.KeyValue{}
+
+	if request.Method != "" {
+		attrs = append(attrs, HTTPMethodKey.String(request.Method))
+	} else {
+		attrs = append(attrs, HTTPMethodKey.String(http.MethodGet))
 	}
 
-	if serverName != "" {
-		attrs = append(attrs, HTTPServerNameKey.String(serverName))
-	}
+	attrs = append(attrs, HTTPUrlKey.String(request.URL.String()))
+
+	return append(attrs, httpCommonAttributesFromHTTPRequest(request)...)
+}
+
+func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+	attrs := []kv.KeyValue{}
+
 	if request.TLS != nil {
 		attrs = append(attrs, HTTPSchemeHTTPS)
 	} else {
 		attrs = append(attrs, HTTPSchemeHTTP)
 	}
-	if route != "" {
-		attrs = append(attrs, HTTPRouteKey.String(route))
-	}
+
 	if request.Host != "" {
 		attrs = append(attrs, HTTPHostKey.String(request.Host))
 	}
+
 	if ua := request.UserAgent(); ua != "" {
 		attrs = append(attrs, HTTPUserAgentKey.String(ua))
-	}
-	if values, ok := request.Header["X-Forwarded-For"]; ok && len(values) > 0 {
-		attrs = append(attrs, HTTPClientIPKey.String(values[0]))
 	}
 
 	flavor := ""
@@ -171,6 +174,29 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 	}
 
 	return attrs
+}
+
+// HTTPServerAttributesFromHTTPRequest generates attributes of the
+// http namespace as specified by the OpenTelemetry specification for
+// a span on the server side. Currently, only basic authentication is
+// supported.
+func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []kv.KeyValue {
+	attrs := []kv.KeyValue{
+		HTTPMethodKey.String(request.Method),
+		HTTPTargetKey.String(request.RequestURI),
+	}
+
+	if serverName != "" {
+		attrs = append(attrs, HTTPServerNameKey.String(serverName))
+	}
+	if route != "" {
+		attrs = append(attrs, HTTPRouteKey.String(route))
+	}
+	if values, ok := request.Header["X-Forwarded-For"]; ok && len(values) > 0 {
+		attrs = append(attrs, HTTPClientIPKey.String(values[0]))
+	}
+
+	return append(attrs, httpCommonAttributesFromHTTPRequest(request)...)
 }
 
 // HTTPAttributesFromHTTPStatusCode generates attributes of the http
