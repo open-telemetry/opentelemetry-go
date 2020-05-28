@@ -233,17 +233,19 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		panic(x)
 	}()
 
+	select {
+	case <-bsp.stopCh:
+		return
+	default:
+	}
+
 	if bsp.o.BlockOnQueueFull {
-		select {
-		case bsp.queue <- sd:
-		case <-bsp.stopCh:
-		}
+		bsp.queue <- sd
 		return
 	}
 
 	select {
 	case bsp.queue <- sd:
-	case <-bsp.stopCh:
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
