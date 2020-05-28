@@ -117,7 +117,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 				sdktrace.WithBatchTimeout(schDelay),
 				sdktrace.WithMaxQueueSize(200),
 				sdktrace.WithMaxExportBatchSize(20),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 11,
@@ -139,7 +138,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			o: []sdktrace.BatchSpanProcessorOption{
 				sdktrace.WithBatchTimeout(schDelay),
 				sdktrace.WithMaxExportBatchSize(200),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   2000,
 			wantBatchCount: 10,
@@ -179,7 +177,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 }
 
 func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
-	ssp, err := sdktrace.NewBatchSpanProcessor(te, option.o...)
+	// Always use blocking queue to avoid flaky tests.
+	options := append(option.o, sdktrace.WithBlocking())
+	ssp, err := sdktrace.NewBatchSpanProcessor(te, options...)
 	if ssp == nil {
 		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}
