@@ -32,7 +32,6 @@ type Sampler interface {
 type SamplingParameters struct {
 	ParentContext   api.SpanContext
 	TraceID         api.ID
-	SpanID          api.SpanID
 	Name            string
 	HasRemoteParent bool
 	Kind            api.SpanKind
