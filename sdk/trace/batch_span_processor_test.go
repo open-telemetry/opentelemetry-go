@@ -162,12 +162,18 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 
 			tp.UnregisterSpanProcessor(ssp)
 
-			// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/741)
-			// Restore some sort of test here.
-			_ = option.wantNumSpans
-			_ = option.wantBatchCount
-			_ = te.len()           // gotNumOfSpans
-			_ = te.getBatchCount() // gotBatchCount
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("number of exported span: got %+v, want %+v\n",
+					gotNumOfSpans, option.wantNumSpans)
+			}
+
+			gotBatchCount := te.getBatchCount()
+			if gotBatchCount < option.wantBatchCount {
+				t.Errorf("number batches: got %+v, want >= %+v\n",
+					gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
 		})
 	}
 }
