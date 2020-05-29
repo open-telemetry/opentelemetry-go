@@ -21,23 +21,57 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-type Config []Item
+type Config struct {
+	Defaults []Default `json="default"`
+	Views    []View    `json="view"`
+}
 
-type Item struct {
-	Name       string
-	Aggregator string
+type Default struct {
+	InstrumentKind string   `json="instrument_kind"`
+	Aggregator     string   `json="aggregator"`
+	Labels         []string `json="labels"`
+}
+
+type View struct {
+	InstrumentName string   `json="instrument_name"`
+	Aggregator     string   `json="aggregator"`
+	Labels         []string `json="labels"`
 }
 
 type Integrator struct {
+	defaults map[string]Default
+	views    map[string][]View
 }
 
-var _ export.Batcher = (*Integrator)(nil)
+var _ export.Integrator = (*Integrator)(nil)
 
 func New(cfg Config) *Integrator {
-	return &Integrator{}
+	defaults := map[string]Default{}
+	views := map[string][]View{}
+
+	for _, view := range cfg.Views {
+		// TODO here parse the names, return an error
+		views[view.InstrumentName] = append(views[view.InstrumentName], view)
+	}
+	for _, def := range cfg.Defaults {
+		// TODO here same
+		defaults[def.InstrumentKind] = def
+	}
+
+	return &Integrator{
+		defaults: defaults,
+		views:    views,
+	}
 }
 
-func (ci *Integrator) AggregatorFor(*metric.Descriptor) export.Aggregator {
+func (ci *Integrator) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
+	views, ok := ci.views[desc.Name()]
+	if !ok {
+		if len(views) == 1 {
+			return nil
+		}
+	}
+
 	return nil
 }
 
