@@ -91,6 +91,10 @@ func (ts *TraceSuite) GetResourceSpans() []*tracepb.ResourceSpans {
 }
 
 func (ts *TraceSuite) Export(ctx context.Context, req *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
+	if err := ts.RequestError(); err != nil {
+		return nil, err
+	}
+
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	rss := req.GetResourceSpans()

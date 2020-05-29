@@ -16,12 +16,15 @@ package otlp_testing
 
 import (
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Let the system define the port
@@ -34,6 +37,10 @@ type ServerSuite struct {
 	serverAddr     string
 	ServerListener net.Listener
 	Server         *grpc.Server
+
+	requestCount  uint64
+	FailureModulo uint64
+	FailureCodes  []codes.Code
 
 	ExporterOpts []otlp.ExporterOption
 	Exporter     *otlp.Exporter
@@ -63,6 +70,42 @@ func (s *ServerSuite) StartServer() {
 
 func (s *ServerSuite) ServerAddr() string {
 	return s.serverAddr
+}
+
+func (s *ServerSuite) RequestError() error {
+	if s.FailureModulo <= 0 {
+		return nil
+	}
+
+	count := atomic.AddUint64(&s.requestCount, 1)
+	if count%s.FailureModulo == 0 {
+		return nil
+	}
+
+	var c codes.Code
+	if n := len(s.FailureCodes); n > 0 {
+		/* Example to understand the indexing:
+		*  - s.FailureModulo = 3
+		*  - len(s.Codes) 5
+		*
+		* count - 1 | count / s.FailureModulo | index (mod 5)
+		* ===================================================
+		*      0    |            0            |       0
+		*      1    |            0            |       1
+		*      2    |            1            |     n/a (2)
+		*      3    |            1            |       2
+		*      4    |            1            |       3
+		*      5    |            2            |     n/a (3)
+		*      6    |            2            |       4
+		*      7    |            2            |       0
+		*      8    |            3            |     n/a (0)
+		*      9    |            3            |       1
+		 */
+		c = s.FailureCodes[(count-1-(count/s.FailureModulo))%uint64(n)]
+	} else {
+		c = codes.Unavailable
+	}
+	return status.Errorf(c, "artificial error: count %d, modulo %d", count, s.FailureModulo)
 }
 
 func (s *ServerSuite) NewExporter() *otlp.Exporter {
