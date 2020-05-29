@@ -35,13 +35,15 @@ const (
 	// Note: MaxAttempts > 5 are treated as 5. See
 	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy
 	// for more details.
+	//
+	// The following is to ensure CANCELLED is not corrected to CANCELED.
+	// nolint
 	DefaultGRPCServiceConfig = `{
 	"methodConfig":[{
 		"name":[
 			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
 			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
 		],
-		"waitForReady": true,
 		"retryPolicy":{
 			"MaxAttempts":5,
 			"InitialBackoff":"0.3s",

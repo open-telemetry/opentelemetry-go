@@ -56,7 +56,7 @@ func main() {
 
 ## Configuration
 
-Configuratin options can be specified when creating a new exporter (`NewExporter`).
+Configurations options can be specified when creating a new exporter (`NewExporter`).
 
 ### `WorkerCount(n uint)`
 
