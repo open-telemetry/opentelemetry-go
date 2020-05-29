@@ -17,6 +17,6 @@ package oterror
 import "errors"
 
 var (
-	// SDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
-	SDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
+	// ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
+	ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 )

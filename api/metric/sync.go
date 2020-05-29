@@ -110,7 +110,7 @@ func (h syncBoundInstrument) Unbind() {
 func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
-			err = oterror.SDKReturnedNilImpl
+			err = oterror.ErrSDKReturnedNilImpl
 		}
 		instrument = NoopAsync{}
 	}
@@ -125,7 +125,7 @@ func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 func checkNewSync(instrument SyncImpl, err error) (syncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
-			err = oterror.SDKReturnedNilImpl
+			err = oterror.ErrSDKReturnedNilImpl
 		}
 		// Note: an alternate behavior would be to synthesize a new name
 		// or group all duplicately-named instruments of a certain type

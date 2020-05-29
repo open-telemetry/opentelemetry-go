@@ -20,7 +20,7 @@
 *
 * The unified error handling interface is used for any error that
 * OpenTelemetry component are not able to remediate on their own, instead
-* handeling them in a uniform and user-defined way.
+* handling them in a uniform and user-defined way.
  */
 
 package oterror

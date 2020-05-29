@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+
 	"go.opentelemetry.io/otel/api/oterror"
 )
 
