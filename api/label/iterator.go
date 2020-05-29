@@ -25,6 +25,21 @@ type Iterator struct {
 	idx     int
 }
 
+// MergeIterator supports iterating over two sets of labels while
+// eliminating duplicate values from the combined set.  The first
+// iterator value takes precedence.
+type MergeItererator struct {
+	one     oneIterator
+	two     oneIterator
+	current kv.KeyValue
+}
+
+type oneIterator struct {
+	iter  Iterator
+	done  bool
+	label kv.KeyValue
+}
+
 // Next moves the iterator to the next position. Returns false if there
 // are no more labels.
 func (i *Iterator) Next() bool {
@@ -74,4 +89,64 @@ func (i *Iterator) ToSlice() []kv.KeyValue {
 		slice = append(slice, i.Label())
 	}
 	return slice
+}
+
+// NewMergeIterator returns a MergeIterator for merging two label sets
+// Duplicates are resolved by taking the value from the first set.
+func NewMergeIterator(s1, s2 *Set) MergeItererator {
+	mi := MergeItererator{
+		one: makeOne(s1.Iter()),
+		two: makeOne(s2.Iter()),
+	}
+	return mi
+}
+
+func makeOne(iter Iterator) oneIterator {
+	oi := oneIterator{
+		iter: iter,
+	}
+	oi.advance()
+	return oi
+}
+
+func (oi *oneIterator) advance() {
+	if oi.done = !oi.iter.Next(); !oi.done {
+		oi.label = oi.iter.Label()
+	}
+}
+
+// Next returns true if there is another label available.
+func (m *MergeItererator) Next() bool {
+	if m.one.done && m.two.done {
+		return false
+	}
+	if m.one.done {
+		m.current = m.two.label
+		m.two.advance()
+		return true
+	}
+	if m.two.done {
+		m.current = m.one.label
+		m.one.advance()
+		return true
+	}
+	if m.one.label.Key == m.two.label.Key {
+		m.current = m.one.label // first iterator label value wins
+		m.one.advance()
+		m.two.advance()
+		return true
+	}
+	if m.one.label.Key < m.two.label.Key {
+		m.current = m.one.label
+		m.one.advance()
+		return true
+	}
+	m.current = m.two.label
+	m.two.advance()
+	return true
+}
+
+// Label returns the current value after Next() returns true.
+func (m *MergeItererator) Label() kv.KeyValue {
+	return m.current
 }

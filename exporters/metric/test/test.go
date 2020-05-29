@@ -97,7 +97,7 @@ func (p *CheckpointSet) AddValueRecorder(desc *metric.Descriptor, v float64, lab
 	p.updateAggregator(desc, array.New(), v, labels...)
 }
 
-func (p *CheckpointSet) AddHistogramValueRecorder(desc *metric.Descriptor, boundaries []metric.Number, v float64, labels ...kv.KeyValue) {
+func (p *CheckpointSet) AddHistogramValueRecorder(desc *metric.Descriptor, boundaries []float64, v float64, labels ...kv.KeyValue) {
 	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
 }
 

@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
@@ -50,14 +51,11 @@ func main() {
 
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(
+		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in Jaeger
 			kv.Key(conventions.AttributeServiceName).String("test-service"),
-		),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithScheduleDelayMillis(5),
-			sdktrace.WithMaxExportBatchSize(2),
-		))
+		)),
+		sdktrace.WithSyncer(exp))
 	if err != nil {
 		log.Fatalf("error creating trace provider: %v\n", err)
 	}
@@ -74,6 +72,4 @@ func main() {
 	}
 
 	span.End()
-	// Wait 1 second before ending
-	<-time.After(time.Second)
 }

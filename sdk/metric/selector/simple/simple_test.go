@@ -56,7 +56,7 @@ func TestExactDistribution(t *testing.T) {
 }
 
 func TestHistogramDistribution(t *testing.T) {
-	ex := simple.NewWithHistogramDistribution([]metric.Number{})
+	ex := simple.NewWithHistogramDistribution(nil)
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueRecorderDesc).(*histogram.Aggregator) })
 	require.NotPanics(t, func() { _ = ex.AggregatorFor(&testValueObserverDesc).(*histogram.Aggregator) })
