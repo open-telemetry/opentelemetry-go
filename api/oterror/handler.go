@@ -14,10 +14,9 @@
 
 package oterror
 
-// Handler performs a required function when an irremediable event is
-// encountered.
+// Handler handles irremediable events.
 type Handler interface {
-	// Handle handles any error that irremediable by an OpenTelemetry
+	// Handle handles any error deemed irremediable by an OpenTelemetry
 	// component.
 	Handle(error)
 }
