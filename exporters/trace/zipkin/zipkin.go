@@ -105,6 +105,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) {
 		e.logf("failed to create request to %s: %v", e.url, err)
 		return
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := e.client.Do(req)
 	if err != nil {
 		e.logf("request to %s failed: %v", e.url, err)
