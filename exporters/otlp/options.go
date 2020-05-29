@@ -35,9 +35,6 @@ const (
 	// Note: MaxAttempts > 5 are treated as 5. See
 	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy
 	// for more details.
-	//
-	// The following is to ensure CANCELLED is not corrected to CANCELED.
-	// nolint
 	DefaultGRPCServiceConfig = `{
 	"methodConfig":[{
 		"name":[
