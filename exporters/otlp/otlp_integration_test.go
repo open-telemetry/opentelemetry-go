@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
@@ -31,41 +30,13 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	otlp_testing "go.opentelemetry.io/otel/exporters/otlp/testing"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-func TestIntegrationTestSuite(t *testing.T) {
-	/*
-		standard := &TraceIntegrationTestSuite{}
-		suite.Run(t, standard)
-	*/
-
-	// Default retry policy should ensure these succeed.
-	retry := &TraceIntegrationTestSuite{
-		TraceSuite: otlp_testing.TraceSuite{
-			ServerSuite: otlp_testing.ServerSuite{
-				FailureModulo: 5,
-			},
-		},
-	}
-	suite.Run(t, retry)
-}
-
-type TraceIntegrationTestSuite struct {
-	otlp_testing.TraceSuite
-}
-
-func (s *TraceIntegrationTestSuite) TestSpanExport() {
-	tracer := s.TraceProvider.Tracer("test")
-	_, span := tracer.Start(context.Background(), "test/span")
-	span.End()
-	s.Len(s.GetResourceSpans(), 1)
-}
 
 func TestNewExporter_endToEnd(t *testing.T) {
 	tests := []struct {
@@ -85,7 +56,7 @@ func TestNewExporter_endToEnd(t *testing.T) {
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
-	mc := runMockColAtAddr(t, "127.0.0.1:56561")
+	mc := runMockColAtAddr(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -116,13 +87,17 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		),
 	}
 	tp1, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11)"),
-			kv.Int64("rk2", 5)))...)
+		sdktrace.WithResource(resource.New(
+			kv.String("rk1", "rv11)"),
+			kv.Int64("rk2", 5),
+		)))...)
 	assert.NoError(t, err)
 
 	tp2, err := sdktrace.NewProvider(append(pOpts,
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv12)"),
-			kv.Float32("rk3", 6.5)))...)
+		sdktrace.WithResource(resource.New(
+			kv.String("rk1", "rv12)"),
+			kv.Float32("rk3", 6.5),
+		)))...)
 	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
@@ -187,12 +162,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 				callback := func(v int64) metricapi.Int64ObserverCallback {
 					return metricapi.Int64ObserverCallback(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
 				}(data.val)
-				metricapi.Must(meter).RegisterInt64ValueObserver(name, callback)
+				metricapi.Must(meter).NewInt64ValueObserver(name, callback)
 			case metricapi.Float64NumberKind:
 				callback := func(v float64) metricapi.Float64ObserverCallback {
 					return metricapi.Float64ObserverCallback(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
-				metricapi.Must(meter).RegisterFloat64ValueObserver(name, callback)
+				metricapi.Must(meter).NewFloat64ValueObserver(name, callback)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -334,9 +309,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	reconnectionPeriod := 20 * time.Millisecond
 	exp, err := otlp.NewExporter(otlp.WithInsecure(),
 		otlp.WithAddress(mc.address),
-		otlp.WithReconnectionPeriod(reconnectionPeriod),
-		otlp.WithGRPCServiceConfig(""),
-	)
+		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
