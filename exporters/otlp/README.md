@@ -3,13 +3,146 @@
 [![GoDoc](https://godoc.org/go.opentelemetry.io/otel?status.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp)
 
 
-This exporter converts OpenTelemetry [SpanData](https://github.com/open-telemetry/opentelemetry-go/blob/6769330394f78192df01cb59299e9e0f2e5e977b/sdk/export/trace/trace.go#L49) 
-to OpenTelemetry Protocol [Span](https://github.com/open-telemetry/opentelemetry-proto/blob/c20698d5bb483cf05de1a7c0e134b7c57e359674/opentelemetry/proto/trace/v1/trace.proto#L46)
-and exports them to OpenTelemetry Collector.
+This exporter exports OpenTelemetry spans and metrics to the OpenTelemetry Collector.
 
 
-## Installation
+## Installation and Setup
+
+The exporter can be installed using standard `go` functionality.
 
 ```bash
 $ go get -u go.opentelemetry.io/otel/exporters/otlp
 ```
+
+A new exporter can be created using the `NewExporter` function.
+
+```golang
+package main
+
+import (
+	"log"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
+
+func main() {
+	exporter, err := otlp.NewExporter() // Configure as needed.
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+	defer func() {
+		err := exporter.Stop()
+		if err != nil {
+			log.Fatalf("failed to stop exporter: %v", err)
+		}
+	}()
+
+	// Note: The exporter can also be used as a Batcher.
+	traceProvider, err := sdktrace.NewProvider(sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal("failed to create trace provider: %v", err)
+	}
+
+	pusher := push.New(simple.NewWithExactDistribution(), exporter)
+	pusher.Start()
+	metricProvider := pusher.Provider()
+
+	// Your code here ...
+}
+```
+
+## Configuration
+
+Configuratin options can be specified when creating a new exporter (`NewExporter`).
+
+### `WorkerCount(n uint)`
+
+Sets the number of Goroutines to use when processing telemetry.
+
+
+### `WithInsecure()`
+
+Disables client transport security for the exporter's gRPC connection just like [`grpc.WithInsecure()`](https://pkg.go.dev/google.golang.org/grpc#WithInsecure) does.
+By default, client security is required unless `WithInsecure` is used.
+
+### `WithAddress(addr string)`
+
+Sets the address that the exporter will connect to the collector on.
+The default address the exporter connects to is `localhost:55680`.
+
+### `WithReconnectionPeriod(rp time.Duration)`
+
+Set the delay between connection attempts after failing to connect with the collector.
+
+### `WithCompressor(compressor string)`
+
+Set the compressor for the gRPC client to use when sending requests.
+The compressor used needs to have been registered with `google.golang.org/grpc/encoding` prior to using here.
+This can be done by `encoding.RegisterCompressor`.
+Some compressors auto-register on import, such as gzip, which can be registered by calling `import _ "google.golang.org/grpc/encoding/gzip"`.
+
+### `WithHeaders(headers map[string]string)`
+
+Headers to send when the gRPC stream connection is instantiated.
+
+### `WithTLSCredentials(creds "google.golang.org/grpc/credentials".TransportCredentials)`
+
+TLS credentials to use when talking to the server.
+
+### `WithGRPCServiceConfig(serviceConfig string)`
+
+The default gRPC service config used when .
+
+By default, the exporter is configured to support [retries](#retries).
+
+```json
+{
+	"methodConfig":[{
+		"name":[
+			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
+			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
+		],
+		"waitForReady": true,
+		"retryPolicy":{
+			"MaxAttempts":5,
+			"InitialBackoff":"0.3s",
+			"MaxBackoff":"5s",
+			"BackoffMultiplier":2,
+			"RetryableStatusCodes":[
+				"UNAVAILABLE",
+				"CANCELLED",
+				"DEADLINE_EXCEEDED",
+				"RESOURCE_EXHAUSTED",
+				"ABORTED",
+				"OUT_OF_RANGE",
+				"UNAVAILABLE",
+				"DATA_LOSS"
+			]
+		}
+	}]
+}
+```
+
+### `WithGRPCDialOption(opts ..."google.golang.org/grpc".DialOption)`
+
+Additional `grpc.DialOption` to be used.
+
+These options take precedence over any other set by other parts of the configuration.
+
+## Retries
+
+The exporter will not, by default, retry failed requests to the collector.
+However, it is configured in a way that it can easily be enable.
+
+To enable retries, the `GRPC_GO_RETRY` environment variable needs to be set to `on`. For example,
+
+```
+GRPC_GO_RETRY=on go run .
+```
+
+The [default service config](https://github.com/grpc/proposal/blob/master/A6-client-retries.md) used by default is defined to retry failed requests with exponential backoff (`0.3seconds * (2)^retry`) with [a max of `5` retries](https://github.com/open-telemetry/oteps/blob/be2a3fcbaa417ebbf5845cd485d34fdf0ab4a2a4/text/0035-opentelemetry-protocol.md#export-response)).
+
+These retries are only attempted for reponses that are [deemed "retry-able" by the collector](https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy).
