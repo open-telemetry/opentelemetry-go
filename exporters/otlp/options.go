@@ -31,36 +31,34 @@ const (
 	//
 	// For more info on the RetryableStatusCodes we allow here:
 	// https://github.com/open-telemetry/oteps/blob/be2a3fcbaa417ebbf5845cd485d34fdf0ab4a2a4/text/0035-opentelemetry-protocol.md#export-response
+	//
+	// Note: MaxAttempts > 5 are treated as 5. See
+	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy
+	// for more details.
 	DefaultGRPCServiceConfig = `{
-   "methodConfig":[
-      {
-         "name":[
-            {
-               "service":"opentelemetry.proto.collector.metrics.v1.MetricsService"
-            },
-            {
-               "service":"opentelemetry.proto.collector.trace.v1.TraceService"
-            }
-         ],
-		 "waitForReady": true,
-         "retryPolicy":{
-            "MaxAttempts":4,
-            "InitialBackoff":".01s",
-            "MaxBackoff":"1.0s",
-            "BackoffMultiplier":1.0,
-            "RetryableStatusCodes":[
-               "UNAVAILABLE",
-			   "CANCELLED",
-               "DEADLINE_EXCEEDED",
-               "RESOURCE_EXHAUSTED",
-               "ABORTED",
-               "OUT_OF_RANGE",
-               "UNAVAILABLE",
-               "DATA_LOSS"
-            ]
-         }
-      }
-   ]
+	"methodConfig":[{
+		"name":[
+			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
+			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
+		],
+		"waitForReady": true,
+		"retryPolicy":{
+			"MaxAttempts":5,
+			"InitialBackoff":"0.3s",
+			"MaxBackoff":"5s",
+			"BackoffMultiplier":2,
+			"RetryableStatusCodes":[
+				"UNAVAILABLE",
+				"CANCELLED",
+				"DEADLINE_EXCEEDED",
+				"RESOURCE_EXHAUSTED",
+				"ABORTED",
+				"OUT_OF_RANGE",
+				"UNAVAILABLE",
+				"DATA_LOSS"
+			]
+		}
+	}]
 }`
 )
 
