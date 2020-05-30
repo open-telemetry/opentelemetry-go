@@ -19,8 +19,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/api/label"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -31,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/multi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/sdk/resource"
 )
 
 type (
@@ -56,9 +59,9 @@ type (
 	}
 
 	Integrator struct {
-		policies    map[string]*aggregation
 		instDefault map[metric.Kind]*aggregation
 		views       map[string][]*aggregation
+		batch
 	}
 
 	newFunc func(desc *metric.Descriptor) export.Aggregator
@@ -66,6 +69,24 @@ type (
 	aggregation struct {
 		newFunc newFunc
 		labels  []kv.Key
+	}
+
+	stateKey struct {
+		descriptor *metric.Descriptor
+		distinct   label.Distinct
+		resource   label.Distinct
+	}
+
+	stateValue struct {
+		aggregator export.Aggregator
+		labels     *label.Set
+		resource   *resource.Resource
+	}
+
+	state struct {
+		// RWMutex implements locking for the `CheckpointSet` interface.
+		sync.RWMutex
+		values map[stateKey]stateValue
 	}
 )
 
@@ -193,6 +214,9 @@ func New(cfg Config) (*Integrator, error) {
 	return &Integrator{
 		instDefault: instDefault,
 		views:       views,
+		state: state{
+			values: map[stateKey]stateValue{},
+		},
 	}, nil
 }
 
@@ -215,5 +239,33 @@ func (ci *Integrator) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
 }
 
 func (ci *Integrator) Process(ctx context.Context, record export.Record) error {
+	// @@@ Decide which records are stateful and which are not.
+	// Need to ask the exporters what their disposition:
+	//   - pass-through
+	//   - only delta
+	//   - only cumulative
+	// It depends on some kind of elective: e.g., GaugeHistogram
+	// vs. Histogram Observer instruments are special because
+	// inputs are cumulative, need to track start_time (but
+	// probably not very special, consider the opposite case of
+	// delta instruments reporting through cumulative
+	// exporters...).
+
+	// Store stateful records in a map; build a list of stateless records.
+
+	return nil
+}
+
+func (b *state) ForEach(f func(export.Record) error) error {
+	// for key, value := range b.values {
+	// 	if err := f(export.NewRecord(
+	// 		key.descriptor,
+	// 		value.labels,
+	// 		value.resource,
+	// 		value.aggregator,
+	// 	)); err != nil && !errors.Is(err, aggregator.ErrNoData) {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
