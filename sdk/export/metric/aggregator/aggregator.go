@@ -100,6 +100,19 @@ type (
 	}
 )
 
+type (
+	Kind int
+)
+
+const (
+	SumKind Kind = iota
+	MinMaxSumCountKind
+	HistogramKind
+	LastValueKind
+	SketchKind
+	ExactKind
+)
+
 var (
 	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")

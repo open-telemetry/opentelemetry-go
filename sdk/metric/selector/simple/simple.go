@@ -91,7 +91,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.A
 func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
 	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return ddsketch.New(s.config, descriptor)
+		return ddsketch.New(descriptor, s.config)
 	default:
 		return sum.New()
 	}
