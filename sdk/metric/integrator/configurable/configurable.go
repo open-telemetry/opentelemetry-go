@@ -12,50 +12,92 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package configurable // import "go.opentelemetry.io/otel/sdk/metric/batcher/configurable"
+package configurable // import "go.opentelemetry.io/otel/sdk/metric/integrator/configurable"
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-type Config struct {
-	Defaults []Default `json="default"`
-	Views    []View    `json="view"`
-}
+type (
+	AggregationType int
+)
 
-type Default struct {
-	InstrumentKind string   `json="instrument_kind"`
-	Aggregator     string   `json="aggregator"`
-	Labels         []string `json="labels"`
-}
+const (
+	Sum AggregationType = iota
+	MinMaxSumCount
+	Histogram
+	LastValue
+	Sketch
+	Exact
+)
 
-type View struct {
-	InstrumentName string   `json="instrument_name"`
-	Aggregator     string   `json="aggregator"`
-	Labels         []string `json="labels"`
-}
+type (
+	Config struct {
+		Defaults     `mapstructure:"defaults"`
+		Views        `mapstructure:"views"`
+		Aggregations `mapstructure:"aggregations"`
+	}
 
-type Integrator struct {
-	defaults map[string]Default
-	views    map[string][]View
-}
+	Defaults struct {
+		// Instrument kind name to aggregation policy
+		Aggregation map[string]string `mapstructure:"aggregation"`
+	}
+
+	// Instrument name to aggregation policy
+	Views map[string]string
+
+	Aggregations map[string]Aggregation
+
+	Aggregation struct {
+		Aggregator string   `mapstructure:"aggregator"`
+		Labels     []string `mapstructure:"labels"`
+	}
+
+	Integrator struct {
+		defaults map[string]*aggregation
+		views    map[string][]*aggregation
+	}
+
+	aggregation struct {
+	}
+)
 
 var _ export.Integrator = (*Integrator)(nil)
 
+func ParseYamlData(data []byte) (cfg Config, err error) {
+	v := viper.New()
+	v.SetConfigType("yaml")
+
+	if err = v.ReadConfig(bytes.NewBuffer(data)); err != nil {
+		return
+	}
+
+	// Check for valid toplevel fields
+	if err = v.UnmarshalExact(&cfg); err != nil {
+		return
+	}
+
+	return
+}
+
 func New(cfg Config) *Integrator {
-	defaults := map[string]Default{}
-	views := map[string][]View{}
+	defaults := map[string]*aggregation{}
+	views := map[string][]*aggregation{}
 
 	for _, view := range cfg.Views {
 		// TODO here parse the names, return an error
-		views[view.InstrumentName] = append(views[view.InstrumentName], view)
+		// views[view.InstrumentName] = append(views[view.InstrumentName], view)
+		_ = view
 	}
-	for _, def := range cfg.Defaults {
+	for _, def := range cfg.Defaults.Aggregation {
 		// TODO here same
-		defaults[def.InstrumentKind] = def
+		// defaults[def.InstrumentKind] = def
+		_ = def
 	}
 
 	return &Integrator{
