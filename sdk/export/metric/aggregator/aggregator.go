@@ -98,6 +98,11 @@ type (
 		MinMaxSumCount
 		Quantile
 	}
+
+	// Multi is a multiplexed Aggregator.
+	Multi interface {
+		Aggregators() []export.Aggregator
+	}
 )
 
 type (
@@ -111,6 +116,7 @@ const (
 	LastValueKind
 	SketchKind
 	ExactKind
+	MultiKind
 )
 
 var (

@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/multi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
@@ -205,8 +206,12 @@ func (ci *Integrator) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
 		return views[0].newFunc(desc)
 	}
 
-	// TODO @@@
-	return nil
+	var aggs []export.Aggregator
+	for _, v := range views {
+		aggs = append(aggs, v.newFunc(desc))
+	}
+
+	return multi.New(aggs...)
 }
 
 func (ci *Integrator) Process(ctx context.Context, record export.Record) error {
