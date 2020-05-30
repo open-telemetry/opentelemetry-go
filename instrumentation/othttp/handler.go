@@ -57,7 +57,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	}
 
 	defaultOpts := []Option{
-		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
+		WithTracer(global.Tracer("go.opentelemetry.io/otel/instrumentation/othttp")),
 		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 		WithSpanNameFormatter(defaultHandlerFormatter),
