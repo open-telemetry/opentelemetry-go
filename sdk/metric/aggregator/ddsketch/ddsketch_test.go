@@ -34,7 +34,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
-	agg := New(NewDefaultConfig(), descriptor)
+	agg := New(descriptor, NewDefaultConfig())
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
@@ -94,8 +94,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg1 := New(NewDefaultConfig(), descriptor)
-	agg2 := New(NewDefaultConfig(), descriptor)
+	agg1 := New(descriptor, NewDefaultConfig())
+	agg2 := New(descriptor, NewDefaultConfig())
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
