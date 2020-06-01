@@ -26,9 +26,33 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
+// Option is a function that allows configuration of the httptrace Extract()
+// and Inject() functions
+type Option func(*config)
+
+type config struct {
+	propagators propagation.Propagators
+}
+
+func newConfig(opts []Option) *config {
+	c := &config{propagators: global.Propagators()}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
+}
+
+// WithPropagators sets the propagators to use for Extraction and Injection
+func WithPropagators(props propagation.Propagators) Option {
+	return func(c *config) {
+		c.propagators = props
+	}
+}
+
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
-func Extract(ctx context.Context, req *http.Request) ([]kv.KeyValue, []kv.KeyValue, trace.SpanContext) {
-	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), req.Header)
+func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]kv.KeyValue, []kv.KeyValue, trace.SpanContext) {
+	c := newConfig(opts)
+	ctx = propagation.ExtractHTTP(ctx, c.propagators, req.Header)
 
 	attrs := append(
 		standard.HTTPServerAttributesFromHTTPRequest("", "", req),
@@ -44,6 +68,7 @@ func Extract(ctx context.Context, req *http.Request) ([]kv.KeyValue, []kv.KeyVal
 	return attrs, correlationCtxKVs, trace.RemoteSpanContextFromContext(ctx)
 }
 
-func Inject(ctx context.Context, req *http.Request) {
-	propagation.InjectHTTP(ctx, global.Propagators(), req.Header)
+func Inject(ctx context.Context, req *http.Request, opts ...Option) {
+	c := newConfig(opts)
+	propagation.InjectHTTP(ctx, c.propagators, req.Header)
 }
