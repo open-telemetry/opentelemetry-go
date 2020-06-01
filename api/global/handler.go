@@ -22,12 +22,14 @@ import (
 	"go.opentelemetry.io/otel/api/oterror"
 )
 
-var defaultHandler = &handler{
-	l: log.New(os.Stderr, "", log.LstdFlags),
-}
+var (
+	defaultHandler = &handler{
+		l: log.New(os.Stderr, "", log.LstdFlags),
+	}
 
-// Global Handler (used for testing).
-var globalHandler oterror.Handler = defaultHandler
+	// Ensure the handler implements oterror.Handle at build time.
+	_ oterror.Handler = (*handler)(nil)
+)
 
 // handler logs all errors to STDERR.
 type handler struct {
@@ -65,7 +67,7 @@ func (h *handler) Handle(err error) {
 // until an Handler is set (all functionality is delegated to the set
 // Handler once it is set).
 func Handler() oterror.Handler {
-	return globalHandler
+	return defaultHandler
 }
 
 // SetHandler sets the global Handler to be h.
@@ -75,5 +77,5 @@ func SetHandler(h oterror.Handler) {
 
 // Handle is a convience function for Handler().Handle(err)
 func Handle(err error) {
-	globalHandler.Handle(err)
+	defaultHandler.Handle(err)
 }

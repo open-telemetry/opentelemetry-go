@@ -15,52 +15,60 @@
 package global
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
-
-	"go.opentelemetry.io/otel/api/oterror"
 )
 
-type mock []error
+type errLogger []string
 
-func (m *mock) Handle(err error) {
-	(*m) = append(*m, err)
+func (l *errLogger) Write(p []byte) (int, error) {
+	msg := bytes.TrimRight(p, "\n")
+	(*l) = append(*l, string(msg))
+	return len(msg), nil
+}
+
+func (l *errLogger) Reset() {
+	*l = errLogger([]string{})
+}
+
+func (l *errLogger) Got() []string {
+	return []string(*l)
 }
 
 type HandlerTestSuite struct {
 	suite.Suite
 
-	origHandler oterror.Handler
+	origHandler *handler
 
-	errs []error
-}
-
-func (s *HandlerTestSuite) Handle(err error) {
-	s.errs = append(s.errs, err)
+	errLogger *errLogger
 }
 
 func (s *HandlerTestSuite) SetupSuite() {
-	s.origHandler = globalHandler
-	globalHandler = s
+	s.errLogger = new(errLogger)
+	s.origHandler = defaultHandler
+	defaultHandler = &handler{
+		l: log.New(s.errLogger, "", 0),
+	}
 }
 
 func (s *HandlerTestSuite) TearDownSuite() {
-	globalHandler = s.origHandler
+	defaultHandler = s.origHandler
 }
 
 func (s *HandlerTestSuite) SetupTest() {
-	s.errs = []error{}
+	s.errLogger.Reset()
 }
 
 func (s *HandlerTestSuite) TestGlobalHandler() {
-	err1 := errors.New("one")
-	err2 := errors.New("two")
-	Handler().Handle(err1)
-	Handle(err2)
-	s.Assert().Equal([]error{err1, err2}, s.errs)
+	errs := []string{"one", "two"}
+	Handler().Handle(errors.New(errs[0]))
+	Handle(errors.New(errs[1]))
+	s.Assert().Equal(errs, s.errLogger.Got())
 }
 
 func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
@@ -96,7 +104,10 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	}
 
 	// Change to another Handler. We are testing this is loss-less.
-	secondary := new(mock)
+	newErrLogger := new(errLogger)
+	secondary := &handler{
+		l: log.New(newErrLogger, "", 0),
+	}
 	SetHandler(secondary)
 
 	select {
@@ -117,8 +128,9 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	// Ensure we do not lose any straglers.
 	<-done
 
-	s.Assert().Greater(len(s.errs), 1, "at least 2 errors should have been sent")
-	s.Assert().Len(s.errs, sent)
+	got := append(s.errLogger.Got(), newErrLogger.Got()...)
+	s.Assert().Greater(len(got), 1, "at least 2 errors should have been sent")
+	s.Assert().Len(got, sent)
 }
 
 func TestHandlerTestSuite(t *testing.T) {
