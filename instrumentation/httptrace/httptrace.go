@@ -26,11 +26,6 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-var (
-	HostKey = kv.Key("http.host")
-	URLKey  = kv.Key("http.url")
-)
-
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request) ([]kv.KeyValue, []kv.KeyValue, trace.SpanContext) {
 	ctx = propagation.ExtractHTTP(ctx, global.Propagators(), req.Header)
