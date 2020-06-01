@@ -44,20 +44,19 @@ type HandlerTestSuite struct {
 	suite.Suite
 
 	origHandler *handler
-
-	errLogger *errLogger
+	errLogger   *errLogger
 }
 
 func (s *HandlerTestSuite) SetupSuite() {
 	s.errLogger = new(errLogger)
-	s.origHandler = defaultHandler
-	defaultHandler = &handler{
+	s.origHandler = globalHandler
+	globalHandler = &handler{
 		l: log.New(s.errLogger, "", 0),
 	}
 }
 
 func (s *HandlerTestSuite) TearDownSuite() {
-	defaultHandler = s.origHandler
+	globalHandler = s.origHandler
 }
 
 func (s *HandlerTestSuite) SetupTest() {

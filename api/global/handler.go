@@ -18,14 +18,23 @@ import (
 	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/oterror"
 )
 
 var (
-	defaultHandler = &handler{
+	// globalHandler provides an oterror.Handler that can be used throughout
+	// an OpenTelemetry instrumented project. When a user specified Handler
+	// is registered (`SetHandler`) all calls to `Handle` will be delegated
+	// to the registered Handler.
+	globalHandler = &handler{
 		l: log.New(os.Stderr, "", log.LstdFlags),
 	}
+
+	// delegateHanderOnce ensures that a user provided Handler is only ever
+	// registered once.
+	delegateHanderOnce sync.Once
 
 	// Ensure the handler implements oterror.Handle at build time.
 	_ oterror.Handler = (*handler)(nil)
@@ -33,32 +42,26 @@ var (
 
 // handler logs all errors to STDERR.
 type handler struct {
-	sync.Mutex
-	delegate oterror.Handler
+	delegate atomic.Value
 
 	l *log.Logger
 }
 
+// setDelegate sets the handler delegate if one is not already set.
 func (h *handler) setDelegate(d oterror.Handler) {
-	h.Lock()
-	defer h.Unlock()
-	if h.delegate != nil {
-		// delegate already registered
+	if h.delegate.Load() != nil {
+		// Delegate already registered
 		return
 	}
-
-	h.delegate = d
+	h.delegate.Store(d)
 }
 
 // Handle implements oterror.Handler.
 func (h *handler) Handle(err error) {
-	if h.delegate != nil {
-		h.delegate.Handle(err)
+	if d := h.delegate.Load(); d != nil {
+		d.(oterror.Handler).Handle(err)
 		return
 	}
-
-	h.Lock()
-	defer h.Unlock()
 	h.l.Print(err)
 }
 
@@ -67,15 +70,23 @@ func (h *handler) Handle(err error) {
 // until an Handler is set (all functionality is delegated to the set
 // Handler once it is set).
 func Handler() oterror.Handler {
-	return defaultHandler
+	return globalHandler
 }
 
 // SetHandler sets the global Handler to be h.
 func SetHandler(h oterror.Handler) {
-	defaultHandler.setDelegate(h)
+	delegateHanderOnce.Do(func() {
+		current := Handler()
+		if current == h {
+			return
+		}
+		if internalHandler, ok := current.(*handler); ok {
+			internalHandler.setDelegate(h)
+		}
+	})
 }
 
 // Handle is a convience function for Handler().Handle(err)
 func Handle(err error) {
-	defaultHandler.Handle(err)
+	globalHandler.Handle(err)
 }
