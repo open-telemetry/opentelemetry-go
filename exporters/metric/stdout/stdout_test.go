@@ -240,7 +240,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 func TestStdoutNoData(t *testing.T) {
 	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
 	for name, tc := range map[string]export.Aggregator{
-		"ddsketch":       ddsketch.New(ddsketch.NewDefaultConfig(), &desc),
+		"ddsketch":       ddsketch.New(&desc, ddsketch.NewDefaultConfig()),
 		"minmaxsumcount": minmaxsumcount.New(&desc),
 	} {
 		tc := tc

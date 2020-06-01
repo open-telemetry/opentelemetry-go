@@ -46,7 +46,7 @@ type (
 	}
 
 	batch struct {
-		// RWMutex implements locking for the `CheckpoingSet` interface.
+		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		values map[batchKey]batchValue
 	}

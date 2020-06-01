@@ -12,23 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !go1.14
+// +build go1.14
 
 package filters
 
 import (
 	"net/http"
-	"net/textproto"
 	"strings"
 
-	"go.opentelemetry.io/otel/plugin/othttp"
+	"go.opentelemetry.io/otel/instrumentation/othttp"
 )
 
 // Header returns a Filter that returns true if the request
 // includes a header k with a value equal to v.
 func Header(k, v string) othttp.Filter {
 	return func(r *http.Request) bool {
-		for _, hv := range r.Header[textproto.CanonicalMIMEHeaderKey(k)] {
+		for _, hv := range r.Header.Values(k) {
 			if v == hv {
 				return true
 			}
@@ -41,7 +40,7 @@ func Header(k, v string) othttp.Filter {
 // includes a header k with a value that contains v.
 func HeaderContains(k, v string) othttp.Filter {
 	return func(r *http.Request) bool {
-		for _, hv := range r.Header[textproto.CanonicalMIMEHeaderKey(k)] {
+		for _, hv := range r.Header.Values(k) {
 			if strings.Contains(hv, v) {
 				return true
 			}
