@@ -55,6 +55,9 @@ func main() {
 	tracer := global.Tracer("mage-sense")
 	meter := global.Meter("mage-read")
 
+	// labels represent additional descriptors that can be bound to a metric
+	// observer or recorder. In this case they describe the location in
+	// which a spell scroll is scribed.
 	commonLabels := []kv.KeyValue{
 		kv.String("work-room", "East Scriptorium"),
 		kv.String("occupancy", "69,105"),

@@ -3,15 +3,15 @@ Here is a collection of OpenTelemtry-Go examples showcasing basic functionality.
 
 ## OTLP
 This example demonstrates how to export trace and metric data from an
-application using OpenTelemetry's own wire protocal OTLP. We will also walk
-you through configuring a collector to accept OTLP exports.
+application using OpenTelemetry's own wire protocal
+[OTLP](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/protocol/README.md).
+We will also walk you through configuring a collector to accept OTLP exports.
 
 ### How to run?
 
 #### Prequisites
 - go >=1.14 installed
-- `GOPATH` is configured
-- (optional) OpenTelemetry collector is available
+- OpenTelemetry collector is available
 
 #### Start the Application
 An example application is included in `example/otlp`. It simulates the process
@@ -28,10 +28,10 @@ go run main.go
 The application is currently configured to transmit exported data to
 `localhost:55680`. See [main.go](otlp/main.go) for full details.
 
-Note, if you don't have a receiver configured to take in metric data, the
-application will complain about being unable to connect.
+Note, if the receiver is incorrectly configured to take in metric data, the
+application may complain about being unable to connect.
 
-#### (optional) Configure the Collector
+#### Configure the Collector
 Follow the instructions [on the
 website](https://opentelemetry.io/docs/collector/about/) to install a working
 instance of the collector. This example assumes you have the collector installed
