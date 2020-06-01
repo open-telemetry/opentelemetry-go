@@ -50,12 +50,13 @@ func (h *handler) setDelegate(d oterror.Handler) {
 
 // Handle implements oterror.Handler.
 func (h *handler) Handle(err error) {
-	h.Lock()
-	defer h.Unlock()
 	if h.delegate != nil {
 		h.delegate.Handle(err)
 		return
 	}
+
+	h.Lock()
+	defer h.Unlock()
 	h.l.Print(err)
 }
 
