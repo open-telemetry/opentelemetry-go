@@ -55,7 +55,7 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.errs = []error{}
 }
 
-func (s *HandlerTestSuite) TestGlocalHandler() {
+func (s *HandlerTestSuite) TestGlobalHandler() {
 	err1 := errors.New("one")
 	err2 := errors.New("two")
 	Handler().Handle(err1)
