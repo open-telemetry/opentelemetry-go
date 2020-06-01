@@ -49,7 +49,7 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	}
 
 	defaultOpts := []Option{
-		WithTracer(global.Tracer("go.opentelemetry.io/plugin/othttp")),
+		WithTracer(global.Tracer("go.opentelemetry.io/otel/instrumentation/othttp")),
 		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindClient)),
 		WithSpanNameFormatter(defaultTransportFormatter),

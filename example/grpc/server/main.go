@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/example/grpc/api"
 	"go.opentelemetry.io/otel/example/grpc/config"
-	"go.opentelemetry.io/otel/plugin/grpctrace"
+	"go.opentelemetry.io/otel/instrumentation/grpctrace"
 
 	"google.golang.org/grpc"
 )
