@@ -394,7 +394,6 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		sampled := sampler.ShouldSample(SamplingParameters{
 			ParentContext:   data.parent,
 			TraceID:         spanContext.TraceID,
-			SpanID:          spanContext.SpanID,
 			Name:            data.name,
 			HasRemoteParent: data.remoteParent,
 			Kind:            data.kind,

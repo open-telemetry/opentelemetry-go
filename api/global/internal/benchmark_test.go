@@ -59,13 +59,13 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	switch descriptor.MetricKind() {
 	case metric.CounterKind:
 		return sum.New()
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
 			return minmaxsumcount.New(descriptor)
 		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
+			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
 		} else if strings.HasSuffix(descriptor.Name(), "array") {
-			return ddsketch.New(ddsketch.NewDefaultConfig(), descriptor)
+			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
 		}
 	}
 	return nil

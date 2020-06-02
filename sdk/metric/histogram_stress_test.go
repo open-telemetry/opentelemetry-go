@@ -25,8 +25,8 @@ import (
 )
 
 func TestStressInt64Histogram(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.MeasureKind, metric.Int64NumberKind)
-	h := histogram.New(&desc, []metric.Number{metric.NewInt64Number(25), metric.NewInt64Number(50), metric.NewInt64Number(75)})
+	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderKind, metric.Int64NumberKind)
+	h := histogram.New(&desc, []float64{25, 50, 75})
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -51,7 +51,7 @@ func TestStressInt64Histogram(t *testing.T) {
 
 		var realCount int64
 		for _, c := range b.Counts {
-			v := c.AsInt64()
+			v := int64(c)
 			realCount += v
 		}
 

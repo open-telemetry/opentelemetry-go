@@ -21,15 +21,39 @@ type BatchObserver struct {
 	runner AsyncBatchRunner
 }
 
-// Int64Observer is a metric that captures a set of int64 values at a
+// Int64ValueObserver is a metric that captures a set of int64 values at a
 // point in time.
-type Int64Observer struct {
+type Int64ValueObserver struct {
 	asyncInstrument
 }
 
-// Float64Observer is a metric that captures a set of float64 values
+// Float64ValueObserver is a metric that captures a set of float64 values
 // at a point in time.
-type Float64Observer struct {
+type Float64ValueObserver struct {
+	asyncInstrument
+}
+
+// Int64SumObserver is a metric that captures a precomputed sum of
+// int64 values at a point in time.
+type Int64SumObserver struct {
+	asyncInstrument
+}
+
+// Float64SumObserver is a metric that captures a precomputed sum of
+// float64 values at a point in time.
+type Float64SumObserver struct {
+	asyncInstrument
+}
+
+// Int64UpDownSumObserver is a metric that captures a precomputed sum of
+// int64 values at a point in time.
+type Int64UpDownSumObserver struct {
+	asyncInstrument
+}
+
+// Float64UpDownSumObserver is a metric that captures a precomputed sum of
+// float64 values at a point in time.
+type Float64UpDownSumObserver struct {
 	asyncInstrument
 }
 
@@ -37,7 +61,7 @@ type Float64Observer struct {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64Observer) Observation(v int64) Observation {
+func (i Int64ValueObserver) Observation(v int64) Observation {
 	return Observation{
 		number:     NewInt64Number(v),
 		instrument: i.instrument,
@@ -48,7 +72,51 @@ func (i Int64Observer) Observation(v int64) Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64Observer) Observation(v float64) Observation {
+func (f Float64ValueObserver) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64SumObserver) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64SumObserver) Observation(v float64) Observation {
+	return Observation{
+		number:     NewFloat64Number(v),
+		instrument: f.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (i Int64UpDownSumObserver) Observation(v int64) Observation {
+	return Observation{
+		number:     NewInt64Number(v),
+		instrument: i.instrument,
+	}
+}
+
+// Observation returns an Observation, a BatchObserverCallback
+// argument, for an asynchronous integer instrument.
+// This returns an implementation-level object for use by the SDK,
+// users should not refer to this.
+func (f Float64UpDownSumObserver) Observation(v float64) Observation {
 	return Observation{
 		number:     NewFloat64Number(v),
 		instrument: f.instrument,

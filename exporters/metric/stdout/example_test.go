@@ -17,7 +17,6 @@ package stdout_test
 import (
 	"context"
 	"log"
-	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
@@ -29,7 +28,7 @@ func ExampleNewExportPipeline() {
 	pusher, err := stdout.NewExportPipeline(stdout.Config{
 		PrettyPrint:    true,
 		DoNotPrintTime: true,
-	}, time.Minute)
+	})
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}
@@ -38,7 +37,7 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	key := kv.Key("key")
-	meter := pusher.Meter("example")
+	meter := pusher.Provider().Meter("example")
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")

@@ -285,7 +285,7 @@ func (f *testFixture) Process(_ context.Context, record export.Record) error {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.MeasureKind:
+	case metric.ValueRecorderKind:
 		lv, ts, err := agg.(aggregator.LastValue).LastValue()
 		if err != nil && err != aggregator.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
@@ -431,15 +431,15 @@ func TestStressFloat64Counter(t *testing.T) {
 func intLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewInt64Measure(name + ".lastvalue")
+			return Must(meter).NewInt64ValueRecorder(name + ".lastvalue")
 		},
 		getUpdateValue: func() api.Number {
 			r1 := rand.Int63()
 			return api.NewInt64Number(rand.Int63() - r1)
 		},
 		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
-			measure := inst.(api.Int64Measure)
-			measure.Record(ctx, value.AsInt64(), labels...)
+			valuerecorder := inst.(api.Int64ValueRecorder)
+			valuerecorder.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
@@ -473,14 +473,14 @@ func TestStressInt64LastValue(t *testing.T) {
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewFloat64Measure(name + ".lastvalue")
+			return Must(meter).NewFloat64ValueRecorder(name + ".lastvalue")
 		},
 		getUpdateValue: func() api.Number {
 			return api.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
 		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []kv.KeyValue) {
-			measure := inst.(api.Float64Measure)
-			measure.Record(ctx, value.AsFloat64(), labels...)
+			valuerecorder := inst.(api.Float64ValueRecorder)
+			valuerecorder.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{

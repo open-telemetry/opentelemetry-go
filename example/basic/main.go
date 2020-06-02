@@ -26,6 +26,7 @@ import (
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
 	tracestdout "go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -46,7 +47,7 @@ func initTracer() {
 	}
 	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResourceAttributes(kv.String("rk1", "rv11"), kv.Int64("rk2", 5)))
+		sdktrace.WithResource(resource.New(kv.String("rk1", "rv11"), kv.Int64("rk2", 5))))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v", err)
 	}
@@ -73,14 +74,14 @@ func main() {
 
 	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
 
-	oneMetricCB := func(result metric.Float64ObserverResult) {
+	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
 	}
-	_ = metric.Must(meter).RegisterFloat64Observer("ex.com.one", oneMetricCB,
-		metric.WithDescription("An observer set to 1.0"),
+	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
+		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	measureTwo := metric.Must(meter).NewFloat64Measure("ex.com.two")
+	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
 
@@ -89,8 +90,8 @@ func main() {
 		barKey.String("bar1"),
 	)
 
-	measure := measureTwo.Bind(commonLabels...)
-	defer measure.Unbind()
+	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
+	defer valuerecorder.Unbind()
 
 	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
 
@@ -103,7 +104,7 @@ func main() {
 			correlation.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
-			measureTwo.Measurement(2.0),
+			valuerecorderTwo.Measurement(2.0),
 		)
 
 		return tracer.WithSpan(
@@ -114,7 +115,7 @@ func main() {
 
 				trace.SpanFromContext(ctx).AddEvent(ctx, "Sub span event")
 
-				measure.Record(ctx, 1.3)
+				valuerecorder.Record(ctx, 1.3)
 
 				return nil
 			},

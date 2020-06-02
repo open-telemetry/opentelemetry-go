@@ -15,6 +15,7 @@
 package registry_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -37,17 +38,17 @@ var (
 		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Counter(name))
 		},
-		"measure.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewInt64Measure(name))
+		"valuerecorder.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewInt64ValueRecorder(name))
 		},
-		"measure.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewFloat64Measure(name))
+		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64ValueRecorder(name))
 		},
-		"observer.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterInt64Observer(name, func(metric.Int64ObserverResult) {}))
+		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
-		"observer.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.RegisterFloat64Observer(name, func(metric.Float64ObserverResult) {}))
+		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )
@@ -117,4 +118,15 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 		}
 	}
+}
+
+func TestProvider(t *testing.T) {
+	impl, _ := mockTest.NewMeter()
+	p := registry.NewProvider(impl)
+	m1 := p.Meter("m1")
+	m1p := p.Meter("m1")
+	m2 := p.Meter("m2")
+
+	require.Equal(t, m1, m1p)
+	require.NotEqual(t, m1, m2)
 }

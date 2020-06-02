@@ -24,7 +24,6 @@ type Sampler interface {
 		sc SpanContext,
 		remote bool,
 		traceID ID,
-		spanID SpanID,
 		spanName string,
 		spanKind SpanKind,
 		attributes []kv.KeyValue,

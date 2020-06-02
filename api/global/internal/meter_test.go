@@ -82,21 +82,21 @@ func TestDirect(t *testing.T) {
 	counter.Add(ctx, 1, labels1...)
 	counter.Add(ctx, 1, labels1...)
 
-	measure := Must(meter1).NewFloat64Measure("test.measure")
-	measure.Record(ctx, 1, labels1...)
-	measure.Record(ctx, 2, labels1...)
+	valuerecorder := Must(meter1).NewFloat64ValueRecorder("test.valuerecorder")
+	valuerecorder.Record(ctx, 1, labels1...)
+	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).RegisterFloat64Observer("test.observer.float", func(result metric.Float64ObserverResult) {
+	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).RegisterInt64Observer("test.observer.int", func(result metric.Int64ObserverResult) {
+	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
 
-	second := Must(meter2).NewFloat64Measure("test.second")
+	second := Must(meter2).NewFloat64ValueRecorder("test.second")
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
@@ -104,7 +104,7 @@ func TestDirect(t *testing.T) {
 	global.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
-	measure.Record(ctx, 3, labels1...)
+	valuerecorder.Record(ctx, 3, labels1...)
 	second.Record(ctx, 3, labels3...)
 
 	mock.RunAsyncInstruments()
@@ -120,7 +120,7 @@ func TestDirect(t *testing.T) {
 				Number:      asInt(1),
 			},
 			{
-				Name:        "test.measure",
+				Name:        "test.valuerecorder",
 				LibraryName: "test1",
 				Labels:      asMap(labels1...),
 				Number:      asFloat(3),
@@ -132,25 +132,25 @@ func TestDirect(t *testing.T) {
 				Number:      asFloat(3),
 			},
 			{
-				Name:        "test.observer.float",
+				Name:        "test.valueobserver.float",
 				LibraryName: "test1",
 				Labels:      asMap(labels1...),
 				Number:      asFloat(1),
 			},
 			{
-				Name:        "test.observer.float",
+				Name:        "test.valueobserver.float",
 				LibraryName: "test1",
 				Labels:      asMap(labels2...),
 				Number:      asFloat(2),
 			},
 			{
-				Name:        "test.observer.int",
+				Name:        "test.valueobserver.int",
 				LibraryName: "test1",
 				Labels:      asMap(labels1...),
 				Number:      asInt(1),
 			},
 			{
-				Name:        "test.observer.int",
+				Name:        "test.valueobserver.int",
 				LibraryName: "test1",
 				Labels:      asMap(labels2...),
 				Number:      asInt(2),
@@ -174,8 +174,8 @@ func TestBound(t *testing.T) {
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
-	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(labels1...)
+	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
+	boundM := valuerecorder.Bind(labels1...)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
@@ -194,7 +194,7 @@ func TestBound(t *testing.T) {
 				Number:      asFloat(1),
 			},
 			{
-				Name:        "test.measure",
+				Name:        "test.valuerecorder",
 				LibraryName: "test",
 				Labels:      asMap(labels1...),
 				Number:      asInt(3),
@@ -216,8 +216,8 @@ func TestUnbind(t *testing.T) {
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
 
-	measure := Must(glob).NewInt64Measure("test.measure")
-	boundM := measure.Bind(labels1...)
+	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
+	boundM := valuerecorder.Bind(labels1...)
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -331,12 +331,12 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Async: no SDK yet
-	observer := Must(meter1).RegisterFloat64Observer(
-		"interface.observer",
-		func(result metric.Float64ObserverResult) {},
+	valueobserver := Must(meter1).NewFloat64ValueObserver(
+		"interface.valueobserver",
+		func(_ context.Context, result metric.Float64ObserverResult) {},
 	)
 
-	ival = observer.AsyncImpl().Implementation()
+	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
@@ -356,7 +356,7 @@ func TestImplementationIndirection(t *testing.T) {
 	require.True(t, ok)
 
 	// Async
-	ival = observer.AsyncImpl().Implementation()
+	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
@@ -407,7 +407,7 @@ func TestRecordBatchRealSDK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	global.SetMeterProvider(pusher)
+	global.SetMeterProvider(pusher.Provider())
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	pusher.Stop()

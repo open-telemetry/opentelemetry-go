@@ -33,7 +33,6 @@ func (ns alwaysOffSampler) ShouldSample(
 	_ SpanContext,
 	_ bool,
 	_ ID,
-	_ SpanID,
 	_ string,
 	_ SpanKind,
 	_ []kv.KeyValue,

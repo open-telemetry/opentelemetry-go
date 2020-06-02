@@ -14,7 +14,11 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/kv"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/api/kv"
+)
 
 // The file is organized as follows:
 //
@@ -29,7 +33,7 @@ import "go.opentelemetry.io/otel/api/kv"
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64Observer.Observation()).
+// instruments (e.g., Int64ValueObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     Number
@@ -38,16 +42,16 @@ type Observation struct {
 
 // Int64ObserverCallback is a type of callback that integral
 // observers run.
-type Int64ObserverCallback func(Int64ObserverResult)
+type Int64ObserverCallback func(context.Context, Int64ObserverResult)
 
 // Float64ObserverCallback is a type of callback that floating point
 // observers run.
-type Float64ObserverCallback func(Float64ObserverResult)
+type Float64ObserverCallback func(context.Context, Float64ObserverResult)
 
 // BatchObserverCallback is a callback argument for use with any
 // Observer instrument that will be reported as a batch of
 // observations.
-type BatchObserverCallback func(BatchObserverResult)
+type BatchObserverCallback func(context.Context, BatchObserverResult)
 
 // Int64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous integer metric instrument.
@@ -110,7 +114,7 @@ type AsyncSingleRunner interface {
 	// receives one captured observation.  (The function accepts
 	// multiple observations so the same implementation can be
 	// used for batch runners.)
-	Run(single AsyncImpl, capture func([]kv.KeyValue, ...Observation))
+	Run(ctx context.Context, single AsyncImpl, capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
@@ -120,7 +124,7 @@ type AsyncSingleRunner interface {
 type AsyncBatchRunner interface {
 	// Run accepts a function for capturing observations of
 	// multiple instruments.
-	Run(capture func([]kv.KeyValue, ...Observation))
+	Run(ctx context.Context, capture func([]kv.KeyValue, ...Observation))
 
 	AsyncRunner
 }
@@ -154,24 +158,60 @@ func (*Float64ObserverCallback) AnyRunner() {}
 func (*BatchObserverCallback) AnyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
-	(*i)(Int64ObserverResult{
+func (i *Int64ObserverCallback) Run(ctx context.Context, impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
+	(*i)(ctx, Int64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverCallback) Run(impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
-	(*f)(Float64ObserverResult{
+func (f *Float64ObserverCallback) Run(ctx context.Context, impl AsyncImpl, function func([]kv.KeyValue, ...Observation)) {
+	(*f)(ctx, Float64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncBatchRunner.
-func (b *BatchObserverCallback) Run(function func([]kv.KeyValue, ...Observation)) {
-	(*b)(BatchObserverResult{
+func (b *BatchObserverCallback) Run(ctx context.Context, function func([]kv.KeyValue, ...Observation)) {
+	(*b)(ctx, BatchObserverResult{
 		function: function,
 	})
+}
+
+// wrapInt64ValueObserverInstrument converts an AsyncImpl into Int64ValueObserver.
+func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64ValueObserverInstrument converts an AsyncImpl into Float64ValueObserver.
+func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64ValueObserver{asyncInstrument: common}, err
+}
+
+// wrapInt64SumObserverInstrument converts an AsyncImpl into Int64SumObserver.
+func wrapInt64SumObserverInstrument(asyncInst AsyncImpl, err error) (Int64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64SumObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64SumObserverInstrument converts an AsyncImpl into Float64SumObserver.
+func wrapFloat64SumObserverInstrument(asyncInst AsyncImpl, err error) (Float64SumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64SumObserver{asyncInstrument: common}, err
+}
+
+// wrapInt64UpDownSumObserverInstrument converts an AsyncImpl into Int64UpDownSumObserver.
+func wrapInt64UpDownSumObserverInstrument(asyncInst AsyncImpl, err error) (Int64UpDownSumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Int64UpDownSumObserver{asyncInstrument: common}, err
+}
+
+// wrapFloat64UpDownSumObserverInstrument converts an AsyncImpl into Float64UpDownSumObserver.
+func wrapFloat64UpDownSumObserverInstrument(asyncInst AsyncImpl, err error) (Float64UpDownSumObserver, error) {
+	common, err := checkNewAsync(asyncInst, err)
+	return Float64UpDownSumObserver{asyncInstrument: common}, err
 }

@@ -22,25 +22,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type testIntegrator struct {
-	t             *testing.T
-	lock          sync.Mutex
-	checkpointSet *test.CheckpointSet
-	checkpoints   int
-	finishes      int
-}
+var testResource = resource.New(kv.String("R", "V"))
 
 type testExporter struct {
 	t         *testing.T
@@ -52,70 +48,28 @@ type testExporter struct {
 
 type testFixture struct {
 	checkpointSet *test.CheckpointSet
-	integrator    *testIntegrator
 	exporter      *testExporter
 }
 
-type mockClock struct {
-	mock *clock.Mock
-}
-
-type mockTicker struct {
-	ticker *clock.Ticker
-}
-
-var _ push.Clock = mockClock{}
-var _ push.Ticker = mockTicker{}
+type testSelector struct{}
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := test.NewCheckpointSet()
+	checkpointSet := test.NewCheckpointSet(testResource)
 
-	integrator := &testIntegrator{
-		t:             t,
-		checkpointSet: checkpointSet,
-	}
 	exporter := &testExporter{
 		t: t,
 	}
 	return testFixture{
 		checkpointSet: checkpointSet,
-		integrator:    integrator,
 		exporter:      exporter,
 	}
 }
 
-func (b *testIntegrator) AggregatorFor(*metric.Descriptor) export.Aggregator {
+func (testSelector) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
-func (b *testIntegrator) CheckpointSet() export.CheckpointSet {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.checkpoints++
-	return b.checkpointSet
-}
-
-func (b *testIntegrator) FinishedCollection() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.finishes++
-}
-
-func (b *testIntegrator) Process(_ context.Context, record export.Record) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	labels := record.Labels().ToSlice()
-	b.checkpointSet.Add(record.Descriptor(), record.Aggregator(), labels...)
-	return nil
-}
-
-func (b *testIntegrator) getCounts() (checkpoints, finishes int) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	return b.checkpoints, b.finishes
-}
-
-func (e *testExporter) Export(_ context.Context, _ *resource.Resource, checkpointSet export.CheckpointSet) error {
+func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
@@ -143,29 +97,9 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 	return r, e.exports
 }
 
-func (c mockClock) Now() time.Time {
-	return c.mock.Now()
-}
-
-func (c mockClock) Ticker(period time.Duration) push.Ticker {
-	return mockTicker{c.mock.Ticker(period)}
-}
-
-func (c mockClock) Add(d time.Duration) {
-	c.mock.Add(d)
-}
-
-func (t mockTicker) Stop() {
-	t.ticker.Stop()
-}
-
-func (t mockTicker) C() <-chan time.Time {
-	return t.ticker.C
-}
-
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter, time.Second)
+	p := push.New(testSelector{}, fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -173,7 +107,7 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(fix.integrator, fix.exporter, time.Second)
+	p := push.New(testSelector{}, fix.exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -182,10 +116,15 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
-	p := push.New(fix.integrator, fix.exporter, time.Second)
-	meter := p.Meter("name")
+	p := push.New(
+		testSelector{},
+		fix.exporter,
+		push.WithPeriod(time.Second),
+		push.WithResource(testResource),
+	)
+	meter := p.Provider().Meter("name")
 
-	mock := mockClock{clock.NewMock()}
+	mock := controllerTest.NewMockClock()
 	p.SetClock(mock)
 
 	ctx := context.Background()
@@ -197,9 +136,6 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 3)
 
 	records, exports := fix.exporter.resetRecords()
-	checkpoints, finishes := fix.integrator.getCounts()
-	require.Equal(t, 0, checkpoints)
-	require.Equal(t, 0, finishes)
 	require.Equal(t, 0, exports)
 	require.Equal(t, 0, len(records))
 
@@ -207,12 +143,10 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.integrator.getCounts()
-	require.Equal(t, 1, checkpoints)
-	require.Equal(t, 1, finishes)
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
@@ -226,12 +160,10 @@ func TestPushTicker(t *testing.T) {
 	runtime.Gosched()
 
 	records, exports = fix.exporter.resetRecords()
-	checkpoints, finishes = fix.integrator.getCounts()
-	require.Equal(t, 2, checkpoints)
-	require.Equal(t, 2, finishes)
 	require.Equal(t, 2, exports)
 	require.Equal(t, 1, len(records))
 	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err = records[0].Aggregator().(aggregator.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())
@@ -256,8 +188,8 @@ func TestPushExportError(t *testing.T) {
 		expectedDescriptors []string
 		expectedError       error
 	}{
-		{"errNone", nil, []string{"counter1", "counter2"}, nil},
-		{"errNoData", aggregator.ErrNoData, []string{"counter2"}, nil},
+		{"errNone", nil, []string{"counter1{R=V,X=Y}", "counter2{R=V,}"}, nil},
+		{"errNoData", aggregator.ErrNoData, []string{"counter2{R=V,}"}, nil},
 		{"errUnexpected", errAggregator, []string{}, errAggregator},
 	}
 	for _, tt := range tests {
@@ -265,7 +197,12 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1", tt.injectedError)
 
-			p := push.New(fix.integrator, fix.exporter, time.Second)
+			p := push.New(
+				testSelector{},
+				fix.exporter,
+				push.WithPeriod(time.Second),
+				push.WithResource(testResource),
+			)
 
 			var err error
 			var lock sync.Mutex
@@ -275,19 +212,19 @@ func TestPushExportError(t *testing.T) {
 				err = sdkErr
 			})
 
-			mock := mockClock{clock.NewMock()}
+			mock := controllerTest.NewMockClock()
 			p.SetClock(mock)
 
 			ctx := context.Background()
 
-			meter := p.Meter("name")
+			meter := p.Provider().Meter("name")
 			counter1 := metric.Must(meter).NewInt64Counter("counter1")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2")
 
 			p.Start()
 			runtime.Gosched()
 
-			counter1.Add(ctx, 3)
+			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, fix.exporter.exports)
@@ -297,10 +234,7 @@ func TestPushExportError(t *testing.T) {
 			runtime.Gosched()
 
 			records, exports := fix.exporter.resetRecords()
-			checkpoints, finishes := fix.integrator.getCounts()
 			require.Equal(t, 1, exports)
-			require.Equal(t, 1, checkpoints)
-			require.Equal(t, 1, finishes)
 			lock.Lock()
 			if tt.expectedError == nil {
 				require.NoError(t, err)
@@ -311,11 +245,16 @@ func TestPushExportError(t *testing.T) {
 			lock.Unlock()
 			require.Equal(t, len(tt.expectedDescriptors), len(records))
 			for _, r := range records {
-				require.Contains(t, tt.expectedDescriptors, r.Descriptor().Name())
+				require.Contains(t, tt.expectedDescriptors,
+					fmt.Sprintf("%s{%s,%s}",
+						r.Descriptor().Name(),
+						r.Resource().Encoded(label.DefaultEncoder()),
+						r.Labels().Encoded(label.DefaultEncoder()),
+					),
+				)
 			}
 
 			p.Stop()
-
 		})
 	}
 }

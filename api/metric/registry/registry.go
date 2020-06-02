@@ -23,6 +23,13 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
+// Provider is a standard metric.Provider for wrapping `MeterImpl`
+type Provider struct {
+	impl metric.MeterImpl
+}
+
+var _ metric.Provider = (*Provider)(nil)
+
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
 // to wrap an implementation with uniqueness checking.
@@ -37,6 +44,19 @@ var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 type key struct {
 	name        string
 	libraryName string
+}
+
+// NewProvider returns a new provider that implements instrument
+// name-uniqueness checking.
+func NewProvider(impl metric.MeterImpl) *Provider {
+	return &Provider{
+		impl: NewUniqueInstrumentMeterImpl(impl),
+	}
+}
+
+// Meter implements metric.Provider.
+func (p *Provider) Meter(name string) metric.Meter {
+	return metric.WrapMeterImpl(p.impl, name)
 }
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
