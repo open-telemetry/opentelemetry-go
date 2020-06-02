@@ -36,7 +36,6 @@ func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
 		pull.WithCachePeriod(0),
-		pull.WithStateful(true),
 	)
 
 	ctx := context.Background()
@@ -68,7 +67,6 @@ func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
 		pull.WithCachePeriod(time.Second),
-		pull.WithStateful(true),
 	)
 	mock := controllerTest.NewMockClock()
 	puller.SetClock(mock)

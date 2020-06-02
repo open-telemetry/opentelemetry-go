@@ -143,6 +143,10 @@ type Exporter interface {
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+
+	// Kind indicates which kind of aggregation this exporter
+	// accepts, whether stateful or not.
+	Kind() ExporterKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -226,3 +230,9 @@ const (
 	DeltaExporter       ExporterKind = 2 // e.g., StatsD
 	PassThroughExporter ExporterKind = 4 // e.g., OTLP
 )
+
+// Includes tests whether `kind` includes a specific kind of
+// exporter.
+func (kind ExporterKind) Includes(has ExporterKind) bool {
+	return kind&has != 0
+}

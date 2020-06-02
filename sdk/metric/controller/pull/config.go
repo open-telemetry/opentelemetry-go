@@ -17,6 +17,7 @@ package pull
 import (
 	"time"
 
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -33,10 +34,10 @@ type Config struct {
 	// created by the Controller.
 	Resource *resource.Resource
 
-	// Stateful causes the controller to maintain state across
-	// collection events, so that records in the exported
-	// checkpoint set are cumulative.
-	Stateful bool
+	// ExporterKind informs the integrator when it should maintain
+	// state about an individual record, based on the expected
+	// kind of checkpoint record.
+	ExporterKind export.ExporterKind
 
 	// CachePeriod is the period which a recently-computed result
 	// will be returned without gathering metric data again.
@@ -74,15 +75,15 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
-// WithStateful sets the Stateful configuration option of a Config.
-func WithStateful(stateful bool) Option {
-	return statefulOption(stateful)
+// WithExporterKind sets the ExporterKind configuration option of a Config.
+func WithExporterKind(kind export.ExporterKind) Option {
+	return ExporterKindOption(kind)
 }
 
-type statefulOption bool
+type ExporterKindOption export.ExporterKind
 
-func (o statefulOption) Apply(config *Config) {
-	config.Stateful = bool(o)
+func (o ExporterKindOption) Apply(config *Config) {
+	config.ExporterKind = export.ExporterKind(o)
 }
 
 // WithCachePeriod sets the CachePeriod configuration option of a Config.

@@ -69,6 +69,10 @@ func (testSelector) AggregatorFor(*metric.Descriptor) export.Aggregator {
 	return sum.New()
 }
 
+func (e *testExporter) Kind() export.ExporterKind {
+	return export.PassThroughExporter
+}
+
 func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()

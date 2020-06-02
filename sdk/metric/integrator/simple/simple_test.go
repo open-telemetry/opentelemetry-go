@@ -31,7 +31,7 @@ import (
 
 func TestSimpleStateless(t *testing.T) {
 	ctx := context.Background()
-	b := simple.New(test.NewAggregationSelector(), false)
+	b := simple.New(test.NewAggregationSelector(), export.PassThroughExporter)
 
 	// Set initial lastValue values
 	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
@@ -93,7 +93,7 @@ func TestSimpleStateless(t *testing.T) {
 
 func TestSimpleStateful(t *testing.T) {
 	ctx := context.Background()
-	b := simple.New(test.NewAggregationSelector(), true)
+	b := simple.New(test.NewAggregationSelector(), export.CumulativeExporter)
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()

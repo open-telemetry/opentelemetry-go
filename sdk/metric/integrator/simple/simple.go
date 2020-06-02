@@ -29,7 +29,7 @@ import (
 type (
 	Integrator struct {
 		export.AggregationSelector
-		stateful bool
+		kind export.ExporterKind
 		batch
 	}
 
@@ -43,6 +43,7 @@ type (
 		aggregator export.Aggregator
 		labels     *label.Set
 		resource   *resource.Resource
+		stateful   bool
 	}
 
 	batch struct {
@@ -55,10 +56,10 @@ type (
 var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &batch{}
 
-func New(selector export.AggregationSelector, stateful bool) *Integrator {
+func New(selector export.AggregationSelector, kind export.ExporterKind) *Integrator {
 	return &Integrator{
 		AggregationSelector: selector,
-		stateful:            stateful,
+		kind:                kind,
 		batch: batch{
 			values: map[batchKey]batchValue{},
 		},
@@ -73,20 +74,19 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		resource:   record.Resource().Equivalent(),
 	}
 	agg := record.Aggregator()
-	value, ok := b.batch.values[key]
-	if ok {
-		// Note: The call to Merge here combines only
-		// identical records.  It is required even for a
-		// stateless Integrator because such identical records
-		// may arise in the Meter implementation due to race
-		// conditions.
+	if value, ok := b.batch.values[key]; ok {
+		// An existing record will be found if:
+		// (a) the record is stateful
+		// (b) multiple accumulators (SDKs) are being used.
 		return value.aggregator.Merge(agg, desc)
 	}
+	stateful := b.isStateNeeded(record.Descriptor())
+
 	// If this integrator is stateful, create a copy of the
 	// Aggregator for long-term storage.  Otherwise the
 	// Meter implementation will checkpoint the aggregator
 	// again, overwriting the long-lived state.
-	if b.stateful {
+	if stateful {
 		tmp := agg
 		// Note: the call to AggregatorFor() followed by Merge
 		// is effectively a Clone() operation.
@@ -99,8 +99,25 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		aggregator: agg,
 		labels:     record.Labels(),
 		resource:   record.Resource(),
+		stateful:   stateful,
 	}
 	return nil
+}
+
+func (b *Integrator) isStateNeeded(desc *metric.Descriptor) bool {
+	switch desc.MetricKind() {
+	case metric.ValueRecorderKind, metric.ValueObserverKind, metric.CounterKind, metric.UpDownCounterKind:
+		// Delta-oriented instruments:
+		return b.kind.Includes(export.CumulativeExporter)
+
+	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+		// Cumulative-oriented instruments:
+		return b.kind.Includes(export.DeltaExporter)
+	}
+	// Something unexpected is happening--we could panic.  This
+	// will become an error when the exporter tries to access a
+	// checkpoint, presumably, so let it be.
+	return false
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
@@ -108,8 +125,10 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 }
 
 func (b *Integrator) FinishedCollection() {
-	if !b.stateful {
-		b.batch.values = map[batchKey]batchValue{}
+	for key, value := range b.batch.values {
+		if !value.stateful {
+			delete(b.batch.values, key)
+		}
 	}
 }
 

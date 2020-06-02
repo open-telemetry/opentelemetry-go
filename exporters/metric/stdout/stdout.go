@@ -142,11 +142,15 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exporter,
-		append([]push.Option{push.WithStateful(true)}, options...)...,
+		options...,
 	)
 	pusher.Start()
 
 	return pusher, nil
+}
+
+func (e *Exporter) Kind() export.ExporterKind {
+	return export.PassThroughExporter
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {

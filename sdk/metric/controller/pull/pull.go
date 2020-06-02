@@ -50,11 +50,12 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 		Resource:     resource.Empty(),
 		ErrorHandler: sdk.DefaultErrorHandler,
 		CachePeriod:  DefaultCachePeriod,
+		ExporterKind: export.PassThroughExporter,
 	}
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(selector, config.Stateful)
+	integrator := integrator.New(selector, config.ExporterKind)
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
