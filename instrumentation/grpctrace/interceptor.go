@@ -22,6 +22,8 @@ import (
 	"net"
 	"regexp"
 
+	"go.opentelemetry.io/otel/api/standard"
+
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -33,17 +35,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-var (
-	rpcServiceKey  = kv.Key("rpc.service")
-	netPeerIPKey   = kv.Key("net.peer.ip")
-	netPeerPortKey = kv.Key("net.peer.port")
-
-	messageTypeKey             = kv.Key("message.type")
-	messageIDKey               = kv.Key("message.id")
-	messageUncompressedSizeKey = kv.Key("message.uncompressed_size")
-)
-
-type messageType string
+type messageType kv.KeyValue
 
 // Event adds an event of the messageType to the span associated with the
 // passed context with id and size (if message is a proto message).
@@ -51,21 +43,21 @@ func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent(ctx, "message",
-			messageTypeKey.String(string(m)),
-			messageIDKey.Int(id),
-			messageUncompressedSizeKey.Int(proto.Size(p)),
+			kv.KeyValue(m),
+			standard.RPCMessageIDKey.Int(id),
+			standard.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
 		)
 	} else {
 		span.AddEvent(ctx, "message",
-			messageTypeKey.String(string(m)),
-			messageIDKey.Int(id),
+			kv.KeyValue(m),
+			standard.RPCMessageIDKey.Int(id),
 		)
 	}
 }
 
-const (
-	messageSent     messageType = "SENT"
-	messageReceived messageType = "RECEIVED"
+var (
+	messageSent     = messageType(standard.RPCMessageTypeSent)
+	messageReceived = messageType(standard.RPCMessageTypeReceived)
 )
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
@@ -93,7 +85,7 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 			ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
 		)
 		defer span.End()
 
@@ -271,7 +263,7 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 			ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
 		)
 
 		Inject(ctx, &metadataCopy)
@@ -325,7 +317,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
 		)
 		defer span.End()
 
@@ -415,7 +407,7 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(rpcServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
 		)
 		defer span.End()
 
@@ -442,8 +434,8 @@ func peerInfoFromTarget(target string) []kv.KeyValue {
 	}
 
 	return []kv.KeyValue{
-		netPeerIPKey.String(host),
-		netPeerPortKey.String(port),
+		standard.NetPeerIPKey.String(host),
+		standard.NetPeerPortKey.String(port),
 	}
 }
 
