@@ -1,9 +1,8 @@
-module github.com/wtong98/otel-test
+module go.opentelemetry.io/otel/example/otel-test
 
-go 1.14
+go 1.13
 
 require (
-	github.com/open-telemetry/opentelemetry-collector v0.3.0 // indirect
 	go.opentelemetry.io/otel v0.6.0
 	go.opentelemetry.io/otel/exporters/otlp v0.6.0
 )

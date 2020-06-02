@@ -1,13 +1,13 @@
 # OTLP Example
 This example demonstrates how to export trace and metric data from an
-application using OpenTelemetry's own wire protocal
+application using OpenTelemetry's own wire protocol
 [OTLP](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/protocol/README.md).
 We will also walk you through configuring a collector to accept OTLP exports.
 
 ### How to run?
 
 #### Prequisites
-- go >=1.14 installed
+- go >=1.13 installed
 - OpenTelemetry collector is available
 
 #### Configure the Collector

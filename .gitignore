@@ -15,5 +15,6 @@ coverage.*
 /example/http/server/server
 /example/jaeger/jaeger
 /example/namedtracer/namedtracer
+/example/otlp/otel-test
 /example/prometheus/prometheus
 /example/zipkin/zipkin
