@@ -50,8 +50,6 @@ type Exporter struct {
 	lock       sync.RWMutex
 	controller *pull.Controller
 
-	onError func(error)
-
 	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []float64
 }
@@ -85,10 +83,6 @@ type Config struct {
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
 	DefaultHistogramBoundaries []float64
-
-	// OnError is a function that handle errors that may occur while exporting metrics.
-	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
-	OnError func(error)
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
@@ -106,19 +100,12 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 		config.Gatherer = config.Registry
 	}
 
-	if config.OnError == nil {
-		config.OnError = func(err error) {
-			fmt.Println(err.Error())
-		}
-	}
-
 	e := &Exporter{
 		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer:                 config.Registerer,
 		gatherer:                   config.Gatherer,
 		defaultSummaryQuantiles:    config.DefaultSummaryQuantiles,
 		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
-		onError:                    config.OnError,
 	}
 
 	c := &collector{
@@ -257,7 +244,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return nil
 	})
 	if err != nil {
-		c.exp.onError(err)
+		global.Handle(err)
 	}
 }
 
