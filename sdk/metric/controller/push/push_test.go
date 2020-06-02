@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -37,6 +38,29 @@ import (
 )
 
 var testResource = resource.New(kv.String("R", "V"))
+
+type handler struct{ err error }
+
+func (h *handler) Handle(err error) {
+	h.err = err
+}
+
+func (h *handler) Reset() {
+	h.err = nil
+}
+
+func (h *handler) Flush() error {
+	err := h.err
+	h.Reset()
+	return err
+}
+
+var testHandler *handler
+
+func init() {
+	testHandler = new(handler)
+	global.SetHandler(testHandler)
+}
 
 type testExporter struct {
 	t         *testing.T
@@ -204,14 +228,6 @@ func TestPushExportError(t *testing.T) {
 				push.WithResource(testResource),
 			)
 
-			var err error
-			var lock sync.Mutex
-			p.SetErrorHandler(func(sdkErr error) {
-				lock.Lock()
-				defer lock.Unlock()
-				err = sdkErr
-			})
-
 			mock := controllerTest.NewMockClock()
 			p.SetClock(mock)
 
@@ -228,21 +244,20 @@ func TestPushExportError(t *testing.T) {
 			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, fix.exporter.exports)
-			require.Nil(t, err)
+			require.Nil(t, testHandler.Flush())
 
 			mock.Add(time.Second)
 			runtime.Gosched()
 
 			records, exports := fix.exporter.resetRecords()
 			require.Equal(t, 1, exports)
-			lock.Lock()
 			if tt.expectedError == nil {
-				require.NoError(t, err)
+				require.NoError(t, testHandler.Flush())
 			} else {
+				err := testHandler.Flush()
 				require.Error(t, err)
 				require.Equal(t, tt.expectedError, err)
 			}
-			lock.Unlock()
 			require.Equal(t, len(tt.expectedDescriptors), len(records))
 			for _, r := range records {
 				require.Contains(t, tt.expectedDescriptors,
