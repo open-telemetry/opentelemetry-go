@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
@@ -46,7 +47,7 @@ func TestPullNoCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(records.AddTo)
+	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -56,7 +57,7 @@ func TestPullNoCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(records.AddTo)
+	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,
@@ -80,7 +81,7 @@ func TestPullWithCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(records.AddTo)
+	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -91,7 +92,7 @@ func TestPullWithCache(t *testing.T) {
 	// Cached value!
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(records.AddTo)
+	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -103,7 +104,7 @@ func TestPullWithCache(t *testing.T) {
 	// Re-computed value!
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(records.AddTo)
+	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,

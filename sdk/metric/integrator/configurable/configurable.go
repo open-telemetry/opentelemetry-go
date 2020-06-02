@@ -14,6 +14,10 @@
 
 package configurable // import "go.opentelemetry.io/otel/sdk/metric/integrator/configurable"
 
+// TODO: This code takes a direct dependency on all the exporters and
+// all the aggregators.  These should be indirect through the use of a
+// registry and factory pattern in separate changes.
+
 import (
 	"bytes"
 	"context"
@@ -22,10 +26,11 @@ import (
 	"sync"
 
 	"github.com/spf13/viper"
-	"go.opentelemetry.io/api/label"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
@@ -33,7 +38,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/multi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -41,6 +46,8 @@ type (
 		Defaults     `mapstructure:"defaults"`
 		Views        `mapstructure:"views"`
 		Aggregations `mapstructure:"aggregations"`
+
+		// Exporters `mapstructure:"exporters"`
 	}
 
 	Defaults struct {
@@ -58,18 +65,20 @@ type (
 		Labels     []string `mapstructure:"labels"`
 	}
 
-	Integrator struct {
-		instDefault map[metric.Kind]*aggregation
-		views       map[string][]*aggregation
-		batch
-	}
+	// Exporters map[string]Exporter
 
-	newFunc func(desc *metric.Descriptor) export.Aggregator
+	Integrator struct {
+		instDefault [][]*aggregation // always len=1
+		views       map[string][]*aggregation
+		state
+	}
 
 	aggregation struct {
 		newFunc newFunc
 		labels  []kv.Key
 	}
+
+	newFunc func(desc *metric.Descriptor) export.Aggregator
 
 	stateKey struct {
 		descriptor *metric.Descriptor
@@ -86,7 +95,9 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		values map[stateKey]stateValue
+
+		persistent map[stateKey]stateValue
+		temporary  []export.Record
 	}
 )
 
@@ -112,10 +123,37 @@ func s2k(ss ...string) (rr []kv.Key) {
 	return
 }
 
+func (ci *Integrator) newInstDefault() [][]*aggregation {
+	id := make([][]*aggregation, metric.NumKinds)
+
+	addDef := func(mkind metric.Kind, _ aggregator.Kind, nf newFunc) {
+		id[mkind] = []*aggregation{
+			&aggregation{
+				newFunc: nf,
+			},
+		}
+	}
+
+	addDef(metric.CounterKind, aggregator.SumKind, ci.sumAggregator)
+	addDef(metric.UpDownCounterKind, aggregator.SumKind, ci.sumAggregator)
+	addDef(metric.SumObserverKind, aggregator.SumKind, ci.sumAggregator)
+	addDef(metric.UpDownSumObserverKind, aggregator.SumKind, ci.sumAggregator)
+	addDef(metric.ValueRecorderKind, aggregator.MinMaxSumCountKind, ci.minmaxsumcountAggregator)
+	addDef(metric.ValueObserverKind, aggregator.MinMaxSumCountKind, ci.minmaxsumcountAggregator)
+
+	return id
+}
+
 func New(cfg Config) (*Integrator, error) {
 	policies := map[string]*aggregation{}
-	instDefault := map[metric.Kind]*aggregation{}
-	views := map[string][]*aggregation{}
+
+	ci := &Integrator{
+		views: map[string][]*aggregation{},
+		state: state{
+			persistent: map[stateKey]stateValue{},
+		},
+	}
+	ci.instDefault = ci.newInstDefault()
 
 	for policy, agg := range cfg.Aggregations {
 		if agg.Aggregator == "" {
@@ -129,31 +167,17 @@ func New(cfg Config) (*Integrator, error) {
 		var nf newFunc
 		switch {
 		case strings.EqualFold("sum", agg.Aggregator):
-			nf = func(_ *metric.Descriptor) export.Aggregator {
-				return sum.New()
-			}
+			nf = ci.sumAggregator
 		case strings.EqualFold("minmaxsumcount", agg.Aggregator):
-			nf = func(desc *metric.Descriptor) export.Aggregator {
-				return minmaxsumcount.New(desc)
-			}
+			nf = ci.minmaxsumcountAggregator
 		case strings.EqualFold("histogram", agg.Aggregator):
-			nf = func(desc *metric.Descriptor) export.Aggregator {
-				// TODO: boundaries
-				return histogram.New(desc, nil)
-			}
+			nf = ci.histogramAggregator
 		case strings.EqualFold("lastvalue", agg.Aggregator):
-			nf = func(desc *metric.Descriptor) export.Aggregator {
-				return lastvalue.New()
-			}
+			nf = ci.lastvalueAggregator
 		case strings.EqualFold("sketch", agg.Aggregator):
-			nf = func(desc *metric.Descriptor) export.Aggregator {
-				// TODO: config
-				return ddsketch.New(desc, ddsketch.NewDefaultConfig())
-			}
+			nf = ci.sketchAggregator
 		case strings.EqualFold("array", agg.Aggregator):
-			nf = func(desc *metric.Descriptor) export.Aggregator {
-				return array.New()
-			}
+			nf = ci.arrayAggregator
 		default:
 			return nil, fmt.Errorf("unrecognized aggregator name: %s", agg.Aggregator)
 		}
@@ -191,7 +215,7 @@ func New(cfg Config) (*Integrator, error) {
 			return nil, fmt.Errorf("invalid instrument kind: %s", instKind)
 		}
 
-		instDefault[kind] = agg
+		ci.instDefault[kind] = []*aggregation{agg}
 	}
 
 	for instName, list := range cfg.Views {
@@ -207,24 +231,47 @@ func New(cfg Config) (*Integrator, error) {
 				return nil, fmt.Errorf("undefined policy: %s", policy)
 			}
 
-			views[instName] = append(views[instName], agg)
+			ci.views[instName] = append(ci.views[instName], agg)
 		}
 	}
 
-	return &Integrator{
-		instDefault: instDefault,
-		views:       views,
-		state: state{
-			values: map[stateKey]stateValue{},
-		},
-	}, nil
+	return ci, nil
+}
+
+func (ci *Integrator) sumAggregator(_ *metric.Descriptor) export.Aggregator {
+	return sum.New()
+}
+
+func (ci *Integrator) minmaxsumcountAggregator(desc *metric.Descriptor) export.Aggregator {
+	return minmaxsumcount.New(desc)
+}
+
+func (ci *Integrator) histogramAggregator(desc *metric.Descriptor) export.Aggregator {
+	return histogram.New(desc, nil)
+}
+
+func (ci *Integrator) lastvalueAggregator(desc *metric.Descriptor) export.Aggregator {
+	return lastvalue.New()
+}
+
+func (ci *Integrator) sketchAggregator(desc *metric.Descriptor) export.Aggregator {
+	return ddsketch.New(desc, ddsketch.NewDefaultConfig())
+}
+
+func (ci *Integrator) arrayAggregator(desc *metric.Descriptor) export.Aggregator {
+	return array.New()
+}
+
+func (ci *Integrator) aggregationFor(desc *metric.Descriptor) []*aggregation {
+	views, ok := ci.views[desc.Name()]
+	if !ok {
+		return ci.instDefault[desc.MetricKind()]
+	}
+	return views
 }
 
 func (ci *Integrator) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
-	views, ok := ci.views[desc.Name()]
-	if !ok {
-		return ci.instDefault[desc.MetricKind()].newFunc(desc)
-	}
+	views := ci.aggregationFor(desc)
 
 	if len(views) == 1 {
 		return views[0].newFunc(desc)
@@ -239,6 +286,84 @@ func (ci *Integrator) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
 }
 
 func (ci *Integrator) Process(ctx context.Context, record export.Record) error {
+	// desc := record.Descriptor()
+	// for _, view := range ci.aggregationFor(desc) {
+	// 	keys := view.Labels
+
+	// 	// Cache the mapping from Descriptor->Key->Index
+	// 	ki, ok := b.descKeyIndex[desc]
+	// 	if !ok {
+	// 		ki = map[core.Key]int{}
+	// 		b.descKeyIndex[desc] = ki
+
+	// 		for i, k := range keys {
+	// 			ki[k] = i
+	// 		}
+	// 	}
+
+	// 	// Compute the value list.  Note: Unspecified values become
+	// 	// empty strings.  TODO: pin this down, we have no appropriate
+	// 	// Value constructor.
+	// 	outputLabels := make([]core.KeyValue, len(keys))
+
+	// 	for i, key := range keys {
+	// 		outputLabels[i] = key.String("")
+	// 	}
+
+	// 	// Note also the possibility to speed this computation of
+	// 	// "encoded" via "outputLabels" in the form of a (Descriptor,
+	// 	// Labels)->(Labels, Encoded) cache.
+	// 	iter := record.Labels().Iter()
+	// 	for iter.Next() {
+	// 		kv := iter.Label()
+	// 		pos, ok := ki[kv.Key]
+	// 		if !ok {
+	// 			continue
+	// 		}
+	// 		outputLabels[pos].Value = kv.Value
+	// 	}
+
+	// 	// Compute an encoded lookup key.
+	// 	elabels := export.NewSimpleLabels(b.labelEncoder, outputLabels...)
+	// 	encoded := elabels.Encoded(b.labelEncoder)
+
+	// 	// Merge this aggregator with all preceding aggregators that
+	// 	// map to the same set of `outputLabels` labels.
+	// 	agg := record.Aggregator()
+	// 	key := batchKey{
+	// 		descriptor: record.Descriptor(),
+	// 		encoded:    encoded,
+	// 	}
+	// 	rag, ok := b.aggCheckpoint[key]
+	// 	if ok {
+	// 		// Combine the input aggregator with the current
+	// 		// checkpoint state.
+	// 		return rag.Aggregator().Merge(agg, desc)
+	// 	}
+	// 	// If this Batcher is stateful, create a copy of the
+	// 	// Aggregator for long-term storage.  Otherwise the
+	// 	// Meter implementation will checkpoint the aggregator
+	// 	// again, overwriting the long-lived state.
+	// 	if b.stateful {
+	// 		tmp := agg
+	// 		// Note: the call to AggregatorFor() followed by Merge
+	// 		// is effectively a Clone() operation.
+	// 		agg = b.AggregatorFor(desc)
+	// 		if err := agg.Merge(tmp, desc); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	b.aggCheckpoint[key] = export.NewRecord(desc, elabels, agg)
+	// }
+	// return nil
+
+	// Some of the former "defaultkeys batcher" goes here.
+
+	// for _, v := range views {
+	// 	ci.temporary = append(ci.temporary, record)
+
+	// }
+
 	// @@@ Decide which records are stateful and which are not.
 	// Need to ask the exporters what their disposition:
 	//   - pass-through
@@ -250,8 +375,10 @@ func (ci *Integrator) Process(ctx context.Context, record export.Record) error {
 	// probably not very special, consider the opposite case of
 	// delta instruments reporting through cumulative
 	// exporters...).
-
-	// Store stateful records in a map; build a list of stateless records.
+	//
+	// For Prometheus this varies by the instrument.
+	//
+	// Store stateful records in a map; build a slice of stateless records.
 
 	return nil
 }
@@ -269,3 +396,15 @@ func (b *state) ForEach(f func(export.Record) error) error {
 	// }
 	return nil
 }
+
+// @@@
+
+// func (b *Integrator) CheckpointSet() export.CheckpointSet {
+// 	return &b.batch
+// }
+
+// func (b *Integrator) FinishedCollection() {
+// 	if !b.stateful {
+// 		b.batch.values = map[batchKey]batchValue{}
+// 	}
+// }

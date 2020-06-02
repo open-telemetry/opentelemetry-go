@@ -115,7 +115,8 @@ func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.
 	}
 }
 
-func (p *CheckpointSet) ForEach(f func(export.Record) error) error {
+func (p *CheckpointSet) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
+	// @@@ NOt used KIND
 	for _, r := range p.updates {
 		if err := f(r); err != nil && !errors.Is(err, aggregator.ErrNoData) {
 			return err

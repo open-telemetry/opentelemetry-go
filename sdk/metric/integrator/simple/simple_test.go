@@ -62,7 +62,7 @@ func TestSimpleStateless(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 
 	records := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(records.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records.AddTo)
 
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -84,7 +84,7 @@ func TestSimpleStateless(t *testing.T) {
 
 	// Verify that state was reset
 	checkpointSet = b.CheckpointSet()
-	_ = checkpointSet.ForEach(func(rec export.Record) error {
+	_ = checkpointSet.ForEach(export.PassThroughExporter, func(rec export.Record) error {
 		t.Fatal("Unexpected call")
 		return nil
 	})
@@ -107,7 +107,7 @@ func TestSimpleStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	records1 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(records1.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 10, // labels1
@@ -118,7 +118,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records2 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(records2.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records2.AddTo)
 
 	require.EqualValues(t, records1.Map, records2.Map)
 	b.FinishedCollection()
@@ -134,7 +134,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records3 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(records3.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records3.AddTo)
 
 	require.EqualValues(t, records1.Map, records3.Map)
 	b.FinishedCollection()
@@ -146,7 +146,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records4 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(records4.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 30,

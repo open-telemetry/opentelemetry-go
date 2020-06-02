@@ -74,7 +74,7 @@ func (e *testExporter) Export(_ context.Context, checkpointSet export.Checkpoint
 	defer e.lock.Unlock()
 	e.exports++
 	var records []export.Record
-	if err := checkpointSet.ForEach(func(r export.Record) error {
+	if err := checkpointSet.ForEach(export.PassThroughExporter, func(r export.Record) error {
 		if e.injectErr != nil {
 			if err := e.injectErr(r); err != nil {
 				return err

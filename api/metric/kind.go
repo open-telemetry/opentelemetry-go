@@ -34,4 +34,7 @@ const (
 	SumObserverKind
 	// UpDownSumObserverKind indicates a UpDownSumObserver instrument.
 	UpDownSumObserverKind
+
+	// NumKinds is the number of metric kinds.
+	NumKinds = 6
 )

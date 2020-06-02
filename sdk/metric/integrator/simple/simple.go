@@ -113,7 +113,8 @@ func (b *Integrator) FinishedCollection() {
 	}
 }
 
-func (b *batch) ForEach(f func(export.Record) error) error {
+func (b *batch) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
+	// @@@ Use the kind
 	for key, value := range b.values {
 		if err := f(export.NewRecord(
 			key.descriptor,

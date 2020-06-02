@@ -156,7 +156,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	aggError = checkpointSet.ForEach(func(record export.Record) error {
+	aggError = checkpointSet.ForEach(export.PassThroughExporter, func(record export.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregator()
 		kind := desc.NumberKind()

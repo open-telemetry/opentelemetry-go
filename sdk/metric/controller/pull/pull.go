@@ -85,11 +85,11 @@ func (c *Controller) Provider() metric.Provider {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(f func(export.Record) error) error {
+func (c *Controller) ForEach(kind export.ExporterKind, f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
 
-	return c.checkpoint.ForEach(f)
+	return c.checkpoint.ForEach(kind, f)
 }
 
 // Collect requests a collection.  The collection will be skipped if

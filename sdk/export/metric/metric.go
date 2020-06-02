@@ -158,7 +158,7 @@ type CheckpointSet interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(func(Record) error) error
+	ForEach(ExporterKind, func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
@@ -216,3 +216,13 @@ func (r Record) Labels() *label.Set {
 func (r Record) Resource() *resource.Resource {
 	return r.resource
 }
+
+// ExporterKind indicates the kind of data exported by an exporter.
+// These bits may be OR-d together when multiple exporters are in use.
+type ExporterKind int
+
+const (
+	CumulativeExporter  ExporterKind = 1 // e.g., Prometheus
+	DeltaExporter       ExporterKind = 2 // e.g., StatsD
+	PassThroughExporter ExporterKind = 4 // e.g., OTLP
+)
