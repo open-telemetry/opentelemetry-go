@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -23,6 +24,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -200,12 +202,14 @@ func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...
 	})
 }
 
+var errUninitializedSpan = errors.New("failed to set name on uninitialized span")
+
 func (s *span) SetName(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.data == nil {
-		// TODO: now what?
+		global.Handle(errUninitializedSpan)
 		return
 	}
 	s.data.Name = name
