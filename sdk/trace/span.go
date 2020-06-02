@@ -23,6 +23,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -205,7 +206,7 @@ func (s *span) SetName(name string) {
 	defer s.mu.Unlock()
 
 	if s.data == nil {
-		// TODO: now what?
+		global.Handle(fmt.Errorf("failed to set name on uninitialized span: %#v", s))
 		return
 	}
 	s.data.Name = name
