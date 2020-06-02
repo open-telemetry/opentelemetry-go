@@ -39,19 +39,22 @@ import (
 
 var testResource = resource.New(kv.String("R", "V"))
 
-type handler struct{ err error }
-
-func (h *handler) Handle(err error) {
-	h.err = err
+type handler struct {
+	sync.Mutex
+	err error
 }
 
-func (h *handler) Reset() {
-	h.err = nil
+func (h *handler) Handle(err error) {
+	h.Lock()
+	h.err = err
+	h.Unlock()
 }
 
 func (h *handler) Flush() error {
+	h.Lock()
 	err := h.err
-	h.Reset()
+	h.err = nil
+	h.Unlock()
 	return err
 }
 

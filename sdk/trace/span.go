@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -201,12 +202,14 @@ func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...
 	})
 }
 
+var errUninitializedSpan = errors.New("failed to set name on uninitialized span")
+
 func (s *span) SetName(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.data == nil {
-		global.Handle(fmt.Errorf("failed to set name on uninitialized span: %#v", s))
+		global.Handle(errUninitializedSpan)
 		return
 	}
 	s.data.Name = name
