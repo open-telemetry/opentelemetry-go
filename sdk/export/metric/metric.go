@@ -236,3 +236,22 @@ const (
 func (kind ExporterKind) Includes(has ExporterKind) bool {
 	return kind&has != 0
 }
+
+// MemoryRequired returns whether an exporter of this kind requires
+// memory to export correctly.
+func (kind ExporterKind) MemoryRequired(desc metric.Descriptor) bool {
+	switch desc.MetricKind() {
+	case metric.ValueRecorderKind, metric.ValueObserverKind,
+		metric.CounterKind, metric.UpDownCounterKind:
+		// Delta-oriented instruments:
+		return kind.Includes(CumulativeExporter)
+
+	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+		// Cumulative-oriented instruments:
+		return kind.Includes(DeltaExporter)
+	}
+	// Something unexpected is happening--we could panic.  This
+	// will become an error when the exporter tries to access a
+	// checkpoint, presumably, so let it be.
+	return false
+}

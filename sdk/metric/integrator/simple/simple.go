@@ -49,7 +49,7 @@ type (
 	batch struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		values map[batchKey]batchValue
+		values map[batchKey]*batchValue
 	}
 )
 
@@ -73,14 +73,33 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		distinct:   record.Labels().Equivalent(),
 		resource:   record.Resource().Equivalent(),
 	}
+	stateful := b.kind.MemoryRequired(*record.Descriptor())
 	agg := record.Aggregator()
+
 	if value, ok := b.batch.values[key]; ok {
 		// An existing record will be found if:
 		// (a) the record is stateful
 		// (b) multiple accumulators (SDKs) are being used.
+
+		if value.aggregator == nil {
+			value.aggregator = agg
+		}
+
+		// @@@ If the thing we're pointing at is not owned,
+		// clone it.  This means there are multiple SDKs.
+
+		// @@@ If the thing is an async instrument, w.t.f. fix it.
+
 		return value.aggregator.Merge(agg, desc)
 	}
-	stateful := b.isStateNeeded(record.Descriptor())
+
+	// TODO: Here, somehow, I want to maintain the incremental state
+	// updates (because there could be >1 of them) in the active portion
+	// of the stateful aggregator.
+
+	// Maybe add a method "UpdateFromCheckpoint"?  Copy the
+	// incremental updates into the working state, then merge
+	// during the checkpoint.
 
 	// If this integrator is stateful, create a copy of the
 	// Aggregator for long-term storage.  Otherwise the
@@ -102,22 +121,6 @@ func (b *Integrator) Process(_ context.Context, record export.Record) error {
 		stateful:   stateful,
 	}
 	return nil
-}
-
-func (b *Integrator) isStateNeeded(desc *metric.Descriptor) bool {
-	switch desc.MetricKind() {
-	case metric.ValueRecorderKind, metric.ValueObserverKind, metric.CounterKind, metric.UpDownCounterKind:
-		// Delta-oriented instruments:
-		return b.kind.Includes(export.CumulativeExporter)
-
-	case metric.SumObserverKind, metric.UpDownSumObserverKind:
-		// Cumulative-oriented instruments:
-		return b.kind.Includes(export.DeltaExporter)
-	}
-	// Something unexpected is happening--we could panic.  This
-	// will become an error when the exporter tries to access a
-	// checkpoint, presumably, so let it be.
-	return false
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
