@@ -41,8 +41,8 @@ type AsyncCollector interface {
 type AsyncInstrumentState struct {
 	lock sync.Mutex
 
-	// errorOnce will use the global.Handler to report an error once of an
-	// invalid runner being attempted to run.
+	// errorOnce will use the global.Handler to report an error
+	// once in case of an invalid runner attempting to run.
 	errorOnce sync.Once
 
 	// runnerMap keeps the set of runners that will run each
