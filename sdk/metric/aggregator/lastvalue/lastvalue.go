@@ -102,14 +102,14 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
-	ggd := (*lastValueData)(atomic.LoadPointer(&g.checkpoint))
+	ggd := (*lastValueData)(atomic.LoadPointer(&g.current))
 	ogd := (*lastValueData)(atomic.LoadPointer(&o.checkpoint))
 
 	if ggd.timestamp.After(ogd.timestamp) {
 		return nil
 	}
 
-	g.checkpoint = unsafe.Pointer(ogd)
+	g.current = unsafe.Pointer(ogd)
 	return nil
 }
 

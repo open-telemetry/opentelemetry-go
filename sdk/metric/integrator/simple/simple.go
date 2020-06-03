@@ -35,7 +35,7 @@ type (
 
 		export.AggregationSelector
 
-		state state
+		state
 	}
 
 	stateKey struct {
@@ -227,23 +227,18 @@ func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 		if value.checkpointed != b.sequence {
 			value.checkpointed = b.sequence
 			if value.stateful {
-				fmt.Println("LOOK1", value.aggregator)
 				// Accumulated value in current; last value in checkpoint.
 				value.aggregator.Swap()
 
-				fmt.Println("LOOK2", value.aggregator)
 				// Last value in current, accumulated value in checkpoint:
 				// add into current.
-				value.aggregator.Merge(value.aggregator, key.descriptor)
-
-				fmt.Println("LOOK3", value.aggregator)
-				// Now current has up-to-date value, checkpoint has accumulated value.
-				// value.aggregator.Checkpoint(context.Background(), key.descriptor)
-				// fmt.Println("LOOK4", value.aggregator)
+				err := value.aggregator.Merge(value.aggregator, key.descriptor)
+				if err != nil {
+					return err
+				}
 
 				// Place up-to-date value in checkpoint, accumulated value in current.
 				value.aggregator.Swap()
-				fmt.Println("LOOK5", value.aggregator)
 			} else {
 				// In this case, we'll the accumulated value (otherwise
 				// we'd have state).

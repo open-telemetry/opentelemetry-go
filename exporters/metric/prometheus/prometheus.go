@@ -170,7 +170,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	// expressed as delta histograms.
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		options...,
+		append(options, pull.WithExporterKind(export.CumulativeExporter))...,
 	)
 }
 

@@ -129,6 +129,10 @@ func (c *Aggregator) Merge(oa export.Aggregator, d *metric.Descriptor) error {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.Merge(o.checkpoint)
+	c.current.Merge(o.checkpoint)
 	return nil
+}
+
+func (c *Aggregator) Swap() {
+	c.current, c.checkpoint = c.checkpoint, c.current
 }

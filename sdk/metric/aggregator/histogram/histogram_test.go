@@ -161,7 +161,9 @@ func TestHistogramMerge(t *testing.T) {
 		agg1.Checkpoint(ctx, descriptor)
 		agg2.Checkpoint(ctx, descriptor)
 
+		agg1.Swap()
 		test.CheckedMerge(t, agg1, agg2, descriptor)
+		agg1.Swap()
 
 		all.Sort()
 

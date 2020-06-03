@@ -31,13 +31,18 @@ type (
 	// an array with the exact set of values.
 	Aggregator struct {
 		// ckptSum needs to be aligned for 64-bit atomic operations.
-		ckptSum    metric.Number
 		lock       sync.Mutex
-		current    points
-		checkpoint points
+		current    pointsAndSum
+		checkpoint pointsAndSum
 	}
 
 	points []metric.Number
+
+	pointsAndSum struct {
+		points
+		sum    metric.Number
+		sorted bool
+	}
 )
 
 var _ export.Aggregator = &Aggregator{}
@@ -54,12 +59,12 @@ func New() *Aggregator {
 
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.ckptSum, nil
+	return c.checkpoint.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(len(c.checkpoint)), nil
+	return int64(len(c.checkpoint.points)), nil
 }
 
 // Max returns the maximum value in the checkpoint.
@@ -80,28 +85,18 @@ func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
 
 // Points returns access to the raw data set.
 func (c *Aggregator) Points() ([]metric.Number, error) {
-	return c.checkpoint, nil
+	return c.checkpoint.points, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, nil
+	c.checkpoint, c.current = c.current, pointsAndSum{}
 	c.lock.Unlock()
 
-	kind := desc.NumberKind()
-
-	// TODO: This sort should be done lazily, only when quantiles
-	// are requested.  The SDK specification says you can use this
-	// aggregator to simply list values in the order they were
-	// received as an alternative to requesting quantile information.
-	c.sort(kind)
-
-	c.ckptSum = metric.Number(0)
-
-	for _, v := range c.checkpoint {
-		c.ckptSum.AddNumber(kind, v)
+	if !c.checkpoint.sorted {
+		c.sortCheckpoint(desc.NumberKind())
 	}
 }
 
@@ -110,7 +105,8 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 // calls.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
-	c.current = append(c.current, number)
+	c.current.points = append(c.current.points, number)
+	c.current.sum.AddNumber(desc.NumberKind(), number)
 	c.lock.Unlock()
 	return nil
 }
@@ -121,13 +117,17 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
-
-	c.ckptSum.AddNumber(desc.NumberKind(), o.ckptSum)
-	c.checkpoint = combine(c.checkpoint, o.checkpoint, desc.NumberKind())
+	c.current.points = combine(c.current.points, o.checkpoint.points, desc.NumberKind())
+	c.current.sorted = true
+	c.current.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 	return nil
 }
 
-func (c *Aggregator) sort(kind metric.NumberKind) {
+func (c *Aggregator) Swap() {
+	c.checkpoint, c.current = c.current, c.checkpoint
+}
+
+func (c *Aggregator) sortCheckpoint(kind metric.NumberKind) {
 	switch kind {
 	case metric.Float64NumberKind:
 		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint)))
@@ -140,9 +140,12 @@ func (c *Aggregator) sort(kind metric.NumberKind) {
 		// support uint64-kind metric instruments.
 		panic("Impossible case")
 	}
+
+	c.checkpoint.sorted = true
 }
 
 func combine(a, b points, kind metric.NumberKind) points {
+	// N.B.: This can be optimized if one is empty and already
 	result := make(points, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {

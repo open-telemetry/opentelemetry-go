@@ -108,6 +108,10 @@ func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
 	c.lock.Unlock()
 }
 
+func (c *Aggregator) Swap() {
+	c.checkpoint, c.current = c.current, c.checkpoint
+}
+
 func (c *Aggregator) emptyState() state {
 	kind := c.kind
 	return state{
@@ -142,14 +146,14 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
+	c.current.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
+	c.current.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
 
-	if c.checkpoint.min.CompareNumber(desc.NumberKind(), o.checkpoint.min) > 0 {
-		c.checkpoint.min.SetNumber(o.checkpoint.min)
+	if c.current.min.CompareNumber(desc.NumberKind(), o.checkpoint.min) > 0 {
+		c.current.min.SetNumber(o.checkpoint.min)
 	}
-	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
-		c.checkpoint.max.SetNumber(o.checkpoint.max)
+	if c.current.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
+		c.current.max.SetNumber(o.checkpoint.max)
 	}
 	return nil
 }

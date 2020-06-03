@@ -97,7 +97,9 @@ func TestLastValueMerge(t *testing.T) {
 		require.Nil(t, err)
 		require.True(t, t1.Before(t2))
 
+		agg1.Swap()
 		test.CheckedMerge(t, agg1, agg2, descriptor)
+		agg1.Swap()
 
 		lv, ts, err := agg1.LastValue()
 		require.Nil(t, err)

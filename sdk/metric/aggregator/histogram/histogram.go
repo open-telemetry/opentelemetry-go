@@ -119,6 +119,10 @@ func emptyState(boundaries []float64) state {
 	}
 }
 
+func (c *Aggregator) Swap() {
+	c.checkpoint, c.current = c.current, c.checkpoint
+}
+
 // Update adds the recorded measurement to the current data set.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
@@ -160,11 +164,11 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
+	c.current.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
+	c.current.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
 
-	for i := 0; i < len(c.checkpoint.bucketCounts); i++ {
-		c.checkpoint.bucketCounts[i] += o.checkpoint.bucketCounts[i]
+	for i := 0; i < len(c.current.bucketCounts); i++ {
+		c.current.bucketCounts[i] += o.checkpoint.bucketCounts[i]
 	}
 	return nil
 }

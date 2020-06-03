@@ -18,32 +18,14 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
-	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "Aggregator.ckptSum",
-			Offset: unsafe.Offsetof(Aggregator{}.ckptSum),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
 
 type updateTest struct {
 	count int
@@ -148,7 +130,9 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	agg1.Checkpoint(ctx, descriptor)
 	agg2.Checkpoint(ctx, descriptor)
 
+	agg1.Swap()
 	test.CheckedMerge(t, agg1, agg2, descriptor)
+	agg1.Swap()
 
 	all.Sort()
 
@@ -179,7 +163,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 func TestArrayMerge(t *testing.T) {
 	// Test with an odd an even number of measurements
-	for count := 999; count <= 1000; count++ {
+	for count := 9; count <= 10; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
 			// Test absolute and non-absolute
 			for _, absolute := range []bool{false, true} {
