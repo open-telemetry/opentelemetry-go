@@ -107,7 +107,7 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
+func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, emptyState(c.boundaries)
 	c.lock.Unlock()

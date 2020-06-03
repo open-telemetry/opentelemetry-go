@@ -89,7 +89,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 	assert.EqualError(t, err, aggregator.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
-	mmsc.Checkpoint(context.Background(), &metric.Descriptor{})
+	mmsc.Checkpoint(&metric.Descriptor{})
 	min, max, sum, count, err := minMaxSumCountValues(mmsc)
 	if assert.NoError(t, err) {
 		assert.Equal(t, min, metric.NewInt64Number(1))
@@ -146,7 +146,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	if !assert.NoError(t, mmsc.Update(ctx, 1, &metric.Descriptor{})) {
 		return
 	}
-	mmsc.Checkpoint(ctx, &metric.Descriptor{})
+	mmsc.Checkpoint(&metric.Descriptor{})
 	for _, test := range tests {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
 			metric.WithDescription(test.description),
@@ -165,7 +165,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	mmsc := minmaxsumcount.New(&desc)
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
-	mmsc.Checkpoint(context.Background(), &desc)
+	mmsc.Checkpoint(&desc)
 	expected := []*metricpb.SummaryDataPoint{
 		{
 			Count: 2,
@@ -261,7 +261,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
-	s.Checkpoint(context.Background(), &desc)
+	s.Checkpoint(&desc)
 	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
@@ -275,7 +275,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	labels := label.NewSet()
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
-	s.Checkpoint(context.Background(), &desc)
+	s.Checkpoint(&desc)
 	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)

@@ -123,8 +123,8 @@ func TestSimpleStateful(t *testing.T) {
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, metric.NewInt64Number(20), &test.CounterADesc)
 	_ = caggB.Update(ctx, metric.NewInt64Number(20), &test.CounterBDesc)
-	caggA.Checkpoint(ctx, &test.CounterADesc)
-	caggB.Checkpoint(ctx, &test.CounterBDesc)
+	caggA.Checkpoint(&test.CounterADesc)
+	caggB.Checkpoint(&test.CounterBDesc)
 
 	// Now process the second update
 	_ = b.Process(export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))

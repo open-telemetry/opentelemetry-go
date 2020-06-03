@@ -80,7 +80,7 @@ func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
 }
 
 // Checkpoint atomically saves the current value.
-func (g *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
+func (g *Aggregator) Checkpoint(*metric.Descriptor) {
 	g.checkpoint = atomic.LoadPointer(&g.current)
 }
 

@@ -15,7 +15,6 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -112,7 +111,7 @@ func (b *Integrator) cloneReplace(value *stateValue, replace export.Aggregator, 
 	if !desc.MetricKind().Asynchronous() {
 		return fmt.Errorf("inconsistent integrator state")
 	}
-	value.aggregator.Checkpoint(context.Background(), desc)
+	value.aggregator.Checkpoint(desc)
 	cstate, err := b.cloneCheckpoint(value.aggregator, desc)
 	if err != nil {
 		return err
@@ -148,7 +147,7 @@ func (b *Integrator) Process(record export.Record) error {
 				// The prior stateful value is in the checkpoint register, and
 				// the last accumulator value is in the current register.
 				value.aggregator.Swap()
-				value.aggregator.Checkpoint(context.Background(), desc)
+				value.aggregator.Checkpoint(desc)
 			}
 			// This is the first record in the current checkpoint set.
 			if !stateful && !value.aggOwned {
@@ -243,7 +242,7 @@ func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 				// In this case, we'll the accumulated value (otherwise
 				// we'd have state).
 				if value.aggOwned {
-					value.aggregator.Checkpoint(context.Background(), key.descriptor)
+					value.aggregator.Checkpoint(key.descriptor)
 					value.aggOwned = false
 				}
 			}

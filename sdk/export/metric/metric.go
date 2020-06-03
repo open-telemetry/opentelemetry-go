@@ -115,8 +115,7 @@ type Aggregator interface {
 	// After the checkpoint is taken, the current value may be
 	// accessed using by converting to one a suitable interface
 	// types in the `aggregator` sub-package.
-	// TODO remove Context
-	Checkpoint(context.Context, *metric.Descriptor)
+	Checkpoint(*metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's current state.

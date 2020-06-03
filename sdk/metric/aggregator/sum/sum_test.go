@@ -15,7 +15,6 @@
 package sum
 
 import (
-	"context"
 	"os"
 	"testing"
 	"unsafe"
@@ -49,8 +48,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestCounterSum(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
@@ -63,7 +60,7 @@ func TestCounterSum(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
-		agg.Checkpoint(ctx, descriptor)
+		agg.Checkpoint(descriptor)
 
 		asum, err := agg.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
@@ -72,8 +69,6 @@ func TestCounterSum(t *testing.T) {
 }
 
 func TestValueRecorderSum(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
@@ -90,7 +85,7 @@ func TestValueRecorderSum(t *testing.T) {
 			sum.AddNumber(profile.NumberKind, r2)
 		}
 
-		agg.Checkpoint(ctx, descriptor)
+		agg.Checkpoint(descriptor)
 
 		asum, err := agg.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
@@ -99,8 +94,6 @@ func TestValueRecorderSum(t *testing.T) {
 }
 
 func TestCounterMerge(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg1 := New()
 		agg2 := New()
@@ -115,12 +108,12 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg2.Checkpoint(ctx, descriptor)
+		agg2.Checkpoint(descriptor)
 
 		test.CheckedMerge(t, agg1, agg2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
-		agg1.Checkpoint(ctx, descriptor)
+		agg1.Checkpoint(descriptor)
 
 		asum, err := agg1.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
