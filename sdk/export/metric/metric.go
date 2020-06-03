@@ -123,6 +123,9 @@ type Aggregator interface {
 	// Merge() is called in a single-threaded context, no locking
 	// is required.
 	Merge(Aggregator, *metric.Descriptor) error
+
+	// Swap interchanges the current and checkpointed state.
+	Swap()
 }
 
 // Exporter handles presentation of the checkpoint of aggregate

@@ -112,3 +112,7 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	g.checkpoint = unsafe.Pointer(ogd)
 	return nil
 }
+
+func (g *Aggregator) Swap() {
+	g.checkpoint, g.current = g.current, g.checkpoint
+}

@@ -70,3 +70,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	c.current.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil
 }
+
+func (c *Aggregator) Swap() {
+	c.current, c.checkpoint = c.checkpoint, c.current
+}

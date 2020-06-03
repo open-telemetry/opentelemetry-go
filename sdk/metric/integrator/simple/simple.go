@@ -27,16 +27,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+// @@@ Need a systematic test of all the instruments / aggregators.
+
 type (
 	Integrator struct {
 		kind export.ExporterKind
 
 		export.AggregationSelector
 
-		sequence     int64
-		checkpointed int64
-
-		state
+		state state
 	}
 
 	stateKey struct {
@@ -46,18 +45,42 @@ type (
 	}
 
 	stateValue struct {
+		// labels corresponds to the stateKey.distinct field.
+		labels *label.Set
+
+		// resource corresponds to the stateKey.resource field.
+		resource *resource.Resource
+
+		// lock protects the remaining fields, synchronizes computing the
+		// checkpoint state on the fly.
+		lock sync.Mutex
+
 		aggregator export.Aggregator
-		labels     *label.Set
-		resource   *resource.Resource
-		updated    int64
-		stateful   bool
-		aggOwned   bool
+
+		// updated indicates the last sequence number when this value had
+		// Process() called by an accumulator.
+		updated      int64
+		checkpointed int64
+
+		// stateful indicates that the last-value of the aggregation (since
+		// process start time) is being maintained.
+		stateful bool
+
+		// aggOwned is always true for stateful aggregators.  aggOWned may also be
+		// true for stateless synchronous aggregators, either the set of labels is
+		// reduced (by in-process aggregation) or multiple accumulators are used.
+		//
+		// When aggOwned is true, the current accumulated value is held in the
+		// aggregator's current register.  If the aggregator is stateless, the
+		// last stateful value is held in the checkpoint register.
+		aggOwned bool
 	}
 
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		values map[stateKey]*stateValue
+		sequence int64
+		values   map[stateKey]*stateValue
 	}
 )
 
@@ -68,7 +91,6 @@ func New(selector export.AggregationSelector, kind export.ExporterKind) *Integra
 	return &Integrator{
 		AggregationSelector: selector,
 		kind:                kind,
-		checkpointed:        -1,
 		state: state{
 			values: map[stateKey]*stateValue{},
 		},
@@ -112,13 +134,22 @@ func (b *Integrator) Process(record export.Record) error {
 
 	// Check if there is an existing record.  If so, update it.
 	if value, ok := b.state.values[key]; ok {
+		value.lock.Lock()
+		defer value.lock.Unlock()
+
 		// Advance the update sequence number:
-		sameRound := b.sequence == value.updated
-		value.updated = b.sequence
+		sameRound := b.state.sequence == value.updated
+		value.updated = b.state.sequence
 
 		// An existing record will be found when:
 		// (a) stateful aggregation is required for an exporter
 		if !sameRound {
+			if stateful {
+				// The prior stateful value is in the checkpoint register, and
+				// the last accumulator value is in the current register.
+				value.aggregator.Swap()
+				value.aggregator.Checkpoint(context.Background(), desc)
+			}
 			// This is the first record in the current checkpoint set.
 			if !stateful && !value.aggOwned {
 				// The first time through, refer to a checkpointed
@@ -156,11 +187,13 @@ func (b *Integrator) Process(record export.Record) error {
 
 	// There was no existing record.
 	newValue := &stateValue{
-		aggregator: agg,
-		labels:     record.Labels(),
-		resource:   record.Resource(),
-		stateful:   stateful,
-		updated:    b.sequence,
+		aggregator:   agg,
+		labels:       record.Labels(),
+		resource:     record.Resource(),
+		stateful:     stateful,
+		checkpointed: -1,
+		updated:      b.state.sequence,
+		aggOwned:     false,
 	}
 	if stateful {
 		var err error
@@ -175,36 +208,54 @@ func (b *Integrator) Process(record export.Record) error {
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
-	if b.checkpointed != b.sequence {
-		b.checkpointed = b.sequence
-		for key, value := range b.state.values {
-			if value.aggOwned {
-				value.aggregator.Merge(value.aggregator, key.descriptor)
-				value.aggregator.Checkpoint(context.Background(), key.descriptor)
-			}
-			if !value.stateful {
-				value.aggOwned = false
-			}
-		}
-	}
 	return &b.state
 }
 
 func (b *Integrator) FinishedCollection() {
-	b.sequence++
-	// TODO For a DeltaExporter it's likely faster to create a new map and
-	// copy only the cumulative instrument state.
-	for key, value := range b.state.values {
-		if !value.stateful {
-			delete(b.state.values, key)
-			continue
-		}
-	}
+	b.state.sequence++
 }
 
 func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
-	// @@@ Use the kind
 	for key, value := range b.values {
+		value.lock.Lock()
+
+		if !value.stateful && value.updated != b.sequence {
+			delete(b.values, key)
+			continue
+		}
+
+		if value.checkpointed != b.sequence {
+			value.checkpointed = b.sequence
+			if value.stateful {
+				fmt.Println("LOOK1", value.aggregator)
+				// Accumulated value in current; last value in checkpoint.
+				value.aggregator.Swap()
+
+				fmt.Println("LOOK2", value.aggregator)
+				// Last value in current, accumulated value in checkpoint:
+				// add into current.
+				value.aggregator.Merge(value.aggregator, key.descriptor)
+
+				fmt.Println("LOOK3", value.aggregator)
+				// Now current has up-to-date value, checkpoint has accumulated value.
+				// value.aggregator.Checkpoint(context.Background(), key.descriptor)
+				// fmt.Println("LOOK4", value.aggregator)
+
+				// Place up-to-date value in checkpoint, accumulated value in current.
+				value.aggregator.Swap()
+				fmt.Println("LOOK5", value.aggregator)
+			} else {
+				// In this case, we'll the accumulated value (otherwise
+				// we'd have state).
+				if value.aggOwned {
+					value.aggregator.Checkpoint(context.Background(), key.descriptor)
+					value.aggOwned = false
+				}
+			}
+		}
+
+		value.lock.Unlock()
+
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
