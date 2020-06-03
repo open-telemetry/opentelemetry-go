@@ -36,6 +36,7 @@ func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
 		pull.WithCachePeriod(0),
+		pull.WithExporterKind(export.CumulativeExporter),
 	)
 
 	ctx := context.Background()
@@ -46,7 +47,7 @@ func TestPullNoCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -56,7 +57,7 @@ func TestPullNoCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,
@@ -67,6 +68,7 @@ func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
 		pull.WithCachePeriod(time.Second),
+		pull.WithExporterKind(export.CumulativeExporter),
 	)
 	mock := controllerTest.NewMockClock()
 	puller.SetClock(mock)
@@ -79,7 +81,7 @@ func TestPullWithCache(t *testing.T) {
 
 	puller.Collect(ctx)
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -90,7 +92,7 @@ func TestPullWithCache(t *testing.T) {
 	// Cached value!
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -102,7 +104,7 @@ func TestPullWithCache(t *testing.T) {
 	// Re-computed value!
 	puller.Collect(ctx)
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,

@@ -102,10 +102,9 @@ func TestSimpleStateful(t *testing.T) {
 	_ = b.Process(counterB)
 
 	checkpointSet := b.CheckpointSet()
-	b.FinishedCollection()
 
 	records1 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.PassThroughExporter, records1.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 10, // labels1
@@ -116,7 +115,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records2 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.PassThroughExporter, records2.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records2.AddTo)
 
 	require.EqualValues(t, records1.Map, records2.Map)
 	b.FinishedCollection()
@@ -127,16 +126,6 @@ func TestSimpleStateful(t *testing.T) {
 	caggA.Checkpoint(ctx, &test.CounterADesc)
 	caggB.Checkpoint(ctx, &test.CounterBDesc)
 
-	// As yet cagg has not been passed to Integrator.Process.  Should
-	// not see an update.
-	checkpointSet = b.CheckpointSet()
-
-	records3 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.PassThroughExporter, records3.AddTo)
-
-	require.EqualValues(t, records1.Map, records3.Map)
-	b.FinishedCollection()
-
 	// Now process the second update
 	_ = b.Process(export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))
 	_ = b.Process(export.NewRecord(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
@@ -144,7 +133,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records4 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.PassThroughExporter, records4.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 30,

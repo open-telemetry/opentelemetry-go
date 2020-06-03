@@ -42,6 +42,7 @@ type Controller struct {
 	lastCollect time.Time
 	clock       controllerTime.Clock
 	checkpoint  export.CheckpointSet
+	sequence    int64
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
@@ -107,6 +108,12 @@ func (c *Controller) Collect(ctx context.Context) {
 			return
 		}
 		c.lastCollect = now
+	}
+
+	c.sequence++
+
+	if c.sequence != 0 {
+		c.integrator.FinishedCollection()
 	}
 
 	c.accumulator.Collect(ctx)

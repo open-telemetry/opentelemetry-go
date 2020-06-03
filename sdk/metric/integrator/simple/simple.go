@@ -29,19 +29,23 @@ import (
 
 type (
 	Integrator struct {
+		kind export.ExporterKind
+
 		export.AggregationSelector
-		kind     export.ExporterKind
-		sequence int64
-		batch
+
+		sequence     int64
+		checkpointed int64
+
+		state
 	}
 
-	batchKey struct {
+	stateKey struct {
 		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
 	}
 
-	batchValue struct {
+	stateValue struct {
 		aggregator export.Aggregator
 		labels     *label.Set
 		resource   *resource.Resource
@@ -50,29 +54,30 @@ type (
 		aggOwned   bool
 	}
 
-	batch struct {
+	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		values map[batchKey]*batchValue
+		values map[stateKey]*stateValue
 	}
 )
 
 var _ export.Integrator = &Integrator{}
-var _ export.CheckpointSet = &batch{}
+var _ export.CheckpointSet = &state{}
 
 func New(selector export.AggregationSelector, kind export.ExporterKind) *Integrator {
 	return &Integrator{
 		AggregationSelector: selector,
 		kind:                kind,
-		batch: batch{
-			values: map[batchKey]*batchValue{},
+		checkpointed:        -1,
+		state: state{
+			values: map[stateKey]*stateValue{},
 		},
 	}
 }
 
-func (b *Integrator) cloneCheckpoint(copy export.Aggregator, desc *metric.Descriptor) (export.Aggregator, error) {
+func (b *Integrator) cloneCheckpoint(checkpointed export.Aggregator, desc *metric.Descriptor) (export.Aggregator, error) {
 	agg := b.AggregatorFor(desc)
-	if err := agg.Merge(copy, desc); err != nil {
+	if err := agg.Merge(checkpointed, desc); err != nil {
 		return nil, err
 	}
 	return agg, nil
@@ -81,7 +86,7 @@ func (b *Integrator) cloneCheckpoint(copy export.Aggregator, desc *metric.Descri
 // cloneReplace is used to replace the current aggregation with another, leaving the
 // checkpoint unchanged.  This is for use with asynchronous instruments when an overwrite
 // occurs.
-func (b *Integrator) cloneReplace(value *batchValue, replace export.Aggregator, desc *metric.Descriptor) error {
+func (b *Integrator) cloneReplace(value *stateValue, replace export.Aggregator, desc *metric.Descriptor) error {
 	if !desc.MetricKind().Asynchronous() {
 		return fmt.Errorf("inconsistent integrator state")
 	}
@@ -97,7 +102,7 @@ func (b *Integrator) cloneReplace(value *batchValue, replace export.Aggregator, 
 
 func (b *Integrator) Process(record export.Record) error {
 	desc := record.Descriptor()
-	key := batchKey{
+	key := stateKey{
 		descriptor: desc,
 		distinct:   record.Labels().Equivalent(),
 		resource:   record.Resource().Equivalent(),
@@ -106,81 +111,100 @@ func (b *Integrator) Process(record export.Record) error {
 	agg := record.Aggregator()
 
 	// Check if there is an existing record.  If so, update it.
-	if value, ok := b.batch.values[key]; ok {
+	if value, ok := b.state.values[key]; ok {
 		// Advance the update sequence number:
 		sameRound := b.sequence == value.updated
 		value.updated = b.sequence
 
 		// An existing record will be found when:
-		// (a) multiple accumulators (SDKs) are being used.
-		if sameRound {
-			// Another accumulator must have produced this.
-			if desc.MetricKind().Asynchronous() && !stateful {
-				// The last value across multiple accumulators is taken.
+		// (a) stateful aggregation is required for an exporter
+		if !sameRound {
+			// This is the first record in the current checkpoint set.
+			if !stateful && !value.aggOwned {
+				// The first time through, refer to a checkpointed
+				// aggregator.
 				value.aggregator = agg
 				return nil
 			}
-			// Clone the (synchronous or stateful asynchronous) record.
-			if !value.aggOwned {
-				clone, err := b.cloneCheckpoint(value.aggregator, desc)
-				if err != nil {
-					return err
-				}
-				value.aggregator = clone
-				value.aggOwned = true
-			}
-			// Synchronous case: Merge with the prior aggregation.
-			if desc.MetricKind().Synchronous() {
-				return value.aggregator.Merge(agg, desc)
-			}
-			// Asynchronous case: Replace the current value.
-			return b.cloneReplace(value, agg, desc)
+			// This can be synchronous or asynchronous.
+			err := value.aggregator.Merge(agg, desc)
+			return err
 		}
-		// (b) stateful aggregation is required for an exporter
-		if !stateful {
-			return fmt.Errorf("inconsistent integrator state")
+		// (b) multiple accumulators (SDKs) are being used.
+		// Another accumulator must have produced this.
+		if desc.MetricKind().Asynchronous() && !stateful {
+			// The last value across multiple accumulators is taken.
+			value.aggregator = agg
+			return nil
 		}
-		// This can be synchronous or asynchronous.
-		return value.aggregator.Merge(agg, desc)
+		// Clone the (synchronous or stateful asynchronous) record.
+		if !value.aggOwned {
+			clone, err := b.cloneCheckpoint(value.aggregator, desc)
+			if err != nil {
+				return err
+			}
+			value.aggregator = clone
+			value.aggOwned = true
+		}
+		// Synchronous case: Merge with the prior aggregation.
+		if desc.MetricKind().Synchronous() {
+			return value.aggregator.Merge(agg, desc)
+		}
+		// Asynchronous case: Replace the current value.
+		return b.cloneReplace(value, agg, desc)
 	}
 
 	// There was no existing record.
-	newValue := &batchValue{
+	newValue := &stateValue{
 		aggregator: agg,
 		labels:     record.Labels(),
 		resource:   record.Resource(),
 		stateful:   stateful,
+		updated:    b.sequence,
 	}
 	if stateful {
 		var err error
 		newValue.aggregator, err = b.cloneCheckpoint(agg, desc)
+		newValue.aggOwned = true
 		if err != nil {
 			return err
 		}
 	}
-	b.batch.values[key] = newValue
+	b.state.values[key] = newValue
 	return nil
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
-	return &b.batch
+	if b.checkpointed != b.sequence {
+		b.checkpointed = b.sequence
+		for key, value := range b.state.values {
+			if value.aggOwned {
+				value.aggregator.Merge(value.aggregator, key.descriptor)
+				value.aggregator.Checkpoint(context.Background(), key.descriptor)
+			}
+			if !value.stateful {
+				value.aggOwned = false
+			}
+		}
+	}
+	return &b.state
 }
 
 func (b *Integrator) FinishedCollection() {
 	b.sequence++
-	for key, value := range b.batch.values {
+	// TODO For a DeltaExporter it's likely faster to create a new map and
+	// copy only the cumulative instrument state.
+	for key, value := range b.state.values {
 		if !value.stateful {
-			delete(b.batch.values, key)
+			delete(b.state.values, key)
+			continue
 		}
 	}
 }
 
-func (b *batch) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
+func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
 	// @@@ Use the kind
 	for key, value := range b.values {
-		if value.aggOwned {
-			value.aggregator.Checkpoint(context.Background(), key.descriptor)
-		}
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
@@ -191,4 +215,8 @@ func (b *batch) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 		}
 	}
 	return nil
+}
+
+func (b *stateValue) String() string {
+	return fmt.Sprintf("%v %v %v %v", b.aggregator, b.updated, b.stateful, b.aggOwned)
 }
