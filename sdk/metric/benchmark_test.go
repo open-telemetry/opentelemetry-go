@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-type processFunc func(context.Context, export.Record) error
+type processFunc func(export.Record) error
 
 type benchFixture struct {
 	meter       metric.MeterMust
@@ -75,11 +75,11 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (f *benchFixture) Process(ctx context.Context, rec export.Record) error {
+func (f *benchFixture) Process(rec export.Record) error {
 	if f.pcb == nil {
 		return nil
 	}
-	return f.pcb(ctx, rec)
+	return f.pcb(rec)
 }
 
 func (*benchFixture) CheckpointSet() export.CheckpointSet {
@@ -202,7 +202,7 @@ var benchmarkIteratorVar kv.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
 	fix := newFixture(b)
-	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
+	fix.setProcessCallback(func(rec export.Record) error {
 		var kv kv.KeyValue
 		li := rec.Labels().Iter()
 		fix.B.StartTimer()
@@ -561,7 +561,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	encoder := label.DefaultEncoder()
-	fix.pcb = func(_ context.Context, rec export.Record) error {
+	fix.pcb = func(rec export.Record) error {
 		_ = rec.Labels().Encoded(encoder)
 		return nil
 	}
@@ -585,7 +585,7 @@ func BenchmarkLabelIterator(b *testing.B) {
 	fix := newFixture(b)
 
 	var rec export.Record
-	fix.pcb = func(_ context.Context, processRec export.Record) error {
+	fix.pcb = func(processRec export.Record) error {
 		rec = processRec
 		return nil
 	}

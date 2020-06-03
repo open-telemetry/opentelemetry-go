@@ -215,6 +215,10 @@ func (e *Exporter) Stop() error {
 	return err
 }
 
+func (e *Exporter) Kind() metricsdk.ExporterKind {
+	return metricsdk.PassThroughExporter
+}
+
 // Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
 // interface. It transforms and batches metric Records into OTLP Metrics and
 // transmits them to the configured collector.

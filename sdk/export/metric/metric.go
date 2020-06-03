@@ -63,10 +63,7 @@ type Integrator interface {
 	// Process is called by the SDK once per internal record,
 	// passing the export Record (a Descriptor, the corresponding
 	// Labels, and the checkpointed Aggregator).
-	//
-	// The Context argument originates from the controller that
-	// orchestrates collection.
-	Process(ctx context.Context, record Record) error
+	Process(record Record) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -118,13 +115,11 @@ type Aggregator interface {
 	// After the checkpoint is taken, the current value may be
 	// accessed using by converting to one a suitable interface
 	// types in the `aggregator` sub-package.
-	//
-	// The Context argument originates from the controller that
-	// orchestrates collection.
+	// TODO remove Context
 	Checkpoint(context.Context, *metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
-	// aggregator into this aggregator's checkpointed state.
+	// aggregator into this aggregator's current state.
 	// Merge() is called in a single-threaded context, no locking
 	// is required.
 	Merge(Aggregator, *metric.Descriptor) error

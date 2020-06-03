@@ -65,7 +65,7 @@ type checkpointSet struct {
 	records []metricsdk.Record
 }
 
-func (m *checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
+func (m *checkpointSet) ForEach(_ metricsdk.ExporterKind, fn func(metricsdk.Record) error) error {
 	for _, r := range m.records {
 		if err := fn(r); err != nil && err != aggregator.ErrNoData {
 			return err

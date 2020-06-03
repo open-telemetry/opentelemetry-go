@@ -20,21 +20,38 @@ package metric
 type Kind int8
 
 const (
-	// ValueRecorderKind indicates a ValueRecorder instrument.
-	ValueRecorderKind Kind = iota
-	// ValueObserverKind indicates an ValueObserver instrument.
-	ValueObserverKind
-
 	// CounterKind indicates a Counter instrument.
-	CounterKind
+	CounterKind Kind = iota
+
 	// UpDownCounterKind indicates a UpDownCounter instrument.
 	UpDownCounterKind
 
+	// ValueRecorderKind indicates a ValueRecorder instrument.
+	ValueRecorderKind
+
 	// SumObserverKind indicates a SumObserver instrument.
 	SumObserverKind
+
 	// UpDownSumObserverKind indicates a UpDownSumObserver instrument.
 	UpDownSumObserverKind
+
+	// ValueObserverKind indicates an ValueObserver instrument.
+	ValueObserverKind
 
 	// NumKinds is the number of metric kinds.
 	NumKinds = 6
 )
+
+// Synchronous returns whether this is a synchronous kind of instrument.
+func (k Kind) Synchronous() bool {
+	switch k {
+	case CounterKind, UpDownCounterKind, ValueRecorderKind:
+		return true
+	}
+	return false
+}
+
+// Asynchronous returns whether this is an asynchronous kind of instrument.
+func (k Kind) Asynchronous() bool {
+	return !k.Synchronous()
+}

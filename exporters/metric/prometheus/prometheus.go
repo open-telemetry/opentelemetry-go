@@ -170,7 +170,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	// expressed as delta histograms.
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		append(options, pull.WithStateful(true))...,
+		options...,
 	)
 }
 
@@ -201,7 +201,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().ForEach(func(record export.Record) error {
+	_ = c.exp.Controller().ForEach(export.CumulativeExporter, func(record export.Record) error {
 		var labelKeys []string
 		mergeLabels(record, &labelKeys, nil)
 		ch <- c.toDesc(record, labelKeys)
@@ -220,7 +220,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	ctrl := c.exp.Controller()
 	ctrl.Collect(context.Background())
 
-	err := ctrl.ForEach(func(record export.Record) error {
+	err := ctrl.ForEach(export.CumulativeExporter, func(record export.Record) error {
 		agg := record.Aggregator()
 		numberKind := record.Descriptor().NumberKind()
 

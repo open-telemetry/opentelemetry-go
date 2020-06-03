@@ -102,7 +102,7 @@ func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record
 	go func() {
 		defer close(out)
 		// No select is needed since errc is buffered.
-		errc <- cps.ForEach(func(r export.Record) error {
+		errc <- cps.ForEach(export.PassThroughExporter, func(r export.Record) error {
 			select {
 			case <-ctx.Done():
 				return ErrContextCanceled

@@ -115,12 +115,12 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(ctx, descriptor)
 		agg2.Checkpoint(ctx, descriptor)
 
 		test.CheckedMerge(t, agg1, agg2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
+		agg1.Checkpoint(ctx, descriptor)
 
 		asum, err := agg1.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")

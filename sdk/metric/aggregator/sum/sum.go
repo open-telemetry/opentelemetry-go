@@ -67,6 +67,6 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
-	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
+	c.current.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil
 }
