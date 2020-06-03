@@ -121,15 +121,15 @@ func (b *Integrator) cloneReplace(value *stateValue, replace export.Aggregator, 
 	return cstate.Merge(replace, desc)
 }
 
-func (b *Integrator) Process(record export.Record) error {
-	desc := record.Descriptor()
+func (b *Integrator) Process(accum export.Accumulation) error {
+	desc := accum.Descriptor()
 	key := stateKey{
 		descriptor: desc,
-		distinct:   record.Labels().Equivalent(),
-		resource:   record.Resource().Equivalent(),
+		distinct:   accum.Labels().Equivalent(),
+		resource:   accum.Resource().Equivalent(),
 	}
 	stateful := b.kind.MemoryRequired(*desc)
-	agg := record.Aggregator()
+	agg := accum.Aggregator()
 
 	// Check if there is an existing record.  If so, update it.
 	if value, ok := b.state.values[key]; ok {
@@ -187,8 +187,8 @@ func (b *Integrator) Process(record export.Record) error {
 	// There was no existing record.
 	newValue := &stateValue{
 		aggregator:   agg,
-		labels:       record.Labels(),
-		resource:     record.Resource(),
+		labels:       accum.Labels(),
+		resource:     accum.Resource(),
 		stateful:     stateful,
 		checkpointed: -1,
 		updated:      b.state.sequence,

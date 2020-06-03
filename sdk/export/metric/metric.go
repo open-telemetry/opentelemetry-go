@@ -61,9 +61,10 @@ type Integrator interface {
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
-	// passing the export Record (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator).
-	Process(record Record) error
+	// passing the Accumulation (a Descriptor, the corresponding
+	// Labels and Resource, and the accumulated and checkpointed
+	// Aggregator).
+	Process(accum Accumulation) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -215,6 +216,49 @@ func (r Record) Labels() *label.Set {
 
 // Resource contains common attributes that apply to this metric event.
 func (r Record) Resource() *resource.Resource {
+	return r.resource
+}
+
+// Accumulation contains the exported data for a single metric instrument
+// and label set.
+type Accumulation struct {
+	descriptor *metric.Descriptor
+	labels     *label.Set
+	resource   *resource.Resource
+	aggregator Aggregator
+}
+
+// NewAccumulation allows Integrator implementations to construct export
+// records.  The Descriptor, Labels, and Aggregator represent
+// aggregate metric events received over a single collection period.
+func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+	return Accumulation{
+		descriptor: descriptor,
+		labels:     labels,
+		resource:   resource,
+		aggregator: aggregator,
+	}
+}
+
+// Aggregator returns the checkpointed aggregator. It is safe to
+// access the checkpointed state without locking.
+func (r Accumulation) Aggregator() Aggregator {
+	return r.aggregator
+}
+
+// Descriptor describes the metric instrument being exported.
+func (r Accumulation) Descriptor() *metric.Descriptor {
+	return r.descriptor
+}
+
+// Labels describes the labels associated with the instrument and the
+// aggregated data.
+func (r Accumulation) Labels() *label.Set {
+	return r.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (r Accumulation) Resource() *resource.Resource {
 	return r.resource
 }
 

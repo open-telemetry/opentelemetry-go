@@ -60,7 +60,7 @@ func TestSimpleStateless(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 
 	records := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.PassThroughExporter, records.AddTo)
+	_ = checkpointSet.ForEach(export.PassThroughExporter, records.AddRecord)
 
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -104,7 +104,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet := b.CheckpointSet()
 
 	records1 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.CumulativeExporter, records1.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records1.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 10, // labels1
@@ -115,7 +115,7 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records2 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.CumulativeExporter, records2.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records2.AddRecord)
 
 	require.EqualValues(t, records1.Map, records2.Map)
 	b.FinishedCollection()
@@ -127,13 +127,13 @@ func TestSimpleStateful(t *testing.T) {
 	caggB.Checkpoint(&test.CounterBDesc)
 
 	// Now process the second update
-	_ = b.Process(export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))
-	_ = b.Process(export.NewRecord(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
+	_ = b.Process(export.NewAccumulation(&test.CounterADesc, test.Labels1, test.Resource, caggA))
+	_ = b.Process(export.NewAccumulation(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
 
 	checkpointSet = b.CheckpointSet()
 
 	records4 := test.NewOutput(test.SdkEncoder)
-	_ = checkpointSet.ForEach(export.CumulativeExporter, records4.AddTo)
+	_ = checkpointSet.ForEach(export.CumulativeExporter, records4.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"sum.a/C~D&G~H/R~V": 30,

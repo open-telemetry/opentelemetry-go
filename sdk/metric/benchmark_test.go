@@ -68,7 +68,7 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (f *benchFixture) Process(export.Record) error {
+func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
 }
 

@@ -24,7 +24,6 @@ import (
 	"math"
 	"math/rand"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,6 +31,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -104,19 +104,8 @@ func concurrency() int {
 	return concurrencyPerCPU * runtime.NumCPU()
 }
 
-func canonicalizeLabels(ls []kv.KeyValue) string {
-	copy := append(ls[0:0:0], ls...)
-	sort.SliceStable(copy, func(i, j int) bool {
-		return copy[i].Key < copy[j].Key
-	})
-	var b strings.Builder
-	for _, kv := range copy {
-		b.WriteString(string(kv.Key))
-		b.WriteString("=")
-		b.WriteString(kv.Value.Emit())
-		b.WriteString("$")
-	}
-	return b.String()
+func canonicalizeLabels(labels *label.Set) string {
+	return labels.Encoded(label.DefaultEncoder())
 }
 
 func getPeriod() time.Duration {
@@ -144,7 +133,8 @@ func (f *testFixture) someLabels() []kv.KeyValue {
 			}
 			l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
 		}
-		lc := canonicalizeLabels(l)
+		ls := label.NewSet(l...)
+		lc := canonicalizeLabels(&ls)
 		f.lock.Lock()
 		avail := !f.lused[lc]
 		if avail {
@@ -165,7 +155,8 @@ func (f *testFixture) startWorker(impl *Accumulator, meter api.Meter, wg *sync.W
 		descriptor = &ii.descriptor
 	}
 	kvs := f.someLabels()
-	clabs := canonicalizeLabels(kvs)
+	ls := label.NewSet(kvs...)
+	clabs := canonicalizeLabels(&ls)
 	dur := getPeriod()
 	key := testKey{
 		labels:     clabs,
@@ -263,11 +254,10 @@ func (*testFixture) CheckpointSet() export.CheckpointSet {
 func (*testFixture) FinishedCollection() {
 }
 
-func (f *testFixture) Process(record export.Record) error {
-	labels := record.Labels().ToSlice()
+func (f *testFixture) Process(accum export.Accumulation) error {
 	key := testKey{
-		labels:     canonicalizeLabels(labels),
-		descriptor: record.Descriptor(),
+		labels:     canonicalizeLabels(accum.Labels()),
+		descriptor: accum.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -277,8 +267,8 @@ func (f *testFixture) Process(record export.Record) error {
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	agg := record.Aggregator()
-	switch record.Descriptor().MetricKind() {
+	agg := accum.Aggregator()
+	switch accum.Descriptor().MetricKind() {
 	case metric.CounterKind:
 		sum, err := agg.(aggregator.Sum).Sum()
 		if err != nil {

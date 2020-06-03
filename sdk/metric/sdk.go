@@ -479,8 +479,8 @@ func (m *Accumulator) checkpoint(descriptor *metric.Descriptor, recorder export.
 	}
 	recorder.Checkpoint(descriptor)
 
-	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
-	err := m.integrator.Process(exportRecord)
+	accum := export.NewAccumulation(descriptor, labels, m.resource, recorder)
+	err := m.integrator.Process(accum)
 	if err != nil {
 		m.errorHandler(err)
 	}

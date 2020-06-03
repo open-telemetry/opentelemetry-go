@@ -136,13 +136,13 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 }
 
 // Convenience method for building a test exported lastValue record.
-func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, Resource, LastValueAgg(desc, value))
+func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
+	return export.NewAccumulation(desc, labels, Resource, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
-func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, Resource, CounterAgg(desc, value))
+func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
+	return export.NewAccumulation(desc, labels, Resource, CounterAgg(desc, value))
 }
 
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
@@ -154,22 +154,42 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	return cagg
 }
 
-// AddTo adds a name/label-encoding entry with the lastValue or counter
+// AddAccum adds a name/label-encoding entry with the lastValue or counter
 // value to the output map.
-func (o Output) AddTo(rec export.Record) error {
-	encoded := rec.Labels().Encoded(o.labelEncoder)
-	rencoded := rec.Resource().Encoded(o.labelEncoder)
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
+func (o Output) AddAccum(accum export.Accumulation) error {
+	encoded := accum.Labels().Encoded(o.labelEncoder)
+	rencoded := accum.Resource().Encoded(o.labelEncoder)
+	key := fmt.Sprint(accum.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
+	if s, ok := accum.Aggregator().(aggregator.Sum); ok {
 		sum, _ := s.Sum()
-		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregator().(aggregator.LastValue); ok {
+		value = sum.CoerceToFloat64(accum.Descriptor().NumberKind())
+	} else if l, ok := accum.Aggregator().(aggregator.LastValue); ok {
 		last, _, _ := l.LastValue()
-		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
+		value = last.CoerceToFloat64(accum.Descriptor().NumberKind())
 	} else {
-		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", accum.Aggregator()))
+	}
+	o.Map[key] = value
+	return nil
+}
+
+// AddRecord @@@ is like AddRecord ...
+func (o Output) AddRecord(record export.Record) error {
+	encoded := record.Labels().Encoded(o.labelEncoder)
+	rencoded := record.Resource().Encoded(o.labelEncoder)
+	key := fmt.Sprint(record.Descriptor().Name(), "/", encoded, "/", rencoded)
+	var value float64
+
+	if s, ok := record.Aggregator().(aggregator.Sum); ok {
+		sum, _ := s.Sum()
+		value = sum.CoerceToFloat64(record.Descriptor().NumberKind())
+	} else if l, ok := record.Aggregator().(aggregator.LastValue); ok {
+		last, _, _ := l.LastValue()
+		value = last.CoerceToFloat64(record.Descriptor().NumberKind())
+	} else {
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", record.Aggregator()))
 	}
 	o.Map[key] = value
 	return nil
