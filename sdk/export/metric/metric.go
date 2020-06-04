@@ -132,11 +132,19 @@ type Aggregator interface {
 	// Kind returns the kind of aggregation.
 	Kind() aggregation.Kind
 
-	// @@@ HERE YOU ARE
-	// Accumulated() aggregation.Aggregation
+	// AccumulatedValue returns the aggregation from the beginning
+	// of the collection interval.  It is the caller's
+	// responsibility (likely an Integrator) to ensure that the
+	// result is meaningful and can be used without
+	// synchronization.
+	AccumulatedValue() aggregation.Aggregation
 
-	// @@@ HERE YOU ARE
-	// Totaled() aggregation.Aggregation
+	// CheckpointedValue returns the aggregation from the
+	// beginning of the process.  It is the caller's
+	// responsibility (likely an Integrator) to ensure that the
+	// result is meaningful and can be used without
+	// synchronization.
+	CheckpointedValue() aggregation.Aggregation
 }
 
 // Exporter handles presentation of the checkpoint of aggregate

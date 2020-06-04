@@ -40,6 +40,7 @@ type (
 	points []metric.Number
 
 	pointsAndSum struct {
+		self *Aggregator
 		points
 		sum    metric.Number
 		sorted bool
@@ -47,15 +48,18 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.MinMaxSumCount = &Aggregator{}
-var _ aggregation.Distribution = &Aggregator{}
-var _ aggregation.Points = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &pointsAndSum{}
+var _ aggregation.Distribution = &pointsAndSum{}
+var _ aggregation.Points = &pointsAndSum{}
 
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and Checkpoint() concurrency.
 func New() *Aggregator {
-	return &Aggregator{}
+	agg := &Aggregator{}
+	agg.current = pointsAndSum{self: agg}
+	agg.checkpoint = pointsAndSum{self: agg}
+	return agg
 }
 
 // Kind returns aggregation.Exact.
@@ -63,42 +67,11 @@ func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.ExactKind
 }
 
-// Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.checkpoint.sum, nil
-}
-
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	return int64(len(c.checkpoint.points)), nil
-}
-
-// Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (metric.Number, error) {
-	return c.checkpoint.Quantile(1)
-}
-
-// Min returns the mininum value in the checkpoint.
-func (c *Aggregator) Min() (metric.Number, error) {
-	return c.checkpoint.Quantile(0)
-}
-
-// Quantile returns the estimated quantile of data in the checkpoint.
-// It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
-	return c.checkpoint.Quantile(q)
-}
-
-// Points returns access to the raw data set.
-func (c *Aggregator) Points() ([]metric.Number, error) {
-	return c.checkpoint.points, nil
-}
-
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, pointsAndSum{}
+	c.checkpoint, c.current = c.current, pointsAndSum{self: c}
 	c.lock.Unlock()
 
 	if !c.checkpoint.sorted {
@@ -140,7 +113,7 @@ func (c *Aggregator) Swap() {
 func (c *Aggregator) sortCheckpoint(kind metric.NumberKind) {
 	switch kind {
 	case metric.Float64NumberKind:
-		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint)))
+		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.checkpoint.points)))
 
 	case metric.Int64NumberKind:
 		sort.Sort(&c.checkpoint)
@@ -152,6 +125,14 @@ func (c *Aggregator) sortCheckpoint(kind metric.NumberKind) {
 	}
 
 	c.checkpoint.sorted = true
+}
+
+func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &c.current
+}
+
+func (c *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &c.checkpoint
 }
 
 func combine(a, b points, kind metric.NumberKind) points {
@@ -208,4 +189,40 @@ func (p *points) Quantile(q float64) (metric.Number, error) {
 	position := float64(len(*p)-1) * q
 	ceil := int(math.Ceil(position))
 	return (*p)[ceil], nil
+}
+
+// Kind returns aggregation.ExactKind
+func (*pointsAndSum) Kind() aggregation.Kind {
+	return aggregation.ExactKind
+}
+
+// Sum returns the sum of values in the checkpoint.
+func (s *pointsAndSum) Sum() (metric.Number, error) {
+	return s.sum, nil
+}
+
+// Count returns the number of values in the checkpoint.
+func (s *pointsAndSum) Count() (int64, error) {
+	return int64(len(s.points)), nil
+}
+
+// Max returns the maximum value in the checkpoint.
+func (s *pointsAndSum) Max() (metric.Number, error) {
+	return s.points.Quantile(1)
+}
+
+// Min returns the mininum value in the checkpoint.
+func (s *pointsAndSum) Min() (metric.Number, error) {
+	return s.points.Quantile(0)
+}
+
+// Quantile returns the estimated quantile of data in the checkpoint.
+// It is an error if `q` is less than 0 or greated than 1.
+func (s *pointsAndSum) Quantile(q float64) (metric.Number, error) {
+	return s.points.Quantile(q)
+}
+
+// Points returns access to the raw data set.
+func (s *pointsAndSum) Points() ([]metric.Number, error) {
+	return s.points, nil
 }

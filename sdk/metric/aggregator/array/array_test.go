@@ -51,7 +51,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
-	sum, err := agg.Sum()
+	sum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InEpsilon(t,
@@ -59,19 +59,19 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum")
-	count, err := agg.Count()
+	count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count")
 
-	min, err := agg.Min()
+	min, err := agg.CheckpointedValue().(aggregation.Min).Min()
 	require.Nil(t, err)
 	require.Equal(t, all.Min(), min, "Same min")
 
-	max, err := agg.Max()
+	max, err := agg.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t, all.Max(), max, "Same max")
 
-	qx, err := agg.Quantile(0.5)
+	qx, err := agg.CheckpointedValue().(aggregation.Quantile).Quantile(0.5)
 	require.Nil(t, err)
 	require.Equal(t, all.Median(), qx, "Same median")
 }
@@ -132,7 +132,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
-	sum, err := agg1.Sum()
+	sum, err := agg1.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InEpsilon(t,
@@ -140,19 +140,19 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
-	count, err := agg1.Count()
+	count, err := agg1.CheckpointedValue().(aggregation.Count).Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
 
-	min, err := agg1.Min()
+	min, err := agg1.CheckpointedValue().(aggregation.Min).Min()
 	require.Nil(t, err)
 	require.Equal(t, all.Min(), min, "Same min - absolute")
 
-	max, err := agg1.Max()
+	max, err := agg1.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t, all.Max(), max, "Same max - absolute")
 
-	qx, err := agg1.Quantile(0.5)
+	qx, err := agg1.CheckpointedValue().(aggregation.Quantile).Quantile(0.5)
 	require.Nil(t, err)
 	require.Equal(t, all.Median(), qx, "Same median - absolute")
 }
@@ -181,15 +181,15 @@ func TestArrayErrors(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
-		_, err := agg.Max()
+		_, err := agg.CheckpointedValue().(aggregation.Max).Max()
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		_, err = agg.Min()
+		_, err = agg.CheckpointedValue().(aggregation.Min).Min()
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		_, err = agg.Quantile(0.1)
+		_, err = agg.CheckpointedValue().(aggregation.Quantile).Quantile(0.1)
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
@@ -202,19 +202,19 @@ func TestArrayErrors(t *testing.T) {
 		}
 		agg.Checkpoint(descriptor)
 
-		count, err := agg.Count()
+		count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 		require.Equal(t, int64(1), count, "NaN value was not counted")
 		require.Nil(t, err)
 
-		num, err := agg.Quantile(0)
+		num, err := agg.CheckpointedValue().(aggregation.Quantile).Quantile(0)
 		require.Nil(t, err)
 		require.Equal(t, num, metric.Number(0))
 
-		_, err = agg.Quantile(-0.0001)
+		_, err = agg.CheckpointedValue().(aggregation.Quantile).Quantile(-0.0001)
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrInvalidQuantile)
 
-		_, err = agg.Quantile(1.0001)
+		_, err = agg.CheckpointedValue().(aggregation.Quantile).Quantile(1.0001)
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrInvalidQuantile)
 	})
@@ -269,28 +269,28 @@ func TestArrayFloat64(t *testing.T) {
 
 	all.Sort()
 
-	sum, err := agg.Sum()
+	sum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
-	count, err := agg.Count()
+	count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	min, err := agg.Min()
+	min, err := agg.CheckpointedValue().(aggregation.Min).Min()
 	require.Nil(t, err)
 	require.Equal(t, all.Min(), min, "Same min")
 
-	max, err := agg.Max()
+	max, err := agg.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t, all.Max(), max, "Same max")
 
-	qx, err := agg.Quantile(0.5)
+	qx, err := agg.CheckpointedValue().(aggregation.Quantile).Quantile(0.5)
 	require.Nil(t, err)
 	require.Equal(t, all.Median(), qx, "Same median")
 
-	po, err := agg.Points()
+	po, err := agg.CheckpointedValue().(aggregation.Points).Points()
 	require.Nil(t, err)
 	require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
 	for i := 0; i < len(po); i++ {

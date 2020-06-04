@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -62,7 +63,7 @@ func TestCounterSum(t *testing.T) {
 
 		agg.Checkpoint(descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -87,7 +88,7 @@ func TestValueRecorderSum(t *testing.T) {
 
 		agg.Checkpoint(descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -115,7 +116,7 @@ func TestCounterMerge(t *testing.T) {
 		sum.AddNumber(descriptor.NumberKind(), sum)
 		agg1.Checkpoint(descriptor)
 
-		asum, err := agg1.Sum()
+		asum, err := agg1.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})

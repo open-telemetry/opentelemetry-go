@@ -45,6 +45,7 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
+		self         *Aggregator
 		bucketCounts []float64
 		count        metric.Number
 		sum          metric.Number
@@ -52,9 +53,9 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
-var _ aggregation.Count = &Aggregator{}
-var _ aggregation.Histogram = &Aggregator{}
+var _ aggregation.Sum = &state{}
+var _ aggregation.Count = &state{}
+var _ aggregation.Histogram = &state{}
 
 // New returns a new aggregator for computing Histograms.
 //
@@ -72,41 +73,18 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	copy(sortedBoundaries, boundaries)
 	sort.Float64s(sortedBoundaries)
 
-	return &Aggregator{
+	agg := &Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: sortedBoundaries,
-		current:    emptyState(sortedBoundaries),
-		checkpoint: emptyState(sortedBoundaries),
 	}
+	agg.current = agg.emptyState(sortedBoundaries)
+	agg.checkpoint = agg.emptyState(sortedBoundaries)
+	return agg
 }
 
 // Kind returns aggregation.Histogram.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.HistogramKind
-}
-
-// Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.sum, nil
-}
-
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return int64(c.checkpoint.count), nil
-}
-
-// Histogram returns the count of events in pre-determined buckets.
-func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return aggregation.Buckets{
-		Boundaries: c.boundaries,
-		Counts:     c.checkpoint.bucketCounts,
-	}, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -115,12 +93,15 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // other.
 func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, emptyState(c.boundaries)
+	c.checkpoint, c.current = c.current, c.emptyState(c.boundaries)
 	c.lock.Unlock()
 }
 
-func emptyState(boundaries []float64) state {
+func (c *Aggregator) emptyState(boundaries []float64) state {
+	// TODO: It is possible to avoid allocating new arrays on each
+	// checkpoint by re-using the existing slices.
 	return state{
+		self:         c,
 		bucketCounts: make([]float64, len(boundaries)+1),
 	}
 }
@@ -177,4 +158,41 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		c.current.bucketCounts[i] += o.checkpoint.bucketCounts[i]
 	}
 	return nil
+}
+
+func (c *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &c.checkpoint
+}
+
+func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &c.current
+}
+
+// Kind returns aggregation.HistogramKind.
+func (s *state) Kind() aggregation.Kind {
+	return aggregation.HistogramKind
+}
+
+// Sum returns the sum of all values in the checkpoint.
+func (s *state) Sum() (metric.Number, error) {
+	s.self.lock.Lock()
+	defer s.self.lock.Unlock()
+	return s.sum, nil
+}
+
+// Count returns the number of values in the checkpoint.
+func (s *state) Count() (int64, error) {
+	s.self.lock.Lock()
+	defer s.self.lock.Unlock()
+	return int64(s.count), nil
+}
+
+// Histogram returns the count of events in pre-determined buckets.
+func (s *state) Histogram() (aggregation.Buckets, error) {
+	s.self.lock.Lock()
+	defer s.self.lock.Unlock()
+	return aggregation.Buckets{
+		Boundaries: s.self.boundaries,
+		Counts:     s.bucketCounts,
+	}, nil
 }

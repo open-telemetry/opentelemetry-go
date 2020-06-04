@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
@@ -96,7 +97,7 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 
 	all.Sort()
 
-	asum, err := agg.Sum()
+	asum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 	sum := all.Sum()
 	require.InEpsilon(t,
 		sum.CoerceToFloat64(profile.NumberKind),
@@ -105,11 +106,11 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 		"Same sum - "+policy.name)
 	require.NoError(t, err)
 
-	count, err := agg.Count()
+	count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.NoError(t, err)
 
-	buckets, err := agg.Histogram()
+	buckets, err := agg.CheckpointedValue().(aggregation.Histogram).Histogram()
 	require.NoError(t, err)
 
 	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
@@ -126,7 +127,7 @@ func TestHistogramInitial(t *testing.T) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg := histogram.New(descriptor, boundaries)
-		buckets, err := agg.Histogram()
+		buckets, err := agg.CheckpointedValue().(aggregation.Histogram).Histogram()
 
 		require.NoError(t, err)
 		require.Equal(t, len(buckets.Counts), len(boundaries)+1)
@@ -163,7 +164,7 @@ func TestHistogramMerge(t *testing.T) {
 
 		all.Sort()
 
-		asum, err := agg1.Sum()
+		asum, err := agg1.CheckpointedValue().(aggregation.Sum).Sum()
 		sum := all.Sum()
 		require.InEpsilon(t,
 			sum.CoerceToFloat64(profile.NumberKind),
@@ -172,11 +173,11 @@ func TestHistogramMerge(t *testing.T) {
 			"Same sum - absolute")
 		require.NoError(t, err)
 
-		count, err := agg1.Count()
+		count, err := agg1.CheckpointedValue().(aggregation.Count).Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.NoError(t, err)
 
-		buckets, err := agg1.Histogram()
+		buckets, err := agg1.CheckpointedValue().(aggregation.Histogram).Histogram()
 		require.NoError(t, err)
 
 		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
@@ -196,15 +197,15 @@ func TestHistogramNotSet(t *testing.T) {
 		agg := histogram.New(descriptor, boundaries)
 		agg.Checkpoint(descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
 		require.NoError(t, err)
 
-		count, err := agg.Count()
+		count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.NoError(t, err)
 
-		buckets, err := agg.Histogram()
+		buckets, err := agg.CheckpointedValue().(aggregation.Histogram).Histogram()
 		require.NoError(t, err)
 
 		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")

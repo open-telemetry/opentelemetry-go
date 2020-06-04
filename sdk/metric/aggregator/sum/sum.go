@@ -23,19 +23,23 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
+type sumValue struct {
+	metric.Number
+}
+
 // Aggregator aggregates counter events.
 type Aggregator struct {
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
-	current metric.Number
+	current sumValue
 
 	// checkpoint is a temporary used during Checkpoint()
 	// checkpoint needs to be aligned for 64-bit atomic operations.
-	checkpoint metric.Number
+	checkpoint sumValue
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
+var _ aggregation.Sum = &sumValue{}
 
 // New returns a new counter aggregator implemented by atomic
 // operations.  This aggregator implements the aggregation.Sum
@@ -49,16 +53,10 @@ func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
 
-// Sum returns the last-checkpointed sum.  This will never return an
-// error.
-func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.checkpoint, nil
-}
-
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
 func (c *Aggregator) Checkpoint(_ *metric.Descriptor) {
-	c.checkpoint = c.current.SwapNumberAtomic(metric.Number(0))
+	c.checkpoint.Number = c.current.Number.SwapNumberAtomic(metric.Number(0))
 }
 
 // Update atomically adds to the current value.
@@ -73,10 +71,29 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	if o == nil {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
-	c.current.AddNumber(desc.NumberKind(), o.checkpoint)
+	c.current.AddNumber(desc.NumberKind(), o.checkpoint.Number)
 	return nil
 }
 
 func (c *Aggregator) Swap() {
 	c.current, c.checkpoint = c.checkpoint, c.current
+}
+
+func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &c.current
+}
+
+func (c *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &c.checkpoint
+}
+
+// Sum returns the last-checkpointed sum.  This will never return an
+// error.
+func (s *sumValue) Sum() (metric.Number, error) {
+	return s.Number, nil
+}
+
+// Kind returns aggregation.Sum.
+func (s *sumValue) Kind() aggregation.Kind {
+	return aggregation.SumKind
 }
