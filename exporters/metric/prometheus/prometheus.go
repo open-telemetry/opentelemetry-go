@@ -221,7 +221,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	ctrl.Collect(context.Background())
 
 	err := ctrl.ForEach(export.CumulativeExporter, func(record export.Record) error {
-		agg := record.Aggregator()
+		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 
 		var labelKeys, labels []string

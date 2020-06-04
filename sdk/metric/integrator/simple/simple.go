@@ -248,6 +248,9 @@ func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 			}
 		}
 
+		// @@@ HERE we need the start and end time.  stateful
+		// or no, and the kind of exporter matters.
+
 		value.lock.Unlock()
 
 		if err := f(export.NewRecord(

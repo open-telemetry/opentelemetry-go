@@ -69,7 +69,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		distinct: elabels.Equivalent(),
 	}
 	if record, ok := p.records[key]; ok {
-		return record.Aggregator(), false
+		return record.Aggregation(), false
 	}
 
 	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)

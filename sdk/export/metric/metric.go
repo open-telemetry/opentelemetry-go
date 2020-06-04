@@ -197,9 +197,8 @@ func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resou
 	}
 }
 
-// Aggregator returns the checkpointed aggregator. It is safe to
-// access the checkpointed state without locking.
-func (r Record) Aggregator() Aggregator {
+func (r Record) Aggregation() Aggregator {
+	// @@@
 	return r.aggregator
 }
 
@@ -208,7 +207,7 @@ func (r Record) Descriptor() *metric.Descriptor {
 	return r.descriptor
 }
 
-// Labels describes the labels associated with the instrument and the
+// descriptor describes the labels associated with the instrument and the
 // aggregated data.
 func (r Record) Labels() *label.Set {
 	return r.labels

@@ -152,7 +152,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := records[0].Aggregation().(aggregator.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
 	require.Nil(t, err)
 
@@ -169,7 +169,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err = records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err = records[0].Aggregation().(aggregator.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())
 	require.Nil(t, err)
 

@@ -96,6 +96,10 @@ func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Unlock()
 
 	if !c.checkpoint.sorted {
+		// TODO: This sort should be done lazily, only when quantiles
+		// are requested.  The SDK specification says you can use this
+		// aggregator to simply list values in the order they were
+		// received as an alternative to requesting quantile information.
 		c.sortCheckpoint(desc.NumberKind())
 	}
 }

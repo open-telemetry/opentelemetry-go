@@ -225,11 +225,11 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 }
 
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
-// error is returned if the Record Aggregator is not supported.
+// error is returned if the Record Aggregation is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
 	d := r.Descriptor()
 	l := r.Labels()
-	switch a := r.Aggregator().(type) {
+	switch a := r.Aggregation().(type) {
 	case aggregator.MinMaxSumCount:
 		return minMaxSumCount(d, l, a)
 	case aggregator.Sum:
@@ -239,7 +239,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 	}
 }
 
-// sum transforms a Sum Aggregator into an OTLP Metric.
+// sum transforms a Sum Aggregation into an OTLP Metric.
 func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricpb.Metric, error) {
 	sum, err := a.Sum()
 	if err != nil {
@@ -273,7 +273,7 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 	return m, nil
 }
 
-// minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
+// minMaxSumCountValue returns the values of the MinMaxSumCount Aggregation
 // as discret values.
 func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
@@ -291,7 +291,7 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Num
 	return
 }
 
-// minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
+// minMaxSumCount transforms a MinMaxSumCount Aggregation into an OTLP Metric.
 func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
