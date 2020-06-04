@@ -159,7 +159,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 func TestArrayMerge(t *testing.T) {
 	// Test with an odd an even number of measurements
-	for count := 9; count <= 10; count++ {
+	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
 			// Test absolute and non-absolute
 			for _, absolute := range []bool{false, true} {

@@ -35,6 +35,7 @@ type (
 	}
 
 	state struct {
+		self  *Aggregator
 		count metric.Number
 		sum   metric.Number
 		min   metric.Number
@@ -43,7 +44,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.MinMaxSumCount = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &state{}
 
 // New returns a new aggregator for computing the min, max, sum, and
 // count.  It does not compute quantile information other than Min and
@@ -51,59 +52,17 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 //
 // This type uses a mutex for Update() and Checkpoint() concurrency.
 func New(desc *metric.Descriptor) *Aggregator {
-	kind := desc.NumberKind()
-	return &Aggregator{
-		kind: kind,
-		current: state{
-			count: metric.NewUint64Number(0),
-			sum:   kind.Zero(),
-			min:   kind.Maximum(),
-			max:   kind.Minimum(),
-		},
+	agg := &Aggregator{
+		kind: desc.NumberKind(),
 	}
+	agg.current = agg.emptyState()
+	agg.checkpoint = agg.emptyState()
+	return agg
 }
 
 // Kind returns aggregation.MinMaxSumCountKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.MinMaxSumCountKind
-}
-
-// Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.sum, nil
-}
-
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.count.CoerceToInt64(metric.Uint64NumberKind), nil
-}
-
-// Min returns the minimum value in the checkpoint.
-// The error value aggregation.ErrNoData will be returned
-// if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Min() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregation.ErrNoData
-	}
-	return c.checkpoint.min, nil
-}
-
-// Max returns the maximum value in the checkpoint.
-// The error value aggregation.ErrNoData will be returned
-// if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Max() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregation.ErrNoData
-	}
-	return c.checkpoint.max, nil
 }
 
 // Checkpoint saves the current state and resets the current state to
@@ -119,12 +78,12 @@ func (c *Aggregator) Swap() {
 }
 
 func (c *Aggregator) emptyState() state {
-	kind := c.kind
 	return state{
+		self:  c,
 		count: metric.NewUint64Number(0),
-		sum:   kind.Zero(),
-		min:   kind.Maximum(),
-		max:   kind.Minimum(),
+		sum:   c.kind.Zero(),
+		min:   c.kind.Maximum(),
+		max:   c.kind.Minimum(),
 	}
 }
 
@@ -162,4 +121,47 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		c.current.max.SetNumber(o.checkpoint.max)
 	}
 	return nil
+}
+
+func (c *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &c.checkpoint
+}
+
+func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &c.current
+}
+
+// Kind returns aggregation.MinMaxSumCountKind.
+func (s *state) Kind() aggregation.Kind {
+	return aggregation.MinMaxSumCountKind
+}
+
+// Sum returns the sum of values in the checkpoint.
+func (s *state) Sum() (metric.Number, error) {
+	return s.sum, nil
+}
+
+// Count returns the number of values in the checkpoint.
+func (s *state) Count() (int64, error) {
+	return s.count.CoerceToInt64(metric.Uint64NumberKind), nil
+}
+
+// Min returns the minimum value in the checkpoint.
+// The error value aggregation.ErrNoData will be returned
+// if there were no measurements recorded during the checkpoint.
+func (s *state) Min() (metric.Number, error) {
+	if s.count.IsZero(metric.Uint64NumberKind) {
+		return s.self.kind.Zero(), aggregation.ErrNoData
+	}
+	return s.min, nil
+}
+
+// Max returns the maximum value in the checkpoint.
+// The error value aggregation.ErrNoData will be returned
+// if there were no measurements recorded during the checkpoint.
+func (s *state) Max() (metric.Number, error) {
+	if s.count.IsZero(metric.Uint64NumberKind) {
+		return s.self.kind.Zero(), aggregation.ErrNoData
+	}
+	return s.max, nil
 }

@@ -93,7 +93,7 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 
 	all.Sort()
 
-	aggSum, err := agg.Sum()
+	aggSum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InEpsilon(t,
@@ -102,18 +102,18 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		0.000000001,
 		"Same sum - "+policy.name)
 
-	count, err := agg.Count()
+	count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
-	min, err := agg.Min()
+	min, err := agg.CheckpointedValue().(aggregation.Min).Min()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Min(),
 		min,
 		"Same min -"+policy.name)
 
-	max, err := agg.Max()
+	max, err := agg.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
@@ -150,7 +150,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 
 		all.Sort()
 
-		aggSum, err := agg1.Sum()
+		aggSum, err := agg1.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Nil(t, err)
 		allSum := all.Sum()
 		require.InEpsilon(t,
@@ -159,18 +159,18 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			0.000000001,
 			"Same sum - absolute")
 
-		count, err := agg1.Count()
+		count, err := agg1.CheckpointedValue().(aggregation.Count).Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
 
-		min, err := agg1.Min()
+		min, err := agg1.CheckpointedValue().(aggregation.Min).Min()
 		require.Nil(t, err)
 		require.Equal(t,
 			all.Min(),
 			min,
 			"Same min - absolute")
 
-		max, err := agg1.Max()
+		max, err := agg1.CheckpointedValue().(aggregation.Max).Max()
 		require.Nil(t, err)
 		require.Equal(t,
 			all.Max(),
@@ -186,15 +186,15 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		agg := New(descriptor)
 		agg.Checkpoint(descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
 		require.Nil(t, err)
 
-		count, err := agg.Count()
+		count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.Nil(t, err)
 
-		max, err := agg.Max()
+		max, err := agg.CheckpointedValue().(aggregation.Max).Max()
 		require.Equal(t, aggregation.ErrNoData, err)
 		require.Equal(t, metric.Number(0), max)
 	})
