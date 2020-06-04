@@ -131,6 +131,12 @@ type Aggregator interface {
 
 	// Kind returns the kind of aggregation.
 	Kind() aggregation.Kind
+
+	// @@@ HERE YOU ARE
+	// Accumulated() aggregation.Aggregation
+
+	// @@@ HERE YOU ARE
+	// Totaled() aggregation.Aggregation
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -200,7 +206,7 @@ func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resou
 		descriptor: descriptor,
 		labels:     labels,
 		resource:   resource,
-		aggregator: aggregator,
+		aggregator: aggregator, // @@@ HERE YOU ARE
 		start:      start,
 		end:        end,
 	}
@@ -217,12 +223,12 @@ func (r Record) Kind() aggregation.Kind {
 	return r.aggregator.Kind()
 }
 
-// Start implements aggregation.Aggregation.
+// Start is the start time of the interval covered by this aggregation.
 func (r Record) Start() time.Time {
 	return r.start
 }
 
-// End implements aggregation.Aggregation.
+// End is the end time of the interval covered by this aggregation.
 func (r Record) End() time.Time {
 	return r.end
 }

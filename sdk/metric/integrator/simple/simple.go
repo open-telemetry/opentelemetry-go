@@ -80,11 +80,12 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		sequence   int64
-		processing int64
-		start      time.Time
-		end        time.Time
-		values     map[stateKey]*stateValue
+		sequence      int64
+		processing    int64
+		processStart  time.Time
+		intervalStart time.Time
+		intervalEnd   time.Time
+		values        map[stateKey]*stateValue
 	}
 )
 
@@ -92,13 +93,15 @@ var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &state{}
 
 func New(selector export.AggregationSelector, kind export.ExporterKind) *Integrator {
+	now := time.Now()
 	return &Integrator{
 		AggregationSelector: selector,
 		kind:                kind,
 		state: state{
-			values:     map[stateKey]*stateValue{},
-			start:      time.Now(),
-			processing: -1,
+			values:        map[stateKey]*stateValue{},
+			processStart:  now,
+			intervalStart: now,
+			processing:    -1,
 		},
 	}
 }
@@ -132,7 +135,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	if b.processing != b.sequence {
 		// This is the beginning of the end of the interval.
 		b.processing = b.sequence
-		b.end = time.Now()
+		b.state.intervalEnd = time.Now()
 	}
 
 	desc := accum.Descriptor()
@@ -225,14 +228,11 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 
 func (b *Integrator) FinishedCollection() {
 	b.state.sequence++
-	b.state.start = b.state.end
-	b.state.end = time.Time{}
+	b.state.intervalStart = b.state.intervalEnd
+	b.state.intervalEnd = time.Time{}
 }
 
 func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) error {
-	// @@@ kind
-	_ = kind
-
 	for key, value := range b.values {
 		value.lock.Lock()
 
@@ -268,13 +268,16 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 
 		value.lock.Unlock()
 
+		// @@@ kind, timestamp correctness
+		_ = kind
+
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
 			value.resource,
-			value.aggregator,
-			b.start,
-			b.end,
+			value.aggregator, // @@@
+			b.intervalStart,  // @@@
+			b.intervalEnd,    // @@@
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}
