@@ -19,38 +19,14 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
-type (
-	testTraceProvider struct{}
-	testMeterProvider struct{}
-)
+type testMeterProvider struct{}
 
-var (
-	_ trace.Provider  = &testTraceProvider{}
-	_ metric.Provider = &testMeterProvider{}
-)
-
-func (*testTraceProvider) Tracer(_ string) trace.Tracer {
-	return &trace.NoopTracer{}
-}
+var _ metric.Provider = &testMeterProvider{}
 
 func (*testMeterProvider) Meter(_ string) metric.Meter {
 	return metric.Meter{}
-}
-
-func TestMultipleGlobalTracerProvider(t *testing.T) {
-	p1 := testTraceProvider{}
-	p2 := trace.NoopProvider{}
-	global.SetTraceProvider(&p1)
-	global.SetTraceProvider(&p2)
-
-	got := global.TraceProvider()
-	want := &p2
-	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
-	}
 }
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {

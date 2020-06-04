@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -112,6 +113,16 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) {
 		return
 	}
 	e.logf("zipkin responded with status %d", resp.StatusCode)
+
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		e.logf("failed to read response body: %v", err)
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		e.logf("failed to close response body: %v", err)
+	}
 }
 
 func (e *Exporter) logf(format string, args ...interface{}) {

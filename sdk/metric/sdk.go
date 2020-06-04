@@ -17,11 +17,11 @@ package metric
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -61,9 +61,6 @@ type (
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
-
-		// errorHandler supports delivering errors to the user.
-		errorHandler ErrorHandler
 
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
@@ -143,8 +140,6 @@ type (
 		labels        *label.Set
 		recorder      export.Aggregator
 	}
-
-	ErrorHandler func(error)
 )
 
 var (
@@ -170,7 +165,7 @@ func (s *syncInstrument) Implementation() interface{} {
 
 func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
-		a.meter.errorHandler(err)
+		global.Handle(err)
 		return
 	}
 	recorder := a.getRecorder(labels)
@@ -180,7 +175,7 @@ func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 		return
 	}
 	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
-		a.meter.errorHandler(err)
+		global.Handle(err)
 		return
 	}
 }
@@ -211,10 +206,6 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 		observedEpoch: a.meter.currentEpoch,
 	}
 	return rec
-}
-
-func (m *Accumulator) SetErrorHandler(f ErrorHandler) {
-	m.errorHandler = f
 }
 
 // acquireHandle gets or creates a `*record` corresponding to `kvs`,
@@ -314,23 +305,16 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 // current metric values.  A push-based integrator should configure its
 // own periodic collection.
 func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
-	c := &Config{ErrorHandler: DefaultErrorHandler}
+	c := &Config{}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
 	return &Accumulator{
 		integrator:       integrator,
-		errorHandler:     c.ErrorHandler,
-		asyncInstruments: internal.NewAsyncInstrumentState(c.ErrorHandler),
+		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
 	}
-}
-
-// DefaultErrorHandler is used when the user does not configure an
-// error handler.  Prints messages to os.Stderr.
-func DefaultErrorHandler(err error) {
-	fmt.Fprintln(os.Stderr, "Metrics Accumulator error:", err)
 }
 
 // NewSyncInstrument implements api.MetricImpl.
@@ -485,7 +469,7 @@ func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descrip
 	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
 	err := m.integrator.Process(ctx, exportRecord)
 	if err != nil {
-		m.errorHandler(err)
+		global.Handle(err)
 	}
 	return 1
 }
@@ -521,11 +505,11 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 		return
 	}
 	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
-		r.inst.meter.errorHandler(err)
+		global.Handle(err)
 		return
 	}
 	if err := r.recorder.Update(ctx, number, &r.inst.descriptor); err != nil {
-		r.inst.meter.errorHandler(err)
+		global.Handle(err)
 		return
 	}
 	// Record was modified, inform the Collect() that things need
@@ -553,7 +537,7 @@ func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
 			return inst
 		}
 	}
-	m.errorHandler(ErrUninitializedInstrument)
+	global.Handle(ErrUninitializedInstrument)
 	return nil
 }
 
@@ -565,6 +549,6 @@ func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
 			return inst
 		}
 	}
-	m.errorHandler(ErrUninitializedInstrument)
+	global.Handle(ErrUninitializedInstrument)
 	return nil
 }

@@ -12,27 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push
+package global
 
 import (
-	"testing"
-
-	"go.opentelemetry.io/otel/api/kv"
-
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/api/propagation"
 )
 
-func TestWithResource(t *testing.T) {
-	r := resource.New(kv.String("A", "a"))
+// Propagators returns the registered global propagators instance.  If
+// none is registered then an instance of propagators.NoopPropagators
+// is returned.
+func Propagators() propagation.Propagators {
+	return internal.Propagators()
+}
 
-	c := &Config{}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
-
-	// Ensure overwriting works.
-	c = &Config{Resource: &resource.Resource{}}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
+// SetPropagators registers `p` as the global propagators instance.
+func SetPropagators(p propagation.Propagators) {
+	internal.SetPropagators(p)
 }

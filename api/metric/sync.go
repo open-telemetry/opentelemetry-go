@@ -16,9 +16,9 @@ package metric
 
 import (
 	"context"
-	"errors"
 
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/oterror"
 )
 
 // Measurement is used for reporting a synchronous batch of metric
@@ -44,10 +44,6 @@ type syncBoundInstrument struct {
 type asyncInstrument struct {
 	instrument AsyncImpl
 }
-
-// ErrSDKReturnedNilImpl is used when one of the `MeterImpl` New
-// methods returns nil.
-var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 // SyncImpl returns the instrument that created this measurement.
 // This returns an implementation-level object for use by the SDK,
@@ -114,7 +110,7 @@ func (h syncBoundInstrument) Unbind() {
 func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
-			err = ErrSDKReturnedNilImpl
+			err = oterror.ErrSDKReturnedNilImpl
 		}
 		instrument = NoopAsync{}
 	}
@@ -129,7 +125,7 @@ func checkNewAsync(instrument AsyncImpl, err error) (asyncInstrument, error) {
 func checkNewSync(instrument SyncImpl, err error) (syncInstrument, error) {
 	if instrument == nil {
 		if err == nil {
-			err = ErrSDKReturnedNilImpl
+			err = oterror.ErrSDKReturnedNilImpl
 		}
 		// Note: an alternate behavior would be to synthesize a new name
 		// or group all duplicately-named instruments of a certain type

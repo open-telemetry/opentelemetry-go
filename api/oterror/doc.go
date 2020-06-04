@@ -12,27 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push
+/*
+* The oterror package provides unified error interactions in OpenTelemetry.
+* This includes providing standardized errors common to OpenTelemetry (APIs,
+* SDKs, and exporters). Additionally it provides an API for unified error
+* handling in OpenTelemetry.
+*
+* The unified error handling interface is used for any error that
+* OpenTelemetry component are not able to remediate on their own, instead
+* handling them in a uniform and user-defined way.
+ */
 
-import (
-	"testing"
-
-	"go.opentelemetry.io/otel/api/kv"
-
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/sdk/resource"
-)
-
-func TestWithResource(t *testing.T) {
-	r := resource.New(kv.String("A", "a"))
-
-	c := &Config{}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
-
-	// Ensure overwriting works.
-	c = &Config{Resource: &resource.Resource{}}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
-}
+package oterror
