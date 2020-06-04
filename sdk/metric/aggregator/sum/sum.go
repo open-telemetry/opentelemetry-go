@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates counter events.
@@ -65,7 +66,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregation.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 	c.current.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil

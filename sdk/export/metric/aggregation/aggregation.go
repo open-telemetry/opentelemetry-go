@@ -16,11 +16,9 @@ package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggreg
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // These interfaces describe the various ways to access state from an
@@ -124,30 +122,3 @@ var (
 	// The aggregator should simply be skipped in this case.
 	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
-
-// NewInconsistentMergeError formats an error describing an attempt to
-// merge different-type aggregators.  The result can be unwrapped as
-// an ErrInconsistentType.
-func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
-}
-
-// RangeTest is a commmon routine for testing for valid input values.
-// This rejects NaN values.  This rejects negative values when the
-// metric instrument does not support negative values, including
-// monotonic counter metrics and absolute ValueRecorder metrics.
-func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
-	numberKind := descriptor.NumberKind()
-
-	if numberKind == metric.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		return ErrNaNInput
-	}
-
-	switch descriptor.MetricKind() {
-	case metric.CounterKind, metric.SumObserverKind:
-		if number.IsNegative(numberKind) {
-			return ErrNegativeInput
-		}
-	}
-	return nil
-}

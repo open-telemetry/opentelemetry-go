@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -99,7 +100,7 @@ func (g *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregation.NewInconsistentMergeError(g, oa)
+		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
 	ggd := (*lastValueData)(atomic.LoadPointer(&g.current))

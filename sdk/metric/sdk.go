@@ -28,7 +28,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -168,7 +168,7 @@ func (s *syncInstrument) Implementation() interface{} {
 }
 
 func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
-	if err := aggregation.RangeTest(number, &a.descriptor); err != nil {
+	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		a.meter.errorHandler(err)
 		return
 	}
@@ -517,7 +517,7 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 		// The instrument is disabled according to the AggregationSelector.
 		return
 	}
-	if err := aggregation.RangeTest(number, &r.inst.descriptor); err != nil {
+	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
 		r.inst.meter.errorHandler(err)
 		return
 	}

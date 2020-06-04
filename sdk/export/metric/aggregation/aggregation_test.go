@@ -23,12 +23,13 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 func TestInconsistentMergeErr(t *testing.T) {
-	err := aggregation.NewInconsistentMergeError(sum.New(), lastvalue.New())
+	err := aggregator.NewInconsistentMergeError(sum.New(), lastvalue.New())
 	require.Equal(
 		t,
 		"cannot merge *sum.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
@@ -40,7 +41,7 @@ func TestInconsistentMergeErr(t *testing.T) {
 func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
 	nan := metric.NewFloat64Number(math.NaN())
-	err := aggregation.RangeTest(nan, desc)
+	err := aggregator.RangeTest(nan, desc)
 
 	if desc.NumberKind() == metric.Float64NumberKind {
 		require.Equal(t, aggregation.ErrNaNInput, err)
@@ -60,8 +61,8 @@ func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
 		neg = metric.NewInt64Number(-1)
 	}
 
-	posErr := aggregation.RangeTest(pos, desc)
-	negErr := aggregation.RangeTest(neg, desc)
+	posErr := aggregator.RangeTest(pos, desc)
+	negErr := aggregator.RangeTest(neg, desc)
 
 	require.Nil(t, posErr)
 	require.Equal(t, negErr, aggregation.ErrNegativeInput)
