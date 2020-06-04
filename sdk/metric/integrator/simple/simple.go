@@ -61,7 +61,6 @@ type (
 		// Process() called by an accumulator.
 		updated      int64
 		checkpointed int64
-		processing   int64
 
 		// stateful indicates that the last-value of the aggregation (since
 		// process start time) is being maintained.

@@ -118,8 +118,8 @@ func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
 	return &c.current
 }
 
-func (a *Aggregator) toNumber(f float64) metric.Number {
-	if a.kind == metric.Float64NumberKind {
+func (c *Aggregator) toNumber(f float64) metric.Number {
+	if c.kind == metric.Float64NumberKind {
 		return metric.NewFloat64Number(f)
 	}
 	return metric.NewInt64Number(int64(f))

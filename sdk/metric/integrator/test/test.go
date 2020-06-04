@@ -162,10 +162,10 @@ func (o Output) AddAccum(accum export.Accumulation) error {
 	key := fmt.Sprint(accum.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := accum.Aggregator().(aggregation.Sum); ok {
+	if s, ok := accum.Aggregator().CheckpointedValue().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(accum.Descriptor().NumberKind())
-	} else if l, ok := accum.Aggregator().(aggregation.LastValue); ok {
+	} else if l, ok := accum.Aggregator().CheckpointedValue().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(accum.Descriptor().NumberKind())
 	} else {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
@@ -661,7 +662,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, agg))
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, agg.CheckpointedValue(), time.Time{}, time.Time{}))
 	}
 	for _, records := range recs {
 		assert.NoError(t, exp.Export(context.Background(), &checkpointSet{records: records}))

@@ -85,12 +85,12 @@ func TestMinMaxSumCountValue(t *testing.T) {
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
 
 	// Prior to checkpointing ErrNoData should be returned.
-	_, _, _, _, err := minMaxSumCountValues(mmsc)
+	_, _, _, _, err := minMaxSumCountValues(mmsc.CheckpointedValue().(aggregation.MinMaxSumCount))
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
 	mmsc.Checkpoint(&metric.Descriptor{})
-	min, max, sum, count, err := minMaxSumCountValues(mmsc)
+	min, max, sum, count, err := minMaxSumCountValues(mmsc.CheckpointedValue().(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
 		assert.Equal(t, min, metric.NewInt64Number(1))
 		assert.Equal(t, max, metric.NewInt64Number(10))
@@ -152,7 +152,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
 		labels := label.NewSet(test.labels...)
-		got, err := minMaxSumCount(&desc, &labels, mmsc)
+		got, err := minMaxSumCount(&desc, &labels, mmsc.CheckpointedValue().(aggregation.MinMaxSumCount))
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -182,7 +182,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			},
 		},
 	}
-	m, err := minMaxSumCount(&desc, &labels, mmsc)
+	m, err := minMaxSumCount(&desc, &labels, mmsc.CheckpointedValue().(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
@@ -196,7 +196,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 	// a MinMaxSumCount Aggregation. Use this fact to check the error is
 	// correctly returned.
 	mmsc := minmaxsumcount.New(&metric.Descriptor{})
-	_, _, _, _, err := minMaxSumCountValues(mmsc)
+	_, _, _, _, err := minMaxSumCountValues(mmsc.CheckpointedValue().(aggregation.MinMaxSumCount))
 	assert.Error(t, err)
 	assert.Equal(t, aggregation.ErrNoData, err)
 }
@@ -249,7 +249,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.WithUnit(test.unit),
 		)
 		labels := label.NewSet(test.labels...)
-		got, err := sum(&desc, &labels, sumAgg.New())
+		got, err := sum(&desc, &labels, sumAgg.New().CheckpointedValue().(aggregation.Sum))
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -262,7 +262,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	s.Checkpoint(&desc)
-	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
+	if m, err := sum(&desc, &labels, s.CheckpointedValue().(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
@@ -276,7 +276,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	s := sumAgg.New()
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	s.Checkpoint(&desc)
-	if m, err := sum(&desc, &labels, s); assert.NoError(t, err) {
+	if m, err := sum(&desc, &labels, s.CheckpointedValue().(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
@@ -288,7 +288,7 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.NumberKind(-1))
 	labels := label.NewSet()
 	s := sumAgg.New()
-	_, err := sum(&desc, &labels, s)
+	_, err := sum(&desc, &labels, s.CheckpointedValue().(aggregation.Sum))
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)

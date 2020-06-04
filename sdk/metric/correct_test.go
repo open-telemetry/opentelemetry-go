@@ -127,7 +127,7 @@ func TestInputRangeCounter(t *testing.T) {
 	integrator.accum = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err := integrator.accum[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err := integrator.accum[0].Aggregator().CheckpointedValue().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -151,7 +151,7 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	counter.Add(ctx, 1)
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := integrator.accum[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err := integrator.accum[0].Aggregator().CheckpointedValue().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -182,7 +182,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	integrator.accum = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := integrator.accum[0].Aggregator().(aggregation.Distribution).Count()
+	count, err := integrator.accum[0].Aggregator().CheckpointedValue().(aggregation.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, sdkErr)
@@ -272,7 +272,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 	var actual [][]kv.KeyValue
 	for _, rec := range integrator.accum {
-		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
+		sum, _ := rec.Aggregator().CheckpointedValue().(aggregation.Sum).Sum()
 		require.Equal(t, sum, metric.NewInt64Number(2))
 
 		kvs := rec.Labels().ToSlice()
