@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -77,7 +78,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		return record.Aggregator, false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg, time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = ckptRecord{
 		Record:     rec,

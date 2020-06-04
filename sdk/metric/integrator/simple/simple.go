@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -60,6 +61,7 @@ type (
 		// Process() called by an accumulator.
 		updated      int64
 		checkpointed int64
+		processing   int64
 
 		// stateful indicates that the last-value of the aggregation (since
 		// process start time) is being maintained.
@@ -78,8 +80,11 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		sequence int64
-		values   map[stateKey]*stateValue
+		sequence   int64
+		processing int64
+		start      time.Time
+		end        time.Time
+		values     map[stateKey]*stateValue
 	}
 )
 
@@ -91,7 +96,9 @@ func New(selector export.AggregationSelector, kind export.ExporterKind) *Integra
 		AggregationSelector: selector,
 		kind:                kind,
 		state: state{
-			values: map[stateKey]*stateValue{},
+			values:     map[stateKey]*stateValue{},
+			start:      time.Now(),
+			processing: -1,
 		},
 	}
 }
@@ -122,6 +129,12 @@ func (b *Integrator) cloneReplace(value *stateValue, replace export.Aggregator, 
 }
 
 func (b *Integrator) Process(accum export.Accumulation) error {
+	if b.processing != b.sequence {
+		// This is the beginning of the end of the interval.
+		b.processing = b.sequence
+		b.end = time.Now()
+	}
+
 	desc := accum.Descriptor()
 	key := stateKey{
 		descriptor: desc,
@@ -212,9 +225,14 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 
 func (b *Integrator) FinishedCollection() {
 	b.state.sequence++
+	b.state.start = b.state.end
+	b.state.end = time.Time{}
 }
 
-func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
+func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) error {
+	// @@@ kind
+	_ = kind
+
 	for key, value := range b.values {
 		value.lock.Lock()
 
@@ -248,9 +266,6 @@ func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 			}
 		}
 
-		// @@@ HERE we need the start and end time.  stateful
-		// or no, and the kind of exporter matters.
-
 		value.lock.Unlock()
 
 		if err := f(export.NewRecord(
@@ -258,6 +273,8 @@ func (b *state) ForEach(_ export.ExporterKind, f func(export.Record) error) erro
 			value.labels,
 			value.resource,
 			value.aggregator,
+			b.start,
+			b.end,
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}

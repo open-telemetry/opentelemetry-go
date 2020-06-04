@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -187,17 +188,21 @@ type Record struct {
 	labels     *label.Set
 	resource   *resource.Resource
 	aggregator Aggregator
+	start      time.Time
+	end        time.Time
 }
 
 // NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator, start, end time.Time) Record {
 	return Record{
 		descriptor: descriptor,
 		labels:     labels,
 		resource:   resource,
 		aggregator: aggregator,
+		start:      start,
+		end:        end,
 	}
 }
 
@@ -207,9 +212,19 @@ func (r Record) Aggregation() aggregation.Aggregation {
 	return r
 }
 
-// Kind returns the kind of aggregation used.
+// Kind implements aggregation.Aggregation.
 func (r Record) Kind() aggregation.Kind {
 	return r.aggregator.Kind()
+}
+
+// Start implements aggregation.Aggregation.
+func (r Record) Start() time.Time {
+	return r.start
+}
+
+// End implements aggregation.Aggregation.
+func (r Record) End() time.Time {
+	return r.end
 }
 
 // Descriptor describes the metric instrument being exported.

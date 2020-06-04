@@ -27,7 +27,14 @@ import (
 type (
 	// Aggregation is one of the interfaces below.
 	Aggregation interface {
+		// Kind returns the kind of aggregation used.
 		Kind() Kind
+
+		// Start returns the start of the collection interval covered by this aggregation.
+		Start() time.Time
+
+		// End returns the end of the collection interval covered by this aggregation.
+		End() time.Time
 	}
 
 	// Sum returns an aggregated sum.
