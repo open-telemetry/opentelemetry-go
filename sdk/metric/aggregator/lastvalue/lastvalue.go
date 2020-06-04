@@ -68,6 +68,11 @@ func New() *Aggregator {
 	}
 }
 
+// Kind returns aggregation.LastValue.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
+}
+
 // LastValue returns the last-recorded lastValue value and the
 // corresponding timestamp.  The error value aggregation.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was

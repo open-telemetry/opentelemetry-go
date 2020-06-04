@@ -25,6 +25,11 @@ import (
 // Aggregation.
 
 type (
+	// Aggregation is one of the interfaces below.
+	Aggregation interface {
+		Kind() Kind
+	}
+
 	// Sum returns an aggregated sum.
 	Sum interface {
 		Sum() (metric.Number, error)
@@ -99,16 +104,16 @@ type (
 )
 
 type (
-	Kind int
+	Kind string
 )
 
 const (
-	SumKind Kind = iota
-	MinMaxSumCountKind
-	HistogramKind
-	LastValueKind
-	SketchKind
-	ExactKind
+	SumKind            Kind = "sum"
+	MinMaxSumCountKind Kind = "minmaxsumcount"
+	HistogramKind      Kind = "histogram"
+	LastValueKind      Kind = "lastvalue"
+	SketchKind         Kind = "sketch"
+	ExactKind          Kind = "exact"
 )
 
 var (

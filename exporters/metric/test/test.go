@@ -36,9 +36,14 @@ type mapkey struct {
 	distinct label.Distinct
 }
 
+type ckptRecord struct {
+	export.Record
+	export.Aggregator
+}
+
 type CheckpointSet struct {
 	sync.RWMutex
-	records  map[mapkey]export.Record
+	records  map[mapkey]ckptRecord
 	updates  []export.Record
 	resource *resource.Resource
 }
@@ -47,13 +52,13 @@ type CheckpointSet struct {
 // Records are grouped by their encoded labels.
 func NewCheckpointSet(resource *resource.Resource) *CheckpointSet {
 	return &CheckpointSet{
-		records:  make(map[mapkey]export.Record),
+		records:  map[mapkey]ckptRecord{},
 		resource: resource,
 	}
 }
 
 func (p *CheckpointSet) Reset() {
-	p.records = make(map[mapkey]export.Record)
+	p.records = map[mapkey]ckptRecord{}
 	p.updates = nil
 }
 
@@ -69,12 +74,15 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		distinct: elabels.Equivalent(),
 	}
 	if record, ok := p.records[key]; ok {
-		return record.Aggregation(), false
+		return record.Aggregator, false
 	}
 
 	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)
 	p.updates = append(p.updates, rec)
-	p.records[key] = rec
+	p.records[key] = ckptRecord{
+		Record:     rec,
+		Aggregator: newAgg,
+	}
 	return newAgg, true
 }
 

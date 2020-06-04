@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -124,8 +125,11 @@ type Aggregator interface {
 	// is required.
 	Merge(Aggregator, *metric.Descriptor) error
 
-	// Swap interchanges the current and checkpointed state.
+	// Swap exchanges the current and checkpointed state.
 	Swap()
+
+	// Kind returns the kind of aggregation.
+	Kind() aggregation.Kind
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -197,9 +201,15 @@ func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resou
 	}
 }
 
-func (r Record) Aggregation() Aggregator {
-	// @@@
-	return r.aggregator
+// Aggregation returns the aggregation, an interface to the record and
+// its aggregator, dependent on the kind of both the input and exporter.
+func (r Record) Aggregation() aggregation.Aggregation {
+	return r
+}
+
+// Kind returns the kind of aggregation used.
+func (r Record) Kind() aggregation.Kind {
+	return r.aggregator.Kind()
 }
 
 // Descriptor describes the metric instrument being exported.
