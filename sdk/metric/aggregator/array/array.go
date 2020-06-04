@@ -40,7 +40,6 @@ type (
 	points []metric.Number
 
 	pointsAndSum struct {
-		self *Aggregator
 		points
 		sum    metric.Number
 		sorted bool
@@ -56,13 +55,10 @@ var _ aggregation.Points = &pointsAndSum{}
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and Checkpoint() concurrency.
 func New() *Aggregator {
-	agg := &Aggregator{}
-	agg.current = pointsAndSum{self: agg}
-	agg.checkpoint = pointsAndSum{self: agg}
-	return agg
+	return &Aggregator{}
 }
 
-// Kind returns aggregation.Exact.
+// Kind returns aggregation.ExactKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.ExactKind
 }
@@ -71,7 +67,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, pointsAndSum{self: c}
+	c.checkpoint, c.current = c.current, pointsAndSum{}
 	c.lock.Unlock()
 
 	if !c.checkpoint.sorted {
@@ -191,7 +187,7 @@ func (p *points) Quantile(q float64) (metric.Number, error) {
 	return (*p)[ceil], nil
 }
 
-// Kind returns aggregation.ExactKind
+// Kind returns aggregation.ExactKind.
 func (*pointsAndSum) Kind() aggregation.Kind {
 	return aggregation.ExactKind
 }

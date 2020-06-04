@@ -63,7 +63,7 @@ func TestLastValueUpdate(t *testing.T) {
 
 		agg.Checkpoint(record)
 
-		lv, _, err := agg.LastValue()
+		lv, _, err := agg.CheckpointedValue().(aggregation.LastValue).LastValue()
 		require.Equal(t, last, lv, "Same last value - non-monotonic")
 		require.Nil(t, err)
 	})
@@ -86,9 +86,9 @@ func TestLastValueMerge(t *testing.T) {
 		agg1.Checkpoint(descriptor)
 		agg2.Checkpoint(descriptor)
 
-		_, t1, err := agg1.LastValue()
+		_, t1, err := agg1.CheckpointedValue().(aggregation.LastValue).LastValue()
 		require.Nil(t, err)
-		_, t2, err := agg2.LastValue()
+		_, t2, err := agg2.CheckpointedValue().(aggregation.LastValue).LastValue()
 		require.Nil(t, err)
 		require.True(t, t1.Before(t2))
 
@@ -96,7 +96,7 @@ func TestLastValueMerge(t *testing.T) {
 		test.CheckedMerge(t, agg1, agg2, descriptor)
 		agg1.Swap()
 
-		lv, ts, err := agg1.LastValue()
+		lv, ts, err := agg1.CheckpointedValue().(aggregation.LastValue).LastValue()
 		require.Nil(t, err)
 		require.Equal(t, t2, ts, "Merged timestamp - non-monotonic")
 		require.Equal(t, first2, lv, "Merged value - non-monotonic")
@@ -109,7 +109,7 @@ func TestLastValueNotSet(t *testing.T) {
 	g := New()
 	g.Checkpoint(descriptor)
 
-	value, timestamp, err := g.LastValue()
+	value, timestamp, err := g.CheckpointedValue().(aggregation.LastValue).LastValue()
 	require.Equal(t, aggregation.ErrNoData, err)
 	require.True(t, timestamp.IsZero())
 	require.Equal(t, metric.Number(0), value)

@@ -63,7 +63,7 @@ func New(desc *metric.Descriptor) *Aggregator {
 	}
 }
 
-// Kind returns aggregation.MinMaxSumCount.
+// Kind returns aggregation.MinMaxSumCountKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.MinMaxSumCountKind
 }

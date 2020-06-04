@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -48,7 +49,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
-	sum, err := agg.Sum()
+	sum, err := agg.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InDelta(t,
@@ -57,18 +58,18 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		1,
 		"Same sum")
 
-	count, err := agg.Count()
+	count, err := agg.CheckpointedValue().(aggregation.Count).Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	max, err := agg.Max()
+	max, err := agg.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
 		max,
 		"Same max")
 
-	median, err := agg.Quantile(0.5)
+	median, err := agg.CheckpointedValue().(aggregation.Quantile).Quantile(0.5)
 	require.Nil(t, err)
 	allMedian := all.Median()
 	require.InDelta(t,
@@ -127,7 +128,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 
 	all.Sort()
 
-	aggSum, err := agg1.Sum()
+	aggSum, err := agg1.CheckpointedValue().(aggregation.Sum).Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InDelta(t,
@@ -136,18 +137,18 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		1,
 		"Same sum")
 
-	count, err := agg1.Count()
+	count, err := agg1.CheckpointedValue().(aggregation.Count).Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	max, err := agg1.Max()
+	max, err := agg1.CheckpointedValue().(aggregation.Max).Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
 		max,
 		"Same max")
 
-	median, err := agg1.Quantile(0.5)
+	median, err := agg1.CheckpointedValue().(aggregation.Quantile).Quantile(0.5)
 	require.Nil(t, err)
 	allMedian := all.Median()
 	require.InDelta(t,

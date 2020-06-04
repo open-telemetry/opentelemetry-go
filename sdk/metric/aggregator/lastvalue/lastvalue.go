@@ -27,14 +27,17 @@ import (
 )
 
 type (
+	lastValuePointer struct {
+		pointer unsafe.Pointer
+	}
 
 	// Aggregator aggregates lastValue events.
 	Aggregator struct {
 		// current is an atomic pointer to *lastValueData.  It is never nil.
-		current unsafe.Pointer
+		current lastValuePointer
 
 		// checkpoint is a copy of the current value taken in Checkpoint()
-		checkpoint unsafe.Pointer
+		checkpoint lastValuePointer
 	}
 
 	// lastValueData stores the current value of a lastValue along with
@@ -54,7 +57,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.LastValue = &Aggregator{}
+var _ aggregation.LastValue = &lastValuePointer{}
 
 // An unset lastValue has zero timestamp and zero value.
 var unsetLastValue = &lastValueData{}
@@ -63,31 +66,19 @@ var unsetLastValue = &lastValueData{}
 // last value and timestamp that were recorded.
 func New() *Aggregator {
 	return &Aggregator{
-		current:    unsafe.Pointer(unsetLastValue),
-		checkpoint: unsafe.Pointer(unsetLastValue),
+		current:    lastValuePointer{pointer: unsafe.Pointer(unsetLastValue)},
+		checkpoint: lastValuePointer{pointer: unsafe.Pointer(unsetLastValue)},
 	}
 }
 
-// Kind returns aggregation.LastValue.
+// Kind returns aggregation.LastValueKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.LastValueKind
 }
 
-// LastValue returns the last-recorded lastValue value and the
-// corresponding timestamp.  The error value aggregation.ErrNoData
-// will be returned if (due to a race condition) the checkpoint was
-// computed before the first value was set.
-func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
-	gd := (*lastValueData)(g.checkpoint)
-	if gd == unsetLastValue {
-		return metric.Number(0), time.Time{}, aggregation.ErrNoData
-	}
-	return gd.value.AsNumber(), gd.timestamp, nil
-}
-
 // Checkpoint atomically saves the current value.
 func (g *Aggregator) Checkpoint(*metric.Descriptor) {
-	g.checkpoint = atomic.LoadPointer(&g.current)
+	g.checkpoint.pointer = atomic.LoadPointer(&g.current.pointer)
 }
 
 // Update atomically sets the current "last" value.
@@ -96,7 +87,7 @@ func (g *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 		value:     number,
 		timestamp: time.Now(),
 	}
-	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
+	atomic.StorePointer(&g.current.pointer, unsafe.Pointer(ngd))
 	return nil
 }
 
@@ -108,17 +99,42 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(g, oa)
 	}
 
-	ggd := (*lastValueData)(atomic.LoadPointer(&g.current))
-	ogd := (*lastValueData)(atomic.LoadPointer(&o.checkpoint))
+	ggd := (*lastValueData)(atomic.LoadPointer(&g.current.pointer))
+	ogd := (*lastValueData)(atomic.LoadPointer(&o.checkpoint.pointer))
 
 	if ggd.timestamp.After(ogd.timestamp) {
 		return nil
 	}
 
-	g.current = unsafe.Pointer(ogd)
+	g.current.pointer = unsafe.Pointer(ogd)
 	return nil
 }
 
 func (g *Aggregator) Swap() {
 	g.checkpoint, g.current = g.current, g.checkpoint
+}
+
+func (g *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &g.checkpoint
+}
+
+func (g *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &g.current
+}
+
+// LastValue returns the last-recorded lastValue value and the
+// corresponding timestamp.  The error value aggregation.ErrNoData
+// will be returned if (due to a race condition) the checkpoint was
+// computed before the first value was set.
+func (p *lastValuePointer) LastValue() (metric.Number, time.Time, error) {
+	gd := (*lastValueData)(p.pointer)
+	if gd == unsetLastValue {
+		return metric.Number(0), time.Time{}, aggregation.ErrNoData
+	}
+	return gd.value.AsNumber(), gd.timestamp, nil
+}
+
+// Kind returns aggregation.LastValueKind.
+func (p *lastValuePointer) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
 }

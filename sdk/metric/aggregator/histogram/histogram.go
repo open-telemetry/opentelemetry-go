@@ -82,7 +82,7 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	return agg
 }
 
-// Kind returns aggregation.Histogram.
+// Kind returns aggregation.HistogramKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.HistogramKind
 }
@@ -175,22 +175,16 @@ func (s *state) Kind() aggregation.Kind {
 
 // Sum returns the sum of all values in the checkpoint.
 func (s *state) Sum() (metric.Number, error) {
-	s.self.lock.Lock()
-	defer s.self.lock.Unlock()
 	return s.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (s *state) Count() (int64, error) {
-	s.self.lock.Lock()
-	defer s.self.lock.Unlock()
 	return int64(s.count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (s *state) Histogram() (aggregation.Buckets, error) {
-	s.self.lock.Lock()
-	defer s.self.lock.Unlock()
 	return aggregation.Buckets{
 		Boundaries: s.self.boundaries,
 		Counts:     s.bucketCounts,

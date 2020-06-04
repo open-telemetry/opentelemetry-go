@@ -30,30 +30,42 @@ import (
 // Config is an alias for the underlying DDSketch config object.
 type Config = sdk.Config
 
+type sketchValue struct {
+	sketch *sdk.DDSketch
+	self   *Aggregator
+}
+
 // Aggregator aggregates events into a distribution.
 type Aggregator struct {
 	lock       sync.Mutex
 	cfg        *Config
 	kind       metric.NumberKind
-	current    *sdk.DDSketch
-	checkpoint *sdk.DDSketch
+	current    sketchValue
+	checkpoint sketchValue
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.MinMaxSumCount = &Aggregator{}
-var _ aggregation.Distribution = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &sketchValue{}
+var _ aggregation.Distribution = &sketchValue{}
 
 // New returns a new DDSketch aggregation.
 func New(desc *metric.Descriptor, cfg *Config) *Aggregator {
-	return &Aggregator{
-		cfg:        cfg,
-		kind:       desc.NumberKind(),
-		current:    sdk.NewDDSketch(cfg),
-		checkpoint: sdk.NewDDSketch(cfg),
+	agg := &Aggregator{
+		cfg:  cfg,
+		kind: desc.NumberKind(),
 	}
+	agg.current = sketchValue{
+		sketch: sdk.NewDDSketch(cfg),
+		self:   agg,
+	}
+	agg.checkpoint = sketchValue{
+		sketch: sdk.NewDDSketch(cfg),
+		self:   agg,
+	}
+	return agg
 }
 
-// Kind returns aggregation.Sketch.
+// Kind returns aggregation.SketchKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.SketchKind
 }
@@ -67,54 +79,14 @@ func NewDefaultConfig() *Config {
 	return sdk.NewDefaultConfig()
 }
 
-// Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.toNumber(c.checkpoint.Sum()), nil
-}
-
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	return c.checkpoint.Count(), nil
-}
-
-// Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (metric.Number, error) {
-	return c.Quantile(1)
-}
-
-// Min returns the minimum value in the checkpoint.
-func (c *Aggregator) Min() (metric.Number, error) {
-	return c.Quantile(0)
-}
-
-// Quantile returns the estimated quantile of data in the checkpoint.
-// It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
-	if c.checkpoint.Count() == 0 {
-		return metric.Number(0), aggregation.ErrNoData
-	}
-	f := c.checkpoint.Quantile(q)
-	if math.IsNaN(f) {
-		return metric.Number(0), aggregation.ErrInvalidQuantile
-	}
-	return c.toNumber(f), nil
-}
-
-func (c *Aggregator) toNumber(f float64) metric.Number {
-	if c.kind == metric.Float64NumberKind {
-		return metric.NewFloat64Number(f)
-	}
-	return metric.NewInt64Number(int64(f))
-}
-
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) Checkpoint(_ *metric.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
-	c.checkpoint = c.current
-	c.current = replace
+	c.checkpoint.sketch = c.current.sketch
+	c.current.sketch = replace
 	c.lock.Unlock()
 }
 
@@ -124,7 +96,7 @@ func (c *Aggregator) Checkpoint(_ *metric.Descriptor) {
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.current.Add(number.CoerceToFloat64(desc.NumberKind()))
+	c.current.sketch.Add(number.CoerceToFloat64(desc.NumberKind()))
 	return nil
 }
 
@@ -135,10 +107,63 @@ func (c *Aggregator) Merge(oa export.Aggregator, d *metric.Descriptor) error {
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 
-	c.current.Merge(o.checkpoint)
+	c.current.sketch.Merge(o.checkpoint.sketch)
 	return nil
 }
 
 func (c *Aggregator) Swap() {
 	c.current, c.checkpoint = c.checkpoint, c.current
+}
+
+func (c *Aggregator) CheckpointedValue() aggregation.Aggregation {
+	return &c.checkpoint
+}
+
+func (c *Aggregator) AccumulatedValue() aggregation.Aggregation {
+	return &c.current
+}
+
+func (a *Aggregator) toNumber(f float64) metric.Number {
+	if a.kind == metric.Float64NumberKind {
+		return metric.NewFloat64Number(f)
+	}
+	return metric.NewInt64Number(int64(f))
+}
+
+// Kind returns aggregation.SketchKind
+func (s *sketchValue) Kind() aggregation.Kind {
+	return aggregation.SketchKind
+}
+
+// Sum returns the sum of values in the checkpoint.
+func (s *sketchValue) Sum() (metric.Number, error) {
+	return s.self.toNumber(s.sketch.Sum()), nil
+}
+
+// Count returns the number of values in the checkpoint.
+func (s *sketchValue) Count() (int64, error) {
+	return s.sketch.Count(), nil
+}
+
+// Max returns the maximum value in the checkpoint.
+func (s *sketchValue) Max() (metric.Number, error) {
+	return s.Quantile(1)
+}
+
+// Min returns the minimum value in the checkpoint.
+func (s *sketchValue) Min() (metric.Number, error) {
+	return s.Quantile(0)
+}
+
+// Quantile returns the estimated quantile of data in the checkpoint.
+// It is an error if `q` is less than 0 or greated than 1.
+func (s *sketchValue) Quantile(q float64) (metric.Number, error) {
+	if s.sketch.Count() == 0 {
+		return metric.Number(0), aggregation.ErrNoData
+	}
+	f := s.sketch.Quantile(q)
+	if math.IsNaN(f) {
+		return metric.Number(0), aggregation.ErrInvalidQuantile
+	}
+	return s.self.toNumber(f), nil
 }

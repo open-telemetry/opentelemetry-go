@@ -48,7 +48,7 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Kind returns aggregation.Sum.
+// Kind returns aggregation.SumKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
@@ -93,7 +93,7 @@ func (s *sumValue) Sum() (metric.Number, error) {
 	return s.Number, nil
 }
 
-// Kind returns aggregation.Sum.
+// Kind returns aggregation.SumKind.
 func (s *sumValue) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
