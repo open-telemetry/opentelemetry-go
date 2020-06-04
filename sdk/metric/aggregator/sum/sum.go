@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 // Aggregator aggregates counter events.
@@ -34,10 +34,10 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.Sum = &Aggregator{}
+var _ aggregation.Sum = &Aggregator{}
 
 // New returns a new counter aggregator implemented by atomic
-// operations.  This aggregator implements the aggregator.Sum
+// operations.  This aggregator implements the aggregation.Sum
 // export interface.
 func New() *Aggregator {
 	return &Aggregator{}
@@ -65,7 +65,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregation.NewInconsistentMergeError(c, oa)
 	}
 	c.current.AddNumber(desc.NumberKind(), o.checkpoint)
 	return nil

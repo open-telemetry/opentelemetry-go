@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -162,10 +162,10 @@ func (o Output) AddAccum(accum export.Accumulation) error {
 	key := fmt.Sprint(accum.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := accum.Aggregator().(aggregator.Sum); ok {
+	if s, ok := accum.Aggregator().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(accum.Descriptor().NumberKind())
-	} else if l, ok := accum.Aggregator().(aggregator.LastValue); ok {
+	} else if l, ok := accum.Aggregator().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(accum.Descriptor().NumberKind())
 	} else {
@@ -182,10 +182,10 @@ func (o Output) AddRecord(record export.Record) error {
 	key := fmt.Sprint(record.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := record.Aggregation().(aggregator.Sum); ok {
+	if s, ok := record.Aggregation().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(record.Descriptor().NumberKind())
-	} else if l, ok := record.Aggregation().(aggregator.LastValue); ok {
+	} else if l, ok := record.Aggregation().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(record.Descriptor().NumberKind())
 	} else {

@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 const Magnitude = 1000
@@ -156,7 +156,7 @@ func CheckedUpdate(t *testing.T, agg export.Aggregator, number metric.Number, de
 	// Note: Aggregator tests are written assuming that the SDK
 	// has performed the RangeTest. Therefore we skip errors that
 	// would have been detected by the RangeTest.
-	err := aggregator.RangeTest(number, descriptor)
+	err := aggregation.RangeTest(number, descriptor)
 	if err != nil {
 		return
 	}

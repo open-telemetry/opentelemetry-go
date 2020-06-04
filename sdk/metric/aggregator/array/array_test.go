@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -183,15 +183,15 @@ func TestArrayErrors(t *testing.T) {
 
 		_, err := agg.Max()
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrNoData)
+		require.Equal(t, err, aggregation.ErrNoData)
 
 		_, err = agg.Min()
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrNoData)
+		require.Equal(t, err, aggregation.ErrNoData)
 
 		_, err = agg.Quantile(0.1)
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrNoData)
+		require.Equal(t, err, aggregation.ErrNoData)
 
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -212,11 +212,11 @@ func TestArrayErrors(t *testing.T) {
 
 		_, err = agg.Quantile(-0.0001)
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrInvalidQuantile)
+		require.Equal(t, err, aggregation.ErrInvalidQuantile)
 
 		_, err = agg.Quantile(1.0001)
 		require.Error(t, err)
-		require.Equal(t, err, aggregator.ErrInvalidQuantile)
+		require.Equal(t, err, aggregation.ErrInvalidQuantile)
 	})
 }
 

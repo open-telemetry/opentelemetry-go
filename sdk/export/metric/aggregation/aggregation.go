@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 )
 
 // These interfaces describe the various ways to access state from an
-// Aggregator.
+// Aggregation.
 
 type (
 	// Sum returns an aggregated sum.
