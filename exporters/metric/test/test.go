@@ -78,7 +78,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		return record.Aggregator, false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg, time.Time{}, time.Time{})
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg.CheckpointedValue(), time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = ckptRecord{
 		Record:     rec,

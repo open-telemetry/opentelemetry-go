@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/sdk/export/metric/aggregation"
 )
 
 func TestStressInt64Histogram(t *testing.T) {

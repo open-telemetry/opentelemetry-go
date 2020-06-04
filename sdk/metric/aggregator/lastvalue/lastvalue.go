@@ -71,11 +71,6 @@ func New() *Aggregator {
 	}
 }
 
-// Kind returns aggregation.LastValueKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.LastValueKind
-}
-
 // Checkpoint atomically saves the current value.
 func (g *Aggregator) Checkpoint(*metric.Descriptor) {
 	g.checkpoint.pointer = atomic.LoadPointer(&g.current.pointer)

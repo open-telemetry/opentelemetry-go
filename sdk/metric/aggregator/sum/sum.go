@@ -48,11 +48,6 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
-// Kind returns aggregation.SumKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.SumKind
-}
-
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
 func (c *Aggregator) Checkpoint(_ *metric.Descriptor) {

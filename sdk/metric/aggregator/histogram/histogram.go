@@ -82,11 +82,6 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	return agg
 }
 
-// Kind returns aggregation.HistogramKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.HistogramKind
-}
-
 // Checkpoint saves the current state and resets the current state to
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each

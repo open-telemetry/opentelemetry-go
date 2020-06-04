@@ -275,9 +275,9 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			key.descriptor,
 			value.labels,
 			value.resource,
-			value.aggregator, // @@@
-			b.intervalStart,  // @@@
-			b.intervalEnd,    // @@@
+			value.aggregator.CheckpointedValue(), // @@@
+			b.intervalStart,                      // @@@
+			b.intervalEnd,                        // @@@
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}

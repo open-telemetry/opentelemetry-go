@@ -60,11 +60,6 @@ func New(desc *metric.Descriptor) *Aggregator {
 	return agg
 }
 
-// Kind returns aggregation.MinMaxSumCountKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.MinMaxSumCountKind
-}
-
 // Checkpoint saves the current state and resets the current state to
 // the empty set.
 func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {

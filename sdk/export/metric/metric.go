@@ -129,9 +129,6 @@ type Aggregator interface {
 	// Swap exchanges the current and checkpointed state.
 	Swap()
 
-	// Kind returns the kind of aggregation.
-	Kind() aggregation.Kind
-
 	// AccumulatedValue returns the aggregation from the beginning
 	// of the collection interval.  It is the caller's
 	// responsibility (likely an Integrator) to ensure that the
@@ -198,37 +195,37 @@ type CheckpointSet interface {
 // Record contains the exported data for a single metric instrument
 // and label set.
 type Record struct {
-	descriptor *metric.Descriptor
-	labels     *label.Set
-	resource   *resource.Resource
-	aggregator Aggregator
-	start      time.Time
-	end        time.Time
+	descriptor  *metric.Descriptor
+	labels      *label.Set
+	resource    *resource.Resource
+	aggregation aggregation.Aggregation
+	start       time.Time
+	end         time.Time
 }
 
 // NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator, start, end time.Time) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
-		descriptor: descriptor,
-		labels:     labels,
-		resource:   resource,
-		aggregator: aggregator, // @@@ HERE YOU ARE
-		start:      start,
-		end:        end,
+		descriptor:  descriptor,
+		labels:      labels,
+		resource:    resource,
+		aggregation: aggregation,
+		start:       start,
+		end:         end,
 	}
 }
 
 // Aggregation returns the aggregation, an interface to the record and
 // its aggregator, dependent on the kind of both the input and exporter.
 func (r Record) Aggregation() aggregation.Aggregation {
-	return r
+	return r.aggregation
 }
 
 // Kind implements aggregation.Aggregation.
 func (r Record) Kind() aggregation.Kind {
-	return r.aggregator.Kind()
+	return r.aggregation.Kind()
 }
 
 // Start is the start time of the interval covered by this aggregation.
