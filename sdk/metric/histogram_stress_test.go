@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/sdk/export/metric/aggregation"
 )
 
 func TestStressInt64Histogram(t *testing.T) {
@@ -46,8 +47,8 @@ func TestStressInt64Histogram(t *testing.T) {
 	for time.Since(startTime) < time.Second {
 		h.Checkpoint(&desc)
 
-		b, _ := h.Histogram()
-		c, _ := h.Count()
+		b, _ := h.CheckpointedValue().(aggregation.Histogram).Histogram()
+		c, _ := h.CheckpointedValue().(aggregation.Count).Count()
 
 		var realCount int64
 		for _, c := range b.Counts {

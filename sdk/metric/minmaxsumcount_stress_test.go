@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/sdk/export/metric/aggregation"
 )
 
 func TestStressInt64MinMaxSumCount(t *testing.T) {
@@ -48,10 +49,10 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 	for time.Since(startTime) < time.Second {
 		mmsc.Checkpoint(&desc)
 
-		s, _ := mmsc.Sum()
-		c, _ := mmsc.Count()
-		min, e1 := mmsc.Min()
-		max, e2 := mmsc.Max()
+		s, _ := mmsc.CheckpointedValue().(aggregation.Sum).Sum()
+		c, _ := mmsc.CheckpointedValue().(aggregation.Count).Count()
+		min, e1 := mmsc.CheckpointedValue().(aggregation.Min).Min()
+		max, e2 := mmsc.CheckpointedValue().(aggregation.Max).Max()
 		if c == 0 && (e1 == nil || e2 == nil || s.AsInt64() != 0) {
 			t.Fail()
 		}
