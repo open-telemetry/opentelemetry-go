@@ -27,8 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// @@@ Need a systematic test of all the instruments / aggregators.
-
 type (
 	Integrator struct {
 		kind export.ExporterKind
@@ -265,18 +263,44 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			}
 		}
 
-		value.lock.Unlock()
+		var agg aggregation.Aggregation
+		var start time.Time
 
-		// @@@ kind, timestamp correctness
-		_ = kind
+		switch kind {
+		case export.PassThroughExporter:
+			// No state is required, pass through the checkpointed value.
+			agg = value.aggregator.CheckpointedValue()
+
+			if key.descriptor.MetricKind().Cumulative() {
+				start = b.processStart
+			} else {
+				start = b.intervalStart
+			}
+		case export.CumulativeExporter:
+			// If stateful, the sum has been computed.  If stateless, the
+			// input was already cumulative.  Either way, use the checkpointed
+			// value:
+			agg = value.aggregator.CheckpointedValue()
+			start = b.processStart
+
+		case export.DeltaExporter:
+			if value.stateful {
+				agg = value.aggregator.AccumulatedValue()
+			} else {
+				agg = value.aggregator.CheckpointedValue()
+			}
+			start = b.intervalStart
+		}
+
+		value.lock.Unlock()
 
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
 			value.resource,
-			value.aggregator.CheckpointedValue(), // @@@
-			b.intervalStart,                      // @@@
-			b.intervalEnd,                        // @@@
+			agg,
+			start,
+			b.intervalEnd,
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}

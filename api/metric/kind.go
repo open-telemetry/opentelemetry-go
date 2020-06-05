@@ -55,3 +55,13 @@ func (k Kind) Synchronous() bool {
 func (k Kind) Asynchronous() bool {
 	return !k.Synchronous()
 }
+
+// Cumulative returns whether this instruments inputs are measured
+// from the start of the process.
+func (k Kind) Cumulative() bool {
+	switch k {
+	case SumObserverKind, UpDownSumObserverKind:
+		return true
+	}
+	return false
+}
