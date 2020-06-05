@@ -18,13 +18,12 @@ import (
 	"context"
 	"encoding/binary"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -47,6 +46,8 @@ type options struct {
 	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
 	// registered as Global Trace Provider
 	RegisterGlobal bool
+
+	Disabled bool
 }
 
 // WithProcess sets the process with the information about the exporting process.
@@ -78,17 +79,28 @@ func RegisterAsGlobal() Option {
 	}
 }
 
+func WithDisabled(disabled bool) Option {
+	return func(o *options) {
+		o.Disabled = disabled
+	}
+}
+
 // NewRawExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
-	uploader, err := endpointOption()
-	if err != nil {
-		return nil, err
-	}
-
 	o := options{}
 	for _, opt := range opts {
 		opt(&o)
+	}
+	if o.Disabled {
+		return &Exporter{
+			o: o,
+		}, nil
+	}
+
+	uploader, err := endpointOption()
+	if err != nil {
+		return nil, err
 	}
 
 	service := o.Process.ServiceName
@@ -171,6 +183,9 @@ var _ export.SpanSyncer = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(ctx context.Context, d *export.SpanData) {
+	if e.o.Disabled {
+		return
+	}
 	_ = e.bundler.Add(spanDataToThrift(d), 1)
 	// TODO(jbd): Handle oversized bundlers.
 }
@@ -328,10 +343,16 @@ func getBoolTag(k string, b bool) *gen.Tag {
 //
 // This is useful if your program is ending and you do not want to lose recent spans.
 func (e *Exporter) Flush() {
+	if e.o.Disabled {
+		return
+	}
 	e.bundler.Flush()
 }
 
 func (e *Exporter) upload(spans []*gen.Span) error {
+	if e.o.Disabled {
+		return nil
+	}
 	batch := &gen.Batch{
 		Spans:   spans,
 		Process: e.process,
