@@ -144,6 +144,11 @@ type Aggregator interface {
 	CheckpointedValue() aggregation.Aggregation
 }
 
+type Subtractor interface {
+	// Subtract is the pposite of Merge.  Not mandatory.
+	Subtract(Aggregator, *metric.Descriptor) error
+}
+
 // Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.

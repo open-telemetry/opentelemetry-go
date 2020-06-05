@@ -244,19 +244,23 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 
 		if firstTime {
 			if value.stateful {
-				if mkind.Adding() && mkind.Synchronous() {
-					// Accumulated value in current; last value in checkpoint.
+				var err error
+				if mkind.Cumulative() {
 					value.aggregator.Swap()
-					// Last value in current, accumulated value in checkpoint:
-					// add into current.
-					err := value.aggregator.Merge(value.aggregator, key.descriptor)
-					if err != nil {
-						return err
+					if subt, ok := value.aggregator.(export.Subtractor); ok {
+						err = subt.Subtract(value.aggregator, key.descriptor)
+					} else {
+						err = fmt.Errorf("could not subtract")
 					}
+				} else {
+					value.aggregator.Swap()
+					err = value.aggregator.Merge(value.aggregator, key.descriptor)
+					value.aggregator.Swap()
+				}
+				if err != nil {
+					return err
 				}
 
-				// Place up-to-date value in checkpoint, last value in current.
-				value.aggregator.Swap()
 			} else {
 				// Checkpoint the accumulated value.
 				if value.aggOwned {
@@ -274,7 +278,7 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			// No state is required, pass through the checkpointed value.
 			agg = value.aggregator.CheckpointedValue()
 
-			if key.descriptor.MetricKind().Cumulative() {
+			if mkind.Cumulative() {
 				start = b.processStart
 			} else {
 				start = b.intervalStart
@@ -290,15 +294,7 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 		case export.DeltaExporter:
 
 			if mkind.Cumulative() {
-				// Compute the difference. @@@ Nope
-				former := value.aggregator.AccumulatedValue()
-				current := value.aggregator.CheckpointedValue()
-
-				if differ, ok := current.(aggregation.Differencer); ok {
-					agg = differ.Subtract(former)
-				} else {
-					return fmt.Errorf("aggregator cannot subtract")
-				}
+				agg = value.aggregator.AccumulatedValue()
 			} else {
 				agg = value.aggregator.CheckpointedValue()
 			}
