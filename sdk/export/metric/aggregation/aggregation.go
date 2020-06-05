@@ -31,6 +31,13 @@ type (
 		Kind() Kind
 	}
 
+	// Subtracter is an interface allowing Aggregations to support
+	// computing the difference between measurements.
+	// @@@ Nope
+	Differencer interface {
+		Subtract(Aggregation) Aggregation
+	}
+
 	// Sum returns an aggregated sum.
 	Sum interface {
 		Sum() (metric.Number, error)

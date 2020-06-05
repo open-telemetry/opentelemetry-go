@@ -56,12 +56,26 @@ func (k Kind) Asynchronous() bool {
 	return !k.Synchronous()
 }
 
-// Cumulative returns whether this instruments inputs are measured
-// from the start of the process.
-func (k Kind) Cumulative() bool {
+func (k Kind) Adding() bool {
 	switch k {
-	case SumObserverKind, UpDownSumObserverKind:
+	case CounterKind, UpDownCounterKind, SumObserverKind, UpDownSumObserverKind:
 		return true
 	}
 	return false
+}
+
+func (k Kind) Grouping() bool {
+	return !k.Adding()
+}
+
+func (k Kind) Monotonic() bool {
+	switch k {
+	case CounterKind, SumObserverKind:
+		return true
+	}
+	return false
+}
+
+func (k Kind) Cumulative() bool {
+	return k.Adding() && k.Asynchronous()
 }

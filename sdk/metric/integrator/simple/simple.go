@@ -231,6 +231,7 @@ func (b *Integrator) FinishedCollection() {
 
 func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) error {
 	for key, value := range b.values {
+		mkind := key.descriptor.MetricKind()
 		value.lock.Lock()
 
 		if !value.stateful && value.updated != b.sequence {
@@ -238,24 +239,26 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			continue
 		}
 
-		if value.checkpointed != b.sequence {
-			value.checkpointed = b.sequence
-			if value.stateful {
-				// Accumulated value in current; last value in checkpoint.
-				value.aggregator.Swap()
+		firstTime := value.checkpointed != b.sequence
+		value.checkpointed = b.sequence
 
-				// Last value in current, accumulated value in checkpoint:
-				// add into current.
-				err := value.aggregator.Merge(value.aggregator, key.descriptor)
-				if err != nil {
-					return err
+		if firstTime {
+			if value.stateful {
+				if mkind.Adding() && mkind.Synchronous() {
+					// Accumulated value in current; last value in checkpoint.
+					value.aggregator.Swap()
+					// Last value in current, accumulated value in checkpoint:
+					// add into current.
+					err := value.aggregator.Merge(value.aggregator, key.descriptor)
+					if err != nil {
+						return err
+					}
 				}
 
-				// Place up-to-date value in checkpoint, accumulated value in current.
+				// Place up-to-date value in checkpoint, last value in current.
 				value.aggregator.Swap()
 			} else {
-				// In this case, we'll the accumulated value (otherwise
-				// we'd have state).
+				// Checkpoint the accumulated value.
 				if value.aggOwned {
 					value.aggregator.Checkpoint(key.descriptor)
 					value.aggOwned = false
@@ -276,6 +279,7 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			} else {
 				start = b.intervalStart
 			}
+
 		case export.CumulativeExporter:
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
@@ -284,8 +288,17 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			start = b.processStart
 
 		case export.DeltaExporter:
-			if value.stateful {
-				agg = value.aggregator.AccumulatedValue()
+
+			if mkind.Cumulative() {
+				// Compute the difference. @@@ Nope
+				former := value.aggregator.AccumulatedValue()
+				current := value.aggregator.CheckpointedValue()
+
+				if differ, ok := current.(aggregation.Differencer); ok {
+					agg = differ.Subtract(former)
+				} else {
+					return fmt.Errorf("aggregator cannot subtract")
+				}
 			} else {
 				agg = value.aggregator.CheckpointedValue()
 			}
