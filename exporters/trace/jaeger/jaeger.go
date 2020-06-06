@@ -89,6 +89,7 @@ func WithDisabled(disabled bool) Option {
 // the collected spans to Jaeger.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
 	o := options{}
+	opts = append(opts, WithDisabledFromEnv(), WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}

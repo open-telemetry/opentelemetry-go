@@ -123,7 +123,7 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 		username          = "user"
 		password          = "password"
 		serviceName       = "test-service"
-		disabled          = "disable"
+		disabled          = "false"
 		tags              = "key=value"
 	)
 
@@ -145,14 +145,64 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
 		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
+		WithDisabled(true),
 		WithDisabledFromEnv(),
 		WithProcessFromEnv(),
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, exp.o.Disabled, false)
+	assert.Equal(t, false, exp.o.Disabled)
 	assert.EqualValues(t, serviceName, exp.process.ServiceName)
 	assert.Len(t, exp.process.Tags, 1)
+
+	require.IsType(t, &collectorUploader{}, exp.uploader)
+	uploader := exp.uploader.(*collectorUploader)
+	assert.Equal(t, collectorEndpoint, uploader.endpoint)
+	assert.Equal(t, username, uploader.username)
+	assert.Equal(t, password, uploader.password)
+}
+
+func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
+	const (
+		collectorEndpoint = "http://localhost"
+		username          = "user"
+		password          = "password"
+		serviceName       = "test-service"
+		disabled          = "false"
+		tags              = "key=value"
+	)
+
+	require.NoError(t, os.Setenv(envEndpoint, collectorEndpoint))
+	require.NoError(t, os.Setenv(envUser, username))
+	require.NoError(t, os.Setenv(envPassword, password))
+	require.NoError(t, os.Setenv(envDisabled, disabled))
+	require.NoError(t, os.Setenv(envServiceName, serviceName))
+	require.NoError(t, os.Setenv(envTags, tags))
+	defer func() {
+		require.NoError(t, os.Unsetenv(envEndpoint))
+		require.NoError(t, os.Unsetenv(envUser))
+		require.NoError(t, os.Unsetenv(envPassword))
+		require.NoError(t, os.Unsetenv(envDisabled))
+		require.NoError(t, os.Unsetenv(envServiceName))
+		require.NoError(t, os.Unsetenv(envTags))
+	}()
+
+	// Create Jaeger Exporter with environment variables
+	exp, err := NewRawExporter(
+		WithCollectorEndpoint(""),
+		WithDisabled(true),
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, false, exp.o.Disabled)
+	assert.EqualValues(t, serviceName, exp.process.ServiceName)
+	assert.Len(t, exp.process.Tags, 1)
+
+	require.IsType(t, &collectorUploader{}, exp.uploader)
+	uploader := exp.uploader.(*collectorUploader)
+	assert.Equal(t, collectorEndpoint, uploader.endpoint)
+	assert.Equal(t, username, uploader.username)
+	assert.Equal(t, password, uploader.password)
 }
 
 func TestCollectorEndpointFromEnv(t *testing.T) {
