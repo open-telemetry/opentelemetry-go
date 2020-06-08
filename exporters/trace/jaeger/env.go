@@ -103,8 +103,8 @@ func WithProcessFromEnv() Option {
 // is an environment variable and `defaultValue` is the value to use in case the env var is not set
 func parseTags(sTags string) []kv.KeyValue {
 	pairs := strings.Split(sTags, ",")
-	tags := make([]kv.KeyValue, 0)
-	for _, p := range pairs {
+	tags := make([]kv.KeyValue, len(pairs))
+	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
 
@@ -117,7 +117,7 @@ func parseTags(sTags string) []kv.KeyValue {
 			}
 		}
 
-		tags = append(tags, parseKeyValue(k, v))
+		tags[i] = parseKeyValue(k, v)
 	}
 
 	return tags
