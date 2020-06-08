@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=ExporterKind
+
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (

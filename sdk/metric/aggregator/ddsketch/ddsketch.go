@@ -50,6 +50,9 @@ var _ aggregation.Distribution = &sketchValue{}
 
 // New returns a new DDSketch aggregation.
 func New(desc *metric.Descriptor, cfg *Config) *Aggregator {
+	if cfg == nil {
+		cfg = NewDefaultConfig()
+	}
 	agg := &Aggregator{
 		cfg:  cfg,
 		kind: desc.NumberKind(),

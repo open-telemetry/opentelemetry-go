@@ -57,8 +57,7 @@ type (
 
 		// updated indicates the last sequence number when this value had
 		// Process() called by an accumulator.
-		updated      int64
-		checkpointed int64
+		updated int64
 
 		// stateful indicates that the last-value of the aggregation (since
 		// process start time) is being maintained.
@@ -77,8 +76,12 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		sequence      int64
-		processing    int64
+		sequence   int64
+		processSeq int64
+
+		foreachLock sync.Mutex
+		foreachSeq  int64
+
 		processStart  time.Time
 		intervalStart time.Time
 		intervalEnd   time.Time
@@ -98,7 +101,8 @@ func New(selector export.AggregationSelector, kind export.ExporterKind) *Integra
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
 			intervalStart: now,
-			processing:    -1,
+			processSeq:    -1,
+			foreachSeq:    -1,
 		},
 	}
 }
@@ -118,20 +122,22 @@ func (b *Integrator) cloneReplace(value *stateValue, replace export.Aggregator, 
 	if !desc.MetricKind().Asynchronous() {
 		return fmt.Errorf("inconsistent integrator state")
 	}
-	value.aggregator.Checkpoint(desc)
+	// This discards the current state.
 	cstate, err := b.cloneCheckpoint(value.aggregator, desc)
 	if err != nil {
 		return err
 	}
 	value.aggregator = cstate
+	value.aggregator.Checkpoint(desc)
 
+	// This replaces the current state.
 	return cstate.Merge(replace, desc)
 }
 
 func (b *Integrator) Process(accum export.Accumulation) error {
-	if b.processing != b.sequence {
+	if b.processSeq != b.sequence {
 		// This is the beginning of the end of the interval.
-		b.processing = b.sequence
+		b.processSeq = b.sequence
 		b.state.intervalEnd = time.Now()
 	}
 
@@ -199,13 +205,12 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 
 	// There was no existing record.
 	newValue := &stateValue{
-		aggregator:   agg,
-		labels:       accum.Labels(),
-		resource:     accum.Resource(),
-		stateful:     stateful,
-		checkpointed: -1,
-		updated:      b.state.sequence,
-		aggOwned:     false,
+		aggregator: agg,
+		labels:     accum.Labels(),
+		resource:   accum.Resource(),
+		stateful:   stateful,
+		updated:    b.state.sequence,
+		aggOwned:   false,
 	}
 	if stateful {
 		var err error
@@ -224,12 +229,28 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 }
 
 func (b *Integrator) FinishedCollection() {
+	b.foreachLock.Lock()
+	needForeach := b.foreachSeq != b.sequence
+	b.foreachLock.Unlock()
+
+	if needForeach {
+		// Note: Users are not expected to skip ForEach, if they do they
+		// can lose errors here.
+		_ = b.ForEach(b.kind, func(_ export.Record) error { return nil })
+
+	}
+
 	b.state.sequence++
 	b.state.intervalStart = b.state.intervalEnd
 	b.state.intervalEnd = time.Time{}
 }
 
 func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) error {
+	b.foreachLock.Lock()
+	firstTime := b.foreachSeq != b.sequence
+	b.foreachSeq = b.sequence
+	b.foreachLock.Unlock()
+
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
 		value.lock.Lock()
@@ -239,9 +260,6 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 			continue
 		}
 
-		firstTime := value.checkpointed != b.sequence
-		value.checkpointed = b.sequence
-
 		if firstTime {
 			if value.stateful {
 				var err error
@@ -250,7 +268,7 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 					if subt, ok := value.aggregator.(export.Subtractor); ok {
 						err = subt.Subtract(value.aggregator, key.descriptor)
 					} else {
-						err = fmt.Errorf("could not subtract")
+						err = aggregation.ErrNoSubtraction
 					}
 				} else {
 					value.aggregator.Swap()
@@ -258,6 +276,7 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 					value.aggregator.Swap()
 				}
 				if err != nil {
+					value.lock.Unlock()
 					return err
 				}
 

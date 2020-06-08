@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -154,28 +155,22 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	return cagg
 }
 
-// AddAccum adds a name/label-encoding entry with the lastValue or counter
-// value to the output map.
+// AddAccum is a helper for testing the export.Accumulation output by
+// an Accumulator.  value to the output map.
 func (o Output) AddAccum(accum export.Accumulation) error {
-	encoded := accum.Labels().Encoded(o.labelEncoder)
-	rencoded := accum.Resource().Encoded(o.labelEncoder)
-	key := fmt.Sprint(accum.Descriptor().Name(), "/", encoded, "/", rencoded)
-	var value float64
-
-	if s, ok := accum.Aggregator().CheckpointedValue().(aggregation.Sum); ok {
-		sum, _ := s.Sum()
-		value = sum.CoerceToFloat64(accum.Descriptor().NumberKind())
-	} else if l, ok := accum.Aggregator().CheckpointedValue().(aggregation.LastValue); ok {
-		last, _, _ := l.LastValue()
-		value = last.CoerceToFloat64(accum.Descriptor().NumberKind())
-	} else {
-		panic(fmt.Sprintf("Unhandled aggregator type: %T", accum.Aggregator()))
-	}
-	o.Map[key] = value
-	return nil
+	return o.AddRecord(
+		export.NewRecord(
+			accum.Descriptor(),
+			accum.Labels(),
+			accum.Resource(),
+			accum.Aggregator().CheckpointedValue(),
+			time.Time{},
+			time.Time{},
+		),
+	)
 }
 
-// AddRecord @@@ is like AddRecord ...
+// AddRecord is a helper for testing the export.Records output by an Integrator.
 func (o Output) AddRecord(record export.Record) error {
 	encoded := record.Labels().Encoded(o.labelEncoder)
 	rencoded := record.Resource().Encoded(o.labelEncoder)

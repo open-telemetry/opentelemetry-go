@@ -39,6 +39,7 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
+var _ export.Subtractor = &Aggregator{}
 var _ aggregation.Sum = &sumValue{}
 
 // New returns a new counter aggregator implemented by atomic
@@ -67,6 +68,17 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentMergeError(c, oa)
 	}
 	c.current.AddNumber(desc.NumberKind(), o.checkpoint.Number)
+	return nil
+}
+
+func (c *Aggregator) Subtract(oa export.Aggregator, desc *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentMergeError(c, oa)
+	}
+	tmp := c.current
+	c.current = o.checkpoint
+	c.current.AddNumber(desc.NumberKind(), metric.ChangeSign(desc.NumberKind(), tmp.Number))
 	return nil
 }
 

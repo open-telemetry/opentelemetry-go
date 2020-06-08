@@ -631,6 +631,18 @@ func (n *Number) AsInterface(kind NumberKind) interface{} {
 	}
 }
 
+// - sign change
+
+func ChangeSign(kind NumberKind, nn Number) Number {
+	switch kind {
+	case Int64NumberKind:
+		return NewInt64Number(-nn.AsInt64())
+	case Float64NumberKind:
+		return NewFloat64Number(-nn.AsFloat64())
+	}
+	return nn
+}
+
 // - private stuff
 
 func (n *Number) compareWithZero(kind NumberKind) int {
