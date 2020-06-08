@@ -23,10 +23,17 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
 func Test_parseTags(t *testing.T) {
-	require.NoError(t, os.Setenv("existing", "not-default"))
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		"existing": "not-default",
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
 
 	tags := "key=value,k1=${nonExisting:default}, k2=${withSpace:default},k3=${existing:default},k4=true,k5=42,k6=-1.2"
 	ts := parseTags(tags)
@@ -127,19 +134,17 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 		tags              = "key=value"
 	)
 
-	require.NoError(t, os.Setenv(envEndpoint, collectorEndpoint))
-	require.NoError(t, os.Setenv(envUser, username))
-	require.NoError(t, os.Setenv(envPassword, password))
-	require.NoError(t, os.Setenv(envDisabled, disabled))
-	require.NoError(t, os.Setenv(envServiceName, serviceName))
-	require.NoError(t, os.Setenv(envTags, tags))
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envEndpoint:    collectorEndpoint,
+		envUser:        username,
+		envPassword:    password,
+		envDisabled:    disabled,
+		envServiceName: serviceName,
+		envTags:        tags,
+	})
+	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, os.Unsetenv(envEndpoint))
-		require.NoError(t, os.Unsetenv(envUser))
-		require.NoError(t, os.Unsetenv(envPassword))
-		require.NoError(t, os.Unsetenv(envDisabled))
-		require.NoError(t, os.Unsetenv(envServiceName))
-		require.NoError(t, os.Unsetenv(envTags))
+		require.NoError(t, envStore.Restore())
 	}()
 
 	// Create Jaeger Exporter with environment variables
@@ -172,24 +177,22 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 		tags              = "key=value"
 	)
 
-	require.NoError(t, os.Setenv(envEndpoint, collectorEndpoint))
-	require.NoError(t, os.Setenv(envUser, username))
-	require.NoError(t, os.Setenv(envPassword, password))
-	require.NoError(t, os.Setenv(envDisabled, disabled))
-	require.NoError(t, os.Setenv(envServiceName, serviceName))
-	require.NoError(t, os.Setenv(envTags, tags))
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envEndpoint:    collectorEndpoint,
+		envUser:        username,
+		envPassword:    password,
+		envDisabled:    disabled,
+		envServiceName: serviceName,
+		envTags:        tags,
+	})
+	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, os.Unsetenv(envEndpoint))
-		require.NoError(t, os.Unsetenv(envUser))
-		require.NoError(t, os.Unsetenv(envPassword))
-		require.NoError(t, os.Unsetenv(envDisabled))
-		require.NoError(t, os.Unsetenv(envServiceName))
-		require.NoError(t, os.Unsetenv(envTags))
+		require.NoError(t, envStore.Restore())
 	}()
 
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
-		WithCollectorEndpoint(""),
+		WithCollectorEndpoint("should be overwritten"),
 		WithDisabled(true),
 	)
 
@@ -210,9 +213,12 @@ func TestCollectorEndpointFromEnv(t *testing.T) {
 		collectorEndpoint = "http://localhost"
 	)
 
-	require.NoError(t, os.Setenv(envEndpoint, collectorEndpoint))
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envEndpoint: collectorEndpoint,
+	})
+	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, os.Unsetenv(envEndpoint))
+		require.NoError(t, envStore.Restore())
 	}()
 
 	assert.Equal(t, collectorEndpoint, CollectorEndpointFromEnv())
@@ -254,6 +260,12 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 		},
 	}
 
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envUser)
+	envStore.Record(envPassword)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envUser, tc.envUsername))
@@ -265,9 +277,6 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 			assert.Equal(t, tc.expectedCollectorEndpointOptions, tc.collectorEndpointOptions)
 		})
 	}
-
-	require.NoError(t, os.Unsetenv(envUser))
-	require.NoError(t, os.Unsetenv(envPassword))
 }
 
 func TestWithDisabledFromEnv(t *testing.T) {
@@ -291,6 +300,11 @@ func TestWithDisabledFromEnv(t *testing.T) {
 		},
 	}
 
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envDisabled)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envDisabled, tc.env))
@@ -301,8 +315,6 @@ func TestWithDisabledFromEnv(t *testing.T) {
 			assert.Equal(t, tc.expectedOptions, tc.options)
 		})
 	}
-
-	require.NoError(t, os.Unsetenv(envDisabled))
 }
 
 func TestProcessFromEnv(t *testing.T) {
@@ -311,11 +323,13 @@ func TestProcessFromEnv(t *testing.T) {
 		tags        = "key=value,key2=123"
 	)
 
-	require.NoError(t, os.Setenv(envServiceName, serviceName))
-	require.NoError(t, os.Setenv(envTags, tags))
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envServiceName: serviceName,
+		envTags:        tags,
+	})
+	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, os.Unsetenv(envServiceName))
-		require.NoError(t, os.Unsetenv(envTags))
+		require.NoError(t, envStore.Restore())
 	}()
 
 	p := ProcessFromEnv()
@@ -381,6 +395,12 @@ func TestWithProcessFromEnv(t *testing.T) {
 		},
 	}
 
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envServiceName)
+	envStore.Record(envTags)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envServiceName, tc.envServiceName))
@@ -392,7 +412,4 @@ func TestWithProcessFromEnv(t *testing.T) {
 			assert.Equal(t, tc.expectedOptions, tc.options)
 		})
 	}
-
-	require.NoError(t, os.Unsetenv(envServiceName))
-	require.NoError(t, os.Unsetenv(envTags))
 }
