@@ -124,8 +124,10 @@ func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.
 	}
 }
 
+// ForEach exposes the records in this checkpoint. Note that this test
+// does not make use of the ExporterKind argument: use a real Integrator
+// for such testing.
 func (p *CheckpointSet) ForEach(_ export.ExporterKind, f func(export.Record) error) error {
-	// @@@ NOt used KIND
 	for _, r := range p.updates {
 		if err := f(r); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err

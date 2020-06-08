@@ -18,9 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 )
@@ -41,11 +41,9 @@ type AsyncCollector interface {
 type AsyncInstrumentState struct {
 	lock sync.Mutex
 
-	// errorHandler will be called in case of an invalid
-	// metric.AsyncRunner, i.e., one that does not implement
-	// either the single-or batch-runner interfaces.
-	errorHandler func(error)
-	errorOnce    sync.Once
+	// errorOnce will use the global.Handler to report an error
+	// once in case of an invalid runner attempting to run.
+	errorOnce sync.Once
 
 	// runnerMap keeps the set of runners that will run each
 	// collection interval.  Singletons are entered with a real
@@ -79,20 +77,9 @@ type asyncRunnerPair struct {
 // NewAsyncInstrumentState returns a new *AsyncInstrumentState, for
 // use by MeterImpl to manage running the set of observer callbacks in
 // the correct order.
-//
-// errorHandler is used to print an error condition.  If errorHandler
-// nil, the default error handler will be used that prints to
-// os.Stderr.  Only the first error is passed to the handler, after
-// which errors are skipped.
-func NewAsyncInstrumentState(errorHandler func(error)) *AsyncInstrumentState {
-	if errorHandler == nil {
-		errorHandler = func(err error) {
-			fmt.Fprintln(os.Stderr, "Metrics Async state error:", err)
-		}
-	}
+func NewAsyncInstrumentState() *AsyncInstrumentState {
 	return &AsyncInstrumentState{
-		errorHandler: errorHandler,
-		runnerMap:    map[asyncRunnerPair]struct{}{},
+		runnerMap: map[asyncRunnerPair]struct{}{},
 	}
 }
 
@@ -155,7 +142,7 @@ func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector
 		}
 
 		a.errorOnce.Do(func() {
-			a.errorHandler(fmt.Errorf("%w: type %T (reported once)", ErrInvalidAsyncRunner, rp))
+			global.Handle(fmt.Errorf("%w: type %T (reported once)", ErrInvalidAsyncRunner, rp))
 		})
 	}
 }

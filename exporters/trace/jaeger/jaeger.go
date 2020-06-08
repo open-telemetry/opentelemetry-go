@@ -17,7 +17,6 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"log"
 
 	"go.opentelemetry.io/otel/api/kv/value"
 
@@ -37,11 +36,6 @@ type Option func(*options)
 
 // options are the options to be used when initializing a Jaeger export.
 type options struct {
-	// OnError is the hook to be called when there is
-	// an error occurred when uploading the span data.
-	// If no custom hook is set, errors are logged.
-	OnError func(err error)
-
 	// Process contains the information about the exporting process.
 	Process Process
 
@@ -53,15 +47,6 @@ type options struct {
 	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
 	// registered as Global Trace Provider
 	RegisterGlobal bool
-}
-
-// WithOnError sets the hook to be called when there is
-// an error occurred when uploading the span data.
-// If no custom hook is set, errors are logged.
-func WithOnError(onError func(err error)) Option {
-	return func(o *options) {
-		o.OnError = onError
-	}
 }
 
 // WithProcess sets the process with the information about the exporting process.
@@ -106,13 +91,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 		opt(&o)
 	}
 
-	onError := func(err error) {
-		if o.OnError != nil {
-			o.OnError(err)
-			return
-		}
-		log.Printf("Error when uploading spans to Jaeger: %v", err)
-	}
 	service := o.Process.ServiceName
 	if service == "" {
 		service = defaultServiceName
@@ -134,7 +112,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 	bundler := bundler.NewBundler((*gen.Span)(nil), func(bundle interface{}) {
 		if err := e.upload(bundle.([]*gen.Span)); err != nil {
-			onError(err)
+			global.Handle(err)
 		}
 	})
 

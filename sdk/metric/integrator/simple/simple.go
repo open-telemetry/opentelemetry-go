@@ -234,8 +234,8 @@ func (b *Integrator) FinishedCollection() {
 	b.foreachLock.Unlock()
 
 	if needForeach {
-		// Note: Users are not expected to skip ForEach, if they do they
-		// can lose errors here.
+		// Note: Users are not expected to skip ForEach, but
+		// if they do they may lose errors here.
 		_ = b.ForEach(b.kind, func(_ export.Record) error { return nil })
 
 	}
@@ -261,6 +261,10 @@ func (b *state) ForEach(kind export.ExporterKind, f func(export.Record) error) e
 		}
 
 		if firstTime {
+			// TODO: SumObserver monotonicity should be
+			// tested here.  This is a case where memory
+			// is required even for a cumulative exporter.
+
 			if value.stateful {
 				var err error
 				if mkind.Cumulative() {

@@ -15,39 +15,14 @@
 package push
 
 import (
-	"fmt"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/kv"
 
 	"github.com/stretchr/testify/assert"
 
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
-
-func TestWithErrorHandler(t *testing.T) {
-	errH, reg := func() (sdk.ErrorHandler, *error) {
-		e := fmt.Errorf("default invalid")
-		reg := &e
-		return func(err error) {
-			*reg = err
-		}, reg
-	}()
-
-	c := &Config{}
-	WithErrorHandler(errH).Apply(c)
-	err1 := fmt.Errorf("error 1")
-	c.ErrorHandler(err1)
-	assert.EqualError(t, *reg, err1.Error())
-
-	// Ensure overwriting works.
-	c = &Config{ErrorHandler: sdk.DefaultErrorHandler}
-	WithErrorHandler(errH).Apply(c)
-	err2 := fmt.Errorf("error 2")
-	c.ErrorHandler(err2)
-	assert.EqualError(t, *reg, err2.Error())
-}
 
 func TestWithResource(t *testing.T) {
 	r := resource.New(kv.String("A", "a"))

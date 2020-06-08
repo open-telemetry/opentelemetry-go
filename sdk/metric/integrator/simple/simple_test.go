@@ -62,8 +62,9 @@ func TestIntegrator(t *testing.T) {
 				{kind: metric.CounterKind},
 				{kind: metric.UpDownCounterKind},
 				{kind: metric.ValueRecorderKind},
-				{kind: metric.ValueObserverKind},
 				{kind: metric.SumObserverKind},
+				{kind: metric.UpDownSumObserverKind},
+				{kind: metric.ValueObserverKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{

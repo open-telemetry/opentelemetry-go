@@ -49,7 +49,6 @@ type Controller struct {
 func New(selector export.AggregationSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:     resource.Empty(),
-		ErrorHandler: sdk.DefaultErrorHandler,
 		CachePeriod:  DefaultCachePeriod,
 		ExporterKind: export.PassThroughExporter,
 	}
@@ -60,7 +59,6 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
-		sdk.WithErrorHandler(config.ErrorHandler),
 	)
 	return &Controller{
 		accumulator: accum,

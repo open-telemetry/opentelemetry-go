@@ -150,6 +150,8 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 }
 
 func (e *Exporter) Kind() export.ExporterKind {
+	// TODO: This exporter can support any kind it wants, since
+	// there are no requirements for the output.  Make this an option?
 	return export.PassThroughExporter
 }
 
