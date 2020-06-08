@@ -12,7 +12,7 @@ depending on the master. So it is not a concern.
 4. Create a PR on github and merge the PR once approved.
 
     ```
-    ./pre-release.sh -t <new tag>
+    ./pre_release.sh -t <new tag>
     git diff master
     git push
     ```

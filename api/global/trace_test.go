@@ -12,34 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package global_test
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
-func TestWithErrorHandler(t *testing.T) {
-	errH, reg := func() (ErrorHandler, *error) {
-		e := fmt.Errorf("default invalid")
-		reg := &e
-		return func(err error) {
-			*reg = err
-		}, reg
-	}()
+type testTraceProvider struct{}
 
-	c := &Config{}
-	WithErrorHandler(errH).Apply(c)
-	err1 := fmt.Errorf("error 1")
-	c.ErrorHandler(err1)
-	assert.EqualError(t, *reg, err1.Error())
+var _ trace.Provider = &testTraceProvider{}
 
-	// Ensure overwriting works.
-	c = &Config{ErrorHandler: DefaultErrorHandler}
-	WithErrorHandler(errH).Apply(c)
-	err2 := fmt.Errorf("error 2")
-	c.ErrorHandler(err2)
-	assert.EqualError(t, *reg, err2.Error())
+func (*testTraceProvider) Tracer(_ string) trace.Tracer {
+	return &trace.NoopTracer{}
+}
+
+func TestMultipleGlobalTracerProvider(t *testing.T) {
+	p1 := testTraceProvider{}
+	p2 := trace.NoopProvider{}
+	global.SetTraceProvider(&p1)
+	global.SetTraceProvider(&p2)
+
+	got := global.TraceProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	}
 }

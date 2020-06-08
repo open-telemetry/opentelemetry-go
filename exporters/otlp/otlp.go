@@ -72,7 +72,10 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
-	e.c = Config{numWorkers: DefaultNumWorkers}
+	e.c = Config{
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
+	}
 	configureOptions(&e.c, opts...)
 
 	// TODO (rghetia): add resources
@@ -157,7 +160,11 @@ func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
 
 func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	addr := e.prepareCollectorAddress()
-	var dialOpts []grpc.DialOption
+
+	dialOpts := []grpc.DialOption{}
+	if e.c.grpcServiceConfig != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(e.c.grpcServiceConfig))
+	}
 	if e.c.clientCredentials != nil {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(e.c.clientCredentials))
 	} else if e.c.canDialInsecure {

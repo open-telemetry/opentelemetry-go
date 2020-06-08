@@ -47,9 +47,8 @@ type Controller struct {
 // New returns a *Controller configured with an aggregation selector and options.
 func New(selector export.AggregationSelector, options ...Option) *Controller {
 	config := &Config{
-		Resource:     resource.Empty(),
-		ErrorHandler: sdk.DefaultErrorHandler,
-		CachePeriod:  DefaultCachePeriod,
+		Resource:    resource.Empty(),
+		CachePeriod: DefaultCachePeriod,
 	}
 	for _, opt := range options {
 		opt.Apply(config)
@@ -58,7 +57,6 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
-		sdk.WithErrorHandler(config.ErrorHandler),
 	)
 	return &Controller{
 		accumulator: accum,

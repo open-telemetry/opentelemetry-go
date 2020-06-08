@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -40,40 +41,57 @@ import (
 var Must = metric.Must
 var testResource = resource.New(kv.String("R", "V"))
 
+type handler struct {
+	sync.Mutex
+	err error
+}
+
+func (h *handler) Handle(err error) {
+	h.Lock()
+	h.err = err
+	h.Unlock()
+}
+
+func (h *handler) Reset() {
+	h.Lock()
+	h.err = nil
+	h.Unlock()
+}
+
+func (h *handler) Flush() error {
+	h.Lock()
+	err := h.err
+	h.err = nil
+	h.Unlock()
+	return err
+}
+
+var testHandler *handler
+
+func init() {
+	testHandler = new(handler)
+	global.SetHandler(testHandler)
+}
+
 type correctnessIntegrator struct {
 	newAggCount int64
 
 	t *testing.T
 
 	records []export.Record
-
-	sync.Mutex
-	err error
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessIntegrator) {
+	testHandler.Reset()
 	integrator := &correctnessIntegrator{
 		t: t,
 	}
 	accum := metricsdk.NewAccumulator(
 		integrator,
 		metricsdk.WithResource(testResource),
-		metricsdk.WithErrorHandler(func(err error) {
-			integrator.Lock()
-			defer integrator.Unlock()
-			integrator.err = err
-		}),
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, integrator
-}
-
-func (ci *correctnessIntegrator) sdkErr() error {
-	ci.Lock()
-	defer ci.Unlock()
-	t := ci.err
-	ci.err = nil
-	return t
 }
 
 func (ci *correctnessIntegrator) AggregatorFor(descriptor *metric.Descriptor) (agg export.Aggregator) {
@@ -110,16 +128,10 @@ func TestInputRangeCounter(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	var sdkErr error
-	sdk.SetErrorHandler(func(handleErr error) {
-		sdkErr = handleErr
-	})
-
 	counter := Must(meter).NewInt64Counter("name.counter")
 
 	counter.Add(ctx, -1)
-	require.Equal(t, aggregator.ErrNegativeInput, sdkErr)
-	sdkErr = nil
+	require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
@@ -131,17 +143,12 @@ func TestInputRangeCounter(t *testing.T) {
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
-	require.Nil(t, sdkErr)
+	require.Nil(t, testHandler.Flush())
 }
 
 func TestInputRangeUpDownCounter(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
-
-	var sdkErr error
-	sdk.SetErrorHandler(func(handleErr error) {
-		sdkErr = handleErr
-	})
 
 	counter := Must(meter).NewInt64UpDownCounter("name.updowncounter")
 
@@ -155,23 +162,17 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
-	require.Nil(t, sdkErr)
+	require.Nil(t, testHandler.Flush())
 }
 
 func TestInputRangeValueRecorder(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	var sdkErr error
-	sdk.SetErrorHandler(func(handleErr error) {
-		sdkErr = handleErr
-	})
-
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.valuerecorder")
 
 	valuerecorder.Record(ctx, math.NaN())
-	require.Equal(t, aggregator.ErrNaNInput, sdkErr)
-	sdkErr = nil
+	require.Equal(t, aggregator.ErrNaNInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
@@ -185,7 +186,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	count, err := integrator.records[0].Aggregator().(aggregator.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
-	require.Nil(t, sdkErr)
+	require.Nil(t, testHandler.Flush())
 	require.Nil(t, err)
 }
 
@@ -204,17 +205,13 @@ func TestDisabledInstrument(t *testing.T) {
 
 func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, _ := newSDK(t)
+	meter, _, _ := newSDK(t)
 
-	var sdkErr error
-	sdk.SetErrorHandler(func(handleErr error) {
-		sdkErr = handleErr
-	})
 	c := Must(meter).NewFloat64Counter("sum.name")
 
-	require.Nil(t, sdkErr)
+	require.Nil(t, testHandler.Flush())
 	c.Add(ctx, math.NaN())
-	require.Error(t, sdkErr)
+	require.Error(t, testHandler.Flush())
 }
 
 func TestSDKLabelsDeduplication(t *testing.T) {
@@ -395,15 +392,15 @@ func TestSumObserverInputRange(t *testing.T) {
 
 	_ = Must(meter).NewFloat64SumObserver("float.sumobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, kv.String("A", "B"))
-		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1, kv.String("C", "D"))
-		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
 	})
 	_ = Must(meter).NewInt64SumObserver("int.sumobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
-		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
-		require.Equal(t, aggregator.ErrNegativeInput, integrator.sdkErr())
+		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
 	})
 
 	collected := sdk.Collect(ctx)
@@ -412,7 +409,7 @@ func TestSumObserverInputRange(t *testing.T) {
 	require.Equal(t, 0, len(integrator.records))
 
 	// check that the error condition was reset
-	require.NoError(t, integrator.sdkErr())
+	require.NoError(t, testHandler.Flush())
 }
 
 func TestObserverBatch(t *testing.T) {
@@ -553,7 +550,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	var observer metric.Int64ValueObserver
 
 	ctx := context.Background()
-	meter, sdk, integrator := newSDK(t)
+	meter, sdk, _ := newSDK(t)
 
 	// Now try with uninitialized instruments.
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
@@ -562,7 +559,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	})
 
 	collected := sdk.Collect(ctx)
-	require.Equal(t, metricsdk.ErrUninitializedInstrument, integrator.sdkErr())
+	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
 	require.Equal(t, 0, collected)
 
 	// Now try with instruments from another SDK.
@@ -579,7 +576,7 @@ func TestIncorrectInstruments(t *testing.T) {
 
 	collected = sdk.Collect(ctx)
 	require.Equal(t, 0, collected)
-	require.Equal(t, metricsdk.ErrUninitializedInstrument, integrator.sdkErr())
+	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
 }
 
 func TestSyncInAsync(t *testing.T) {
