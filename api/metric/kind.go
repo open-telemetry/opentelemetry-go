@@ -37,9 +37,6 @@ const (
 
 	// ValueObserverKind indicates an ValueObserver instrument.
 	ValueObserverKind
-
-	// NumKinds is the number of metric kinds.
-	NumKinds = 6
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
@@ -56,6 +53,7 @@ func (k Kind) Asynchronous() bool {
 	return !k.Synchronous()
 }
 
+// Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
 func (k Kind) Adding() bool {
 	switch k {
 	case CounterKind, UpDownCounterKind, SumObserverKind, UpDownSumObserverKind:
@@ -64,10 +62,12 @@ func (k Kind) Adding() bool {
 	return false
 }
 
+// Adding returns whether this kind of instrument groups its inputs (as opposed to Adding).
 func (k Kind) Grouping() bool {
 	return !k.Adding()
 }
 
+// Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
 func (k Kind) Monotonic() bool {
 	switch k {
 	case CounterKind, SumObserverKind:
@@ -76,6 +76,7 @@ func (k Kind) Monotonic() bool {
 	return false
 }
 
+// Cumulative returns whether this kind of instrument receives cumulative inputs.
 func (k Kind) Cumulative() bool {
 	return k.Adding() && k.Asynchronous()
 }
