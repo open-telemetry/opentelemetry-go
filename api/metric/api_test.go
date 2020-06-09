@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/oterror"
 	"go.opentelemetry.io/otel/api/unit"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -388,7 +389,8 @@ func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRu
 
 func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
-	meter := metric.WrapMeterImpl(impl, "test")
+	il := instrumentation.Library{Name: "test"}
+	meter := metric.WrapMeterImpl(impl, il)
 
 	valuerecorder, err := meter.NewInt64ValueRecorder("test.valuerecorder")
 

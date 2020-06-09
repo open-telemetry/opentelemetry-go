@@ -14,7 +14,10 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/unit"
+import (
+	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+)
 
 // Config contains some options for metrics of any kind.
 type Config struct {
@@ -23,9 +26,9 @@ type Config struct {
 	Description string
 	// Unit is an optional field describing the metric instrument.
 	Unit unit.Unit
-	// LibraryName is the name given to the Meter that created
-	// this instrument.  See `Provider`.
-	LibraryName string
+	// InstrumentationLibrary describes the library that provided
+	// instrumentation.
+	InstrumentationLibrary instrumentation.Library
 }
 
 // Option is an interface for applying metric options.
@@ -65,20 +68,55 @@ func (u unitOption) Apply(config *Config) {
 	config.Unit = unit.Unit(u)
 }
 
-// WithLibraryName applies provided library name.  This is meant for
-// use in `Provider` implementations that have not used
-// `WrapMeterImpl`.  Implementations built using `WrapMeterImpl` have
-// instrument descriptors taken care of through this package.
+// WithInstrumentationLibrary sets the library used to provided
+// instrumentation. This is meant for use in `Provider` implementations that
+// have not used `WrapMeterImpl`.  Implementations built using
+// `WrapMeterImpl` have instrument descriptors taken care of through this
+// package.
 //
 // This option will have no effect when supplied by the user.
 // Provider implementations are expected to append this option after
 // the user-supplied options when building instrument descriptors.
-func WithLibraryName(name string) Option {
-	return libraryNameOption(name)
+func WithInstrumentationLibrary(il instrumentation.Library) Option {
+	return instrumentationLibraryOption(il)
 }
 
-type libraryNameOption string
+type instrumentationLibraryOption instrumentation.Library
 
-func (r libraryNameOption) Apply(config *Config) {
-	config.LibraryName = string(r)
+func (i instrumentationLibraryOption) Apply(config *Config) {
+	config.InstrumentationLibrary = instrumentation.Library(i)
+}
+
+// Config contains options for a Meter.
+type MeterConfig struct {
+	// InstrumentationVersion is the version of the library providing
+	// instrumentation.
+	InstrumentationVersion string
+}
+
+// MeterOption is an interface for applying meter options.
+type MeterOption interface {
+	// Apply is used to set the MeterOption value of a MeterConfig.
+	Apply(*MeterConfig)
+}
+
+// MeterConfigure is a helper that applies all the MeterOptions to a
+// MeterConfig.
+func MeterConfigure(opts []MeterOption) MeterConfig {
+	var config MeterConfig
+	for _, o := range opts {
+		o.Apply(&config)
+	}
+	return config
+}
+
+// WithInstrumentationVersion sets the instrumentation version.
+func WithInstrumentationVersion(version string) MeterOption {
+	return instrumentationVersionOption(version)
+}
+
+type instrumentationVersionOption string
+
+func (i instrumentationVersionOption) Apply(config *MeterConfig) {
+	config.InstrumentationVersion = string(i)
 }

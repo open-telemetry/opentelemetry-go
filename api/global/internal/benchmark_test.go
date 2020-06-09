@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -51,7 +52,7 @@ func newFixture(b *testing.B) *benchFixture {
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
+	bf.meter = metric.WrapMeterImpl(bf.accumulator, instrumentation.Library{Name: "test"})
 	return bf
 }
 
@@ -82,7 +83,7 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func (fix *benchFixture) Meter(name string) metric.Meter {
+func (fix *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 	return fix.meter
 }
 

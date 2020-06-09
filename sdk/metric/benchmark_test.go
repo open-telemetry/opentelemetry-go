@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -45,7 +46,8 @@ func newFixture(b *testing.B) *benchFixture {
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
+	il := instrumentation.Library{Name: "benchmarks"}
+	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, il))
 	return bf
 }
 

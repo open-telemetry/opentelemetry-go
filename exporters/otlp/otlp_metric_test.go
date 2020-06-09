@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -489,6 +490,17 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceInstLibMetricGroupingExport(t *testing.T) {
+	countingLib1 := instrumentation.Library{
+		Name:    "couting-lib",
+		Version: "v1",
+	}
+	countingLib2 := instrumentation.Library{
+		Name:    "couting-lib",
+		Version: "v2",
+	}
+	summingLib := instrumentation.Library{
+		Name: "summing-lib",
+	}
 	runMetricExportTests(
 		t,
 		[]record{
@@ -498,7 +510,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.Int64NumberKind,
 				testInstA,
 				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
+					metric.WithInstrumentationLibrary(countingLib1),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
@@ -508,7 +520,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.Int64NumberKind,
 				testInstA,
 				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
+					metric.WithInstrumentationLibrary(countingLib2),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
@@ -518,7 +530,17 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.Int64NumberKind,
 				testInstA,
 				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
+					metric.WithInstrumentationLibrary(countingLib1),
+				},
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+			{
+				"int64-count",
+				metric.CounterKind,
+				metric.Int64NumberKind,
+				testInstA,
+				[]metric.Option{
+					metric.WithInstrumentationLibrary(countingLib1),
 				},
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
@@ -528,7 +550,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.Int64NumberKind,
 				testInstA,
 				[]metric.Option{
-					metric.WithLibraryName("summing-lib"),
+					metric.WithInstrumentationLibrary(summingLib),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
@@ -538,7 +560,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.Int64NumberKind,
 				testInstB,
 				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
+					metric.WithInstrumentationLibrary(countingLib1),
 				},
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
@@ -549,7 +571,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name: "couting-lib",
+							Name:    "couting-lib",
+							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{
 							{
@@ -565,6 +588,22 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 							},
 							{
 								MetricDescriptor: cpu2MD,
+								Int64DataPoints: []*metricpb.Int64DataPoint{
+									{
+										Value: 11,
+									},
+								},
+							},
+						},
+					},
+					{
+						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+							Name:    "couting-lib",
+							Version: "v2",
+						},
+						Metrics: []*metricpb.Metric{
+							{
+								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
 										Value: 11,
@@ -595,7 +634,8 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name: "couting-lib",
+							Name:    "couting-lib",
+							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{
 							{

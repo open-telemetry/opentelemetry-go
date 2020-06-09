@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // This file contains the forwarding implementation of metric.Provider
@@ -54,7 +55,7 @@ type meterProvider struct {
 
 	// meters maintains a unique entry for every named Meter
 	// that has been registered through the global instance.
-	meters map[string]*meterEntry
+	meters map[instrumentation.Library]*meterEntry
 }
 
 type meterImpl struct {
@@ -123,7 +124,7 @@ func (inst *instrument) Descriptor() metric.Descriptor {
 
 func newMeterProvider() *meterProvider {
 	return &meterProvider{
-		meters: map[string]*meterEntry{},
+		meters: map[instrumentation.Library]*meterEntry{},
 	}
 }
 
@@ -132,38 +133,42 @@ func (p *meterProvider) setDelegate(provider metric.Provider) {
 	defer p.lock.Unlock()
 
 	p.delegate = provider
-	for name, entry := range p.meters {
-		entry.impl.setDelegate(name, provider)
+	for il, entry := range p.meters {
+		entry.impl.setDelegate(il, provider)
 	}
 	p.meters = nil
 }
 
-func (p *meterProvider) Meter(name string) metric.Meter {
+func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	if p.delegate != nil {
-		return p.delegate.Meter(name)
+		return p.delegate.Meter(instrumentationName, opts...)
 	}
 
-	entry, ok := p.meters[name]
+	il := instrumentation.Library{
+		Name:    instrumentationName,
+		Version: metric.MeterConfigure(opts).InstrumentationVersion,
+	}
+	entry, ok := p.meters[il]
 	if !ok {
 		entry = &meterEntry{}
 		entry.unique = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
-		p.meters[name] = entry
+		p.meters[il] = entry
 
 	}
-	return metric.WrapMeterImpl(entry.unique, name)
+	return metric.WrapMeterImpl(entry.unique, il)
 }
 
 // Meter interface and delegation
 
-func (m *meterImpl) setDelegate(name string, provider metric.Provider) {
+func (m *meterImpl) setDelegate(il instrumentation.Library, provider metric.Provider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	d := new(metric.MeterImpl)
-	*d = provider.Meter(name).MeterImpl()
+	*d = provider.Meter(il.Name, metric.WithInstrumentationVersion(il.Version)).MeterImpl()
 	m.delegate = unsafe.Pointer(d)
 
 	for _, inst := range m.syncInsts {

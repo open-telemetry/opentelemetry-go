@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // The file is organized as follows:
@@ -33,9 +34,13 @@ import (
 
 // Provider supports named Meter instances.
 type Provider interface {
-	// Meter gets a named Meter interface.  If the name is an
-	// empty string, the provider uses a default name.
-	Meter(name string) Meter
+	// Meter creates an implementation of the Meter interface.
+	// The instrumentationName must be the name of the library providing
+	// instrumentation. This name may be the same as the instrumented code
+	// only if that code provides built-in instrumentation. If the
+	// instrumentationName is empty, then a implementation defined default
+	// name will be used instead.
+	Meter(instrumentationName string, opts ...MeterOption) Meter
 }
 
 // Meter is the OpenTelemetry metric API, based on a `MeterImpl`
@@ -43,8 +48,8 @@ type Provider interface {
 //
 // An uninitialized Meter is a no-op implementation.
 type Meter struct {
-	impl        MeterImpl
-	libraryName string
+	impl MeterImpl
+	il   instrumentation.Library
 }
 
 // RecordBatch atomically records a batch of measurements.
@@ -291,7 +296,7 @@ func (m Meter) newAsync(
 		return NoopAsync{}, nil
 	}
 	desc := NewDescriptor(name, mkind, nkind, opts...)
-	desc.config.LibraryName = m.libraryName
+	desc.config.InstrumentationLibrary = m.il
 	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
@@ -309,6 +314,6 @@ func (m Meter) newSync(
 		return NoopSync{}, nil
 	}
 	desc := NewDescriptor(name, metricKind, numberKind, opts...)
-	desc.config.LibraryName = m.libraryName
+	desc.config.InstrumentationLibrary = m.il
 	return m.impl.NewSyncInstrument(desc)
 }

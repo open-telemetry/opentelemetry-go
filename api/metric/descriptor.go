@@ -14,7 +14,10 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/unit"
+import (
+	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+)
 
 // Descriptor contains all the settings that describe an instrument,
 // including its name, metric kind, number kind, and the configurable
@@ -64,8 +67,8 @@ func (d Descriptor) NumberKind() NumberKind {
 	return d.numberKind
 }
 
-// LibraryName returns the metric instrument's library name, typically
-// given via a call to Provider.Meter().
-func (d Descriptor) LibraryName() string {
-	return d.config.LibraryName
+// InstrumentationLibrary returns the instrumentation.Library describing the
+// library that provided instrumentation of this instrument.
+func (d Descriptor) InstrumentationLibrary() instrumentation.Library {
+	return d.config.InstrumentationLibrary
 }
