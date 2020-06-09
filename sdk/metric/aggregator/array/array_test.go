@@ -15,7 +15,6 @@
 package array
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"os"
@@ -66,8 +65,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	ctx := context.Background()
-	agg.Checkpoint(ctx, descriptor)
+	agg.Checkpoint(descriptor)
 
 	all.Sort()
 
@@ -116,8 +114,6 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
-
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg1 := New()
@@ -145,8 +141,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Checkpoint(ctx, descriptor)
-	agg2.Checkpoint(ctx, descriptor)
+	agg1.Checkpoint(descriptor)
+	agg2.Checkpoint(descriptor)
 
 	test.CheckedMerge(t, agg1, agg2, descriptor)
 
@@ -213,8 +209,6 @@ func TestArrayErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, aggregator.ErrNoData)
 
-		ctx := context.Background()
-
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		test.CheckedUpdate(t, agg, metric.Number(0), descriptor)
@@ -222,7 +216,7 @@ func TestArrayErrors(t *testing.T) {
 		if profile.NumberKind == metric.Float64NumberKind {
 			test.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
 		}
-		agg.Checkpoint(ctx, descriptor)
+		agg.Checkpoint(descriptor)
 
 		count, err := agg.Count()
 		require.Equal(t, int64(1), count, "NaN value was not counted")
@@ -275,7 +269,6 @@ func TestArrayFloat64(t *testing.T) {
 
 	all := test.NewNumbers(metric.Float64NumberKind)
 
-	ctx := context.Background()
 	agg := New()
 
 	for _, f := range fpsf(1) {
@@ -288,7 +281,7 @@ func TestArrayFloat64(t *testing.T) {
 		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
-	agg.Checkpoint(ctx, descriptor)
+	agg.Checkpoint(descriptor)
 
 	all.Sort()
 

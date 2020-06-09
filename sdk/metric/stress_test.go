@@ -263,7 +263,7 @@ func (*testFixture) CheckpointSet() export.CheckpointSet {
 func (*testFixture) FinishedCollection() {
 }
 
-func (f *testFixture) Process(_ context.Context, record export.Record) error {
+func (f *testFixture) Process(record export.Record) error {
 	labels := record.Labels().ToSlice()
 	key := testKey{
 		labels:     canonicalizeLabels(labels),

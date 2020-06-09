@@ -32,13 +32,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-type processFunc func(context.Context, export.Record) error
-
 type benchFixture struct {
 	meter       metric.MeterMust
 	accumulator *sdk.Accumulator
 	B           *testing.B
-	pcb         processFunc
 }
 
 func newFixture(b *testing.B) *benchFixture {
@@ -50,10 +47,6 @@ func newFixture(b *testing.B) *benchFixture {
 	bf.accumulator = sdk.NewAccumulator(bf)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
 	return bf
-}
-
-func (f *benchFixture) setProcessCallback(cb processFunc) {
-	f.pcb = cb
 }
 
 func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
@@ -75,11 +68,8 @@ func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggrega
 	return nil
 }
 
-func (f *benchFixture) Process(ctx context.Context, rec export.Record) error {
-	if f.pcb == nil {
-		return nil
-	}
-	return f.pcb(ctx, rec)
+func (f *benchFixture) Process(rec export.Record) error {
+	return nil
 }
 
 func (*benchFixture) CheckpointSet() export.CheckpointSet {
@@ -201,28 +191,14 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 var benchmarkIteratorVar kv.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
-	fix := newFixture(b)
-	fix.setProcessCallback(func(ctx context.Context, rec export.Record) error {
-		var kv kv.KeyValue
-		li := rec.Labels().Iter()
-		fix.B.StartTimer()
-		for i := 0; i < fix.B.N; i++ {
-			iter := li
-			// test getting only the first element
-			if iter.Next() {
-				kv = iter.Label()
-			}
-		}
-		fix.B.StopTimer()
-		benchmarkIteratorVar = kv
-		return nil
-	})
-	cnt := fix.meter.NewInt64Counter("int64.counter")
-	ctx := context.Background()
-	cnt.Add(ctx, 1, makeLabels(n)...)
-
+	labels := label.NewSet(makeLabels(n)...)
 	b.ResetTimer()
-	fix.accumulator.Collect(ctx)
+	for i := 0; i < b.N; i++ {
+		iter := labels.Iter()
+		for iter.Next() {
+			benchmarkIteratorVar = iter.Label()
+		}
+	}
 }
 
 func BenchmarkIterator_0(b *testing.B) {
@@ -560,11 +536,6 @@ func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
 func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	encoder := label.DefaultEncoder()
-	fix.pcb = func(_ context.Context, rec export.Record) error {
-		_ = rec.Labels().Encoded(encoder)
-		return nil
-	}
 
 	c := fix.meter.NewInt64Counter("int64.counter")
 	k := kv.String("bench", "true")
@@ -574,41 +545,5 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c.Add(ctx, 1, k)
 		fix.accumulator.Collect(ctx)
-	}
-}
-
-// LabelIterator
-
-func BenchmarkLabelIterator(b *testing.B) {
-	const labelCount = 1024
-	ctx := context.Background()
-	fix := newFixture(b)
-
-	var rec export.Record
-	fix.pcb = func(_ context.Context, processRec export.Record) error {
-		rec = processRec
-		return nil
-	}
-
-	keyValues := makeLabels(labelCount)
-	counter := fix.meter.NewInt64Counter("test.counter")
-	counter.Add(ctx, 1, keyValues...)
-
-	fix.accumulator.Collect(ctx)
-
-	b.ResetTimer()
-
-	labels := rec.Labels()
-	iter := labels.Iter()
-	var val kv.KeyValue
-	for i := 0; i < b.N; i++ {
-		if !iter.Next() {
-			iter = labels.Iter()
-			iter.Next()
-		}
-		val = iter.Label()
-	}
-	if false {
-		fmt.Println(val)
 	}
 }

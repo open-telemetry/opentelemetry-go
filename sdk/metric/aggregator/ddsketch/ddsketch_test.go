@@ -15,7 +15,6 @@
 package ddsketch
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -31,8 +30,6 @@ type updateTest struct {
 }
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
-
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 	agg := New(descriptor, NewDefaultConfig())
 
@@ -47,7 +44,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	agg.Checkpoint(ctx, descriptor)
+	agg.Checkpoint(descriptor)
 
 	all.Sort()
 
@@ -91,7 +88,6 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
-	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg1 := New(descriptor, NewDefaultConfig())
@@ -122,8 +118,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Checkpoint(ctx, descriptor)
-	agg2.Checkpoint(ctx, descriptor)
+	agg1.Checkpoint(descriptor)
+	agg2.Checkpoint(descriptor)
 
 	test.CheckedMerge(t, agg1, agg2, descriptor)
 

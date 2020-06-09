@@ -63,7 +63,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 
 func main() {
 	exp, pusher := initProvider()
-	defer handleErr(exp.Stop(), "Failed to stop exporter")
+	defer func() { handleErr(exp.Stop(), "Failed to stop exporter") }()
 	defer pusher.Stop() // pushes any last exports to the receiver
 
 	tracer := global.Tracer("mage-sense")

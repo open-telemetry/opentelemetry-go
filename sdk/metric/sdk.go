@@ -50,7 +50,6 @@ type (
 		// `*asyncInstrument` instances
 		asyncLock        sync.Mutex
 		asyncInstruments *internal.AsyncInstrumentState
-		asyncContext     context.Context
 
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
@@ -354,13 +353,13 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	defer m.collectLock.Unlock()
 
 	checkpointed := m.observeAsyncInstruments(ctx)
-	checkpointed += m.collectSyncInstruments(ctx)
+	checkpointed += m.collectSyncInstruments()
 	m.currentEpoch++
 
 	return checkpointed
 }
 
-func (m *Accumulator) collectSyncInstruments(ctx context.Context) int {
+func (m *Accumulator) collectSyncInstruments() int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -374,7 +373,7 @@ func (m *Accumulator) collectSyncInstruments(ctx context.Context) int {
 		if mods != coll {
 			// Updates happened in this interval,
 			// checkpoint and continue.
-			checkpointed += m.checkpointRecord(ctx, inuse)
+			checkpointed += m.checkpointRecord(inuse)
 			inuse.collectedCount = mods
 			return true
 		}
@@ -395,7 +394,7 @@ func (m *Accumulator) collectSyncInstruments(ctx context.Context) int {
 		// last we'll see of this record, checkpoint
 		mods = atomic.LoadInt64(&inuse.updateCount)
 		if mods != coll {
-			checkpointed += m.checkpointRecord(ctx, inuse)
+			checkpointed += m.checkpointRecord(inuse)
 		}
 		return true
 	})
@@ -419,10 +418,9 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	defer m.asyncLock.Unlock()
 
 	asyncCollected := 0
-	m.asyncContext = ctx
 
+	// TODO: change this to `ctx` (in a separate PR, with tests)
 	m.asyncInstruments.Run(context.Background(), m)
-	m.asyncContext = nil
 
 	for _, inst := range m.asyncInstruments.Instruments() {
 		if a := m.fromAsync(inst); a != nil {
@@ -433,8 +431,8 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 	return asyncCollected
 }
 
-func (m *Accumulator) checkpointRecord(ctx context.Context, r *record) int {
-	return m.checkpoint(ctx, &r.inst.descriptor, r.recorder, r.labels)
+func (m *Accumulator) checkpointRecord(r *record) int {
+	return m.checkpoint(&r.inst.descriptor, r.recorder, r.labels)
 }
 
 func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
@@ -446,7 +444,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		lrec := lrec
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(m.asyncContext, &a.descriptor, lrec.recorder, lrec.labels)
+			checkpointed += m.checkpoint(&a.descriptor, lrec.recorder, lrec.labels)
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -460,14 +458,14 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 	return checkpointed
 }
 
-func (m *Accumulator) checkpoint(ctx context.Context, descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
+func (m *Accumulator) checkpoint(descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
 	if recorder == nil {
 		return 0
 	}
-	recorder.Checkpoint(ctx, descriptor)
+	recorder.Checkpoint(descriptor)
 
 	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
-	err := m.integrator.Process(ctx, exportRecord)
+	err := m.integrator.Process(exportRecord)
 	if err != nil {
 		global.Handle(err)
 	}

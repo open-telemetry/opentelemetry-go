@@ -131,7 +131,7 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	gagg := lastvalue.New()
 	_ = gagg.Update(ctx, metric.NewInt64Number(v), desc)
-	gagg.Checkpoint(ctx, desc)
+	gagg.Checkpoint(desc)
 	return gagg
 }
 
@@ -150,7 +150,7 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
 	cagg := sum.New()
 	_ = cagg.Update(ctx, metric.NewInt64Number(v), desc)
-	cagg.Checkpoint(ctx, desc)
+	cagg.Checkpoint(desc)
 	return cagg
 }
 
