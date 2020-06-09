@@ -117,7 +117,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 				sdktrace.WithBatchTimeout(schDelay),
 				sdktrace.WithMaxQueueSize(200),
 				sdktrace.WithMaxExportBatchSize(20),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 11,
@@ -139,7 +138,6 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			o: []sdktrace.BatchSpanProcessorOption{
 				sdktrace.WithBatchTimeout(schDelay),
 				sdktrace.WithMaxExportBatchSize(200),
-				sdktrace.WithBlocking(),
 			},
 			wantNumSpans:   2000,
 			wantBatchCount: 10,
@@ -162,18 +160,26 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 
 			tp.UnregisterSpanProcessor(ssp)
 
-			// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/741)
-			// Restore some sort of test here.
-			_ = option.wantNumSpans
-			_ = option.wantBatchCount
-			_ = te.len()           // gotNumOfSpans
-			_ = te.getBatchCount() // gotBatchCount
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("number of exported span: got %+v, want %+v\n",
+					gotNumOfSpans, option.wantNumSpans)
+			}
+
+			gotBatchCount := te.getBatchCount()
+			if gotBatchCount < option.wantBatchCount {
+				t.Errorf("number batches: got %+v, want >= %+v\n",
+					gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
 		})
 	}
 }
 
 func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
-	ssp, err := sdktrace.NewBatchSpanProcessor(te, option.o...)
+	// Always use blocking queue to avoid flaky tests.
+	options := append(option.o, sdktrace.WithBlocking())
+	ssp, err := sdktrace.NewBatchSpanProcessor(te, options...)
 	if ssp == nil {
 		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
 	}

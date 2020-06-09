@@ -105,9 +105,10 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 		queue:  make(chan *export.SpanData, o.MaxQueueSize),
 		stopCh: make(chan struct{}),
 	}
-	bsp.stopWait.Add(1)
 
+	bsp.stopWait.Add(1)
 	go func() {
+		defer bsp.stopWait.Done()
 		bsp.processQueue()
 		bsp.drainQueue()
 	}()
@@ -130,8 +131,6 @@ func (bsp *BatchSpanProcessor) Shutdown() {
 	bsp.stopOnce.Do(func() {
 		close(bsp.stopCh)
 		bsp.stopWait.Wait()
-		close(bsp.queue)
-
 	})
 }
 
@@ -173,7 +172,6 @@ func (bsp *BatchSpanProcessor) exportSpans() {
 // is shut down. It calls the exporter in batches of up to MaxExportBatchSize
 // waiting up to BatchTimeout to form a batch.
 func (bsp *BatchSpanProcessor) processQueue() {
-	defer bsp.stopWait.Done()
 	defer bsp.timer.Stop()
 
 	for {
@@ -197,13 +195,22 @@ func (bsp *BatchSpanProcessor) processQueue() {
 // drainQueue awaits the any caller that had added to bsp.stopWait
 // to finish the enqueue, then exports the final batch.
 func (bsp *BatchSpanProcessor) drainQueue() {
-	for sd := range bsp.queue {
-		bsp.batch = append(bsp.batch, sd)
-		if len(bsp.batch) == bsp.o.MaxExportBatchSize {
-			bsp.exportSpans()
+	for {
+		select {
+		case sd := <-bsp.queue:
+			if sd == nil {
+				bsp.exportSpans()
+				return
+			}
+
+			bsp.batch = append(bsp.batch, sd)
+			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+				bsp.exportSpans()
+			}
+		default:
+			close(bsp.queue)
 		}
 	}
-	bsp.exportSpans()
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
@@ -226,17 +233,19 @@ func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
 		panic(x)
 	}()
 
+	select {
+	case <-bsp.stopCh:
+		return
+	default:
+	}
+
 	if bsp.o.BlockOnQueueFull {
-		select {
-		case bsp.queue <- sd:
-		case <-bsp.stopCh:
-		}
+		bsp.queue <- sd
 		return
 	}
 
 	select {
 	case bsp.queue <- sd:
-	case <-bsp.stopCh:
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
