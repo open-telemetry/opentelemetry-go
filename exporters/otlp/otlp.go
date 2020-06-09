@@ -162,6 +162,13 @@ func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
 	return nil
 }
 
+func (e *Exporter) contextWithMetadata(ctx context.Context) context.Context {
+	if e.metadata.Len() > 0 {
+		return metadata.NewOutgoingContext(ctx, e.metadata)
+	}
+	return ctx
+}
+
 func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	addr := e.prepareCollectorAddress()
 
@@ -181,10 +188,7 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 		dialOpts = append(dialOpts, e.c.grpcDialOptions...)
 	}
 
-	ctx := context.Background()
-	if e.metadata.Len() > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, e.metadata)
-	}
+	ctx := e.contextWithMetadata(context.Background())
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
@@ -249,11 +253,8 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	case <-ctx.Done():
 		return errContextCanceled
 	default:
-		if e.metadata.Len() > 0 {
-			ctx = metadata.NewOutgoingContext(ctx, e.metadata)
-		}
 		e.senderMu.Lock()
-		_, err := e.metricExporter.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
+		_, err := e.metricExporter.Export(e.contextWithMetadata(ctx), &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: rms,
 		})
 		e.senderMu.Unlock()
@@ -287,11 +288,8 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 			return
 		}
 
-		if e.metadata.Len() > 0 {
-			ctx = metadata.NewOutgoingContext(ctx, e.metadata)
-		}
 		e.senderMu.Lock()
-		_, err := e.traceExporter.Export(ctx, &coltracepb.ExportTraceServiceRequest{
+		_, err := e.traceExporter.Export(e.contextWithMetadata(ctx), &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
 		e.senderMu.Unlock()
