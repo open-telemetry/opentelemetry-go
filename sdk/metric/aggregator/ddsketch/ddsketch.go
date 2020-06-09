@@ -103,7 +103,7 @@ func (c *Aggregator) toNumber(f float64) metric.Number {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) Checkpoint(ctx context.Context, _ *metric.Descriptor) {
+func (c *Aggregator) Checkpoint(*metric.Descriptor) {
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()

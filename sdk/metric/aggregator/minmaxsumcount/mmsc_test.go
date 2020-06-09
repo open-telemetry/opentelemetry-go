@@ -15,7 +15,6 @@
 package minmaxsumcount
 
 import (
-	"context"
 	"math"
 	"math/rand"
 	"testing"
@@ -78,7 +77,6 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
-	ctx := context.Background()
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg := New(descriptor)
@@ -91,7 +89,7 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	agg.Checkpoint(ctx, descriptor)
+	agg.Checkpoint(descriptor)
 
 	all.Sort()
 
@@ -124,8 +122,6 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 }
 
 func TestMinMaxSumCountMerge(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -145,8 +141,8 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(ctx, descriptor)
-		agg2.Checkpoint(ctx, descriptor)
+		agg1.Checkpoint(descriptor)
+		agg2.Checkpoint(descriptor)
 
 		test.CheckedMerge(t, agg1, agg2, descriptor)
 
@@ -182,13 +178,11 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 }
 
 func TestMaxSumCountNotSet(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg := New(descriptor)
-		agg.Checkpoint(ctx, descriptor)
+		agg.Checkpoint(descriptor)
 
 		asum, err := agg.Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")

@@ -120,9 +120,9 @@ type Aggregator interface {
 	// accessed using by converting to one a suitable interface
 	// types in the `aggregator` sub-package.
 	//
-	// The Context argument originates from the controller that
-	// orchestrates collection.
-	Checkpoint(context.Context, *metric.Descriptor)
+	// This call has no Context argument because it is expected to
+	// perform only computation.
+	Checkpoint(*metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's checkpointed state.

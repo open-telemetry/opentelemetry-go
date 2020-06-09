@@ -105,7 +105,7 @@ func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.
 	ctx := context.Background()
 	// Updates and checkpoint the new aggregator
 	_ = newAgg.Update(ctx, createNumber(desc, v), desc)
-	newAgg.Checkpoint(ctx, desc)
+	newAgg.Checkpoint(desc)
 
 	// Try to add this aggregator to the CheckpointSet
 	agg, added := p.Add(desc, newAgg, labels...)
