@@ -18,7 +18,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	sdk "go.opentelemetry.io/otel/sdk"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -104,7 +103,6 @@ func (p *Provider) Tracer(name string, opts ...apitrace.TracerOption) apitrace.T
 	defer p.mu.Unlock()
 	if name == "" {
 		name = defaultTracerName
-		c.InstrumentationVersion = sdk.Version()
 	}
 	il := instrumentation.Library{
 		Name:    name,
