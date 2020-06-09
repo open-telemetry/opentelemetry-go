@@ -29,7 +29,7 @@ type WrapperProvider struct {
 var _ oteltrace.Provider = (*WrapperProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperProvider.
-func (p *WrapperProvider) Tracer(name string) oteltrace.Tracer {
+func (p *WrapperProvider) Tracer(_ string, _ ...oteltrace.TracerOption) oteltrace.Tracer {
 	return p.wTracer
 }
 

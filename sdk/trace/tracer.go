@@ -19,11 +19,12 @@ import (
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/trace/parent"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 type tracer struct {
-	provider *Provider
-	name     string
+	provider               *Provider
+	instrumentationLibrary instrumentation.Library
 }
 
 var _ apitrace.Tracer = &tracer{}

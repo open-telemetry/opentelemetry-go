@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -45,7 +46,7 @@ type ProviderOption func(*ProviderOptions)
 
 type Provider struct {
 	mu             sync.Mutex
-	namedTracer    map[string]*tracer
+	namedTracer    map[instrumentation.Library]*tracer
 	spanProcessors atomic.Value
 	config         atomic.Value // access atomically
 }
@@ -63,7 +64,7 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 	}
 
 	tp := &Provider{
-		namedTracer: make(map[string]*tracer),
+		namedTracer: make(map[instrumentation.Library]*tracer),
 	}
 	tp.config.Store(&Config{
 		DefaultSampler:       AlwaysSample(),
@@ -93,16 +94,27 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 
 // Tracer with the given name. If a tracer for the given name does not exist,
 // it is created first. If the name is empty, DefaultTracerName is used.
-func (p *Provider) Tracer(name string) apitrace.Tracer {
+func (p *Provider) Tracer(name string, opts ...apitrace.TracerOption) apitrace.Tracer {
+	c := new(apitrace.TracerConfig)
+	for _, o := range opts {
+		o(c)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {
 		name = defaultTracerName
 	}
-	t, ok := p.namedTracer[name]
+	il := instrumentation.Library{
+		Name:    name,
+		Version: c.InstrumentationVersion,
+	}
+	t, ok := p.namedTracer[il]
 	if !ok {
-		t = &tracer{name: name, provider: p}
-		p.namedTracer[name] = t
+		t = &tracer{
+			provider:               p,
+			instrumentationLibrary: il,
+		}
+		p.namedTracer[il] = t
 	}
 	return t
 }

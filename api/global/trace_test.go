@@ -25,7 +25,7 @@ type testTraceProvider struct{}
 
 var _ trace.Provider = &testTraceProvider{}
 
-func (*testTraceProvider) Tracer(_ string) trace.Tracer {
+func (*testTraceProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
