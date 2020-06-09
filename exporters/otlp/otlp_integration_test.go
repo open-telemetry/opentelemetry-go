@@ -420,7 +420,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	}()
 
 	headers := mc.getHeaders()
-	assert.Equal(t, 1, len(headers.Get("header1")))
+	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 
 }
