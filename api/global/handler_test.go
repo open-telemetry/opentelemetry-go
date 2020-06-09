@@ -17,6 +17,7 @@ package global
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -71,11 +72,28 @@ func (s *HandlerTestSuite) TestGlobalHandler() {
 }
 
 func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
+	// max time to wait for goroutine to Handle an error.
+	pause := 10 * time.Millisecond
+
 	var sent int
 	err := errors.New("")
 	stop := make(chan struct{})
 	beat := make(chan struct{})
 	done := make(chan struct{})
+
+	// Wait for a error to be submitted from the following goroutine.
+	wait := func(d time.Duration) error {
+		timer := time.NewTimer(d)
+		select {
+		case <-timer.C:
+			// We are about to fail, stop the spawned goroutine.
+			stop <- struct{}{}
+			return fmt.Errorf("no errors sent in %v", d)
+		case <-beat:
+			timer.Stop()
+			return nil
+		}
+	}
 
 	go func() {
 		for {
@@ -96,11 +114,7 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	}()
 
 	// Wait for the spice to flow
-	select {
-	case <-time.Tick(2 * time.Millisecond):
-		s.T().Fatal("no errors were sent in 2ms")
-	case <-beat:
-	}
+	s.Require().NoError(wait(pause), "starting error stream")
 
 	// Change to another Handler. We are testing this is loss-less.
 	newErrLogger := new(errLogger)
@@ -108,21 +122,12 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 		l: log.New(newErrLogger, "", 0),
 	}
 	SetHandler(secondary)
-
-	select {
-	case <-time.Tick(2 * time.Millisecond):
-		s.T().Fatal("no errors were sent within 2ms after SetHandler")
-	case <-beat:
-	}
-
+	// Flush so we can ensure new errors are sent to new Handler.
+	s.Require().NoError(wait(pause), "flushing error stream")
 	// Now beat is clear, wait for a fresh send.
-	select {
-	case <-time.Tick(2 * time.Millisecond):
-		s.T().Fatal("no fresh errors were sent within 2ms after SetHandler")
-	case <-beat:
-	}
+	s.Require().NoError(wait(pause), "getting fresh errors to new Handler")
 
-	// Stop sending errors.
+	// Testing done, stop sending errors.
 	stop <- struct{}{}
 	// Ensure we do not lose any straglers.
 	<-done
