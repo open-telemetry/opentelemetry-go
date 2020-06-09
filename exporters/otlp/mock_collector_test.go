@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	metadata "google.golang.org/grpc/metadata"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
@@ -44,8 +45,13 @@ func makeMockCollector(t *testing.T) *mockCol {
 }
 
 type mockTraceService struct {
-	mu  sync.RWMutex
-	rsm map[string]*tracepb.ResourceSpans
+	mu      sync.RWMutex
+	rsm     map[string]*tracepb.ResourceSpans
+	headers metadata.MD
+}
+
+func (mts *mockTraceService) getHeaders() metadata.MD {
+	return mts.headers
 }
 
 func (mts *mockTraceService) getSpans() []*tracepb.Span {
@@ -70,6 +76,7 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 
 func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
 	mts.mu.Lock()
+	mts.headers, _ = metadata.FromIncomingContext(ctx)
 	defer mts.mu.Unlock()
 	rss := exp.GetResourceSpans()
 	for _, rs := range rss {
@@ -190,6 +197,10 @@ func (mc *mockCol) getSpans() []*tracepb.Span {
 
 func (mc *mockCol) getResourceSpans() []*tracepb.ResourceSpans {
 	return mc.traceSvc.getResourceSpans()
+}
+
+func (mc *mockCol) getHeaders() metadata.MD {
+	return mc.traceSvc.getHeaders()
 }
 
 func (mc *mockCol) getMetrics() []*metricpb.Metric {

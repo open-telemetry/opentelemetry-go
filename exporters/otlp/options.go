@@ -122,8 +122,7 @@ func WithCompressor(compressor string) ExporterOption {
 	}
 }
 
-// WithHeaders will send the provided headers when the gRPC stream connection
-// is instantiated.
+// WithHeaders will send the provided headers with gRPC requests
 func WithHeaders(headers map[string]string) ExporterOption {
 	return func(cfg *Config) {
 		cfg.headers = headers
