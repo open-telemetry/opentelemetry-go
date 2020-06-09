@@ -30,34 +30,33 @@ import (
 // These tests use the ../test label encoding.
 
 func TestSimpleStateless(t *testing.T) {
-	ctx := context.Background()
 	b := simple.New(test.NewAggregationSelector(), false)
 
 	// Set initial lastValue values
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels3, 30))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 10))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueADesc, test.Labels2, 20))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueADesc, test.Labels3, 30))
 
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels3, 30))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 10))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueBDesc, test.Labels2, 20))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueBDesc, test.Labels3, 30))
 
 	// Another lastValue Set for Labels1
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 50))
-	_ = b.Process(ctx, test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 50))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueADesc, test.Labels1, 50))
+	_ = b.Process(test.NewLastValueRecord(&test.LastValueBDesc, test.Labels1, 50))
 
 	// Set initial counter values
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels3, 40))
+	_ = b.Process(test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10))
+	_ = b.Process(test.NewCounterRecord(&test.CounterADesc, test.Labels2, 20))
+	_ = b.Process(test.NewCounterRecord(&test.CounterADesc, test.Labels3, 40))
 
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 10))
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels2, 20))
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels3, 40))
+	_ = b.Process(test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 10))
+	_ = b.Process(test.NewCounterRecord(&test.CounterBDesc, test.Labels2, 20))
+	_ = b.Process(test.NewCounterRecord(&test.CounterBDesc, test.Labels3, 40))
 
 	// Another counter Add for Labels1
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterADesc, test.Labels1, 50))
-	_ = b.Process(ctx, test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 50))
+	_ = b.Process(test.NewCounterRecord(&test.CounterADesc, test.Labels1, 50))
+	_ = b.Process(test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 50))
 
 	checkpointSet := b.CheckpointSet()
 
@@ -97,11 +96,11 @@ func TestSimpleStateful(t *testing.T) {
 
 	counterA := test.NewCounterRecord(&test.CounterADesc, test.Labels1, 10)
 	caggA := counterA.Aggregator()
-	_ = b.Process(ctx, counterA)
+	_ = b.Process(counterA)
 
 	counterB := test.NewCounterRecord(&test.CounterBDesc, test.Labels1, 10)
 	caggB := counterB.Aggregator()
-	_ = b.Process(ctx, counterB)
+	_ = b.Process(counterB)
 
 	checkpointSet := b.CheckpointSet()
 	b.FinishedCollection()
@@ -140,8 +139,8 @@ func TestSimpleStateful(t *testing.T) {
 	b.FinishedCollection()
 
 	// Now process the second update
-	_ = b.Process(ctx, export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))
-	_ = b.Process(ctx, export.NewRecord(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
+	_ = b.Process(export.NewRecord(&test.CounterADesc, test.Labels1, test.Resource, caggA))
+	_ = b.Process(export.NewRecord(&test.CounterBDesc, test.Labels1, test.Resource, caggB))
 
 	checkpointSet = b.CheckpointSet()
 

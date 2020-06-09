@@ -62,11 +62,12 @@ type Integrator interface {
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Record (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator).
-	//
-	// The Context argument originates from the controller that
-	// orchestrates collection.
-	Process(ctx context.Context, record Record) error
+	// Labels, and the checkpointed Aggregator).  This call has no
+	// Context argument because it is expected to perform only
+	// computation.  An SDK is not expected to call exporters from
+	// with Process, use a controller for that (see
+	// ./controllers/{pull,push}.
+	Process(record Record) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to

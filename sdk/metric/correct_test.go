@@ -119,7 +119,7 @@ func (ci *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
 func (*correctnessIntegrator) FinishedCollection() {
 }
 
-func (ci *correctnessIntegrator) Process(_ context.Context, record export.Record) error {
+func (ci *correctnessIntegrator) Process(record export.Record) error {
 	ci.records = append(ci.records, record)
 	return nil
 }
