@@ -85,7 +85,7 @@ func (c *Aggregator) Points() ([]metric.Number, error) {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) Checkpoint(ctx context.Context, desc *metric.Descriptor) {
+func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
 	c.lock.Lock()
 	c.checkpoint, c.current = c.current, nil
 	c.lock.Unlock()

@@ -15,7 +15,6 @@
 package lastvalue
 
 import (
-	"context"
 	"math/rand"
 	"os"
 	"testing"
@@ -50,8 +49,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestLastValueUpdate(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
 
@@ -64,7 +61,7 @@ func TestLastValueUpdate(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		agg.Checkpoint(ctx, record)
+		agg.Checkpoint(record)
 
 		lv, _, err := agg.LastValue()
 		require.Equal(t, last, lv, "Same last value - non-monotonic")
@@ -73,8 +70,6 @@ func TestLastValueUpdate(t *testing.T) {
 }
 
 func TestLastValueMerge(t *testing.T) {
-	ctx := context.Background()
-
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg1 := New()
 		agg2 := New()
@@ -88,8 +83,8 @@ func TestLastValueMerge(t *testing.T) {
 		test.CheckedUpdate(t, agg1, first1, descriptor)
 		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		agg1.Checkpoint(ctx, descriptor)
-		agg2.Checkpoint(ctx, descriptor)
+		agg1.Checkpoint(descriptor)
+		agg2.Checkpoint(descriptor)
 
 		_, t1, err := agg1.LastValue()
 		require.Nil(t, err)
@@ -110,7 +105,7 @@ func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
 	g := New()
-	g.Checkpoint(context.Background(), descriptor)
+	g.Checkpoint(descriptor)
 
 	value, timestamp, err := g.LastValue()
 	require.Equal(t, aggregator.ErrNoData, err)
