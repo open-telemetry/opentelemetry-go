@@ -51,7 +51,7 @@ func New() *Aggregator {
 
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
-func (c *Aggregator) Checkpoint(_ *metric.Descriptor) {
+func (c *Aggregator) Checkpoint(*metric.Descriptor) {
 	c.checkpoint.Number = c.current.Number.SwapNumberAtomic(metric.Number(0))
 }
 

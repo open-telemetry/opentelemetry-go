@@ -64,10 +64,12 @@ type Integrator interface {
 	// disable metrics with active records.
 	AggregationSelector
 
-	// Process is called by the SDK once per internal record,
-	// passing the Accumulation (a Descriptor, the corresponding
-	// Labels and Resource, and the accumulated and checkpointed
-	// Aggregator).
+	// passing the export Record (a Descriptor, the corresponding
+	// Labels, and the checkpointed Aggregator).  This call has no
+	// Context argument because it is expected to perform only
+	// computation.  An SDK is not expected to call exporters from
+	// with Process, use a controller for that (see
+	// ./controllers/{pull,push}.
 	Process(accum Accumulation) error
 }
 
@@ -120,6 +122,9 @@ type Aggregator interface {
 	// After the checkpoint is taken, the current value may be
 	// accessed using by converting to one a suitable interface
 	// types in the `aggregator` sub-package.
+	//
+	// This call has no Context argument because it is expected to
+	// perform only computation.
 	Checkpoint(*metric.Descriptor)
 
 	// Merge combines the checkpointed state from the argument
