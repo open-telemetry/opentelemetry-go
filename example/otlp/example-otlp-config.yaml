@@ -1,0 +1,29 @@
+   extensions:
+     health_check:
+
+   receivers:
+     otlp:
+       endpoint: 0.0.0.0:55680
+
+   processors:
+     batch:
+     queued_retry:
+
+   exporters:
+     logging:
+         loglevel: debug
+
+   service:
+
+     pipelines:
+
+       traces:
+         receivers: [otlp]
+         processors: [batch, queued_retry]
+         exporters: [logging]
+
+       metrics:
+         receivers: [otlp]
+         exporters: [logging]
+
+     extensions: [health_check]

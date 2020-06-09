@@ -12,27 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push
+package oterror
 
-import (
-	"testing"
+import "errors"
 
-	"go.opentelemetry.io/otel/api/kv"
-
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/sdk/resource"
+var (
+	// ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
+	ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 )
-
-func TestWithResource(t *testing.T) {
-	r := resource.New(kv.String("A", "a"))
-
-	c := &Config{}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
-
-	// Ensure overwriting works.
-	c = &Config{Resource: &resource.Resource{}}
-	WithResource(r).Apply(c)
-	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
-}

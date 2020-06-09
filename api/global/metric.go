@@ -17,33 +17,7 @@ package global
 import (
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/trace"
 )
-
-// Tracer creates a named tracer that implements Tracer interface.
-// If the name is an empty string then provider uses default name.
-//
-// This is short for TraceProvider().Tracer(name)
-func Tracer(name string) trace.Tracer {
-	return TraceProvider().Tracer(name)
-}
-
-// TraceProvider returns the registered global trace provider.
-// If none is registered then an instance of trace.NoopProvider is returned.
-//
-// Use the trace provider to create a named tracer. E.g.
-//     tracer := global.TraceProvider().Tracer("example.com/foo")
-// or
-//     tracer := global.Tracer("example.com/foo")
-func TraceProvider() trace.Provider {
-	return internal.TraceProvider()
-}
-
-// SetTraceProvider registers `tp` as the global trace provider.
-func SetTraceProvider(tp trace.Provider) {
-	internal.SetTraceProvider(tp)
-}
 
 // Meter gets a named Meter interface.  If the name is an
 // empty string, the provider uses a default name.
@@ -68,16 +42,4 @@ func MeterProvider() metric.Provider {
 // SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.Provider) {
 	internal.SetMeterProvider(mp)
-}
-
-// Propagators returns the registered global propagators instance.  If
-// none is registered then an instance of propagators.NoopPropagators
-// is returned.
-func Propagators() propagation.Propagators {
-	return internal.Propagators()
-}
-
-// SetPropagators registers `p` as the global propagators instance.
-func SetPropagators(p propagation.Propagators) {
-	internal.SetPropagators(p)
 }

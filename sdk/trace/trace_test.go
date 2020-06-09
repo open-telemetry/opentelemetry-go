@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv/value"
 
 	"github.com/google/go-cmp/cmp"
@@ -43,9 +44,15 @@ var (
 	sid apitrace.SpanID
 )
 
+type discardHandler struct{}
+
+func (*discardHandler) Handle(_ error) {}
+
 func init() {
 	tid, _ = apitrace.IDFromHex("01020304050607080102040810203040")
 	sid, _ = apitrace.SpanIDFromHex("0102040810203040")
+
+	global.SetHandler(new(discardHandler))
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
