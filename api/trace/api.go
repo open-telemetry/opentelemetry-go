@@ -24,9 +24,30 @@ import (
 )
 
 type Provider interface {
-	// Tracer creates a named tracer that implements Tracer interface.
-	// If the name is an empty string then provider uses default name.
-	Tracer(name string) Tracer
+	// Tracer creates a tracer that implements the Tracer interface.
+	// The instrumentationName must be name of the library providing
+	// instrumentation. This name may be the same as the instrumented code
+	// only if that code as built-in instrumentation. If the instrumentation
+	// is empty, then the will assign a default name.
+	Tracer(instrumentationName string, opts ...TracerOption) Tracer
+}
+
+// TODO (MrAlias): unify this API option design:
+// https://github.com/open-telemetry/opentelemetry-go/issues/536
+
+// TracerConfig contains options for a Tracer.
+type TracerConfig struct {
+	InstrumentationVersion string
+}
+
+// TracerOption configures a TracerConfig option.
+type TracerOption func(*TracerConfig)
+
+// WithInstrumentationVersion sets the instrumentation version for a Tracer.
+func WithInstrumentationVersion(version string) TracerOption {
+	return func(c *TracerConfig) {
+		c.InstrumentationVersion = version
+	}
 }
 
 type Tracer interface {
