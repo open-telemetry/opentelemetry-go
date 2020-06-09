@@ -317,21 +317,12 @@ func Test_spanDataToThrift(t *testing.T) {
 	}
 }
 
-func TestNewRawExporterWithDisabled(t *testing.T) {
-	const (
-		collectorEndpoint = "http://localhost"
-	)
-	// Create Jaeger Exporter
-	exp, err := NewRawExporter(
-		WithCollectorEndpoint(collectorEndpoint),
+func TestNewExporterPipelineWithDisabled(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		WithDisabled(true),
 	)
-
+	defer fn()
 	assert.NoError(t, err)
-	assert.EqualValues(t, true, exp.o.Disabled)
-
-	// Ensure we can still normally invoke function
-	assert.NoError(t, exp.upload([]*gen.Span{}))
-	exp.ExportSpan(context.Background(), &export.SpanData{})
-	exp.Flush()
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }

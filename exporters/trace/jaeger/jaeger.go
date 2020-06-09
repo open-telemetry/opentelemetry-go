@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -38,7 +39,7 @@ type options struct {
 	// Process contains the information about the exporting process.
 	Process Process
 
-	//BufferMaxCount defines the total number of traces that can be buffered in memory
+	// BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
 
 	Config *sdktrace.Config
@@ -57,7 +58,7 @@ func WithProcess(process Process) Option {
 	}
 }
 
-//WithBufferMaxCount defines the total number of traces that can be buffered in memory
+// WithBufferMaxCount defines the total number of traces that can be buffered in memory
 func WithBufferMaxCount(bufferMaxCount int) Option {
 	return func(o *options) {
 		o.BufferMaxCount = bufferMaxCount
@@ -87,21 +88,18 @@ func WithDisabled(disabled bool) Option {
 
 // NewRawExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
+//
+// It will IGNORE Disabled option.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
+	uploader, err := endpointOption()
+	if err != nil {
+		return nil, err
+	}
+
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv(), WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
-	}
-	if o.Disabled {
-		return &Exporter{
-			o: o,
-		}, nil
-	}
-
-	uploader, err := endpointOption()
-	if err != nil {
-		return nil, err
 	}
 
 	service := o.Process.ServiceName
@@ -142,7 +140,15 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.Provider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.Provider, func(), error) {
+	o := options{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if o.Disabled {
+		return &apitrace.NoopProvider{}, func() {}, nil
+	}
+
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
 		return nil, nil, err
@@ -184,9 +190,6 @@ var _ export.SpanSyncer = (*Exporter)(nil)
 
 // ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(ctx context.Context, d *export.SpanData) {
-	if e.o.Disabled {
-		return
-	}
 	_ = e.bundler.Add(spanDataToThrift(d), 1)
 	// TODO(jbd): Handle oversized bundlers.
 }
@@ -344,16 +347,10 @@ func getBoolTag(k string, b bool) *gen.Tag {
 //
 // This is useful if your program is ending and you do not want to lose recent spans.
 func (e *Exporter) Flush() {
-	if e.o.Disabled {
-		return
-	}
 	e.bundler.Flush()
 }
 
 func (e *Exporter) upload(spans []*gen.Span) error {
-	if e.o.Disabled {
-		return nil
-	}
 	batch := &gen.Batch{
 		Spans:   spans,
 		Process: e.process,
