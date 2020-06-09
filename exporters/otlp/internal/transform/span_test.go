@@ -23,11 +23,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -322,6 +324,10 @@ func TestSpanData(t *testing.T) {
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
 		Resource:                 resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
+		InstrumentationLibrary: instrumentation.Library{
+			Name:    "go.opentelemetry.io/test/otel",
+			Version: "v0.0.1",
+		},
 	}
 
 	// Not checking resource as the underlying map of our Resource makes
@@ -345,16 +351,14 @@ func TestSpanData(t *testing.T) {
 	}
 
 	got := SpanData([]*export.SpanData{spanData})
-	if !assert.Len(t, got, 1) {
-		return
-	}
+	require.Len(t, got, 1)
 
-	// Break the span down as large diffs can be hard to read.
-	actualSpans := got[0].GetInstrumentationLibrarySpans()
-	if !assert.Len(t, actualSpans, 1) && !assert.Len(t, actualSpans[0].Spans, 1) {
-		return
-	}
-	actualSpan := actualSpans[0].Spans[0]
+	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
+	ilSpans := got[0].GetInstrumentationLibrarySpans()
+	require.Len(t, ilSpans, 1)
+	assert.Equal(t, ilSpans[0].GetInstrumentationLibrary(), instrumentationLibrary(spanData.InstrumentationLibrary))
+	require.Len(t, ilSpans[0].Spans, 1)
+	actualSpan := ilSpans[0].Spans[0]
 
 	if diff := cmp.Diff(expectedSpan, actualSpan, cmp.Comparer(proto.Equal)); diff != "" {
 		t.Fatalf("transformed span differs %v\n", diff)
@@ -363,7 +367,9 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	rs := SpanData([]*export.SpanData{{}})[0]
+	sd := SpanData([]*export.SpanData{{}})
+	require.Len(t, sd, 1)
+	rs := sd[0]
 	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
 
 	// Empty means root span.
