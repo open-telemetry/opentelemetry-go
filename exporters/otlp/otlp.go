@@ -50,7 +50,8 @@ type Exporter struct {
 
 	backgroundConnectionDoneCh chan bool
 
-	c Config
+	c        Config
+	metadata metadata.MD
 }
 
 var _ tracesdk.SpanBatcher = (*Exporter)(nil)
@@ -77,6 +78,9 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 		grpcServiceConfig: DefaultGRPCServiceConfig,
 	}
 	configureOptions(&e.c, opts...)
+	if len(e.c.headers) > 0 {
+		e.metadata = metadata.New(e.c.headers)
+	}
 
 	// TODO (rghetia): add resources
 
@@ -178,8 +182,8 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	}
 
 	ctx := context.Background()
-	if len(e.c.headers) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(e.c.headers))
+	if e.metadata.Len() > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, e.metadata)
 	}
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
@@ -245,6 +249,9 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	case <-ctx.Done():
 		return errContextCanceled
 	default:
+		if e.metadata.Len() > 0 {
+			ctx = metadata.NewOutgoingContext(ctx, e.metadata)
+		}
 		e.senderMu.Lock()
 		_, err := e.metricExporter.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: rms,
@@ -280,6 +287,9 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 			return
 		}
 
+		if e.metadata.Len() > 0 {
+			ctx = metadata.NewOutgoingContext(ctx, e.metadata)
+		}
 		e.senderMu.Lock()
 		_, err := e.traceExporter.Export(ctx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
