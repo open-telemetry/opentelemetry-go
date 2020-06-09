@@ -15,7 +15,6 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 
 import (
-	"context"
 	"errors"
 	"sync"
 
@@ -65,7 +64,7 @@ func New(selector export.AggregationSelector, stateful bool) *Integrator {
 	}
 }
 
-func (b *Integrator) Process(_ context.Context, record export.Record) error {
+func (b *Integrator) Process(record export.Record) error {
 	desc := record.Descriptor()
 	key := batchKey{
 		descriptor: desc,

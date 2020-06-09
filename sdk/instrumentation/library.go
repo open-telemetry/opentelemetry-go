@@ -17,11 +17,15 @@ Package instrumentation provides an instrumentation library structure to be
 passed to both the OpenTelemetry Tracer and Meter components.
 
 For more information see
-[this](https://github.com/open-telemetry/oteps/blob/master/text/0083-component.md)
+[this](https://github.com/open-telemetry/oteps/blob/master/text/0083-component.md).
 */
 package instrumentation
 
+// Library represents the instrumentation library.
 type Library struct {
-	Name    string
+	// Name is the name of the instrumentation library. This should be the
+	// Go package name of that library.
+	Name string
+	// Version is the version of the instrumentation library.
 	Version string
 }

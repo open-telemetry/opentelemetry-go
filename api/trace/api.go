@@ -24,11 +24,12 @@ import (
 )
 
 type Provider interface {
-	// Tracer creates a tracer that implements the Tracer interface.
-	// The instrumentationName must be name of the library providing
+	// Tracer creates an implementation of the Tracer interface.
+	// The instrumentationName must be the name of the library providing
 	// instrumentation. This name may be the same as the instrumented code
-	// only if that code as built-in instrumentation. If the instrumentation
-	// is empty, then the will assign a default name.
+	// only if that code provides built-in instrumentation. If the
+	// instrumentationName is empty, then a implementation defined default
+	// name will be used instead.
 	Tracer(instrumentationName string, opts ...TracerOption) Tracer
 }
 
