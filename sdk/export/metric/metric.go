@@ -73,7 +73,7 @@ type Integrator interface {
 // AggregationSelector supports selecting the kind of Aggregator to
 // use at runtime for a specific metric instrument.
 type AggregationSelector interface {
-	// AggregatorFor returns the kind of aggregator suited to the
+	// AggregatorFor returns two aggregators of a kind suited to the
 	// requested export.  Returning `nil` indicates to ignore this
 	// metric instrument.  This must return a consistent type to
 	// avoid confusion in later stages of the metrics export
@@ -83,7 +83,7 @@ type AggregationSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*metric.Descriptor) Aggregator
+	AggregatorFor(*metric.Descriptor) [2]Aggregator
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -110,7 +110,9 @@ type Aggregator interface {
 	Update(context.Context, metric.Number, *metric.Descriptor) error
 
 	// Checkpoint is called during collection to finish one period
-	// of aggregation by atomically saving the current value.
+	// of aggregation by atomically saving the current value into
+	// the argument.
+	//
 	// Checkpoint() is called concurrently with Update().
 	// Checkpoint should reset the current state to the empty
 	// state, in order to begin computing a new delta for the next
@@ -122,7 +124,7 @@ type Aggregator interface {
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	Checkpoint(*metric.Descriptor)
+	Checkpoint(Aggregator, *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// aggregator into this aggregator's checkpointed state.

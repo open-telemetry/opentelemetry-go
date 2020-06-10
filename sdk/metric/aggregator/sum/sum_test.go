@@ -32,12 +32,8 @@ const count = 100
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "Aggregator.current",
-			Offset: unsafe.Offsetof(Aggregator{}.current),
-		},
-		{
-			Name:   "Aggregator.checkpoint",
-			Offset: unsafe.Offsetof(Aggregator{}.checkpoint),
+			Name:   "Aggregator.value",
+			Offset: unsafe.Offsetof(Aggregator{}.value),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
@@ -50,6 +46,7 @@ func TestMain(m *testing.M) {
 func TestCounterSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
+		ckpt := New()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -60,9 +57,10 @@ func TestCounterSum(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
-		agg.Checkpoint(descriptor)
+		err := agg.Checkpoint(ckpt, descriptor)
+		require.NoError(t, err)
 
-		asum, err := agg.Sum()
+		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -71,6 +69,7 @@ func TestCounterSum(t *testing.T) {
 func TestValueRecorderSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
+		ckpt := New()
 
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -85,9 +84,9 @@ func TestValueRecorderSum(t *testing.T) {
 			sum.AddNumber(profile.NumberKind, r2)
 		}
 
-		agg.Checkpoint(descriptor)
+		agg.Checkpoint(ckpt, descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -97,6 +96,9 @@ func TestCounterMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg1 := New()
 		agg2 := New()
+
+		ckpt1 := New()
+		ckpt2 := New()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -108,14 +110,14 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		agg1.Checkpoint(ckpt1, descriptor)
+		agg2.Checkpoint(ckpt2, descriptor)
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
 
-		asum, err := agg1.Sum()
+		asum, err := ckpt1.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})

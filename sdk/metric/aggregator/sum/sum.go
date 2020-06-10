@@ -26,11 +26,7 @@ import (
 type Aggregator struct {
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
-	current metric.Number
-
-	// checkpoint is a temporary used during Checkpoint()
-	// checkpoint needs to be aligned for 64-bit atomic operations.
-	checkpoint metric.Number
+	value metric.Number
 }
 
 var _ export.Aggregator = &Aggregator{}
@@ -46,18 +42,23 @@ func New() *Aggregator {
 // Sum returns the last-checkpointed sum.  This will never return an
 // error.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.checkpoint, nil
+	return c.value, nil
 }
 
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
-func (c *Aggregator) Checkpoint(*metric.Descriptor) {
-	c.checkpoint = c.current.SwapNumberAtomic(metric.Number(0))
+func (c *Aggregator) Checkpoint(oa export.Aggregator, _ *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+	o.value = c.value.SwapNumberAtomic(metric.Number(0))
+	return nil
 }
 
 // Update atomically adds to the current value.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
-	c.current.AddNumberAtomic(desc.NumberKind(), number)
+	c.value.AddNumberAtomic(desc.NumberKind(), number)
 	return nil
 }
 
@@ -65,8 +66,8 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
-	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
+	c.value.AddNumber(desc.NumberKind(), o.value)
 	return nil
 }

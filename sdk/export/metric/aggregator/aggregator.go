@@ -112,11 +112,11 @@ var (
 	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
 
-// NewInconsistentMergeError formats an error describing an attempt to
+// NewInconsistentAggregatorError formats an error describing an attempt to
 // merge different-type aggregators.  The result can be unwrapped as
 // an ErrInconsistentType.
-func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
+func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
+	return fmt.Errorf("%w: %T and %T", ErrInconsistentType, a1, a2)
 }
 
 // RangeTest is a commmon routine for testing for valid input values.
