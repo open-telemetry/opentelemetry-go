@@ -73,17 +73,23 @@ type Integrator interface {
 // AggregationSelector supports selecting the kind of Aggregator to
 // use at runtime for a specific metric instrument.
 type AggregationSelector interface {
-	// AggregatorFor returns two aggregators of a kind suited to the
-	// requested export.  Returning `nil` indicates to ignore this
-	// metric instrument.  This must return a consistent type to
-	// avoid confusion in later stages of the metrics export
-	// process, i.e., when Merging multiple aggregators for a
-	// specific instrument.
+	// AggregatorFor allocates a variable number of aggregators of
+	// a kind suitable for the requested export.  This method
+	// supports a variable-number of allocations to support making
+	// a single allocation.
+	//
+	// When the call returns without initializing the *Aggregator
+	// to a non-nil value, the metric instrument is explicitly
+	// disabled.
+	//
+	// This must return a consistent type to avoid confusion in
+	// later stages of the metrics export process, i.e., when
+	// Merging multiple aggregators for a specific instrument.
 	//
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*metric.Descriptor) [2]Aggregator
+	AggregatorFor(*metric.Descriptor, ...*Aggregator)
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
