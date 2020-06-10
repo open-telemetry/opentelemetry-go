@@ -15,10 +15,12 @@
 package jaeger
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"strings"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
 )
@@ -71,13 +73,19 @@ func WithDisabledFromEnv() Option {
 }
 
 // ProcessFromEnv parse environment variables into jaeger exporter's Process.
+// It will return a nil tag slice if the environment variable JAEGER_TAGS is malformed.
 func ProcessFromEnv() Process {
 	var p Process
 	if e := os.Getenv(envServiceName); e != "" {
 		p.ServiceName = e
 	}
 	if e := os.Getenv(envTags); e != "" {
-		p.Tags = parseTags(e)
+		tags, err := parseTags(e)
+		if err != nil {
+			global.Handle(err)
+		} else {
+			p.Tags = tags
+		}
 	}
 
 	return p
@@ -96,20 +104,29 @@ func WithProcessFromEnv() Option {
 	}
 }
 
+var errTagValueNotFound = errors.New("missing tag value")
+var errTagEnvironmentDefaultValueNotFound = errors.New("missing default value for tag environment value")
+
 // parseTags parses the given string into a collection of Tags.
 // Spec for this value:
 // - comma separated list of key=value
 // - value can be specified using the notation ${envVar:defaultValue}, where `envVar`
 // is an environment variable and `defaultValue` is the value to use in case the env var is not set
-func parseTags(sTags string) []kv.KeyValue {
+func parseTags(sTags string) ([]kv.KeyValue, error) {
 	pairs := strings.Split(sTags, ",")
 	tags := make([]kv.KeyValue, len(pairs))
 	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
+		if len(field) != 2 {
+			return nil, errTagValueNotFound
+		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
 
 		if strings.HasPrefix(v, "${") && strings.HasSuffix(v, "}") {
 			ed := strings.SplitN(v[2:len(v)-1], ":", 2)
+			if len(ed) != 2 {
+				return nil, errTagEnvironmentDefaultValueNotFound
+			}
 			e, d := ed[0], ed[1]
 			v = os.Getenv(e)
 			if v == "" && d != "" {
@@ -120,7 +137,7 @@ func parseTags(sTags string) []kv.KeyValue {
 		tags[i] = parseKeyValue(k, v)
 	}
 
-	return tags
+	return tags, nil
 }
 
 func parseKeyValue(k, v string) kv.KeyValue {

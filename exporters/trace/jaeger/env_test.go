@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"math"
 	"os"
 	"testing"
 
@@ -35,32 +36,109 @@ func Test_parseTags(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	tags := "key=value,k1=${nonExisting:default}, k2=${withSpace:default},k3=${existing:default},k4=true,k5=42,k6=-1.2"
-	ts := parseTags(tags)
-	assert.Equal(t, 7, len(ts))
+	testCases := []struct {
+		name          string
+		tagStr        string
+		expectedTags  []kv.KeyValue
+		expectedError error
+	}{
+		{
+			name:   "string",
+			tagStr: "key=value",
+			expectedTags: []kv.KeyValue{
+				{
+					Key:   "key",
+					Value: value.String("value"),
+				},
+			},
+		},
+		{
+			name:   "int64",
+			tagStr: "k=9223372036854775807,k2=-9223372036854775808",
+			expectedTags: []kv.KeyValue{
+				{
+					Key:   "k",
+					Value: value.Int64(math.MaxInt64),
+				},
+				{
+					Key:   "k2",
+					Value: value.Int64(math.MinInt64),
+				},
+			},
+		},
+		{
+			name:   "float64",
+			tagStr: "k=1.797693134862315708145274237317043567981e+308,k2=4.940656458412465441765687928682213723651e-324,k3=-1.2",
+			expectedTags: []kv.KeyValue{
+				{
+					Key:   "k",
+					Value: value.Float64(math.MaxFloat64),
+				},
+				{
+					Key:   "k2",
+					Value: value.Float64(math.SmallestNonzeroFloat64),
+				},
+				{
+					Key:   "k3",
+					Value: value.Float64(-1.2),
+				},
+			},
+		},
+		{
+			name:   "multiple type values",
+			tagStr: "k=v,k2=123, k3=v3 ,k4=-1.2, k5=${existing:default},k6=${nonExisting:default}",
+			expectedTags: []kv.KeyValue{
+				{
+					Key:   "k",
+					Value: value.String("v"),
+				},
+				{
+					Key:   "k2",
+					Value: value.Int64(123),
+				},
+				{
+					Key:   "k3",
+					Value: value.String("v3"),
+				},
+				{
+					Key:   "k4",
+					Value: value.Float64(-1.2),
+				},
+				{
+					Key:   "k5",
+					Value: value.String("not-default"),
+				},
+				{
+					Key:   "k6",
+					Value: value.String("default"),
+				},
+			},
+		},
+		{
+			name:          "malformed: only have key",
+			tagStr:        "key",
+			expectedError: errTagValueNotFound,
+		},
+		{
+			name:          "malformed: environment key has no default value",
+			tagStr:        "key=${foo}",
+			expectedError: errTagEnvironmentDefaultValueNotFound,
+		},
+	}
 
-	assert.Equal(t, kv.Key("key"), ts[0].Key)
-	assert.Equal(t, value.String("value"), ts[0].Value)
-
-	assert.Equal(t, kv.Key("k1"), ts[1].Key)
-	assert.Equal(t, value.String("default"), ts[1].Value)
-
-	assert.Equal(t, kv.Key("k2"), ts[2].Key)
-	assert.Equal(t, value.String("default"), ts[2].Value)
-
-	assert.Equal(t, kv.Key("k3"), ts[3].Key)
-	assert.Equal(t, value.String("not-default"), ts[3].Value)
-
-	assert.Equal(t, kv.Key("k4"), ts[4].Key)
-	assert.Equal(t, value.Bool(true), ts[4].Value)
-
-	assert.Equal(t, kv.Key("k5"), ts[5].Key)
-	assert.Equal(t, value.Int64(42), ts[5].Value)
-
-	assert.Equal(t, kv.Key("k6"), ts[6].Key)
-	assert.Equal(t, value.Float64(-1.2), ts[6].Value)
-
-	require.NoError(t, os.Unsetenv("existing"))
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tags, err := parseTags(tc.tagStr)
+			if tc.expectedError == nil {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedTags, tags)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectedError, err)
+				assert.Equal(t, tc.expectedTags, tags)
+			}
+		})
+	}
 }
 
 func Test_parseValue(t *testing.T) {
@@ -319,29 +397,48 @@ func TestWithDisabledFromEnv(t *testing.T) {
 }
 
 func TestProcessFromEnv(t *testing.T) {
-	const (
-		serviceName = "test-service"
-		tags        = "key=value,key2=123"
-	)
-
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envServiceName: serviceName,
-		envTags:        tags,
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	p := ProcessFromEnv()
-
-	assert.Equal(t, Process{
-		ServiceName: serviceName,
-		Tags: []kv.KeyValue{
-			kv.String("key", "value"),
-			kv.Int64("key2", 123),
+	testCases := []struct {
+		name            string
+		serviceName     string
+		tags            string
+		expectedProcess Process
+	}{
+		{
+			name:        "set process",
+			serviceName: "test-service",
+			tags:        "key=value,key2=123",
+			expectedProcess: Process{
+				ServiceName: "test-service",
+				Tags: []kv.KeyValue{
+					kv.String("key", "value"),
+					kv.Int64("key2", 123),
+				},
+			},
 		},
-	}, p)
+		{
+			name:        "malformed tags",
+			serviceName: "test-service",
+			tags:        "key",
+			expectedProcess: Process{
+				ServiceName: "test-service",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			envStore, err := ottest.SetEnvVariables(map[string]string{
+				envServiceName: tc.serviceName,
+				envTags:        tc.tags,
+			})
+			require.NoError(t, err)
+
+			p := ProcessFromEnv()
+			assert.Equal(t, tc.expectedProcess, p)
+
+			require.NoError(t, envStore.Restore())
+		})
+	}
 }
 
 func TestWithProcessFromEnv(t *testing.T) {
