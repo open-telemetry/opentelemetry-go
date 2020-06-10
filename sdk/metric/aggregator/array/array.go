@@ -23,7 +23,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -41,15 +42,20 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.MinMaxSumCount = &Aggregator{}
-var _ aggregator.Distribution = &Aggregator{}
-var _ aggregator.Points = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &Aggregator{}
+var _ aggregation.Distribution = &Aggregator{}
+var _ aggregation.Points = &Aggregator{}
 
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and Checkpoint() concurrency.
 func New() *Aggregator {
 	return &Aggregator{}
+}
+
+// Kind returns aggregation.ExactKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.ExactKind
 }
 
 // Sum returns the sum of values in the checkpoint.
@@ -179,11 +185,11 @@ func (p *points) Swap(i, j int) {
 // of a quantile.
 func (p *points) Quantile(q float64) (metric.Number, error) {
 	if len(*p) == 0 {
-		return metric.Number(0), aggregator.ErrNoData
+		return metric.Number(0), aggregation.ErrNoData
 	}
 
 	if q < 0 || q > 1 {
-		return metric.Number(0), aggregator.ErrInvalidQuantile
+		return metric.Number(0), aggregation.ErrInvalidQuantile
 	}
 
 	if q == 0 || len(*p) == 1 {

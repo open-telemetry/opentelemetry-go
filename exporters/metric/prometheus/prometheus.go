@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -216,11 +216,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		desc := c.toDesc(record, labelKeys)
 
-		if hist, ok := agg.(aggregator.Histogram); ok {
+		if hist, ok := agg.(aggregation.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting histogram: %w", err)
 			}
-		} else if dist, ok := agg.(aggregator.Distribution); ok {
+		} else if dist, ok := agg.(aggregation.Distribution); ok {
 			// TODO: summaries values are never being resetted.
 			//  As measurements are recorded, new records starts to have less impact on these summaries.
 			//  We should implement an solution that is similar to the Prometheus Clients
@@ -232,11 +232,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting summary: %w", err)
 			}
-		} else if sum, ok := agg.(aggregator.Sum); ok {
+		} else if sum, ok := agg.(aggregation.Sum); ok {
 			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting counter: %w", err)
 			}
-		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
+		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting last value: %w", err)
 			}
@@ -248,7 +248,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -263,7 +263,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -278,7 +278,7 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
@@ -305,7 +305,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)

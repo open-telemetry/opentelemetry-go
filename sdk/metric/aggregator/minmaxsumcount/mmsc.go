@@ -20,7 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -42,7 +43,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.MinMaxSumCount = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &Aggregator{}
 
 // New returns a new aggregator for computing the min, max, sum, and
 // count.  It does not compute quantile information other than Min and
@@ -62,6 +63,11 @@ func New(desc *metric.Descriptor) *Aggregator {
 	}
 }
 
+// Kind returns aggregation.MinMaxSumCountKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.MinMaxSumCountKind
+}
+
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()
@@ -77,25 +83,25 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Min returns the minimum value in the checkpoint.
-// The error value aggregator.ErrNoData will be returned
+// The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Min() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregator.ErrNoData
+		return c.kind.Zero(), aggregation.ErrNoData
 	}
 	return c.checkpoint.min, nil
 }
 
 // Max returns the maximum value in the checkpoint.
-// The error value aggregator.ErrNoData will be returned
+// The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Max() (metric.Number, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregator.ErrNoData
+		return c.kind.Zero(), aggregation.ErrNoData
 	}
 	return c.checkpoint.max, nil
 }

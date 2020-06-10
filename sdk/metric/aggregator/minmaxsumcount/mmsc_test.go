@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -193,7 +193,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		require.Nil(t, err)
 
 		max, err := agg.Max()
-		require.Equal(t, aggregator.ErrNoData, err)
+		require.Equal(t, aggregation.ErrNoData, err)
 		require.Equal(t, metric.Number(0), max)
 	})
 }
