@@ -62,7 +62,9 @@ var _ aggregator.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
+func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
+	aggs := make([]Aggregator, cnt)
+
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := make([]float64, len(boundaries))
@@ -70,11 +72,14 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	copy(sortedBoundaries, boundaries)
 	sort.Float64s(sortedBoundaries)
 
-	return &Aggregator{
-		kind:       desc.NumberKind(),
-		boundaries: sortedBoundaries,
-		state:      emptyState(sortedBoundaries),
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			kind:       desc.NumberKind(),
+			boundaries: sortedBoundaries,
+			state:      emptyState(sortedBoundaries),
+		}
 	}
+	return aggs
 }
 
 // Sum returns the sum of all values in the checkpoint.

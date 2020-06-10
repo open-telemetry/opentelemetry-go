@@ -46,8 +46,8 @@ var _ aggregator.Points = &Aggregator{}
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and Checkpoint() concurrency.
-func New() *Aggregator {
-	return &Aggregator{}
+func New(cnt int) []Aggregator {
+	return make([]Aggregator, cnt)
 }
 
 // Sum returns the sum of values in the checkpoint.

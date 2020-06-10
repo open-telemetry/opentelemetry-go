@@ -42,12 +42,16 @@ var _ aggregator.MinMaxSumCount = &Aggregator{}
 var _ aggregator.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
-func New(desc *metric.Descriptor, cfg *Config) *Aggregator {
-	return &Aggregator{
-		cfg:    cfg,
-		kind:   desc.NumberKind(),
-		sketch: sdk.NewDDSketch(cfg),
+func New(cnt int, desc *metric.Descriptor, cfg *Config) []Aggregator {
+	aggs := make([]Aggregator, cnt)
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			cfg:    cfg,
+			kind:   desc.NumberKind(),
+			sketch: sdk.NewDDSketch(cfg),
+		}
 	}
+	return aggs
 }
 
 // NewDefaultConfig returns a new, default DDSketch config.

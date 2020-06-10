@@ -59,8 +59,8 @@ func checkZero(t *testing.T, agg *Aggregator) {
 
 func TestLastValueUpdate(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-		ckpt := New()
+		alloc := New(2)
+		agg, ckpt := &alloc[0], &alloc[1]
 
 		record := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -82,10 +82,8 @@ func TestLastValueUpdate(t *testing.T) {
 
 func TestLastValueMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg1 := New()
-		agg2 := New()
-		ckpt1 := New()
-		ckpt2 := New()
+		alloc := New(4)
+		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 		descriptor := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -120,8 +118,8 @@ func TestLastValueMerge(t *testing.T) {
 func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
-	g := New()
-	ckpt := New()
+	g := &New(1)[0]
+	ckpt := &New(1)[0]
 	g.Checkpoint(ckpt, descriptor)
 
 	checkZero(t, g)

@@ -35,8 +35,8 @@ var _ aggregator.Sum = &Aggregator{}
 // New returns a new counter aggregator implemented by atomic
 // operations.  This aggregator implements the aggregator.Sum
 // export interface.
-func New() *Aggregator {
-	return &Aggregator{}
+func New(cnt int) []Aggregator {
+	return make([]Aggregator, cnt)
 }
 
 // Sum returns the last-checkpointed sum.  This will never return an

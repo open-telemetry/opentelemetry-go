@@ -48,12 +48,16 @@ var _ aggregator.MinMaxSumCount = &Aggregator{}
 // Max.
 //
 // This type uses a mutex for Update() and Checkpoint() concurrency.
-func New(desc *metric.Descriptor) *Aggregator {
+func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
-	return &Aggregator{
-		kind:  kind,
-		state: emptyState(kind),
+	aggs := make([]Aggregator, cnt)
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			kind:  kind,
+			state: emptyState(kind),
+		}
 	}
+	return aggs
 }
 
 // Sum returns the sum of values in the checkpoint.

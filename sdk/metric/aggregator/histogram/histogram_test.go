@@ -101,8 +101,8 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := histogram.New(descriptor, boundaries)
-	ckpt := histogram.New(descriptor, boundaries)
+	alloc := histogram.New(2, descriptor, boundaries)
+	agg, ckpt := &alloc[0], &alloc[1]
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -147,7 +147,7 @@ func TestHistogramInitial(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := histogram.New(descriptor, boundaries)
+		agg := histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
 
 		require.NoError(t, err)
@@ -160,10 +160,8 @@ func TestHistogramMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg1 := histogram.New(descriptor, boundaries)
-		agg2 := histogram.New(descriptor, boundaries)
-		ckpt1 := histogram.New(descriptor, boundaries)
-		ckpt2 := histogram.New(descriptor, boundaries)
+		alloc := histogram.New(4, descriptor, boundaries)
+		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -215,8 +213,9 @@ func TestHistogramNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := histogram.New(descriptor, boundaries)
-		ckpt := histogram.New(descriptor, boundaries)
+		alloc := histogram.New(2, descriptor, boundaries)
+		agg, ckpt := &alloc[0], &alloc[1]
+
 		err := agg.Checkpoint(ckpt, descriptor)
 		require.NoError(t, err)
 

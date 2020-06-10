@@ -55,8 +55,8 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := New()
-	ckpt := New()
+	alloc := New(2)
+	agg, ckpt := &alloc[0], &alloc[1]
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -124,10 +124,8 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg1 := New()
-	agg2 := New()
-	ckpt1 := New()
-	ckpt2 := New()
+	alloc := New(4)
+	agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -208,8 +206,8 @@ func TestArrayMerge(t *testing.T) {
 
 func TestArrayErrors(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-		ckpt := New()
+		alloc := New(2)
+		agg, ckpt := &alloc[0], &alloc[1]
 
 		_, err := ckpt.Max()
 		require.Error(t, err)
@@ -283,8 +281,8 @@ func TestArrayFloat64(t *testing.T) {
 
 	all := test.NewNumbers(metric.Float64NumberKind)
 
-	agg := New()
-	ckpt := New()
+	alloc := New(2)
+	agg, ckpt := &alloc[0], &alloc[1]
 
 	for _, f := range fpsf(1) {
 		all.Append(metric.NewFloat64Number(f))

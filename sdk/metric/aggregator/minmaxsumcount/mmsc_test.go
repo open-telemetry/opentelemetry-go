@@ -100,8 +100,8 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := New(descriptor)
-	ckpt := New(descriptor)
+	alloc := New(2, descriptor)
+	agg, ckpt := &alloc[0], &alloc[1]
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -149,10 +149,8 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg1 := New(descriptor)
-		agg2 := New(descriptor)
-		ckpt1 := New(descriptor)
-		ckpt2 := New(descriptor)
+		alloc := New(4, descriptor)
+		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -210,8 +208,8 @@ func TestMaxSumCountNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := New(descriptor)
-		ckpt := New(descriptor)
+		alloc := New(2, descriptor)
+		agg, ckpt := &alloc[0], &alloc[1]
 
 		agg.Checkpoint(ckpt, descriptor)
 

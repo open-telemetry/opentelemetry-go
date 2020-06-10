@@ -53,8 +53,8 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 func TestCounterSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-		ckpt := New()
+		alloc := New(2)
+		agg, ckpt := &alloc[0], &alloc[1]
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -78,8 +78,8 @@ func TestCounterSum(t *testing.T) {
 
 func TestValueRecorderSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
-		ckpt := New()
+		alloc := New(2)
+		agg, ckpt := &alloc[0], &alloc[1]
 
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -105,11 +105,8 @@ func TestValueRecorderSum(t *testing.T) {
 
 func TestCounterMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg1 := New()
-		agg2 := New()
-
-		ckpt1 := New()
-		ckpt2 := New()
+		alloc := New(4)
+		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
