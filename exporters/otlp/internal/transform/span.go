@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 const (
@@ -33,30 +34,61 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
-	// Group by the distinct representation of the Resource.
+
 	rsm := make(map[label.Distinct]*tracepb.ResourceSpans)
 
-	for _, sd := range sdl {
-		if sd != nil {
-			key := sd.Resource.Equivalent()
+	type ilsKey struct {
+		r  label.Distinct
+		il instrumentation.Library
+	}
+	ilsm := make(map[ilsKey]*tracepb.InstrumentationLibrarySpans)
 
-			rs, ok := rsm[key]
-			if !ok {
-				rs = &tracepb.ResourceSpans{
-					Resource: Resource(sd.Resource),
-					InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
-						{
-							Spans: []*tracepb.Span{},
-						},
-					},
-				}
-				rsm[key] = rs
+	var resources int
+	for _, sd := range sdl {
+		if sd == nil {
+			continue
+		}
+
+		rKey := sd.Resource.Equivalent()
+		iKey := ilsKey{
+			r:  rKey,
+			il: sd.InstrumentationLibrary,
+		}
+		ils, iOk := ilsm[iKey]
+		if !iOk {
+			// Either the resource or instrumentation library were unknown.
+			ils = &tracepb.InstrumentationLibrarySpans{
+				InstrumentationLibrary: instrumentationLibrary(sd.InstrumentationLibrary),
+				Spans:                  []*tracepb.Span{},
 			}
-			rs.InstrumentationLibrarySpans[0].Spans =
-				append(rs.InstrumentationLibrarySpans[0].Spans, span(sd))
+		}
+		ils.Spans = append(ils.Spans, span(sd))
+		ilsm[iKey] = ils
+
+		rs, rOk := rsm[rKey]
+		if !rOk {
+			resources++
+			// The resource was unknown.
+			rs = &tracepb.ResourceSpans{
+				Resource:                    Resource(sd.Resource),
+				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ils},
+			}
+			rsm[rKey] = rs
+			continue
+		}
+
+		// The resource has been seen before. Check if the instrumentation
+		// library lookup was unknown because if so we need to add it to the
+		// ResourceSpans. Otherwise, the instrumentation library has already
+		// been seen and the append we did above will be included it in the
+		// InstrumentationLibrarySpans reference.
+		if !iOk {
+			rs.InstrumentationLibrarySpans = append(rs.InstrumentationLibrarySpans, ils)
 		}
 	}
-	rss := make([]*tracepb.ResourceSpans, 0, len(rsm))
+
+	// Transform the categorized map into a slice
+	rss := make([]*tracepb.ResourceSpans, 0, resources)
 	for _, rs := range rsm {
 		rss = append(rss, rs)
 	}

@@ -36,6 +36,7 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -301,8 +302,9 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			kv.String("key1", "value1"),
 			kv.String("key2", "value2"),
 		},
-		SpanKind:        apitrace.SpanKindInternal,
-		HasRemoteParent: true,
+		SpanKind:               apitrace.SpanKindInternal,
+		HasRemoteParent:        true,
+		InstrumentationLibrary: instrumentation.Library{Name: "StartSpanAttribute"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOnStart: -got +want %s", diff)
@@ -329,8 +331,9 @@ func TestSetSpanAttributes(t *testing.T) {
 		Attributes: []kv.KeyValue{
 			kv.String("key1", "value1"),
 		},
-		SpanKind:        apitrace.SpanKindInternal,
-		HasRemoteParent: true,
+		SpanKind:               apitrace.SpanKindInternal,
+		HasRemoteParent:        true,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanAttribute"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributes: -got +want %s", diff)
@@ -365,9 +368,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			kv.Bool("key1", false),
 			kv.Int64("key4", 4),
 		},
-		SpanKind:              apitrace.SpanKindInternal,
-		HasRemoteParent:       true,
-		DroppedAttributeCount: 1,
+		SpanKind:               apitrace.SpanKindInternal,
+		HasRemoteParent:        true,
+		DroppedAttributeCount:  1,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanAttributesOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
@@ -411,7 +415,8 @@ func TestEvents(t *testing.T) {
 			{Name: "foo", Attributes: []kv.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: apitrace.SpanKindInternal,
+		SpanKind:               apitrace.SpanKindInternal,
+		InstrumentationLibrary: instrumentation.Library{Name: "Events"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -463,6 +468,7 @@ func TestEventsOverLimit(t *testing.T) {
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
 		SpanKind:                 apitrace.SpanKindInternal,
+		InstrumentationLibrary:   instrumentation.Library{Name: "EventsOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -505,7 +511,8 @@ func TestLinks(t *testing.T) {
 			{SpanContext: sc1, Attributes: []kv.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2, k3v3}},
 		},
-		SpanKind: apitrace.SpanKindInternal,
+		SpanKind:               apitrace.SpanKindInternal,
+		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -547,9 +554,10 @@ func TestLinksOverLimit(t *testing.T) {
 			{SpanContext: sc2, Attributes: []kv.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []kv.KeyValue{k3v3}},
 		},
-		DroppedLinkCount: 1,
-		HasRemoteParent:  true,
-		SpanKind:         apitrace.SpanKindInternal,
+		DroppedLinkCount:       1,
+		HasRemoteParent:        true,
+		SpanKind:               apitrace.SpanKindInternal,
+		InstrumentationLibrary: instrumentation.Library{Name: "LinksOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -594,12 +602,13 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		SpanKind:        apitrace.SpanKindInternal,
-		StatusCode:      codes.Canceled,
-		StatusMessage:   "canceled",
-		HasRemoteParent: true,
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		SpanKind:               apitrace.SpanKindInternal,
+		StatusCode:             codes.Canceled,
+		StatusMessage:          "canceled",
+		HasRemoteParent:        true,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
@@ -951,6 +960,7 @@ func TestRecordError(t *testing.T) {
 					},
 				},
 			},
+			InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 		}
 		if diff := cmpDiff(got, want); diff != "" {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -997,6 +1007,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 				},
 			},
 		},
+		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorWithStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1020,12 +1031,13 @@ func TestRecordErrorNil(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		SpanKind:        apitrace.SpanKindInternal,
-		HasRemoteParent: true,
-		StatusCode:      codes.OK,
-		StatusMessage:   "",
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		SpanKind:               apitrace.SpanKindInternal,
+		HasRemoteParent:        true,
+		StatusCode:             codes.OK,
+		StatusMessage:          "",
+		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1092,9 +1104,44 @@ func TestWithResource(t *testing.T) {
 		Attributes: []kv.KeyValue{
 			kv.String("key1", "value1"),
 		},
+		SpanKind:               apitrace.SpanKindInternal,
+		HasRemoteParent:        true,
+		Resource:               resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
+		InstrumentationLibrary: instrumentation.Library{Name: "WithResource"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("WithResource:\n  -got +want %s", diff)
+	}
+}
+
+func TestWithInstrumentationVersion(t *testing.T) {
+	var te testExporter
+	tp, _ := NewProvider(WithSyncer(&te))
+
+	ctx := context.Background()
+	ctx = apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
+	_, span := tp.Tracer(
+		"WithInstrumentationVersion",
+		apitrace.WithInstrumentationVersion("v0.1.0"),
+	).Start(ctx, "span0", apitrace.WithRecord())
+	got, err := endSpan(&te, span)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	want := &export.SpanData{
+		SpanContext: apitrace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
 		HasRemoteParent: true,
-		Resource:        resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
+		InstrumentationLibrary: instrumentation.Library{
+			Name:    "WithInstrumentationVersion",
+			Version: "v0.1.0",
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("WithResource:\n  -got +want %s", diff)
