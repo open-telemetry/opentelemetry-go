@@ -92,7 +92,7 @@ Some compressors auto-register on import, such as gzip, which can be registered 
 
 ### `WithHeaders(headers map[string]string)`
 
-Headers to send when the gRPC stream connection is instantiated.
+Headers to send with gRPC requests.
 
 ### `WithTLSCredentials(creds "google.golang.org/grpc/credentials".TransportCredentials)`
 

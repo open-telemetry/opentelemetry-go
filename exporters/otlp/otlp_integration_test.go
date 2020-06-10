@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
@@ -399,4 +400,27 @@ func TestNewExporter_withAddress(t *testing.T) {
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Unexpected Start error: %v", err)
 	}
+}
+
+func TestNewExporter_withHeaders(t *testing.T) {
+	mc := runMockCol(t)
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	exp, _ := otlp.NewExporter(
+		otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address),
+		otlp.WithHeaders(map[string]string{"header1": "value1"}),
+	)
+	exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
+
+	defer func() {
+		_ = exp.Stop()
+	}()
+
+	headers := mc.getHeaders()
+	require.Len(t, headers.Get("header1"), 1)
+	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
