@@ -12,21 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // These interfaces describe the various ways to access state from an
-// Aggregator.
+// Aggregation.
 
 type (
+	// Aggregation is one of the interfaces below.
+	Aggregation interface {
+		// Kind returns the kind of aggregation used.
+		Kind() Kind
+	}
+
 	// Sum returns an aggregated sum.
 	Sum interface {
 		Sum() (metric.Number, error)
@@ -100,11 +104,25 @@ type (
 	}
 )
 
+type (
+	Kind string
+)
+
+const (
+	SumKind            Kind = "sum"
+	MinMaxSumCountKind Kind = "minmaxsumcount"
+	HistogramKind      Kind = "histogram"
+	LastValueKind      Kind = "lastvalue"
+	SketchKind         Kind = "sketch"
+	ExactKind          Kind = "exact"
+)
+
 var (
 	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
+	ErrNoSubtraction    = fmt.Errorf("aggregator does not subtract")
 
 	// ErrNoData is returned when (due to a race with collection)
 	// the Aggregator is check-pointed before the first value is set.
@@ -112,29 +130,7 @@ var (
 	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
 
-// NewInconsistentMergeError formats an error describing an attempt to
-// merge different-type aggregators.  The result can be unwrapped as
-// an ErrInconsistentType.
-func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
-}
-
-// RangeTest is a commmon routine for testing for valid input values.
-// This rejects NaN values.  This rejects negative values when the
-// metric instrument does not support negative values, including
-// monotonic counter metrics and absolute ValueRecorder metrics.
-func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
-	numberKind := descriptor.NumberKind()
-
-	if numberKind == metric.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		return ErrNaNInput
-	}
-
-	switch descriptor.MetricKind() {
-	case metric.CounterKind, metric.SumObserverKind:
-		if number.IsNegative(numberKind) {
-			return ErrNegativeInput
-		}
-	}
-	return nil
+// String returns a string representation of the aggregation kind.
+func (k Kind) String() string {
+	return string(k)
 }
