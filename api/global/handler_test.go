@@ -90,18 +90,22 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 			stop <- struct{}{}
 			return fmt.Errorf("no errors sent in %v", d)
 		case <-beat:
+			// Allow the timer to be reclaimed by GC.
 			timer.Stop()
 			return nil
 		}
 	}
 
 	go func() {
+		// Slow down to speed up: do not overload the processor.
+		ticker := time.NewTicker(100 * time.Microsecond)
 		for {
 			select {
 			case <-stop:
+				ticker.Stop()
 				done <- struct{}{}
 				return
-			default:
+			case <-ticker.C:
 				sent++
 				Handle(err)
 			}
@@ -122,10 +126,7 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 		l: log.New(newErrLogger, "", 0),
 	}
 	SetHandler(secondary)
-	// Flush so we can ensure new errors are sent to new Handler.
-	s.Require().NoError(wait(pause), "flushing error stream")
-	// Now beat is clear, wait for a fresh send.
-	s.Require().NoError(wait(pause), "getting fresh errors to new Handler")
+	s.Require().NoError(wait(pause), "switched to new Handler")
 
 	// Testing done, stop sending errors.
 	stop <- struct{}{}
