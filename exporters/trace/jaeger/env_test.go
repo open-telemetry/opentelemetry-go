@@ -197,7 +197,8 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, false, exp.o.Disabled)
+	// NewRawExporter will ignore Disabled env
+	assert.Equal(t, true, exp.o.Disabled)
 	assert.EqualValues(t, serviceName, exp.process.ServiceName)
 	assert.Len(t, exp.process.Tags, 1)
 

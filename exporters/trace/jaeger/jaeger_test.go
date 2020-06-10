@@ -326,3 +326,21 @@ func TestNewExporterPipelineWithDisabled(t *testing.T) {
 	assert.NoError(t, err)
 	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }
+
+func TestNewExporterPipelineWithDisabledFromEnv(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "true",
+	})
+	require.NoError(t, err)
+	envStore.Record(envDisabled)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
+}

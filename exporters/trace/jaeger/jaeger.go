@@ -97,7 +97,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	o := options{}
-	opts = append(opts, WithDisabledFromEnv(), WithProcessFromEnv())
+	opts = append(opts, WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -142,6 +142,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 // with the recommended setup for trace provider
 func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.Provider, func(), error) {
 	o := options{}
+	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}

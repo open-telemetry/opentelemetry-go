@@ -70,7 +70,7 @@ func WithDisabledFromEnv() Option {
 	}
 }
 
-// WithProcessFromEnv parse environment variables into jaeger exporter's Process.
+// ProcessFromEnv parse environment variables into jaeger exporter's Process.
 func ProcessFromEnv() Process {
 	var p Process
 	if e := os.Getenv(envServiceName); e != "" {
