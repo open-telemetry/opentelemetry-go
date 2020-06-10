@@ -151,7 +151,6 @@ var (
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
-	ErrNoSubtraction    = fmt.Errorf("aggregator does not subtract")
 
 	// ErrNoData is returned when (due to a race with collection)
 	// the Aggregator is check-pointed before the first value is set.
