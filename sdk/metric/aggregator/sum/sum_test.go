@@ -43,6 +43,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+	kind := desc.NumberKind()
+
+	sum, err := agg.Sum()
+	require.NoError(t, err)
+	require.Equal(t, kind.Zero(), sum)
+}
+
 func TestCounterSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
@@ -59,6 +67,8 @@ func TestCounterSum(t *testing.T) {
 
 		err := agg.Checkpoint(ckpt, descriptor)
 		require.NoError(t, err)
+
+		checkZero(t, agg, descriptor)
 
 		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
@@ -85,6 +95,7 @@ func TestValueRecorderSum(t *testing.T) {
 		}
 
 		agg.Checkpoint(ckpt, descriptor)
+		checkZero(t, agg, descriptor)
 
 		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
@@ -112,6 +123,9 @@ func TestCounterMerge(t *testing.T) {
 
 		agg1.Checkpoint(ckpt1, descriptor)
 		agg2.Checkpoint(ckpt2, descriptor)
+
+		checkZero(t, agg1, descriptor)
+		checkZero(t, agg2, descriptor)
 
 		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 

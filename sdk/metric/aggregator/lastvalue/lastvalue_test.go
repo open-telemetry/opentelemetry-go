@@ -15,9 +15,11 @@
 package lastvalue
 
 import (
+	"errors"
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
@@ -48,9 +50,17 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func checkZero(t *testing.T, agg *Aggregator) {
+	lv, ts, err := agg.LastValue()
+	require.True(t, errors.Is(err, aggregator.ErrNoData))
+	require.Equal(t, time.Time{}, ts)
+	require.Equal(t, metric.Number(0), lv)
+}
+
 func TestLastValueUpdate(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg := New()
+		ckpt := New()
 
 		record := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -61,9 +71,10 @@ func TestLastValueUpdate(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		agg.Checkpoint(record)
+		err := agg.Checkpoint(ckpt, record)
+		require.NoError(t, err)
 
-		lv, _, err := agg.LastValue()
+		lv, _, err := ckpt.LastValue()
 		require.Equal(t, last, lv, "Same last value - non-monotonic")
 		require.Nil(t, err)
 	})
@@ -73,6 +84,8 @@ func TestLastValueMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		agg1 := New()
 		agg2 := New()
+		ckpt1 := New()
+		ckpt2 := New()
 
 		descriptor := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -83,18 +96,21 @@ func TestLastValueMerge(t *testing.T) {
 		test.CheckedUpdate(t, agg1, first1, descriptor)
 		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		_ = agg1.Checkpoint(ckpt1, descriptor)
+		_ = agg2.Checkpoint(ckpt2, descriptor)
 
-		_, t1, err := agg1.LastValue()
+		checkZero(t, agg1)
+		checkZero(t, agg2)
+
+		_, t1, err := ckpt1.LastValue()
 		require.Nil(t, err)
-		_, t2, err := agg2.LastValue()
+		_, t2, err := ckpt2.LastValue()
 		require.Nil(t, err)
 		require.True(t, t1.Before(t2))
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
-		lv, ts, err := agg1.LastValue()
+		lv, ts, err := ckpt1.LastValue()
 		require.Nil(t, err)
 		require.Equal(t, t2, ts, "Merged timestamp - non-monotonic")
 		require.Equal(t, first2, lv, "Merged value - non-monotonic")
@@ -105,10 +121,8 @@ func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
 	g := New()
-	g.Checkpoint(descriptor)
+	ckpt := New()
+	g.Checkpoint(ckpt, descriptor)
 
-	value, timestamp, err := g.LastValue()
-	require.Equal(t, aggregator.ErrNoData, err)
-	require.True(t, timestamp.IsZero())
-	require.Equal(t, metric.Number(0), value)
+	checkZero(t, g)
 }
