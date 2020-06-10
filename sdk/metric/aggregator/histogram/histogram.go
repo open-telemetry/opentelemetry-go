@@ -34,10 +34,9 @@ type (
 	// It also calculates the sum and count of all events.
 	Aggregator struct {
 		lock       sync.Mutex
-		current    state
-		checkpoint state
 		boundaries []float64
 		kind       metric.NumberKind
+		state
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -74,32 +73,25 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	return &Aggregator{
 		kind:       desc.NumberKind(),
 		boundaries: sortedBoundaries,
-		current:    emptyState(sortedBoundaries),
-		checkpoint: emptyState(sortedBoundaries),
+		state:      emptyState(sortedBoundaries),
 	}
 }
 
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.sum, nil
+	return c.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return int64(c.checkpoint.count), nil
+	return int64(c.count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	return aggregator.Buckets{
 		Boundaries: c.boundaries,
-		Counts:     c.checkpoint.bucketCounts,
+		Counts:     c.bucketCounts,
 	}, nil
 }
 
@@ -107,10 +99,16 @@ func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
+func (c *Aggregator) Checkpoint(oa export.Aggregator, desc *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, emptyState(c.boundaries)
+	o.state, c.state = c.state, emptyState(c.boundaries)
 	c.lock.Unlock()
+	return nil
 }
 
 func emptyState(boundaries []float64) state {
@@ -146,9 +144,9 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.current.count.AddInt64(1)
-	c.current.sum.AddNumber(kind, number)
-	c.current.bucketCounts[bucketID]++
+	c.count.AddInt64(1)
+	c.sum.AddNumber(kind, number)
+	c.bucketCounts[bucketID]++
 
 	return nil
 }
@@ -157,14 +155,14 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
+	c.sum.AddNumber(desc.NumberKind(), o.sum)
+	c.count.AddNumber(metric.Uint64NumberKind, o.count)
 
-	for i := 0; i < len(c.checkpoint.bucketCounts); i++ {
-		c.checkpoint.bucketCounts[i] += o.checkpoint.bucketCounts[i]
+	for i := 0; i < len(c.bucketCounts); i++ {
+		c.bucketCounts[i] += o.bucketCounts[i]
 	}
 	return nil
 }
