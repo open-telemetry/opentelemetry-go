@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -86,7 +86,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 
 	// Prior to checkpointing ErrNoData should be returned.
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
-	assert.EqualError(t, err, aggregator.ErrNoData.Error())
+	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
 	mmsc.Checkpoint(&metric.Descriptor{})
@@ -198,7 +198,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 	mmsc := minmaxsumcount.New(&metric.Descriptor{})
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
 	assert.Error(t, err)
-	assert.Equal(t, aggregator.ErrNoData, err)
+	assert.Equal(t, aggregation.ErrNoData, err)
 }
 
 func TestSumMetricDescriptor(t *testing.T) {

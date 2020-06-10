@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
@@ -175,7 +175,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err := records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := records[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
 	require.Nil(t, err)
 
@@ -192,7 +192,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err = records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err = records[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())
 	require.Nil(t, err)
 
@@ -216,7 +216,7 @@ func TestPushExportError(t *testing.T) {
 		expectedError       error
 	}{
 		{"errNone", nil, []string{"counter1{R=V,X=Y}", "counter2{R=V,}"}, nil},
-		{"errNoData", aggregator.ErrNoData, []string{"counter2{R=V,}"}, nil},
+		{"errNoData", aggregation.ErrNoData, []string{"counter2{R=V,}"}, nil},
 		{"errUnexpected", errAggregator, []string{}, errAggregator},
 	}
 	for _, tt := range tests {

@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
@@ -133,7 +133,7 @@ func TestInputRangeCounter(t *testing.T) {
 	counter := Must(meter).NewInt64Counter("name.counter")
 
 	counter.Add(ctx, -1)
-	require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
+	require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
@@ -141,7 +141,7 @@ func TestInputRangeCounter(t *testing.T) {
 	integrator.records = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err := integrator.records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := integrator.records[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -160,7 +160,7 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	counter.Add(ctx, 1)
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := integrator.records[0].Aggregator().(aggregator.Sum).Sum()
+	sum, err := integrator.records[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -174,7 +174,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.valuerecorder")
 
 	valuerecorder.Record(ctx, math.NaN())
-	require.Equal(t, aggregator.ErrNaNInput, testHandler.Flush())
+	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
@@ -185,7 +185,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	integrator.records = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := integrator.records[0].Aggregator().(aggregator.Distribution).Count()
+	count, err := integrator.records[0].Aggregator().(aggregation.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -271,7 +271,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 	var actual [][]kv.KeyValue
 	for _, rec := range integrator.records {
-		sum, _ := rec.Aggregator().(aggregator.Sum).Sum()
+		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
 		require.Equal(t, sum, metric.NewInt64Number(2))
 
 		kvs := rec.Labels().ToSlice()
@@ -394,15 +394,15 @@ func TestSumObserverInputRange(t *testing.T) {
 
 	_ = Must(meter).NewFloat64SumObserver("float.sumobserver", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, kv.String("A", "B"))
-		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1, kv.String("C", "D"))
-		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
 	_ = Must(meter).NewInt64SumObserver("int.sumobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, kv.String("A", "B"))
-		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
-		require.Equal(t, aggregator.ErrNegativeInput, testHandler.Flush())
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
 
 	collected := sdk.Collect(ctx)

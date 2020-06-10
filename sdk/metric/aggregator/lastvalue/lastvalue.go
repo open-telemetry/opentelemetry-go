@@ -22,7 +22,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -53,7 +54,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.LastValue = &Aggregator{}
+var _ aggregation.LastValue = &Aggregator{}
 
 // An unset lastValue has zero timestamp and zero value.
 var unsetLastValue = &lastValueData{}
@@ -67,14 +68,19 @@ func New() *Aggregator {
 	}
 }
 
+// Kind returns aggregation.LastValueKind.
+func (g *Aggregator) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
+}
+
 // LastValue returns the last-recorded lastValue value and the
-// corresponding timestamp.  The error value aggregator.ErrNoData
+// corresponding timestamp.  The error value aggregation.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
 func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
 	gd := (*lastValueData)(g.checkpoint)
 	if gd == unsetLastValue {
-		return metric.Number(0), time.Time{}, aggregator.ErrNoData
+		return metric.Number(0), time.Time{}, aggregation.ErrNoData
 	}
 	return gd.value.AsNumber(), gd.timestamp, nil
 }

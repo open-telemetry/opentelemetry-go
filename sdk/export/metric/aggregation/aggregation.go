@@ -12,54 +12,68 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 // These interfaces describe the various ways to access state from an
-// Aggregator.
+// Aggregation.
 
 type (
+	// Aggregation is an interface returned by the Aggregator
+	// containing an interval of metric data.
+	Aggregation interface {
+		// Kind returns a short identifying string to identify
+		// the Aggregator that was used to produce the
+		// Aggregation (e.g., "Sum").
+		Kind() Kind
+	}
+
 	// Sum returns an aggregated sum.
 	Sum interface {
+		Aggregation
 		Sum() (metric.Number, error)
 	}
 
 	// Sum returns the number of values that were aggregated.
 	Count interface {
+		Aggregation
 		Count() (int64, error)
 	}
 
 	// Min returns the minimum value over the set of values that were aggregated.
 	Min interface {
+		Aggregation
 		Min() (metric.Number, error)
 	}
 
 	// Max returns the maximum value over the set of values that were aggregated.
 	Max interface {
+		Aggregation
 		Max() (metric.Number, error)
 	}
 
 	// Quantile returns an exact or estimated quantile over the
 	// set of values that were aggregated.
 	Quantile interface {
+		Aggregation
 		Quantile(float64) (metric.Number, error)
 	}
 
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
+		Aggregation
 		LastValue() (metric.Number, time.Time, error)
 	}
 
 	// Points returns the raw set of values that were aggregated.
 	Points interface {
+		Aggregation
 		Points() ([]metric.Number, error)
 	}
 
@@ -80,24 +94,56 @@ type (
 
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
-		Sum
+		Aggregation
+		Sum() (metric.Number, error)
 		Histogram() (Buckets, error)
 	}
 
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
 	MinMaxSumCount interface {
-		Min
-		Max
-		Sum
-		Count
+		Aggregation
+		Min() (metric.Number, error)
+		Max() (metric.Number, error)
+		Sum() (metric.Number, error)
+		Count() (int64, error)
 	}
 
 	// Distribution supports the Min, Max, Sum, Count, and Quantile
 	// interfaces.
 	Distribution interface {
-		MinMaxSumCount
-		Quantile
+		Aggregation
+		Min() (metric.Number, error)
+		Max() (metric.Number, error)
+		Sum() (metric.Number, error)
+		Count() (int64, error)
+		Quantile(float64) (metric.Number, error)
 	}
+)
+
+type (
+	// Kind is a short name for the Aggregator that produces an
+	// Aggregation, used for descriptive purpose only.  Kind is a
+	// string to allow user-defined Aggregators.
+	//
+	// When deciding how to handle an Aggregation, Exporters are
+	// encouraged to decide based on conversion to the above
+	// interfaces based on strength, not on Kind value, when
+	// deciding how to expose metric data.  This enables
+	// user-supplied Aggregators to replace builtin Aggregators.
+	//
+	// For example, test for a Distribution before testing for a
+	// MinMaxSumCount, test for a Histogram before testing for a
+	// Sum, and so on.
+	Kind string
+)
+
+const (
+	SumKind            Kind = "Sum"
+	MinMaxSumCountKind Kind = "MinMaxSumCount"
+	HistogramKind      Kind = "Histogram"
+	LastValueKind      Kind = "Lastvalue"
+	SketchKind         Kind = "Sketch"
+	ExactKind          Kind = "Exact"
 )
 
 var (
@@ -112,29 +158,7 @@ var (
 	ErrNoData = fmt.Errorf("no data collected by this aggregator")
 )
 
-// NewInconsistentMergeError formats an error describing an attempt to
-// merge different-type aggregators.  The result can be unwrapped as
-// an ErrInconsistentType.
-func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, ErrInconsistentType)
-}
-
-// RangeTest is a commmon routine for testing for valid input values.
-// This rejects NaN values.  This rejects negative values when the
-// metric instrument does not support negative values, including
-// monotonic counter metrics and absolute ValueRecorder metrics.
-func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
-	numberKind := descriptor.NumberKind()
-
-	if numberKind == metric.Float64NumberKind && math.IsNaN(number.AsFloat64()) {
-		return ErrNaNInput
-	}
-
-	switch descriptor.MetricKind() {
-	case metric.CounterKind, metric.SumObserverKind:
-		if number.IsNegative(numberKind) {
-			return ErrNegativeInput
-		}
-	}
-	return nil
+// String returns the string value of Kind.
+func (k Kind) String() string {
+	return string(k)
 }
