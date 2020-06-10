@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -280,14 +280,14 @@ func (f *testFixture) Process(record export.Record) error {
 	agg := record.Aggregator()
 	switch record.Descriptor().MetricKind() {
 	case metric.CounterKind:
-		sum, err := agg.(aggregator.Sum).Sum()
+		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case metric.ValueRecorderKind:
-		lv, ts, err := agg.(aggregator.LastValue).LastValue()
-		if err != nil && err != aggregator.ErrNoData {
+		lv, ts, err := agg.(aggregation.LastValue).LastValue()
+		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
 		}
 		f.impl.storeCollect(actual, lv, ts)

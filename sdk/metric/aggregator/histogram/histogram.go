@@ -21,7 +21,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -51,9 +52,9 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.Sum = &Aggregator{}
-var _ aggregator.Count = &Aggregator{}
-var _ aggregator.Histogram = &Aggregator{}
+var _ aggregation.Sum = &Aggregator{}
+var _ aggregation.Count = &Aggregator{}
+var _ aggregation.Histogram = &Aggregator{}
 
 // New returns a new aggregator for computing Histograms.
 //
@@ -79,6 +80,11 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	}
 }
 
+// Kind returns aggregation.HistogramKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.HistogramKind
+}
+
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()
@@ -94,10 +100,10 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Histogram returns the count of events in pre-determined buckets.
-func (c *Aggregator) Histogram() (aggregator.Buckets, error) {
+func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return aggregator.Buckets{
+	return aggregation.Buckets{
 		Boundaries: c.boundaries,
 		Counts:     c.checkpoint.bucketCounts,
 	}, nil

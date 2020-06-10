@@ -216,6 +216,13 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 		}
 	}
 
+	if il := data.InstrumentationLibrary; il.Name != "" {
+		tags = append(tags, getStringTag("instrumentation.name", il.Name))
+		if il.Version != "" {
+			tags = append(tags, getStringTag("instrumentation.version", il.Name))
+		}
+	}
+
 	tags = append(tags,
 		getInt64Tag("status.code", int64(data.StatusCode)),
 		getStringTag("status.message", data.StatusMessage),

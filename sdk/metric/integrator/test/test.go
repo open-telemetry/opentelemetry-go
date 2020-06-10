@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -162,10 +162,10 @@ func (o Output) AddTo(rec export.Record) error {
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
+	if s, ok := rec.Aggregator().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregator().(aggregator.LastValue); ok {
+	} else if l, ok := rec.Aggregator().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
 	} else {

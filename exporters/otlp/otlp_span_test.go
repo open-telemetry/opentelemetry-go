@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -96,6 +97,32 @@ func TestExportSpans(t *testing.T) {
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
 					Resource:      resource.New(kv.String("instance", "tester-a")),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "lib-a",
+						Version: "v0.1.0",
+					},
+				},
+				{
+					SpanContext: apitrace.SpanContext{
+						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+						TraceFlags: byte(1),
+					},
+					SpanKind:  apitrace.SpanKindServer,
+					Name:      "secondary parent process",
+					StartTime: startTime,
+					EndTime:   endTime,
+					Attributes: []kv.KeyValue{
+						kv.String("user", "alice"),
+						kv.Bool("authenticated", true),
+					},
+					StatusCode:    codes.OK,
+					StatusMessage: "Ok",
+					Resource:      resource.New(kv.String("instance", "tester-a")),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "lib-b",
+						Version: "v0.1.0",
+					},
 				},
 				{
 					SpanContext: apitrace.SpanContext{
@@ -115,6 +142,10 @@ func TestExportSpans(t *testing.T) {
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
 					Resource:      resource.New(kv.String("instance", "tester-a")),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "lib-a",
+						Version: "v0.1.0",
+					},
 				},
 				{
 					SpanContext: apitrace.SpanContext{
@@ -133,6 +164,10 @@ func TestExportSpans(t *testing.T) {
 					StatusCode:    codes.Unauthenticated,
 					StatusMessage: "Unauthenticated",
 					Resource:      resource.New(kv.String("instance", "tester-b")),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "lib-a",
+						Version: "v1.1.0",
+					},
 				},
 			},
 			[]tracepb.ResourceSpans{
@@ -148,6 +183,10 @@ func TestExportSpans(t *testing.T) {
 					},
 					InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
 						{
+							InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+								Name:    "lib-a",
+								Version: "v0.1.0",
+							},
 							Spans: []*tracepb.Span{
 								{
 									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -200,6 +239,38 @@ func TestExportSpans(t *testing.T) {
 								},
 							},
 						},
+						{
+							InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+								Name:    "lib-b",
+								Version: "v0.1.0",
+							},
+							Spans: []*tracepb.Span{
+								{
+									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
+									Name:              "secondary parent process",
+									Kind:              tracepb.Span_SERVER,
+									StartTimeUnixNano: uint64(startTime.UnixNano()),
+									EndTimeUnixNano:   uint64(endTime.UnixNano()),
+									Attributes: []*commonpb.AttributeKeyValue{
+										{
+											Key:         "user",
+											Type:        commonpb.AttributeKeyValue_STRING,
+											StringValue: "alice",
+										},
+										{
+											Key:       "authenticated",
+											Type:      commonpb.AttributeKeyValue_BOOL,
+											BoolValue: true,
+										},
+									},
+									Status: &tracepb.Status{
+										Code:    tracepb.Status_Ok,
+										Message: "Ok",
+									},
+								},
+							},
+						},
 					},
 				},
 				{
@@ -214,6 +285,10 @@ func TestExportSpans(t *testing.T) {
 					},
 					InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{
 						{
+							InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+								Name:    "lib-a",
+								Version: "v1.1.0",
+							},
 							Spans: []*tracepb.Span{
 								{
 									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},

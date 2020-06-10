@@ -342,12 +342,13 @@ func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, rem
 		startTime = time.Now()
 	}
 	span.data = &export.SpanData{
-		SpanContext:     span.spanContext,
-		StartTime:       startTime,
-		SpanKind:        apitrace.ValidateSpanKind(o.SpanKind),
-		Name:            name,
-		HasRemoteParent: remoteParent,
-		Resource:        cfg.Resource,
+		SpanContext:            span.spanContext,
+		StartTime:              startTime,
+		SpanKind:               apitrace.ValidateSpanKind(o.SpanKind),
+		Name:                   name,
+		HasRemoteParent:        remoteParent,
+		Resource:               cfg.Resource,
+		InstrumentationLibrary: tr.instrumentationLibrary,
 	}
 	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
 	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)

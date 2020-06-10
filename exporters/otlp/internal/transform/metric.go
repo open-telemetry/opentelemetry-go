@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -230,9 +230,9 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 	d := r.Descriptor()
 	l := r.Labels()
 	switch a := r.Aggregator().(type) {
-	case aggregator.MinMaxSumCount:
+	case aggregation.MinMaxSumCount:
 		return minMaxSumCount(d, l, a)
-	case aggregator.Sum:
+	case aggregation.Sum:
 		return sum(d, l, a)
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
@@ -240,7 +240,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricpb.Metric, error) {
+func sum(desc *metric.Descriptor, labels *label.Set, a aggregation.Sum) (*metricpb.Metric, error) {
 	sum, err := a.Sum()
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.
-func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -292,7 +292,7 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Num
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
