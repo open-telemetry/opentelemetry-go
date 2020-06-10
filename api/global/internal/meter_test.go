@@ -255,7 +255,7 @@ func TestDefaultSDK(t *testing.T) {
 	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"test.builtin{A=B}","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"test.builtin{instrumentation.name=builtin,A=B}","sum":1}]}
 `, <-ch)
 }
 
@@ -417,6 +417,6 @@ func TestRecordBatchRealSDK(t *testing.T) {
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	pusher.Stop()
 
-	require.Equal(t, `{"updates":[{"name":"test.counter","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"test.counter{instrumentation.name=builtin}","sum":1}]}
 `, buf.String())
 }
