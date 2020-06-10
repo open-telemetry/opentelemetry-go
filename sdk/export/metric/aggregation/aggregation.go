@@ -30,7 +30,7 @@ type (
 	Aggregation interface {
 		// Kind returns a short identifying string to identify
 		// the Aggregator that was used to produce the
-		// Aggregation (e.g., "sum").
+		// Aggregation (e.g., "Sum").
 		Kind() Kind
 	}
 
@@ -138,12 +138,12 @@ type (
 )
 
 const (
-	SumKind            Kind = "sum"
-	MinMaxSumCountKind Kind = "minmaxsumcount"
-	HistogramKind      Kind = "histogram"
-	LastValueKind      Kind = "lastvalue"
-	SketchKind         Kind = "sketch"
-	ExactKind          Kind = "exact"
+	SumKind            Kind = "Sum"
+	MinMaxSumCountKind Kind = "MinMaxSumCount"
+	HistogramKind      Kind = "Histogram"
+	LastValueKind      Kind = "Lastvalue"
+	SketchKind         Kind = "Sketch"
+	ExactKind          Kind = "Exact"
 )
 
 var (
