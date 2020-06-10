@@ -36,11 +36,11 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
-	require.True(t, errors.Is(err, aggregator.ErrNoData))
+	require.NoError(t, err)
 	require.Equal(t, kind.Zero(), sum)
 
 	count, err := agg.Count()
-	require.True(t, errors.Is(err, aggregator.ErrNoData))
+	require.NoError(t, err)
 	require.Equal(t, int64(0), count)
 
 	max, err := agg.Max()

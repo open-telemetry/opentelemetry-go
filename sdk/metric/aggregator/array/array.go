@@ -52,17 +52,11 @@ func New() *Aggregator {
 
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	if len(c.points) == 0 {
-		return 0, aggregator.ErrNoData
-	}
 	return c.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	if len(c.points) == 0 {
-		return 0, aggregator.ErrNoData
-	}
 	return int64(len(c.points)), nil
 }
 
