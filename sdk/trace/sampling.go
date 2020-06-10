@@ -145,9 +145,8 @@ func (ps parentSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if p.ParentContext.IsValid() {
 		if p.ParentContext.IsSampled() {
 			return SamplingResult{Decision: RecordAndSampled}
-		} else {
-			return SamplingResult{Decision: NotRecord}
 		}
+		return SamplingResult{Decision: NotRecord}
 	}
 	return ps.fallback.ShouldSample(p)
 }
