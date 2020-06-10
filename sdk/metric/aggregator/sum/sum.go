@@ -44,6 +44,11 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
+// Kind returns aggregation.SumKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.SumKind
+}
+
 // Sum returns the last-checkpointed sum.  This will never return an
 // error.
 func (c *Aggregator) Sum() (metric.Number, error) {

@@ -63,6 +63,11 @@ func New(desc *metric.Descriptor) *Aggregator {
 	}
 }
 
+// Kind returns aggregation.MinMaxSumCountKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.MinMaxSumCountKind
+}
+
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()

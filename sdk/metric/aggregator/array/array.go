@@ -53,6 +53,11 @@ func New() *Aggregator {
 	return &Aggregator{}
 }
 
+// Kind returns aggregation.ExactKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.ExactKind
+}
+
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.ckptSum, nil

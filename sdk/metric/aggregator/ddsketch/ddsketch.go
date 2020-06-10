@@ -52,6 +52,11 @@ func New(desc *metric.Descriptor, cfg *Config) *Aggregator {
 	}
 }
 
+// Kind returns aggregation.SketchKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.SketchKind
+}
+
 // NewDefaultConfig returns a new, default DDSketch config.
 //
 // TODO: Should the Config constructor set minValue to -Inf to

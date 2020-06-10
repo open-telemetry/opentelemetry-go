@@ -80,6 +80,11 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	}
 }
 
+// Kind returns aggregation.HistogramKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.HistogramKind
+}
+
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	c.lock.Lock()
