@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -108,7 +108,7 @@ func TestLastValueNotSet(t *testing.T) {
 	g.Checkpoint(descriptor)
 
 	value, timestamp, err := g.LastValue()
-	require.Equal(t, aggregator.ErrNoData, err)
+	require.Equal(t, aggregation.ErrNoData, err)
 	require.True(t, timestamp.IsZero())
 	require.Equal(t, metric.Number(0), value)
 }

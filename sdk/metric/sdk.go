@@ -28,7 +28,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 

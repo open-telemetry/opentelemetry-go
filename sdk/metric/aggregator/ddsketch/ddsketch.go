@@ -21,9 +21,9 @@ import (
 	sdk "github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/otel/api/metric"
-
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Config is an alias for the underlying DDSketch config object.
@@ -39,8 +39,8 @@ type Aggregator struct {
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.MinMaxSumCount = &Aggregator{}
-var _ aggregator.Distribution = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &Aggregator{}
+var _ aggregation.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
 func New(desc *metric.Descriptor, cfg *Config) *Aggregator {
@@ -85,11 +85,11 @@ func (c *Aggregator) Min() (metric.Number, error) {
 // It is an error if `q` is less than 0 or greated than 1.
 func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
 	if c.checkpoint.Count() == 0 {
-		return metric.Number(0), aggregator.ErrNoData
+		return metric.Number(0), aggregation.ErrNoData
 	}
 	f := c.checkpoint.Quantile(q)
 	if math.IsNaN(f) {
-		return metric.Number(0), aggregator.ErrInvalidQuantile
+		return metric.Number(0), aggregation.ErrInvalidQuantile
 	}
 	return c.toNumber(f), nil
 }
