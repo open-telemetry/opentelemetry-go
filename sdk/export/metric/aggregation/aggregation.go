@@ -27,9 +27,6 @@ import (
 type (
 	// Aggregation is an interface returned by the Aggregator
 	// containing an interval of metric data.
-	//
-	// Note that the interfaces below do not embed this interface.
-	// Aggregators are expected to
 	Aggregation interface {
 		// Kind returns a short identifying string to identify
 		// the Aggregator that was used to produce the
