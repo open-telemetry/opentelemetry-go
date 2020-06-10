@@ -56,9 +56,9 @@ func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs .
 	for _, aggp := range aggPtrs {
 		switch desc.MetricKind() {
 		case metric.CounterKind:
-			*aggp = sum.New()
+			*aggp = &sum.New(1)[0]
 		case metric.ValueObserverKind:
-			*aggp = lastvalue.New()
+			*aggp = &lastvalue.New(1)[0]
 		default:
 			panic("Invalid descriptor MetricKind for this test")
 		}

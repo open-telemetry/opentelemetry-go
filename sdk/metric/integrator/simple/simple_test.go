@@ -69,11 +69,9 @@ func makeLabels(labels ...kv.KeyValue) *label.Set {
 // LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.
 func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
-	gagg := lastvalue.New()
-	ckpt := lastvalue.New()
+	gagg := &lastvalue.New(1)[0]
 	_ = gagg.Update(ctx, metric.NewInt64Number(v), desc)
-	_ = gagg.Checkpoint(ckpt, desc)
-	return ckpt
+	return gagg
 }
 
 // Convenience method for building a test exported lastValue record.
@@ -89,11 +87,9 @@ func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) e
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
 func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 	ctx := context.Background()
-	cagg := sum.New()
-	ckpt := sum.New()
+	cagg := &sum.New(1)[0]
 	_ = cagg.Update(ctx, metric.NewInt64Number(v), desc)
-	cagg.Checkpoint(ckpt, desc)
-	return ckpt
+	return cagg
 }
 
 func TestSimpleStateless(t *testing.T) {
@@ -178,10 +174,8 @@ func TestSimpleStateful(t *testing.T) {
 		"sum.b/C=D,G=H/R=V": 10, // labels1
 	}, records1.Map)
 
-	caggA := sum.New()
-	caggB := sum.New()
-	ckptA := sum.New()
-	ckptB := sum.New()
+	alloc := sum.New(4)
+	caggA, caggB, ckptA, ckptB := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 
 	// Test that state was NOT reset
 	checkpointSet = b.CheckpointSet()
