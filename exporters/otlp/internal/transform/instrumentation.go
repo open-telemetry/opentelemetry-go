@@ -12,13 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package transform
 
-type NoopProvider struct{}
+import (
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 
-var _ Provider = NoopProvider{}
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+)
 
-// Tracer returns noop implementation of Tracer.
-func (p NoopProvider) Tracer(_ string, _ ...TracerOption) Tracer {
-	return NoopTracer{}
+func instrumentationLibrary(il instrumentation.Library) *commonpb.InstrumentationLibrary {
+	if il == (instrumentation.Library{}) {
+		return nil
+	}
+	return &commonpb.InstrumentationLibrary{
+		Name:    il.Name,
+		Version: il.Version,
+	}
 }

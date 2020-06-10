@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -71,6 +72,10 @@ type SpanData struct {
 
 	// Resource contains attributes representing an entity that produced this span.
 	Resource *resource.Resource
+
+	// InstrumentationLibrary defines the instrumentation library used to
+	// providing instrumentation.
+	InstrumentationLibrary instrumentation.Library
 }
 
 // Event is used to describe an Event with a message string and set of
