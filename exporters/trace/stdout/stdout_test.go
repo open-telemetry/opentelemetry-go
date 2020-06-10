@@ -122,7 +122,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`{` +
 		`"Key":"rk1",` +
 		`"Value":{"Type":"STRING","Value":"rv11"}` +
-		`}]}` + "\n"
+		`}],` +
+		`"InstrumentationLibrary":{` +
+		`"Name":"",` +
+		`"Version":""` +
+		`}}` + "\n"
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)
