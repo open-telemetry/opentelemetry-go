@@ -37,7 +37,10 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	key := kv.Key("key")
-	meter := pusher.Provider().Meter("example")
+	meter := pusher.Provider().Meter(
+		"github.com/instrumentron",
+		metric.WithInstrumentationVersion("v0.1.0"),
+	)
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
@@ -49,7 +52,7 @@ func ExampleNewExportPipeline() {
 	// {
 	// 	"updates": [
 	// 		{
-	// 			"name": "a.counter{key=value}",
+	// 			"name": "a.counter{instrumentation.name=github.com/instrumentron,instrumentation.version=v0.1.0,key=value}",
 	// 			"sum": 100
 	// 		}
 	// 	]
