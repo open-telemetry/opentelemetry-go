@@ -52,11 +52,19 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	require.Equal(t, kind.Zero(), min)
 }
 
+func new2() (_, _ *Aggregator) {
+	alloc := New(2)
+	return &alloc[0], &alloc[1]
+}
+
+func new4() (_, _, _, _ *Aggregator) {
+	alloc := New(4)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
-
-	alloc := New(2)
-	agg, ckpt := &alloc[0], &alloc[1]
+	agg, ckpt := new2()
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -123,9 +131,7 @@ type mergeTest struct {
 
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
-
-	alloc := New(4)
-	agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+	agg1, agg2, ckpt1, ckpt2 := new4()
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -149,8 +155,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Checkpoint(ckpt1, descriptor)
-	agg2.Checkpoint(ckpt2, descriptor)
+	_ = agg1.Checkpoint(ckpt1, descriptor)
+	_ = agg2.Checkpoint(ckpt2, descriptor)
 
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg2, descriptor)
@@ -206,8 +212,7 @@ func TestArrayMerge(t *testing.T) {
 
 func TestArrayErrors(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(2)
-		agg, ckpt := &alloc[0], &alloc[1]
+		agg, ckpt := new2()
 
 		_, err := ckpt.Max()
 		require.Error(t, err)
@@ -228,7 +233,7 @@ func TestArrayErrors(t *testing.T) {
 		if profile.NumberKind == metric.Float64NumberKind {
 			test.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
 		}
-		agg.Checkpoint(ckpt, descriptor)
+		_ = agg.Checkpoint(ckpt, descriptor)
 
 		count, err := ckpt.Count()
 		require.Equal(t, int64(1), count, "NaN value was not counted")
@@ -281,8 +286,7 @@ func TestArrayFloat64(t *testing.T) {
 
 	all := test.NewNumbers(metric.Float64NumberKind)
 
-	alloc := New(2)
-	agg, ckpt := &alloc[0], &alloc[1]
+	agg, ckpt := new2()
 
 	for _, f := range fpsf(1) {
 		all.Append(metric.NewFloat64Number(f))
@@ -294,7 +298,7 @@ func TestArrayFloat64(t *testing.T) {
 		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
-	agg.Checkpoint(ckpt, descriptor)
+	_ = agg.Checkpoint(ckpt, descriptor)
 
 	all.Sort()
 

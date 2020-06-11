@@ -37,7 +37,7 @@ type (
 		lock       sync.Mutex
 		boundaries []float64
 		kind       metric.NumberKind
-		state
+		state      state
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -90,19 +90,19 @@ func (c *Aggregator) Kind() aggregation.Kind {
 
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.sum, nil
+	return c.state.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(c.count), nil
+	return int64(c.state.count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 	return aggregation.Buckets{
 		Boundaries: c.boundaries,
-		Counts:     c.bucketCounts,
+		Counts:     c.state.bucketCounts,
 	}, nil
 }
 
@@ -155,9 +155,9 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.count.AddInt64(1)
-	c.sum.AddNumber(kind, number)
-	c.bucketCounts[bucketID]++
+	c.state.count.AddInt64(1)
+	c.state.sum.AddNumber(kind, number)
+	c.state.bucketCounts[bucketID]++
 
 	return nil
 }
@@ -169,11 +169,11 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	c.sum.AddNumber(desc.NumberKind(), o.sum)
-	c.count.AddNumber(metric.Uint64NumberKind, o.count)
+	c.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
+	c.state.count.AddNumber(metric.Uint64NumberKind, o.state.count)
 
-	for i := 0; i < len(c.bucketCounts); i++ {
-		c.bucketCounts[i] += o.bucketCounts[i]
+	for i := 0; i < len(c.state.bucketCounts); i++ {
+		c.state.bucketCounts[i] += o.state.bucketCounts[i]
 	}
 	return nil
 }

@@ -47,7 +47,7 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		mmsc.Checkpoint(ckpt, &desc)
+		_ = mmsc.Checkpoint(ckpt, &desc)
 
 		s, _ := ckpt.Sum()
 		c, _ := ckpt.Count()

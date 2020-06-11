@@ -50,6 +50,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func new2() (_, _ *Aggregator) {
+	alloc := New(2)
+	return &alloc[0], &alloc[1]
+}
+
+func new4() (_, _, _, _ *Aggregator) {
+	alloc := New(4)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func checkZero(t *testing.T, agg *Aggregator) {
 	lv, ts, err := agg.LastValue()
 	require.True(t, errors.Is(err, aggregation.ErrNoData))
@@ -59,8 +69,7 @@ func checkZero(t *testing.T, agg *Aggregator) {
 
 func TestLastValueUpdate(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(2)
-		agg, ckpt := &alloc[0], &alloc[1]
+		agg, ckpt := new2()
 
 		record := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -82,8 +91,7 @@ func TestLastValueUpdate(t *testing.T) {
 
 func TestLastValueMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(4)
-		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+		agg1, agg2, ckpt1, ckpt2 := new4()
 
 		descriptor := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -118,9 +126,8 @@ func TestLastValueMerge(t *testing.T) {
 func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
-	g := &New(1)[0]
-	ckpt := &New(1)[0]
-	g.Checkpoint(ckpt, descriptor)
+	g, ckpt := new2()
+	_ = g.Checkpoint(ckpt, descriptor)
 
 	checkZero(t, g)
 }

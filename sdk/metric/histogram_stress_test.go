@@ -46,7 +46,7 @@ func TestStressInt64Histogram(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		h.Checkpoint(ckpt, &desc)
+		_ = h.Checkpoint(ckpt, &desc)
 
 		b, _ := ckpt.Histogram()
 		c, _ := ckpt.Count()

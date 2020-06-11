@@ -60,6 +60,16 @@ var (
 	boundaries = []float64{500, 250, 750}
 )
 
+func new2(desc *metric.Descriptor) (_, _ *histogram.Aggregator) {
+	alloc := histogram.New(2, desc, boundaries)
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *histogram.Aggregator) {
+	alloc := histogram.New(4, desc, boundaries)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor) {
 	asum, err := agg.Sum()
 	require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
@@ -101,8 +111,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	alloc := histogram.New(2, descriptor, boundaries)
-	agg, ckpt := &alloc[0], &alloc[1]
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -112,7 +121,7 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	agg.Checkpoint(ckpt, descriptor)
+	_ = agg.Checkpoint(ckpt, descriptor)
 
 	checkZero(t, agg, descriptor)
 
@@ -147,7 +156,7 @@ func TestHistogramInitial(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := histogram.New(1, descriptor, boundaries)[0]
+		agg := &histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
 
 		require.NoError(t, err)
@@ -160,8 +169,7 @@ func TestHistogramMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		alloc := histogram.New(4, descriptor, boundaries)
-		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -176,8 +184,8 @@ func TestHistogramMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(ckpt1, descriptor)
-		agg2.Checkpoint(ckpt2, descriptor)
+		_ = agg1.Checkpoint(ckpt1, descriptor)
+		_ = agg2.Checkpoint(ckpt2, descriptor)
 
 		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
@@ -213,8 +221,7 @@ func TestHistogramNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		alloc := histogram.New(2, descriptor, boundaries)
-		agg, ckpt := &alloc[0], &alloc[1]
+		agg, ckpt := new2(descriptor)
 
 		err := agg.Checkpoint(ckpt, descriptor)
 		require.NoError(t, err)

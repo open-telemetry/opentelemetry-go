@@ -76,6 +76,16 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 	})
 }
 
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
+	alloc := New(2, desc)
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
+	alloc := New(4, desc)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
@@ -100,8 +110,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	alloc := New(2, descriptor)
-	agg, ckpt := &alloc[0], &alloc[1]
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -111,7 +120,7 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	agg.Checkpoint(ckpt, descriptor)
+	_ = agg.Checkpoint(ckpt, descriptor)
 
 	checkZero(t, agg, descriptor)
 
@@ -149,8 +158,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		alloc := New(4, descriptor)
-		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -165,8 +173,8 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(ckpt1, descriptor)
-		agg2.Checkpoint(ckpt2, descriptor)
+		_ = agg1.Checkpoint(ckpt1, descriptor)
+		_ = agg2.Checkpoint(ckpt2, descriptor)
 
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)
@@ -211,7 +219,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		alloc := New(2, descriptor)
 		agg, ckpt := &alloc[0], &alloc[1]
 
-		agg.Checkpoint(ckpt, descriptor)
+		_ = agg.Checkpoint(ckpt, descriptor)
 
 		asum, err := ckpt.Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")

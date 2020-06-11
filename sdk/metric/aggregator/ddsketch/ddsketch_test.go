@@ -31,6 +31,16 @@ const count = 1000
 type updateTest struct {
 }
 
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
+	alloc := New(2, desc, NewDefaultConfig())
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
+	alloc := New(4, desc, NewDefaultConfig())
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
@@ -57,8 +67,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
-	alloc := New(2, descriptor, NewDefaultConfig())
-	agg, ckpt := &alloc[0], &alloc[1]
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
@@ -120,8 +129,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	alloc := New(4, descriptor, NewDefaultConfig())
-	agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+	agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {

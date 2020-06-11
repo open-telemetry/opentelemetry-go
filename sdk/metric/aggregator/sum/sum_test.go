@@ -43,6 +43,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func new2() (_, _ *Aggregator) {
+	alloc := New(2)
+	return &alloc[0], &alloc[1]
+}
+
+func new4() (_, _, _, _ *Aggregator) {
+	alloc := New(4)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
@@ -53,8 +63,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 func TestCounterSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(2)
-		agg, ckpt := &alloc[0], &alloc[1]
+		agg, ckpt := new2()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -78,8 +87,7 @@ func TestCounterSum(t *testing.T) {
 
 func TestValueRecorderSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(2)
-		agg, ckpt := &alloc[0], &alloc[1]
+		agg, ckpt := new2()
 
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -94,7 +102,7 @@ func TestValueRecorderSum(t *testing.T) {
 			sum.AddNumber(profile.NumberKind, r2)
 		}
 
-		agg.Checkpoint(ckpt, descriptor)
+		_ = agg.Checkpoint(ckpt, descriptor)
 		checkZero(t, agg, descriptor)
 
 		asum, err := ckpt.Sum()
@@ -105,8 +113,7 @@ func TestValueRecorderSum(t *testing.T) {
 
 func TestCounterMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		alloc := New(4)
-		agg1, agg2, ckpt1, ckpt2 := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+		agg1, agg2, ckpt1, ckpt2 := new4()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -118,8 +125,8 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(ckpt1, descriptor)
-		agg2.Checkpoint(ckpt2, descriptor)
+		_ = agg1.Checkpoint(ckpt1, descriptor)
+		_ = agg2.Checkpoint(ckpt2, descriptor)
 
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)

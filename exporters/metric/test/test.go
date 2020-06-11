@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -121,4 +122,18 @@ func (p *CheckpointSet) ForEach(f func(export.Record) error) error {
 		}
 	}
 	return nil
+}
+
+// Takes a slice of []some.Aggregator and returns a slice of []export.Aggregator
+func Unslice2(sl interface{}) (one, two export.Aggregator) {
+	slv := reflect.ValueOf(sl)
+	if slv.Type().Kind() != reflect.Slice {
+		panic("Invalid Unslice2")
+	}
+	if slv.Len() != 2 {
+		panic("Invalid Unslice2")
+	}
+	one = slv.Index(0).Addr().Interface().(export.Aggregator)
+	two = slv.Index(1).Addr().Interface().(export.Aggregator)
+	return
 }
