@@ -41,14 +41,14 @@ var (
 
 	// LastValueADesc and LastValueBDesc group by "G"
 	LastValueADesc = metric.NewDescriptor(
-		"lastvalue.a", metric.ValueObserverKind, metric.Int64NumberKind)
+		"a.lastvalue", metric.ValueObserverKind, metric.Int64NumberKind)
 	LastValueBDesc = metric.NewDescriptor(
-		"lastvalue.b", metric.ValueObserverKind, metric.Int64NumberKind)
+		"b.lastvalue", metric.ValueObserverKind, metric.Int64NumberKind)
 	// CounterADesc and CounterBDesc group by "C"
 	CounterADesc = metric.NewDescriptor(
-		"sum.a", metric.CounterKind, metric.Int64NumberKind)
+		"a.sum", metric.CounterKind, metric.Int64NumberKind)
 	CounterBDesc = metric.NewDescriptor(
-		"sum.b", metric.CounterKind, metric.Int64NumberKind)
+		"b.sum", metric.CounterKind, metric.Int64NumberKind)
 
 	// LastValue groups are (labels1), (labels2+labels3)
 	// Counter groups are (labels1+labels2), (labels3)
@@ -93,7 +93,7 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 }
 
 func TestSimpleStateless(t *testing.T) {
-	b := simple.New(test.NewAggregationSelector(), false)
+	b := simple.New(test.AggregationSelector(), false)
 
 	// Set initial lastValue values
 	_ = b.Process(NewLastValueRecord(&LastValueADesc, Labels1, 10))
@@ -129,18 +129,18 @@ func TestSimpleStateless(t *testing.T) {
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C=D,G=H/R=V":       60, // labels1
-		"sum.a/C=D,E=F/R=V":       20, // labels2
-		"sum.a//R=V":              40, // labels3
-		"sum.b/C=D,G=H/R=V":       60, // labels1
-		"sum.b/C=D,E=F/R=V":       20, // labels2
-		"sum.b//R=V":              40, // labels3
-		"lastvalue.a/C=D,G=H/R=V": 50, // labels1
-		"lastvalue.a/C=D,E=F/R=V": 20, // labels2
-		"lastvalue.a//R=V":        30, // labels3
-		"lastvalue.b/C=D,G=H/R=V": 50, // labels1
-		"lastvalue.b/C=D,E=F/R=V": 20, // labels2
-		"lastvalue.b//R=V":        30, // labels3
+		"a.sum/C=D,G=H/R=V":       60, // labels1
+		"a.sum/C=D,E=F/R=V":       20, // labels2
+		"a.sum//R=V":              40, // labels3
+		"b.sum/C=D,G=H/R=V":       60, // labels1
+		"b.sum/C=D,E=F/R=V":       20, // labels2
+		"b.sum//R=V":              40, // labels3
+		"a.lastvalue/C=D,G=H/R=V": 50, // labels1
+		"a.lastvalue/C=D,E=F/R=V": 20, // labels2
+		"a.lastvalue//R=V":        30, // labels3
+		"b.lastvalue/C=D,G=H/R=V": 50, // labels1
+		"b.lastvalue/C=D,E=F/R=V": 20, // labels2
+		"b.lastvalue//R=V":        30, // labels3
 	}, records.Map)
 	b.FinishedCollection()
 
@@ -155,7 +155,7 @@ func TestSimpleStateless(t *testing.T) {
 
 func TestSimpleStateful(t *testing.T) {
 	ctx := context.Background()
-	b := simple.New(test.NewAggregationSelector(), true)
+	b := simple.New(test.AggregationSelector(), true)
 
 	counterA := NewCounterRecord(&CounterADesc, Labels1, 10)
 	_ = b.Process(counterA)
@@ -170,8 +170,8 @@ func TestSimpleStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records1.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C=D,G=H/R=V": 10, // labels1
-		"sum.b/C=D,G=H/R=V": 10, // labels1
+		"a.sum/C=D,G=H/R=V": 10, // labels1
+		"b.sum/C=D,G=H/R=V": 10, // labels1
 	}, records1.Map)
 
 	alloc := sum.New(4)
@@ -214,8 +214,8 @@ func TestSimpleStateful(t *testing.T) {
 	_ = checkpointSet.ForEach(records4.AddTo)
 
 	require.EqualValues(t, map[string]float64{
-		"sum.a/C=D,G=H/R=V": 30,
-		"sum.b/C=D,G=H/R=V": 30,
+		"a.sum/C=D,G=H/R=V": 30,
+		"b.sum/C=D,G=H/R=V": 30,
 	}, records4.Map)
 	b.FinishedCollection()
 }

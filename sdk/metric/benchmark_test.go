@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -26,46 +25,26 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 )
 
 type benchFixture struct {
 	meter       metric.MeterMust
 	accumulator *sdk.Accumulator
 	B           *testing.B
+	export.AggregationSelector
 }
 
 func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
-		B: b,
+		B:                   b,
+		AggregationSelector: test.AggregationSelector(),
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
 	bf.meter = metric.Must(metric.WrapMeterImpl(bf.accumulator, "benchmarks"))
 	return bf
-}
-
-func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	name := descriptor.Name()
-	switch {
-	case strings.HasSuffix(name, "counter"):
-		return sum.New()
-	case strings.HasSuffix(name, "lastvalue"):
-		return lastvalue.New()
-	default:
-		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
-			return minmaxsumcount.New(descriptor)
-		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
-			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
-		} else if strings.HasSuffix(descriptor.Name(), "array") {
-			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
-		}
-	}
-	return nil
 }
 
 func (f *benchFixture) Process(rec export.Record) error {

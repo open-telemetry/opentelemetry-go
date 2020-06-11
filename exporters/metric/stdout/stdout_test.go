@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -80,7 +80,7 @@ func TestStdoutInvalidQuantile(t *testing.T) {
 		Quantiles: []float64{1.1, 0.9},
 	})
 	require.Error(t, err, "Invalid quantile error expected")
-	require.Equal(t, aggregator.ErrInvalidQuantile, err)
+	require.Equal(t, aggregation.ErrInvalidQuantile, err)
 }
 
 func TestStdoutTimestamp(t *testing.T) {

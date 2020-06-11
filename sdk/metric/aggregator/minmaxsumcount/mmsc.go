@@ -20,7 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 type (
@@ -40,8 +41,8 @@ type (
 	}
 )
 
-var w_ export.Aggregator = &Aggregator{}
-var _ aggregator.MinMaxSumCount = &Aggregator{}
+var _ export.Aggregator = &Aggregator{}
+var _ aggregation.MinMaxSumCount = &Aggregator{}
 
 // New returns a new aggregator for computing the min, max, sum, and
 // count.  It does not compute quantile information other than Min and
@@ -60,6 +61,11 @@ func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	return aggs
 }
 
+// Kind returns aggregation.MinMaxSumCountKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.MinMaxSumCountKind
+}
+
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.sum, nil
@@ -71,21 +77,21 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Min returns the minimum value in the checkpoint.
-// The error value aggregator.ErrNoData will be returned
+// The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Min() (metric.Number, error) {
 	if c.count == 0 {
-		return 0, aggregator.ErrNoData
+		return 0, aggregation.ErrNoData
 	}
 	return c.min, nil
 }
 
 // Max returns the maximum value in the checkpoint.
-// The error value aggregator.ErrNoData will be returned
+// The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Max() (metric.Number, error) {
 	if c.count == 0 {
-		return 0, aggregator.ErrNoData
+		return 0, aggregation.ErrNoData
 	}
 	return c.max, nil
 }

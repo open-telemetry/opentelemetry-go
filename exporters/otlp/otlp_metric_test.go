@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -67,7 +67,7 @@ type checkpointSet struct {
 
 func (m *checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
 	for _, r := range m.records {
-		if err := fn(r); err != nil && err != aggregator.ErrNoData {
+		if err := fn(r); err != nil && err != aggregation.ErrNoData {
 			return err
 		}
 	}

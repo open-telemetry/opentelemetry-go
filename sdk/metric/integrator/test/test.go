@@ -16,12 +16,17 @@ package test
 
 import (
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
@@ -45,23 +50,52 @@ func NewOutput(labelEncoder label.Encoder) Output {
 	}
 }
 
-// NewAggregationSelector returns a policy that is consistent with the
+// AggregationSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
 // instruments and lastvalue.New() for lastValue instruments.
-func NewAggregationSelector() export.AggregationSelector {
-	return &testAggregationSelector{}
+func AggregationSelector() export.AggregationSelector {
+	return testAggregationSelector{}
 }
 
-func (*testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	for _, aggp := range aggPtrs {
-		switch desc.MetricKind() {
-		case metric.CounterKind:
-			*aggp = &sum.New(1)[0]
-		case metric.ValueObserverKind:
-			*aggp = &lastvalue.New(1)[0]
-		default:
-			panic("Invalid descriptor MetricKind for this test")
+func (testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+
+	switch {
+	case strings.HasSuffix(desc.Name(), ".disabled"):
+		for i := range aggPtrs {
+			*aggPtrs[i] = nil
 		}
+	case strings.HasSuffix(desc.Name(), ".sum"):
+		aggs := sum.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), ".minmaxsumcount"):
+		aggs := minmaxsumcount.New(len(aggPtrs), desc)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), ".lastvalue"):
+		aggs := lastvalue.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), ".sketch"):
+		aggs := ddsketch.New(len(aggPtrs), desc, ddsketch.NewDefaultConfig())
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), ".histogram"):
+		aggs := histogram.New(len(aggPtrs), desc, nil)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), ".exact"):
+		aggs := array.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		panic(fmt.Sprint("Invalid instrument name for test AggregationSelector: ", desc.Name()))
 	}
 }
 
@@ -73,10 +107,10 @@ func (o Output) AddTo(rec export.Record) error {
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := rec.Aggregator().(aggregator.Sum); ok {
+	if s, ok := rec.Aggregator().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregator().(aggregator.LastValue); ok {
+	} else if l, ok := rec.Aggregator().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
 	} else {

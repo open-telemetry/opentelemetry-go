@@ -17,18 +17,21 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"os"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -105,6 +108,16 @@ func TestNewRawExporter(t *testing.T) {
 }
 
 func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+	// Record and restore env
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envEndpoint)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	// If the user sets the environment variable JAEGER_ENDPOINT, endpoint will always get a value.
+	require.NoError(t, os.Unsetenv(envEndpoint))
+
 	_, err := NewRawExporter(
 		WithCollectorEndpoint(""),
 	)
@@ -302,4 +315,32 @@ func Test_spanDataToThrift(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewExporterPipelineWithDisabled(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithDisabled(true),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
+}
+
+func TestNewExporterPipelineWithDisabledFromEnv(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "true",
+	})
+	require.NoError(t, err)
+	envStore.Record(envDisabled)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }

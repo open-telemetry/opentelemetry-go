@@ -25,8 +25,10 @@ import (
 )
 
 func TestStressInt64MinMaxSumCount(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderKind, metric.Int64NumberKind)
-	mmsc := minmaxsumcount.New(&desc)
+	desc := metric.NewDescriptor("some.minmaxsumcount", metric.ValueRecorderKind, metric.Int64NumberKind)
+
+	alloc := minmaxsumcount.New(2, &desc)
+	mmsc, ckpt := &alloc[0], &alloc[1]
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -46,7 +48,7 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		mmsc.Checkpoint(&desc)
+		mmsc.Checkpoint(ckpt, &desc)
 
 		s, _ := mmsc.Sum()
 		c, _ := mmsc.Count()

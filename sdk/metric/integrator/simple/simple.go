@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -119,7 +119,7 @@ func (b *batch) ForEach(f func(export.Record) error) error {
 			value.labels,
 			value.resource,
 			value.aggregator,
-		)); err != nil && !errors.Is(err, aggregator.ErrNoData) {
+		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}
 	}

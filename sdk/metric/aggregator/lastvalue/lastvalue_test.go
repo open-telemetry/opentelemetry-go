@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 
 func checkZero(t *testing.T, agg *Aggregator) {
 	lv, ts, err := agg.LastValue()
-	require.True(t, errors.Is(err, aggregator.ErrNoData))
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
 	require.Equal(t, time.Time{}, ts)
 	require.Equal(t, metric.Number(0), lv)
 }
