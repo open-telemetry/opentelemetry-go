@@ -20,7 +20,7 @@ import "go.opentelemetry.io/otel/api/unit"
 type InstrumentConfig struct {
 	// Description describes the metric instrument in human-readable terms.
 	Description string
-	// Unit describing the measurement unit for a metric instrument.
+	// Unit describes the measurement unit for a metric instrument.
 	Unit unit.Unit
 	// InstrumentationName is the name of the library providing
 	// instrumentation.
