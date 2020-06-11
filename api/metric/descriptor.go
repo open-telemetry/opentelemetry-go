@@ -14,9 +14,7 @@
 
 package metric
 
-import (
-	"go.opentelemetry.io/otel/api/unit"
-)
+import "go.opentelemetry.io/otel/api/unit"
 
 // Descriptor contains all the settings that describe an instrument,
 // including its name, metric kind, number kind, and the configurable
