@@ -33,9 +33,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 	integratorTest "go.opentelemetry.io/otel/sdk/metric/integrator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/sdk/metric/integrator/test"
 )
 
 var testResource = resource.New(kv.String("R", "V"))
