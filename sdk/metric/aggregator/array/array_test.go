@@ -15,11 +15,10 @@
 package array
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"testing"
-
-	"errors"
 
 	"github.com/stretchr/testify/require"
 

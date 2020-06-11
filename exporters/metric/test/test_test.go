@@ -15,36 +15,16 @@
 package test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/api/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
-type testAgg struct{}
-
-var _ export.Aggregator = (*testAgg)(nil)
-
-func (ta *testAgg) Update(context.Context, metric.Number, *metric.Descriptor) error {
-	return nil
-}
-
-func (ta *testAgg) Checkpoint(export.Aggregator, *metric.Descriptor) error {
-	return nil
-}
-
-func (ta *testAgg) Merge(export.Aggregator, *metric.Descriptor) error {
-	return nil
-}
-
 func TestUnslice(t *testing.T) {
-	in := make([]testAgg, 2)
+	in := make([]NoopAggregator, 2)
 
 	a, b := Unslice2(in)
 
-	require.Equal(t, a.(*testAgg), &in[0])
-	require.Equal(t, b.(*testAgg), &in[1])
+	require.Equal(t, a.(*NoopAggregator), &in[0])
+	require.Equal(t, b.(*NoopAggregator), &in[1])
 }
