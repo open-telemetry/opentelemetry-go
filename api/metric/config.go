@@ -38,7 +38,7 @@ type InstrumentOption interface {
 }
 
 // ConfigureInstrument is a helper that applies all the InstrumentOptions
-// to a InstrumentConfig.
+// to an InstrumentConfig.
 func ConfigureInstrument(opts []InstrumentOption) InstrumentConfig {
 	var config InstrumentConfig
 	for _, o := range opts {
