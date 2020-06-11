@@ -125,10 +125,13 @@ func transformer(ctx context.Context, in <-chan export.Record, out chan<- result
 			continue
 		}
 		res := result{
-			Resource:               r.Resource(),
-			InstrumentationLibrary: r.Descriptor().InstrumentationLibrary(),
-			Metric:                 m,
-			Err:                    err,
+			Resource: r.Resource(),
+			InstrumentationLibrary: instrumentation.Library{
+				Name:    r.Descriptor().InstrumentationName(),
+				Version: r.Descriptor().InstrumentationVersion(),
+			},
+			Metric: m,
+			Err:    err,
 		}
 		select {
 		case <-ctx.Done():

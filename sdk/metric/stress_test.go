@@ -36,7 +36,6 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -308,8 +307,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
-	il := instrumentation.Library{Name: "stress_test"}
-	meter := metric.WrapMeterImpl(sdk, il)
+	meter := metric.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
@@ -86,9 +85,10 @@ type AsyncImpl interface {
 
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl, il instrumentation.Library) Meter {
+func WrapMeterImpl(impl MeterImpl, instrumentatioName string, opts ...MeterOption) Meter {
 	return Meter{
-		impl: impl,
-		il:   il,
+		impl:    impl,
+		name:    instrumentatioName,
+		version: ConfigureMeter(opts).InstrumentationVersion,
 	}
 }

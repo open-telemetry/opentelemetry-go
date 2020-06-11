@@ -16,7 +16,6 @@ package metric
 
 import (
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // Descriptor contains all the settings that describe an instrument,
@@ -26,16 +25,16 @@ type Descriptor struct {
 	name       string
 	kind       Kind
 	numberKind NumberKind
-	config     Config
+	config     InstrumentConfig
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...Option) Descriptor {
+func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
 	return Descriptor{
 		name:       name,
 		kind:       mkind,
 		numberKind: nkind,
-		config:     Configure(opts),
+		config:     ConfigureInstrument(opts),
 	}
 }
 
@@ -67,8 +66,14 @@ func (d Descriptor) NumberKind() NumberKind {
 	return d.numberKind
 }
 
-// InstrumentationLibrary returns the instrumentation.Library describing the
-// library that provided instrumentation of this instrument.
-func (d Descriptor) InstrumentationLibrary() instrumentation.Library {
-	return d.config.InstrumentationLibrary
+// InstrumentationName returns the name of the library that provided
+// instrumentation for this instrument.
+func (d Descriptor) InstrumentationName() string {
+	return d.config.InstrumentationName
+}
+
+// InstrumentationVersion returns the version of the library that provided
+// instrumentation for this instrument.
+func (d Descriptor) InstrumentationVersion() string {
+	return d.config.InstrumentationVersion
 }

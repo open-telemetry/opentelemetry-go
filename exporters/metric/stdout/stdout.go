@@ -164,10 +164,10 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 
 		var instLabels []kv.KeyValue
-		if il := desc.InstrumentationLibrary(); il.Name != "" {
-			instLabels = append(instLabels, kv.String("instrumentation.name", il.Name))
-			if il.Version != "" {
-				instLabels = append(instLabels, kv.String("instrumentation.version", il.Version))
+		if name := desc.InstrumentationName(); name != "" {
+			instLabels = append(instLabels, kv.String("instrumentation.name", name))
+			if version := desc.InstrumentationVersion(); version != "" {
+				instLabels = append(instLabels, kv.String("instrumentation.version", version))
 			}
 		}
 		instSet := label.NewSet(instLabels...)

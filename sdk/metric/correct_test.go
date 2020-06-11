@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -91,8 +90,7 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessInt
 		integrator,
 		metricsdk.WithResource(testResource),
 	)
-	il := instrumentation.Library{Name: "test"}
-	meter := metric.WrapMeterImpl(accum, il)
+	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, integrator
 }
 

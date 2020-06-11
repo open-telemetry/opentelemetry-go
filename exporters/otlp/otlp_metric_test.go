@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -80,7 +79,7 @@ type record struct {
 	mKind    metric.Kind
 	nKind    metric.NumberKind
 	resource *resource.Resource
-	opts     []metric.Option
+	opts     []metric.InstrumentOption
 	labels   []kv.KeyValue
 }
 
@@ -490,16 +489,16 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceInstLibMetricGroupingExport(t *testing.T) {
-	countingLib1 := instrumentation.Library{
-		Name:    "couting-lib",
-		Version: "v1",
+	countingLib1 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v1"),
 	}
-	countingLib2 := instrumentation.Library{
-		Name:    "couting-lib",
-		Version: "v2",
+	countingLib2 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v2"),
 	}
-	summingLib := instrumentation.Library{
-		Name: "summing-lib",
+	summingLib := []metric.InstrumentOption{
+		metric.WithInstrumentationName("summing-lib"),
 	}
 	runMetricExportTests(
 		t,
@@ -509,9 +508,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(countingLib1),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -519,9 +516,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(countingLib2),
-				},
+				countingLib2,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -529,9 +524,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(countingLib1),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -539,9 +532,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(countingLib1),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
@@ -549,9 +540,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(summingLib),
-				},
+				summingLib,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -559,9 +548,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstB,
-				[]metric.Option{
-					metric.WithInstrumentationLibrary(countingLib1),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -571,7 +558,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name:    "couting-lib",
+							Name:    "counting-lib",
 							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{
@@ -598,7 +585,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 					},
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name:    "couting-lib",
+							Name:    "counting-lib",
 							Version: "v2",
 						},
 						Metrics: []*metricpb.Metric{
@@ -634,7 +621,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name:    "couting-lib",
+							Name:    "counting-lib",
 							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{

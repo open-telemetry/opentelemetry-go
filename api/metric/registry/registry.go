@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // Provider is a standard metric.Provider for wrapping `MeterImpl`
@@ -43,8 +42,9 @@ type uniqueInstrumentMeterImpl struct {
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
 type key struct {
-	name string
-	il   instrumentation.Library
+	instrumentName         string
+	instrumentationName    string
+	InstrumentationVersion string
 }
 
 // NewProvider returns a new provider that implements instrument
@@ -57,11 +57,7 @@ func NewProvider(impl metric.MeterImpl) *Provider {
 
 // Meter implements metric.Provider.
 func (p *Provider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	il := instrumentation.Library{
-		Name:    instrumentationName,
-		Version: metric.MeterConfigure(opts).InstrumentationVersion,
-	}
-	return metric.WrapMeterImpl(p.impl, il)
+	return metric.WrapMeterImpl(p.impl, instrumentationName, opts...)
 }
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
@@ -86,18 +82,18 @@ func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []kv
 func keyOf(descriptor metric.Descriptor) key {
 	return key{
 		descriptor.Name(),
-		descriptor.InstrumentationLibrary(),
+		descriptor.InstrumentationName(),
+		descriptor.InstrumentationVersion(),
 	}
 }
 
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
 func NewMetricKindMismatchError(desc metric.Descriptor) error {
-	il := desc.InstrumentationLibrary()
-	return fmt.Errorf("Metric was %s (%s %s) registered as a %s %s: %w",
+	return fmt.Errorf("Metric was %s (%s %s)registered as a %s %s: %w",
 		desc.Name(),
-		il.Name,
-		il.Version,
+		desc.InstrumentationName(),
+		desc.InstrumentationVersion(),
 		desc.NumberKind(),
 		desc.MetricKind(),
 		ErrMetricKindMismatch)

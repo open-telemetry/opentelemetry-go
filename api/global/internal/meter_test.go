@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/kv/value"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 
 	"github.com/stretchr/testify/require"
 
@@ -38,7 +37,8 @@ import (
 // Note: Maybe this should be factored into ../../../internal/metric?
 type measured struct {
 	Name                   string
-	InstrumentationLibrary instrumentation.Library
+	InstrumentationName    string
+	InstrumentationVersion string
 	Labels                 map[kv.Key]value.Value
 	Number                 metric.Number
 }
@@ -49,7 +49,8 @@ func asStructs(batches []metrictest.Batch) []measured {
 		for _, m := range batch.Measurements {
 			r = append(r, measured{
 				Name:                   m.Instrument.Descriptor().Name(),
-				InstrumentationLibrary: m.Instrument.Descriptor().InstrumentationLibrary(),
+				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
+				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
 				Labels:                 asMap(batch.Labels...),
 				Number:                 m.Number,
 			})
@@ -115,46 +116,46 @@ func TestDirect(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:                   "test.counter",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels1...),
-				Number:                 asInt(1),
+				Name:                "test.counter",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels1...),
+				Number:              asInt(1),
 			},
 			{
-				Name:                   "test.valuerecorder",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels1...),
-				Number:                 asFloat(3),
+				Name:                "test.valuerecorder",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels1...),
+				Number:              asFloat(3),
 			},
 			{
-				Name:                   "test.second",
-				InstrumentationLibrary: instrumentation.Library{Name: "test2"},
-				Labels:                 asMap(labels3...),
-				Number:                 asFloat(3),
+				Name:                "test.second",
+				InstrumentationName: "test2",
+				Labels:              asMap(labels3...),
+				Number:              asFloat(3),
 			},
 			{
-				Name:                   "test.valueobserver.float",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels1...),
-				Number:                 asFloat(1),
+				Name:                "test.valueobserver.float",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels1...),
+				Number:              asFloat(1),
 			},
 			{
-				Name:                   "test.valueobserver.float",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels2...),
-				Number:                 asFloat(2),
+				Name:                "test.valueobserver.float",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels2...),
+				Number:              asFloat(2),
 			},
 			{
-				Name:                   "test.valueobserver.int",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels1...),
-				Number:                 asInt(1),
+				Name:                "test.valueobserver.int",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels1...),
+				Number:              asInt(1),
 			},
 			{
-				Name:                   "test.valueobserver.int",
-				InstrumentationLibrary: instrumentation.Library{Name: "test1"},
-				Labels:                 asMap(labels2...),
-				Number:                 asInt(2),
+				Name:                "test.valueobserver.int",
+				InstrumentationName: "test1",
+				Labels:              asMap(labels2...),
+				Number:              asInt(2),
 			},
 		},
 		measurements,
@@ -189,16 +190,16 @@ func TestBound(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:                   "test.counter",
-				InstrumentationLibrary: instrumentation.Library{Name: "test"},
-				Labels:                 asMap(labels1...),
-				Number:                 asFloat(1),
+				Name:                "test.counter",
+				InstrumentationName: "test",
+				Labels:              asMap(labels1...),
+				Number:              asFloat(1),
 			},
 			{
-				Name:                   "test.valuerecorder",
-				InstrumentationLibrary: instrumentation.Library{Name: "test"},
-				Labels:                 asMap(labels1...),
-				Number:                 asInt(3),
+				Name:                "test.valuerecorder",
+				InstrumentationName: "test",
+				Labels:              asMap(labels1...),
+				Number:              asInt(3),
 			},
 		},
 		asStructs(mock.MeasurementBatches))
@@ -285,12 +286,8 @@ type meterWithConstructorError struct {
 	metric.MeterImpl
 }
 
-func (m *meterProviderWithConstructorError) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	il := instrumentation.Library{
-		Name:    instrumentationName,
-		Version: metric.MeterConfigure(opts).InstrumentationVersion,
-	}
-	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(instrumentationName, opts...).MeterImpl()}, il)
+func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
 }
 
 func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
@@ -385,10 +382,10 @@ func TestRecordBatchMock(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:                   "test.counter",
-				InstrumentationLibrary: instrumentation.Library{Name: "builtin"},
-				Labels:                 asMap(),
-				Number:                 asInt(1),
+				Name:                "test.counter",
+				InstrumentationName: "builtin",
+				Labels:              asMap(),
+				Number:              asInt(1),
 			},
 		},
 		asStructs(mock.MeasurementBatches))
