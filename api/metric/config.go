@@ -18,9 +18,9 @@ import "go.opentelemetry.io/otel/api/unit"
 
 // InstrumentConfig contains options for instrument descriptors.
 type InstrumentConfig struct {
-	// Description describes the metric instrument in human-readable terms.
+	// Description describes the instrument in human-readable terms.
 	Description string
-	// Unit describes the measurement unit for a metric instrument.
+	// Unit describes the measurement unit for a instrument.
 	Unit unit.Unit
 	// InstrumentationName is the name of the library providing
 	// instrumentation.
@@ -30,7 +30,7 @@ type InstrumentConfig struct {
 	InstrumentationVersion string
 }
 
-// InstrumentOption is an interface for applying metric options.
+// InstrumentOption is an interface for applying instrument options.
 type InstrumentOption interface {
 	// ApplyMeter is used to set a InstrumentOption value of a
 	// InstrumentConfig.
