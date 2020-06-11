@@ -482,20 +482,6 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 	return checkpointed
 }
 
-// func (m *Accumulator) checkpoint(descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
-// 	if recorder == nil {
-// 		return 0
-// 	}
-// 	recorder.Checkpoint(descriptor)
-
-// 	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
-// 	err := m.integrator.Process(exportRecord)
-// 	if err != nil {
-// 		global.Handle(err)
-// 	}
-// 	return 1
-// }
-
 // RecordBatch enters a batch of metric events.
 func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is

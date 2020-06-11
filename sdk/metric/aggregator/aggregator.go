@@ -24,7 +24,7 @@ import (
 )
 
 // NewInconsistentAggregatorError formats an error describing an attempt to
-// merge different-type aggregators.  The result can be unwrapped as
+// Checkpoint or Merge different-type aggregators.  The result can be unwrapped as
 // an ErrInconsistentType.
 func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 	return fmt.Errorf("%w: %T and %T", aggregation.ErrInconsistentType, a1, a2)
