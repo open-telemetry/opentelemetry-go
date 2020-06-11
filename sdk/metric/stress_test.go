@@ -248,9 +248,9 @@ func (*testFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregat
 	name := descriptor.Name()
 	switch {
 	case strings.HasSuffix(name, "counter"):
-		return sum.New()
+		return &sum.New(1)[0]
 	case strings.HasSuffix(name, "lastvalue"):
-		return lastvalue.New()
+		return &lastvalue.New(1)[0]
 	default:
 		panic("Not implemented for this test")
 	}

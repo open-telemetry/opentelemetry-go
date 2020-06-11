@@ -86,26 +86,25 @@ func createNumber(desc *metric.Descriptor, v float64) metric.Number {
 }
 
 func (p *CheckpointSet) AddLastValue(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, lastvalue.New(), v, labels...)
+	p.updateAggregator(desc, &lastvalue.New(1)[0], v, labels...)
 }
 
 func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, sum.New(), v, labels...)
+	p.updateAggregator(desc, &sum.New(1)[0], v, labels...)
 }
 
 func (p *CheckpointSet) AddValueRecorder(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, array.New(), v, labels...)
+	p.updateAggregator(desc, &array.New(1)[0], v, labels...)
 }
 
 func (p *CheckpointSet) AddHistogramValueRecorder(desc *metric.Descriptor, boundaries []float64, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, histogram.New(desc, boundaries), v, labels...)
+	p.updateAggregator(desc, &histogram.New(1, desc, boundaries)[0], v, labels...)
 }
 
 func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.Aggregator, v float64, labels ...kv.KeyValue) {
 	ctx := context.Background()
 	// Updates and checkpoint the new aggregator
 	_ = newAgg.Update(ctx, createNumber(desc, v), desc)
-	newAgg.Checkpoint(desc)
 
 	// Try to add this aggregator to the CheckpointSet
 	agg, added := p.Add(desc, newAgg, labels...)
