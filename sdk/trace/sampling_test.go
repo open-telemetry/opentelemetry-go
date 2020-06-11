@@ -23,7 +23,21 @@ import (
 )
 
 func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
-	sampler := sdktrace.AlwaysParentSample()
+	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
+	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.SpanContext{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	}
+	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
+		t.Error("Sampling decision should be RecordAndSampled")
+	}
+}
+
+func TestNeverParentSampleWithParentSampled(t *testing.T) {
+	sampler := sdktrace.ParentSample(sdktrace.NeverSample())
 	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.SpanContext{
@@ -37,7 +51,7 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 }
 
 func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
-	sampler := sdktrace.AlwaysParentSample()
+	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
 	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.SpanContext{
@@ -45,6 +59,20 @@ func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
 		SpanID:  spanID,
 	}
 	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.NotRecord {
+		t.Error("Sampling decision should be NotRecord")
+	}
+}
+
+func TestParentSampleWithNoParent(t *testing.T) {
+	params := sdktrace.SamplingParameters{}
+
+	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
+	if sampler.ShouldSample(params).Decision != sdktrace.RecordAndSampled {
+		t.Error("Sampling decision should be RecordAndSampled")
+	}
+
+	sampler = sdktrace.ParentSample(sdktrace.NeverSample())
+	if sampler.ShouldSample(params).Decision != sdktrace.NotRecord {
 		t.Error("Sampling decision should be NotRecord")
 	}
 }
