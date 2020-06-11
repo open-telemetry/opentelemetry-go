@@ -151,7 +151,7 @@ func TestPushTicker(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := metric.Must(meter).NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	p.Start()
 
@@ -167,7 +167,7 @@ func TestPushTicker(t *testing.T) {
 	records, exports = fix.exporter.resetRecords()
 	require.Equal(t, 1, exports)
 	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err := records[0].Aggregator().(aggregation.Sum).Sum()
@@ -184,7 +184,7 @@ func TestPushTicker(t *testing.T) {
 	records, exports = fix.exporter.resetRecords()
 	require.Equal(t, 2, exports)
 	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter", records[0].Descriptor().Name())
+	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
 	sum, err = records[0].Aggregator().(aggregation.Sum).Sum()
@@ -210,14 +210,14 @@ func TestPushExportError(t *testing.T) {
 		expectedDescriptors []string
 		expectedError       error
 	}{
-		{"errNone", nil, []string{"counter1{R=V,X=Y}", "counter2{R=V,}"}, nil},
-		{"errNoData", aggregation.ErrNoData, []string{"counter2{R=V,}"}, nil},
+		{"errNone", nil, []string{"counter1.sum{R=V,X=Y}", "counter2.sum{R=V,}"}, nil},
+		{"errNoData", aggregation.ErrNoData, []string{"counter2.sum{R=V,}"}, nil},
 		{"errUnexpected", errAggregator, []string{}, errAggregator},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fix := newFixture(t)
-			fix.exporter.injectErr = injector("counter1", tt.injectedError)
+			fix.exporter.injectErr = injector("counter1.sum", tt.injectedError)
 
 			p := push.New(
 				test.AggregationSelector(),
@@ -232,8 +232,8 @@ func TestPushExportError(t *testing.T) {
 			ctx := context.Background()
 
 			meter := p.Provider().Meter("name")
-			counter1 := metric.Must(meter).NewInt64Counter("counter1")
-			counter2 := metric.Must(meter).NewInt64Counter("counter2")
+			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
+			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
 			p.Start()
 			runtime.Gosched()

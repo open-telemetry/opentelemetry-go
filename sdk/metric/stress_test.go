@@ -343,7 +343,7 @@ func float64sEqual(a, b api.Number) bool {
 func intCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewInt64Counter(name + ".counter")
+			return Must(meter).NewInt64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {
@@ -381,7 +381,7 @@ func TestStressInt64Counter(t *testing.T) {
 func floatCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewFloat64Counter(name + ".counter")
+			return Must(meter).NewFloat64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {

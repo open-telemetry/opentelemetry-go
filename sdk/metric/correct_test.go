@@ -574,8 +574,8 @@ func TestSyncInAsync(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, integrator := newSDK(t)
 
-	counter := Must(meter).NewFloat64Counter("name.sum")
-	_ = Must(meter).NewInt64ValueObserver("observer",
+	counter := Must(meter).NewFloat64Counter("counter.sum")
+	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10)
 			counter.Add(ctx, 100)
@@ -589,7 +589,7 @@ func TestSyncInAsync(t *testing.T) {
 		_ = out.AddTo(rec)
 	}
 	require.EqualValues(t, map[string]float64{
-		"counter//R=V":  100,
-		"observer//R=V": 10,
+		"counter.sum//R=V":        100,
+		"observer.lastvalue//R=V": 10,
 	}, out.Map)
 }
