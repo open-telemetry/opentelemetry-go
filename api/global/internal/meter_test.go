@@ -74,7 +74,7 @@ func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.Meter("test1")
+	meter1 := global.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := global.Meter("test2")
 	labels1 := []kv.KeyValue{kv.String("A", "B")}
 	labels2 := []kv.KeyValue{kv.String("C", "D")}
@@ -116,16 +116,18 @@ func TestDirect(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:                "test.counter",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels1...),
-				Number:              asInt(1),
+				Name:                   "test.counter",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asInt(1),
 			},
 			{
-				Name:                "test.valuerecorder",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels1...),
-				Number:              asFloat(3),
+				Name:                   "test.valuerecorder",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asFloat(3),
 			},
 			{
 				Name:                "test.second",
@@ -134,28 +136,32 @@ func TestDirect(t *testing.T) {
 				Number:              asFloat(3),
 			},
 			{
-				Name:                "test.valueobserver.float",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels1...),
-				Number:              asFloat(1),
+				Name:                   "test.valueobserver.float",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asFloat(1),
 			},
 			{
-				Name:                "test.valueobserver.float",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels2...),
-				Number:              asFloat(2),
+				Name:                   "test.valueobserver.float",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels2...),
+				Number:                 asFloat(2),
 			},
 			{
-				Name:                "test.valueobserver.int",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels1...),
-				Number:              asInt(1),
+				Name:                   "test.valueobserver.int",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asInt(1),
 			},
 			{
-				Name:                "test.valueobserver.int",
-				InstrumentationName: "test1",
-				Labels:              asMap(labels2...),
-				Number:              asInt(2),
+				Name:                   "test.valueobserver.int",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels2...),
+				Number:                 asInt(2),
 			},
 		},
 		measurements,

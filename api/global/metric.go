@@ -19,12 +19,16 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
-// Meter gets a named Meter interface.  If the name is an
-// empty string, the provider uses a default name.
+// Meter creates an implementation of the Meter interface from the global
+// Provider. The instrumentationName must be the name of the library
+// providing instrumentation. This name may be the same as the instrumented
+// code only if that code provides built-in instrumentation. If the
+// instrumentationName is empty, then a implementation defined default name
+// will be used instead.
 //
 // This is short for MeterProvider().Meter(name)
-func Meter(name string) metric.Meter {
-	return MeterProvider().Meter(name)
+func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
+	return MeterProvider().Meter(instrumentationName, opts...)
 }
 
 // MeterProvider returns the registered global meter provider.  If
