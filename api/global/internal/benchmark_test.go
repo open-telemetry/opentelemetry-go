@@ -82,7 +82,7 @@ func (*benchFixture) CheckpointSet() export.CheckpointSet {
 func (*benchFixture) FinishedCollection() {
 }
 
-func (fix *benchFixture) Meter(name string) metric.Meter {
+func (fix *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 	return fix.meter
 }
 

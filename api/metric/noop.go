@@ -32,7 +32,7 @@ var _ SyncImpl = NoopSync{}
 var _ BoundSyncImpl = noopBoundInstrument{}
 var _ AsyncImpl = NoopAsync{}
 
-func (NoopProvider) Meter(name string) Meter {
+func (NoopProvider) Meter(_ string, _ ...MeterOption) Meter {
 	return Meter{}
 }
 
