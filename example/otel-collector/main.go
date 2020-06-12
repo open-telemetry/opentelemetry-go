@@ -76,6 +76,8 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 }
 
 func main() {
+	log.Printf("Waiting for connection...")
+
 	exp, pusher := initProvider()
 	defer func() { handleErr(exp.Stop(), "failed to stop exporter") }()
 	defer pusher.Stop() // pushes any last exports to the receiver
@@ -111,7 +113,7 @@ func main() {
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
-		fmt.Printf("Doing really hard work (%d / 10)\n", i + 1)
+		log.Printf("Doing really hard work (%d / 10)\n", i + 1)
 		<-time.After(time.Second)
 		iSpan.End()
 	}

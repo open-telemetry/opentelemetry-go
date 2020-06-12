@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Configuration based on otel-collector k8s demo: 
+# Configuration based on otel-collector k8s demo:
 # https://github.com/open-telemetry/opentelemetry-collector/blob/master/examples/k8s.yaml
 
 apiVersion: v1
@@ -26,7 +26,7 @@ metadata:
 data:
   otel-collector-config: |
     receivers:
-      # Make sure to add the otlp receiver. 
+      # Make sure to add the otlp receiver.
       # This will open up the receiver on port 55680
       otlp:
         endpoint: 0.0.0.0:55680
@@ -36,13 +36,16 @@ data:
     exporters:
       jaeger_grpc:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
+      prometheus:
+        endpoint: "prometheus-k8s.monitoring.svc.cluster.local:9090"
+
     service:
       extensions: [health_check]
       pipelines:
         traces:
           receivers: [otlp]
           processors: []
-          exporters: [jaeger_grpc]
+          exporters: [jaeger_grpc, prometheus]
 ---
 apiVersion: v1
 kind: Service
