@@ -104,7 +104,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	lvagg, ckpt := test.Unslice2(lastvalue.New(2))
 
 	aggtest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
-	_ = lvagg.Checkpoint(ckpt, &desc)
+	_ = lvagg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, ckpt)
 
@@ -151,7 +151,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 	cagg, ckpt := test.Unslice2(sum.New(2))
 
 	aggtest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
-	_ = cagg.Checkpoint(ckpt, &desc)
+	_ = cagg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
 
@@ -169,7 +169,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	lvagg, ckpt := test.Unslice2(lastvalue.New(2))
 
 	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
-	_ = lvagg.Checkpoint(ckpt, &desc)
+	_ = lvagg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
 
@@ -189,7 +189,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
 	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
-	_ = magg.Checkpoint(ckpt, &desc)
+	_ = magg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
 
@@ -212,7 +212,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 		aggtest.CheckedUpdate(fix.t, aagg, metric.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 
-	_ = aagg.Checkpoint(ckpt, &desc)
+	_ = aagg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
 
@@ -256,7 +256,7 @@ func TestStdoutNoData(t *testing.T) {
 
 			checkpointSet := test.NewCheckpointSet(testResource)
 
-			_ = agg.Checkpoint(ckpt, &desc)
+			_ = agg.SynchronizedCopy(ckpt, &desc)
 
 			checkpointSet.Add(&desc, ckpt)
 
@@ -278,7 +278,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 
 	lvagg, ckpt := test.Unslice2(lastvalue.New(2))
-	_ = lvagg.Checkpoint(ckpt, &desc)
+	_ = lvagg.SynchronizedCopy(ckpt, &desc)
 
 	checkpointSet.Add(&desc, lvagg, kv.String("A", "B"), kv.String("C", "D"))
 
@@ -330,7 +330,7 @@ func TestStdoutResource(t *testing.T) {
 		lvagg, ckpt := test.Unslice2(lastvalue.New(2))
 
 		aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
-		_ = lvagg.Checkpoint(ckpt, &desc)
+		_ = lvagg.SynchronizedCopy(ckpt, &desc)
 
 		checkpointSet.Add(&desc, ckpt, tc.attrs...)
 

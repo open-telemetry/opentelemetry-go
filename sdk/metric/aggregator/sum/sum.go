@@ -53,7 +53,7 @@ func (c *Aggregator) Sum() (metric.Number, error) {
 
 // Checkpoint atomically saves the current value and resets the
 // current sum to zero.
-func (c *Aggregator) Checkpoint(oa export.Aggregator, _ *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

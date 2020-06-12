@@ -80,7 +80,7 @@ func TestLastValueUpdate(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		err := agg.Checkpoint(ckpt, record)
+		err := agg.SynchronizedCopy(ckpt, record)
 		require.NoError(t, err)
 
 		lv, _, err := ckpt.LastValue()
@@ -102,8 +102,8 @@ func TestLastValueMerge(t *testing.T) {
 		test.CheckedUpdate(t, agg1, first1, descriptor)
 		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		_ = agg1.Checkpoint(ckpt1, descriptor)
-		_ = agg2.Checkpoint(ckpt2, descriptor)
+		_ = agg1.SynchronizedCopy(ckpt1, descriptor)
+		_ = agg2.SynchronizedCopy(ckpt2, descriptor)
 
 		checkZero(t, agg1)
 		checkZero(t, agg2)
@@ -127,7 +127,7 @@ func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
 	g, ckpt := new2()
-	_ = g.Checkpoint(ckpt, descriptor)
+	_ = g.SynchronizedCopy(ckpt, descriptor)
 
 	checkZero(t, g)
 }

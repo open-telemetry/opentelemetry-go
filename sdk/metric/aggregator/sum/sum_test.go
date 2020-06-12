@@ -74,7 +74,7 @@ func TestCounterSum(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
-		err := agg.Checkpoint(ckpt, descriptor)
+		err := agg.SynchronizedCopy(ckpt, descriptor)
 		require.NoError(t, err)
 
 		checkZero(t, agg, descriptor)
@@ -102,7 +102,7 @@ func TestValueRecorderSum(t *testing.T) {
 			sum.AddNumber(profile.NumberKind, r2)
 		}
 
-		_ = agg.Checkpoint(ckpt, descriptor)
+		_ = agg.SynchronizedCopy(ckpt, descriptor)
 		checkZero(t, agg, descriptor)
 
 		asum, err := ckpt.Sum()
@@ -125,8 +125,8 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		_ = agg1.Checkpoint(ckpt1, descriptor)
-		_ = agg2.Checkpoint(ckpt2, descriptor)
+		_ = agg1.SynchronizedCopy(ckpt1, descriptor)
+		_ = agg2.SynchronizedCopy(ckpt2, descriptor)
 
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)

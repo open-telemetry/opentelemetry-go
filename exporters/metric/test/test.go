@@ -52,7 +52,7 @@ func (*NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor
 }
 
 // Checkpoint implements export.Aggregator.
-func (*NoopAggregator) Checkpoint(export.Aggregator, *metric.Descriptor) error {
+func (*NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 

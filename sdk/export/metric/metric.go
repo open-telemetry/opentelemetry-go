@@ -116,21 +116,21 @@ type Aggregator interface {
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
 	Update(context.Context, metric.Number, *metric.Descriptor) error
 
-	// Checkpoint is called during collection to finish one period
+	// SynchronizedCopy is called during collection to finish one period
 	// of aggregation by atomically saving the current state into
 	// the argument Aggregator.
 	//
-	// Checkpoint() is called concurrently with Update().  These
+	// SynchronizedCopy() is called concurrently with Update().  These
 	// two methods must be synchronized with respect to each
 	// other, for correctness.
 	//
-	// The checkpointed Aggregator can be converted into one of
-	// the interfaces in the `aggregator` sub-package, according
-	// to kind of Aggregator that was selected.
+	// After saving a synchronized copy, the Aggregator can be converted
+	// into one or more of the interfaces in the `aggregation` sub-package,
+	// according to kind of Aggregator that was selected.
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	Checkpoint(Aggregator, *metric.Descriptor) error
+	SynchronizedCopy(Aggregator, *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized

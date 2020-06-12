@@ -658,7 +658,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}
-		_ = agg.Checkpoint(ckpt, &desc)
+		_ = agg.SynchronizedCopy(ckpt, &desc)
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource

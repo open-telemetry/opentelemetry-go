@@ -189,9 +189,9 @@ func TestSimpleStateful(t *testing.T) {
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, metric.NewInt64Number(20), &CounterADesc)
 	_ = caggB.Update(ctx, metric.NewInt64Number(20), &CounterBDesc)
-	err := caggA.Checkpoint(ckptA, &CounterADesc)
+	err := caggA.SynchronizedCopy(ckptA, &CounterADesc)
 	require.NoError(t, err)
-	err = caggB.Checkpoint(ckptB, &CounterBDesc)
+	err = caggB.SynchronizedCopy(ckptB, &CounterBDesc)
 	require.NoError(t, err)
 
 	// As yet cagg has not been passed to Integrator.Process.  Should

@@ -86,7 +86,7 @@ func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
 }
 
 // Checkpoint atomically saves the current value.
-func (g *Aggregator) Checkpoint(oa export.Aggregator, _ *metric.Descriptor) error {
+func (g *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(g, oa)

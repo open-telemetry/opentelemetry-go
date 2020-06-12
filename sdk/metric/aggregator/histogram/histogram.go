@@ -110,7 +110,7 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

@@ -106,7 +106,7 @@ func (c *Aggregator) toNumber(f float64) metric.Number {
 
 // Checkpoint saves the current state and resets the current state to
 // a new sketch, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) Checkpoint(oa export.Aggregator, _ *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -121,7 +121,7 @@ func (c *Aggregator) Checkpoint(oa export.Aggregator, _ *metric.Descriptor) erro
 }
 
 // Update adds the recorded measurement to the current data set.
-// Update takes a lock to prevent concurrent Update() and Checkpoint()
+// Update takes a lock to prevent concurrent Update() and SynchronizedCopy()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()

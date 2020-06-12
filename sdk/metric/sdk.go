@@ -438,7 +438,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 	if r.current == nil {
 		return 0
 	}
-	err := r.current.Checkpoint(r.checkpoint, &r.inst.descriptor)
+	err := r.current.SynchronizedCopy(r.checkpoint, &r.inst.descriptor)
 	if err != nil {
 		global.Handle(err)
 		return 0

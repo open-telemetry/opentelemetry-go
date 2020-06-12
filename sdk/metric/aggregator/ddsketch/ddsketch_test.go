@@ -80,7 +80,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	err := agg.Checkpoint(ckpt, descriptor)
+	err := agg.SynchronizedCopy(ckpt, descriptor)
 	require.NoError(t, err)
 
 	checkZero(t, agg, descriptor)
@@ -156,8 +156,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	_ = agg1.Checkpoint(ckpt1, descriptor)
-	_ = agg2.Checkpoint(ckpt2, descriptor)
+	_ = agg1.SynchronizedCopy(ckpt1, descriptor)
+	_ = agg2.SynchronizedCopy(ckpt2, descriptor)
 
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg1, descriptor)

@@ -48,7 +48,7 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 // count.  It does not compute quantile information other than Min and
 // Max.
 //
-// This type uses a mutex for Update() and Checkpoint() concurrency.
+// This type uses a mutex for Update() and SynchronizedCopy() concurrency.
 func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
 	aggs := make([]Aggregator, cnt)
@@ -98,7 +98,7 @@ func (c *Aggregator) Max() (metric.Number, error) {
 
 // Checkpoint saves the current state and resets the current state to
 // the empty set.
-func (c *Aggregator) Checkpoint(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
