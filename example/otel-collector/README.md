@@ -1,6 +1,6 @@
 # OpenTelemetry Collector Traces Example
 
-This example illustrates how to export traces from the OpenTelemetry-Go SDK to the OpenTelemetry Collector, and from there to a Jaeger instance.
+This example illustrates how to export trace and metric data from the OpenTelemetry-Go SDK to the OpenTelemetry Collector, and from there to a Jaeger instance.
 The complete flow is:
 
 `Demo App -> OpenTelemetry Collector -> Jaeger`
@@ -9,7 +9,7 @@ The complete flow is:
 
 The demo is built on Kubernetes, and uses a local instance of [microk8s](https://microk8s.io/). You will need access to a cluster in order to deploy the OpenTelemetry Collector and Jaeger components from this demo.
 
-For simplicity, the demo application is not part of the k8s cluster, and will access the OpenTelemetry Collector through a NodePort on the cluster. Note that the NodePort opened by this demo is not secured. 
+For simplicity, the demo application is not part of the k8s cluster, and will access the OpenTelemetry Collector through a NodePort on the cluster. Note that the NodePort opened by this demo is not secured.
 
 Ideally you'd want to either have your application running as part of the kubernetes cluster, or use a secured connection (NodePort/LoadBalancer with TLS or an ingress extension).
 
@@ -42,7 +42,7 @@ For manual deployments, follow the same steps as above, but instead run the `kub
 
 First, the namespace needs to be created:
 ```bash
-k apply -f k8s/namespace.yaml
+kubectl apply -f k8s/namespace.yaml
 ```
 
 Jaeger is then deployed via the operator, and the demo follows [these steps](https://github.com/jaegertracing/jaeger-operator#getting-started) to create it:
@@ -59,11 +59,11 @@ kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operato
 kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role_binding.yaml
 
 # Create the Jaeger instance itself:
-kubectl apply -f k8s/jaeger/jaeger.yaml
+kubectl apply -f k8s/jaeger.yaml
 ```
 
-The OpenTelemetry Collector is contained in a single k8s file, which can be deployed with one command: 
-```bash 
+The OpenTelemetry Collector is contained in a single k8s file, which can be deployed with one command:
+```bash
 k8s apply -f k8s/otel-collector.yaml
 ```
 
@@ -78,7 +78,7 @@ One important part here is that, in order to enable our application to send trac
 ...
   otel-collector-config: |
     receivers:
-      # Make sure to add the otlp receiver. 
+      # Make sure to add the otlp receiver.
       # This will open up the receiver on port 55680.
       otlp:
         endpoint: 0.0.0.0:55680
@@ -135,7 +135,7 @@ First, we need to create an exporter using the [otlp](https://pkg.go.dev/go.open
 exp, err := otlp.NewExporter(otlp.WithInsecure(),
         // use the address of the NodePort service created above
         // <node-ip>:30080
-        otlp.WithAddress("localhost:30080"), 
+        otlp.WithAddress("localhost:30080"),
         otlp.WithGRPCDialOption(grpc.WithBlock()))
 if err != nil {
         log.Fatalf("Failed to create the collector exporter: %v", err)
@@ -175,6 +175,6 @@ ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
 defer span.End()
 ```
 
-The traces should now be visible from the Jaeger UI (if you have it installed), or thorough the jaeger-query service, under the name `test-service`.
+The traces should now be visible from the Jaeger UI (if you have it installed), or through the jaeger-query service, under the name `test-service`.
 
 You can find the complete code for this example in the [main.go](./main.go) file.
