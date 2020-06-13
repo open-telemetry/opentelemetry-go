@@ -34,10 +34,10 @@ type (
 	}
 
 	state struct {
-		count int64
 		sum   metric.Number
 		min   metric.Number
 		max   metric.Number
+		count int64
 	}
 )
 
@@ -104,6 +104,9 @@ func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descrip
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
+	// TODO: It is incorrect to use an Aggregator of different
+	// kind. Should we test that o.kind == c.kind?  (The same question
+	// occurs for several of the other aggregators in ../*.)
 	c.lock.Lock()
 	o.state, c.state = c.state, emptyState(c.kind)
 	c.lock.Unlock()

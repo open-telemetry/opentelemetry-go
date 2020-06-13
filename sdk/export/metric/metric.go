@@ -116,9 +116,9 @@ type Aggregator interface {
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
 	Update(context.Context, metric.Number, *metric.Descriptor) error
 
-	// SynchronizedCopy is called during collection to finish one period
-	// of aggregation by atomically saving the current state into
-	// the argument Aggregator.
+	// SynchronizedCopy is called during collection to finish one
+	// period of aggregation by atomically saving the
+	// currently-updating state into the argument Aggregator.
 	//
 	// SynchronizedCopy() is called concurrently with Update().  These
 	// two methods must be synchronized with respect to each
@@ -128,14 +128,18 @@ type Aggregator interface {
 	// into one or more of the interfaces in the `aggregation` sub-package,
 	// according to kind of Aggregator that was selected.
 	//
+	// This method will return an InconsistentAggregatorError if
+	// this Aggregator cannot be copied into the destination due
+	// to an incompatible type.
+	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	SynchronizedCopy(Aggregator, *metric.Descriptor) error
+	SynchronizedCopy(destination Aggregator, descriptor *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
 	// with respect to Update, and should only be called on
-	// checkpoiunted Aggregators.
+	// checkpointed Aggregators.
 	//
 	// The owner of a checkpointed
 	// Aggregator is responsible for synchronization.
