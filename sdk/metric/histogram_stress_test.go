@@ -46,7 +46,7 @@ func TestStressInt64Histogram(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		_ = h.SynchronizedCopy(ckpt, &desc)
+		require.NoError(t, h.SynchronizedCopy(ckpt, &desc))
 
 		b, _ := ckpt.Histogram()
 		c, _ := ckpt.Count()

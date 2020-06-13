@@ -96,7 +96,7 @@ func (c *Aggregator) Max() (metric.Number, error) {
 	return c.max, nil
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state into oa and resets the current state to
 // the empty set.
 func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)

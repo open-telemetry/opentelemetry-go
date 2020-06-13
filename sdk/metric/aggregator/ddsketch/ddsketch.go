@@ -104,7 +104,7 @@ func (c *Aggregator) toNumber(f float64) metric.Number {
 	return metric.NewInt64Number(int64(f))
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state into oa and resets the current state to
 // a new sketch, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)

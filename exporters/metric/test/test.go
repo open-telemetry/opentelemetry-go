@@ -51,7 +51,7 @@ func (*NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor
 	return nil
 }
 
-// Checkpoint implements export.Aggregator.
+// SynchronizedCopy implements export.Aggregator.
 func (*NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
@@ -113,7 +113,7 @@ func Unslice2(sl interface{}) (one, two export.Aggregator) {
 		panic("Invalid Unslice2")
 	}
 	if slv.Len() != 2 {
-		panic("Invalid Unslice2")
+		panic("Invalid Unslice2: length > 2")
 	}
 	one = slv.Index(0).Addr().Interface().(export.Aggregator)
 	two = slv.Index(1).Addr().Interface().(export.Aggregator)

@@ -156,8 +156,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	_ = agg1.SynchronizedCopy(ckpt1, descriptor)
-	_ = agg2.SynchronizedCopy(ckpt2, descriptor)
+	require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+	require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg1, descriptor)

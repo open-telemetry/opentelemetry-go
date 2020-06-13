@@ -51,7 +51,7 @@ func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.value, nil
 }
 
-// Checkpoint atomically saves the current value and resets the
+// SynchronizedCopy atomically saves the current value into oa and resets the
 // current sum to zero.
 func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)

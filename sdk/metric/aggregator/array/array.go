@@ -87,7 +87,7 @@ func (c *Aggregator) Points() ([]metric.Number, error) {
 	return c.points, nil
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state to oa and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
