@@ -138,11 +138,10 @@ type Aggregator interface {
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
-	// with respect to Update, and should only be called on
-	// checkpointed Aggregators.
+	// with respect to Update or SynchronizedCopy.
 	//
-	// The owner of a checkpointed
-	// Aggregator is responsible for synchronization.
+	// The owner of an Aggregator being merged is responsible for
+	// synchronization of both Aggregator states.
 	Merge(Aggregator, *metric.Descriptor) error
 }
 
