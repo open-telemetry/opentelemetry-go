@@ -106,7 +106,7 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 	}, nil
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state into oa and resets the current state to
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
