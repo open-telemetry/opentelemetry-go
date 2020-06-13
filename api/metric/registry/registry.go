@@ -42,8 +42,9 @@ type uniqueInstrumentMeterImpl struct {
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
 type key struct {
-	name        string
-	libraryName string
+	instrumentName         string
+	instrumentationName    string
+	InstrumentationVersion string
 }
 
 // NewProvider returns a new provider that implements instrument
@@ -55,8 +56,8 @@ func NewProvider(impl metric.MeterImpl) *Provider {
 }
 
 // Meter implements metric.Provider.
-func (p *Provider) Meter(name string) metric.Meter {
-	return metric.WrapMeterImpl(p.impl, name)
+func (p *Provider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
+	return metric.WrapMeterImpl(p.impl, instrumentationName, opts...)
 }
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
@@ -81,16 +82,18 @@ func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []kv
 func keyOf(descriptor metric.Descriptor) key {
 	return key{
 		descriptor.Name(),
-		descriptor.LibraryName(),
+		descriptor.InstrumentationName(),
+		descriptor.InstrumentationVersion(),
 	}
 }
 
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
 func NewMetricKindMismatchError(desc metric.Descriptor) error {
-	return fmt.Errorf("Metric was %s (%s) registered as a %s %s: %w",
+	return fmt.Errorf("Metric was %s (%s %s)registered as a %s %s: %w",
 		desc.Name(),
-		desc.LibraryName(),
+		desc.InstrumentationName(),
+		desc.InstrumentationVersion(),
 		desc.NumberKind(),
 		desc.MetricKind(),
 		ErrMetricKindMismatch)

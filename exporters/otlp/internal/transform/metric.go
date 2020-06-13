@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -53,10 +54,10 @@ var (
 
 // result is the product of transforming Records into OTLP Metrics.
 type result struct {
-	Resource *resource.Resource
-	Library  string
-	Metric   *metricpb.Metric
-	Err      error
+	Resource               *resource.Resource
+	InstrumentationLibrary instrumentation.Library
+	Metric                 *metricpb.Metric
+	Err                    error
 }
 
 // CheckpointSet transforms all records contained in a checkpoint into
@@ -125,9 +126,12 @@ func transformer(ctx context.Context, in <-chan export.Record, out chan<- result
 		}
 		res := result{
 			Resource: r.Resource(),
-			Library:  r.Descriptor().LibraryName(),
-			Metric:   m,
-			Err:      err,
+			InstrumentationLibrary: instrumentation.Library{
+				Name:    r.Descriptor().InstrumentationName(),
+				Version: r.Descriptor().InstrumentationVersion(),
+			},
+			Metric: m,
+			Err:    err,
 		}
 		select {
 		case <-ctx.Done():
@@ -148,7 +152,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	type resourceBatch struct {
 		Resource *resourcepb.Resource
 		// Group by instrumentation library name and then the MetricDescriptor.
-		InstrumentationLibraryBatches map[string]map[string]*metricpb.Metric
+		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
 	}
 
 	// group by unique Resource string.
@@ -164,15 +168,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		if !ok {
 			rb = resourceBatch{
 				Resource:                      Resource(res.Resource),
-				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
+				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
 			}
 			grouped[rID] = rb
 		}
 
-		mb, ok := rb.InstrumentationLibraryBatches[res.Library]
+		mb, ok := rb.InstrumentationLibraryBatches[res.InstrumentationLibrary]
 		if !ok {
 			mb = make(map[string]*metricpb.Metric)
-			rb.InstrumentationLibraryBatches[res.Library] = mb
+			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
 		}
 
 		mID := res.Metric.GetMetricDescriptor().String()
@@ -202,12 +206,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	var rms []*metricpb.ResourceMetrics
 	for _, rb := range grouped {
 		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
-		for ilName, mb := range rb.InstrumentationLibraryBatches {
+		for il, mb := range rb.InstrumentationLibraryBatches {
 			ilm := &metricpb.InstrumentationLibraryMetrics{
 				Metrics: make([]*metricpb.Metric, 0, len(mb)),
 			}
-			if ilName != "" {
-				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{Name: ilName}
+			if il != (instrumentation.Library{}) {
+				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{
+					Name:    il.Name,
+					Version: il.Version,
+				}
 			}
 			for _, m := range mb {
 				ilm.Metrics = append(ilm.Metrics, m)

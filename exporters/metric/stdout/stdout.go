@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -162,6 +163,16 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		kind := desc.NumberKind()
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 
+		var instLabels []kv.KeyValue
+		if name := desc.InstrumentationName(); name != "" {
+			instLabels = append(instLabels, kv.String("instrumentation.name", name))
+			if version := desc.InstrumentationVersion(); version != "" {
+				instLabels = append(instLabels, kv.String("instrumentation.version", version))
+			}
+		}
+		instSet := label.NewSet(instLabels...)
+		encodedInstLabels := instSet.Encoded(e.config.LabelEncoder)
+
 		var expose expoLine
 
 		if sum, ok := agg.(aggregation.Sum); ok {
@@ -230,10 +241,14 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		sb.WriteString(desc.Name())
 
-		if len(encodedLabels) > 0 || len(encodedResource) > 0 {
+		if len(encodedLabels) > 0 || len(encodedResource) > 0 || len(encodedInstLabels) > 0 {
 			sb.WriteRune('{')
 			sb.WriteString(encodedResource)
-			if len(encodedLabels) > 0 && len(encodedResource) > 0 {
+			if len(encodedInstLabels) > 0 && len(encodedResource) > 0 {
+				sb.WriteRune(',')
+			}
+			sb.WriteString(encodedInstLabels)
+			if len(encodedLabels) > 0 && (len(encodedInstLabels) > 0 || len(encodedResource) > 0) {
 				sb.WriteRune(',')
 			}
 			sb.WriteString(encodedLabels)
