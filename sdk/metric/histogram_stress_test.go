@@ -20,13 +20,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 func TestStressInt64Histogram(t *testing.T) {
 	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderKind, metric.Int64NumberKind)
-	h := histogram.New(&desc, []float64{25, 50, 75})
+
+	alloc := histogram.New(2, &desc, []float64{25, 50, 75})
+	h, ckpt := &alloc[0], &alloc[1]
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -44,10 +48,10 @@ func TestStressInt64Histogram(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		h.Checkpoint(&desc)
+		require.NoError(t, h.SynchronizedCopy(ckpt, &desc))
 
-		b, _ := h.Histogram()
-		c, _ := h.Count()
+		b, _ := ckpt.Histogram()
+		c, _ := ckpt.Count()
 
 		var realCount int64
 		for _, c := range b.Counts {

@@ -16,7 +16,6 @@ package internal_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -26,9 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -37,6 +34,7 @@ var Must = metric.Must
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
+	export.AggregationSelector
 	accumulator *sdk.Accumulator
 	meter       metric.Meter
 	B           *testing.B
@@ -47,28 +45,13 @@ var _ metric.Provider = &benchFixture{}
 func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
-		B: b,
+		B:                   b,
+		AggregationSelector: test.AggregationSelector(),
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
 	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
 	return bf
-}
-
-func (*benchFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case metric.CounterKind:
-		return sum.New()
-	case metric.ValueRecorderKind:
-		if strings.HasSuffix(descriptor.Name(), "minmaxsumcount") {
-			return minmaxsumcount.New(descriptor)
-		} else if strings.HasSuffix(descriptor.Name(), "ddsketch") {
-			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
-		} else if strings.HasSuffix(descriptor.Name(), "array") {
-			return ddsketch.New(descriptor, ddsketch.NewDefaultConfig())
-		}
-	}
-	return nil
 }
 
 func (*benchFixture) Process(export.Record) error {

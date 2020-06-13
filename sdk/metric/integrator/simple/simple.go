@@ -89,7 +89,7 @@ func (b *Integrator) Process(record export.Record) error {
 		tmp := agg
 		// Note: the call to AggregatorFor() followed by Merge
 		// is effectively a Clone() operation.
-		agg = b.AggregatorFor(desc)
+		b.AggregatorFor(desc, &agg)
 		if err := agg.Merge(tmp, desc); err != nil {
 			return err
 		}

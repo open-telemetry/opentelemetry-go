@@ -15,9 +15,11 @@
 package lastvalue
 
 import (
+	"errors"
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
@@ -48,9 +50,26 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func new2() (_, _ *Aggregator) {
+	alloc := New(2)
+	return &alloc[0], &alloc[1]
+}
+
+func new4() (_, _, _, _ *Aggregator) {
+	alloc := New(4)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func checkZero(t *testing.T, agg *Aggregator) {
+	lv, ts, err := agg.LastValue()
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, time.Time{}, ts)
+	require.Equal(t, metric.Number(0), lv)
+}
+
 func TestLastValueUpdate(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
+		agg, ckpt := new2()
 
 		record := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -61,9 +80,10 @@ func TestLastValueUpdate(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, record)
 		}
 
-		agg.Checkpoint(record)
+		err := agg.SynchronizedCopy(ckpt, record)
+		require.NoError(t, err)
 
-		lv, _, err := agg.LastValue()
+		lv, _, err := ckpt.LastValue()
 		require.Equal(t, last, lv, "Same last value - non-monotonic")
 		require.Nil(t, err)
 	})
@@ -71,8 +91,7 @@ func TestLastValueUpdate(t *testing.T) {
 
 func TestLastValueMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg1 := New()
-		agg2 := New()
+		agg1, agg2, ckpt1, ckpt2 := new4()
 
 		descriptor := test.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
 
@@ -83,18 +102,21 @@ func TestLastValueMerge(t *testing.T) {
 		test.CheckedUpdate(t, agg1, first1, descriptor)
 		test.CheckedUpdate(t, agg2, first2, descriptor)
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
-		_, t1, err := agg1.LastValue()
+		checkZero(t, agg1)
+		checkZero(t, agg2)
+
+		_, t1, err := ckpt1.LastValue()
 		require.Nil(t, err)
-		_, t2, err := agg2.LastValue()
+		_, t2, err := ckpt2.LastValue()
 		require.Nil(t, err)
 		require.True(t, t1.Before(t2))
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
-		lv, ts, err := agg1.LastValue()
+		lv, ts, err := ckpt1.LastValue()
 		require.Nil(t, err)
 		require.Equal(t, t2, ts, "Merged timestamp - non-monotonic")
 		require.Equal(t, first2, lv, "Merged value - non-monotonic")
@@ -104,11 +126,8 @@ func TestLastValueMerge(t *testing.T) {
 func TestLastValueNotSet(t *testing.T) {
 	descriptor := test.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
 
-	g := New()
-	g.Checkpoint(descriptor)
+	g, ckpt := new2()
+	require.NoError(t, g.SynchronizedCopy(ckpt, descriptor))
 
-	value, timestamp, err := g.LastValue()
-	require.Equal(t, aggregation.ErrNoData, err)
-	require.True(t, timestamp.IsZero())
-	require.Equal(t, metric.Number(0), value)
+	checkZero(t, g)
 }

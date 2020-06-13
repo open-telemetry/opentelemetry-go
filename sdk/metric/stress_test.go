@@ -36,8 +36,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 )
 
 const (
@@ -58,6 +57,8 @@ type (
 		wg       sync.WaitGroup
 		impl     testImpl
 		T        *testing.T
+
+		export.AggregationSelector
 
 		lock  sync.Mutex
 		lused map[string]bool
@@ -244,18 +245,6 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	name := descriptor.Name()
-	switch {
-	case strings.HasSuffix(name, "counter"):
-		return sum.New()
-	case strings.HasSuffix(name, "lastvalue"):
-		return lastvalue.New()
-	default:
-		panic("Not implemented for this test")
-	}
-}
-
 func (*testFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
@@ -301,9 +290,10 @@ func stressTest(t *testing.T, impl testImpl) {
 	ctx := context.Background()
 	t.Parallel()
 	fixture := &testFixture{
-		T:     t,
-		impl:  impl,
-		lused: map[string]bool{},
+		T:                   t,
+		impl:                impl,
+		lused:               map[string]bool{},
+		AggregationSelector: test.AggregationSelector(),
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
@@ -353,7 +343,7 @@ func float64sEqual(a, b api.Number) bool {
 func intCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewInt64Counter(name + ".counter")
+			return Must(meter).NewInt64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {
@@ -391,7 +381,7 @@ func TestStressInt64Counter(t *testing.T) {
 func floatCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewFloat64Counter(name + ".counter")
+			return Must(meter).NewFloat64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {

@@ -79,38 +79,57 @@ func NewWithHistogramDistribution(boundaries []float64) export.AggregationSelect
 	return selectorHistogram{boundaries: boundaries}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return minmaxsumcount.New(descriptor)
-	default:
-		return sum.New()
+func sumAggs(aggPtrs []*export.Aggregator) {
+	aggs := sum.New(len(aggPtrs))
+	for i := range aggPtrs {
+		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
 	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return ddsketch.New(descriptor, s.config)
+		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
 	default:
-		return sum.New()
+		sumAggs(aggPtrs)
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
 	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return array.New()
+		aggs := ddsketch.New(len(aggPtrs), descriptor, s.config)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
 	default:
-		return sum.New()
+		sumAggs(aggPtrs)
 	}
 }
 
-func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
 	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return histogram.New(descriptor, s.boundaries)
+		aggs := array.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
 	default:
-		return sum.New()
+		sumAggs(aggPtrs)
+	}
+}
+
+func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	switch descriptor.MetricKind() {
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
+		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		sumAggs(aggPtrs)
 	}
 }

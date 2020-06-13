@@ -35,10 +35,9 @@ type (
 	// It also calculates the sum and count of all events.
 	Aggregator struct {
 		lock       sync.Mutex
-		current    state
-		checkpoint state
 		boundaries []float64
 		kind       metric.NumberKind
+		state      state
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -64,7 +63,9 @@ var _ aggregation.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
+func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
+	aggs := make([]Aggregator, cnt)
+
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := make([]float64, len(boundaries))
@@ -72,12 +73,14 @@ func New(desc *metric.Descriptor, boundaries []float64) *Aggregator {
 	copy(sortedBoundaries, boundaries)
 	sort.Float64s(sortedBoundaries)
 
-	return &Aggregator{
-		kind:       desc.NumberKind(),
-		boundaries: sortedBoundaries,
-		current:    emptyState(sortedBoundaries),
-		checkpoint: emptyState(sortedBoundaries),
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			kind:       desc.NumberKind(),
+			boundaries: sortedBoundaries,
+			state:      emptyState(sortedBoundaries),
+		}
 	}
+	return aggs
 }
 
 // Kind returns aggregation.HistogramKind.
@@ -87,36 +90,36 @@ func (c *Aggregator) Kind() aggregation.Kind {
 
 // Sum returns the sum of all values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.sum, nil
+	return c.state.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return int64(c.checkpoint.count), nil
+	return int64(c.state.count), nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
 func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	return aggregation.Buckets{
 		Boundaries: c.boundaries,
-		Counts:     c.checkpoint.bucketCounts,
+		Counts:     c.state.bucketCounts,
 	}, nil
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state into oa and resets the current state to
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, emptyState(c.boundaries)
+	o.state, c.state = c.state, emptyState(c.boundaries)
 	c.lock.Unlock()
+	return nil
 }
 
 func emptyState(boundaries []float64) state {
@@ -152,9 +155,9 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.current.count.AddInt64(1)
-	c.current.sum.AddNumber(kind, number)
-	c.current.bucketCounts[bucketID]++
+	c.state.count.AddInt64(1)
+	c.state.sum.AddNumber(kind, number)
+	c.state.bucketCounts[bucketID]++
 
 	return nil
 }
@@ -163,14 +166,14 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
-	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
+	c.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
+	c.state.count.AddNumber(metric.Uint64NumberKind, o.state.count)
 
-	for i := 0; i < len(c.checkpoint.bucketCounts); i++ {
-		c.checkpoint.bucketCounts[i] += o.checkpoint.bucketCounts[i]
+	for i := 0; i < len(c.state.bucketCounts); i++ {
+		c.state.bucketCounts[i] += o.state.bucketCounts[i]
 	}
 	return nil
 }

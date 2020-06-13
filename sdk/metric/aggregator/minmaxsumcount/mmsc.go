@@ -28,17 +28,16 @@ type (
 	// Aggregator aggregates events that form a distribution,
 	// keeping only the min, max, sum, and count.
 	Aggregator struct {
-		lock       sync.Mutex
-		current    state
-		checkpoint state
-		kind       metric.NumberKind
+		lock sync.Mutex
+		kind metric.NumberKind
+		state
 	}
 
 	state struct {
-		count metric.Number
 		sum   metric.Number
 		min   metric.Number
 		max   metric.Number
+		count int64
 	}
 )
 
@@ -49,18 +48,17 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 // count.  It does not compute quantile information other than Min and
 // Max.
 //
-// This type uses a mutex for Update() and Checkpoint() concurrency.
-func New(desc *metric.Descriptor) *Aggregator {
+// This type uses a mutex for Update() and SynchronizedCopy() concurrency.
+func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
-	return &Aggregator{
-		kind: kind,
-		current: state{
-			count: metric.NewUint64Number(0),
-			sum:   kind.Zero(),
-			min:   kind.Maximum(),
-			max:   kind.Minimum(),
-		},
+	aggs := make([]Aggregator, cnt)
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			kind:  kind,
+			state: emptyState(kind),
+		}
 	}
+	return aggs
 }
 
 // Kind returns aggregation.MinMaxSumCountKind.
@@ -70,55 +68,56 @@ func (c *Aggregator) Kind() aggregation.Kind {
 
 // Sum returns the sum of values in the checkpoint.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.sum, nil
+	return c.sum, nil
 }
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.checkpoint.count.CoerceToInt64(metric.Uint64NumberKind), nil
+	return c.count, nil
 }
 
 // Min returns the minimum value in the checkpoint.
 // The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Min() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregation.ErrNoData
+	if c.count == 0 {
+		return 0, aggregation.ErrNoData
 	}
-	return c.checkpoint.min, nil
+	return c.min, nil
 }
 
 // Max returns the maximum value in the checkpoint.
 // The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
 func (c *Aggregator) Max() (metric.Number, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.checkpoint.count.IsZero(metric.Uint64NumberKind) {
-		return c.kind.Zero(), aggregation.ErrNoData
+	if c.count == 0 {
+		return 0, aggregation.ErrNoData
 	}
-	return c.checkpoint.max, nil
+	return c.max, nil
 }
 
-// Checkpoint saves the current state and resets the current state to
+// SynchronizedCopy saves the current state into oa and resets the current state to
 // the empty set.
-func (c *Aggregator) Checkpoint(desc *metric.Descriptor) {
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+
+	// TODO: It is incorrect to use an Aggregator of different
+	// kind. Should we test that o.kind == c.kind?  (The same question
+	// occurs for several of the other aggregators in ../*.)
 	c.lock.Lock()
-	c.checkpoint, c.current = c.current, c.emptyState()
+	o.state, c.state = c.state, emptyState(c.kind)
 	c.lock.Unlock()
+
+	return nil
 }
 
-func (c *Aggregator) emptyState() state {
-	kind := c.kind
+func emptyState(kind metric.NumberKind) state {
 	return state{
-		count: metric.NewUint64Number(0),
-		sum:   kind.Zero(),
+		count: 0,
+		sum:   0,
 		min:   kind.Maximum(),
 		max:   kind.Minimum(),
 	}
@@ -130,13 +129,13 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.current.count.AddInt64(1)
-	c.current.sum.AddNumber(kind, number)
-	if number.CompareNumber(kind, c.current.min) < 0 {
-		c.current.min = number
+	c.count++
+	c.sum.AddNumber(kind, number)
+	if number.CompareNumber(kind, c.min) < 0 {
+		c.min = number
 	}
-	if number.CompareNumber(kind, c.current.max) > 0 {
-		c.current.max = number
+	if number.CompareNumber(kind, c.max) > 0 {
+		c.max = number
 	}
 	return nil
 }
@@ -145,17 +144,17 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	c.checkpoint.count.AddNumber(metric.Uint64NumberKind, o.checkpoint.count)
-	c.checkpoint.sum.AddNumber(desc.NumberKind(), o.checkpoint.sum)
+	c.count += o.count
+	c.sum.AddNumber(desc.NumberKind(), o.sum)
 
-	if c.checkpoint.min.CompareNumber(desc.NumberKind(), o.checkpoint.min) > 0 {
-		c.checkpoint.min.SetNumber(o.checkpoint.min)
+	if c.min.CompareNumber(desc.NumberKind(), o.min) > 0 {
+		c.min.SetNumber(o.min)
 	}
-	if c.checkpoint.max.CompareNumber(desc.NumberKind(), o.checkpoint.max) < 0 {
-		c.checkpoint.max.SetNumber(o.checkpoint.max)
+	if c.max.CompareNumber(desc.NumberKind(), o.max) < 0 {
+		c.max.SetNumber(o.max)
 	}
 	return nil
 }

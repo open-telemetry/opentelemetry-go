@@ -28,11 +28,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-func TestInconsistentMergeErr(t *testing.T) {
-	err := aggregator.NewInconsistentMergeError(sum.New(), lastvalue.New())
+func TestInconsistentAggregatorErr(t *testing.T) {
+	err := aggregator.NewInconsistentAggregatorError(&sum.New(1)[0], &lastvalue.New(1)[0])
 	require.Equal(
 		t,
-		"cannot merge *sum.Aggregator with *lastvalue.Aggregator: inconsistent aggregator types",
+		"inconsistent aggregator types: *sum.Aggregator and *lastvalue.Aggregator",
 		err.Error(),
 	)
 	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))

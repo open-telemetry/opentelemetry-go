@@ -116,10 +116,11 @@ type (
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
 
-		// recorder implements the actual RecordOne() API,
+		// current implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
 		// metric was disabled by the exporter.
-		recorder export.Aggregator
+		current    export.Aggregator
+		checkpoint export.Aggregator
 	}
 
 	instrument struct {
@@ -137,7 +138,7 @@ type (
 	labeledRecorder struct {
 		observedEpoch int64
 		labels        *label.Set
-		recorder      export.Aggregator
+		observed      export.Aggregator
 	}
 )
 
@@ -185,14 +186,15 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
-			lrec.recorder = a.meter.integrator.AggregatorFor(&a.descriptor)
+			a.meter.integrator.AggregatorFor(&a.descriptor, &lrec.observed)
 		} else {
 			lrec.observedEpoch = a.meter.currentEpoch
 		}
 		a.recorders[labels.Equivalent()] = lrec
-		return lrec.recorder
+		return lrec.observed
 	}
-	rec := a.meter.integrator.AggregatorFor(&a.descriptor)
+	var rec export.Aggregator
+	a.meter.integrator.AggregatorFor(&a.descriptor, &rec)
 	if a.recorders == nil {
 		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
@@ -200,7 +202,7 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
 	a.recorders[labels.Equivalent()] = &labeledRecorder{
-		recorder:      rec,
+		observed:      rec,
 		labels:        labels,
 		observedEpoch: a.meter.currentEpoch,
 	}
@@ -252,7 +254,8 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 	}
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
-	rec.recorder = s.meter.integrator.AggregatorFor(&s.descriptor)
+
+	s.meter.integrator.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -432,7 +435,21 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 }
 
 func (m *Accumulator) checkpointRecord(r *record) int {
-	return m.checkpoint(&r.inst.descriptor, r.recorder, r.labels)
+	if r.current == nil {
+		return 0
+	}
+	err := r.current.SynchronizedCopy(r.checkpoint, &r.inst.descriptor)
+	if err != nil {
+		global.Handle(err)
+		return 0
+	}
+
+	exportRecord := export.NewRecord(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
+	err = m.integrator.Process(exportRecord)
+	if err != nil {
+		global.Handle(err)
+	}
+	return 1
 }
 
 func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
@@ -444,7 +461,14 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		lrec := lrec
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
-			checkpointed += m.checkpoint(&a.descriptor, lrec.recorder, lrec.labels)
+			if lrec.observed != nil {
+				exportRecord := export.NewRecord(&a.descriptor, lrec.labels, m.resource, lrec.observed)
+				err := m.integrator.Process(exportRecord)
+				if err != nil {
+					global.Handle(err)
+				}
+				checkpointed++
+			}
 		} else if epochDiff > 1 {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
@@ -456,20 +480,6 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		a.recorders = nil
 	}
 	return checkpointed
-}
-
-func (m *Accumulator) checkpoint(descriptor *metric.Descriptor, recorder export.Aggregator, labels *label.Set) int {
-	if recorder == nil {
-		return 0
-	}
-	recorder.Checkpoint(descriptor)
-
-	exportRecord := export.NewRecord(descriptor, labels, m.resource, recorder)
-	err := m.integrator.Process(exportRecord)
-	if err != nil {
-		global.Handle(err)
-	}
-	return 1
 }
 
 // RecordBatch enters a batch of metric events.
@@ -498,7 +508,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measur
 
 // RecordOne implements api.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, number api.Number) {
-	if r.recorder == nil {
+	if r.current == nil {
 		// The instrument is disabled according to the AggregationSelector.
 		return
 	}
@@ -506,7 +516,7 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 		global.Handle(err)
 		return
 	}
-	if err := r.recorder.Update(ctx, number, &r.inst.descriptor); err != nil {
+	if err := r.current.Update(ctx, number, &r.inst.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}

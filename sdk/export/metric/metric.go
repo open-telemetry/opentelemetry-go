@@ -73,17 +73,24 @@ type Integrator interface {
 // AggregationSelector supports selecting the kind of Aggregator to
 // use at runtime for a specific metric instrument.
 type AggregationSelector interface {
-	// AggregatorFor returns the kind of aggregator suited to the
-	// requested export.  Returning `nil` indicates to ignore this
-	// metric instrument.  This must return a consistent type to
-	// avoid confusion in later stages of the metrics export
-	// process, i.e., when Merging multiple aggregators for a
-	// specific instrument.
+	// AggregatorFor allocates a variable number of aggregators of
+	// a kind suitable for the requested export.  This method
+	// initializes a `...*Aggregator`, to support making a single
+	// allocation.
+	//
+	// When the call returns without initializing the *Aggregator
+	// to a non-nil value, the metric instrument is explicitly
+	// disabled.
+	//
+	// This must return a consistent type to avoid confusion in
+	// later stages of the metrics export process, i.e., when
+	// Merging or Checkpointing aggregators for a specific
+	// instrument.
 	//
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*metric.Descriptor) Aggregator
+	AggregatorFor(*metric.Descriptor, ...*Aggregator)
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -99,35 +106,42 @@ type AggregationSelector interface {
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
 	// Update receives a new measured value and incorporates it
-	// into the aggregation.  Update() calls may arrive
-	// concurrently as the SDK does not provide synchronization.
+	// into the aggregation.  Update() calls may be called
+	// concurrently.
 	//
 	// Descriptor.NumberKind() should be consulted to determine
 	// whether the provided number is an int64 or float64.
 	//
 	// The Context argument comes from user-level code and could be
-	// inspected for distributed or span context.
+	// inspected for a `correlation.Map` or `trace.SpanContext`.
 	Update(context.Context, metric.Number, *metric.Descriptor) error
 
-	// Checkpoint is called during collection to finish one period
-	// of aggregation by atomically saving the current value.
-	// Checkpoint() is called concurrently with Update().
-	// Checkpoint should reset the current state to the empty
-	// state, in order to begin computing a new delta for the next
-	// collection period.
+	// SynchronizedCopy is called during collection to finish one
+	// period of aggregation by atomically saving the
+	// currently-updating state into the argument Aggregator.
 	//
-	// After the checkpoint is taken, the current value may be
-	// accessed using by converting to one a suitable interface
-	// types in the `aggregator` sub-package.
+	// SynchronizedCopy() is called concurrently with Update().  These
+	// two methods must be synchronized with respect to each
+	// other, for correctness.
+	//
+	// After saving a synchronized copy, the Aggregator can be converted
+	// into one or more of the interfaces in the `aggregation` sub-package,
+	// according to kind of Aggregator that was selected.
+	//
+	// This method will return an InconsistentAggregatorError if
+	// this Aggregator cannot be copied into the destination due
+	// to an incompatible type.
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	Checkpoint(*metric.Descriptor)
+	SynchronizedCopy(destination Aggregator, descriptor *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
-	// aggregator into this aggregator's checkpointed state.
-	// Merge() is called in a single-threaded context, no locking
-	// is required.
+	// Aggregator into this Aggregator.  Merge is not synchronized
+	// with respect to Update or SynchronizedCopy.
+	//
+	// The owner of an Aggregator being merged is responsible for
+	// synchronization of both Aggregator states.
 	Merge(Aggregator, *metric.Descriptor) error
 }
 

@@ -15,6 +15,7 @@
 package minmaxsumcount
 
 import (
+	"errors"
 	"math"
 	"math/rand"
 	"testing"
@@ -75,11 +76,41 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 	})
 }
 
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
+	alloc := New(2, desc)
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
+	alloc := New(4, desc)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+	kind := desc.NumberKind()
+
+	sum, err := agg.Sum()
+	require.NoError(t, err)
+	require.Equal(t, kind.Zero(), sum)
+
+	count, err := agg.Count()
+	require.NoError(t, err)
+	require.Equal(t, int64(0), count)
+
+	max, err := agg.Max()
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, kind.Zero(), max)
+
+	min, err := agg.Min()
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, kind.Zero(), min)
+}
+
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := New(descriptor)
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -89,11 +120,13 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	agg.Checkpoint(descriptor)
+	require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+
+	checkZero(t, agg, descriptor)
 
 	all.Sort()
 
-	aggSum, err := agg.Sum()
+	aggSum, err := ckpt.Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InEpsilon(t,
@@ -102,18 +135,18 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		0.000000001,
 		"Same sum - "+policy.name)
 
-	count, err := agg.Count()
+	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.Nil(t, err)
 
-	min, err := agg.Min()
+	min, err := ckpt.Min()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Min(),
 		min,
 		"Same min -"+policy.name)
 
-	max, err := agg.Max()
+	max, err := ckpt.Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
@@ -125,8 +158,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg1 := New(descriptor)
-		agg2 := New(descriptor)
+		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -141,14 +173,17 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		checkZero(t, agg1, descriptor)
+		checkZero(t, agg2, descriptor)
+
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		all.Sort()
 
-		aggSum, err := agg1.Sum()
+		aggSum, err := ckpt1.Sum()
 		require.Nil(t, err)
 		allSum := all.Sum()
 		require.InEpsilon(t,
@@ -157,18 +192,18 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			0.000000001,
 			"Same sum - absolute")
 
-		count, err := agg1.Count()
+		count, err := ckpt1.Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.Nil(t, err)
 
-		min, err := agg1.Min()
+		min, err := ckpt1.Min()
 		require.Nil(t, err)
 		require.Equal(t,
 			all.Min(),
 			min,
 			"Same min - absolute")
 
-		max, err := agg1.Max()
+		max, err := ckpt1.Max()
 		require.Nil(t, err)
 		require.Equal(t,
 			all.Max(),
@@ -181,18 +216,20 @@ func TestMaxSumCountNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := New(descriptor)
-		agg.Checkpoint(descriptor)
+		alloc := New(2, descriptor)
+		agg, ckpt := &alloc[0], &alloc[1]
 
-		asum, err := agg.Sum()
+		require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+
+		asum, err := ckpt.Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
 		require.Nil(t, err)
 
-		count, err := agg.Count()
+		count, err := ckpt.Count()
 		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
 		require.Nil(t, err)
 
-		max, err := agg.Max()
+		max, err := ckpt.Max()
 		require.Equal(t, aggregation.ErrNoData, err)
 		require.Equal(t, metric.Number(0), max)
 	})

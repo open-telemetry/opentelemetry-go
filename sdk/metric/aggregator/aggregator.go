@@ -23,11 +23,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
-// NewInconsistentMergeError formats an error describing an attempt to
-// merge different-type aggregators.  The result can be unwrapped as
+// NewInconsistentAggregatorError formats an error describing an attempt to
+// Checkpoint or Merge different-type aggregators.  The result can be unwrapped as
 // an ErrInconsistentType.
-func NewInconsistentMergeError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("cannot merge %T with %T: %w", a1, a2, aggregation.ErrInconsistentType)
+func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
+	return fmt.Errorf("%w: %T and %T", aggregation.ErrInconsistentType, a1, a2)
 }
 
 // RangeTest is a commmon routine for testing for valid input values.

@@ -30,11 +30,8 @@ type (
 
 	// Aggregator aggregates lastValue events.
 	Aggregator struct {
-		// current is an atomic pointer to *lastValueData.  It is never nil.
-		current unsafe.Pointer
-
-		// checkpoint is a copy of the current value taken in Checkpoint()
-		checkpoint unsafe.Pointer
+		// value is an atomic pointer to *lastValueData.  It is never nil.
+		value unsafe.Pointer
 	}
 
 	// lastValueData stores the current value of a lastValue along with
@@ -61,11 +58,14 @@ var unsetLastValue = &lastValueData{}
 
 // New returns a new lastValue aggregator.  This aggregator retains the
 // last value and timestamp that were recorded.
-func New() *Aggregator {
-	return &Aggregator{
-		current:    unsafe.Pointer(unsetLastValue),
-		checkpoint: unsafe.Pointer(unsetLastValue),
+func New(cnt int) []Aggregator {
+	aggs := make([]Aggregator, cnt)
+	for i := range aggs {
+		aggs[i] = Aggregator{
+			value: unsafe.Pointer(unsetLastValue),
+		}
 	}
+	return aggs
 }
 
 // Kind returns aggregation.LastValueKind.
@@ -78,16 +78,21 @@ func (g *Aggregator) Kind() aggregation.Kind {
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
 func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
-	gd := (*lastValueData)(g.checkpoint)
+	gd := (*lastValueData)(g.value)
 	if gd == unsetLastValue {
-		return metric.Number(0), time.Time{}, aggregation.ErrNoData
+		return 0, time.Time{}, aggregation.ErrNoData
 	}
 	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
-// Checkpoint atomically saves the current value.
-func (g *Aggregator) Checkpoint(*metric.Descriptor) {
-	g.checkpoint = atomic.LoadPointer(&g.current)
+// SynchronizedCopy atomically saves the current value.
+func (g *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(g, oa)
+	}
+	o.value = atomic.SwapPointer(&g.value, unsafe.Pointer(unsetLastValue))
+	return nil
 }
 
 // Update atomically sets the current "last" value.
@@ -96,7 +101,7 @@ func (g *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 		value:     number,
 		timestamp: time.Now(),
 	}
-	atomic.StorePointer(&g.current, unsafe.Pointer(ngd))
+	atomic.StorePointer(&g.value, unsafe.Pointer(ngd))
 	return nil
 }
 
@@ -105,16 +110,16 @@ func (g *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(g, oa)
+		return aggregator.NewInconsistentAggregatorError(g, oa)
 	}
 
-	ggd := (*lastValueData)(atomic.LoadPointer(&g.checkpoint))
-	ogd := (*lastValueData)(atomic.LoadPointer(&o.checkpoint))
+	ggd := (*lastValueData)(atomic.LoadPointer(&g.value))
+	ogd := (*lastValueData)(atomic.LoadPointer(&o.value))
 
 	if ggd.timestamp.After(ogd.timestamp) {
 		return nil
 	}
 
-	g.checkpoint = unsafe.Pointer(ogd)
+	g.value = unsafe.Pointer(ogd)
 	return nil
 }

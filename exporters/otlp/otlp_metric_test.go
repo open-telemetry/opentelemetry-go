@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/exporters/metric/test"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -662,12 +663,12 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
 
-		var agg metricsdk.Aggregator
+		var agg, ckpt metricsdk.Aggregator
 		switch r.mKind {
 		case metric.CounterKind:
-			agg = sum.New()
+			agg, ckpt = test.Unslice2(sum.New(2))
 		default:
-			agg = minmaxsumcount.New(&desc)
+			agg, ckpt = test.Unslice2(minmaxsumcount.New(2, &desc))
 		}
 
 		ctx := context.Background()
@@ -684,11 +685,11 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}
-		agg.Checkpoint(&desc)
+		require.NoError(t, agg.SynchronizedCopy(ckpt, &desc))
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, agg))
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, ckpt))
 	}
 	for _, records := range recs {
 		assert.NoError(t, exp.Export(context.Background(), &checkpointSet{records: records}))
