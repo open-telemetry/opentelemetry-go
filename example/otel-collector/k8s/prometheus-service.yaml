@@ -17,31 +17,20 @@
 # limitations under the License.
 
 apiVersion: monitoring.coreos.com/v1
-kind: Prometheus
+kind: ServiceMonitor
 metadata:
   labels:
-    app: prometheus
-    prometheus: service-prometheus
-  name: service-prometheus
-  namespace: monitoring
+    serviceapp: otel-collector-servicemonitor
+  name: otel-collector-servicemonitor
+  namespace: observability
 spec:
-  alerting:
-    alertmanagers:
-    - name: alertmanager-main
-      namespace: monitoring
-      port: web
-  baseImage: quay.io/prometheus/prometheus
-  logLevel: info
-  paused: false
-  replicas: 2
-  retention: 2d
-  routePrefix: /
-  ruleSelector:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    interval: 30s
+    port: metrics
+  namespaceSelector:
+    matchNames:
+    - observability
+  selector:
     matchLabels:
-      prometheus: service-prometheus
-      role: alert-rules
-  serviceAccountName: prometheus-k8s
-  serviceMonitorSelector:
-    matchExpressions:
-    - key: serviceapp
-      operator: Exists
+      app: opentelemetry

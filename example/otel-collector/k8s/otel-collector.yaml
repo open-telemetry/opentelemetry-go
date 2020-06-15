@@ -45,7 +45,12 @@ data:
         traces:
           receivers: [otlp]
           processors: []
-          exporters: [jaeger_grpc, prometheus]
+          exporters: [jaeger_grpc]
+
+        metrics:
+          receivers: [otlp]
+          processors: []
+          exporters: [prometheus]
 ---
 apiVersion: v1
 kind: Service
