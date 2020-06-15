@@ -37,7 +37,9 @@ data:
       jaeger_grpc:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
       prometheus:
-        endpoint: "prometheus-k8s.monitoring.svc.cluster.local:9090"
+        endpoint: "localhost:8889"
+        namespace: "testapp"
+      logging:
 
     service:
       extensions: [health_check]
@@ -50,7 +52,7 @@ data:
         metrics:
           receivers: [otlp]
           processors: []
-          exporters: [prometheus]
+          exporters: [prometheus, logging]
 ---
 apiVersion: v1
 kind: Service
@@ -68,9 +70,9 @@ spec:
     targetPort: 55680
     nodePort: 30080
   - name: metrics # Default endpoint for metrics.
-    port: 8888
+    port: 8889
     protocol: TCP
-    targetPort: 8888
+    targetPort: 8889
   selector:
     component: otel-collector
   type:
@@ -96,7 +98,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/path: "/metrics"
-        prometheus.io/port: "8888"
+        prometheus.io/port: "8889"
         prometheus.io/scrape: "true"
       labels:
         app: opentelemetry
@@ -122,7 +124,7 @@ spec:
             memory: 400Mi
         ports:
         - containerPort: 55680 # Default endpoint for otlp receiver.
-        - containerPort: 8888  # Default endpoint for querying metrics.
+        - containerPort: 8889  # Default endpoint for querying metrics.
         volumeMounts:
         - name: otel-collector-config-vol
           mountPath: /conf
