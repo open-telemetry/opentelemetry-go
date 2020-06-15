@@ -26,6 +26,6 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/trace/jaeger" # Location of package manifests
+    directory: "/exporters/trace/jaeger" # Location of package manifests
     schedule:
       interval: "daily"
