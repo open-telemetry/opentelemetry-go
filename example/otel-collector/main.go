@@ -93,28 +93,18 @@ func main() {
 		kv.String("labelC", "liquid glory"),
 	}
 
-	// Observer metric example
-	metricCallback := func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(1, commonLabels...)
-	}
-	_ = metric.Must(meter).NewFloat64ValueObserver(
-		"an_important_metric",
-		metricCallback,
-		metric.WithDescription("A ValueObserver set to ... 1.0 it seems"),
-	)
-
 	// Recorder metric example
 	valuerecorder := metric.Must(meter).
-		NewFloat64ValueRecorder("another_important_metric").
+		NewFloat64Counter("an_important_metric").
 		Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
 	// work begins
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i + 1)
-		valuerecorder.Record(ctx, 2.5)
+		valuerecorder.Add(ctx, 1.0)
 
 		<-time.After(time.Second)
 		iSpan.End()
