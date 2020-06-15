@@ -61,13 +61,13 @@ type Integrator interface {
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
-	// passing the export Record (a Descriptor, the corresponding
+	// passing the export Accumulation (a Descriptor, the corresponding
 	// Labels, and the checkpointed Aggregator).  This call has no
 	// Context argument because it is expected to perform only
 	// computation.  An SDK is not expected to call exporters from
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
-	Process(record Record) error
+	Process(record Accumulation) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -158,6 +158,14 @@ type Exporter interface {
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+
+	// @@@
+	ExportKindSelector
+}
+
+type ExportKindSelector interface {
+	// @@@
+	ExportKindFor(*metric.Descriptor) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -173,7 +181,7 @@ type CheckpointSet interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(func(Record) error) error
+	ForEach(ExportKindSelector, func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
@@ -189,20 +197,20 @@ type CheckpointSet interface {
 	RUnlock()
 }
 
-// Record contains the exported data for a single metric instrument
+// Accumulation contains the exported data for a single metric instrument
 // and label set.
-type Record struct {
+type Accumulation struct {
 	descriptor *metric.Descriptor
 	labels     *label.Set
 	resource   *resource.Resource
 	aggregator Aggregator
 }
 
-// NewRecord allows Integrator implementations to construct export
+// NewAccumulation allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Record {
-	return Record{
+func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+	return Accumulation{
 		descriptor: descriptor,
 		labels:     labels,
 		resource:   resource,
@@ -212,22 +220,61 @@ func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resou
 
 // Aggregator returns the checkpointed aggregator. It is safe to
 // access the checkpointed state without locking.
-func (r Record) Aggregator() Aggregator {
+func (r Accumulation) Aggregator() Aggregator {
 	return r.aggregator
 }
 
 // Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *metric.Descriptor {
+func (r Accumulation) Descriptor() *metric.Descriptor {
 	return r.descriptor
 }
 
 // Labels describes the labels associated with the instrument and the
 // aggregated data.
-func (r Record) Labels() *label.Set {
+func (r Accumulation) Labels() *label.Set {
 	return r.labels
 }
 
 // Resource contains common attributes that apply to this metric event.
-func (r Record) Resource() *resource.Resource {
+func (r Accumulation) Resource() *resource.Resource {
 	return r.resource
+}
+
+// ExportKind indicates the kind of data exported by an exporter.
+// These bits may be OR-d together when multiple exporters are in use.
+type ExportKind int
+
+const (
+	CumulativeExporter  ExportKind = 1 // e.g., Prometheus
+	DeltaExporter       ExportKind = 2 // e.g., StatsD
+	PassThroughExporter ExportKind = 4 // e.g., OTLP
+)
+
+// Includes tests whether `kind` includes a specific kind of
+// exporter.
+func (kind ExportKind) Includes(has ExportKind) bool {
+	return kind&has != 0
+}
+
+// MemoryRequired returns whether an exporter of this kind requires
+// memory to export correctly.
+func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
+	switch mkind {
+	case metric.ValueRecorderKind, metric.ValueObserverKind,
+		metric.CounterKind, metric.UpDownCounterKind:
+		// Delta-oriented instruments:
+		return kind.Includes(CumulativeExporter)
+
+	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+		// Cumulative-oriented instruments:
+		return kind.Includes(DeltaExporter)
+	}
+	// Something unexpected is happening--we could panic.  This
+	// will become an error when the exporter tries to access a
+	// checkpoint, presumably, so let it be.
+	return false
+}
+
+type Record struct {
+	Accumulation
 }
