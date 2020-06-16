@@ -37,7 +37,7 @@ data:
       jaeger_grpc:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
       prometheus:
-        endpoint: "localhost:8889"
+        endpoint: 0.0.0.0:8889
         namespace: "testapp"
       logging:
 
