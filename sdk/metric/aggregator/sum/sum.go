@@ -90,6 +90,7 @@ func (c *Aggregator) Subtract(opAgg, resAgg export.Aggregator, descriptor *metri
 		return aggregator.NewInconsistentAggregatorError(c, resAgg)
 	}
 
-	res.value = c.value - op.value
+	res.value = c.value
+	res.value.AddNumber(descriptor.NumberKind(), metric.ChangeSign(descriptor.NumberKind(), op.value))
 	return nil
 }

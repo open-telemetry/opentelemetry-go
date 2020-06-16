@@ -113,6 +113,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		resource:   accum.Resource().Equivalent(),
 	}
 	agg := accum.Aggregator()
+
 	// Check if there is an existing record.
 	value, ok := b.state.values[key]
 	if !ok {
@@ -217,6 +218,10 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 				// We need to compute a delta.  We have the last value.
 				if subt, ok := value.current.(export.Subtractor); ok {
 					err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
+
+					if err == nil {
+						err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
+					}
 				} else {
 					err = aggregation.ErrNoSubtraction
 				}
@@ -238,7 +243,6 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		fmt.Println("EK", exporter.ExportKindFor(key.descriptor), mkind.PrecomputedSum(), value.current, value.cumulative, value.delta, value.stateful)
 		switch exporter.ExportKindFor(key.descriptor) {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
@@ -265,9 +269,6 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 
 			if mkind.PrecomputedSum() {
 				agg = value.delta
-				if value.delta == nil {
-					panic("RIGHT HERE")
-				}
 
 			} else {
 				agg = value.current
