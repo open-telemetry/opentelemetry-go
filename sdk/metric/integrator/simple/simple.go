@@ -126,7 +126,13 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 			current:  agg,
 		}
 		if stateful {
+			// If stateful, allocate a cumulative aggregator.
 			b.AggregatorFor(desc, &newValue.cumulative)
+
+			if desc.MetricKind().PrecomputedSum() {
+				// If we need to compute deltas, allocate another aggregator.
+				b.AggregatorFor(desc, &newValue.delta)
+			}
 		}
 		b.state.values[key] = newValue
 		return nil
@@ -152,15 +158,10 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	if desc.MetricKind().Asynchronous() {
 		// The last value across multiple accumulators is taken.
 		value.current = agg
-
-		if value.stateful && value.delta == nil {
-			b.AggregationSelector.AggregatorFor(desc, &value.delta)
-		}
-
 		return nil
 	}
 	if value.delta == nil {
-		// Allocate the delta.
+		// Merging values: may need to allocate the delta aggregator.
 		b.AggregationSelector.AggregatorFor(desc, &value.delta)
 	}
 	if value.current != value.delta {
@@ -183,7 +184,7 @@ func (b *Integrator) FinishedCollection() {
 	if needForeach {
 		// Note: Users are not expected to skip ForEach, but
 		// if they do they may lose errors here.
-		_ = b.ForEach(nil, func(_ export.Record) error { return nil })
+		_ = b.ForEach(nil, nil)
 	}
 
 	b.state.sequence++
@@ -228,9 +229,16 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			}
 		}
 
+		// Support for a no-op ForEach (TODO: find a better way)
+		if exporter == nil && f == nil {
+			value.lock.Unlock()
+			continue
+		}
+
 		var agg aggregation.Aggregation
 		var start time.Time
 
+		fmt.Println("EK", exporter.ExportKindFor(key.descriptor), mkind.PrecomputedSum(), value.current, value.cumulative, value.delta, value.stateful)
 		switch exporter.ExportKindFor(key.descriptor) {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
@@ -257,8 +265,12 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 
 			if mkind.PrecomputedSum() {
 				agg = value.delta
+				if value.delta == nil {
+					panic("RIGHT HERE")
+				}
+
 			} else {
-				agg = value.cumulative
+				agg = value.current
 			}
 			start = b.intervalStart
 		}

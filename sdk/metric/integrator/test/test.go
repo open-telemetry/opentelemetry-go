@@ -101,7 +101,7 @@ func (testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ..
 
 // AddTo adds a name/label-encoding entry with the lastValue or counter
 // value to the output map.
-func (o Output) AddTo(rec export.Record) error {
+func (o Output) AddRecord(rec export.Record) error {
 	encoded := rec.Labels().Encoded(o.labelEncoder)
 	rencoded := rec.Resource().Encoded(o.labelEncoder)
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)

@@ -121,6 +121,12 @@ func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export
 	}
 }
 
+type testExportKind export.ExportKind
+
+func (tek testExportKind) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
+	return export.ExportKind(tek)
+}
+
 func testSynchronousIntegration(
 	t *testing.T,
 	ekind export.ExportKind,
@@ -162,7 +168,7 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					integrator := simple.New(selector, ekind)
+					integrator := simple.New(selector, testExportKind(ekind))
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -171,7 +177,7 @@ func testSynchronousIntegration(
 						// cumulative instruments:
 						input := int64(10)
 						cumulativeMultiplier := int64(nc + 1)
-						if mkind.Cumulative() {
+						if mkind.PrecomputedSum() {
 							input *= cumulativeMultiplier
 						}
 
@@ -189,17 +195,19 @@ func testSynchronousIntegration(
 
 						// Test the final checkpoint state.
 						records1 := test.NewOutput(label.DefaultEncoder())
-						err := checkpointSet.ForEach(ekind, records1.AddRecord)
+						err := checkpointSet.ForEach(testExportKind(ekind), records1.AddRecord)
 
 						// Test for an allowed error:
 						if err != nil && err != aggregation.ErrNoSubtraction {
-							t.Fatal("unexpected checkpoint error")
+							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
 						}
 						if err == aggregation.ErrNoSubtraction {
-							_, canSub := selector.AggregatorFor(&desc1).(export.Subtractor)
+							var subr export.Aggregator
+							selector.AggregatorFor(&desc1, &subr)
+							_, canSub := subr.(export.Subtractor)
 
 							// Allow unsupported subraction case only when it is called for.
-							require.True(t, mkind.Cumulative() && ekind == export.DeltaExporter && !canSub)
+							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
 							return
 						}
 
@@ -208,7 +216,7 @@ func testSynchronousIntegration(
 						if mkind.Asynchronous() {
 							// Because async instruments take the last value,
 							// the number of accumulators doesn't matter.
-							if mkind.Cumulative() {
+							if mkind.PrecomputedSum() {
 								if ekind == export.DeltaExporter {
 									multiplier = 1
 								} else {

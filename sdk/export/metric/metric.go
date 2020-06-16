@@ -314,21 +314,6 @@ func (r Record) Aggregation() aggregation.Aggregation {
 	return r.aggregation
 }
 
-// Kind implements aggregation.Aggregation.
-func (r Record) Kind() aggregation.Kind {
-	return r.aggregation.Kind()
-}
-
-// Start is the start time of the interval covered by this aggregation.
-func (r Record) Start() time.Time {
-	return r.start
-}
-
-// End is the end time of the interval covered by this aggregation.
-func (r Record) End() time.Time {
-	return r.end
-}
-
 // Descriptor describes the metric instrument being exported.
 func (r Record) Descriptor() *metric.Descriptor {
 	return r.descriptor
@@ -343,4 +328,14 @@ func (r Record) Labels() *label.Set {
 // Resource contains common attributes that apply to this metric event.
 func (r Record) Resource() *resource.Resource {
 	return r.resource
+}
+
+// Start is the start time of the interval covered by this aggregation.
+func (r Record) Start() time.Time {
+	return r.start
+}
+
+// End is the end time of the interval covered by this aggregation.
+func (r Record) End() time.Time {
+	return r.end
 }
