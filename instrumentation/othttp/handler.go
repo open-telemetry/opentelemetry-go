@@ -143,6 +143,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 		kv = append(kv, WriteErrorKey.String(werr.Error()))
 	}
 	span.SetAttributes(kv...)
+	span.SetStatus(standard.SpanStatusFromHTTPStatusCode(int(statusCode)))
 }
 
 // WithRouteTag annotates a span with the provided route name using the
