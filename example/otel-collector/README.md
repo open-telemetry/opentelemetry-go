@@ -14,7 +14,12 @@ App + SDK ---> OpenTelemtry Collector ---|
 # Prerequisites
 You will need access to a Kubernetes cluster for this demo. We use a local
 instance of [microk8s](https://microk8s.io/), but please feel free to pick
-your favorite.
+your favorite. If you do decide to use microk8s, please ensure that dns
+and storage addons are enabled
+
+```bash
+microk8s enable dns storage
+```
 
 For simplicity, the demo application is not part of the k8s cluster, and will
 access the OpenTelemetry Collector through a NodePort on the cluster. Note that
@@ -29,6 +34,8 @@ All the necessary Kubernetes deployment files are available in this demo, in the
 [k8s](./k8s) folder. For your convenience, we assembled a [makefile](./Makefile)
 with deployment commands (see below). For those with subtly different systems,
 you are, of course, welcome to poke inside the Makefile and run the commands
+manually. If you use microk8s and alias `microk8s kubectl` to `kubectl`, the
+Makefile will not recognize the alias, and so the commands will have to be run
 manually.
 
 ## Setting up the Prometheus operator
@@ -49,7 +56,7 @@ kubectl create -f manifests/setup
 kubectl create -f manifests/
 ```
 
-Then to tear down the stack:
+And to tear down the stack when you're finished:
 ```bash
 kubectl delete --ignore-not-found=true -f manifests/ -f manifests/setup
 ```
@@ -118,7 +125,7 @@ need to create the Jaeger and Prometheus exporters:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
 
       prometheus:
-           endpoint: "localhost:8889"
+           endpoint: 0.0.0.0:8889
            namespace: "testapp"
 ...
 ```
