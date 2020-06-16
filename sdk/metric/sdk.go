@@ -444,7 +444,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 		return 0
 	}
 
-	exportRecord := export.NewRecord(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
+	exportRecord := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
 	err = m.integrator.Process(exportRecord)
 	if err != nil {
 		global.Handle(err)
@@ -462,7 +462,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
 			if lrec.observed != nil {
-				exportRecord := export.NewRecord(&a.descriptor, lrec.labels, m.resource, lrec.observed)
+				exportRecord := export.NewAccumulation(&a.descriptor, lrec.labels, m.resource, lrec.observed)
 				err := m.integrator.Process(exportRecord)
 				if err != nil {
 					global.Handle(err)
