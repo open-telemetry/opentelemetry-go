@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Example from otlp package: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc#example-package-Insecure
+// Example using the OTLP exporter + collector + third-party backends. For
+// information about using the exporter, see:
+// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc#example-package-Insecure
 package main
 
 import (
@@ -88,9 +90,9 @@ func main() {
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
 	commonLabels := []kv.KeyValue{
-		kv.String("labelA", "coffee"),
-		kv.String("labelB", "tea"),
-		kv.String("labelC", "liquid glory"),
+		kv.String("labelA", "chocolate"),
+		kv.String("labelB", "rasberry"),
+		kv.String("labelC", "vanilla"),
 	}
 
 	// Recorder metric example
