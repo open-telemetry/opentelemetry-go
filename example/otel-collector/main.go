@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
@@ -47,7 +47,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	exp, err := otlp.NewExporter(
 		otlp.WithInsecure(),
 		otlp.WithAddress("localhost:30080"),
-		otlp.WithGRPCDialOption(grpc.WithBlock()),
+		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
 	)
 	handleErr(err, "failed to create exporter")
 
@@ -95,21 +95,24 @@ func main() {
 
 	// Recorder metric example
 	valuerecorder := metric.Must(meter).
-		NewFloat64Counter("an_important_metric").
-		Bind(commonLabels...)
+		NewFloat64Counter(
+			"an_important_metric",
+			metric.WithDescription("Measures the cumulative epicness of the app"),
+		).Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
 	// work begins
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
-		log.Printf("Doing really hard work (%d / 10)\n", i + 1)
+		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		valuerecorder.Add(ctx, 1.0)
 
 		<-time.After(time.Second)
 		iSpan.End()
 	}
 
+	log.Printf("Done!")
 	span.End()
 }
 
