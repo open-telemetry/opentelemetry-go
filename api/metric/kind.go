@@ -73,7 +73,7 @@ func (k Kind) Monotonic() bool {
 	return false
 }
 
-// Cumulative returns whether this kind of instrument receives cumulative inputs.
-func (k Kind) Cumulative() bool {
+// Cumulative returns whether this kind of instrument receives precomputed sums.
+func (k Kind) PrecomputedSum() bool {
 	return k.Adding() && k.Asynchronous()
 }

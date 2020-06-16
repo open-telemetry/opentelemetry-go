@@ -141,22 +141,32 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 
 	// An existing record will be found when:
 	// (a) stateful aggregation is required for an exporter
+	// (b) multiple accumulators (SDKs) are being used.
+	// Another accumulator must have produced this.
+
 	if !sameRound {
+		// This is the first time through in a new round.
 		value.current = agg
 		return nil
 	}
-	// (b) multiple accumulators (SDKs) are being used.
-	// Another accumulator must have produced this.
 	if desc.MetricKind().Asynchronous() {
 		// The last value across multiple accumulators is taken.
 		value.current = agg
+
+		if value.stateful && value.delta == nil {
+			b.AggregationSelector.AggregatorFor(desc, &value.delta)
+		}
+
 		return nil
 	}
 	if value.delta == nil {
+		// Allocate the delta.
 		b.AggregationSelector.AggregatorFor(desc, &value.delta)
 	}
 	if value.current != value.delta {
-		return value.current.SynchronizedCopy(value.delta, desc)
+		// Merging two values, first copy the singleton.
+		value.current.SynchronizedCopy(value.delta, desc)
+		value.current = value.delta
 	}
 	return value.delta.Merge(agg, desc)
 }
@@ -174,7 +184,6 @@ func (b *Integrator) FinishedCollection() {
 		// Note: Users are not expected to skip ForEach, but
 		// if they do they may lose errors here.
 		_ = b.ForEach(nil, func(_ export.Record) error { return nil })
-
 	}
 
 	b.state.sequence++
@@ -197,48 +206,37 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			continue
 		}
 
-		if firstTime {
+		if firstTime && value.stateful {
 			// TODO: SumObserver monotonicity should be
 			// tested here.  This is a case where memory
 			// is required even for a cumulative exporter.
 
-			if value.stateful {
-				var err error
-				if mkind.Cumulative() {
-					value.aggregator.Swap()
-					if subt, ok := value.aggregator.(export.Subtractor); ok {
-						err = subt.Subtract(value.aggregator, key.descriptor)
-					} else {
-						err = aggregation.ErrNoSubtraction
-					}
+			var err error
+			if mkind.PrecomputedSum() {
+				// We need to compute a delta.  We have the last value.
+				if subt, ok := value.current.(export.Subtractor); ok {
+					err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
 				} else {
-					value.aggregator.Swap()
-					err = value.aggregator.Merge(value.aggregator, key.descriptor)
-					value.aggregator.Swap()
+					err = aggregation.ErrNoSubtraction
 				}
-				if err != nil {
-					value.lock.Unlock()
-					return err
-				}
-
 			} else {
-				// Checkpoint the accumulated value.
-				if value.aggOwned {
-					value.aggregator.Checkpoint(key.descriptor)
-					value.aggOwned = false
-				}
+				err = value.cumulative.Merge(value.current, key.descriptor)
+			}
+			if err != nil {
+				value.lock.Unlock()
+				return err
 			}
 		}
 
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		switch kind {
+		switch exporter.ExportKindFor(key.descriptor) {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
-			agg = value.aggregator.CheckpointedValue()
+			agg = value.current
 
-			if mkind.Cumulative() {
+			if mkind.PrecomputedSum() {
 				start = b.processStart
 			} else {
 				start = b.intervalStart
@@ -248,15 +246,19 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
-			agg = value.aggregator.CheckpointedValue()
+			if value.stateful {
+				agg = value.cumulative
+			} else {
+				agg = value.current
+			}
 			start = b.processStart
 
 		case export.DeltaExporter:
 
-			if mkind.Cumulative() {
-				agg = value.aggregator.AccumulatedValue()
+			if mkind.PrecomputedSum() {
+				agg = value.delta
 			} else {
-				agg = value.aggregator.CheckpointedValue()
+				agg = value.cumulative
 			}
 			start = b.intervalStart
 		}
@@ -278,5 +280,5 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 }
 
 func (b *stateValue) String() string {
-	return fmt.Sprintf("%v %v %v %v", b.aggregator, b.updated, b.stateful, b.aggOwned)
+	return fmt.Sprintf("%v %v %v", b.current, b.updated, b.stateful)
 }

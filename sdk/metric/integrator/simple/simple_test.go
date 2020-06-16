@@ -40,7 +40,7 @@ import (
 // TestIntegrator tests all the non-error paths in this package.
 func TestIntegrator(t *testing.T) {
 	type exportCase struct {
-		kind export.ExporterKind
+		kind export.ExportKind
 	}
 	type instrumentCase struct {
 		kind metric.Kind
@@ -102,27 +102,28 @@ type testSelector struct {
 	kind aggregation.Kind
 }
 
-func (ts testSelector) AggregatorFor(desc *metric.Descriptor) export.Aggregator {
-	switch ts.kind {
-	case aggregation.SumKind:
-		return sum.New()
-	case aggregation.MinMaxSumCountKind:
-		return minmaxsumcount.New(desc)
-	case aggregation.HistogramKind:
-		return histogram.New(desc, nil)
-	case aggregation.LastValueKind:
-		return lastvalue.New()
-	case aggregation.SketchKind:
-		return ddsketch.New(desc, nil)
-	case aggregation.ExactKind:
-		return array.New()
+func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	for i := range aggPtrs {
+		switch ts.kind {
+		case aggregation.SumKind:
+			*aggPtrs[i] = &sum.New(1)[0]
+		case aggregation.MinMaxSumCountKind:
+			*aggPtrs[i] = &minmaxsumcount.New(1, desc)[0]
+		case aggregation.HistogramKind:
+			*aggPtrs[i] = &histogram.New(1, desc, nil)[0]
+		case aggregation.LastValueKind:
+			*aggPtrs[i] = &lastvalue.New(1)[0]
+		case aggregation.SketchKind:
+			*aggPtrs[i] = &ddsketch.New(1, desc, nil)[0]
+		case aggregation.ExactKind:
+			*aggPtrs[i] = &array.New(1)[0]
+		}
 	}
-	panic("Unknown aggregation kind")
 }
 
 func testSynchronousIntegration(
 	t *testing.T,
-	ekind export.ExporterKind,
+	ekind export.ExportKind,
 	mkind metric.Kind,
 	nkind metric.NumberKind,
 	akind aggregation.Kind,
@@ -140,9 +141,9 @@ func testSynchronousIntegration(
 
 	updateFor := func(desc *metric.Descriptor, value int64, labs []kv.KeyValue) export.Accumulation {
 		ls := label.NewSet(labs...)
-		agg := selector.AggregatorFor(desc)
+		var agg export.Aggregator
+		selector.AggregatorFor(desc, &agg)
 		_ = agg.Update(ctx, asNumber(value), desc)
-		agg.Checkpoint(desc)
 
 		//fmt.Printf("AGGREGATOR %T %v\n", agg, agg)
 		return export.NewAccumulation(desc, &ls, res, agg)

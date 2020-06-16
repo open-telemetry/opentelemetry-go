@@ -12,14 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=ExportKind
+
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -143,6 +147,13 @@ type Aggregator interface {
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
 	Merge(Aggregator, *metric.Descriptor) error
+
+	aggregation.Aggregation
+}
+
+// @@@
+type Subtractor interface {
+	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -276,5 +287,60 @@ func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
 }
 
 type Record struct {
-	Accumulation
+	descriptor  *metric.Descriptor
+	labels      *label.Set
+	resource    *resource.Resource
+	aggregation aggregation.Aggregation
+	start, end  time.Time
+}
+
+// NewRecord allows Integrator implementations to construct export
+// records.  The Descriptor, Labels, and Aggregator represent
+// aggregate metric events received over a single collection period.
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+	return Record{
+		descriptor:  descriptor,
+		labels:      labels,
+		resource:    resource,
+		aggregation: aggregation,
+		start:       start,
+		end:         end,
+	}
+}
+
+// Aggregation returns the aggregation, an interface to the record and
+// its aggregator, dependent on the kind of both the input and exporter.
+func (r Record) Aggregation() aggregation.Aggregation {
+	return r.aggregation
+}
+
+// Kind implements aggregation.Aggregation.
+func (r Record) Kind() aggregation.Kind {
+	return r.aggregation.Kind()
+}
+
+// Start is the start time of the interval covered by this aggregation.
+func (r Record) Start() time.Time {
+	return r.start
+}
+
+// End is the end time of the interval covered by this aggregation.
+func (r Record) End() time.Time {
+	return r.end
+}
+
+// Descriptor describes the metric instrument being exported.
+func (r Record) Descriptor() *metric.Descriptor {
+	return r.descriptor
+}
+
+// descriptor describes the labels associated with the instrument and the
+// aggregated data.
+func (r Record) Labels() *label.Set {
+	return r.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (r Record) Resource() *resource.Resource {
+	return r.resource
 }

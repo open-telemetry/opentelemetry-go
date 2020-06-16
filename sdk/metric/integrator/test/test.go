@@ -107,14 +107,14 @@ func (o Output) AddTo(rec export.Record) error {
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := rec.Aggregator().(aggregation.Sum); ok {
+	if s, ok := rec.Aggregation().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregator().(aggregation.LastValue); ok {
+	} else if l, ok := rec.Aggregation().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
 	} else {
-		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregation()))
 	}
 	o.Map[key] = value
 	return nil
