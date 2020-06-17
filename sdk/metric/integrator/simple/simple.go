@@ -179,7 +179,16 @@ func (b *Integrator) FinishCollection() error {
 
 		var err error
 		if mkind.PrecomputedSum() {
-			err = aggregation.ErrNoSubtraction
+			// We need to compute a delta.  We have the prior cumulative value.
+			if subt, ok := value.current.(export.Subtractor); ok {
+				err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
+
+				if err == nil {
+					err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
+				}
+			} else {
+				err = aggregation.ErrNoSubtraction
+			}
 		} else {
 			err = value.cumulative.Merge(value.current, key.descriptor)
 		}

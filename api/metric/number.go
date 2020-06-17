@@ -646,3 +646,15 @@ func (n *Number) compareWithZero(kind NumberKind) int {
 		return 0
 	}
 }
+
+// - sign change
+
+func ChangeSign(kind NumberKind, nn Number) Number {
+	switch kind {
+	case Int64NumberKind:
+		return NewInt64Number(-nn.AsInt64())
+	case Float64NumberKind:
+		return NewFloat64Number(-nn.AsFloat64())
+	}
+	return nn
+}

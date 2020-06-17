@@ -151,12 +151,15 @@ type Aggregator interface {
 	aggregation.Aggregation
 }
 
+// @@@
+type Subtractor interface {
+	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+}
+
 // Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.
 type Exporter interface {
-	ExportKindSelector
-
 	// Export is called immediately after completing a collection
 	// pass in the SDK.
 	//
@@ -166,6 +169,9 @@ type Exporter interface {
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+
+	// @@@
+	ExportKindSelector
 }
 
 type ExportKindSelector interface {
