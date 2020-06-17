@@ -42,7 +42,6 @@ type Controller struct {
 	lastCollect time.Time
 	clock       controllerTime.Clock
 	checkpoint  export.CheckpointSet
-	firstPeriod bool
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
@@ -66,7 +65,6 @@ func New(aselector export.AggregationSelector, eselector export.ExportKindSelect
 		period:      config.CachePeriod,
 		checkpoint:  integrator.CheckpointSet(),
 		clock:       controllerTime.RealClock{},
-		firstPeriod: true,
 	}
 }
 
@@ -94,7 +92,7 @@ func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record)
 
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
-func (c *Controller) Collect(ctx context.Context) {
+func (c *Controller) Collect(ctx context.Context) error {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
 
@@ -103,16 +101,13 @@ func (c *Controller) Collect(ctx context.Context) {
 		elapsed := now.Sub(c.lastCollect)
 
 		if elapsed < c.period {
-			return
+			return nil
 		}
 		c.lastCollect = now
 	}
 
-	if !c.firstPeriod {
-		c.integrator.FinishedCollection()
-	}
-
+	c.integrator.StartCollection()
 	c.accumulator.Collect(ctx)
 	c.checkpoint = c.integrator.CheckpointSet()
-	c.firstPeriod = false
+	return c.integrator.FinishCollection()
 }

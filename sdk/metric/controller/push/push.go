@@ -142,12 +142,13 @@ func (c *Controller) tick() {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
 
+	c.integrator.StartCollection()
 	c.accumulator.Collect(ctx)
+	if err := c.integrator.FinishCollection(); err != nil {
+		global.Handle(err)
+	}
 
-	err := c.exporter.Export(ctx, c.integrator.CheckpointSet())
-	c.integrator.FinishedCollection()
-
-	if err != nil {
+	if err := c.exporter.Export(ctx, c.integrator.CheckpointSet()); err != nil {
 		global.Handle(err)
 	}
 }

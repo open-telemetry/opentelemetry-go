@@ -16,7 +16,6 @@ package pull_test
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -33,14 +32,10 @@ import (
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-var (
-	exportKind = test.ExportKind(export.CumulativeExporter)
-)
-
 func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
-		exportKind,
+		export.CumulativeExporter,
 		pull.WithCachePeriod(0),
 	)
 
@@ -50,21 +45,20 @@ func TestPullNoCache(t *testing.T) {
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
-	puller.Collect(ctx)
+	require.NoError(t, puller.Collect(ctx))
+
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(exportKind, records.AddRecord)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
 	}, records.Map)
 
-	fmt.Println("NOW AGAIN")
-
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
-	puller.Collect(ctx)
+	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(exportKind, records.AddRecord)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,
@@ -74,7 +68,7 @@ func TestPullNoCache(t *testing.T) {
 func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
 		selector.NewWithExactDistribution(),
-		exportKind,
+		export.CumulativeExporter,
 		pull.WithCachePeriod(time.Second),
 	)
 	mock := controllerTest.NewMockClock()
@@ -86,9 +80,9 @@ func TestPullWithCache(t *testing.T) {
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
-	puller.Collect(ctx)
+	require.NoError(t, puller.Collect(ctx))
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(exportKind, records.AddRecord)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -97,9 +91,9 @@ func TestPullWithCache(t *testing.T) {
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
 	// Cached value!
-	puller.Collect(ctx)
+	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(exportKind, records.AddRecord)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -109,9 +103,9 @@ func TestPullWithCache(t *testing.T) {
 	runtime.Gosched()
 
 	// Re-computed value!
-	puller.Collect(ctx)
+	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(exportKind, records.AddRecord)
+	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,

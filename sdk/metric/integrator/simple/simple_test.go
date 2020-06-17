@@ -162,7 +162,7 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					integrator := simple.New(selector, test.ExportKind(ekind))
+					integrator := simple.New(selector, ekind)
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -175,26 +175,14 @@ func testSynchronousIntegration(
 							input *= cumulativeMultiplier
 						}
 
+						integrator.StartCollection()
+
 						for na := 0; na < NAccum; na++ {
 							_ = integrator.Process(updateFor(&desc1, input, labs1))
 							_ = integrator.Process(updateFor(&desc2, input, labs2))
 						}
 
-						checkpointSet := integrator.CheckpointSet()
-
-						if nc < NCheckpoint-1 {
-							integrator.FinishedCollection()
-							continue
-						}
-
-						// Test the final checkpoint state.
-						records1 := test.NewOutput(label.DefaultEncoder())
-						err := checkpointSet.ForEach(test.ExportKind(ekind), records1.AddRecord)
-
-						// Test for an allowed error:
-						if err != nil && err != aggregation.ErrNoSubtraction {
-							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
-						}
+						err := integrator.FinishCollection()
 						if err == aggregation.ErrNoSubtraction {
 							var subr export.Aggregator
 							selector.AggregatorFor(&desc1, &subr)
@@ -203,8 +191,24 @@ func testSynchronousIntegration(
 							// Allow unsupported subraction case only when it is called for.
 							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
 							return
+						} else if err != nil {
+							t.Fatal(fmt.Sprint("unexpected FinishCollection error: ", err))
 						}
 
+						if nc < NCheckpoint-1 {
+							continue
+						}
+
+						checkpointSet := integrator.CheckpointSet()
+
+						// Test the final checkpoint state.
+						records1 := test.NewOutput(label.DefaultEncoder())
+						err = checkpointSet.ForEach(ekind, records1.AddRecord)
+
+						// Test for an allowed error:
+						if err != nil && err != aggregation.ErrNoSubtraction {
+							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
+						}
 						var multiplier int64
 
 						if mkind.Asynchronous() {
@@ -223,7 +227,6 @@ func testSynchronousIntegration(
 									multiplier = 1
 								}
 							}
-
 						} else {
 							// Synchronous accumulate results from multiple accumulators,
 							// use that number as the baseline multiplier.
@@ -242,8 +245,6 @@ func testSynchronousIntegration(
 							"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
 							"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
 						}, records1.Map)
-
-						integrator.FinishedCollection()
 					}
 				})
 			}

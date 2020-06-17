@@ -48,16 +48,12 @@ type (
 		// resource corresponds to the stateKey.resource field.
 		resource *resource.Resource
 
-		// lock protects the remaining fields, synchronizes computing the
-		// checkpoint state on the fly.
-		lock sync.Mutex
-
 		// updated indicates the last sequence number when this value had
 		// Process() called by an accumulator.
 		updated int64
 
-		// stateful indicates that the last-value of the aggregation (since
-		// process start time) is being maintained.
+		// stateful indicates that a cumulative aggregation is
+		// being maintained, taken from the process start time.
 		stateful bool
 
 		current    export.Aggregator // refers to single-accumulator checkpoint or delta.
@@ -68,11 +64,7 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		sequence   int64
-		processSeq int64
-
-		foreachLock sync.Mutex
-		foreachSeq  int64
+		sequence int64
 
 		processStart  time.Time
 		intervalStart time.Time
@@ -93,19 +85,17 @@ func New(aselector export.AggregationSelector, eselector export.ExportKindSelect
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
 			intervalStart: now,
-			processSeq:    -1,
-			foreachSeq:    -1,
+			sequence:      -1,
 		},
 	}
 }
 
-func (b *Integrator) Process(accum export.Accumulation) error {
-	if b.processSeq != b.sequence {
-		// This is the beginning of the end of the interval.
-		b.processSeq = b.sequence
-		b.state.intervalEnd = time.Now()
-	}
+func (b *Integrator) StartCollection() {
+	b.state.intervalEnd = time.Now()
+	b.state.sequence++
+}
 
+func (b *Integrator) Process(accum export.Accumulation) error {
 	desc := accum.Descriptor()
 	key := stateKey{
 		descriptor: desc,
@@ -139,9 +129,6 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		return nil
 	}
 
-	value.lock.Lock()
-	defer value.lock.Unlock()
-
 	// Advance the update sequence number:
 	sameRound := b.state.sequence == value.updated
 	value.updated = b.state.sequence
@@ -167,78 +154,58 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	}
 	if value.current != value.delta {
 		// Merging two values, first copy the singleton.
-		value.current.SynchronizedCopy(value.delta, desc)
+		err := value.current.SynchronizedCopy(value.delta, desc)
+		if err != nil {
+			return err
+		}
 		value.current = value.delta
 	}
 	return value.delta.Merge(agg, desc)
+}
+
+func (b *Integrator) FinishCollection() error {
+	b.state.intervalStart = b.state.intervalEnd
+	b.state.intervalEnd = time.Time{}
+
+	for key, value := range b.values {
+		mkind := key.descriptor.MetricKind()
+
+		if !value.stateful {
+			if value.updated != b.sequence {
+				delete(b.values, key)
+			}
+			continue
+		}
+
+		var err error
+		if mkind.PrecomputedSum() {
+			// We need to compute a delta.  We have the prior cumulative value.
+			if subt, ok := value.current.(export.Subtractor); ok {
+				err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
+
+				if err == nil {
+					err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
+				}
+			} else {
+				err = aggregation.ErrNoSubtraction
+			}
+		} else {
+			err = value.cumulative.Merge(value.current, key.descriptor)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
 	return &b.state
 }
 
-func (b *Integrator) FinishedCollection() {
-	b.foreachLock.Lock()
-	needForeach := b.foreachSeq != b.sequence
-	b.foreachLock.Unlock()
-
-	if needForeach {
-		// Note: Users are not expected to skip ForEach, but
-		// if they do they may lose errors here.
-		_ = b.ForEach(nil, nil)
-	}
-
-	b.state.sequence++
-	b.state.intervalStart = b.state.intervalEnd
-	b.state.intervalEnd = time.Time{}
-}
-
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
-	b.foreachLock.Lock()
-	firstTime := b.foreachSeq != b.sequence
-	b.foreachSeq = b.sequence
-	b.foreachLock.Unlock()
-
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
-		value.lock.Lock()
-
-		if !value.stateful && value.updated != b.sequence {
-			delete(b.values, key)
-			continue
-		}
-
-		if firstTime && value.stateful {
-			// TODO: SumObserver monotonicity should be
-			// tested here.  This is a case where memory
-			// is required even for a cumulative exporter.
-
-			var err error
-			if mkind.PrecomputedSum() {
-				// We need to compute a delta.  We have the last value.
-				if subt, ok := value.current.(export.Subtractor); ok {
-					err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
-
-					if err == nil {
-						err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
-					}
-				} else {
-					err = aggregation.ErrNoSubtraction
-				}
-			} else {
-				err = value.cumulative.Merge(value.current, key.descriptor)
-			}
-			if err != nil {
-				value.lock.Unlock()
-				return err
-			}
-		}
-
-		// Support for a no-op ForEach (TODO: find a better way)
-		if exporter == nil && f == nil {
-			value.lock.Unlock()
-			continue
-		}
 
 		var agg aggregation.Aggregation
 		var start time.Time
@@ -266,17 +233,14 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			start = b.processStart
 
 		case export.DeltaExporter:
-
+			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				agg = value.delta
-
 			} else {
 				agg = value.current
 			}
 			start = b.intervalStart
 		}
-
-		value.lock.Unlock()
 
 		if err := f(export.NewRecord(
 			key.descriptor,

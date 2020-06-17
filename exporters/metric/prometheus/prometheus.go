@@ -211,7 +211,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	defer c.exp.lock.RUnlock()
 
 	ctrl := c.exp.Controller()
-	ctrl.Collect(context.Background())
+	if err := ctrl.Collect(context.Background()); err != nil {
+		global.Handle(err)
+	}
 
 	err := ctrl.ForEach(c.exp, func(record export.Record) error {
 		agg := record.Aggregation()
