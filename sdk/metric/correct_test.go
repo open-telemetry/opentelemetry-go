@@ -348,7 +348,7 @@ func TestObserverCollection(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddAccumulation(rec)
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.valueobserver.lastvalue/A=B/R=V": -1,
@@ -451,7 +451,7 @@ func TestObserverBatch(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddAccumulation(rec)
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.sumobserver.sum//R=V":    1.1,
