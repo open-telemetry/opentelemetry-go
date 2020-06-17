@@ -26,10 +26,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -111,42 +107,6 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		Aggregator: newAgg,
 	}
 	return newAgg, true
-}
-
-func createNumber(desc *metric.Descriptor, v float64) metric.Number {
-	if desc.NumberKind() == metric.Float64NumberKind {
-		return metric.NewFloat64Number(v)
-	}
-	return metric.NewInt64Number(int64(v))
-}
-
-func (p *CheckpointSet) AddLastValue(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, &lastvalue.New(1)[0], v, labels...)
-}
-
-func (p *CheckpointSet) AddCounter(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, &sum.New(1)[0], v, labels...)
-}
-
-func (p *CheckpointSet) AddValueRecorder(desc *metric.Descriptor, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, &array.New(1)[0], v, labels...)
-}
-
-func (p *CheckpointSet) AddHistogramValueRecorder(desc *metric.Descriptor, boundaries []float64, v float64, labels ...kv.KeyValue) {
-	p.updateAggregator(desc, &histogram.New(1, desc, boundaries)[0], v, labels...)
-}
-
-func (p *CheckpointSet) updateAggregator(desc *metric.Descriptor, newAgg export.Aggregator, v float64, labels ...kv.KeyValue) {
-	ctx := context.Background()
-	// Update the new aggregator
-	_ = newAgg.Update(ctx, createNumber(desc, v), desc)
-
-	// Try to add this aggregator to the CheckpointSet
-	agg, added := p.Add(desc, newAgg, labels...)
-	if !added {
-		// An aggregator already exist for this descriptor and label set, we should merge them.
-		_ = agg.Merge(newAgg, desc)
-	}
 }
 
 // ForEach exposes the records in this checkpoint. Note that this test
