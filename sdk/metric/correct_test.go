@@ -74,7 +74,7 @@ type correctnessIntegrator struct {
 	t *testing.T
 	*testSelector
 
-	records []export.Accumulation
+	accumulations []export.Accumulation
 }
 
 type testSelector struct {
@@ -101,8 +101,8 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessInt
 	return meter, accum, integrator
 }
 
-func (ci *correctnessIntegrator) Process(record export.Accumulation) error {
-	ci.records = append(ci.records, record)
+func (ci *correctnessIntegrator) Process(accumulation export.Accumulation) error {
+	ci.records = append(ci.records, accumulation)
 	return nil
 }
 

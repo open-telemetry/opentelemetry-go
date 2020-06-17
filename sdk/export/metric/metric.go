@@ -69,7 +69,7 @@ type Integrator interface {
 	// computation.  An SDK is not expected to call exporters from
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
-	Process(record Accumulation) error
+	Process(Accumulation) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -240,9 +240,10 @@ func (m Metadata) Resource() *resource.Resource {
 	return m.resource
 }
 
-// NewAccumulation allows Integrator implementations to construct export
-// records.  The Descriptor, Labels, and Aggregator represent
-// aggregate metric events received over a single collection period.
+// NewAccumulation allows Accumulator implementations to construct new
+// Accumulations to send to Integrators. The Descriptor, Labels, Resource,
+// and Aggregator represent aggregate metric events received over a single
+// collection period.
 func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
