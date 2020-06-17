@@ -184,12 +184,12 @@ func testSynchronousIntegration(
 
 						err := integrator.FinishCollection()
 						if err == aggregation.ErrNoSubtraction {
-							var subr export.Aggregator
-							selector.AggregatorFor(&desc1, &subr)
-							_, canSub := subr.(export.Subtractor)
-
 							// Allow unsupported subraction case only when it is called for.
-							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
+							//
+							// Note: This test framework supports testing delta exports of
+							// cumulative instruments, but it's unimplemented.  This branch
+							// should test that the Aggregator does not support subtraction.
+							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter)
 							return
 						} else if err != nil {
 							t.Fatal(fmt.Sprint("unexpected FinishCollection error: ", err))
