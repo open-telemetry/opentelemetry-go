@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Config contains configuration for a push Controller.
+// Config contains configuration for a pull Controller.
 type Config struct {
 
 	// Resource is the OpenTelemetry resource associated with all Meters
