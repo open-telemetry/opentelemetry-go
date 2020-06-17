@@ -153,7 +153,7 @@ func (b *batch) ForEach(f func(export.Record) error) error {
 			key.descriptor,
 			value.labels,
 			value.resource,
-			value.aggregator,
+			value.aggregator.Aggregation(),
 			b.intervalStart,
 			b.intervalEnd,
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {

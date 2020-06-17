@@ -48,22 +48,27 @@ type NoopAggregator struct{}
 var _ export.Aggregator = (*NoopAggregator)(nil)
 
 // Update implements export.Aggregator.
-func (*NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor) error {
+func (NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor) error {
 	return nil
 }
 
 // SynchronizedCopy implements export.Aggregator.
-func (*NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
 // Merge implements export.Aggregator.
-func (*NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
+// Aggregation returns an interface for reading the state of this aggregator.
+func (NoopAggregator) Aggregation() aggregation.Aggregation {
+	return NoopAggregator{}
+}
+
 // Kind implements aggregation.Aggregation.
-func (*NoopAggregator) Kind() aggregation.Kind {
+func (NoopAggregator) Kind() aggregation.Kind {
 	return aggregation.Kind("Noop")
 }
 
@@ -97,7 +102,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		return record.Aggregation().(export.Aggregator), false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg, time.Time{}, time.Time{})
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg.Aggregation(), time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

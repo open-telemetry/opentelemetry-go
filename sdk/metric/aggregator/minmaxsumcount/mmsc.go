@@ -61,6 +61,11 @@ func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	return aggs
 }
 
+// Aggregation returns an interface for reading the state of this aggregator.
+func (c *Aggregator) Aggregation() aggregation.Aggregation {
+	return c
+}
+
 // Kind returns aggregation.MinMaxSumCountKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.MinMaxSumCountKind

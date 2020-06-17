@@ -122,5 +122,5 @@ func (o Output) AddRecord(rec export.Record) error {
 }
 
 func (o Output) AddAccumulation(acc export.Accumulation) error {
-	return o.AddRecord(export.NewRecord(acc.Descriptor(), acc.Labels(), acc.Resource(), acc.Aggregator(), time.Time{}, time.Time{}))
+	return o.AddRecord(export.NewRecord(acc.Descriptor(), acc.Labels(), acc.Resource(), acc.Aggregator().Aggregation(), time.Time{}, time.Time{}))
 }

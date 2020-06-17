@@ -164,7 +164,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
 		labels := label.NewSet(test.labels...)
-		record := export.NewRecord(&desc, &labels, nil, ckpt, intervalStart, intervalEnd)
+		record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 		got, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
@@ -198,7 +198,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 		},
 	}
-	record := export.NewRecord(&desc, &labels, nil, ckpt, intervalStart, intervalEnd)
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	m, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
@@ -281,7 +281,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, nil, ckpt, intervalStart, intervalEnd)
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{
 			Value:             1,
@@ -300,7 +300,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, nil, ckpt, intervalStart, intervalEnd)
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{

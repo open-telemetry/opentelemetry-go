@@ -107,9 +107,12 @@ type AggregationSelector interface {
 // to attach a Sum aggregator to a ValueRecorder instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
-	// Aggregation indicates the kind of Aggregation supported by
-	// this Aggregator.
-	aggregation.Aggregation
+	// Aggregation returns an Aggregation interface to access the
+	// current state of this Aggregator.  The caller is
+	// responsible for synchronization and must not call any the
+	// other methods in this interface concurrently while using
+	// the Aggregation.
+	Aggregation() aggregation.Aggregation
 
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may be called
