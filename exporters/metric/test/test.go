@@ -19,6 +19,7 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -61,6 +62,11 @@ func (*NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
+// Kind implements aggregation.Aggregation.
+func (*NoopAggregator) Kind() aggregation.Kind {
+	return aggregation.Kind("Noop")
+}
+
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
 // Records are grouped by their encoded labels.
 func NewCheckpointSet(resource *resource.Resource) *CheckpointSet {
@@ -88,10 +94,10 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		distinct: elabels.Equivalent(),
 	}
 	if record, ok := p.records[key]; ok {
-		return record.Aggregator(), false
+		return record.Aggregation().(export.Aggregator), false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg, time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

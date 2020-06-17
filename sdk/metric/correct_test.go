@@ -74,7 +74,7 @@ type correctnessIntegrator struct {
 	t *testing.T
 	*testSelector
 
-	records []export.Record
+	records []export.Accumulation
 }
 
 type testSelector struct {
@@ -101,15 +101,7 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessInt
 	return meter, accum, integrator
 }
 
-func (ci *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
-	ci.t.Fatal("Should not be called")
-	return nil
-}
-
-func (*correctnessIntegrator) FinishedCollection() {
-}
-
-func (ci *correctnessIntegrator) Process(record export.Record) error {
+func (ci *correctnessIntegrator) Process(record export.Accumulation) error {
 	ci.records = append(ci.records, record)
 	return nil
 }
@@ -356,7 +348,7 @@ func TestObserverCollection(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+		_ = out.AddAccumulation(rec)
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.valueobserver.lastvalue/A=B/R=V": -1,
@@ -459,7 +451,7 @@ func TestObserverBatch(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+		_ = out.AddAccumulation(rec)
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.sumobserver.sum//R=V":    1.1,
@@ -504,7 +496,7 @@ func TestRecordBatch(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+		_ = out.AddAccumulation(rec)
 	}
 	require.EqualValues(t, map[string]float64{
 		"int64.sum/A=B,C=D/R=V":     1,
@@ -586,7 +578,7 @@ func TestSyncInAsync(t *testing.T) {
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+		_ = out.AddAccumulation(rec)
 	}
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
