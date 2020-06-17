@@ -28,6 +28,7 @@ import (
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
@@ -238,7 +239,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
-	rms, err := transform.CheckpointSet(ctx, cps, e.c.numWorkers)
+	rms, err := transform.CheckpointSet(ctx, e, cps, e.c.numWorkers)
 	if err != nil {
 		return err
 	}
@@ -263,6 +264,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}
 	return nil
+}
+
+func (e *Exporter) ExportKindFor(*metric.Descriptor) metricsdk.ExportKind {
+	return metricsdk.PassThroughExporter
 }
 
 func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {

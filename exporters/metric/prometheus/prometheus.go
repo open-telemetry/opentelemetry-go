@@ -32,11 +32,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-// Exporter is an implementation of metric.Exporter that sends metrics to
-// Prometheus.
-//
-// This exporter supports Prometheus pulls, as such it does not
-// implement the export.Exporter interface.
+// Exporter supports Prometheus pulls.  It does not implement the
+// sdk/export/metric.Exporter interface--instead it creates a pull
+// controller and reads the latest checkpointed data on-scrape.
 type Exporter struct {
 	handler http.Handler
 
@@ -157,7 +155,8 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	// expressed as delta histograms.
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		append(options, pull.WithStateful(true))...,
+		e,
+		options...,
 	)
 }
 
@@ -171,6 +170,13 @@ func (e *Exporter) Controller() *pull.Controller {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.controller
+}
+
+func (e *Exporter) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
+	// TODO: Prometheus supports two types of export data that are
+	// not cumulative: GaugeDelta, Summary.
+	// @@@ Need the aggregator here.
+	return export.CumulativeExporter
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +194,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().ForEach(func(record export.Record) error {
+	_ = c.exp.Controller().ForEach(c.exp, func(record export.Record) error {
 		var labelKeys []string
 		mergeLabels(record, &labelKeys, nil)
 		ch <- c.toDesc(record, labelKeys)
@@ -207,8 +213,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	ctrl := c.exp.Controller()
 	ctrl.Collect(context.Background())
 
-	err := ctrl.ForEach(func(record export.Record) error {
-		agg := record.Aggregator()
+	err := ctrl.ForEach(c.exp, func(record export.Record) error {
+		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 
 		var labelKeys, labels []string

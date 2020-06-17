@@ -91,12 +91,16 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
+func (e *testExporter) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
+	return export.PassThroughExporter
+}
+
 func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
 	var records []export.Record
-	if err := checkpointSet.ForEach(func(r export.Record) error {
+	if err := checkpointSet.ForEach(e, func(r export.Record) error {
 		if e.injectErr != nil {
 			if err := e.injectErr(r); err != nil {
 				return err
@@ -170,7 +174,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err := records[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err := records[0].Aggregation().(aggregation.Sum).Sum()
 	require.Equal(t, int64(3), sum.AsInt64())
 	require.Nil(t, err)
 
@@ -187,7 +191,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
 	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
 
-	sum, err = records[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err = records[0].Aggregation().(aggregation.Sum).Sum()
 	require.Equal(t, int64(7), sum.AsInt64())
 	require.Nil(t, err)
 

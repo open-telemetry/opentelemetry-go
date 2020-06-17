@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
-
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
@@ -150,6 +150,10 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	return pusher, nil
 }
 
+func (e *Exporter) ExportKindFor(*metric.Descriptor) export.ExportKind {
+	return export.PassThroughExporter
+}
+
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
@@ -157,9 +161,9 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	aggError = checkpointSet.ForEach(func(record export.Record) error {
+	aggError = checkpointSet.ForEach(e, func(record export.Record) error {
 		desc := record.Descriptor()
-		agg := record.Aggregator()
+		agg := record.Aggregation()
 		kind := desc.NumberKind()
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 

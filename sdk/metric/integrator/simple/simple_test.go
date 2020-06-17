@@ -121,12 +121,6 @@ func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export
 	}
 }
 
-type testExportKind export.ExportKind
-
-func (tek testExportKind) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
-	return export.ExportKind(tek)
-}
-
 func testSynchronousIntegration(
 	t *testing.T,
 	ekind export.ExportKind,
@@ -168,7 +162,7 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					integrator := simple.New(selector, testExportKind(ekind))
+					integrator := simple.New(selector, test.ExportKind(ekind))
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -195,7 +189,7 @@ func testSynchronousIntegration(
 
 						// Test the final checkpoint state.
 						records1 := test.NewOutput(label.DefaultEncoder())
-						err := checkpointSet.ForEach(testExportKind(ekind), records1.AddRecord)
+						err := checkpointSet.ForEach(test.ExportKind(ekind), records1.AddRecord)
 
 						// Test for an allowed error:
 						if err != nil && err != aggregation.ErrNoSubtraction {

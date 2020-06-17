@@ -267,6 +267,11 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 	return kind&has != 0
 }
 
+// ExportKindFor returns a constant, as an implementation of ExportKindFor.
+func (kind ExportKind) ExportKindFor(desc *metric.Descriptor) ExportKind {
+	return kind
+}
+
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
 func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
@@ -330,12 +335,12 @@ func (r Record) Resource() *resource.Resource {
 	return r.resource
 }
 
-// Start is the start time of the interval covered by this aggregation.
-func (r Record) Start() time.Time {
+// StartTime is the start time of the interval covered by this aggregation.
+func (r Record) StartTime() time.Time {
 	return r.start
 }
 
-// End is the end time of the interval covered by this aggregation.
-func (r Record) End() time.Time {
+// EndTime is the end time of the interval covered by this aggregation.
+func (r Record) EndTime() time.Time {
 	return r.end
 }

@@ -54,7 +54,7 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (*benchFixture) Process(export.Record) error {
+func (*benchFixture) Process(export.Accumulation) error {
 	return nil
 }
 

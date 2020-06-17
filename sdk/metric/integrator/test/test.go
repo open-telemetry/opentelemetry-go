@@ -17,6 +17,7 @@ package test
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -118,4 +119,8 @@ func (o Output) AddRecord(rec export.Record) error {
 	}
 	o.Map[key] = value
 	return nil
+}
+
+func (o Output) AddAccumulation(acc export.Accumulation) error {
+	return o.AddRecord(export.NewRecord(acc.Descriptor(), acc.Labels(), acc.Resource(), acc.Aggregator(), time.Time{}, time.Time{}))
 }
