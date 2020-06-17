@@ -193,13 +193,46 @@ type CheckpointSet interface {
 	RUnlock()
 }
 
-// Accumulation contains the exported data for a single metric instrument
-// and label set.
-type Accumulation struct {
+// Metadata contains the common elements for exported metric data that
+// are shared by the Accumulator->Integrator and Integrator->Exporter
+// steps.
+type Metadata struct {
 	descriptor *metric.Descriptor
 	labels     *label.Set
 	resource   *resource.Resource
+}
+
+// Accumulation contains the exported data for a single metric instrument
+// and label set, as prepared by an Accumulator for the Integrator.
+type Accumulation struct {
+	Metadata
 	aggregator Aggregator
+}
+
+// Record contains the exported data for a single metric instrument
+// and label set, as prepared by the Integrator for the Exporter.
+// This includes the effective start and end time for the aggregation.
+type Record struct {
+	Metadata
+	aggregation aggregation.Aggregation
+	start       time.Time
+	end         time.Time
+}
+
+// Descriptor describes the metric instrument being exported.
+func (m Metadata) Descriptor() *metric.Descriptor {
+	return m.descriptor
+}
+
+// Labels describes the labels associated with the instrument and the
+// aggregated data.
+func (m Metadata) Labels() *label.Set {
+	return m.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (m Metadata) Resource() *resource.Resource {
+	return m.resource
 }
 
 // NewAccumulation allows Integrator implementations to construct export
@@ -207,9 +240,11 @@ type Accumulation struct {
 // aggregate metric events received over a single collection period.
 func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
 	return Accumulation{
-		descriptor: descriptor,
-		labels:     labels,
-		resource:   resource,
+		Metadata: Metadata{
+			descriptor: descriptor,
+			labels:     labels,
+			resource:   resource,
+		},
 		aggregator: aggregator,
 	}
 }
@@ -220,38 +255,16 @@ func (r Accumulation) Aggregator() Aggregator {
 	return r.aggregator
 }
 
-// Descriptor describes the metric instrument being exported.
-func (r Accumulation) Descriptor() *metric.Descriptor {
-	return r.descriptor
-}
-
-// Labels describes the labels associated with the instrument and the
-// aggregated data.
-func (r Accumulation) Labels() *label.Set {
-	return r.labels
-}
-
-// Resource contains common attributes that apply to this metric event.
-func (r Accumulation) Resource() *resource.Resource {
-	return r.resource
-}
-
-type Record struct {
-	descriptor  *metric.Descriptor
-	labels      *label.Set
-	resource    *resource.Resource
-	aggregation aggregation.Aggregation
-	start, end  time.Time
-}
-
 // NewRecord allows Integrator implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
 func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
-		descriptor:  descriptor,
-		labels:      labels,
-		resource:    resource,
+		Metadata: Metadata{
+			descriptor: descriptor,
+			labels:     labels,
+			resource:   resource,
+		},
 		aggregation: aggregation,
 		start:       start,
 		end:         end,
@@ -262,22 +275,6 @@ func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resou
 // its aggregator, dependent on the kind of both the input and exporter.
 func (r Record) Aggregation() aggregation.Aggregation {
 	return r.aggregation
-}
-
-// Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *metric.Descriptor {
-	return r.descriptor
-}
-
-// descriptor describes the labels associated with the instrument and the
-// aggregated data.
-func (r Record) Labels() *label.Set {
-	return r.labels
-}
-
-// Resource contains common attributes that apply to this metric event.
-func (r Record) Resource() *resource.Resource {
-	return r.resource
 }
 
 // StartTime is the start time of the interval covered by this aggregation.
