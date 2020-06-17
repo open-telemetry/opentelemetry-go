@@ -17,6 +17,7 @@ package simple_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -243,4 +244,48 @@ func TestSimpleInconsistent(t *testing.T) {
 
 	b.StartCollection()
 	require.Equal(t, simple.ErrInconsistentState, b.ForEach(func(export.Record) error { return nil }))
+}
+
+func TestSimpleTimestamps(t *testing.T) {
+	beforeNew := time.Now()
+	b := simple.New(test.AggregationSelector(), true)
+	afterNew := time.Now()
+
+	b.StartCollection()
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
+	b.FinishCollection()
+
+	var start1, end1 time.Time
+
+	b.ForEach(func(rec export.Record) error {
+		start1 = rec.StartTime()
+		end1 = rec.EndTime()
+		return nil
+	})
+
+	// The first start time is set in the constructor.
+	require.True(t, beforeNew.Before(start1))
+	require.True(t, afterNew.After(start1))
+
+	for i := 0; i < 2; i++ {
+		b.StartCollection()
+		_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
+		b.FinishCollection()
+
+		var start2, end2 time.Time
+
+		b.ForEach(func(rec export.Record) error {
+			start2 = rec.StartTime()
+			end2 = rec.EndTime()
+			return nil
+		})
+
+		// Subsequent intervals have their start and end aligned.
+		require.Equal(t, start2, end1)
+		require.True(t, start1.Before(end1))
+		require.True(t, start2.Before(end2))
+
+		start1 = start2
+		end1 = end2
+	}
 }

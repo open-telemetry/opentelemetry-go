@@ -72,7 +72,8 @@ func New(selector export.AggregationSelector, stateful bool) *Integrator {
 		AggregationSelector: selector,
 		stateful:            stateful,
 		batch: batch{
-			values: map[batchKey]batchValue{},
+			values:        map[batchKey]batchValue{},
+			intervalStart: time.Now(),
 		},
 	}
 }
@@ -120,6 +121,9 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 }
 
 func (b *Integrator) StartCollection() {
+	if b.startedCollection != 0 {
+		b.intervalStart = b.intervalEnd
+	}
 	b.startedCollection++
 	if !b.stateful {
 		b.batch.values = map[batchKey]batchValue{}
@@ -128,8 +132,7 @@ func (b *Integrator) StartCollection() {
 
 func (b *Integrator) FinishCollection() error {
 	b.finishedCollection++
-	b.intervalEnd = b.intervalStart
-	b.intervalStart = time.Now()
+	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection {
 		return ErrInconsistentState
 	}
