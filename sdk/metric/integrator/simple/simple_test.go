@@ -230,20 +230,28 @@ func TestSimpleStateful(t *testing.T) {
 }
 
 func TestSimpleInconsistent(t *testing.T) {
+	// Test double-start
 	b := simple.New(test.AggregationSelector(), true)
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
 
+	// Test finish without start
 	b = simple.New(test.AggregationSelector(), true)
 
 	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
 
+	// Test no finish
 	b = simple.New(test.AggregationSelector(), true)
 
 	b.StartCollection()
 	require.Equal(t, simple.ErrInconsistentState, b.ForEach(func(export.Record) error { return nil }))
+
+	// Test no start
+	b = simple.New(test.AggregationSelector(), true)
+
+	require.Equal(t, simple.ErrInconsistentState, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
 }
 
 func TestSimpleTimestamps(t *testing.T) {
@@ -253,15 +261,15 @@ func TestSimpleTimestamps(t *testing.T) {
 
 	b.StartCollection()
 	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
-	b.FinishCollection()
+	require.NoError(t, b.FinishCollection())
 
 	var start1, end1 time.Time
 
-	b.ForEach(func(rec export.Record) error {
+	require.NoError(t, b.ForEach(func(rec export.Record) error {
 		start1 = rec.StartTime()
 		end1 = rec.EndTime()
 		return nil
-	})
+	}))
 
 	// The first start time is set in the constructor.
 	require.True(t, beforeNew.Before(start1))
@@ -269,16 +277,16 @@ func TestSimpleTimestamps(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
-		_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
-		b.FinishCollection()
+		require.NoError(t, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
+		require.NoError(t, b.FinishCollection())
 
 		var start2, end2 time.Time
 
-		b.ForEach(func(rec export.Record) error {
+		require.NoError(t, b.ForEach(func(rec export.Record) error {
 			start2 = rec.StartTime()
 			end2 = rec.EndTime()
 			return nil
-		})
+		}))
 
 		// Subsequent intervals have their start and end aligned.
 		require.Equal(t, start2, end1)

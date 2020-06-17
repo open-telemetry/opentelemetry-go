@@ -79,6 +79,10 @@ func New(selector export.AggregationSelector, stateful bool) *Integrator {
 }
 
 func (b *Integrator) Process(accumulation export.Accumulation) error {
+	if b.startedCollection != b.finishedCollection+1 {
+		return ErrInconsistentState
+	}
+
 	desc := accumulation.Descriptor()
 	key := batchKey{
 		descriptor: desc,

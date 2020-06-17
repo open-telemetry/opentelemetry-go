@@ -107,6 +107,10 @@ type AggregationSelector interface {
 // to attach a Sum aggregator to a ValueRecorder instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
+	// Aggregation indicates the kind of Aggregation supported by
+	// this Aggregator.
+	aggregation.Aggregation
+
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may be called
 	// concurrently.
@@ -145,8 +149,6 @@ type Aggregator interface {
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
 	Merge(Aggregator, *metric.Descriptor) error
-
-	aggregation.Aggregation
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
