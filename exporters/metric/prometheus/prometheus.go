@@ -172,10 +172,7 @@ func (e *Exporter) Controller() *pull.Controller {
 	return e.controller
 }
 
-func (e *Exporter) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
-	// TODO: Prometheus supports two types of export data that are
-	// not cumulative: GaugeDelta, Summary.
-	// @@@ Need the aggregator here.
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	return export.CumulativeExporter
 }
 

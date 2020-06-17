@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -266,7 +267,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	return nil
 }
 
-func (e *Exporter) ExportKindFor(*metric.Descriptor) metricsdk.ExportKind {
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk.ExportKind {
 	return metricsdk.PassThroughExporter
 }
 

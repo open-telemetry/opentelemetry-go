@@ -107,7 +107,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	// Check if there is an existing record.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc).MemoryRequired(desc.MetricKind())
+		stateful := b.ExportKindFor(desc, agg.Kind()).MemoryRequired(desc.MetricKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
@@ -210,7 +210,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		switch exporter.ExportKindFor(key.descriptor) {
+		switch exporter.ExportKindFor(key.descriptor, value.current.Kind()) {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
 			agg = value.current

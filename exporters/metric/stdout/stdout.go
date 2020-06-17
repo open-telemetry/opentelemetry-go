@@ -150,7 +150,7 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	return pusher, nil
 }
 
-func (e *Exporter) ExportKindFor(*metric.Descriptor) export.ExportKind {
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	return export.PassThroughExporter
 }
 

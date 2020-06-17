@@ -91,7 +91,7 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
-func (e *testExporter) ExportKindFor(desc *metric.Descriptor) export.ExportKind {
+func (e *testExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	return export.PassThroughExporter
 }
 

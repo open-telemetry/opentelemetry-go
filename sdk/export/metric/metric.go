@@ -176,7 +176,7 @@ type Exporter interface {
 
 type ExportKindSelector interface {
 	// @@@
-	ExportKindFor(*metric.Descriptor) ExportKind
+	ExportKindFor(*metric.Descriptor, aggregation.Kind) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -268,7 +268,7 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 }
 
 // ExportKindFor returns a constant, as an implementation of ExportKindFor.
-func (kind ExportKind) ExportKindFor(desc *metric.Descriptor) ExportKind {
+func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
 	return kind
 }
 
