@@ -64,8 +64,7 @@ type (
 	state struct {
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
-		sequence int64
-		values   map[stateKey]*stateValue
+		values map[stateKey]*stateValue
 
 		// Note: the timestamp logic currently assumes all
 		// exports are deltas.
@@ -102,6 +101,9 @@ func New(aselector export.AggregationSelector, eselector export.ExportKindSelect
 }
 
 func (b *Integrator) Process(accum export.Accumulation) error {
+	if b.startedCollection != b.finishedCollection+1 {
+		return ErrInconsistentState
+	}
 	desc := accum.Descriptor()
 	key := stateKey{
 		descriptor: desc,
@@ -118,7 +120,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		newValue := &stateValue{
 			labels:   accum.Labels(),
 			resource: accum.Resource(),
-			updated:  b.state.sequence,
+			updated:  b.state.finishedCollection,
 			stateful: stateful,
 			current:  agg,
 		}
@@ -136,8 +138,8 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	}
 
 	// Advance the update sequence number:
-	sameRound := b.state.sequence == value.updated
-	value.updated = b.state.sequence
+	sameRound := b.state.finishedCollection == value.updated
+	value.updated = b.state.finishedCollection
 
 	// An existing record will be found when:
 	// (a) stateful aggregation is required for an exporter
@@ -181,16 +183,17 @@ func (b *Integrator) StartCollection() {
 }
 
 func (b *Integrator) FinishCollection() error {
-	b.finishedCollection++
 	b.intervalEnd = time.Now()
-	if b.startedCollection != b.finishedCollection {
+	if b.startedCollection != b.finishedCollection+1 {
 		return ErrInconsistentState
 	}
+	defer func() { b.finishedCollection++ }()
+
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
 
 		if !value.stateful {
-			if value.updated != b.sequence {
+			if value.updated != b.finishedCollection {
 				delete(b.values, key)
 			}
 			continue
@@ -219,6 +222,9 @@ func (b *Integrator) FinishCollection() error {
 }
 
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+	if b.startedCollection != b.finishedCollection {
+		return ErrInconsistentState
+	}
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
 
