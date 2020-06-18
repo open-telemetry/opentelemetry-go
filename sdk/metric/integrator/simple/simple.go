@@ -16,7 +16,9 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 
 import (
 	"errors"
+	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -48,35 +50,55 @@ type (
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		values map[batchKey]batchValue
+
+		// Note: the timestamp logic currently assumes all
+		// exports are deltas.
+
+		intervalStart time.Time
+		intervalEnd   time.Time
+
+		// startedCollection and finishedCollection are the
+		// number of StartCollection() and FinishCollection()
+		// calls, used to ensure that the sequence of starts
+		// and finishes are correctly balanced.
+
+		startedCollection  int64
+		finishedCollection int64
 	}
 )
 
 var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &batch{}
+var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
 
 func New(selector export.AggregationSelector, stateful bool) *Integrator {
 	return &Integrator{
 		AggregationSelector: selector,
 		stateful:            stateful,
 		batch: batch{
-			values: map[batchKey]batchValue{},
+			values:        map[batchKey]batchValue{},
+			intervalStart: time.Now(),
 		},
 	}
 }
 
-func (b *Integrator) Process(record export.Record) error {
-	desc := record.Descriptor()
+func (b *Integrator) Process(accumulation export.Accumulation) error {
+	if b.startedCollection != b.finishedCollection+1 {
+		return ErrInconsistentState
+	}
+
+	desc := accumulation.Descriptor()
 	key := batchKey{
 		descriptor: desc,
-		distinct:   record.Labels().Equivalent(),
-		resource:   record.Resource().Equivalent(),
+		distinct:   accumulation.Labels().Equivalent(),
+		resource:   accumulation.Resource().Equivalent(),
 	}
-	agg := record.Aggregator()
+	agg := accumulation.Aggregator()
 	value, ok := b.batch.values[key]
 	if ok {
 		// Note: The call to Merge here combines only
-		// identical records.  It is required even for a
-		// stateless Integrator because such identical records
+		// identical accumulations.  It is required even for a
+		// stateless Integrator because such identical accumulations
 		// may arise in the Meter implementation due to race
 		// conditions.
 		return value.aggregator.Merge(agg, desc)
@@ -96,8 +118,8 @@ func (b *Integrator) Process(record export.Record) error {
 	}
 	b.batch.values[key] = batchValue{
 		aggregator: agg,
-		labels:     record.Labels(),
-		resource:   record.Resource(),
+		labels:     accumulation.Labels(),
+		resource:   accumulation.Resource(),
 	}
 	return nil
 }
@@ -106,19 +128,38 @@ func (b *Integrator) CheckpointSet() export.CheckpointSet {
 	return &b.batch
 }
 
-func (b *Integrator) FinishedCollection() {
+func (b *Integrator) StartCollection() {
+	if b.startedCollection != 0 {
+		b.intervalStart = b.intervalEnd
+	}
+	b.startedCollection++
 	if !b.stateful {
 		b.batch.values = map[batchKey]batchValue{}
 	}
 }
 
+func (b *Integrator) FinishCollection() error {
+	b.finishedCollection++
+	b.intervalEnd = time.Now()
+	if b.startedCollection != b.finishedCollection {
+		return ErrInconsistentState
+	}
+	return nil
+}
+
 func (b *batch) ForEach(f func(export.Record) error) error {
+	if b.startedCollection != b.finishedCollection {
+		return ErrInconsistentState
+	}
+
 	for key, value := range b.values {
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
 			value.resource,
-			value.aggregator,
+			value.aggregator.Aggregation(),
+			b.intervalStart,
+			b.intervalEnd,
 		)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}

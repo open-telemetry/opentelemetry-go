@@ -17,6 +17,7 @@ package simple_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -75,13 +76,13 @@ func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 }
 
 // Convenience method for building a test exported lastValue record.
-func NewLastValueRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, Resource, LastValueAgg(desc, value))
+func NewLastValueAccumulation(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
+	return export.NewAccumulation(desc, labels, Resource, LastValueAgg(desc, value))
 }
 
 // Convenience method for building a test exported counter record.
-func NewCounterRecord(desc *metric.Descriptor, labels *label.Set, value int64) export.Record {
-	return export.NewRecord(desc, labels, Resource, CounterAgg(desc, value))
+func NewCounterAccumulation(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
+	return export.NewAccumulation(desc, labels, Resource, CounterAgg(desc, value))
 }
 
 // CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
@@ -95,36 +96,40 @@ func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
 func TestSimpleStateless(t *testing.T) {
 	b := simple.New(test.AggregationSelector(), false)
 
-	// Set initial lastValue values
-	_ = b.Process(NewLastValueRecord(&LastValueADesc, Labels1, 10))
-	_ = b.Process(NewLastValueRecord(&LastValueADesc, Labels2, 20))
-	_ = b.Process(NewLastValueRecord(&LastValueADesc, Labels3, 30))
+	b.StartCollection()
 
-	_ = b.Process(NewLastValueRecord(&LastValueBDesc, Labels1, 10))
-	_ = b.Process(NewLastValueRecord(&LastValueBDesc, Labels2, 20))
-	_ = b.Process(NewLastValueRecord(&LastValueBDesc, Labels3, 30))
+	// Set initial lastValue values
+	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels1, 10))
+	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels2, 20))
+	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels3, 30))
+
+	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels1, 10))
+	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels2, 20))
+	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels3, 30))
 
 	// Another lastValue Set for Labels1
-	_ = b.Process(NewLastValueRecord(&LastValueADesc, Labels1, 50))
-	_ = b.Process(NewLastValueRecord(&LastValueBDesc, Labels1, 50))
+	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels1, 50))
+	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels1, 50))
 
 	// Set initial counter values
-	_ = b.Process(NewCounterRecord(&CounterADesc, Labels1, 10))
-	_ = b.Process(NewCounterRecord(&CounterADesc, Labels2, 20))
-	_ = b.Process(NewCounterRecord(&CounterADesc, Labels3, 40))
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels2, 20))
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels3, 40))
 
-	_ = b.Process(NewCounterRecord(&CounterBDesc, Labels1, 10))
-	_ = b.Process(NewCounterRecord(&CounterBDesc, Labels2, 20))
-	_ = b.Process(NewCounterRecord(&CounterBDesc, Labels3, 40))
+	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels1, 10))
+	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels2, 20))
+	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels3, 40))
 
 	// Another counter Add for Labels1
-	_ = b.Process(NewCounterRecord(&CounterADesc, Labels1, 50))
-	_ = b.Process(NewCounterRecord(&CounterBDesc, Labels1, 50))
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 50))
+	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels1, 50))
+
+	require.NoError(t, b.FinishCollection())
 
 	checkpointSet := b.CheckpointSet()
 
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records.AddTo)
+	_ = checkpointSet.ForEach(records.AddRecord)
 
 	// Output lastvalue should have only the "G=H" and "G=" keys.
 	// Output counter should have only the "C=D" and "C=" keys.
@@ -142,32 +147,34 @@ func TestSimpleStateless(t *testing.T) {
 		"b.lastvalue/C=D,E=F/R=V": 20, // labels2
 		"b.lastvalue//R=V":        30, // labels3
 	}, records.Map)
-	b.FinishedCollection()
 
 	// Verify that state was reset
+	b.StartCollection()
+	require.NoError(t, b.FinishCollection())
 	checkpointSet = b.CheckpointSet()
 	_ = checkpointSet.ForEach(func(rec export.Record) error {
 		t.Fatal("Unexpected call")
 		return nil
 	})
-	b.FinishedCollection()
 }
 
 func TestSimpleStateful(t *testing.T) {
 	ctx := context.Background()
 	b := simple.New(test.AggregationSelector(), true)
 
-	counterA := NewCounterRecord(&CounterADesc, Labels1, 10)
+	b.StartCollection()
+
+	counterA := NewCounterAccumulation(&CounterADesc, Labels1, 10)
 	_ = b.Process(counterA)
 
-	counterB := NewCounterRecord(&CounterBDesc, Labels1, 10)
+	counterB := NewCounterAccumulation(&CounterBDesc, Labels1, 10)
 	_ = b.Process(counterB)
+	require.NoError(t, b.FinishCollection())
 
 	checkpointSet := b.CheckpointSet()
-	b.FinishedCollection()
 
 	records1 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records1.AddTo)
+	_ = checkpointSet.ForEach(records1.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"a.sum/C=D,G=H/R=V": 10, // labels1
@@ -180,11 +187,13 @@ func TestSimpleStateful(t *testing.T) {
 	// Test that state was NOT reset
 	checkpointSet = b.CheckpointSet()
 
+	b.StartCollection()
+	require.NoError(t, b.FinishCollection())
+
 	records2 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records2.AddTo)
+	_ = checkpointSet.ForEach(records2.AddRecord)
 
 	require.EqualValues(t, records1.Map, records2.Map)
-	b.FinishedCollection()
 
 	// Update and re-checkpoint the original record.
 	_ = caggA.Update(ctx, metric.NewInt64Number(20), &CounterADesc)
@@ -199,23 +208,92 @@ func TestSimpleStateful(t *testing.T) {
 	checkpointSet = b.CheckpointSet()
 
 	records3 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records3.AddTo)
+	_ = checkpointSet.ForEach(records3.AddRecord)
 
 	require.EqualValues(t, records1.Map, records3.Map)
-	b.FinishedCollection()
+	b.StartCollection()
 
 	// Now process the second update
-	_ = b.Process(export.NewRecord(&CounterADesc, Labels1, Resource, ckptA))
-	_ = b.Process(export.NewRecord(&CounterBDesc, Labels1, Resource, ckptB))
+	_ = b.Process(export.NewAccumulation(&CounterADesc, Labels1, Resource, ckptA))
+	_ = b.Process(export.NewAccumulation(&CounterBDesc, Labels1, Resource, ckptB))
+	require.NoError(t, b.FinishCollection())
 
 	checkpointSet = b.CheckpointSet()
 
 	records4 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records4.AddTo)
+	_ = checkpointSet.ForEach(records4.AddRecord)
 
 	require.EqualValues(t, map[string]float64{
 		"a.sum/C=D,G=H/R=V": 30,
 		"b.sum/C=D,G=H/R=V": 30,
 	}, records4.Map)
-	b.FinishedCollection()
+}
+
+func TestSimpleInconsistent(t *testing.T) {
+	// Test double-start
+	b := simple.New(test.AggregationSelector(), true)
+
+	b.StartCollection()
+	b.StartCollection()
+	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+
+	// Test finish without start
+	b = simple.New(test.AggregationSelector(), true)
+
+	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+
+	// Test no finish
+	b = simple.New(test.AggregationSelector(), true)
+
+	b.StartCollection()
+	require.Equal(t, simple.ErrInconsistentState, b.ForEach(func(export.Record) error { return nil }))
+
+	// Test no start
+	b = simple.New(test.AggregationSelector(), true)
+
+	require.Equal(t, simple.ErrInconsistentState, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
+}
+
+func TestSimpleTimestamps(t *testing.T) {
+	beforeNew := time.Now()
+	b := simple.New(test.AggregationSelector(), true)
+	afterNew := time.Now()
+
+	b.StartCollection()
+	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
+	require.NoError(t, b.FinishCollection())
+
+	var start1, end1 time.Time
+
+	require.NoError(t, b.ForEach(func(rec export.Record) error {
+		start1 = rec.StartTime()
+		end1 = rec.EndTime()
+		return nil
+	}))
+
+	// The first start time is set in the constructor.
+	require.True(t, beforeNew.Before(start1))
+	require.True(t, afterNew.After(start1))
+
+	for i := 0; i < 2; i++ {
+		b.StartCollection()
+		require.NoError(t, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
+		require.NoError(t, b.FinishCollection())
+
+		var start2, end2 time.Time
+
+		require.NoError(t, b.ForEach(func(rec export.Record) error {
+			start2 = rec.StartTime()
+			end2 = rec.EndTime()
+			return nil
+		}))
+
+		// Subsequent intervals have their start and end aligned.
+		require.Equal(t, start2, end1)
+		require.True(t, start1.Before(end1))
+		require.True(t, start2.Before(end2))
+
+		start1 = start2
+		end1 = end2
+	}
 }

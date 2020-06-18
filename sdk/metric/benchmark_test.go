@@ -47,15 +47,8 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (f *benchFixture) Process(rec export.Record) error {
+func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
-}
-
-func (*benchFixture) CheckpointSet() export.CheckpointSet {
-	return nil
-}
-
-func (*benchFixture) FinishedCollection() {
 }
 
 func makeManyLabels(n int) [][]kv.KeyValue {

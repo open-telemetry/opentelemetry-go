@@ -159,7 +159,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	}
 	aggError = checkpointSet.ForEach(func(record export.Record) error {
 		desc := record.Descriptor()
-		agg := record.Aggregator()
+		agg := record.Aggregation()
 		kind := desc.NumberKind()
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 

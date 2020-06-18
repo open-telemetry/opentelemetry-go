@@ -205,10 +205,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	defer c.exp.lock.RUnlock()
 
 	ctrl := c.exp.Controller()
-	ctrl.Collect(context.Background())
+	if err := ctrl.Collect(context.Background()); err != nil {
+		global.Handle(err)
+	}
 
 	err := ctrl.ForEach(func(record export.Record) error {
-		agg := record.Aggregator()
+		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 
 		var labelKeys, labels []string

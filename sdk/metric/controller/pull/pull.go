@@ -92,7 +92,7 @@ func (c *Controller) ForEach(f func(export.Record) error) error {
 
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
-func (c *Controller) Collect(ctx context.Context) {
+func (c *Controller) Collect(ctx context.Context) error {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
 
@@ -101,11 +101,14 @@ func (c *Controller) Collect(ctx context.Context) {
 		elapsed := now.Sub(c.lastCollect)
 
 		if elapsed < c.period {
-			return
+			return nil
 		}
 		c.lastCollect = now
 	}
 
+	c.integrator.StartCollection()
 	c.accumulator.Collect(ctx)
+	err := c.integrator.FinishCollection()
 	c.checkpoint = c.integrator.CheckpointSet()
+	return err
 }

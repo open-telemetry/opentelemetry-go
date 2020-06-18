@@ -54,15 +54,8 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
-func (*benchFixture) Process(export.Record) error {
+func (*benchFixture) Process(export.Accumulation) error {
 	return nil
-}
-
-func (*benchFixture) CheckpointSet() export.CheckpointSet {
-	return nil
-}
-
-func (*benchFixture) FinishedCollection() {
 }
 
 func (fix *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {

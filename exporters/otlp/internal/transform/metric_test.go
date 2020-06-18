@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
@@ -29,9 +30,17 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/exporters/metric/test"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+)
+
+var (
+	// Timestamps used in this test:
+
+	intervalStart = time.Now()
+	intervalEnd   = intervalStart.Add(time.Hour)
 )
 
 func TestStringKeyValues(t *testing.T) {
@@ -155,7 +164,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 			metric.WithDescription(test.description),
 			metric.WithUnit(test.unit))
 		labels := label.NewSet(test.labels...)
-		got, err := minMaxSumCount(&desc, &labels, ckpt.(aggregation.MinMaxSumCount))
+		record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+		got, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -184,9 +194,12 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 					Value:      10,
 				},
 			},
+			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 		},
 	}
-	m, err := minMaxSumCount(&desc, &labels, ckpt.(aggregation.MinMaxSumCount))
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	m, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
@@ -253,7 +266,9 @@ func TestSumMetricDescriptor(t *testing.T) {
 			metric.WithUnit(test.unit),
 		)
 		labels := label.NewSet(test.labels...)
-		got, err := sum(&desc, &labels, &sumAgg.New(1)[0])
+		emptyAgg := &sumAgg.New(1)[0]
+		record := export.NewRecord(&desc, &labels, nil, emptyAgg, intervalStart, intervalEnd)
+		got, err := sum(record, emptyAgg)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -266,8 +281,13 @@ func TestSumInt64DataPoints(t *testing.T) {
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
-	if m, err := sum(&desc, &labels, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.Int64DataPoint{{Value: 1}}, m.Int64DataPoints)
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
+		assert.Equal(t, []*metricpb.Int64DataPoint{{
+			Value:             1,
+			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+		}}, m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
 		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
@@ -280,9 +300,14 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
-	if m, err := sum(&desc, &labels, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
-		assert.Equal(t, []*metricpb.DoubleDataPoint{{Value: 1}}, m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint{{
+			Value:             1,
+			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+		}}, m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
 		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
@@ -292,7 +317,8 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.NumberKind(-1))
 	labels := label.NewSet()
 	s := &sumAgg.New(1)[0]
-	_, err := sum(&desc, &labels, s)
+	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)
+	_, err := sum(record, s)
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)

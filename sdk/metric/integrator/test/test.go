@@ -17,6 +17,7 @@ package test
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
@@ -99,23 +100,42 @@ func (testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ..
 	}
 }
 
-// AddTo adds a name/label-encoding entry with the lastValue or counter
-// value to the output map.
-func (o Output) AddTo(rec export.Record) error {
+// AddRecord adds a string representation of the exported metric data
+// to a map for use in testing.  The value taken from the record is
+// either the Sum() or the LastValue() of its Aggregation(), whichever
+// is defined.  Record timestamps are ignored.
+func (o Output) AddRecord(rec export.Record) error {
 	encoded := rec.Labels().Encoded(o.labelEncoder)
 	rencoded := rec.Resource().Encoded(o.labelEncoder)
 	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
 	var value float64
 
-	if s, ok := rec.Aggregator().(aggregation.Sum); ok {
+	if s, ok := rec.Aggregation().(aggregation.Sum); ok {
 		sum, _ := s.Sum()
 		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregator().(aggregation.LastValue); ok {
+	} else if l, ok := rec.Aggregation().(aggregation.LastValue); ok {
 		last, _, _ := l.LastValue()
 		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
 	} else {
-		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregator()))
+		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregation()))
 	}
 	o.Map[key] = value
 	return nil
+}
+
+// AddAccumulation adds a string representation of the exported metric
+// data to a map for use in testing.  The value taken from the
+// accumulation is either the Sum() or the LastValue() of its
+// Aggregator().Aggregation(), whichever is defined.
+func (o Output) AddAccumulation(acc export.Accumulation) error {
+	return o.AddRecord(
+		export.NewRecord(
+			acc.Descriptor(),
+			acc.Labels(),
+			acc.Resource(),
+			acc.Aggregator().Aggregation(),
+			time.Time{},
+			time.Time{},
+		),
+	)
 }

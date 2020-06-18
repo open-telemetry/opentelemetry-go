@@ -83,6 +83,11 @@ func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
 	return aggs
 }
 
+// Aggregation returns an interface for reading the state of this aggregator.
+func (c *Aggregator) Aggregation() aggregation.Aggregation {
+	return c
+}
+
 // Kind returns aggregation.HistogramKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.HistogramKind

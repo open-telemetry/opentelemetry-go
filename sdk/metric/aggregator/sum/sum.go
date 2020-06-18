@@ -40,6 +40,11 @@ func New(cnt int) []Aggregator {
 	return make([]Aggregator, cnt)
 }
 
+// Aggregation returns an interface for reading the state of this aggregator.
+func (c *Aggregator) Aggregation() aggregation.Aggregation {
+	return c
+}
+
 // Kind returns aggregation.SumKind.
 func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.SumKind
