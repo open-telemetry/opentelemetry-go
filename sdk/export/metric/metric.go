@@ -156,8 +156,13 @@ type Aggregator interface {
 	Merge(Aggregator, *metric.Descriptor) error
 }
 
-// @@@
+// Subtractor is an optional interface implemented by some
+// Aggregators.  An Aggregator must support `Subtract()` in order to
+// be configured for a Precomputed-Sum instrument (SumObserver,
+// UpDownSumObserver) using a DeltaExporter.
 type Subtractor interface {
+	// Subtract subtracts the `operand` from this Aggregator and
+	// outputs the value in `result`.
 	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
 }
 
@@ -175,12 +180,19 @@ type Exporter interface {
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
 
-	// @@@
+	// ExportKindSelector is an interface used by the Integrator
+	// in deciding whether to compute Delta or Cumulative
+	// Aggregations when passing Records to this Exporter.
 	ExportKindSelector
 }
 
+// ExportKindSelector is a sub-interface of Exporter used to indicate
+// whether the Integrator should compute Delta or Cumulative
+// Aggregations.
 type ExportKindSelector interface {
-	// @@@
+	// ExportKindFor should return the correct ExportKind that
+	// should be used when exporting data for the given metric
+	// instrument and Aggregator kind.
 	ExportKindFor(*metric.Descriptor, aggregation.Kind) ExportKind
 }
 
