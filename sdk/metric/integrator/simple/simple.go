@@ -53,11 +53,15 @@ type (
 
 		// Note: the timestamp logic currently assumes all
 		// exports are deltas.
+
 		intervalStart time.Time
 		intervalEnd   time.Time
 
-		// inCollect is used to test that StartCollection()
-		// and FinishCollection() are called correctly.
+		// startedCollection and finishedCollection are the
+		// number of StartCollection() and FinishCollection()
+		// calls, used to ensure that the sequence of starts
+		// and finishes are correctly balanced.
+
 		startedCollection  int64
 		finishedCollection int64
 	}

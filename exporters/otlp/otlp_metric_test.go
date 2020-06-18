@@ -41,8 +41,10 @@ import (
 )
 
 var (
+	// Timestamps used in this test:
+
 	intervalStart = time.Now()
-	intervalEnd   = intervalStart.Add(-time.Hour)
+	intervalEnd   = intervalStart.Add(time.Hour)
 )
 
 func startTime() uint64 {
