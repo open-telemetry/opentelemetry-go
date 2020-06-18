@@ -205,6 +205,11 @@ type CheckpointSet interface {
 	// metrics that were updated during the last collection
 	// period. Each aggregated checkpoint returned by the
 	// function parameter may return an error.
+	//
+	// The ExportKindSelector argument is used to determine
+	// whether the Record is computed using Delta or Cumulative
+	// aggregation.
+	//
 	// ForEach tolerates ErrNoData silently, as this is
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
@@ -325,8 +330,17 @@ func (r Record) EndTime() time.Time {
 type ExportKind int
 
 const (
-	CumulativeExporter  ExportKind = 1 // e.g., Prometheus
-	DeltaExporter       ExportKind = 2 // e.g., StatsD
+	// CumulativeExporter indicates that the Exporter expects a
+	// Cumulative Aggregation.
+	CumulativeExporter ExportKind = 1 // e.g., Prometheus
+
+	// DeltaExporter indicates that the Exporter expects a
+	// Delta Aggregation.
+	DeltaExporter ExportKind = 2 // e.g., StatsD
+
+	// PassThroughExporter indicates that the Exporter expects
+	// either a Cumulative or a Delta Aggregation, whichever does
+	// not require maintaining state for the given instrument.
 	PassThroughExporter ExportKind = 4 // e.g., OTLP
 )
 

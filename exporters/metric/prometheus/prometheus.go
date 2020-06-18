@@ -142,17 +142,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	// Prometheus uses a stateful pull controller since instruments are
-	// cumulative and should not be reset after each collection interval.
-	//
-	// Prometheus uses this approach to be resilient to scrape failures.
-	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
-	// it could try again on the next scrape and no data would be lost, only resolution.
-	//
-	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	//
-	// TODO: Prometheus supports "Gauge Histogram" which are
-	// expressed as delta histograms.
+
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
 		e,
@@ -173,6 +163,10 @@ func (e *Exporter) Controller() *pull.Controller {
 }
 
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	// NOTE: Summary values should use Delta aggregation, then be
+	// combined into a sliding window, see the TODO below.
+	// TODO: Prometheus also supports a "GaugeDelta" exposition format,
+	// which is expressed as a delta histogram.
 	return export.CumulativeExporter
 }
 

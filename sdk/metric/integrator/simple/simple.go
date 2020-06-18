@@ -87,6 +87,11 @@ var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
 
+// New returns a basic Integrator using the provided
+// AggregationSelector to select Aggregators.  The ExportKindSelector
+// is consulted to determine the kind(s) of exporter that will consume
+// data, so that this Integrator can prepare to compute Delta or
+// Cumulative Aggregations as needed.
 func New(aselector export.AggregationSelector, eselector export.ExportKindSelector) *Integrator {
 	now := time.Now()
 	return &Integrator{
@@ -100,6 +105,7 @@ func New(aselector export.AggregationSelector, eselector export.ExportKindSelect
 	}
 }
 
+// Process implements export.Integrator.
 func (b *Integrator) Process(accum export.Accumulation) error {
 	if b.startedCollection != b.finishedCollection+1 {
 		return ErrInconsistentState
@@ -171,10 +177,16 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	return value.delta.Merge(agg, desc)
 }
 
+// CheckpointSet returns the associated CheckpointSet.  Use the
+// CheckpointSet Locker interface to synchronize access to this
+// object.  The CheckpointSet.ForEach() method cannot be called
+// concurrently with Process().
 func (b *Integrator) CheckpointSet() export.CheckpointSet {
 	return &b.state
 }
 
+// StartCollection signals to the Integrator one or more Accumulators
+// will begin calling Process() calls during collection.
 func (b *Integrator) StartCollection() {
 	if b.startedCollection != 0 {
 		b.intervalStart = b.intervalEnd
@@ -182,6 +194,9 @@ func (b *Integrator) StartCollection() {
 	b.startedCollection++
 }
 
+// FinishCollection signals to the Integrator that a complete round of
+// collection is finished and that ForEach will be called to access
+// the CheckpointSet.
 func (b *Integrator) FinishCollection() error {
 	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection+1 {
@@ -221,6 +236,9 @@ func (b *Integrator) FinishCollection() error {
 	return nil
 }
 
+// ForEach iterates through the CheckpointSet, for passing an
+// export.Record with the appropriate Cumulative or Delta aggregation
+// to an exporter.
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
 	if b.startedCollection != b.finishedCollection {
 		return ErrInconsistentState
@@ -275,8 +293,4 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		}
 	}
 	return nil
-}
-
-func (b *stateValue) String() string {
-	return fmt.Sprintf("%v %v %v", b.current, b.updated, b.stateful)
 }

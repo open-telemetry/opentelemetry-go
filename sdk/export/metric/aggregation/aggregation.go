@@ -138,7 +138,6 @@ type (
 )
 
 const (
-	NoopKind           Kind = "Noop"
 	SumKind            Kind = "Sum"
 	MinMaxSumCountKind Kind = "MinMaxSumCount"
 	HistogramKind      Kind = "Histogram"
