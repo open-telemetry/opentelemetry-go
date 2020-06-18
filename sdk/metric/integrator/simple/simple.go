@@ -65,16 +65,28 @@ type (
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		sequence int64
+		values   map[stateKey]*stateValue
+
+		// Note: the timestamp logic currently assumes all
+		// exports are deltas.
 
 		processStart  time.Time
 		intervalStart time.Time
 		intervalEnd   time.Time
-		values        map[stateKey]*stateValue
+
+		// startedCollection and finishedCollection are the
+		// number of StartCollection() and FinishCollection()
+		// calls, used to ensure that the sequence of starts
+		// and finishes are correctly balanced.
+
+		startedCollection  int64
+		finishedCollection int64
 	}
 )
 
 var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &state{}
+var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
 
 func New(aselector export.AggregationSelector, eselector export.ExportKindSelector) *Integrator {
 	now := time.Now()
@@ -85,14 +97,8 @@ func New(aselector export.AggregationSelector, eselector export.ExportKindSelect
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
 			intervalStart: now,
-			sequence:      -1,
 		},
 	}
-}
-
-func (b *Integrator) StartCollection() {
-	b.state.intervalEnd = time.Now()
-	b.state.sequence++
 }
 
 func (b *Integrator) Process(accum export.Accumulation) error {
@@ -107,7 +113,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	// Check if there is an existing record.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc, agg.Kind()).MemoryRequired(desc.MetricKind())
+		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.MetricKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
@@ -163,10 +169,23 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	return value.delta.Merge(agg, desc)
 }
 
-func (b *Integrator) FinishCollection() error {
-	b.state.intervalStart = b.state.intervalEnd
-	b.state.intervalEnd = time.Time{}
+func (b *Integrator) CheckpointSet() export.CheckpointSet {
+	return &b.state
+}
 
+func (b *Integrator) StartCollection() {
+	if b.startedCollection != 0 {
+		b.intervalStart = b.intervalEnd
+	}
+	b.startedCollection++
+}
+
+func (b *Integrator) FinishCollection() error {
+	b.finishedCollection++
+	b.intervalEnd = time.Now()
+	if b.startedCollection != b.finishedCollection {
+		return ErrInconsistentState
+	}
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
 
@@ -199,10 +218,6 @@ func (b *Integrator) FinishCollection() error {
 	return nil
 }
 
-func (b *Integrator) CheckpointSet() export.CheckpointSet {
-	return &b.state
-}
-
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
@@ -210,10 +225,10 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		switch exporter.ExportKindFor(key.descriptor, value.current.Kind()) {
+		switch exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind()) {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
-			agg = value.current
+			agg = value.current.Aggregation()
 
 			if mkind.PrecomputedSum() {
 				start = b.processStart
@@ -226,18 +241,18 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
 			if value.stateful {
-				agg = value.cumulative
+				agg = value.cumulative.Aggregation()
 			} else {
-				agg = value.current
+				agg = value.current.Aggregation()
 			}
 			start = b.processStart
 
 		case export.DeltaExporter:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
-				agg = value.delta
+				agg = value.delta.Aggregation()
 			} else {
-				agg = value.current
+				agg = value.current.Aggregation()
 			}
 			start = b.intervalStart
 		}

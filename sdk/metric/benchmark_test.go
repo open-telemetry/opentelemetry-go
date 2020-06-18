@@ -51,13 +51,6 @@ func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
 }
 
-func (*benchFixture) CheckpointSet() export.CheckpointSet {
-	return nil
-}
-
-func (*benchFixture) FinishedCollection() {
-}
-
 func makeManyLabels(n int) [][]kv.KeyValue {
 	r := make([][]kv.KeyValue, n)
 

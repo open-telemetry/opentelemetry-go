@@ -249,9 +249,6 @@ func (*testFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 
-func (*testFixture) FinishedCollection() {
-}
-
 func (f *testFixture) Process(accumulation export.Accumulation) error {
 	labels := accumulation.Labels().ToSlice()
 	key := testKey{

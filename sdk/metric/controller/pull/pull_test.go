@@ -46,9 +46,8 @@ func TestPullNoCache(t *testing.T) {
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
-
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
+	require.NoError(t, puller.ForEach(records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -58,7 +57,7 @@ func TestPullNoCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
+	require.NoError(t, puller.ForEach(records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,
@@ -82,7 +81,7 @@ func TestPullWithCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records := test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
+	require.NoError(t, puller.ForEach(records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -93,7 +92,7 @@ func TestPullWithCache(t *testing.T) {
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
+	require.NoError(t, puller.ForEach(records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 10,
@@ -105,7 +104,7 @@ func TestPullWithCache(t *testing.T) {
 	// Re-computed value!
 	require.NoError(t, puller.Collect(ctx))
 	records = test.NewOutput(label.DefaultEncoder())
-	_ = puller.ForEach(export.CumulativeExporter, records.AddRecord)
+	require.NoError(t, puller.ForEach(records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter/A=B/": 20,

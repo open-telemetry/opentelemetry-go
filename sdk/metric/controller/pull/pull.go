@@ -108,6 +108,7 @@ func (c *Controller) Collect(ctx context.Context) error {
 
 	c.integrator.StartCollection()
 	c.accumulator.Collect(ctx)
+	err := c.integrator.FinishCollection()
 	c.checkpoint = c.integrator.CheckpointSet()
-	return c.integrator.FinishCollection()
+	return err
 }

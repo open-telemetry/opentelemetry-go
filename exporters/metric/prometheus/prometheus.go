@@ -212,7 +212,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		global.Handle(err)
 	}
 
-	err := ctrl.ForEach(c.exp, func(record export.Record) error {
+	err := ctrl.ForEach(func(record export.Record) error {
 		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 

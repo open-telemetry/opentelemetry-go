@@ -18,12 +18,14 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	exportTest "go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
@@ -145,7 +147,6 @@ func testSynchronousIntegration(
 		selector.AggregatorFor(desc, &agg)
 		_ = agg.Update(ctx, asNumber(value), desc)
 
-		//fmt.Printf("AGGREGATOR %T %v\n", agg, agg)
 		return export.NewAccumulation(desc, &ls, res, agg)
 	}
 
@@ -249,5 +250,86 @@ func testSynchronousIntegration(
 				})
 			}
 		})
+	}
+}
+
+func TestSimpleInconsistent(t *testing.T) {
+	// Test double-start
+	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
+
+	b.StartCollection()
+	b.StartCollection()
+	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+
+	// Test finish without start
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+
+	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+
+	// Test no finish
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+
+	b.StartCollection()
+	require.Equal(
+		t,
+		simple.ErrInconsistentState,
+		b.ForEach(
+			export.PassThroughExporter,
+			func(export.Record) error { return nil },
+		),
+	)
+
+	// Test no start
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+
+	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
+	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
+	require.Equal(t, simple.ErrInconsistentState, b.Process(accum))
+}
+
+func TestSimpleTimestamps(t *testing.T) {
+	beforeNew := time.Now()
+	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	afterNew := time.Now()
+
+	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
+	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
+
+	b.StartCollection()
+	_ = b.Process(accum)
+	require.NoError(t, b.FinishCollection())
+
+	var start1, end1 time.Time
+
+	require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
+		start1 = rec.StartTime()
+		end1 = rec.EndTime()
+		return nil
+	}))
+
+	// The first start time is set in the constructor.
+	require.True(t, beforeNew.Before(start1))
+	require.True(t, afterNew.After(start1))
+
+	for i := 0; i < 2; i++ {
+		b.StartCollection()
+		require.NoError(t, b.Process(accum))
+		require.NoError(t, b.FinishCollection())
+
+		var start2, end2 time.Time
+
+		require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
+			start2 = rec.StartTime()
+			end2 = rec.EndTime()
+			return nil
+		}))
+
+		// Subsequent intervals have their start and end aligned.
+		require.Equal(t, start2, end1)
+		require.True(t, start1.Before(end1))
+		require.True(t, start2.Before(end2))
+
+		start1 = start2
+		end1 = end2
 	}
 }
