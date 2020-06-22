@@ -132,9 +132,6 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 // NewExportPipeline sets up a complete export pipeline with the
 // recommended setup, chaining a NewRawExporter into the recommended
 // selectors and integrators.
-//
-// The pipeline is configured with a stateful integrator unless the
-// push.WithStateful(false) option is used.
 func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -143,7 +140,7 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exporter,
-		append([]push.Option{push.WithStateful(true)}, options...)...,
+		options...,
 	)
 	pusher.Start()
 

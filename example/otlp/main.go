@@ -50,7 +50,6 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exp,
-		push.WithStateful(true),
 		push.WithPeriod(2*time.Second),
 	)
 
