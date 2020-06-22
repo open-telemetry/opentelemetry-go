@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/kv/value"
@@ -56,18 +57,6 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 	return nil
 }
 
-type mockProtoMessage struct{}
-
-func (mm *mockProtoMessage) Reset() {
-}
-
-func (mm *mockProtoMessage) String() string {
-	return "mock"
-}
-
-func (mm *mockProtoMessage) ProtoMessage() {
-}
-
 func TestUnaryClientInterceptor(t *testing.T) {
 	exp := &testExporter{spanMap: make(map[string]*export.SpanData)}
 	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp),
@@ -84,8 +73,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	tracer := tp.Tracer("grpctrace/client")
 	unaryInterceptor := UnaryClientInterceptor(tracer)
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &anypb.Any{}
+	reply := &anypb.Any{}
 	uniInterceptorInvoker := &mockUICInvoker{}
 
 	checks := []struct {
@@ -313,8 +302,8 @@ func TestStreamClientInterceptor(t *testing.T) {
 		t.Fatalf("span shouldn't end while stream is open")
 	}
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &anypb.Any{}
+	reply := &anypb.Any{}
 
 	// send and receive fake data
 	for i := 0; i < 10; i++ {
@@ -400,7 +389,7 @@ func TestServerInterceptorError(t *testing.T) {
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr
 	}
-	_, err = usi(context.Background(), &mockProtoMessage{}, &grpc.UnaryServerInfo{}, handler)
+	_, err = usi(context.Background(), &anypb.Any{}, &grpc.UnaryServerInfo{}, handler)
 	require.Error(t, err)
 	assert.Equal(t, err, deniedErr)
 
