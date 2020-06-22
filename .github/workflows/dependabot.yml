@@ -23,6 +23,3 @@ jobs:
       id: autocommit
       with:
         commit_message: Auto-fix go.sum changes in dependent modules
-    - name: changes
-      run: |
-        echo "Changes detected: ${{ steps.autocommit.outputs.changes_detected }}"
