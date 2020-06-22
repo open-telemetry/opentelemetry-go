@@ -262,7 +262,6 @@ func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.
 
 func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
 	panic("Not called")
-	return nil
 }
 
 func TestSimpleInconsistent(t *testing.T) {
