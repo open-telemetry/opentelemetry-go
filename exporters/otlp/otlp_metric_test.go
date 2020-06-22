@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
@@ -38,6 +39,21 @@ import (
 
 	"google.golang.org/grpc"
 )
+
+var (
+	// Timestamps used in this test:
+
+	intervalStart = time.Now()
+	intervalEnd   = intervalStart.Add(time.Hour)
+)
+
+func startTime() uint64 {
+	return uint64(intervalStart.UnixNano())
+}
+
+func pointTime() uint64 {
+	return uint64(intervalEnd.UnixNano())
+}
 
 type metricsServiceClientStub struct {
 	rm []metricpb.ResourceMetrics
@@ -171,7 +187,9 @@ func TestNoGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -179,7 +197,9 @@ func TestNoGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -235,6 +255,8 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value:      10.0,
 										},
 									},
+									StartTimeUnixNano: startTime(),
+									TimeUnixNano:      pointTime(),
 								},
 								{
 									Count: 2,
@@ -249,6 +271,8 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value:      10.0,
 										},
 									},
+									StartTimeUnixNano: startTime(),
+									TimeUnixNano:      pointTime(),
 								},
 							},
 						},
@@ -287,10 +311,14 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -337,10 +365,14 @@ func TestCountUint64MetricGroupingExport(t *testing.T) {
 								},
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -387,10 +419,14 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 								},
 								DoubleDataPoints: []*metricpb.DoubleDataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -449,10 +485,14 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -460,7 +500,9 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -477,7 +519,9 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -567,10 +611,14 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -578,7 +626,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -594,7 +644,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -609,7 +661,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -630,7 +684,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -689,7 +745,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, ckpt))
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
 	for _, records := range recs {
 		assert.NoError(t, exp.Export(context.Background(), &checkpointSet{records: records}))

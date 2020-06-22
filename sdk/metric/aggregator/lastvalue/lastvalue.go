@@ -68,6 +68,11 @@ func New(cnt int) []Aggregator {
 	return aggs
 }
 
+// Aggregation returns an interface for reading the state of this aggregator.
+func (g *Aggregator) Aggregation() aggregation.Aggregation {
+	return g
+}
+
 // Kind returns aggregation.LastValueKind.
 func (g *Aggregator) Kind() aggregation.Kind {
 	return aggregation.LastValueKind

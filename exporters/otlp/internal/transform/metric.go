@@ -234,20 +234,20 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
-	d := r.Descriptor()
-	l := r.Labels()
-	switch a := r.Aggregator().(type) {
+	switch a := r.Aggregation().(type) {
 	case aggregation.MinMaxSumCount:
-		return minMaxSumCount(d, l, a)
+		return minMaxSumCount(r, a)
 	case aggregation.Sum:
-		return sum(d, l, a)
+		return sum(r, a)
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
 	}
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metric.Descriptor, labels *label.Set, a aggregation.Sum) (*metricpb.Metric, error) {
+func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 	sum, err := a.Sum()
 	if err != nil {
 		return nil, err
@@ -266,12 +266,20 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregation.Sum) (*metric
 	case metric.Int64NumberKind, metric.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
-			{Value: sum.CoerceToInt64(n)},
+			{
+				Value:             sum.CoerceToInt64(n),
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+			},
 		}
 	case metric.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
-			{Value: sum.CoerceToFloat64(n)},
+			{
+				Value:             sum.CoerceToFloat64(n),
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+			},
 		}
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
@@ -299,7 +307,9 @@ func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Nu
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
@@ -328,6 +338,8 @@ func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregation.Mi
 						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
 			},
 		},
 	}, nil

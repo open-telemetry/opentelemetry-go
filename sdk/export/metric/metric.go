@@ -17,9 +17,11 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -61,13 +63,13 @@ type Integrator interface {
 	AggregationSelector
 
 	// Process is called by the SDK once per internal record,
-	// passing the export Record (a Descriptor, the corresponding
+	// passing the export Accumulation (a Descriptor, the corresponding
 	// Labels, and the checkpointed Aggregator).  This call has no
 	// Context argument because it is expected to perform only
 	// computation.  An SDK is not expected to call exporters from
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
-	Process(record Record) error
+	Process(Accumulation) error
 }
 
 // AggregationSelector supports selecting the kind of Aggregator to
@@ -105,6 +107,13 @@ type AggregationSelector interface {
 // to attach a Sum aggregator to a ValueRecorder instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
+	// Aggregation returns an Aggregation interface to access the
+	// current state of this Aggregator.  The caller is
+	// responsible for synchronization and must not call any the
+	// other methods in this interface concurrently while using
+	// the Aggregation.
+	Aggregation() aggregation.Aggregation
+
 	// Update receives a new measured value and incorporates it
 	// into the aggregation.  Update() calls may be called
 	// concurrently.
@@ -189,45 +198,97 @@ type CheckpointSet interface {
 	RUnlock()
 }
 
-// Record contains the exported data for a single metric instrument
-// and label set.
-type Record struct {
+// Metadata contains the common elements for exported metric data that
+// are shared by the Accumulator->Integrator and Integrator->Exporter
+// steps.
+type Metadata struct {
 	descriptor *metric.Descriptor
 	labels     *label.Set
 	resource   *resource.Resource
+}
+
+// Accumulation contains the exported data for a single metric instrument
+// and label set, as prepared by an Accumulator for the Integrator.
+type Accumulation struct {
+	Metadata
 	aggregator Aggregator
 }
 
-// NewRecord allows Integrator implementations to construct export
-// records.  The Descriptor, Labels, and Aggregator represent
-// aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Record {
-	return Record{
-		descriptor: descriptor,
-		labels:     labels,
-		resource:   resource,
+// Record contains the exported data for a single metric instrument
+// and label set, as prepared by the Integrator for the Exporter.
+// This includes the effective start and end time for the aggregation.
+type Record struct {
+	Metadata
+	aggregation aggregation.Aggregation
+	start       time.Time
+	end         time.Time
+}
+
+// Descriptor describes the metric instrument being exported.
+func (m Metadata) Descriptor() *metric.Descriptor {
+	return m.descriptor
+}
+
+// Labels describes the labels associated with the instrument and the
+// aggregated data.
+func (m Metadata) Labels() *label.Set {
+	return m.labels
+}
+
+// Resource contains common attributes that apply to this metric event.
+func (m Metadata) Resource() *resource.Resource {
+	return m.resource
+}
+
+// NewAccumulation allows Accumulator implementations to construct new
+// Accumulations to send to Integrators. The Descriptor, Labels, Resource,
+// and Aggregator represent aggregate metric events received over a single
+// collection period.
+func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+	return Accumulation{
+		Metadata: Metadata{
+			descriptor: descriptor,
+			labels:     labels,
+			resource:   resource,
+		},
 		aggregator: aggregator,
 	}
 }
 
 // Aggregator returns the checkpointed aggregator. It is safe to
 // access the checkpointed state without locking.
-func (r Record) Aggregator() Aggregator {
+func (r Accumulation) Aggregator() Aggregator {
 	return r.aggregator
 }
 
-// Descriptor describes the metric instrument being exported.
-func (r Record) Descriptor() *metric.Descriptor {
-	return r.descriptor
+// NewRecord allows Integrator implementations to construct export
+// records.  The Descriptor, Labels, and Aggregator represent
+// aggregate metric events received over a single collection period.
+func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+	return Record{
+		Metadata: Metadata{
+			descriptor: descriptor,
+			labels:     labels,
+			resource:   resource,
+		},
+		aggregation: aggregation,
+		start:       start,
+		end:         end,
+	}
 }
 
-// Labels describes the labels associated with the instrument and the
-// aggregated data.
-func (r Record) Labels() *label.Set {
-	return r.labels
+// Aggregation returns the aggregation, an interface to the record and
+// its aggregator, dependent on the kind of both the input and exporter.
+func (r Record) Aggregation() aggregation.Aggregation {
+	return r.aggregation
 }
 
-// Resource contains common attributes that apply to this metric event.
-func (r Record) Resource() *resource.Resource {
-	return r.resource
+// StartTime is the start time of the interval covered by this aggregation.
+func (r Record) StartTime() time.Time {
+	return r.start
+}
+
+// EndTime is the end time of the interval covered by this aggregation.
+func (r Record) EndTime() time.Time {
+	return r.end
 }

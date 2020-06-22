@@ -19,6 +19,7 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
@@ -47,18 +48,28 @@ type NoopAggregator struct{}
 var _ export.Aggregator = (*NoopAggregator)(nil)
 
 // Update implements export.Aggregator.
-func (*NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor) error {
+func (NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor) error {
 	return nil
 }
 
 // SynchronizedCopy implements export.Aggregator.
-func (*NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
 // Merge implements export.Aggregator.
-func (*NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
 	return nil
+}
+
+// Aggregation returns an interface for reading the state of this aggregator.
+func (NoopAggregator) Aggregation() aggregation.Aggregation {
+	return NoopAggregator{}
+}
+
+// Kind implements aggregation.Aggregation.
+func (NoopAggregator) Kind() aggregation.Kind {
+	return aggregation.Kind("Noop")
 }
 
 // NewCheckpointSet returns a test CheckpointSet that new records could be added.
@@ -88,10 +99,10 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		distinct: elabels.Equivalent(),
 	}
 	if record, ok := p.records[key]; ok {
-		return record.Aggregator(), false
+		return record.Aggregation().(export.Aggregator), false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg)
+	rec := export.NewRecord(desc, &elabels, p.resource, newAgg.Aggregation(), time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

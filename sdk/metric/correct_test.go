@@ -74,7 +74,7 @@ type correctnessIntegrator struct {
 	t *testing.T
 	*testSelector
 
-	records []export.Record
+	accumulations []export.Accumulation
 }
 
 type testSelector struct {
@@ -101,16 +101,8 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessInt
 	return meter, accum, integrator
 }
 
-func (ci *correctnessIntegrator) CheckpointSet() export.CheckpointSet {
-	ci.t.Fatal("Should not be called")
-	return nil
-}
-
-func (*correctnessIntegrator) FinishedCollection() {
-}
-
-func (ci *correctnessIntegrator) Process(record export.Record) error {
-	ci.records = append(ci.records, record)
+func (ci *correctnessIntegrator) Process(accumulation export.Accumulation) error {
+	ci.accumulations = append(ci.accumulations, accumulation)
 	return nil
 }
 
@@ -126,10 +118,10 @@ func TestInputRangeCounter(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	integrator.records = nil
+	integrator.accumulations = nil
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err := integrator.records[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err := integrator.accumulations[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -148,7 +140,7 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	counter.Add(ctx, 1)
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := integrator.records[0].Aggregator().(aggregation.Sum).Sum()
+	sum, err := integrator.accumulations[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, err)
@@ -170,10 +162,10 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	valuerecorder.Record(ctx, 1)
 	valuerecorder.Record(ctx, 2)
 
-	integrator.records = nil
+	integrator.accumulations = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := integrator.records[0].Aggregator().(aggregation.Distribution).Count()
+	count, err := integrator.accumulations[0].Aggregator().(aggregation.Distribution).Count()
 	require.Equal(t, int64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -190,7 +182,7 @@ func TestDisabledInstrument(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
-	require.Equal(t, 0, len(integrator.records))
+	require.Equal(t, 0, len(integrator.accumulations))
 }
 
 func TestRecordNaN(t *testing.T) {
@@ -258,7 +250,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	sdk.Collect(ctx)
 
 	var actual [][]kv.KeyValue
-	for _, rec := range integrator.records {
+	for _, rec := range integrator.accumulations {
 		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
 		require.Equal(t, sum, metric.NewInt64Number(2))
 
@@ -352,11 +344,11 @@ func TestObserverCollection(t *testing.T) {
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, collected, len(integrator.records))
+	require.Equal(t, collected, len(integrator.accumulations))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+	for _, rec := range integrator.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.valueobserver.lastvalue/A=B/R=V": -1,
@@ -397,7 +389,7 @@ func TestSumObserverInputRange(t *testing.T) {
 	collected := sdk.Collect(ctx)
 
 	require.Equal(t, 0, collected)
-	require.Equal(t, 0, len(integrator.records))
+	require.Equal(t, 0, len(integrator.accumulations))
 
 	// check that the error condition was reset
 	require.NoError(t, testHandler.Flush())
@@ -455,11 +447,11 @@ func TestObserverBatch(t *testing.T) {
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, collected, len(integrator.records))
+	require.Equal(t, collected, len(integrator.accumulations))
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+	for _, rec := range integrator.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"float.sumobserver.sum//R=V":    1.1,
@@ -503,8 +495,8 @@ func TestRecordBatch(t *testing.T) {
 	sdk.Collect(ctx)
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+	for _, rec := range integrator.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"int64.sum/A=B,C=D/R=V":     1,
@@ -585,8 +577,8 @@ func TestSyncInAsync(t *testing.T) {
 	sdk.Collect(ctx)
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
-	for _, rec := range integrator.records {
-		_ = out.AddTo(rec)
+	for _, rec := range integrator.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
