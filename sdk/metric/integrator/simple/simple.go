@@ -164,7 +164,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	//
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
-	// been seen in the same collection.  When this happens, in
+	// been seen in the same collection.  When this happens, it
 	// implies that multiple Accumulators are being used because
 	// the Accumulator outputs a maximum of one Accumulation per
 	// instrument and label set.
@@ -209,8 +209,8 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		b.AggregationSelector.AggregatorFor(desc, &value.delta)
 	}
 	if value.current != value.delta {
-		// If the current and delta Aggregators it implies that
-		// multiple Accumulators were used.  The first
+		// If the current and delta Aggregators are not the same it
+		// implies that multiple Accumulators were used.  The first
 		// Accumulation seen for a given stateKey will return in
 		// one of the cases above after assigning `value.current
 		// = agg` (i.e., after taking a reference to the
