@@ -119,7 +119,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 	}
 	agg := accum.Aggregator()
 
-	// Check if there is an existing record.
+	// Check if there is an existing value.
 	value, ok := b.state.values[key]
 	if !ok {
 		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.MetricKind())
@@ -132,49 +132,103 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 			current:  agg,
 		}
 		if stateful {
-			// If stateful, allocate a cumulative aggregator.
-			b.AggregatorFor(desc, &newValue.cumulative)
-
 			if desc.MetricKind().PrecomputedSum() {
-				// If we need to compute deltas, allocate another aggregator.
-				b.AggregatorFor(desc, &newValue.delta)
+				// If we know we need to compute deltas, allocate two aggregators.
+				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
+			} else {
+				// In this case we are not certain to need a delta, only allocate a
+				// cumulative aggregator.  We _may_ need a delta accumulator if
+				// multiple synchronous Accumulators produce an Accumulation (handled
+				// below), which requires merging them into a temporary Aggregator.
+				b.AggregatorFor(desc, &newValue.cumulative)
 			}
 		}
 		b.state.values[key] = newValue
 		return nil
 	}
 
-	// Advance the update sequence number:
-	sameRound := b.state.finishedCollection == value.updated
+	// Advance the update sequence number.
+	sameCollection := b.state.finishedCollection == value.updated
 	value.updated = b.state.finishedCollection
 
-	// An existing record will be found when:
-	// (a) stateful aggregation is required for an exporter
-	// (b) multiple accumulators (SDKs) are being used.
-	// Another accumulator must have produced this.
+	// An existing value will be found for some stateKey when:
+	// (a) stateful aggregation is being used
+	// (b) multiple accumulators are being used.
+	//
+	// Case (a) occurs when the instrument and the exporter
+	// require memory to work correctly, either because the
+	// instrument reports a PrecomputedSum to a DeltaExporter or
+	// the reverse, a non-PrecomputedSum instrument with a
+	// CumulativeExporter.  This logic is encapsulated in
+	// ExportKind.MemoryRequired(MetricKind).
+	//
+	// Case (b) occurs when the variable `sameCollection` is true,
+	// indicating that the stateKey for Accumulation has already
+	// been seen in the same collection.  When this happens, in
+	// implies that multiple Accumulators are being used because
+	// the Accumulator outputs a maximum of one Accumulation per
+	// instrument and label set.
+	//
+	// The following logic distinguishes between asynchronous and
+	// synchronous instruments in order to ensure that the use of
+	// multiple Accumulators does not change instrument semantics.
+	// To maintain the instrument semantics, multiple synchronous
+	// Accumulations should be merged, whereas when multiple
+	// asynchronous Accumulations are processed, the last value
+	// should be kept.
 
-	if !sameRound {
-		// This is the first time through in a new round.
+	if !sameCollection {
+		// This is the first Accumulation we've seen for this
+		// stateKey during this collection.  Just keep a
+		// reference to the Accumulator's Aggregator.
 		value.current = agg
 		return nil
 	}
 	if desc.MetricKind().Asynchronous() {
 		// The last value across multiple accumulators is taken.
+		// Just keep a reference to the Accumulator's Aggregator.
 		value.current = agg
 		return nil
 	}
+
+	// The above two cases are keeping a reference to the
+	// Accumulator's Aggregator.  The remaining cases address
+	// synchronous instruments, which always merge multiple
+	// Accumulations using `value.delta` for temporary storage.
+
 	if value.delta == nil {
-		// Merging values: may need to allocate the delta aggregator.
+		// The temporary `value.delta` may have been allocated
+		// already, either in a prior pass through this block of
+		// code or in the `!ok` branch above.  It would be
+		// allocated in the `!ok` branch if this is stateful
+		// PrecomputedSum instrument (in which case the exporter
+		// is requesting a delta so we allocate it up front),
+		// and it would be allocated in this block when multiple
+		// accumulators are used and the first condition is not
+		// met.
 		b.AggregationSelector.AggregatorFor(desc, &value.delta)
 	}
 	if value.current != value.delta {
-		// Merging two values, first copy the singleton.
+		// If the current and delta Aggregators it implies that
+		// multiple Accumulators were used.  The first
+		// Accumulation seen for a given stateKey will return in
+		// one of the cases above after assigning `value.current
+		// = agg` (i.e., after taking a reference to the
+		// Accumulator's Aggregator).
+		//
+		// The second time through this branch copies the
+		// Accumulator's Aggregator into `value.delta` and sets
+		// `value.current` appropriately to avoid this branch if
+		// a third Accumulator is used.
 		err := value.current.SynchronizedCopy(value.delta, desc)
 		if err != nil {
 			return err
 		}
 		value.current = value.delta
 	}
+	// The two statements above ensures that `value.current` refers
+	// to `value.delta` and not to an Accumulator's Aggregator.  Now
+	// combine this Accumulation with the prior Accumulation.
 	return value.delta.Merge(agg, desc)
 }
 
@@ -195,8 +249,8 @@ func (b *Integrator) StartCollection() {
 	b.startedCollection++
 }
 
-// FinishCollection signals to the Integrator that a complete round of
-// collection is finished and that ForEach will be called to access
+// FinishCollection signals to the Integrator that a complete
+// collection has finished and that ForEach will be called to access
 // the CheckpointSet.
 func (b *Integrator) FinishCollection() error {
 	b.intervalEnd = time.Now()
@@ -215,9 +269,11 @@ func (b *Integrator) FinishCollection() error {
 			continue
 		}
 
+		// Update Aggregator state to support exporting either a
+		// delta or a cumulative aggregation.
 		var err error
 		if mkind.PrecomputedSum() {
-			// We need to compute a delta.  We have the prior cumulative value.
+			// delta_value = current_cumulative_value - previous_cumulative_value
 			if subt, ok := value.current.(export.Subtractor); ok {
 				err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
 
@@ -228,6 +284,7 @@ func (b *Integrator) FinishCollection() error {
 				err = aggregation.ErrNoSubtraction
 			}
 		} else {
+			// cumulative_value = previous_cumulative_value + current_delta_value
 			err = value.cumulative.Merge(value.current, key.descriptor)
 		}
 		if err != nil {
