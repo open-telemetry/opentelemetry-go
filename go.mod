@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/DataDog/sketches-go v0.0.0-20190923095040-43f19ad77ff7
-	github.com/benbjohnson/clock v1.0.0
+	github.com/benbjohnson/clock v1.0.3
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.5.0
