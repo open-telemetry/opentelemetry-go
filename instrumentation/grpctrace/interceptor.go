@@ -24,11 +24,11 @@ import (
 
 	"go.opentelemetry.io/otel/api/standard"
 
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/kv"
