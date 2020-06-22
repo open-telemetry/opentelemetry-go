@@ -200,7 +200,7 @@ web-browser to view the generated traces.
 Unfortunately, the Prometheus operator doesn't provide a convenient
 out-of-the-box ingress route for us to use, so we'll use port-forwarding
 instead. Note: this is a quick-and-dirty solution for the sake of example.
-You *will* be attacked by shady people if you do this in production
+You *will* be attacked by shady people if you do this in production!
 
 ```bash
 kubectl --namespace monitoring port-forward svc/prometheus-k8s 9090
