@@ -13,7 +13,6 @@ require (
 	go.opentelemetry.io/otel v0.6.0
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/grpc v1.29.1
-	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
 go 1.13
