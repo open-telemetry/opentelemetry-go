@@ -350,7 +350,7 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 	return kind&has != 0
 }
 
-// ExportKindFor returns a constant, as an implementation of ExportKindFor.
+// ExportKindFor returns a constant, as an implementation of ExportKindSelector.
 func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
 	return kind
 }
