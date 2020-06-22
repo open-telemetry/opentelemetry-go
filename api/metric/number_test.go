@@ -172,44 +172,44 @@ func TestNumberAsInterface(t *testing.T) {
 	require.Equal(t, uint64(100), (&u64).AsInterface(Uint64NumberKind).(uint64))
 }
 
-func TestNumberChangeSign(t *testing.T) {
+func TestNumberSignChange(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		posInt := NewInt64Number(10)
 		negInt := NewInt64Number(-10)
 
-		require.Equal(t, posInt, ChangeSign(Int64NumberKind, negInt))
-		require.Equal(t, negInt, ChangeSign(Int64NumberKind, posInt))
+		require.Equal(t, posInt, NewNumberSignChange(Int64NumberKind, negInt))
+		require.Equal(t, negInt, NewNumberSignChange(Int64NumberKind, posInt))
 	})
 
 	t.Run("Float64", func(t *testing.T) {
 		posFloat := NewFloat64Number(10)
 		negFloat := NewFloat64Number(-10)
 
-		require.Equal(t, posFloat, ChangeSign(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, ChangeSign(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
 	})
 
 	t.Run("Float64Zero", func(t *testing.T) {
 		posFloat := NewFloat64Number(0)
 		negFloat := NewFloat64Number(math.Copysign(0, -1))
 
-		require.Equal(t, posFloat, ChangeSign(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, ChangeSign(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
 	})
 
 	t.Run("Float64Inf", func(t *testing.T) {
 		posFloat := NewFloat64Number(math.Inf(+1))
 		negFloat := NewFloat64Number(math.Inf(-1))
 
-		require.Equal(t, posFloat, ChangeSign(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, ChangeSign(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
 	})
 
 	t.Run("Float64NaN", func(t *testing.T) {
 		posFloat := NewFloat64Number(math.NaN())
 		negFloat := NewFloat64Number(math.Copysign(math.NaN(), -1))
 
-		require.Equal(t, posFloat, ChangeSign(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, ChangeSign(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
 	})
 }

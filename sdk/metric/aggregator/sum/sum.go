@@ -96,6 +96,6 @@ func (c *Aggregator) Subtract(opAgg, resAgg export.Aggregator, descriptor *metri
 	}
 
 	res.value = c.value
-	res.value.AddNumber(descriptor.NumberKind(), metric.ChangeSign(descriptor.NumberKind(), op.value))
+	res.value.AddNumber(descriptor.NumberKind(), metric.NewNumberSignChange(descriptor.NumberKind(), op.value))
 	return nil
 }

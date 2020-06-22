@@ -107,6 +107,20 @@ func NewUint64Number(u uint64) Number {
 	return NewNumberFromRaw(internal.Uint64ToRaw(u))
 }
 
+// NewNumberSignChange returns a number with the same magnitude and
+// the opposite sign.  `kind` must describe the kind of number in `nn`.
+//
+// Does not change Uint64NumberKind values.
+func NewNumberSignChange(kind NumberKind, nn Number) Number {
+	switch kind {
+	case Int64NumberKind:
+		return NewInt64Number(-nn.AsInt64())
+	case Float64NumberKind:
+		return NewFloat64Number(-nn.AsFloat64())
+	}
+	return nn
+}
+
 // - as x
 
 // AsNumber gets the Number.
@@ -645,16 +659,4 @@ func (n *Number) compareWithZero(kind NumberKind) int {
 		// you get what you deserve
 		return 0
 	}
-}
-
-// - sign change
-
-func ChangeSign(kind NumberKind, nn Number) Number {
-	switch kind {
-	case Int64NumberKind:
-		return NewInt64Number(-nn.AsInt64())
-	case Float64NumberKind:
-		return NewFloat64Number(-nn.AsFloat64())
-	}
-	return nn
 }
