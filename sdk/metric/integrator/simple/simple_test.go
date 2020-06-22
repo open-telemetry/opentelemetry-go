@@ -16,6 +16,7 @@ package simple_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -253,6 +254,17 @@ func testSynchronousIntegration(
 	}
 }
 
+type bogusExporter struct{}
+
+func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return 1000000
+}
+
+func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
+	panic("Not called")
+	return nil
+}
+
 func TestSimpleInconsistent(t *testing.T) {
 	// Test double-start
 	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
@@ -285,6 +297,19 @@ func TestSimpleInconsistent(t *testing.T) {
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
 	require.Equal(t, simple.ErrInconsistentState, b.Process(accum))
+
+	// Test invalid kind:
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b.StartCollection()
+	require.NoError(t, b.Process(accum))
+	require.NoError(t, b.FinishCollection())
+
+	err := b.ForEach(
+		bogusExporter{},
+		func(export.Record) error { return nil },
+	)
+	require.True(t, errors.Is(err, simple.ErrInvalidExporterKind))
+
 }
 
 func TestSimpleTimestamps(t *testing.T) {

@@ -86,6 +86,7 @@ type (
 var _ export.Integrator = &Integrator{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
+var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 
 // New returns a basic Integrator using the provided
 // AggregationSelector to select Aggregators.  The ExportKindSelector
@@ -249,7 +250,8 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		switch exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind()) {
+		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
+		switch ekind {
 		case export.PassThroughExporter:
 			// No state is required, pass through the checkpointed value.
 			agg = value.current.Aggregation()
@@ -279,6 +281,9 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 				agg = value.current.Aggregation()
 			}
 			start = b.intervalStart
+
+		default:
+			return fmt.Errorf("%v: %w", ekind, ErrInvalidExporterKind)
 		}
 
 		if err := f(export.NewRecord(
