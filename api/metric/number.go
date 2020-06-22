@@ -33,6 +33,7 @@ const (
 	// Float64NumberKind means that the Number stores float64.
 	Float64NumberKind
 	// Uint64NumberKind means that the Number stores uint64.
+	// TODO: This can be removed, it's not used.
 	Uint64NumberKind
 )
 

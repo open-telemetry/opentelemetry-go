@@ -165,8 +165,9 @@ func (e *Exporter) Controller() *pull.Controller {
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	// NOTE: Summary values should use Delta aggregation, then be
 	// combined into a sliding window, see the TODO below.
-	// TODO: Prometheus also supports a "GaugeDelta" exposition format,
-	// which is expressed as a delta histogram.
+	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
+	// which is expressed as a delta histogram.  Need to understand if this
+	// should be a default behavior for ValueRecorder/ValueObserver.
 	return export.CumulativeExporter
 }
 
