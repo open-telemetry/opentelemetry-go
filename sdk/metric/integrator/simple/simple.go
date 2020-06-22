@@ -236,7 +236,7 @@ func (b *Integrator) FinishCollection() error {
 	return nil
 }
 
-// ForEach iterates through the CheckpointSet, for passing an
+// ForEach iterates through the CheckpointSet, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
