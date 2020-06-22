@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/standard"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
