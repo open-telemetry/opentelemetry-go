@@ -741,7 +741,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}
-		require.NoError(t, agg.SynchronizedCopy(ckpt, &desc))
+		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource

@@ -220,7 +220,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		// Accumulator's Aggregator into `value.delta` and sets
 		// `value.current` appropriately to avoid this branch if
 		// a third Accumulator is used.
-		err := value.current.SynchronizedCopy(value.delta, desc)
+		err := value.current.SynchronizedMove(value.delta, desc)
 		if err != nil {
 			return err
 		}
@@ -278,7 +278,7 @@ func (b *Integrator) FinishCollection() error {
 				err = subt.Subtract(value.cumulative, value.delta, key.descriptor)
 
 				if err == nil {
-					err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
+					err = value.current.SynchronizedMove(value.cumulative, key.descriptor)
 				}
 			} else {
 				err = aggregation.ErrNoSubtraction
