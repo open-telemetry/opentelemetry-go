@@ -34,7 +34,7 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
