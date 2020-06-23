@@ -77,7 +77,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	err := agg.SynchronizedCopy(ckpt, descriptor)
+	err := agg.SynchronizedMove(ckpt, descriptor)
 	require.NoError(t, err)
 
 	checkZero(t, agg, descriptor)
@@ -154,8 +154,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
-	require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
+	require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
+	require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg2, descriptor)
@@ -232,7 +232,7 @@ func TestArrayErrors(t *testing.T) {
 		if profile.NumberKind == metric.Float64NumberKind {
 			test.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
 		}
-		require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
 		count, err := ckpt.Count()
 		require.Equal(t, int64(1), count, "NaN value was not counted")
@@ -297,7 +297,7 @@ func TestArrayFloat64(t *testing.T) {
 		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
-	require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
 	all.Sort()
 

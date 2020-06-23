@@ -62,8 +62,8 @@ type result struct {
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
-	records, errc := source(ctx, cps)
+func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+	records, errc := source(ctx, exportSelector, cps)
 
 	// Start a fixed number of goroutines to transform records.
 	transformed := make(chan result)
@@ -96,14 +96,14 @@ func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uin
 // source starts a goroutine that sends each one of the Records yielded by
 // the CheckpointSet on the returned chan. Any error encoutered will be sent
 // on the returned error chan after seeding is complete.
-func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
+func source(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
 	out := make(chan export.Record)
 	// Seed records into process.
 	go func() {
 		defer close(out)
 		// No select is needed since errc is buffered.
-		errc <- cps.ForEach(func(r export.Record) error {
+		errc <- cps.ForEach(exportSelector, func(r export.Record) error {
 			select {
 			case <-ctx.Done():
 				return ErrContextCanceled

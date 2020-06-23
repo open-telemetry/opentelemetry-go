@@ -90,8 +90,8 @@ func (g *Aggregator) LastValue() (metric.Number, time.Time, error) {
 	return gd.value.AsNumber(), gd.timestamp, nil
 }
 
-// SynchronizedCopy atomically saves the current value.
-func (g *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
+// SynchronizedMove atomically saves the current value.
+func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(g, oa)

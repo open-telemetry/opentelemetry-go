@@ -23,7 +23,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -32,7 +32,7 @@ import (
 const DefaultCachePeriod time.Duration = 10 * time.Second
 
 // Controller manages access to a *sdk.Accumulator and
-// *simple.Integrator.  Use Provider() for obtaining Meters.  Use
+// *basic.Integrator.  Use Provider() for obtaining Meters.  Use
 // Foreach() for accessing current records.
 type Controller struct {
 	accumulator *sdk.Accumulator
@@ -45,7 +45,7 @@ type Controller struct {
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
-func New(selector export.AggregationSelector, options ...Option) *Controller {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
 		CachePeriod: DefaultCachePeriod,
@@ -53,7 +53,7 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(selector, config.Stateful)
+	integrator := integrator.New(aselector, eselector)
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
@@ -83,11 +83,11 @@ func (c *Controller) Provider() metric.Provider {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(f func(export.Record) error) error {
+func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
 
-	return c.checkpoint.ForEach(f)
+	return c.checkpoint.ForEach(ks, f)
 }
 
 // Collect requests a collection.  The collection will be skipped if

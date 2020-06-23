@@ -47,7 +47,7 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 
 	startTime := time.Now()
 	for time.Since(startTime) < time.Second {
-		_ = mmsc.SynchronizedCopy(ckpt, &desc)
+		_ = mmsc.SynchronizedMove(ckpt, &desc)
 
 		s, _ := ckpt.Sum()
 		c, _ := ckpt.Count()

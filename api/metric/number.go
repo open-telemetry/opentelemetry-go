@@ -33,6 +33,7 @@ const (
 	// Float64NumberKind means that the Number stores float64.
 	Float64NumberKind
 	// Uint64NumberKind means that the Number stores uint64.
+	// TODO: This can be removed, it's not used.
 	Uint64NumberKind
 )
 
@@ -105,6 +106,20 @@ func NewFloat64Number(f float64) Number {
 // NewInt64Number creates an integral Number.
 func NewUint64Number(u uint64) Number {
 	return NewNumberFromRaw(internal.Uint64ToRaw(u))
+}
+
+// NewNumberSignChange returns a number with the same magnitude and
+// the opposite sign.  `kind` must describe the kind of number in `nn`.
+//
+// Does not change Uint64NumberKind values.
+func NewNumberSignChange(kind NumberKind, nn Number) Number {
+	switch kind {
+	case Int64NumberKind:
+		return NewInt64Number(-nn.AsInt64())
+	case Float64NumberKind:
+		return NewFloat64Number(-nn.AsFloat64())
+	}
+	return nn
 }
 
 // - as x

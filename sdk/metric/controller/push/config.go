@@ -26,11 +26,6 @@ type Config struct {
 	// created by the Controller.
 	Resource *resource.Resource
 
-	// Stateful causes the controller to maintain state across
-	// collection events, so that records in the exported
-	// checkpoint set are cumulative.
-	Stateful bool
-
 	// Period is the interval between calls to Collect a checkpoint.
 	Period time.Duration
 
@@ -55,17 +50,6 @@ type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
-}
-
-// WithStateful sets the Stateful configuration option of a Config.
-func WithStateful(stateful bool) Option {
-	return statefulOption(stateful)
-}
-
-type statefulOption bool
-
-func (o statefulOption) Apply(config *Config) {
-	config.Stateful = bool(o)
 }
 
 // WithPeriod sets the Period configuration option of a Config.
