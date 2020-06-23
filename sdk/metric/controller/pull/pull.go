@@ -45,7 +45,7 @@ type Controller struct {
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
-func New(aselector export.AggregationSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
 		CachePeriod: DefaultCachePeriod,

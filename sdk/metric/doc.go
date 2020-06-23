@@ -74,13 +74,14 @@ export pipeline, containing the name, units, description, metric kind,
 number kind (int64 or float64).  A Descriptor accompanies metric data
 as it passes through the export pipeline.
 
-The AggregationSelector interface supports choosing the method of
-aggregation to apply to a particular instrument.  Given the Descriptor,
-this AggregatorFor method returns an implementation of Aggregator.  If this
+The AggregatorSelector interface supports choosing the method of
+aggregation to apply to a particular instrument, by delegating the
+construction of an Aggregator to this interface.  Given the Descriptor,
+the AggregatorFor method returns an implementation of Aggregator.  If this
 interface returns nil, the metric will be disabled.  The aggregator should
 be matched to the capabilities of the exporter.  Selecting the aggregator
-for sum-only instruments is relatively straightforward, but many options
-are available for aggregating distributions from ValueRecorder instruments.
+for Adding instruments is relatively straightforward, but many options
+are available for aggregating distributions from Grouping instruments.
 
 Aggregator is an interface which implements a concrete strategy for
 aggregating metric updates.  Several Aggregator implementations are
@@ -94,7 +95,7 @@ context, that combines state from two aggregators into one.  Each SDK
 record has an associated aggregator.
 
 Integrator is an interface which sits between the SDK and an exporter.
-The Integrator embeds an AggregationSelector, used by the SDK to assign
+The Integrator embeds an AggregatorSelector, used by the SDK to assign
 new Aggregators.  The Integrator supports a Process() API for submitting
 checkpointed aggregators to the integrator, and a CheckpointSet() API
 for producing a complete checkpoint for the exporter.  Two default

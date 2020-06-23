@@ -171,7 +171,7 @@ func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 	recorder := a.getRecorder(labels)
 	if recorder == nil {
 		// The instrument is disabled according to the
-		// AggregationSelector.
+		// AggregatorSelector.
 		return
 	}
 	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
@@ -509,7 +509,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measur
 // RecordOne implements api.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	if r.current == nil {
-		// The instrument is disabled according to the AggregationSelector.
+		// The instrument is disabled according to the AggregatorSelector.
 		return
 	}
 	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {

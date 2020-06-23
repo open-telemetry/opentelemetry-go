@@ -266,19 +266,19 @@ func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
 
 func TestBasicInconsistent(t *testing.T) {
 	// Test double-start
-	b := basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b := basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	require.Equal(
@@ -291,14 +291,14 @@ func TestBasicInconsistent(t *testing.T) {
 	)
 
 	// Test no start
-	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
-	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 	b.StartCollection()
 	require.NoError(t, b.Process(accum))
 	require.NoError(t, b.FinishCollection())
@@ -313,7 +313,7 @@ func TestBasicInconsistent(t *testing.T) {
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
-	b := basic.New(test.AggregationSelector(), export.PassThroughExporter)
+	b := basic.New(test.AggregatorSelector(), export.PassThroughExporter)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
