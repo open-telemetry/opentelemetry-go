@@ -28,6 +28,14 @@ const (
 	WriteErrorKey = kv.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
 )
 
+// Server HTTP metrics
+const (
+	RequestCount  = "request_count"  // request count total
+	RequestBytes  = "request_bytes"  // request bytes total
+	ResponseBytes = "response_bytes" // response bytes
+	ServerLatency = "server_latency" // End to end latency
+)
+
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool

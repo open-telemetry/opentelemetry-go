@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mockmeter "go.opentelemetry.io/otel/internal/metric"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
@@ -28,6 +29,7 @@ func TestHandlerBasics(t *testing.T) {
 
 	var id uint64
 	tracer := mocktrace.MockTracer{StartSpanID: &id}
+	_, meter := mockmeter.NewMeter()
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +37,9 @@ func TestHandlerBasics(t *testing.T) {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithTracer(&tracer))
+		WithTracer(&tracer),
+		WithMeter(meter),
+	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
 	if err != nil {
