@@ -46,7 +46,7 @@ var _ aggregation.Points = &Aggregator{}
 
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
-// for Update() and SynchronizedCopy() concurrency.
+// for Update() and SynchronizedMove() concurrency.
 func New(cnt int) []Aggregator {
 	return make([]Aggregator, cnt)
 }
@@ -92,9 +92,9 @@ func (c *Aggregator) Points() ([]metric.Number, error) {
 	return c.points, nil
 }
 
-// SynchronizedCopy saves the current state to oa and resets the current state to
+// SynchronizedMove saves the current state to oa and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -114,7 +114,7 @@ func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descrip
 }
 
 // Update adds the recorded measurement to the current data set.
-// Update takes a lock to prevent concurrent Update() and SynchronizedCopy()
+// Update takes a lock to prevent concurrent Update() and SynchronizedMove()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()

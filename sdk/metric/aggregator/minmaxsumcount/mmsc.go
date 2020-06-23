@@ -48,7 +48,7 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 // count.  It does not compute quantile information other than Min and
 // Max.
 //
-// This type uses a mutex for Update() and SynchronizedCopy() concurrency.
+// This type uses a mutex for Update() and SynchronizedMove() concurrency.
 func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
 	aggs := make([]Aggregator, cnt)
@@ -101,9 +101,9 @@ func (c *Aggregator) Max() (metric.Number, error) {
 	return c.max, nil
 }
 
-// SynchronizedCopy saves the current state into oa and resets the current state to
+// SynchronizedMove saves the current state into oa and resets the current state to
 // the empty set.
-func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

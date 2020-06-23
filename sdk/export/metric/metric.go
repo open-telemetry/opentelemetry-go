@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=ExportKind
+
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
@@ -25,8 +27,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Integrator is responsible for deciding which kind of aggregation to
-// use (via AggregationSelector), gathering exported results from the
+// Processor is responsible for deciding which kind of aggregation to
+// use (via AggregatorSelector), gathering exported results from the
 // SDK during collection, and deciding over which dimensions to group
 // the exported data.
 //
@@ -34,16 +36,16 @@ import (
 // the sole responsibility of determining which Aggregator to use for
 // each record.
 //
-// The embedded AggregationSelector interface is called (concurrently)
+// The embedded AggregatorSelector interface is called (concurrently)
 // in instrumentation context to select the appropriate Aggregator for
 // an instrument.
 //
 // The `Process` method is called during collection in a
 // single-threaded context from the SDK, after the aggregator is
-// checkpointed, allowing the integrator to build the set of metrics
+// checkpointed, allowing the processor to build the set of metrics
 // currently being exported.
-type Integrator interface {
-	// AggregationSelector is responsible for selecting the
+type Processor interface {
+	// AggregatorSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
 	//
 	// This may be a static decision based on fields of the
@@ -60,7 +62,7 @@ type Integrator interface {
 	// Note that the SDK only calls AggregatorFor when new records
 	// require an Aggregator. This does not provide a way to
 	// disable metrics with active records.
-	AggregationSelector
+	AggregatorSelector
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Accumulation (a Descriptor, the corresponding
@@ -72,9 +74,9 @@ type Integrator interface {
 	Process(Accumulation) error
 }
 
-// AggregationSelector supports selecting the kind of Aggregator to
+// AggregatorSelector supports selecting the kind of Aggregator to
 // use at runtime for a specific metric instrument.
-type AggregationSelector interface {
+type AggregatorSelector interface {
 	// AggregatorFor allocates a variable number of aggregators of
 	// a kind suitable for the requested export.  This method
 	// initializes a `...*Aggregator`, to support making a single
@@ -125,11 +127,12 @@ type Aggregator interface {
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
 	Update(context.Context, metric.Number, *metric.Descriptor) error
 
-	// SynchronizedCopy is called during collection to finish one
+	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the
-	// currently-updating state into the argument Aggregator.
+	// currently-updating state into the argument Aggregator AND
+	// resetting the current value to the zero state.
 	//
-	// SynchronizedCopy() is called concurrently with Update().  These
+	// SynchronizedMove() is called concurrently with Update().  These
 	// two methods must be synchronized with respect to each
 	// other, for correctness.
 	//
@@ -143,15 +146,25 @@ type Aggregator interface {
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	SynchronizedCopy(destination Aggregator, descriptor *metric.Descriptor) error
+	SynchronizedMove(destination Aggregator, descriptor *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
-	// with respect to Update or SynchronizedCopy.
+	// with respect to Update or SynchronizedMove.
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
 	Merge(Aggregator, *metric.Descriptor) error
+}
+
+// Subtractor is an optional interface implemented by some
+// Aggregators.  An Aggregator must support `Subtract()` in order to
+// be configured for a Precomputed-Sum instrument (SumObserver,
+// UpDownSumObserver) using a DeltaExporter.
+type Subtractor interface {
+	// Subtract subtracts the `operand` from this Aggregator and
+	// outputs the value in `result`.
+	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -164,13 +177,28 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The CheckpointSet interface refers to the Integrator that just
+	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+
+	// ExportKindSelector is an interface used by the Processor
+	// in deciding whether to compute Delta or Cumulative
+	// Aggregations when passing Records to this Exporter.
+	ExportKindSelector
+}
+
+// ExportKindSelector is a sub-interface of Exporter used to indicate
+// whether the Processor should compute Delta or Cumulative
+// Aggregations.
+type ExportKindSelector interface {
+	// ExportKindFor should return the correct ExportKind that
+	// should be used when exporting data for the given metric
+	// instrument and Aggregator kind.
+	ExportKindFor(*metric.Descriptor, aggregation.Kind) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
-// aggregated metrics from the Integrator.  This is passed to the
+// aggregated metrics from the Processor.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
 type CheckpointSet interface {
@@ -178,17 +206,22 @@ type CheckpointSet interface {
 	// metrics that were updated during the last collection
 	// period. Each aggregated checkpoint returned by the
 	// function parameter may return an error.
+	//
+	// The ExportKindSelector argument is used to determine
+	// whether the Record is computed using Delta or Cumulative
+	// aggregation.
+	//
 	// ForEach tolerates ErrNoData silently, as this is
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(func(Record) error) error
+	ForEach(ExportKindSelector, func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
-	// stateful integrator) while it is locked.
+	// stateful processor) while it is locked.
 	//
-	// The Integrator attached to the Accumulator MUST be called
+	// The Processor attached to the Accumulator MUST be called
 	// with the lock held.
 	sync.Locker
 
@@ -199,7 +232,7 @@ type CheckpointSet interface {
 }
 
 // Metadata contains the common elements for exported metric data that
-// are shared by the Accumulator->Integrator and Integrator->Exporter
+// are shared by the Accumulator->Processor and Processor->Exporter
 // steps.
 type Metadata struct {
 	descriptor *metric.Descriptor
@@ -208,14 +241,14 @@ type Metadata struct {
 }
 
 // Accumulation contains the exported data for a single metric instrument
-// and label set, as prepared by an Accumulator for the Integrator.
+// and label set, as prepared by an Accumulator for the Processor.
 type Accumulation struct {
 	Metadata
 	aggregator Aggregator
 }
 
 // Record contains the exported data for a single metric instrument
-// and label set, as prepared by the Integrator for the Exporter.
+// and label set, as prepared by the Processor for the Exporter.
 // This includes the effective start and end time for the aggregation.
 type Record struct {
 	Metadata
@@ -241,7 +274,7 @@ func (m Metadata) Resource() *resource.Resource {
 }
 
 // NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Integrators. The Descriptor, Labels, Resource,
+// Accumulations to send to Processors. The Descriptor, Labels, Resource,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
 func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
@@ -261,7 +294,7 @@ func (r Accumulation) Aggregator() Aggregator {
 	return r.aggregator
 }
 
-// NewRecord allows Integrator implementations to construct export
+// NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
 func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
@@ -291,4 +324,53 @@ func (r Record) StartTime() time.Time {
 // EndTime is the end time of the interval covered by this aggregation.
 func (r Record) EndTime() time.Time {
 	return r.end
+}
+
+// ExportKind indicates the kind of data exported by an exporter.
+// These bits may be OR-d together when multiple exporters are in use.
+type ExportKind int
+
+const (
+	// CumulativeExporter indicates that the Exporter expects a
+	// Cumulative Aggregation.
+	CumulativeExporter ExportKind = 1 // e.g., Prometheus
+
+	// DeltaExporter indicates that the Exporter expects a
+	// Delta Aggregation.
+	DeltaExporter ExportKind = 2 // e.g., StatsD
+
+	// PassThroughExporter indicates that the Exporter expects
+	// either a Cumulative or a Delta Aggregation, whichever does
+	// not require maintaining state for the given instrument.
+	PassThroughExporter ExportKind = 4 // e.g., OTLP
+)
+
+// Includes tests whether `kind` includes a specific kind of
+// exporter.
+func (kind ExportKind) Includes(has ExportKind) bool {
+	return kind&has != 0
+}
+
+// ExportKindFor returns a constant, as an implementation of ExportKindSelector.
+func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
+	return kind
+}
+
+// MemoryRequired returns whether an exporter of this kind requires
+// memory to export correctly.
+func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
+	switch mkind {
+	case metric.ValueRecorderKind, metric.ValueObserverKind,
+		metric.CounterKind, metric.UpDownCounterKind:
+		// Delta-oriented instruments:
+		return kind.Includes(CumulativeExporter)
+
+	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+		// Cumulative-oriented instruments:
+		return kind.Includes(DeltaExporter)
+	}
+	// Something unexpected is happening--we could panic.  This
+	// will become an error when the exporter tries to access a
+	// checkpoint, presumably, so let it be.
+	return false
 }

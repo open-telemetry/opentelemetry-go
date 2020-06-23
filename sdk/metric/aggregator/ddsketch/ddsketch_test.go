@@ -80,7 +80,7 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	err := agg.SynchronizedCopy(ckpt, descriptor)
+	err := agg.SynchronizedMove(ckpt, descriptor)
 	require.NoError(t, err)
 
 	checkZero(t, agg, descriptor)
@@ -156,8 +156,8 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
-	require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
+	require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
+	require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg1, descriptor)

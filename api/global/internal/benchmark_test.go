@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -34,7 +34,7 @@ var Must = metric.Must
 // benchFixture is copied from sdk/metric/benchmark_test.go.
 // TODO refactor to share this code.
 type benchFixture struct {
-	export.AggregationSelector
+	export.AggregatorSelector
 	accumulator *sdk.Accumulator
 	meter       metric.Meter
 	B           *testing.B
@@ -45,8 +45,8 @@ var _ metric.Provider = &benchFixture{}
 func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
-		B:                   b,
-		AggregationSelector: test.AggregationSelector(),
+		B:                  b,
+		AggregatorSelector: test.AggregatorSelector(),
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)

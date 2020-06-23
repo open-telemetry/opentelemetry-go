@@ -25,7 +25,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
 // DefaultPushPeriod is the default time interval between pushes.
@@ -36,7 +36,7 @@ type Controller struct {
 	lock        sync.Mutex
 	accumulator *sdk.Accumulator
 	provider    *registry.Provider
-	integrator  *simple.Integrator
+	processor   *basic.Processor
 	exporter    export.Exporter
 	wg          sync.WaitGroup
 	ch          chan struct{}
@@ -49,7 +49,7 @@ type Controller struct {
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provided exporter and options to configure an SDK with
 // periodic collection.
-func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
+func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		Period: DefaultPushPeriod,
 	}
@@ -60,15 +60,15 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 		c.Timeout = c.Period
 	}
 
-	integrator := simple.New(selector, c.Stateful)
+	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
-		integrator,
+		processor,
 		sdk.WithResource(c.Resource),
 	)
 	return &Controller{
 		provider:    registry.NewProvider(impl),
 		accumulator: impl,
-		integrator:  integrator,
+		processor:   processor,
 		exporter:    exporter,
 		ch:          make(chan struct{}),
 		period:      c.Period,
@@ -139,16 +139,16 @@ func (c *Controller) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+	c.processor.Lock()
+	defer c.processor.Unlock()
 
-	c.integrator.StartCollection()
+	c.processor.StartCollection()
 	c.accumulator.Collect(ctx)
-	if err := c.integrator.FinishCollection(); err != nil {
+	if err := c.processor.FinishCollection(); err != nil {
 		global.Handle(err)
 	}
 
-	if err := c.exporter.Export(ctx, c.integrator.CheckpointSet()); err != nil {
+	if err := c.exporter.Export(ctx, c.processor.CheckpointSet()); err != nil {
 		global.Handle(err)
 	}
 }

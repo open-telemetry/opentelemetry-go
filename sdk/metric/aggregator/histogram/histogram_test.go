@@ -121,7 +121,7 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
 	checkZero(t, agg, descriptor)
 
@@ -184,8 +184,8 @@ func TestHistogramMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
-		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
+		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
 		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
@@ -223,7 +223,7 @@ func TestHistogramNotSet(t *testing.T) {
 
 		agg, ckpt := new2(descriptor)
 
-		err := agg.SynchronizedCopy(ckpt, descriptor)
+		err := agg.SynchronizedMove(ckpt, descriptor)
 		require.NoError(t, err)
 
 		checkZero(t, agg, descriptor)
