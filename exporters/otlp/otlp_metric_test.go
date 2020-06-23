@@ -814,7 +814,19 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				t.Errorf("missing metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
 				continue
 			}
-			assert.ElementsMatch(t, ilm.GetMetrics(), g, "metrics did not match for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
+			if !assert.Len(t, g, len(ilm.GetMetrics())) {
+				continue
+			}
+			for i, expected := range ilm.GetMetrics() {
+				assert.Equal(t, expected.GetMetricDescriptor(), g[i].GetMetricDescriptor())
+				// Compare each list directly because there is no order
+				// guarantee with the concurrent processing design of the exporter
+				// and ElementsMatch does not apply to contained slices.
+				assert.ElementsMatch(t, expected.GetInt64DataPoints(), g[i].GetInt64DataPoints())
+				assert.ElementsMatch(t, expected.GetDoubleDataPoints(), g[i].GetDoubleDataPoints())
+				assert.ElementsMatch(t, expected.GetHistogramDataPoints(), g[i].GetHistogramDataPoints())
+				assert.ElementsMatch(t, expected.GetSummaryDataPoints(), g[i].GetSummaryDataPoints())
+			}
 		}
 	}
 	for k := range got {
