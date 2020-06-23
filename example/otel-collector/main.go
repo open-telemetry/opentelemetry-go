@@ -90,7 +90,7 @@ func main() {
 	// metric observer or recorder.
 	commonLabels := []kv.KeyValue{
 		kv.String("labelA", "chocolate"),
-		kv.String("labelB", "rasberry"),
+		kv.String("labelB", "raspberry"),
 		kv.String("labelC", "vanilla"),
 	}
 
