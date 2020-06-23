@@ -1,25 +1,70 @@
 # OpenTelemetry Collector Traces Example
 
-This example illustrates how to export traces from the OpenTelemetry-Go SDK to the OpenTelemetry Collector, and from there to a Jaeger instance.
+This example illustrates how to export trace and metric data from the
+OpenTelemetry-Go SDK to the OpenTelemetry Collector. From there, we bring the
+trace data to Jaeger and the metric data to Prometheus
 The complete flow is:
 
-`Demo App -> OpenTelemetry Collector -> Jaeger`
+```
+                                          -----> Jaeger (trace)
+App + SDK ---> OpenTelemtry Collector ---|
+                                          -----> Prometheus (metrics)
+```
 
 # Prerequisites
+You will need access to a Kubernetes cluster for this demo. We use a local
+instance of [microk8s](https://microk8s.io/), but please feel free to pick
+your favorite. If you do decide to use microk8s, please ensure that dns
+and storage addons are enabled
 
-The demo is built on Kubernetes, and uses a local instance of [microk8s](https://microk8s.io/). You will need access to a cluster in order to deploy the OpenTelemetry Collector and Jaeger components from this demo.
+```bash
+microk8s enable dns storage
+```
 
-For simplicity, the demo application is not part of the k8s cluster, and will access the OpenTelemetry Collector through a NodePort on the cluster. Note that the NodePort opened by this demo is not secured. 
+For simplicity, the demo application is not part of the k8s cluster, and will
+access the OpenTelemetry Collector through a NodePort on the cluster. Note that
+the NodePort opened by this demo is not secured.
 
-Ideally you'd want to either have your application running as part of the kubernetes cluster, or use a secured connection (NodePort/LoadBalancer with TLS or an ingress extension).
+Ideally you'd want to either have your application running as part of the
+kubernetes cluster, or use a secured connection (NodePort/LoadBalancer with TLS
+or an ingress extension).
 
-# Deploying Jaeger and OpenTelemetry Collector
-The first step of this demo is to deploy a Jaeger instance and a Collector to your cluster. All the necessary Kubernetes deployment files are available in this demo, in the [k8s](./k8s) folder.
-There are two ways to create the necessary deployments for this demo: using the [makefile](./Makefile) or manually applying the k8s files.
+# Deploying to Kubernetes
+All the necessary Kubernetes deployment files are available in this demo, in the
+[k8s](./k8s) folder. For your convenience, we assembled a [makefile](./Makefile)
+with deployment commands (see below). For those with subtly different systems,
+you are, of course, welcome to poke inside the Makefile and run the commands
+manually. If you use microk8s and alias `microk8s kubectl` to `kubectl`, the
+Makefile will not recognize the alias, and so the commands will have to be run
+manually.
+
+## Setting up the Prometheus operator
+If you're using microk8s like us, simply do
+```bash
+microk8s enable prometheus
+```
+and you're good to go. Move on to [Using the makefile](#using-the-makefile).
+
+Otherwise, obtain a copy of the Prometheus Operator stack from
+[coreos](https://github.com/coreos/kube-prometheus):
+```bash
+git clone https://github.com/coreos/kube-prometheus.git
+cd kube-prometheus
+kubectl create -f manifests/setup
+
+# wait for namespaces and CRDs to become available, then
+kubectl create -f manifests/
+```
+
+And to tear down the stack when you're finished:
+```bash
+kubectl delete --ignore-not-found=true -f manifests/ -f manifests/setup
+```
 
 ## Using the makefile
+Next, we can deploy our Jaeger instance, Prometheus monitor, and Collector
+using the [makefile](./Makefile).
 
-For using the [makefile](./Makefile), run the following commands in order:
 ```bash
 # Create the namespace
 make namespace-k8s
@@ -30,55 +75,36 @@ make jaeger-operator-k8s
 # After the operator is deployed, create the Jaeger instance
 make jaeger-k8s
 
+# Then the Prometheus instance. Ensure you have enabled a Prometheus operator
+# before executing (see above).
+make prometheus-k8s
+
 # Finally, deploy the OpenTelemetry Collector
 make otel-collector-k8s
 ```
 
-If you want to clean up after this, you can use the `make clean-k8s` to delete all the resources created above. Note that this will not remove the namespace. Because Kubernetes sometimes gets stuck when removing namespaces, please remove this namespace manually after all the resources inside have been deleted.
+If you want to clean up after this, you can use the `make clean-k8s` to delete
+all the resources created above. Note that this will not remove the namespace.
+Because Kubernetes sometimes gets stuck when removing namespaces, please remove
+this namespace manually after all the resources inside have been deleted,
+for example with
 
-## Manual deployment
-
-For manual deployments, follow the same steps as above, but instead run the `kubectl apply` yourself.
-
-First, the namespace needs to be created:
 ```bash
-k apply -f k8s/namespace.yaml
+kubectl delete namespaces observability
 ```
-
-Jaeger is then deployed via the operator, and the demo follows [these steps](https://github.com/jaegertracing/jaeger-operator#getting-started) to create it:
-```bash
-# Create the jaeger operator and necessary artifacts in ns observability
-kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
-kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/service_account.yaml
-kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role.yaml
-kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role_binding.yaml
-kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/operator.yaml
-
-# Create the cluster role & bindings
-kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role.yaml
-kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role_binding.yaml
-
-# Create the Jaeger instance itself:
-kubectl apply -f k8s/jaeger/jaeger.yaml
-```
-
-The OpenTelemetry Collector is contained in a single k8s file, which can be deployed with one command: 
-```bash 
-k8s apply -f k8s/otel-collector.yaml
-```
-
 
 # Configuring the OpenTelemetry Collector
+Although the above steps should deploy and configure everything, let's spend
+some time on the [configuration](./k8s/otel-collector.yaml) of the Collector.
 
-Although the above steps should deploy and configure both Jaeger and the OpenTelemetry Collector, it might be worth spending some time on the [configuration](./k8s/otel-collector.yaml) of the Collector.
-
-One important part here is that, in order to enable our application to send traces to the OpenTelemetry Collector, we need to first configure the otlp receiver:
+One important part here is that, in order to enable our application to send data
+to the OpenTelemetry Collector, we need to first configure the `otlp` receiver:
 
 ```yml
 ...
   otel-collector-config: |
     receivers:
-      # Make sure to add the otlp receiver. 
+      # Make sure to add the otlp receiver.
       # This will open up the receiver on port 55680.
       otlp:
         endpoint: 0.0.0.0:55680
@@ -86,15 +112,21 @@ One important part here is that, in order to enable our application to send trac
 ...
 ```
 
-This will create the receiver on the Collector side, and open up port `55680` for receiving traces.
+This will create the receiver on the Collector side, and open up port `55680`
+for receiving traces.
 
-The rest of the configuration is quite standard, with the only mention that we need to create the Jaeger exporter:
+The rest of the configuration is quite standard, with the only mention that we
+need to create the Jaeger and Prometheus exporters:
 
 ```yml
 ...
     exporters:
       jaeger_grpc:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
+
+      prometheus:
+           endpoint: 0.0.0.0:8889
+           namespace: "testapp"
 ...
 ```
 
@@ -113,10 +145,10 @@ spec:
     protocol: TCP
     targetPort: 55680
     nodePort: 30080
-  - name: metrics # Default endpoint for metrics.
-    port: 8888
+  - name: metrics # Endpoint for metrics from our app.
+    port: 8889
     protocol: TCP
-    targetPort: 8888
+    targetPort: 8889
   selector:
     component: otel-collector
   type:
@@ -126,55 +158,53 @@ spec:
 This service will bind the `55680` port used to access the otlp receiver to port `30080` on your cluster's node. By doing so, it makes it possible for us to access the Collector by using the static address `<node-ip>:30080`. In case you are running a local cluster, this will be `localhost:30080`. Note that you can also change this to a LoadBalancer or have an ingress extension for accessing the service.
 
 
-# Writing the demo
+# Running the code
+You can find the complete code for this example in the [main.go](./main.go)
+file. To run it, ensure you have a somewhat recent version of Go (preferably >=
+1.13) and do
 
-Having the OpenTelemetry Collector started with the otlp port open for traces, and connected to Jaeger, let's look at the go app that will send traces to the Collector.
-
-First, we need to create an exporter using the [otlp](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc) package:
-```go
-exp, err := otlp.NewExporter(otlp.WithInsecure(),
-        // use the address of the NodePort service created above
-        // <node-ip>:30080
-        otlp.WithAddress("localhost:30080"), 
-        otlp.WithGRPCDialOption(grpc.WithBlock()))
-if err != nil {
-        log.Fatalf("Failed to create the collector exporter: %v", err)
-}
-defer func() {
-        err := exp.Stop()
-        if err != nil {
-                log.Fatalf("Failed to stop the exporter: %v", err)
-        }
-}()
-```
-This will initialize the exporter and connect to the otlp receiver at the address that we set for the [NodePort](#opentelemetry-collector-service): `localhost:30080`.
-
-Feel free to remove the blocking operation, but it might come in handy when testing the connection.
-Also, make sure to close the exporter before the app exits.
-
-The next step is to create the TraceProvider:
-```go
-tp, err := sdktrace.NewProvider(
-        sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-        sdktrace.WithResource(resource.New(
-                // the service name used to display traces in Jaeger
-                kv.Key(conventions.AttributeServiceName).String("test-service"),
-        )),
-        sdktrace.WithSyncer(exp))
-if err != nil {
-        log.Fatalf("error creating trace provider: %v\n", err)
-}
+```bash
+go run main.go
 ```
 
-It is important here to set the [AttributeServiceName](https://github.com/open-telemetry/opentelemetry-collector/blob/master/translator/conventions/opentelemetry.go#L20) from the `github.com/open-telemetry/opentelemetry-collector/translator/conventions` package on the resource level. This will be passed to the OpenTelemetry Collector, and used as ServiceName when exporting the traces to Jaeger.
+The example simulates an application, hard at work, computing for ten seconds
+then finishing.
 
-After this, you can simply start sending traces:
-```go
-tracer := tp.Tracer("test-tracer")
-ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
-defer span.End()
+# Viewing instrumentation data
+Now the exciting part! Let's check out the telemetry data generated by our
+sample application
+
+## Jaeger UI
+First, we need to enable an ingress provider. If you've been using microk8s,
+do
+
+```bash
+microk8s enable ingress
 ```
 
-The traces should now be visible from the Jaeger UI (if you have it installed), or thorough the jaeger-query service, under the name `test-service`.
+Then find out where the Jaeger console is living:
+```bash
+kubectl get ingress --all-namespaces
+```
 
-You can find the complete code for this example in the [main.go](./main.go) file.
+For us, we get the output
+```
+NAMESPACE       NAME           CLASS    HOSTS   ADDRESS     PORTS   AGE
+observability   jaeger-query   <none>   *       127.0.0.1   80      5h40m
+```
+indicating that the Jaeger UI is available at
+[http://localhost:80](http://localhost:80). Navigate there in your favorite
+web-browser to view the generated traces.
+
+## Prometheus
+Unfortunately, the Prometheus operator doesn't provide a convenient
+out-of-the-box ingress route for us to use, so we'll use port-forwarding
+instead. Note: this is a quick-and-dirty solution for the sake of example.
+You *will* be attacked by shady people if you do this in production!
+
+```bash
+kubectl --namespace monitoring port-forward svc/prometheus-k8s 9090
+```
+
+Then navigate to [http://localhost:9090](http://localhost:9090) to view
+the Prometheus dashboard.

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+package basic // import "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 
 import (
 	"errors"
@@ -30,7 +30,7 @@ import (
 type (
 	Integrator struct {
 		export.ExportKindSelector
-		export.AggregationSelector
+		export.AggregatorSelector
 
 		state
 	}
@@ -55,6 +55,25 @@ type (
 		// stateful indicates that a cumulative aggregation is
 		// being maintained, taken from the process start time.
 		stateful bool
+
+		// TODO: as seen in lengthy comments below, both the
+		// `current` and `delta` fields have multiple uses
+		// depending on the specific configuration of
+		// instrument, exporter, and accumulator.  It is
+		// possible to simplify this situation by declaring
+		// explicit fields that are not used with a dual
+		// purpose.  Improve this situation?
+		//
+		// 1. "delta" is used to combine deltas from multiple
+		// accumulators, and it is also used to store the
+		// output of subtraction when computing deltas of
+		// PrecomputedSum instruments.
+		//
+		// 2. "current" either refers to the Aggregator passed
+		// to Process() by a single accumulator (when either
+		// there is just one Accumulator, or the instrument is
+		// Asynchronous), or it refers to "delta", depending
+		// on configuration.
 
 		current    export.Aggregator // refers to single-accumulator checkpoint or delta.
 		delta      export.Aggregator // owned if multi accumulator else nil.
@@ -89,15 +108,15 @@ var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
 var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 
 // New returns a basic Integrator using the provided
-// AggregationSelector to select Aggregators.  The ExportKindSelector
+// AggregatorSelector to select Aggregators.  The ExportKindSelector
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Integrator can prepare to compute Delta or
 // Cumulative Aggregations as needed.
-func New(aselector export.AggregationSelector, eselector export.ExportKindSelector) *Integrator {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector) *Integrator {
 	now := time.Now()
 	return &Integrator{
-		AggregationSelector: aselector,
-		ExportKindSelector:  eselector,
+		AggregatorSelector: aselector,
+		ExportKindSelector: eselector,
 		state: state{
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
@@ -217,7 +236,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		// and it would be allocated in this block when multiple
 		// accumulators are used and the first condition is not
 		// met.
-		b.AggregationSelector.AggregatorFor(desc, &value.delta)
+		b.AggregatorSelector.AggregatorFor(desc, &value.delta)
 	}
 	if value.current != value.delta {
 		// If the current and delta Aggregators are not the same it
@@ -231,7 +250,7 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 		// Accumulator's Aggregator into `value.delta` and sets
 		// `value.current` appropriately to avoid this branch if
 		// a third Accumulator is used.
-		err := value.current.SynchronizedCopy(value.delta, desc)
+		err := value.current.SynchronizedMove(value.delta, desc)
 		if err != nil {
 			return err
 		}
@@ -290,7 +309,7 @@ func (b *Integrator) FinishCollection() error {
 				err = currentSubtractor.Subtract(value.cumulative, value.delta, key.descriptor)
 
 				if err == nil {
-					err = value.current.SynchronizedCopy(value.cumulative, key.descriptor)
+					err = value.current.SynchronizedMove(value.cumulative, key.descriptor)
 				}
 			} else {
 				err = aggregation.ErrNoSubtraction

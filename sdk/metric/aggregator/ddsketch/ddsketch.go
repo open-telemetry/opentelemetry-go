@@ -112,9 +112,9 @@ func (c *Aggregator) toNumber(f float64) metric.Number {
 	return metric.NewInt64Number(int64(f))
 }
 
-// SynchronizedCopy saves the current state into oa and resets the current state to
+// SynchronizedMove saves the current state into oa and resets the current state to
 // a new sketch, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -129,7 +129,7 @@ func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor
 }
 
 // Update adds the recorded measurement to the current data set.
-// Update takes a lock to prevent concurrent Update() and SynchronizedCopy()
+// Update takes a lock to prevent concurrent Update() and SynchronizedMove()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
 	c.lock.Lock()
