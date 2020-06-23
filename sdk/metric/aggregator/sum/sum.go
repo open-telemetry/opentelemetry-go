@@ -57,9 +57,9 @@ func (c *Aggregator) Sum() (metric.Number, error) {
 	return c.value, nil
 }
 
-// SynchronizedCopy atomically saves the current value into oa and resets the
+// SynchronizedMove atomically saves the current value into oa and resets the
 // current sum to zero.
-func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

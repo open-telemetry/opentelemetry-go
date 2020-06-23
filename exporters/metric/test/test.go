@@ -52,8 +52,8 @@ func (NoopAggregator) Update(context.Context, metric.Number, *metric.Descriptor)
 	return nil
 }
 
-// SynchronizedCopy implements export.Aggregator.
-func (NoopAggregator) SynchronizedCopy(export.Aggregator, *metric.Descriptor) error {
+// SynchronizedMove implements export.Aggregator.
+func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
