@@ -19,45 +19,58 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
 // Aggregator aggregates counter events.
 type Aggregator struct {
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
-	current metric.Number
-
-	// checkpoint is a temporary used during Checkpoint()
-	// checkpoint needs to be aligned for 64-bit atomic operations.
-	checkpoint metric.Number
+	value metric.Number
 }
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregator.Sum = &Aggregator{}
+var _ export.Subtractor = &Aggregator{}
+var _ aggregation.Sum = &Aggregator{}
 
 // New returns a new counter aggregator implemented by atomic
-// operations.  This aggregator implements the aggregator.Sum
+// operations.  This aggregator implements the aggregation.Sum
 // export interface.
-func New() *Aggregator {
-	return &Aggregator{}
+func New(cnt int) []Aggregator {
+	return make([]Aggregator, cnt)
+}
+
+// Aggregation returns an interface for reading the state of this aggregator.
+func (c *Aggregator) Aggregation() aggregation.Aggregation {
+	return c
+}
+
+// Kind returns aggregation.SumKind.
+func (c *Aggregator) Kind() aggregation.Kind {
+	return aggregation.SumKind
 }
 
 // Sum returns the last-checkpointed sum.  This will never return an
 // error.
 func (c *Aggregator) Sum() (metric.Number, error) {
-	return c.checkpoint, nil
+	return c.value, nil
 }
 
-// Checkpoint atomically saves the current value and resets the
+// SynchronizedCopy atomically saves the current value into oa and resets the
 // current sum to zero.
-func (c *Aggregator) Checkpoint(*metric.Descriptor) {
-	c.checkpoint = c.current.SwapNumberAtomic(metric.Number(0))
+func (c *Aggregator) SynchronizedCopy(oa export.Aggregator, _ *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+	o.value = c.value.SwapNumberAtomic(metric.Number(0))
+	return nil
 }
 
 // Update atomically adds to the current value.
 func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
-	c.current.AddNumberAtomic(desc.NumberKind(), number)
+	c.value.AddNumberAtomic(desc.NumberKind(), number)
 	return nil
 }
 
@@ -65,8 +78,24 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
-		return aggregator.NewInconsistentMergeError(c, oa)
+		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
-	c.checkpoint.AddNumber(desc.NumberKind(), o.checkpoint)
+	c.value.AddNumber(desc.NumberKind(), o.value)
+	return nil
+}
+
+func (c *Aggregator) Subtract(opAgg, resAgg export.Aggregator, descriptor *metric.Descriptor) error {
+	op, _ := opAgg.(*Aggregator)
+	if op == nil {
+		return aggregator.NewInconsistentAggregatorError(c, opAgg)
+	}
+
+	res, _ := resAgg.(*Aggregator)
+	if res == nil {
+		return aggregator.NewInconsistentAggregatorError(c, resAgg)
+	}
+
+	res.value = c.value
+	res.value.AddNumber(descriptor.NumberKind(), metric.NewNumberSignChange(descriptor.NumberKind(), op.value))
 	return nil
 }

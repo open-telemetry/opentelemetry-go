@@ -36,10 +36,11 @@ import (
 
 // Note: Maybe this should be factored into ../../../internal/metric?
 type measured struct {
-	Name        string
-	LibraryName string
-	Labels      map[kv.Key]value.Value
-	Number      metric.Number
+	Name                   string
+	InstrumentationName    string
+	InstrumentationVersion string
+	Labels                 map[kv.Key]value.Value
+	Number                 metric.Number
 }
 
 func asStructs(batches []metrictest.Batch) []measured {
@@ -47,10 +48,11 @@ func asStructs(batches []metrictest.Batch) []measured {
 	for _, batch := range batches {
 		for _, m := range batch.Measurements {
 			r = append(r, measured{
-				Name:        m.Instrument.Descriptor().Name(),
-				LibraryName: m.Instrument.Descriptor().LibraryName(),
-				Labels:      asMap(batch.Labels...),
-				Number:      m.Number,
+				Name:                   m.Instrument.Descriptor().Name(),
+				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
+				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
+				Labels:                 asMap(batch.Labels...),
+				Number:                 m.Number,
 			})
 		}
 	}
@@ -72,7 +74,7 @@ func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.Meter("test1")
+	meter1 := global.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := global.Meter("test2")
 	labels1 := []kv.KeyValue{kv.String("A", "B")}
 	labels2 := []kv.KeyValue{kv.String("C", "D")}
@@ -114,46 +116,52 @@ func TestDirect(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:        "test.counter",
-				LibraryName: "test1",
-				Labels:      asMap(labels1...),
-				Number:      asInt(1),
+				Name:                   "test.counter",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asInt(1),
 			},
 			{
-				Name:        "test.valuerecorder",
-				LibraryName: "test1",
-				Labels:      asMap(labels1...),
-				Number:      asFloat(3),
+				Name:                   "test.valuerecorder",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asFloat(3),
 			},
 			{
-				Name:        "test.second",
-				LibraryName: "test2",
-				Labels:      asMap(labels3...),
-				Number:      asFloat(3),
+				Name:                "test.second",
+				InstrumentationName: "test2",
+				Labels:              asMap(labels3...),
+				Number:              asFloat(3),
 			},
 			{
-				Name:        "test.valueobserver.float",
-				LibraryName: "test1",
-				Labels:      asMap(labels1...),
-				Number:      asFloat(1),
+				Name:                   "test.valueobserver.float",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asFloat(1),
 			},
 			{
-				Name:        "test.valueobserver.float",
-				LibraryName: "test1",
-				Labels:      asMap(labels2...),
-				Number:      asFloat(2),
+				Name:                   "test.valueobserver.float",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels2...),
+				Number:                 asFloat(2),
 			},
 			{
-				Name:        "test.valueobserver.int",
-				LibraryName: "test1",
-				Labels:      asMap(labels1...),
-				Number:      asInt(1),
+				Name:                   "test.valueobserver.int",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels1...),
+				Number:                 asInt(1),
 			},
 			{
-				Name:        "test.valueobserver.int",
-				LibraryName: "test1",
-				Labels:      asMap(labels2...),
-				Number:      asInt(2),
+				Name:                   "test.valueobserver.int",
+				InstrumentationName:    "test1",
+				InstrumentationVersion: "semver:v1.0.0",
+				Labels:                 asMap(labels2...),
+				Number:                 asInt(2),
 			},
 		},
 		measurements,
@@ -188,16 +196,16 @@ func TestBound(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:        "test.counter",
-				LibraryName: "test",
-				Labels:      asMap(labels1...),
-				Number:      asFloat(1),
+				Name:                "test.counter",
+				InstrumentationName: "test",
+				Labels:              asMap(labels1...),
+				Number:              asFloat(1),
 			},
 			{
-				Name:        "test.valuerecorder",
-				LibraryName: "test",
-				Labels:      asMap(labels1...),
-				Number:      asInt(3),
+				Name:                "test.valuerecorder",
+				InstrumentationName: "test",
+				Labels:              asMap(labels1...),
+				Number:              asInt(3),
 			},
 		},
 		asStructs(mock.MeasurementBatches))
@@ -254,7 +262,7 @@ func TestDefaultSDK(t *testing.T) {
 	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"test.builtin{A=B}","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"test.builtin{instrumentation.name=builtin,A=B}","sum":1}]}
 `, <-ch)
 }
 
@@ -284,8 +292,8 @@ type meterWithConstructorError struct {
 	metric.MeterImpl
 }
 
-func (m *meterProviderWithConstructorError) Meter(name string) metric.Meter {
-	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(name).MeterImpl()}, name)
+func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
 }
 
 func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
@@ -380,10 +388,10 @@ func TestRecordBatchMock(t *testing.T) {
 	require.EqualValues(t,
 		[]measured{
 			{
-				Name:        "test.counter",
-				LibraryName: "builtin",
-				Labels:      asMap(),
-				Number:      asInt(1),
+				Name:                "test.counter",
+				InstrumentationName: "builtin",
+				Labels:              asMap(),
+				Number:              asInt(1),
 			},
 		},
 		asStructs(mock.MeasurementBatches))
@@ -412,6 +420,6 @@ func TestRecordBatchRealSDK(t *testing.T) {
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	pusher.Stop()
 
-	require.Equal(t, `{"updates":[{"name":"test.counter","sum":1}]}
+	require.Equal(t, `{"updates":[{"name":"test.counter{instrumentation.name=builtin}","sum":1}]}
 `, buf.String())
 }

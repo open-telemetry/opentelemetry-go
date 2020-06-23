@@ -18,13 +18,13 @@ import (
 	"context"
 	"encoding/binary"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -39,7 +39,7 @@ type options struct {
 	// Process contains the information about the exporting process.
 	Process Process
 
-	//BufferMaxCount defines the total number of traces that can be buffered in memory
+	// BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
 
 	Config *sdktrace.Config
@@ -47,6 +47,8 @@ type options struct {
 	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
 	// registered as Global Trace Provider
 	RegisterGlobal bool
+
+	Disabled bool
 }
 
 // WithProcess sets the process with the information about the exporting process.
@@ -56,7 +58,7 @@ func WithProcess(process Process) Option {
 	}
 }
 
-//WithBufferMaxCount defines the total number of traces that can be buffered in memory
+// WithBufferMaxCount defines the total number of traces that can be buffered in memory
 func WithBufferMaxCount(bufferMaxCount int) Option {
 	return func(o *options) {
 		o.BufferMaxCount = bufferMaxCount
@@ -78,8 +80,16 @@ func RegisterAsGlobal() Option {
 	}
 }
 
+func WithDisabled(disabled bool) Option {
+	return func(o *options) {
+		o.Disabled = disabled
+	}
+}
+
 // NewRawExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
+//
+// It will IGNORE Disabled option.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
 	uploader, err := endpointOption()
 	if err != nil {
@@ -87,6 +97,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	o := options{}
+	opts = append(opts, WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -129,7 +140,16 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.Provider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.Provider, func(), error) {
+	o := options{}
+	opts = append(opts, WithDisabledFromEnv())
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if o.Disabled {
+		return &apitrace.NoopProvider{}, func() {}, nil
+	}
+
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
 		return nil, nil, err

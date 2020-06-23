@@ -45,7 +45,7 @@ type Controller struct {
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
-func New(selector export.AggregationSelector, options ...Option) *Controller {
+func New(aselector export.AggregationSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
 		CachePeriod: DefaultCachePeriod,
@@ -53,7 +53,7 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(selector, config.Stateful)
+	integrator := integrator.New(aselector, eselector)
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
@@ -83,16 +83,16 @@ func (c *Controller) Provider() metric.Provider {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(f func(export.Record) error) error {
+func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
 
-	return c.checkpoint.ForEach(f)
+	return c.checkpoint.ForEach(ks, f)
 }
 
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
-func (c *Controller) Collect(ctx context.Context) {
+func (c *Controller) Collect(ctx context.Context) error {
 	c.integrator.Lock()
 	defer c.integrator.Unlock()
 
@@ -101,11 +101,14 @@ func (c *Controller) Collect(ctx context.Context) {
 		elapsed := now.Sub(c.lastCollect)
 
 		if elapsed < c.period {
-			return
+			return nil
 		}
 		c.lastCollect = now
 	}
 
+	c.integrator.StartCollection()
 	c.accumulator.Collect(ctx)
+	err := c.integrator.FinishCollection()
 	c.checkpoint = c.integrator.CheckpointSet()
+	return err
 }

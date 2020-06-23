@@ -55,6 +55,11 @@ func WithAgentEndpoint(agentEndpoint string) EndpointOption {
 // For example, http://localhost:14268/api/traces
 func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
+		// Overwrite collector endpoint if environment variables are available.
+		if e := CollectorEndpointFromEnv(); e != "" {
+			collectorEndpoint = e
+		}
+
 		if collectorEndpoint == "" {
 			return nil, errors.New("collectorEndpoint must not be empty")
 		}
@@ -62,6 +67,8 @@ func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpoin
 		o := &CollectorEndpointOptions{
 			httpClient: http.DefaultClient,
 		}
+
+		options = append(options, WithCollectorEndpointOptionFromEnv())
 		for _, opt := range options {
 			opt(o)
 		}

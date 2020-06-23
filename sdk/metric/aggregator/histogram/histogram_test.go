@@ -60,6 +60,35 @@ var (
 	boundaries = []float64{500, 250, 750}
 )
 
+func new2(desc *metric.Descriptor) (_, _ *histogram.Aggregator) {
+	alloc := histogram.New(2, desc, boundaries)
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *histogram.Aggregator) {
+	alloc := histogram.New(4, desc, boundaries)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor) {
+	asum, err := agg.Sum()
+	require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
+	require.NoError(t, err)
+
+	count, err := agg.Count()
+	require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
+	require.NoError(t, err)
+
+	buckets, err := agg.Histogram()
+	require.NoError(t, err)
+
+	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
+	for i, bCount := range buckets.Counts {
+		require.Equal(t, uint64(0), uint64(bCount), "Bucket #%d must have 0 observed values", i)
+	}
+
+}
+
 func TestHistogramAbsolute(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		testHistogram(t, profile, positiveOnly)
@@ -82,7 +111,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg := histogram.New(descriptor, boundaries)
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 
@@ -92,11 +121,13 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	agg.Checkpoint(descriptor)
+	require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+
+	checkZero(t, agg, descriptor)
 
 	all.Sort()
 
-	asum, err := agg.Sum()
+	asum, err := ckpt.Sum()
 	sum := all.Sum()
 	require.InEpsilon(t,
 		sum.CoerceToFloat64(profile.NumberKind),
@@ -105,11 +136,11 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 		"Same sum - "+policy.name)
 	require.NoError(t, err)
 
-	count, err := agg.Count()
+	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
 	require.NoError(t, err)
 
-	buckets, err := agg.Histogram()
+	buckets, err := ckpt.Histogram()
 	require.NoError(t, err)
 
 	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
@@ -125,7 +156,7 @@ func TestHistogramInitial(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := histogram.New(descriptor, boundaries)
+		agg := &histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
 
 		require.NoError(t, err)
@@ -138,8 +169,7 @@ func TestHistogramMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg1 := histogram.New(descriptor, boundaries)
-		agg2 := histogram.New(descriptor, boundaries)
+		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 		all := test.NewNumbers(profile.NumberKind)
 
@@ -154,14 +184,14 @@ func TestHistogramMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		all.Sort()
 
-		asum, err := agg1.Sum()
+		asum, err := ckpt1.Sum()
 		sum := all.Sum()
 		require.InEpsilon(t,
 			sum.CoerceToFloat64(profile.NumberKind),
@@ -170,11 +200,11 @@ func TestHistogramMerge(t *testing.T) {
 			"Same sum - absolute")
 		require.NoError(t, err)
 
-		count, err := agg1.Count()
+		count, err := ckpt1.Count()
 		require.Equal(t, all.Count(), count, "Same count - absolute")
 		require.NoError(t, err)
 
-		buckets, err := agg1.Histogram()
+		buckets, err := ckpt1.Histogram()
 		require.NoError(t, err)
 
 		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
@@ -191,24 +221,13 @@ func TestHistogramNotSet(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		agg := histogram.New(descriptor, boundaries)
-		agg.Checkpoint(descriptor)
+		agg, ckpt := new2(descriptor)
 
-		asum, err := agg.Sum()
-		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")
+		err := agg.SynchronizedCopy(ckpt, descriptor)
 		require.NoError(t, err)
 
-		count, err := agg.Count()
-		require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
-		require.NoError(t, err)
-
-		buckets, err := agg.Histogram()
-		require.NoError(t, err)
-
-		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
-		for i, bCount := range buckets.Counts {
-			require.Equal(t, uint64(0), uint64(bCount), "Bucket #%d must have 0 observed values", i)
-		}
+		checkZero(t, agg, descriptor)
+		checkZero(t, ckpt, descriptor)
 	})
 }
 

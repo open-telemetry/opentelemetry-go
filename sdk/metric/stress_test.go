@@ -35,9 +35,8 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 )
 
 const (
@@ -58,6 +57,8 @@ type (
 		wg       sync.WaitGroup
 		impl     testImpl
 		T        *testing.T
+
+		export.AggregationSelector
 
 		lock  sync.Mutex
 		lused map[string]bool
@@ -244,30 +245,15 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	name := descriptor.Name()
-	switch {
-	case strings.HasSuffix(name, "counter"):
-		return sum.New()
-	case strings.HasSuffix(name, "lastvalue"):
-		return lastvalue.New()
-	default:
-		panic("Not implemented for this test")
-	}
-}
-
 func (*testFixture) CheckpointSet() export.CheckpointSet {
 	return nil
 }
 
-func (*testFixture) FinishedCollection() {
-}
-
-func (f *testFixture) Process(record export.Record) error {
-	labels := record.Labels().ToSlice()
+func (f *testFixture) Process(accumulation export.Accumulation) error {
+	labels := accumulation.Labels().ToSlice()
 	key := testKey{
 		labels:     canonicalizeLabels(labels),
-		descriptor: record.Descriptor(),
+		descriptor: accumulation.Descriptor(),
 	}
 	if f.dupCheck[key] == 0 {
 		f.dupCheck[key]++
@@ -277,17 +263,17 @@ func (f *testFixture) Process(record export.Record) error {
 
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
-	agg := record.Aggregator()
-	switch record.Descriptor().MetricKind() {
+	agg := accumulation.Aggregator()
+	switch accumulation.Descriptor().MetricKind() {
 	case metric.CounterKind:
-		sum, err := agg.(aggregator.Sum).Sum()
+		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
 	case metric.ValueRecorderKind:
-		lv, ts, err := agg.(aggregator.LastValue).LastValue()
-		if err != nil && err != aggregator.ErrNoData {
+		lv, ts, err := agg.(aggregation.LastValue).LastValue()
+		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
 		}
 		f.impl.storeCollect(actual, lv, ts)
@@ -301,9 +287,10 @@ func stressTest(t *testing.T, impl testImpl) {
 	ctx := context.Background()
 	t.Parallel()
 	fixture := &testFixture{
-		T:     t,
-		impl:  impl,
-		lused: map[string]bool{},
+		T:                   t,
+		impl:                impl,
+		lused:               map[string]bool{},
+		AggregationSelector: test.AggregationSelector(),
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
@@ -353,7 +340,7 @@ func float64sEqual(a, b api.Number) bool {
 func intCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewInt64Counter(name + ".counter")
+			return Must(meter).NewInt64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {
@@ -391,7 +378,7 @@ func TestStressInt64Counter(t *testing.T) {
 func floatCounterTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter api.Meter, name string) SyncImpler {
-			return Must(meter).NewFloat64Counter(name + ".counter")
+			return Must(meter).NewFloat64Counter(name + ".sum")
 		},
 		getUpdateValue: func() api.Number {
 			for {

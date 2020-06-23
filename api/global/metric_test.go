@@ -25,7 +25,7 @@ type testMeterProvider struct{}
 
 var _ metric.Provider = &testMeterProvider{}
 
-func (*testMeterProvider) Meter(_ string) metric.Meter {
+func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 	return metric.Meter{}
 }
 

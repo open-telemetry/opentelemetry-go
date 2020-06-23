@@ -47,7 +47,7 @@ func ExampleNew() {
 	// {
 	// 	"updates": [
 	// 		{
-	// 			"name": "a.counter{key=value}",
+	// 			"name": "a.counter{instrumentation.name=example,key=value}",
 	// 			"sum": 100
 	// 		}
 	// 	]

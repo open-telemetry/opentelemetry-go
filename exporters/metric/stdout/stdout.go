@@ -24,10 +24,11 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
-
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -98,7 +99,7 @@ func NewRawExporter(config Config) (*Exporter, error) {
 	} else {
 		for _, q := range config.Quantiles {
 			if q < 0 || q > 1 {
-				return nil, aggregator.ErrInvalidQuantile
+				return nil, aggregation.ErrInvalidQuantile
 			}
 		}
 	}
@@ -131,9 +132,6 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 // NewExportPipeline sets up a complete export pipeline with the
 // recommended setup, chaining a NewRawExporter into the recommended
 // selectors and integrators.
-//
-// The pipeline is configured with a stateful integrator unless the
-// push.WithStateful(false) option is used.
 func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -142,11 +140,15 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exporter,
-		append([]push.Option{push.WithStateful(true)}, options...)...,
+		options...,
 	)
 	pusher.Start()
 
 	return pusher, nil
+}
+
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.PassThroughExporter
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
@@ -156,15 +158,25 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	aggError = checkpointSet.ForEach(func(record export.Record) error {
+	aggError = checkpointSet.ForEach(e, func(record export.Record) error {
 		desc := record.Descriptor()
-		agg := record.Aggregator()
+		agg := record.Aggregation()
 		kind := desc.NumberKind()
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 
+		var instLabels []kv.KeyValue
+		if name := desc.InstrumentationName(); name != "" {
+			instLabels = append(instLabels, kv.String("instrumentation.name", name))
+			if version := desc.InstrumentationVersion(); version != "" {
+				instLabels = append(instLabels, kv.String("instrumentation.version", version))
+			}
+		}
+		instSet := label.NewSet(instLabels...)
+		encodedInstLabels := instSet.Encoded(e.config.LabelEncoder)
+
 		var expose expoLine
 
-		if sum, ok := agg.(aggregator.Sum); ok {
+		if sum, ok := agg.(aggregation.Sum); ok {
 			value, err := sum.Sum()
 			if err != nil {
 				return err
@@ -172,7 +184,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			expose.Sum = value.AsInterface(kind)
 		}
 
-		if mmsc, ok := agg.(aggregator.MinMaxSumCount); ok {
+		if mmsc, ok := agg.(aggregation.MinMaxSumCount); ok {
 			count, err := mmsc.Count()
 			if err != nil {
 				return err
@@ -191,7 +203,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 			expose.Min = min.AsInterface(kind)
 
-			if dist, ok := agg.(aggregator.Distribution); ok && len(e.config.Quantiles) != 0 {
+			if dist, ok := agg.(aggregation.Distribution); ok && len(e.config.Quantiles) != 0 {
 				summary := make([]expoQuantile, len(e.config.Quantiles))
 				expose.Quantiles = summary
 
@@ -208,7 +220,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 					}
 				}
 			}
-		} else if lv, ok := agg.(aggregator.LastValue); ok {
+		} else if lv, ok := agg.(aggregation.LastValue); ok {
 			value, timestamp, err := lv.LastValue()
 			if err != nil {
 				return err
@@ -230,10 +242,14 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 
 		sb.WriteString(desc.Name())
 
-		if len(encodedLabels) > 0 || len(encodedResource) > 0 {
+		if len(encodedLabels) > 0 || len(encodedResource) > 0 || len(encodedInstLabels) > 0 {
 			sb.WriteRune('{')
 			sb.WriteString(encodedResource)
-			if len(encodedLabels) > 0 && len(encodedResource) > 0 {
+			if len(encodedInstLabels) > 0 && len(encodedResource) > 0 {
+				sb.WriteRune(',')
+			}
+			sb.WriteString(encodedInstLabels)
+			if len(encodedLabels) > 0 && (len(encodedInstLabels) > 0 || len(encodedResource) > 0) {
 				sb.WriteRune(',')
 			}
 			sb.WriteString(encodedLabels)

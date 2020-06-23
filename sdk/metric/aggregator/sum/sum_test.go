@@ -32,12 +32,8 @@ const count = 100
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "Aggregator.current",
-			Offset: unsafe.Offsetof(Aggregator{}.current),
-		},
-		{
-			Name:   "Aggregator.checkpoint",
-			Offset: unsafe.Offsetof(Aggregator{}.checkpoint),
+			Name:   "Aggregator.value",
+			Offset: unsafe.Offsetof(Aggregator{}.value),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
@@ -47,9 +43,27 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func new2() (_, _ *Aggregator) {
+	alloc := New(2)
+	return &alloc[0], &alloc[1]
+}
+
+func new4() (_, _, _, _ *Aggregator) {
+	alloc := New(4)
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+	kind := desc.NumberKind()
+
+	sum, err := agg.Sum()
+	require.NoError(t, err)
+	require.Equal(t, kind.Zero(), sum)
+}
+
 func TestCounterSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
+		agg, ckpt := new2()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -60,9 +74,12 @@ func TestCounterSum(t *testing.T) {
 			test.CheckedUpdate(t, agg, x, descriptor)
 		}
 
-		agg.Checkpoint(descriptor)
+		err := agg.SynchronizedCopy(ckpt, descriptor)
+		require.NoError(t, err)
 
-		asum, err := agg.Sum()
+		checkZero(t, agg, descriptor)
+
+		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -70,7 +87,7 @@ func TestCounterSum(t *testing.T) {
 
 func TestValueRecorderSum(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg := New()
+		agg, ckpt := new2()
 
 		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
@@ -85,9 +102,10 @@ func TestValueRecorderSum(t *testing.T) {
 			sum.AddNumber(profile.NumberKind, r2)
 		}
 
-		agg.Checkpoint(descriptor)
+		require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+		checkZero(t, agg, descriptor)
 
-		asum, err := agg.Sum()
+		asum, err := ckpt.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
@@ -95,8 +113,7 @@ func TestValueRecorderSum(t *testing.T) {
 
 func TestCounterMerge(t *testing.T) {
 	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		agg1 := New()
-		agg2 := New()
+		agg1, agg2, ckpt1, ckpt2 := new4()
 
 		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
@@ -108,14 +125,17 @@ func TestCounterMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		agg1.Checkpoint(descriptor)
-		agg2.Checkpoint(descriptor)
+		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
-		test.CheckedMerge(t, agg1, agg2, descriptor)
+		checkZero(t, agg1, descriptor)
+		checkZero(t, agg2, descriptor)
+
+		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
 
-		asum, err := agg1.Sum()
+		asum, err := ckpt1.Sum()
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})

@@ -36,7 +36,7 @@ var Must = metric.Must
 func TestOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []metric.Option
+		opts []metric.InstrumentOption
 		desc string
 		unit unit.Unit
 	}
@@ -49,7 +49,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []metric.Option{
+			opts: []metric.InstrumentOption{
 				metric.WithDescription("stuff"),
 			},
 			desc: "stuff",
@@ -57,7 +57,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "description override",
-			opts: []metric.Option{
+			opts: []metric.InstrumentOption{
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
@@ -66,7 +66,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "unit",
-			opts: []metric.Option{
+			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 			},
 			desc: "",
@@ -74,7 +74,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "unit override",
-			opts: []metric.Option{
+			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
@@ -84,7 +84,7 @@ func TestOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		if diff := cmp.Diff(metric.Configure(tt.opts), metric.Config{
+		if diff := cmp.Diff(metric.ConfigureInstrument(tt.opts), metric.InstrumentConfig{
 			Description: tt.desc,
 			Unit:        tt.unit,
 		}); diff != "" {

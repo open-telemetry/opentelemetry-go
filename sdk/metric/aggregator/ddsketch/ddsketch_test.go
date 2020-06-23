@@ -15,12 +15,14 @@
 package ddsketch
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
@@ -29,9 +31,43 @@ const count = 1000
 type updateTest struct {
 }
 
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
+	alloc := New(2, desc, NewDefaultConfig())
+	return &alloc[0], &alloc[1]
+}
+
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
+	alloc := New(4, desc, NewDefaultConfig())
+	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+	kind := desc.NumberKind()
+
+	sum, err := agg.Sum()
+	require.NoError(t, err)
+	require.Equal(t, kind.Zero(), sum)
+
+	count, err := agg.Count()
+	require.NoError(t, err)
+	require.Equal(t, int64(0), count)
+
+	max, err := agg.Max()
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, kind.Zero(), max)
+
+	median, err := agg.Quantile(0.5)
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, kind.Zero(), median)
+
+	min, err := agg.Min()
+	require.True(t, errors.Is(err, aggregation.ErrNoData))
+	require.Equal(t, kind.Zero(), min)
+}
+
 func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
-	agg := New(descriptor, NewDefaultConfig())
+	agg, ckpt := new2(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
@@ -44,11 +80,14 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		test.CheckedUpdate(t, agg, y, descriptor)
 	}
 
-	agg.Checkpoint(descriptor)
+	err := agg.SynchronizedCopy(ckpt, descriptor)
+	require.NoError(t, err)
+
+	checkZero(t, agg, descriptor)
 
 	all.Sort()
 
-	sum, err := agg.Sum()
+	sum, err := ckpt.Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InDelta(t,
@@ -57,18 +96,18 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 		1,
 		"Same sum")
 
-	count, err := agg.Count()
+	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	max, err := agg.Max()
+	max, err := ckpt.Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
 		max,
 		"Same max")
 
-	median, err := agg.Quantile(0.5)
+	median, err := ckpt.Quantile(0.5)
 	require.Nil(t, err)
 	allMedian := all.Median()
 	require.InDelta(t,
@@ -90,8 +129,7 @@ type mergeTest struct {
 func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-	agg1 := New(descriptor, NewDefaultConfig())
-	agg2 := New(descriptor, NewDefaultConfig())
+	agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
 	all := test.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
@@ -118,14 +156,17 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		}
 	}
 
-	agg1.Checkpoint(descriptor)
-	agg2.Checkpoint(descriptor)
+	require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
+	require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
 
-	test.CheckedMerge(t, agg1, agg2, descriptor)
+	checkZero(t, agg1, descriptor)
+	checkZero(t, agg1, descriptor)
+
+	test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 	all.Sort()
 
-	aggSum, err := agg1.Sum()
+	aggSum, err := ckpt1.Sum()
 	require.Nil(t, err)
 	allSum := all.Sum()
 	require.InDelta(t,
@@ -134,18 +175,18 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 		1,
 		"Same sum")
 
-	count, err := agg1.Count()
+	count, err := ckpt1.Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	max, err := agg1.Max()
+	max, err := ckpt1.Max()
 	require.Nil(t, err)
 	require.Equal(t,
 		all.Max(),
 		max,
 		"Same max")
 
-	median, err := agg1.Quantile(0.5)
+	median, err := ckpt1.Quantile(0.5)
 	require.Nil(t, err)
 	allMedian := all.Median()
 	require.InDelta(t,

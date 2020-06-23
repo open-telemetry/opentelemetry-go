@@ -30,7 +30,8 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -53,16 +54,16 @@ var (
 
 // result is the product of transforming Records into OTLP Metrics.
 type result struct {
-	Resource *resource.Resource
-	Library  string
-	Metric   *metricpb.Metric
-	Err      error
+	Resource               *resource.Resource
+	InstrumentationLibrary instrumentation.Library
+	Metric                 *metricpb.Metric
+	Err                    error
 }
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
-	records, errc := source(ctx, cps)
+func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+	records, errc := source(ctx, exportSelector, cps)
 
 	// Start a fixed number of goroutines to transform records.
 	transformed := make(chan result)
@@ -95,14 +96,14 @@ func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uin
 // source starts a goroutine that sends each one of the Records yielded by
 // the CheckpointSet on the returned chan. Any error encoutered will be sent
 // on the returned error chan after seeding is complete.
-func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
+func source(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
 	out := make(chan export.Record)
 	// Seed records into process.
 	go func() {
 		defer close(out)
 		// No select is needed since errc is buffered.
-		errc <- cps.ForEach(func(r export.Record) error {
+		errc <- cps.ForEach(exportSelector, func(r export.Record) error {
 			select {
 			case <-ctx.Done():
 				return ErrContextCanceled
@@ -125,9 +126,12 @@ func transformer(ctx context.Context, in <-chan export.Record, out chan<- result
 		}
 		res := result{
 			Resource: r.Resource(),
-			Library:  r.Descriptor().LibraryName(),
-			Metric:   m,
-			Err:      err,
+			InstrumentationLibrary: instrumentation.Library{
+				Name:    r.Descriptor().InstrumentationName(),
+				Version: r.Descriptor().InstrumentationVersion(),
+			},
+			Metric: m,
+			Err:    err,
 		}
 		select {
 		case <-ctx.Done():
@@ -148,7 +152,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	type resourceBatch struct {
 		Resource *resourcepb.Resource
 		// Group by instrumentation library name and then the MetricDescriptor.
-		InstrumentationLibraryBatches map[string]map[string]*metricpb.Metric
+		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
 	}
 
 	// group by unique Resource string.
@@ -164,15 +168,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		if !ok {
 			rb = resourceBatch{
 				Resource:                      Resource(res.Resource),
-				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
+				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
 			}
 			grouped[rID] = rb
 		}
 
-		mb, ok := rb.InstrumentationLibraryBatches[res.Library]
+		mb, ok := rb.InstrumentationLibraryBatches[res.InstrumentationLibrary]
 		if !ok {
 			mb = make(map[string]*metricpb.Metric)
-			rb.InstrumentationLibraryBatches[res.Library] = mb
+			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
 		}
 
 		mID := res.Metric.GetMetricDescriptor().String()
@@ -202,12 +206,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	var rms []*metricpb.ResourceMetrics
 	for _, rb := range grouped {
 		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
-		for ilName, mb := range rb.InstrumentationLibraryBatches {
+		for il, mb := range rb.InstrumentationLibraryBatches {
 			ilm := &metricpb.InstrumentationLibraryMetrics{
 				Metrics: make([]*metricpb.Metric, 0, len(mb)),
 			}
-			if ilName != "" {
-				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{Name: ilName}
+			if il != (instrumentation.Library{}) {
+				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{
+					Name:    il.Name,
+					Version: il.Version,
+				}
 			}
 			for _, m := range mb {
 				ilm.Metrics = append(ilm.Metrics, m)
@@ -227,20 +234,20 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
-	d := r.Descriptor()
-	l := r.Labels()
-	switch a := r.Aggregator().(type) {
-	case aggregator.MinMaxSumCount:
-		return minMaxSumCount(d, l, a)
-	case aggregator.Sum:
-		return sum(d, l, a)
+	switch a := r.Aggregation().(type) {
+	case aggregation.MinMaxSumCount:
+		return minMaxSumCount(r, a)
+	case aggregation.Sum:
+		return sum(r, a)
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
 	}
 }
 
 // sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricpb.Metric, error) {
+func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 	sum, err := a.Sum()
 	if err != nil {
 		return nil, err
@@ -259,12 +266,20 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 	case metric.Int64NumberKind, metric.Uint64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
-			{Value: sum.CoerceToInt64(n)},
+			{
+				Value:             sum.CoerceToInt64(n),
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+			},
 		}
 	case metric.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
-			{Value: sum.CoerceToFloat64(n)},
+			{
+				Value:             sum.CoerceToFloat64(n),
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+			},
 		}
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
@@ -275,7 +290,7 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.
-func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -292,7 +307,9 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Num
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
@@ -321,6 +338,8 @@ func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.Min
 						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
 			},
 		},
 	}, nil

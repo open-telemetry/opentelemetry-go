@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
 	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
@@ -29,14 +30,30 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/exporters/metric/test"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"google.golang.org/grpc"
 )
+
+var (
+	// Timestamps used in this test:
+
+	intervalStart = time.Now()
+	intervalEnd   = intervalStart.Add(time.Hour)
+)
+
+func startTime() uint64 {
+	return uint64(intervalStart.UnixNano())
+}
+
+func pointTime() uint64 {
+	return uint64(intervalEnd.UnixNano())
+}
 
 type metricsServiceClientStub struct {
 	rm []metricpb.ResourceMetrics
@@ -65,9 +82,9 @@ type checkpointSet struct {
 	records []metricsdk.Record
 }
 
-func (m *checkpointSet) ForEach(fn func(metricsdk.Record) error) error {
+func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsdk.Record) error) error {
 	for _, r := range m.records {
-		if err := fn(r); err != nil && err != aggregator.ErrNoData {
+		if err := fn(r); err != nil && err != aggregation.ErrNoData {
 			return err
 		}
 	}
@@ -79,7 +96,7 @@ type record struct {
 	mKind    metric.Kind
 	nKind    metric.NumberKind
 	resource *resource.Resource
-	opts     []metric.Option
+	opts     []metric.InstrumentOption
 	labels   []kv.KeyValue
 }
 
@@ -170,7 +187,9 @@ func TestNoGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -178,7 +197,9 @@ func TestNoGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -234,6 +255,8 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value:      10.0,
 										},
 									},
+									StartTimeUnixNano: startTime(),
+									TimeUnixNano:      pointTime(),
 								},
 								{
 									Count: 2,
@@ -248,6 +271,8 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value:      10.0,
 										},
 									},
+									StartTimeUnixNano: startTime(),
+									TimeUnixNano:      pointTime(),
 								},
 							},
 						},
@@ -286,10 +311,14 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -336,10 +365,14 @@ func TestCountUint64MetricGroupingExport(t *testing.T) {
 								},
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -386,10 +419,14 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 								},
 								DoubleDataPoints: []*metricpb.DoubleDataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -448,10 +485,14 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -459,7 +500,9 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -476,7 +519,9 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -489,6 +534,17 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceInstLibMetricGroupingExport(t *testing.T) {
+	countingLib1 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v1"),
+	}
+	countingLib2 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v2"),
+	}
+	summingLib := []metric.InstrumentOption{
+		metric.WithInstrumentationName("summing-lib"),
+	}
 	runMetricExportTests(
 		t,
 		[]record{
@@ -497,9 +553,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -507,9 +561,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
-				},
+				countingLib2,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -517,9 +569,15 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
-				},
+				countingLib1,
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+			{
+				"int64-count",
+				metric.CounterKind,
+				metric.Int64NumberKind,
+				testInstA,
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
@@ -527,9 +585,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstA,
-				[]metric.Option{
-					metric.WithLibraryName("summing-lib"),
-				},
+				summingLib,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
@@ -537,9 +593,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				metric.CounterKind,
 				metric.Int64NumberKind,
 				testInstB,
-				[]metric.Option{
-					metric.WithLibraryName("couting-lib"),
-				},
+				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -549,17 +603,22 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name: "couting-lib",
+							Name:    "counting-lib",
+							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{
 							{
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -567,7 +626,27 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu2MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
+									},
+								},
+							},
+						},
+					},
+					{
+						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+							Name:    "counting-lib",
+							Version: "v2",
+						},
+						Metrics: []*metricpb.Metric{
+							{
+								MetricDescriptor: cpu1MD,
+								Int64DataPoints: []*metricpb.Int64DataPoint{
+									{
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -582,7 +661,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -595,14 +676,17 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-							Name: "couting-lib",
+							Name:    "counting-lib",
+							Version: "v1",
 						},
 						Metrics: []*metricpb.Metric{
 							{
 								MetricDescriptor: cpu1MD,
 								Int64DataPoints: []*metricpb.Int64DataPoint{
 									{
-										Value: 11,
+										Value:             11,
+										StartTimeUnixNano: startTime(),
+										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -635,12 +719,12 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
 
-		var agg metricsdk.Aggregator
+		var agg, ckpt metricsdk.Aggregator
 		switch r.mKind {
 		case metric.CounterKind:
-			agg = sum.New()
+			agg, ckpt = test.Unslice2(sum.New(2))
 		default:
-			agg = minmaxsumcount.New(&desc)
+			agg, ckpt = test.Unslice2(minmaxsumcount.New(2, &desc))
 		}
 
 		ctx := context.Background()
@@ -657,11 +741,11 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}
-		agg.Checkpoint(&desc)
+		require.NoError(t, agg.SynchronizedCopy(ckpt, &desc))
 
 		equiv := r.resource.Equivalent()
 		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, agg))
+		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
 	for _, records := range recs {
 		assert.NoError(t, exp.Export(context.Background(), &checkpointSet{records: records}))
