@@ -135,7 +135,7 @@ func Uint(v uint) Value {
 	return Uint64(uint64(v))
 }
 
-// Array stores array values as an attribute
+// Array creates an ARRAY value.
 func Array(array interface{}) Value {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Array, reflect.Slice:
@@ -214,8 +214,7 @@ func (v Value) AsString() string {
 	return v.stringly
 }
 
-// AsArray array assign interface array value, if given value mataches
-// stored array type.
+// AsArray returns the array Value as an interface{}.
 func (v Value) AsArray() interface{} {
 	return v.array
 }
