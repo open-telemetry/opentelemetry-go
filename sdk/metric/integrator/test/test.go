@@ -38,10 +38,10 @@ type (
 		labelEncoder label.Encoder
 	}
 
-	// testAggregationSelector returns aggregators consistent with
+	// testAggregatorSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
 	// integrators, which clone Aggregators using AggregatorFor(desc).
-	testAggregationSelector struct{}
+	testAggregatorSelector struct{}
 )
 
 func NewOutput(labelEncoder label.Encoder) Output {
@@ -51,14 +51,14 @@ func NewOutput(labelEncoder label.Encoder) Output {
 	}
 }
 
-// AggregationSelector returns a policy that is consistent with the
+// AggregatorSelector returns a policy that is consistent with the
 // test descriptors above.  I.e., it returns sum.New() for counter
 // instruments and lastvalue.New() for lastValue instruments.
-func AggregationSelector() export.AggregationSelector {
-	return testAggregationSelector{}
+func AggregatorSelector() export.AggregatorSelector {
+	return testAggregatorSelector{}
 }
 
-func (testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):
@@ -96,7 +96,7 @@ func (testAggregationSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ..
 			*aggPtrs[i] = &aggs[i]
 		}
 	default:
-		panic(fmt.Sprint("Invalid instrument name for test AggregationSelector: ", desc.Name()))
+		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
 	}
 }
 

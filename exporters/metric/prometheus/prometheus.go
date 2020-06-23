@@ -32,11 +32,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-// Exporter is an implementation of metric.Exporter that sends metrics to
-// Prometheus.
-//
-// This exporter supports Prometheus pulls, as such it does not
-// implement the export.Exporter interface.
+// Exporter supports Prometheus pulls.  It does not implement the
+// sdk/export/metric.Exporter interface--instead it creates a pull
+// controller and reads the latest checkpointed data on-scrape.
 type Exporter struct {
 	handler http.Handler
 
@@ -144,20 +142,11 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	// Prometheus uses a stateful pull controller since instruments are
-	// cumulative and should not be reset after each collection interval.
-	//
-	// Prometheus uses this approach to be resilient to scrape failures.
-	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
-	// it could try again on the next scrape and no data would be lost, only resolution.
-	//
-	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	//
-	// TODO: Prometheus supports "Gauge Histogram" which are
-	// expressed as delta histograms.
+
 	e.controller = pull.New(
 		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		append(options, pull.WithStateful(true))...,
+		e,
+		options...,
 	)
 }
 
@@ -171,6 +160,15 @@ func (e *Exporter) Controller() *pull.Controller {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.controller
+}
+
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	// NOTE: Summary values should use Delta aggregation, then be
+	// combined into a sliding window, see the TODO below.
+	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
+	// which is expressed as a delta histogram.  Need to understand if this
+	// should be a default behavior for ValueRecorder/ValueObserver.
+	return export.CumulativeExporter
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +186,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().ForEach(func(record export.Record) error {
+	_ = c.exp.Controller().ForEach(c.exp, func(record export.Record) error {
 		var labelKeys []string
 		mergeLabels(record, &labelKeys, nil)
 		ch <- c.toDesc(record, labelKeys)
@@ -209,7 +207,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		global.Handle(err)
 	}
 
-	err := ctrl.ForEach(func(record export.Record) error {
+	err := ctrl.ForEach(c.exp, func(record export.Record) error {
 		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 

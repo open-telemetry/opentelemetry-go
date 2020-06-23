@@ -91,12 +91,16 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
+func (e *testExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.PassThroughExporter
+}
+
 func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
 	var records []export.Record
-	if err := checkpointSet.ForEach(func(r export.Record) error {
+	if err := checkpointSet.ForEach(e, func(r export.Record) error {
 		if e.injectErr != nil {
 			if err := e.injectErr(r); err != nil {
 				return err
@@ -121,7 +125,7 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(integratorTest.AggregationSelector(), fix.exporter)
+	p := push.New(integratorTest.AggregatorSelector(), fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -129,7 +133,7 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(test.AggregationSelector(), fix.exporter)
+	p := push.New(test.AggregatorSelector(), fix.exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -139,7 +143,7 @@ func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(
-		test.AggregationSelector(),
+		test.AggregatorSelector(),
 		fix.exporter,
 		push.WithPeriod(time.Second),
 		push.WithResource(testResource),
@@ -220,7 +224,7 @@ func TestPushExportError(t *testing.T) {
 			fix.exporter.injectErr = injector("counter1.sum", tt.injectedError)
 
 			p := push.New(
-				test.AggregationSelector(),
+				test.AggregatorSelector(),
 				fix.exporter,
 				push.WithPeriod(time.Second),
 				push.WithResource(testResource),

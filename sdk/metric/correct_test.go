@@ -78,20 +78,20 @@ type correctnessIntegrator struct {
 }
 
 type testSelector struct {
-	selector    export.AggregationSelector
+	selector    export.AggregatorSelector
 	newAggCount int
 }
 
 func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
-	test.AggregationSelector().AggregatorFor(desc, aggPtrs...)
+	test.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessIntegrator) {
 	testHandler.Reset()
 	integrator := &correctnessIntegrator{
 		t:            t,
-		testSelector: &testSelector{selector: test.AggregationSelector()},
+		testSelector: &testSelector{selector: test.AggregatorSelector()},
 	}
 	accum := metricsdk.NewAccumulator(
 		integrator,

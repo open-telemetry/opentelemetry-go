@@ -36,10 +36,10 @@ type (
 )
 
 var (
-	_ export.AggregationSelector = selectorInexpensive{}
-	_ export.AggregationSelector = selectorSketch{}
-	_ export.AggregationSelector = selectorExact{}
-	_ export.AggregationSelector = selectorHistogram{}
+	_ export.AggregatorSelector = selectorInexpensive{}
+	_ export.AggregatorSelector = selectorSketch{}
+	_ export.AggregatorSelector = selectorExact{}
+	_ export.AggregatorSelector = selectorHistogram{}
 )
 
 // NewWithInexpensiveDistribution returns a simple aggregation selector
@@ -47,7 +47,7 @@ var (
 // for the three kinds of metric.  This selector is faster and uses
 // less memory than the others because minmaxsumcount does not
 // aggregate quantile information.
-func NewWithInexpensiveDistribution() export.AggregationSelector {
+func NewWithInexpensiveDistribution() export.AggregatorSelector {
 	return selectorInexpensive{}
 }
 
@@ -56,7 +56,7 @@ func NewWithInexpensiveDistribution() export.AggregationSelector {
 // kinds of metric.  This selector uses more cpu and memory than the
 // NewWithInexpensiveDistribution because it uses one DDSketch per distinct
 // instrument and label set.
-func NewWithSketchDistribution(config *ddsketch.Config) export.AggregationSelector {
+func NewWithSketchDistribution(config *ddsketch.Config) export.AggregatorSelector {
 	return selectorSketch{
 		config: config,
 	}
@@ -67,7 +67,7 @@ func NewWithSketchDistribution(config *ddsketch.Config) export.AggregationSelect
 // This selector uses more memory than the NewWithSketchDistribution
 // because it aggregates an array of all values, therefore is able to
 // compute exact quantiles.
-func NewWithExactDistribution() export.AggregationSelector {
+func NewWithExactDistribution() export.AggregatorSelector {
 	return selectorExact{}
 }
 
@@ -75,7 +75,7 @@ func NewWithExactDistribution() export.AggregationSelector {
 // histogram, and histogram aggregators for the three kinds of metric. This
 // selector uses more memory than the NewWithInexpensiveDistribution because it
 // uses a counter per bucket.
-func NewWithHistogramDistribution(boundaries []float64) export.AggregationSelector {
+func NewWithHistogramDistribution(boundaries []float64) export.AggregatorSelector {
 	return selectorHistogram{boundaries: boundaries}
 }
 
