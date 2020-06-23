@@ -45,8 +45,8 @@ type (
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
 		bucketCounts []float64
-		count        metric.Number
 		sum          metric.Number
+		count        int64
 	}
 )
 
@@ -100,7 +100,7 @@ func (c *Aggregator) Sum() (metric.Number, error) {
 
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(c.state.count), nil
+	return c.state.count, nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
@@ -160,7 +160,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.state.count.AddInt64(1)
+	c.state.count++
 	c.state.sum.AddNumber(kind, number)
 	c.state.bucketCounts[bucketID]++
 
@@ -175,7 +175,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	}
 
 	c.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
-	c.state.count.AddNumber(metric.Uint64NumberKind, o.state.count)
+	c.state.count += o.state.count
 
 	for i := 0; i < len(c.state.bucketCounts); i++ {
 		c.state.bucketCounts[i] += o.state.bucketCounts[i]

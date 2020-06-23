@@ -10,12 +10,11 @@ func _() {
 	var x [1]struct{}
 	_ = x[Int64NumberKind-0]
 	_ = x[Float64NumberKind-1]
-	_ = x[Uint64NumberKind-2]
 }
 
-const _NumberKind_name = "Int64NumberKindFloat64NumberKindUint64NumberKind"
+const _NumberKind_name = "Int64NumberKindFloat64NumberKind"
 
-var _NumberKind_index = [...]uint8{0, 15, 32, 48}
+var _NumberKind_index = [...]uint8{0, 15, 32}
 
 func (i NumberKind) String() string {
 	if i < 0 || i >= NumberKind(len(_NumberKind_index)-1) {
