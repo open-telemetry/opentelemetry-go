@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package basic // import "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
+package basic // import "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 
 import (
 	"errors"
@@ -28,7 +28,7 @@ import (
 )
 
 type (
-	Integrator struct {
+	Processor struct {
 		export.ExportKindSelector
 		export.AggregatorSelector
 
@@ -102,19 +102,19 @@ type (
 	}
 )
 
-var _ export.Integrator = &Integrator{}
+var _ export.Processor = &Processor{}
 var _ export.CheckpointSet = &state{}
-var ErrInconsistentState = fmt.Errorf("inconsistent integrator state")
+var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 
-// New returns a basic Integrator using the provided
+// New returns a basic Processor using the provided
 // AggregatorSelector to select Aggregators.  The ExportKindSelector
 // is consulted to determine the kind(s) of exporter that will consume
-// data, so that this Integrator can prepare to compute Delta or
+// data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector) *Integrator {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector) *Processor {
 	now := time.Now()
-	return &Integrator{
+	return &Processor{
 		AggregatorSelector: aselector,
 		ExportKindSelector: eselector,
 		state: state{
@@ -125,8 +125,8 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 	}
 }
 
-// Process implements export.Integrator.
-func (b *Integrator) Process(accum export.Accumulation) error {
+// Process implements export.Processor.
+func (b *Processor) Process(accum export.Accumulation) error {
 	if b.startedCollection != b.finishedCollection+1 {
 		return ErrInconsistentState
 	}
@@ -266,23 +266,23 @@ func (b *Integrator) Process(accum export.Accumulation) error {
 // CheckpointSet Locker interface to synchronize access to this
 // object.  The CheckpointSet.ForEach() method cannot be called
 // concurrently with Process().
-func (b *Integrator) CheckpointSet() export.CheckpointSet {
+func (b *Processor) CheckpointSet() export.CheckpointSet {
 	return &b.state
 }
 
-// StartCollection signals to the Integrator one or more Accumulators
+// StartCollection signals to the Processor one or more Accumulators
 // will begin calling Process() calls during collection.
-func (b *Integrator) StartCollection() {
+func (b *Processor) StartCollection() {
 	if b.startedCollection != 0 {
 		b.intervalStart = b.intervalEnd
 	}
 	b.startedCollection++
 }
 
-// FinishCollection signals to the Integrator that a complete
+// FinishCollection signals to the Processor that a complete
 // collection has finished and that ForEach will be called to access
 // the CheckpointSet.
-func (b *Integrator) FinishCollection() error {
+func (b *Processor) FinishCollection() error {
 	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection+1 {
 		return ErrInconsistentState

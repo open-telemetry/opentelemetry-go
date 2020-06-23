@@ -40,7 +40,7 @@ type (
 
 	// testAggregatorSelector returns aggregators consistent with
 	// the test variables below, needed for testing stateful
-	// integrators, which clone Aggregators using AggregatorFor(desc).
+	// processors, which clone Aggregators using AggregatorFor(desc).
 	testAggregatorSelector struct{}
 )
 

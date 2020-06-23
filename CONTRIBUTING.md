@@ -142,7 +142,7 @@ Approvers:
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Anthony Mirabella](https://github.com/Aneurysm9), Centene
-- [Evan Torrie](https://github.com/evantorrie), Comcast
+- [Evan Torrie](https://github.com/evantorrie), Verizon Media
 
 Maintainers:
 

@@ -262,8 +262,8 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 	}
 
 	switch n := desc.NumberKind(); n {
-	case metric.Int64NumberKind, metric.Uint64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
+	case metric.Int64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{
 				Value:             sum.CoerceToInt64(n),

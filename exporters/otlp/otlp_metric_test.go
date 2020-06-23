@@ -293,8 +293,6 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(t, []record{r, r}, expected)
 	//changing the number kind should make no difference.
-	r.nKind = metric.Uint64NumberKind
-	runMetricExportTests(t, []record{r, r}, expected)
 	r.nKind = metric.Float64NumberKind
 	runMetricExportTests(t, []record{r, r}, expected)
 }
@@ -329,70 +327,6 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 									{
 										Value:             11,
 										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	)
-}
-
-func TestCountUint64MetricGroupingExport(t *testing.T) {
-	r := record{
-		"uint64-count",
-		metric.CounterKind,
-		metric.Uint64NumberKind,
-		nil,
-		nil,
-		append(baseKeyValues, cpuKey.Int(1)),
-	}
-	runMetricExportTests(
-		t,
-		[]record{r, r},
-		[]metricpb.ResourceMetrics{
-			{
-				Resource: nil,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-					{
-						Metrics: []*metricpb.Metric{
-							{
-								MetricDescriptor: &metricpb.MetricDescriptor{
-									Name: "uint64-count",
-									Type: metricpb.MetricDescriptor_INT64,
-								},
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value: 11,
-										Labels: []*commonpb.StringKeyValue{
-											{
-												Key:   "CPU",
-												Value: "1",
-											},
-											{
-												Key:   "host",
-												Value: "test.com",
-											},
-										},
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value: 11,
-										Labels: []*commonpb.StringKeyValue{
-											{
-												Key:   "CPU",
-												Value: "1",
-											},
-											{
-												Key:   "host",
-												Value: "test.com",
-											},
-										},
 										StartTimeUnixNano: startTime(),
 										TimeUnixNano:      pointTime(),
 									},
@@ -761,9 +695,6 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		ctx := context.Background()
 		switch r.nKind {
-		case metric.Uint64NumberKind:
-			require.NoError(t, agg.Update(ctx, metric.NewUint64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, metric.NewUint64Number(10), &desc))
 		case metric.Int64NumberKind:
 			require.NoError(t, agg.Update(ctx, metric.NewInt64Number(1), &desc))
 			require.NoError(t, agg.Update(ctx, metric.NewInt64Number(10), &desc))

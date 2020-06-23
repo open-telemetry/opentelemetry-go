@@ -33,8 +33,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
-	integratorTest "go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -125,7 +125,7 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(integratorTest.AggregatorSelector(), fix.exporter)
+	p := push.New(processorTest.AggregatorSelector(), fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
