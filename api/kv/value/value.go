@@ -216,13 +216,8 @@ func (v Value) AsString() string {
 
 // AsArray array assign interface array value, if given value mataches
 // stored array type.
-func (v Value) AsArray(i interface{}) error {
-	if "*"+reflect.TypeOf(v.array).String() != reflect.TypeOf(i).String() {
-		return fmt.Errorf("invalid data type")
-	}
-
-	reflect.ValueOf(i).Elem().Set(reflect.ValueOf(v.array))
-	return nil
+func (v Value) AsArray() interface{} {
+	return v.array
 }
 
 type unknownValueType struct{}
@@ -231,7 +226,7 @@ type unknownValueType struct{}
 func (v Value) AsInterface() interface{} {
 	switch v.Type() {
 	case ARRAY:
-		return v.array
+		return v.AsArray()
 	case BOOL:
 		return v.AsBool()
 	case INT32:

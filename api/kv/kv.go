@@ -95,8 +95,8 @@ func Uint(k string, v uint) KeyValue {
 	return Key(k).Uint(v)
 }
 
-// Array creates a new key-value pair with a passed name and a arrat
-// only premitive type are supported.
+// Array creates a new key-value pair with a passed name and a array
+// Only arrays of primitive type are supported.
 func Array(k string, v interface{}) KeyValue {
 	return Key(k).Array(v)
 }
