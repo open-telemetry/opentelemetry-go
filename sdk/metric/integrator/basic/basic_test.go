@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple_test
+package basic_test
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -164,7 +164,7 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					integrator := simple.New(selector, ekind)
+					integrator := basic.New(selector, ekind)
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -264,26 +264,26 @@ func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
 	panic("Not called")
 }
 
-func TestSimpleInconsistent(t *testing.T) {
+func TestBasicInconsistent(t *testing.T) {
 	// Test double-start
-	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b := basic.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	b.StartCollection()
-	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
 
-	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
+	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	require.Equal(
 		t,
-		simple.ErrInconsistentState,
+		basic.ErrInconsistentState,
 		b.ForEach(
 			export.PassThroughExporter,
 			func(export.Record) error { return nil },
@@ -291,14 +291,14 @@ func TestSimpleInconsistent(t *testing.T) {
 	)
 
 	// Test no start
-	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
-	require.Equal(t, simple.ErrInconsistentState, b.Process(accum))
+	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
-	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b = basic.New(test.AggregationSelector(), export.PassThroughExporter)
 	b.StartCollection()
 	require.NoError(t, b.Process(accum))
 	require.NoError(t, b.FinishCollection())
@@ -307,13 +307,13 @@ func TestSimpleInconsistent(t *testing.T) {
 		bogusExporter{},
 		func(export.Record) error { return nil },
 	)
-	require.True(t, errors.Is(err, simple.ErrInvalidExporterKind))
+	require.True(t, errors.Is(err, basic.ErrInvalidExporterKind))
 
 }
 
-func TestSimpleTimestamps(t *testing.T) {
+func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
-	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b := basic.New(test.AggregationSelector(), export.PassThroughExporter)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)

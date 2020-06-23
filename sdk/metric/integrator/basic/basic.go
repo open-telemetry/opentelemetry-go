@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package simple // import "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+package basic // import "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 
 import (
 	"errors"
