@@ -25,7 +25,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 )
 
 // DefaultPushPeriod is the default time interval between pushes.
@@ -36,7 +36,7 @@ type Controller struct {
 	lock        sync.Mutex
 	accumulator *sdk.Accumulator
 	provider    *registry.Provider
-	integrator  *simple.Integrator
+	integrator  *basic.Integrator
 	exporter    export.Exporter
 	wg          sync.WaitGroup
 	ch          chan struct{}
@@ -60,7 +60,7 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 		c.Timeout = c.Period
 	}
 
-	integrator := simple.New(selector, exporter)
+	integrator := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(c.Resource),

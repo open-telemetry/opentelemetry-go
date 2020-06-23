@@ -23,7 +23,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -32,7 +32,7 @@ import (
 const DefaultCachePeriod time.Duration = 10 * time.Second
 
 // Controller manages access to a *sdk.Accumulator and
-// *simple.Integrator.  Use Provider() for obtaining Meters.  Use
+// *basic.Integrator.  Use Provider() for obtaining Meters.  Use
 // Foreach() for accessing current records.
 type Controller struct {
 	accumulator *sdk.Accumulator
