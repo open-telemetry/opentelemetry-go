@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
-
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
@@ -132,9 +132,6 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 // NewExportPipeline sets up a complete export pipeline with the
 // recommended setup, chaining a NewRawExporter into the recommended
 // selectors and integrators.
-//
-// The pipeline is configured with a stateful integrator unless the
-// push.WithStateful(false) option is used.
 func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -143,11 +140,15 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exporter,
-		append([]push.Option{push.WithStateful(true)}, options...)...,
+		options...,
 	)
 	pusher.Start()
 
 	return pusher, nil
+}
+
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.PassThroughExporter
 }
 
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
@@ -157,7 +158,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	aggError = checkpointSet.ForEach(func(record export.Record) error {
+	aggError = checkpointSet.ForEach(e, func(record export.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregation()
 		kind := desc.NumberKind()

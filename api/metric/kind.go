@@ -35,3 +35,45 @@ const (
 	// UpDownSumObserverKind indicates a UpDownSumObserver instrument.
 	UpDownSumObserverKind
 )
+
+// Synchronous returns whether this is a synchronous kind of instrument.
+func (k Kind) Synchronous() bool {
+	switch k {
+	case CounterKind, UpDownCounterKind, ValueRecorderKind:
+		return true
+	}
+	return false
+}
+
+// Asynchronous returns whether this is an asynchronous kind of instrument.
+func (k Kind) Asynchronous() bool {
+	return !k.Synchronous()
+}
+
+// Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
+func (k Kind) Adding() bool {
+	switch k {
+	case CounterKind, UpDownCounterKind, SumObserverKind, UpDownSumObserverKind:
+		return true
+	}
+	return false
+}
+
+// Adding returns whether this kind of instrument groups its inputs (as opposed to Adding).
+func (k Kind) Grouping() bool {
+	return !k.Adding()
+}
+
+// Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
+func (k Kind) Monotonic() bool {
+	switch k {
+	case CounterKind, SumObserverKind:
+		return true
+	}
+	return false
+}
+
+// Cumulative returns whether this kind of instrument receives precomputed sums.
+func (k Kind) PrecomputedSum() bool {
+	return k.Adding() && k.Asynchronous()
+}

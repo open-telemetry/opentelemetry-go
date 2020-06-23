@@ -45,7 +45,7 @@ type Controller struct {
 }
 
 // New returns a *Controller configured with an aggregation selector and options.
-func New(selector export.AggregationSelector, options ...Option) *Controller {
+func New(aselector export.AggregationSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
 		CachePeriod: DefaultCachePeriod,
@@ -53,7 +53,7 @@ func New(selector export.AggregationSelector, options ...Option) *Controller {
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(selector, config.Stateful)
+	integrator := integrator.New(aselector, eselector)
 	accum := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(config.Resource),
@@ -83,11 +83,11 @@ func (c *Controller) Provider() metric.Provider {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(f func(export.Record) error) error {
+func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
 	c.integrator.RLock()
 	defer c.integrator.RUnlock()
 
-	return c.checkpoint.ForEach(f)
+	return c.checkpoint.ForEach(ks, f)
 }
 
 // Collect requests a collection.  The collection will be skipped if

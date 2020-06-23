@@ -43,6 +43,9 @@ var _ aggregation.Distribution = &Aggregator{}
 
 // New returns a new DDSketch aggregator.
 func New(cnt int, desc *metric.Descriptor, cfg *Config) []Aggregator {
+	if cfg == nil {
+		cfg = NewDefaultConfig()
+	}
 	aggs := make([]Aggregator, cnt)
 	for i := range aggs {
 		aggs[i] = Aggregator{

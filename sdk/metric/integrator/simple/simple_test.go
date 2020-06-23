@@ -16,6 +16,8 @@ package simple_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,248 +26,306 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	exportTest "go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Note: This var block and the helpers below will disappear in a
-// future PR (see the draft in #799).  The test has been completely
-// rewritten there, so this code will simply be dropped.
+// TestIntegrator tests all the non-error paths in this package.
+func TestIntegrator(t *testing.T) {
+	type exportCase struct {
+		kind export.ExportKind
+	}
+	type instrumentCase struct {
+		kind metric.Kind
+	}
+	type numberCase struct {
+		kind metric.NumberKind
+	}
+	type aggregatorCase struct {
+		kind aggregation.Kind
+	}
 
-var (
-	// Resource is applied to all test records built in this package.
-	Resource = resource.New(kv.String("R", "V"))
-
-	// LastValueADesc and LastValueBDesc group by "G"
-	LastValueADesc = metric.NewDescriptor(
-		"a.lastvalue", metric.ValueObserverKind, metric.Int64NumberKind)
-	LastValueBDesc = metric.NewDescriptor(
-		"b.lastvalue", metric.ValueObserverKind, metric.Int64NumberKind)
-	// CounterADesc and CounterBDesc group by "C"
-	CounterADesc = metric.NewDescriptor(
-		"a.sum", metric.CounterKind, metric.Int64NumberKind)
-	CounterBDesc = metric.NewDescriptor(
-		"b.sum", metric.CounterKind, metric.Int64NumberKind)
-
-	// LastValue groups are (labels1), (labels2+labels3)
-	// Counter groups are (labels1+labels2), (labels3)
-
-	// Labels1 has G=H and C=D
-	Labels1 = makeLabels(kv.String("G", "H"), kv.String("C", "D"))
-	// Labels2 has C=D and E=F
-	Labels2 = makeLabels(kv.String("C", "D"), kv.String("E", "F"))
-	// Labels3 is the empty set
-	Labels3 = makeLabels()
-)
-
-func makeLabels(labels ...kv.KeyValue) *label.Set {
-	s := label.NewSet(labels...)
-	return &s
+	for _, tc := range []exportCase{
+		{kind: export.PassThroughExporter},
+		{kind: export.CumulativeExporter},
+		{kind: export.DeltaExporter},
+	} {
+		t.Run(tc.kind.String(), func(t *testing.T) {
+			for _, ic := range []instrumentCase{
+				{kind: metric.CounterKind},
+				{kind: metric.UpDownCounterKind},
+				{kind: metric.ValueRecorderKind},
+				{kind: metric.SumObserverKind},
+				{kind: metric.UpDownSumObserverKind},
+				{kind: metric.ValueObserverKind},
+			} {
+				t.Run(ic.kind.String(), func(t *testing.T) {
+					for _, nc := range []numberCase{
+						{kind: metric.Int64NumberKind},
+						{kind: metric.Float64NumberKind},
+					} {
+						t.Run(nc.kind.String(), func(t *testing.T) {
+							for _, ac := range []aggregatorCase{
+								{kind: aggregation.SumKind},
+								{kind: aggregation.MinMaxSumCountKind},
+								{kind: aggregation.HistogramKind},
+								{kind: aggregation.LastValueKind},
+								{kind: aggregation.ExactKind},
+								{kind: aggregation.SketchKind},
+							} {
+								t.Run(ac.kind.String(), func(t *testing.T) {
+									testSynchronousIntegration(
+										t,
+										tc.kind,
+										ic.kind,
+										nc.kind,
+										ac.kind,
+									)
+								})
+							}
+						})
+					}
+				})
+			}
+		})
+	}
 }
 
-// LastValueAgg returns a checkpointed lastValue aggregator w/ the specified descriptor and value.
-func LastValueAgg(desc *metric.Descriptor, v int64) export.Aggregator {
+type testSelector struct {
+	kind aggregation.Kind
+}
+
+func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	for i := range aggPtrs {
+		switch ts.kind {
+		case aggregation.SumKind:
+			*aggPtrs[i] = &sum.New(1)[0]
+		case aggregation.MinMaxSumCountKind:
+			*aggPtrs[i] = &minmaxsumcount.New(1, desc)[0]
+		case aggregation.HistogramKind:
+			*aggPtrs[i] = &histogram.New(1, desc, nil)[0]
+		case aggregation.LastValueKind:
+			*aggPtrs[i] = &lastvalue.New(1)[0]
+		case aggregation.SketchKind:
+			*aggPtrs[i] = &ddsketch.New(1, desc, nil)[0]
+		case aggregation.ExactKind:
+			*aggPtrs[i] = &array.New(1)[0]
+		}
+	}
+}
+
+func testSynchronousIntegration(
+	t *testing.T,
+	ekind export.ExportKind,
+	mkind metric.Kind,
+	nkind metric.NumberKind,
+	akind aggregation.Kind,
+) {
 	ctx := context.Background()
-	gagg := &lastvalue.New(1)[0]
-	_ = gagg.Update(ctx, metric.NewInt64Number(v), desc)
-	return gagg
+	selector := testSelector{akind}
+	res := resource.New(kv.String("R", "V"))
+
+	asNumber := func(value int64) metric.Number {
+		if nkind == metric.Int64NumberKind {
+			return metric.NewInt64Number(value)
+		}
+		return metric.NewFloat64Number(float64(value))
+	}
+
+	updateFor := func(desc *metric.Descriptor, value int64, labs []kv.KeyValue) export.Accumulation {
+		ls := label.NewSet(labs...)
+		var agg export.Aggregator
+		selector.AggregatorFor(desc, &agg)
+		_ = agg.Update(ctx, asNumber(value), desc)
+
+		return export.NewAccumulation(desc, &ls, res, agg)
+	}
+
+	labs1 := []kv.KeyValue{kv.String("L1", "V")}
+	labs2 := []kv.KeyValue{kv.String("L2", "V")}
+
+	desc1 := metric.NewDescriptor("inst1", mkind, nkind)
+	desc2 := metric.NewDescriptor("inst2", mkind, nkind)
+
+	// For 1 to 3 checkpoints:
+	for NAccum := 1; NAccum <= 3; NAccum++ {
+		t.Run(fmt.Sprintf("NumAccum=%d", NAccum), func(t *testing.T) {
+			// For 1 to 3 accumulators:
+			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
+				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
+
+					integrator := simple.New(selector, ekind)
+
+					for nc := 0; nc < NCheckpoint; nc++ {
+
+						// The input is 10 per update, scaled by
+						// the number of checkpoints for
+						// cumulative instruments:
+						input := int64(10)
+						cumulativeMultiplier := int64(nc + 1)
+						if mkind.PrecomputedSum() {
+							input *= cumulativeMultiplier
+						}
+
+						integrator.StartCollection()
+
+						for na := 0; na < NAccum; na++ {
+							_ = integrator.Process(updateFor(&desc1, input, labs1))
+							_ = integrator.Process(updateFor(&desc2, input, labs2))
+						}
+
+						err := integrator.FinishCollection()
+						if err == aggregation.ErrNoSubtraction {
+							var subr export.Aggregator
+							selector.AggregatorFor(&desc1, &subr)
+							_, canSub := subr.(export.Subtractor)
+
+							// Allow unsupported subraction case only when it is called for.
+							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
+							return
+						} else if err != nil {
+							t.Fatal(fmt.Sprint("unexpected FinishCollection error: ", err))
+						}
+
+						if nc < NCheckpoint-1 {
+							continue
+						}
+
+						checkpointSet := integrator.CheckpointSet()
+
+						// Test the final checkpoint state.
+						records1 := test.NewOutput(label.DefaultEncoder())
+						err = checkpointSet.ForEach(ekind, records1.AddRecord)
+
+						// Test for an allowed error:
+						if err != nil && err != aggregation.ErrNoSubtraction {
+							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
+						}
+						var multiplier int64
+
+						if mkind.Asynchronous() {
+							// Because async instruments take the last value,
+							// the number of accumulators doesn't matter.
+							if mkind.PrecomputedSum() {
+								if ekind == export.DeltaExporter {
+									multiplier = 1
+								} else {
+									multiplier = cumulativeMultiplier
+								}
+							} else {
+								if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
+									multiplier = cumulativeMultiplier
+								} else {
+									multiplier = 1
+								}
+							}
+						} else {
+							// Synchronous accumulate results from multiple accumulators,
+							// use that number as the baseline multiplier.
+							multiplier = int64(NAccum)
+							if ekind == export.CumulativeExporter {
+								// If a cumulative exporter, include prior checkpoints.
+								multiplier *= cumulativeMultiplier
+							}
+							if akind == aggregation.LastValueKind {
+								// If a last-value aggregator, set multiplier to 1.0.
+								multiplier = 1
+							}
+						}
+
+						require.EqualValues(t, map[string]float64{
+							"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
+							"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
+						}, records1.Map)
+					}
+				})
+			}
+		})
+	}
 }
 
-// Convenience method for building a test exported lastValue record.
-func NewLastValueAccumulation(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
-	return export.NewAccumulation(desc, labels, Resource, LastValueAgg(desc, value))
+type bogusExporter struct{}
+
+func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return 1000000
 }
 
-// Convenience method for building a test exported counter record.
-func NewCounterAccumulation(desc *metric.Descriptor, labels *label.Set, value int64) export.Accumulation {
-	return export.NewAccumulation(desc, labels, Resource, CounterAgg(desc, value))
-}
-
-// CounterAgg returns a checkpointed counter aggregator w/ the specified descriptor and value.
-func CounterAgg(desc *metric.Descriptor, v int64) export.Aggregator {
-	ctx := context.Background()
-	cagg := &sum.New(1)[0]
-	_ = cagg.Update(ctx, metric.NewInt64Number(v), desc)
-	return cagg
-}
-
-func TestSimpleStateless(t *testing.T) {
-	b := simple.New(test.AggregationSelector(), false)
-
-	b.StartCollection()
-
-	// Set initial lastValue values
-	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels1, 10))
-	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels2, 20))
-	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels3, 30))
-
-	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels1, 10))
-	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels2, 20))
-	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels3, 30))
-
-	// Another lastValue Set for Labels1
-	_ = b.Process(NewLastValueAccumulation(&LastValueADesc, Labels1, 50))
-	_ = b.Process(NewLastValueAccumulation(&LastValueBDesc, Labels1, 50))
-
-	// Set initial counter values
-	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
-	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels2, 20))
-	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels3, 40))
-
-	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels1, 10))
-	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels2, 20))
-	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels3, 40))
-
-	// Another counter Add for Labels1
-	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 50))
-	_ = b.Process(NewCounterAccumulation(&CounterBDesc, Labels1, 50))
-
-	require.NoError(t, b.FinishCollection())
-
-	checkpointSet := b.CheckpointSet()
-
-	records := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records.AddRecord)
-
-	// Output lastvalue should have only the "G=H" and "G=" keys.
-	// Output counter should have only the "C=D" and "C=" keys.
-	require.EqualValues(t, map[string]float64{
-		"a.sum/C=D,G=H/R=V":       60, // labels1
-		"a.sum/C=D,E=F/R=V":       20, // labels2
-		"a.sum//R=V":              40, // labels3
-		"b.sum/C=D,G=H/R=V":       60, // labels1
-		"b.sum/C=D,E=F/R=V":       20, // labels2
-		"b.sum//R=V":              40, // labels3
-		"a.lastvalue/C=D,G=H/R=V": 50, // labels1
-		"a.lastvalue/C=D,E=F/R=V": 20, // labels2
-		"a.lastvalue//R=V":        30, // labels3
-		"b.lastvalue/C=D,G=H/R=V": 50, // labels1
-		"b.lastvalue/C=D,E=F/R=V": 20, // labels2
-		"b.lastvalue//R=V":        30, // labels3
-	}, records.Map)
-
-	// Verify that state was reset
-	b.StartCollection()
-	require.NoError(t, b.FinishCollection())
-	checkpointSet = b.CheckpointSet()
-	_ = checkpointSet.ForEach(func(rec export.Record) error {
-		t.Fatal("Unexpected call")
-		return nil
-	})
-}
-
-func TestSimpleStateful(t *testing.T) {
-	ctx := context.Background()
-	b := simple.New(test.AggregationSelector(), true)
-
-	b.StartCollection()
-
-	counterA := NewCounterAccumulation(&CounterADesc, Labels1, 10)
-	_ = b.Process(counterA)
-
-	counterB := NewCounterAccumulation(&CounterBDesc, Labels1, 10)
-	_ = b.Process(counterB)
-	require.NoError(t, b.FinishCollection())
-
-	checkpointSet := b.CheckpointSet()
-
-	records1 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records1.AddRecord)
-
-	require.EqualValues(t, map[string]float64{
-		"a.sum/C=D,G=H/R=V": 10, // labels1
-		"b.sum/C=D,G=H/R=V": 10, // labels1
-	}, records1.Map)
-
-	alloc := sum.New(4)
-	caggA, caggB, ckptA, ckptB := &alloc[0], &alloc[1], &alloc[2], &alloc[3]
-
-	// Test that state was NOT reset
-	checkpointSet = b.CheckpointSet()
-
-	b.StartCollection()
-	require.NoError(t, b.FinishCollection())
-
-	records2 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records2.AddRecord)
-
-	require.EqualValues(t, records1.Map, records2.Map)
-
-	// Update and re-checkpoint the original record.
-	_ = caggA.Update(ctx, metric.NewInt64Number(20), &CounterADesc)
-	_ = caggB.Update(ctx, metric.NewInt64Number(20), &CounterBDesc)
-	err := caggA.SynchronizedCopy(ckptA, &CounterADesc)
-	require.NoError(t, err)
-	err = caggB.SynchronizedCopy(ckptB, &CounterBDesc)
-	require.NoError(t, err)
-
-	// As yet cagg has not been passed to Integrator.Process.  Should
-	// not see an update.
-	checkpointSet = b.CheckpointSet()
-
-	records3 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records3.AddRecord)
-
-	require.EqualValues(t, records1.Map, records3.Map)
-	b.StartCollection()
-
-	// Now process the second update
-	_ = b.Process(export.NewAccumulation(&CounterADesc, Labels1, Resource, ckptA))
-	_ = b.Process(export.NewAccumulation(&CounterBDesc, Labels1, Resource, ckptB))
-	require.NoError(t, b.FinishCollection())
-
-	checkpointSet = b.CheckpointSet()
-
-	records4 := test.NewOutput(label.DefaultEncoder())
-	_ = checkpointSet.ForEach(records4.AddRecord)
-
-	require.EqualValues(t, map[string]float64{
-		"a.sum/C=D,G=H/R=V": 30,
-		"b.sum/C=D,G=H/R=V": 30,
-	}, records4.Map)
+func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
+	panic("Not called")
 }
 
 func TestSimpleInconsistent(t *testing.T) {
 	// Test double-start
-	b := simple.New(test.AggregationSelector(), true)
+	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = simple.New(test.AggregationSelector(), true)
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	require.Equal(t, simple.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = simple.New(test.AggregationSelector(), true)
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
-	require.Equal(t, simple.ErrInconsistentState, b.ForEach(func(export.Record) error { return nil }))
+	require.Equal(
+		t,
+		simple.ErrInconsistentState,
+		b.ForEach(
+			export.PassThroughExporter,
+			func(export.Record) error { return nil },
+		),
+	)
 
 	// Test no start
-	b = simple.New(test.AggregationSelector(), true)
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
 
-	require.Equal(t, simple.ErrInconsistentState, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
+	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
+	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
+	require.Equal(t, simple.ErrInconsistentState, b.Process(accum))
+
+	// Test invalid kind:
+	b = simple.New(test.AggregationSelector(), export.PassThroughExporter)
+	b.StartCollection()
+	require.NoError(t, b.Process(accum))
+	require.NoError(t, b.FinishCollection())
+
+	err := b.ForEach(
+		bogusExporter{},
+		func(export.Record) error { return nil },
+	)
+	require.True(t, errors.Is(err, simple.ErrInvalidExporterKind))
+
 }
 
 func TestSimpleTimestamps(t *testing.T) {
 	beforeNew := time.Now()
-	b := simple.New(test.AggregationSelector(), true)
+	b := simple.New(test.AggregationSelector(), export.PassThroughExporter)
 	afterNew := time.Now()
 
+	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
+	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), exportTest.NoopAggregator{})
+
 	b.StartCollection()
-	_ = b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10))
+	_ = b.Process(accum)
 	require.NoError(t, b.FinishCollection())
 
 	var start1, end1 time.Time
 
-	require.NoError(t, b.ForEach(func(rec export.Record) error {
+	require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
 		start1 = rec.StartTime()
 		end1 = rec.EndTime()
 		return nil
@@ -277,12 +337,12 @@ func TestSimpleTimestamps(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
-		require.NoError(t, b.Process(NewCounterAccumulation(&CounterADesc, Labels1, 10)))
+		require.NoError(t, b.Process(accum))
 		require.NoError(t, b.FinishCollection())
 
 		var start2, end2 time.Time
 
-		require.NoError(t, b.ForEach(func(rec export.Record) error {
+		require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
 			start2 = rec.StartTime()
 			end2 = rec.EndTime()
 			return nil

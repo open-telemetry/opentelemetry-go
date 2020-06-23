@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=ExportKind
+
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
@@ -154,6 +156,16 @@ type Aggregator interface {
 	Merge(Aggregator, *metric.Descriptor) error
 }
 
+// Subtractor is an optional interface implemented by some
+// Aggregators.  An Aggregator must support `Subtract()` in order to
+// be configured for a Precomputed-Sum instrument (SumObserver,
+// UpDownSumObserver) using a DeltaExporter.
+type Subtractor interface {
+	// Subtract subtracts the `operand` from this Aggregator and
+	// outputs the value in `result`.
+	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+}
+
 // Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.
@@ -167,6 +179,21 @@ type Exporter interface {
 	// The CheckpointSet interface refers to the Integrator that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
+
+	// ExportKindSelector is an interface used by the Integrator
+	// in deciding whether to compute Delta or Cumulative
+	// Aggregations when passing Records to this Exporter.
+	ExportKindSelector
+}
+
+// ExportKindSelector is a sub-interface of Exporter used to indicate
+// whether the Integrator should compute Delta or Cumulative
+// Aggregations.
+type ExportKindSelector interface {
+	// ExportKindFor should return the correct ExportKind that
+	// should be used when exporting data for the given metric
+	// instrument and Aggregator kind.
+	ExportKindFor(*metric.Descriptor, aggregation.Kind) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -178,11 +205,16 @@ type CheckpointSet interface {
 	// metrics that were updated during the last collection
 	// period. Each aggregated checkpoint returned by the
 	// function parameter may return an error.
+	//
+	// The ExportKindSelector argument is used to determine
+	// whether the Record is computed using Delta or Cumulative
+	// aggregation.
+	//
 	// ForEach tolerates ErrNoData silently, as this is
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(func(Record) error) error
+	ForEach(ExportKindSelector, func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
@@ -291,4 +323,53 @@ func (r Record) StartTime() time.Time {
 // EndTime is the end time of the interval covered by this aggregation.
 func (r Record) EndTime() time.Time {
 	return r.end
+}
+
+// ExportKind indicates the kind of data exported by an exporter.
+// These bits may be OR-d together when multiple exporters are in use.
+type ExportKind int
+
+const (
+	// CumulativeExporter indicates that the Exporter expects a
+	// Cumulative Aggregation.
+	CumulativeExporter ExportKind = 1 // e.g., Prometheus
+
+	// DeltaExporter indicates that the Exporter expects a
+	// Delta Aggregation.
+	DeltaExporter ExportKind = 2 // e.g., StatsD
+
+	// PassThroughExporter indicates that the Exporter expects
+	// either a Cumulative or a Delta Aggregation, whichever does
+	// not require maintaining state for the given instrument.
+	PassThroughExporter ExportKind = 4 // e.g., OTLP
+)
+
+// Includes tests whether `kind` includes a specific kind of
+// exporter.
+func (kind ExportKind) Includes(has ExportKind) bool {
+	return kind&has != 0
+}
+
+// ExportKindFor returns a constant, as an implementation of ExportKindSelector.
+func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
+	return kind
+}
+
+// MemoryRequired returns whether an exporter of this kind requires
+// memory to export correctly.
+func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
+	switch mkind {
+	case metric.ValueRecorderKind, metric.ValueObserverKind,
+		metric.CounterKind, metric.UpDownCounterKind:
+		// Delta-oriented instruments:
+		return kind.Includes(CumulativeExporter)
+
+	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+		// Cumulative-oriented instruments:
+		return kind.Includes(DeltaExporter)
+	}
+	// Something unexpected is happening--we could panic.  This
+	// will become an error when the exporter tries to access a
+	// checkpoint, presumably, so let it be.
+	return false
 }

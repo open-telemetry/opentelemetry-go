@@ -91,12 +91,16 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
+func (e *testExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.PassThroughExporter
+}
+
 func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	e.exports++
 	var records []export.Record
-	if err := checkpointSet.ForEach(func(r export.Record) error {
+	if err := checkpointSet.ForEach(e, func(r export.Record) error {
 		if e.injectErr != nil {
 			if err := e.injectErr(r); err != nil {
 				return err

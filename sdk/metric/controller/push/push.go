@@ -60,7 +60,7 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 		c.Timeout = c.Period
 	}
 
-	integrator := simple.New(selector, c.Stateful)
+	integrator := simple.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		integrator,
 		sdk.WithResource(c.Resource),
