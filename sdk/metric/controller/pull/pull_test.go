@@ -28,7 +28,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 

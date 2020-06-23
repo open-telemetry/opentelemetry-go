@@ -23,7 +23,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -32,11 +32,11 @@ import (
 const DefaultCachePeriod time.Duration = 10 * time.Second
 
 // Controller manages access to a *sdk.Accumulator and
-// *basic.Integrator.  Use Provider() for obtaining Meters.  Use
+// *basic.Processor.  Use Provider() for obtaining Meters.  Use
 // Foreach() for accessing current records.
 type Controller struct {
 	accumulator *sdk.Accumulator
-	integrator  *integrator.Integrator
+	processor   *processor.Processor
 	provider    *registry.Provider
 	period      time.Duration
 	lastCollect time.Time
@@ -53,25 +53,25 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(aselector, eselector)
+	processor := processor.New(aselector, eselector)
 	accum := sdk.NewAccumulator(
-		integrator,
+		processor,
 		sdk.WithResource(config.Resource),
 	)
 	return &Controller{
 		accumulator: accum,
-		integrator:  integrator,
+		processor:   processor,
 		provider:    registry.NewProvider(accum),
 		period:      config.CachePeriod,
-		checkpoint:  integrator.CheckpointSet(),
+		checkpoint:  processor.CheckpointSet(),
 		clock:       controllerTime.RealClock{},
 	}
 }
 
 // SetClock sets the clock used for caching.  For testing purposes.
 func (c *Controller) SetClock(clock controllerTime.Clock) {
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+	c.processor.Lock()
+	defer c.processor.Unlock()
 	c.clock = clock
 }
 
@@ -84,8 +84,8 @@ func (c *Controller) Provider() metric.Provider {
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
 func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
-	c.integrator.RLock()
-	defer c.integrator.RUnlock()
+	c.processor.RLock()
+	defer c.processor.RUnlock()
 
 	return c.checkpoint.ForEach(ks, f)
 }
@@ -93,8 +93,8 @@ func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record)
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
 func (c *Controller) Collect(ctx context.Context) error {
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+	c.processor.Lock()
+	defer c.processor.Unlock()
 
 	if c.period > 0 {
 		now := c.clock.Now()
@@ -106,9 +106,9 @@ func (c *Controller) Collect(ctx context.Context) error {
 		c.lastCollect = now
 	}
 
-	c.integrator.StartCollection()
+	c.processor.StartCollection()
 	c.accumulator.Collect(ctx)
-	err := c.integrator.FinishCollection()
-	c.checkpoint = c.integrator.CheckpointSet()
+	err := c.processor.FinishCollection()
+	c.checkpoint = c.processor.CheckpointSet()
 	return err
 }

@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Integrator is responsible for deciding which kind of aggregation to
+// Processor is responsible for deciding which kind of aggregation to
 // use (via AggregatorSelector), gathering exported results from the
 // SDK during collection, and deciding over which dimensions to group
 // the exported data.
@@ -42,9 +42,9 @@ import (
 //
 // The `Process` method is called during collection in a
 // single-threaded context from the SDK, after the aggregator is
-// checkpointed, allowing the integrator to build the set of metrics
+// checkpointed, allowing the processor to build the set of metrics
 // currently being exported.
-type Integrator interface {
+type Processor interface {
 	// AggregatorSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
 	//
@@ -177,18 +177,18 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The CheckpointSet interface refers to the Integrator that just
+	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
 	Export(context.Context, CheckpointSet) error
 
-	// ExportKindSelector is an interface used by the Integrator
+	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
 	// Aggregations when passing Records to this Exporter.
 	ExportKindSelector
 }
 
 // ExportKindSelector is a sub-interface of Exporter used to indicate
-// whether the Integrator should compute Delta or Cumulative
+// whether the Processor should compute Delta or Cumulative
 // Aggregations.
 type ExportKindSelector interface {
 	// ExportKindFor should return the correct ExportKind that
@@ -198,7 +198,7 @@ type ExportKindSelector interface {
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
-// aggregated metrics from the Integrator.  This is passed to the
+// aggregated metrics from the Processor.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
 type CheckpointSet interface {
@@ -219,9 +219,9 @@ type CheckpointSet interface {
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
-	// stateful integrator) while it is locked.
+	// stateful processor) while it is locked.
 	//
-	// The Integrator attached to the Accumulator MUST be called
+	// The Processor attached to the Accumulator MUST be called
 	// with the lock held.
 	sync.Locker
 
@@ -232,7 +232,7 @@ type CheckpointSet interface {
 }
 
 // Metadata contains the common elements for exported metric data that
-// are shared by the Accumulator->Integrator and Integrator->Exporter
+// are shared by the Accumulator->Processor and Processor->Exporter
 // steps.
 type Metadata struct {
 	descriptor *metric.Descriptor
@@ -241,14 +241,14 @@ type Metadata struct {
 }
 
 // Accumulation contains the exported data for a single metric instrument
-// and label set, as prepared by an Accumulator for the Integrator.
+// and label set, as prepared by an Accumulator for the Processor.
 type Accumulation struct {
 	Metadata
 	aggregator Aggregator
 }
 
 // Record contains the exported data for a single metric instrument
-// and label set, as prepared by the Integrator for the Exporter.
+// and label set, as prepared by the Processor for the Exporter.
 // This includes the effective start and end time for the aggregation.
 type Record struct {
 	Metadata
@@ -274,7 +274,7 @@ func (m Metadata) Resource() *resource.Resource {
 }
 
 // NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Integrators. The Descriptor, Labels, Resource,
+// Accumulations to send to Processors. The Descriptor, Labels, Resource,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
 func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
@@ -294,7 +294,7 @@ func (r Accumulation) Aggregator() Aggregator {
 	return r.aggregator
 }
 
-// NewRecord allows Integrator implementations to construct export
+// NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
 func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
