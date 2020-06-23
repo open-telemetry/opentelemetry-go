@@ -131,7 +131,7 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 
 // NewExportPipeline sets up a complete export pipeline with the
 // recommended setup, chaining a NewRawExporter into the recommended
-// selectors and integrators.
+// selectors and processors.
 func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {

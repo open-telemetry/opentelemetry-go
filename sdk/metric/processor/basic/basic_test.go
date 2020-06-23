@@ -35,13 +35,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/basic"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// TestIntegrator tests all the non-error paths in this package.
-func TestIntegrator(t *testing.T) {
+// TestProcessor tests all the non-error paths in this package.
+func TestProcessor(t *testing.T) {
 	type exportCase struct {
 		kind export.ExportKind
 	}
@@ -164,7 +164,7 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					integrator := basic.New(selector, ekind)
+					processor := basic.New(selector, ekind)
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -177,14 +177,14 @@ func testSynchronousIntegration(
 							input *= cumulativeMultiplier
 						}
 
-						integrator.StartCollection()
+						processor.StartCollection()
 
 						for na := 0; na < NAccum; na++ {
-							_ = integrator.Process(updateFor(&desc1, input, labs1))
-							_ = integrator.Process(updateFor(&desc2, input, labs2))
+							_ = processor.Process(updateFor(&desc1, input, labs1))
+							_ = processor.Process(updateFor(&desc2, input, labs2))
 						}
 
-						err := integrator.FinishCollection()
+						err := processor.FinishCollection()
 						if err == aggregation.ErrNoSubtraction {
 							var subr export.Aggregator
 							selector.AggregatorFor(&desc1, &subr)
@@ -201,7 +201,7 @@ func testSynchronousIntegration(
 							continue
 						}
 
-						checkpointSet := integrator.CheckpointSet()
+						checkpointSet := processor.CheckpointSet()
 
 						// Test the final checkpoint state.
 						records1 := test.NewOutput(label.DefaultEncoder())

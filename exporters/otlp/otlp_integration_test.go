@@ -34,7 +34,7 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -117,8 +117,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	selector := simple.NewWithExactDistribution()
-	integrator := integrator.New(selector, metricsdk.PassThroughExporter)
-	pusher := push.New(integrator, exp)
+	processor := processor.New(selector, metricsdk.PassThroughExporter)
+	pusher := push.New(processor, exp)
 	pusher.Start()
 
 	ctx := context.Background()

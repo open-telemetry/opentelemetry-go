@@ -34,13 +34,13 @@ import (
 
 type (
 	// Accumulator implements the OpenTelemetry Meter API.  The
-	// Accumulator is bound to a single export.Integrator in
+	// Accumulator is bound to a single export.Processor in
 	// `NewAccumulator()`.
 	//
 	// The Accumulator supports a Collect() API to gather and export
 	// current data.  Collect() should be arranged according to
-	// the integrator model.  Push-based integrators will setup a
-	// timer to call Collect() periodically.  Pull-based integrators
+	// the processor model.  Push-based processors will setup a
+	// timer to call Collect() periodically.  Pull-based processors
 	// will call Collect() when a pull request arrives.
 	Accumulator struct {
 		// current maps `mapkey` to *record.
@@ -55,8 +55,8 @@ type (
 		// incremented in `Collect()`.
 		currentEpoch int64
 
-		// integrator is the configured integrator+configuration.
-		integrator export.Integrator
+		// processor is the configured processor+configuration.
+		processor export.Processor
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock sync.Mutex
@@ -186,7 +186,7 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
 			// in the current epoch, we replace the old recorder
-			a.meter.integrator.AggregatorFor(&a.descriptor, &lrec.observed)
+			a.meter.processor.AggregatorFor(&a.descriptor, &lrec.observed)
 		} else {
 			lrec.observedEpoch = a.meter.currentEpoch
 		}
@@ -194,7 +194,7 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 		return lrec.observed
 	}
 	var rec export.Aggregator
-	a.meter.integrator.AggregatorFor(&a.descriptor, &rec)
+	a.meter.processor.AggregatorFor(&a.descriptor, &rec)
 	if a.recorders == nil {
 		a.recorders = make(map[label.Distinct]*labeledRecorder)
 	}
@@ -255,7 +255,7 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
 
-	s.meter.integrator.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
+	s.meter.processor.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -298,22 +298,22 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 }
 
 // NewAccumulator constructs a new Accumulator for the given
-// integrator.  This Accumulator supports only a single integrator.
+// processor.  This Accumulator supports only a single processor.
 //
 // The Accumulator does not start any background process to collect itself
-// periodically, this responsbility lies with the integrator, typically,
+// periodically, this responsbility lies with the processor, typically,
 // depending on the type of export.  For example, a pull-based
-// integrator will call Collect() when it receives a request to scrape
-// current metric values.  A push-based integrator should configure its
+// processor will call Collect() when it receives a request to scrape
+// current metric values.  A push-based processor should configure its
 // own periodic collection.
-func NewAccumulator(integrator export.Integrator, opts ...Option) *Accumulator {
+func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 	c := &Config{}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
 	return &Accumulator{
-		integrator:       integrator,
+		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
 	}
@@ -347,7 +347,7 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 // exports data for each active instrument.  Collect() may not be
 // called concurrently.
 //
-// During the collection pass, the export.Integrator will receive
+// During the collection pass, the export.Processor will receive
 // one Export() call per current aggregation.
 //
 // Returns the number of records that were checkpointed.
@@ -445,7 +445,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 	}
 
 	a := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
-	err = m.integrator.Process(a)
+	err = m.processor.Process(a)
 	if err != nil {
 		global.Handle(err)
 	}
@@ -463,7 +463,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		if epochDiff == 0 {
 			if lrec.observed != nil {
 				a := export.NewAccumulation(&a.descriptor, lrec.labels, m.resource, lrec.observed)
-				err := m.integrator.Process(a)
+				err := m.processor.Process(a)
 				if err != nil {
 					global.Handle(err)
 				}

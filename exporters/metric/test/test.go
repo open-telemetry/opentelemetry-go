@@ -108,7 +108,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 	return newAgg, true
 }
 
-// ForEach does not use ExportKindSelected: use a real Integrator to
+// ForEach does not use ExportKindSelected: use a real Processor to
 // test ExportKind functionality.
 func (p *CheckpointSet) ForEach(_ export.ExportKindSelector, f func(export.Record) error) error {
 	for _, r := range p.updates {
