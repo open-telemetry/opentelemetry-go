@@ -133,7 +133,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				Labels:      nil,
 			},
 		},
 		{
@@ -148,7 +147,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-b-description",
 				Unit:        "By",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
 			},
 		},
 	}
@@ -239,8 +237,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Name:        "sum-test-a",
 				Description: "test-a-description",
 				Unit:        "1",
-				Type:        metricpb.MetricDescriptor_COUNTER_INT64,
-				Labels:      nil,
+				Type:        metricpb.MetricDescriptor_INT64,
 			},
 		},
 		{
@@ -254,8 +251,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Name:        "sum-test-b",
 				Description: "test-b-description",
 				Unit:        "ms",
-				Type:        metricpb.MetricDescriptor_COUNTER_DOUBLE,
-				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
+				Type:        metricpb.MetricDescriptor_DOUBLE,
 			},
 		},
 	}
