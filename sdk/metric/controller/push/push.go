@@ -49,7 +49,7 @@ type Controller struct {
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provided exporter and options to configure an SDK with
 // periodic collection.
-func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
+func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		Period: DefaultPushPeriod,
 	}
