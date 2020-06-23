@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -212,7 +213,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
 				t.Fatalf("span name: got %s, want %s", gotName, want)
 			}
-			attrMap[s.Attributes[0].IntValue] = true
+			attrMap[s.Attributes[0].Value.Value.(*commonpb.AnyValue_IntValue).IntValue] = true
 		}
 		if got, want := len(attrMap), m; got != want {
 			t.Fatalf("span attribute unique values: got %d  want %d", got, want)
@@ -241,12 +242,12 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		case metric.CounterKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_INT64.String(), desc.GetType().String())
+				assert.Equal(t, metricpb.MetricDescriptor_INT64.String(), desc.GetType().String())
 				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
 				}
 			case metricapi.Float64NumberKind:
-				assert.Equal(t, metricpb.MetricDescriptor_COUNTER_DOUBLE.String(), desc.GetType().String())
+				assert.Equal(t, metricpb.MetricDescriptor_DOUBLE.String(), desc.GetType().String())
 				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
 					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
 				}
