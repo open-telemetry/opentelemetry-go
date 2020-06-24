@@ -45,8 +45,8 @@ type Handler struct {
 	writeEvent        bool
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
-	counters          map[string]*metric.Int64Counter
-	valueRecorders    map[string]*metric.Int64ValueRecorder
+	counters          map[string]metric.Int64Counter
+	valueRecorders    map[string]metric.Int64ValueRecorder
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -90,22 +90,23 @@ func (h *Handler) configure(c *Config) {
 }
 
 func (h *Handler) createMeasures() {
-	h.counters = make(map[string]*metric.Int64Counter)
-	h.valueRecorders = make(map[string]*metric.Int64ValueRecorder)
+	h.counters = make(map[string]metric.Int64Counter)
+	h.valueRecorders = make(map[string]metric.Int64ValueRecorder)
 
 	requestCounter := h.meter.NewInt64Counter(RequestCount)
-	requestBytesCounter := h.meter.NewInt64Counter(RequestBytes)
-	responseBytesCounter := h.meter.NewInt64Counter(ResponseBytes)
+	requestBytesCounter := h.meter.NewInt64Counter(RequestContentLength)
+	responseBytesCounter := h.meter.NewInt64Counter(ResponseContentLength)
 	serverLatencyMeasure := h.meter.NewInt64ValueRecorder(ServerLatency)
 
-	h.counters[RequestCount] = &requestCounter
-	h.counters[RequestBytes] = &requestBytesCounter
-	h.counters[ResponseBytes] = &responseBytesCounter
-	h.valueRecorders[ServerLatency] = &serverLatencyMeasure
+	h.counters[RequestCount] = requestCounter
+	h.counters[RequestContentLength] = requestBytesCounter
+	h.counters[ResponseContentLength] = responseBytesCounter
+	h.valueRecorders[ServerLatency] = serverLatencyMeasure
 }
 
 // ServeHTTP serves HTTP requests (http.Handler)
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range h.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -123,8 +124,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := propagation.ExtractHTTP(r.Context(), h.propagators, r.Header)
 	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
-
-	requestStartTime := time.Now()
 
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
@@ -151,12 +150,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Add request metrics
 
-	labels := []kv.KeyValue{kv.Int("status", rww.statusCode), kv.String("method", r.Method)}
+	labels := standard.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
 
 	h.counters[RequestCount].Add(ctx, 1, labels...)
-	h.counters[RequestBytes].Add(ctx, bw.read, labels...)
-	h.counters[ResponseBytes].Add(ctx, rww.written, labels...)
-	h.valueRecorders[ServerLatency].Record(ctx, time.Since(requestStartTime).Milliseconds(), labels...)
+	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
+	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
+
+	elapsedTime := time.Since(requestStartTime).Microseconds()
+
+	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, labels...)
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {

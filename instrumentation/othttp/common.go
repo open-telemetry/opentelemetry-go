@@ -30,10 +30,10 @@ const (
 
 // Server HTTP metrics
 const (
-	RequestCount  = "request_count"  // request count total
-	RequestBytes  = "request_bytes"  // request bytes total
-	ResponseBytes = "response_bytes" // response bytes
-	ServerLatency = "server_latency" // End to end latency
+	RequestCount          = "http.server.request_count"           // Incoming request count total
+	RequestContentLength  = "http.server.request_content_length"  // Incoming request bytes total
+	ResponseContentLength = "http.server.response_content_length" // Incoming response bytes total
+	ServerLatency         = "http.server.duration"                // Incoming end to end duration, microseconds
 )
 
 // Filter is a predicate used to determine whether a given http.request should
