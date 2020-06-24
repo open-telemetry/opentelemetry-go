@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/otel v0.6.0
 	golang.org/x/text v0.3.2 // indirect
-	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc v1.30.0
 )
 
 go 1.13
