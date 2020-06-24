@@ -26,7 +26,7 @@ import (
 func TestAttributes(t *testing.T) {
 	for _, test := range []struct {
 		attrs    []kv.KeyValue
-		expected []*commonpb.AttributeKeyValue
+		expected []*commonpb.KeyValue
 	}{
 		{nil, nil},
 		{
@@ -42,56 +42,86 @@ func TestAttributes(t *testing.T) {
 				kv.String("string to string", "string"),
 				kv.Bool("bool to bool", true),
 			},
-			[]*commonpb.AttributeKeyValue{
+			[]*commonpb.KeyValue{
 				{
-					Key:      "int to int",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 123,
+					Key: "int to int",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 123,
+						},
+					},
 				},
 				{
-					Key:      "uint to int",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 1234,
+					Key: "uint to int",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 1234,
+						},
+					},
 				},
 				{
-					Key:      "int32 to int",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 12345,
+					Key: "int32 to int",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 12345,
+						},
+					},
 				},
 				{
-					Key:      "uint32 to int",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 123456,
+					Key: "uint32 to int",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 123456,
+						},
+					},
 				},
 				{
-					Key:      "int64 to int64",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 1234567,
+					Key: "int64 to int64",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 1234567,
+						},
+					},
 				},
 				{
-					Key:      "uint64 to int64",
-					Type:     commonpb.AttributeKeyValue_INT,
-					IntValue: 12345678,
+					Key: "uint64 to int64",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_IntValue{
+							IntValue: 12345678,
+						},
+					},
 				},
 				{
-					Key:         "float32 to double",
-					Type:        commonpb.AttributeKeyValue_DOUBLE,
-					DoubleValue: 3.14,
+					Key: "float32 to double",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_DoubleValue{
+							DoubleValue: 3.14,
+						},
+					},
 				},
 				{
-					Key:         "float64 to double",
-					Type:        commonpb.AttributeKeyValue_DOUBLE,
-					DoubleValue: 1.61,
+					Key: "float64 to double",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_DoubleValue{
+							DoubleValue: 1.61,
+						},
+					},
 				},
 				{
-					Key:         "string to string",
-					Type:        commonpb.AttributeKeyValue_STRING,
-					StringValue: "string",
+					Key: "string to string",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_StringValue{
+							StringValue: "string",
+						},
+					},
 				},
 				{
-					Key:       "bool to bool",
-					Type:      commonpb.AttributeKeyValue_BOOL,
-					BoolValue: true,
+					Key: "bool to bool",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_BoolValue{
+							BoolValue: true,
+						},
+					},
 				},
 			},
 		},
@@ -101,11 +131,16 @@ func TestAttributes(t *testing.T) {
 			continue
 		}
 		for i, actual := range got {
-			if actual.Type == commonpb.AttributeKeyValue_DOUBLE {
-				if !assert.InDelta(t, test.expected[i].DoubleValue, actual.DoubleValue, 0.01) {
+			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
+				e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+				if !ok {
+					t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
 					continue
 				}
-				test.expected[i].DoubleValue = actual.DoubleValue
+				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+					continue
+				}
+				e.DoubleValue = a.DoubleValue
 			}
 			assert.Equal(t, test.expected[i], actual)
 		}
