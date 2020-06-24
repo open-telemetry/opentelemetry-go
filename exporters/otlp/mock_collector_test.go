@@ -113,7 +113,7 @@ func resourceString(res *resourcepb.Resource) string {
 	return rstr
 }
 
-func sortedAttributes(attrs []*commonpb.AttributeKeyValue) []*commonpb.AttributeKeyValue {
+func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
 	sort.Slice(attrs[:], func(i, j int) bool {
 		return attrs[i].Key < attrs[j].Key
 	})

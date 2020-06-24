@@ -173,11 +173,14 @@ func TestExportSpans(t *testing.T) {
 			[]tracepb.ResourceSpans{
 				{
 					Resource: &resourcepb.Resource{
-						Attributes: []*commonpb.AttributeKeyValue{
+						Attributes: []*commonpb.KeyValue{
 							{
-								Key:         "instance",
-								Type:        commonpb.AttributeKeyValue_STRING,
-								StringValue: "tester-a",
+								Key: "instance",
+								Value: &commonpb.AnyValue{
+									Value: &commonpb.AnyValue_StringValue{
+										StringValue: "tester-a",
+									},
+								},
 							},
 						},
 					},
@@ -195,16 +198,22 @@ func TestExportSpans(t *testing.T) {
 									Kind:              tracepb.Span_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
-									Attributes: []*commonpb.AttributeKeyValue{
+									Attributes: []*commonpb.KeyValue{
 										{
-											Key:         "user",
-											Type:        commonpb.AttributeKeyValue_STRING,
-											StringValue: "alice",
+											Key: "user",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_StringValue{
+													StringValue: "alice",
+												},
+											},
 										},
 										{
-											Key:       "authenticated",
-											Type:      commonpb.AttributeKeyValue_BOOL,
-											BoolValue: true,
+											Key: "authenticated",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_BoolValue{
+													BoolValue: true,
+												},
+											},
 										},
 									},
 									Status: &tracepb.Status{
@@ -220,16 +229,22 @@ func TestExportSpans(t *testing.T) {
 									Kind:              tracepb.Span_INTERNAL,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
-									Attributes: []*commonpb.AttributeKeyValue{
+									Attributes: []*commonpb.KeyValue{
 										{
-											Key:         "user",
-											Type:        commonpb.AttributeKeyValue_STRING,
-											StringValue: "alice",
+											Key: "user",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_StringValue{
+													StringValue: "alice",
+												},
+											},
 										},
 										{
-											Key:       "authenticated",
-											Type:      commonpb.AttributeKeyValue_BOOL,
-											BoolValue: true,
+											Key: "authenticated",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_BoolValue{
+													BoolValue: true,
+												},
+											},
 										},
 									},
 									Status: &tracepb.Status{
@@ -252,16 +267,22 @@ func TestExportSpans(t *testing.T) {
 									Kind:              tracepb.Span_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
-									Attributes: []*commonpb.AttributeKeyValue{
+									Attributes: []*commonpb.KeyValue{
 										{
-											Key:         "user",
-											Type:        commonpb.AttributeKeyValue_STRING,
-											StringValue: "alice",
+											Key: "user",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_StringValue{
+													StringValue: "alice",
+												},
+											},
 										},
 										{
-											Key:       "authenticated",
-											Type:      commonpb.AttributeKeyValue_BOOL,
-											BoolValue: true,
+											Key: "authenticated",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_BoolValue{
+													BoolValue: true,
+												},
+											},
 										},
 									},
 									Status: &tracepb.Status{
@@ -275,11 +296,14 @@ func TestExportSpans(t *testing.T) {
 				},
 				{
 					Resource: &resourcepb.Resource{
-						Attributes: []*commonpb.AttributeKeyValue{
+						Attributes: []*commonpb.KeyValue{
 							{
-								Key:         "instance",
-								Type:        commonpb.AttributeKeyValue_STRING,
-								StringValue: "tester-b",
+								Key: "instance",
+								Value: &commonpb.AnyValue{
+									Value: &commonpb.AnyValue_StringValue{
+										StringValue: "tester-b",
+									},
+								},
 							},
 						},
 					},
@@ -297,16 +321,22 @@ func TestExportSpans(t *testing.T) {
 									Kind:              tracepb.Span_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
-									Attributes: []*commonpb.AttributeKeyValue{
+									Attributes: []*commonpb.KeyValue{
 										{
-											Key:         "user",
-											Type:        commonpb.AttributeKeyValue_STRING,
-											StringValue: "bob",
+											Key: "user",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_StringValue{
+													StringValue: "bob",
+												},
+											},
 										},
 										{
-											Key:       "authenticated",
-											Type:      commonpb.AttributeKeyValue_BOOL,
-											BoolValue: false,
+											Key: "authenticated",
+											Value: &commonpb.AnyValue{
+												Value: &commonpb.AnyValue_BoolValue{
+													BoolValue: false,
+												},
+											},
 										},
 									},
 									Status: &tracepb.Status{
