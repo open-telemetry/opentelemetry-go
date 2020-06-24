@@ -18,7 +18,7 @@ jobs:
       id: modtidy
       with:
         gomods: '**/go.mod'
-        gosum_only: true
+        gomodsum_only: true
     - uses: stefanzweifel/git-auto-commit-action@v4
       id: autocommit
       with:
