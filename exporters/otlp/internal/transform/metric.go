@@ -258,25 +258,26 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
-			Labels:      stringKeyValues(labels.Iter()),
 		},
 	}
 
 	switch n := desc.NumberKind(); n {
 	case metric.Int64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{
 				Value:             sum.CoerceToInt64(n),
+				Labels:            stringKeyValues(labels.Iter()),
 				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
 				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
 			},
 		}
 	case metric.Float64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{
 				Value:             sum.CoerceToFloat64(n),
+				Labels:            stringKeyValues(labels.Iter()),
 				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
 				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
 			},
@@ -322,12 +323,12 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
 			Type:        metricpb.MetricDescriptor_SUMMARY,
-			Labels:      stringKeyValues(labels.Iter()),
 		},
 		SummaryDataPoints: []*metricpb.SummaryDataPoint{
 			{
-				Count: uint64(count),
-				Sum:   sum.CoerceToFloat64(numKind),
+				Labels: stringKeyValues(labels.Iter()),
+				Count:  uint64(count),
+				Sum:    sum.CoerceToFloat64(numKind),
 				PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
 					{
 						Percentile: 0.0,

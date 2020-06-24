@@ -24,12 +24,12 @@ import (
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
-func Attributes(attrs []kv.KeyValue) []*commonpb.AttributeKeyValue {
+func Attributes(attrs []kv.KeyValue) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
 
-	out := make([]*commonpb.AttributeKeyValue, 0, len(attrs))
+	out := make([]*commonpb.KeyValue, 0, len(attrs))
 	for _, kv := range attrs {
 		out = append(out, toAttribute(kv))
 	}
@@ -37,12 +37,12 @@ func Attributes(attrs []kv.KeyValue) []*commonpb.AttributeKeyValue {
 }
 
 // ResourceAttributes transforms a Resource into a slice of OTLP attribute key-values.
-func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyValue {
+func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
 	if resource.Len() == 0 {
 		return nil
 	}
 
-	out := make([]*commonpb.AttributeKeyValue, 0, resource.Len())
+	out := make([]*commonpb.KeyValue, 0, resource.Len())
 	for iter := resource.Iter(); iter.Next(); {
 		out = append(out, toAttribute(iter.Attribute()))
 	}
@@ -50,43 +50,36 @@ func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyVal
 	return out
 }
 
-func toAttribute(v kv.KeyValue) *commonpb.AttributeKeyValue {
+func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
+	result := &commonpb.KeyValue{
+		Key:   string(v.Key),
+		Value: new(commonpb.AnyValue),
+	}
 	switch v.Value.Type() {
 	case value.BOOL:
-		return &commonpb.AttributeKeyValue{
-			Key:       string(v.Key),
-			Type:      commonpb.AttributeKeyValue_BOOL,
+		result.Value.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.Value.AsBool(),
 		}
 	case value.INT64, value.INT32, value.UINT32, value.UINT64:
-		return &commonpb.AttributeKeyValue{
-			Key:      string(v.Key),
-			Type:     commonpb.AttributeKeyValue_INT,
+		result.Value.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.Value.AsInt64(),
 		}
 	case value.FLOAT32:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_DOUBLE,
+		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: float64(v.Value.AsFloat32()),
 		}
 	case value.FLOAT64:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_DOUBLE,
+		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.Value.AsFloat64(),
 		}
 	case value.STRING:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_STRING,
+		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.Value.AsString(),
 		}
 	default:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_STRING,
+		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",
 		}
 	}
+	return result
 }
