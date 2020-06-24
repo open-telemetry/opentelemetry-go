@@ -50,7 +50,7 @@ const (
 	FLOAT32             // 32 bit floating point value, use AsFloat32() to get it.
 	FLOAT64             // 64 bit floating point value, use AsFloat64() to get it.
 	STRING              // String value, use AsString() to get it.
-	ARRAY               // Array value of arbitarary type, use AsArray() to get it.
+	ARRAY               // Array value of arbitrary type, use AsArray() to get it.
 )
 
 // Bool creates a BOOL Value.

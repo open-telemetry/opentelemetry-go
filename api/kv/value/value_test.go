@@ -155,7 +155,7 @@ func TestValue(t *testing.T) {
 			wantValue: []uint{42, 43},
 		},
 		{
-			name:      "Key.Array([][]int) correctly return key's multi dimentionsl array",
+			name:      "Key.Array([][]int) correctly return key's multi dimensional array",
 			value:     k.Array([][]int{{1, 2}, {3, 4}}).Value,
 			wantType:  value.ARRAY,
 			wantValue: [][]int{{1, 2}, {3, 4}},
