@@ -41,6 +41,12 @@ func TestValue(t *testing.T) {
 			wantValue: true,
 		},
 		{
+			name:      "Key.Array([]bool) correctly return key's internal bool values",
+			value:     k.Array([]bool{true, false}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []bool{true, false},
+		},
+		{
 			name:      "Key.Int64() correctly returns keys's internal int64 value",
 			value:     k.Int64(42).Value,
 			wantType:  value.INT64,
@@ -93,6 +99,66 @@ func TestValue(t *testing.T) {
 			value:     k.Uint(bli.uintValue).Value,
 			wantType:  bli.unsignedType,
 			wantValue: bli.unsignedValue,
+		},
+		{
+			name:      "Key.Array([]int64) correctly returns keys's internal int64 values",
+			value:     k.Array([]int64{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []int64{42, 43},
+		},
+		{
+			name:      "KeyArray([]uint64) correctly returns keys's internal uint64 values",
+			value:     k.Array([]uint64{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []uint64{42, 43},
+		},
+		{
+			name:      "Key.Array([]float64) correctly returns keys's internal float64 values",
+			value:     k.Array([]float64{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []float64{42, 43},
+		},
+		{
+			name:      "Key.Array([]int32) correctly returns keys's internal int32 values",
+			value:     k.Array([]int32{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []int32{42, 43},
+		},
+		{
+			name:      "Key.Array([]uint32) correctly returns keys's internal uint32 values",
+			value:     k.Array([]uint32{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []uint32{42, 43},
+		},
+		{
+			name:      "Key.Array([]float32) correctly returns keys's internal float32 values",
+			value:     k.Array([]float32{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []float32{42, 43},
+		},
+		{
+			name:      "Key.Array([]string) correctly return key's internal string values",
+			value:     k.Array([]string{"foo", "bar"}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []string{"foo", "bar"},
+		},
+		{
+			name:      "Key.Array([]int) correctly returns keys's internal signed integral values",
+			value:     k.Array([]int{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []int{42, 43},
+		},
+		{
+			name:      "Key.Array([]uint) correctly returns keys's internal unsigned integral values",
+			value:     k.Array([]uint{42, 43}).Value,
+			wantType:  value.ARRAY,
+			wantValue: []uint{42, 43},
+		},
+		{
+			name:      "Key.Array([][]int) correctly return key's multi dimensional array",
+			value:     k.Array([][]int{{1, 2}, {3, 4}}).Value,
+			wantType:  value.ARRAY,
+			wantValue: [][]int{{1, 2}, {3, 4}},
 		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
