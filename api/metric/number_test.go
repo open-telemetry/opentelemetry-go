@@ -156,9 +156,8 @@ func TestNumberZero(t *testing.T) {
 	zero := Number(0)
 	zerof := NewFloat64Number(0)
 	zeroi := NewInt64Number(0)
-	zerou := NewUint64Number(0)
 
-	if zero != zerof || zero != zeroi || zero != zerou {
+	if zero != zerof || zero != zeroi {
 		t.Errorf("Invalid zero representations")
 	}
 }
@@ -166,10 +165,8 @@ func TestNumberZero(t *testing.T) {
 func TestNumberAsInterface(t *testing.T) {
 	i64 := NewInt64Number(10)
 	f64 := NewFloat64Number(11.11)
-	u64 := NewUint64Number(100)
 	require.Equal(t, int64(10), (&i64).AsInterface(Int64NumberKind).(int64))
 	require.Equal(t, 11.11, (&f64).AsInterface(Float64NumberKind).(float64))
-	require.Equal(t, uint64(100), (&u64).AsInterface(Uint64NumberKind).(uint64))
 }
 
 func TestNumberSignChange(t *testing.T) {
