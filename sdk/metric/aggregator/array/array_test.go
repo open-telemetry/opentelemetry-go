@@ -260,7 +260,6 @@ func TestArrayFloat64(t *testing.T) {
 		// points except for NaN, which is invalid.
 		return []float64{
 			0,
-			math.Inf(sign),
 			1 / math.Inf(sign),
 			1,
 			2,
