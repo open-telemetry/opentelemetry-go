@@ -95,6 +95,12 @@ func Uint(k string, v uint) KeyValue {
 	return Key(k).Uint(v)
 }
 
+// Array creates a new key-value pair with a passed name and a array.
+// Only arrays of primitive type are supported.
+func Array(k string, v interface{}) KeyValue {
+	return Key(k).Array(v)
+}
+
 // Infer creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
 func Infer(k string, value interface{}) KeyValue {
@@ -109,6 +115,8 @@ func Infer(k string, value interface{}) KeyValue {
 	rv := reflect.ValueOf(value)
 
 	switch rv.Kind() {
+	case reflect.Array, reflect.Slice:
+		return Array(k, value)
 	case reflect.Bool:
 		return Bool(k, rv.Bool())
 	case reflect.Int, reflect.Int8, reflect.Int16:

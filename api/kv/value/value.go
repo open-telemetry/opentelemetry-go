@@ -17,7 +17,9 @@ package value
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/internal"
@@ -34,6 +36,8 @@ type Value struct {
 	numeric  uint64
 	stringly string
 	// TODO Lazy value type?
+
+	array interface{}
 }
 
 const (
@@ -46,6 +50,7 @@ const (
 	FLOAT32             // 32 bit floating point value, use AsFloat32() to get it.
 	FLOAT64             // 64 bit floating point value, use AsFloat64() to get it.
 	STRING              // String value, use AsString() to get it.
+	ARRAY               // Array value of arbitrary type, use AsArray() to get it.
 )
 
 // Bool creates a BOOL Value.
@@ -130,6 +135,32 @@ func Uint(v uint) Value {
 	return Uint64(uint64(v))
 }
 
+// Array creates an ARRAY value.
+func Array(array interface{}) Value {
+	switch reflect.TypeOf(array).Kind() {
+	case reflect.Array, reflect.Slice:
+		isValidType := func() bool {
+			// get array type regardless of dimensions
+			typeName := reflect.TypeOf(array).String()
+			typeName = typeName[strings.LastIndex(typeName, "]")+1:]
+			switch typeName {
+			case "bool", "int", "int32", "int64",
+				"float32", "float64", "string",
+				"uint", "uint32", "uint64":
+				return true
+			}
+			return false
+		}()
+		if isValidType {
+			return Value{
+				vtype: ARRAY,
+				array: array,
+			}
+		}
+	}
+	return Value{vtype: INVALID}
+}
+
 // Type returns a type of the Value.
 func (v Value) Type() Type {
 	return v.vtype
@@ -183,11 +214,18 @@ func (v Value) AsString() string {
 	return v.stringly
 }
 
+// AsArray returns the array Value as an interface{}.
+func (v Value) AsArray() interface{} {
+	return v.array
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as interface{}.
 func (v Value) AsInterface() interface{} {
 	switch v.Type() {
+	case ARRAY:
+		return v.AsArray()
 	case BOOL:
 		return v.AsBool()
 	case INT32:
@@ -211,6 +249,8 @@ func (v Value) AsInterface() interface{} {
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
+	case ARRAY:
+		return fmt.Sprint(v.array)
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
 	case INT32:
