@@ -14,6 +14,7 @@
 package othttp
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -63,7 +64,14 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
-	labelsToVerify := standard.HTTPServerMetricAttributesFromHTTPRequest(operation, r)
+	labelsToVerify := []kv.KeyValue{
+		standard.HTTPServerNameKey.String(operation),
+		standard.HTTPSchemeHTTP,
+		standard.HTTPHostKey.String(r.Host),
+		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+	}
+
+	standard.HTTPServerMetricAttributesFromHTTPRequest(operation, r)
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {

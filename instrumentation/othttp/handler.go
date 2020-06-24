@@ -38,7 +38,7 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer            trace.Tracer
-	meter             metric.MeterMust
+	meter             metric.Meter
 	propagators       propagation.Propagators
 	spanStartOptions  []trace.StartOption
 	readEvent         bool
@@ -80,7 +80,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 
 func (h *Handler) configure(c *Config) {
 	h.tracer = c.Tracer
-	h.meter = metric.Must(c.Meter)
+	h.meter = c.Meter
 	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
@@ -89,16 +89,25 @@ func (h *Handler) configure(c *Config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 }
 
+func handleErr(err error) {
+	if err != nil {
+		global.Handle(err)
+	}
+}
+
 func (h *Handler) createMeasures() {
 	h.counters = make(map[string]metric.Int64Counter)
 	h.valueRecorders = make(map[string]metric.Int64ValueRecorder)
 
-	requestCounter := h.meter.NewInt64Counter(RequestCount)
-	requestBytesCounter := h.meter.NewInt64Counter(RequestContentLength)
-	responseBytesCounter := h.meter.NewInt64Counter(ResponseContentLength)
-	serverLatencyMeasure := h.meter.NewInt64ValueRecorder(ServerLatency)
+	requestBytesCounter, err := h.meter.NewInt64Counter(RequestContentLength)
+	handleErr(err)
 
-	h.counters[RequestCount] = requestCounter
+	responseBytesCounter, err := h.meter.NewInt64Counter(ResponseContentLength)
+	handleErr(err)
+
+	serverLatencyMeasure, err := h.meter.NewInt64ValueRecorder(ServerLatency)
+	handleErr(err)
+
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
@@ -152,7 +161,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	labels := standard.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
 
-	h.counters[RequestCount].Add(ctx, 1, labels...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
 
