@@ -23,6 +23,51 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.6.0] - 2020-05-21
 ## [0.5.0] - 2020-05-13
 ## [0.4.3] - 2020-04-24
+
+### Added
+
+- `Dockerfile` and `docker-compose.yml` to run example code. (#635)
+- New `grpctrace` package that provides gRPC client and server interceptors for both unary and stream connections. (#621)
+- New `api/label` package, providing common label set implementation. (#651)
+- Support for JSON marshaling of `Resources`. (#654)
+- `TraceID` and `SpanID` implementations for `Stringer` interface. (#642)
+- `RemoteAddrKey` in the othttp plugin to include the HTTP client address in top-level spans. (#627)
+- `WithSpanFormatter` option to the othttp plugin. (#617)
+- Updated README to include section for compatible libraries and include reference to the contrib repository. (#612)
+- The prometheus exporter now supports exporting histograms. (#601)
+- A `String` method to the `Resource` to return a hashable identifier for a now unique resource. (#613)
+- An `Iter` method to the `Resource` to return an array `AttributeIterator`. (#613)
+- An `Equal` method to the `Resource` test the equivalence of resources. (#613)
+- An iterable structure (`AttributeIterator`) for `Resource` attributes.
+
+### Changed
+
+- zipkin export's `NewExporter` now requires a `serviceName` argument to ensure this needed values is provided. (#644)
+- Pass `Resources` through the metrics export pipeline. (#659)
+
+### Removed
+
+- `WithKeys` option from the metric API. (#639)
+
+### Fixed
+
+- Use the `label.Set.Equivalent` value instead of an encoding in the batcher. (#658)
+- Correct typo `trace.Exporter` to `trace.SpanSyncer` in comments. (#653)
+- Use type names for return values in jaeger exporter. (#648)
+- Increase the visibility of the `api/key` package by updating comments and fixing usages locally. (#650)
+- `Checkpoint` only after `Update`; Keep records in the `sync.Map` longer. (#647)
+- Do not cache `reflect.ValueOf()` in metric Labels. (#649)
+- Batch metrics exported from the OTLP exporter based on `Resource` and labels. (#626)
+- Add error wrapping to the prometheus exporter. (#631)
+- Update the OTLP exporter batching of traces to use a unique `string` representation of an associated `Resource` as the batching key. (#623)
+- Update OTLP `SpanData` transform to only include the `ParentSpanID` if one exists. (#614)
+- Update `Resource` internal representation to uniquely and reliably identify resources. (#613)
+- Check return value from `CheckpointSet.ForEach` in prometheus exporter. (#622)
+- Ensure spans created by httptrace client tracer reflect operation structure. (#618)
+- Create a new recorder rather than reuse when multiple observations in same epoch for asynchronous instruments. #610
+- The default port the OTLP exporter uses to connect to the OpenTelemetry collector is updated to match the one the collector listens on by default. (#611)
+
+
 ## [0.4.2] - 2020-03-31
 
 ### Fixed
@@ -66,7 +111,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add a `RecordBatch` benchmark. (#594)
 - Moved span transforms of the OTLP exporter to the internal pacakge. (#593)
 - Build both go-1.13 and go-1.14 in circleci to test for all supported versions of Go. (#569)
-- Remove unneeded allocation on empty labels in OLTP exporter. (#597)
+- Removed unneeded allocation on empty labels in OLTP exporter. (#597)
 - Update `BatchedSpanProcessor` to process the queue until no data but respect max batch size. (#599)
 - Update project documentation godoc.org links to pkg.go.dev. (#602)
 
@@ -206,7 +251,7 @@ There is still a possibility of breaking changes.
 - Correct comments for `InstallNewPipeline` in the prometheus exporter. (#482)
 - Initialize `onError` based on `Config` in prometheus exporter. (#486)
 - Correct module name in prometheus exporter README. (#475)
-- Remove tracer name prefix from span names. (#430)
+- Removed tracer name prefix from span names. (#430)
 - Fix `aggregator_test.go` import package comment. (#431)
 - Improved detail in stdout exporter. (#436)
 - Fix a dependency issue (generate target should depend on stringer, not lint target) in Makefile. (#442)
@@ -274,7 +319,7 @@ There is still a possibility of breaking changes.
 - Don't capitalize error statements. (#375)
 - Fix ignored errors. (#375)
 - Fix ambiguous variable naming. (#375)
-- Remove unnecessary type casting. (#375)
+- Removed unnecessary type casting. (#375)
 - Use named parameters. (#375)
 - Updated release schedule. (#378)
 - Correct http-stackdriver example module name. (#394)
