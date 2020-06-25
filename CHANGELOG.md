@@ -30,6 +30,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.2.3] - 2020-03-04
 ## [0.2.2] - 2020-02-27
 ## [0.2.1.1] - 2020-01-13
+
+### Fixes
+
+- Use stateful batcher on Prometheus exporter fixing regresion introduced in #395. (#428)
+
 ## [0.2.1] - 2020-01-08
 
 ### Added
