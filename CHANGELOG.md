@@ -29,6 +29,66 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.3.0] - 2020-03-21
 ## [0.2.3] - 2020-03-04
 ## [0.2.2] - 2020-02-27
+
+### Added
+
+- `HTTPSupplier` interface in the propagation API to specify methods to retrieve and store a single value for a key to be associated with a carrier. (#467)
+- `HTTPExtractor` interface in the propagation API to extract information from an HTTPSupplier into a context. (#467)
+- `HTTPInjector` interface in the propagation API to inject information into an HTTPSupplier. (#467)
+- `Config` and configuring `Option` to the propagator API. (#467)
+- `Propagators` interface in the propagation API to contain the set of injectors and extractors for all supported carrier formats. (#467)
+- `HTTPPropagator` interface in the propagation API to inject and extract from an HTTPSupplier. (#467)
+- `WithInjectors` and `WithExtractors` functions to the propagator API to configure injectors and extractors to use. (#467)
+- `ExtractHTTP` and `InjectHTTP` functions to apply configured HTTP extractors and injectors to a passed context. (#467)
+- Histogram aggregator. (#433)
+- `DefaultPropagator` function and have it return `trace.TraceContext` as the default context propagator. (#456)
+- `AlwaysParentSample` sampler to the trace API. (#455)
+- `WithNewRoot` option function to the trace API to specify the created span should be considered a root span. (#451)
+
+
+### Changed
+
+- Renamed `WithMap` to `ContextWithMap` in the correlation package. (#481)
+- Renamed `FromContext` to `MapFromContext` in the correlation package. (#481)
+- Move correlation context propagation to correlation package. (#479)
+- Do not default to putting remote span context into links. (#480)
+- Propagators extrac
+- `Tracer.WithSpan` updated to accept `StartOptions`. (#472)
+- Renamed `MetricKind` to `Kind` to not stutter in the type usage. (#432)
+- Renamed the `export` package to `metric` to match directory structure. (#432)
+- Rename the `api/distributedcontext` package to `api/correlation`. (#444)
+- Rename the `api/propagators` package to `api/propagation`. (#444)
+- Move the propagators from the `propagators` package into the `trace` API package. (#444)
+- Update `Float64Gauge`, `Int64Gauge`, `Float64Counter`, `Int64Counter`, `Float64Measure`, and `Int64Measure` metric methods to use value receivers instead of pointers. (#462)
+- Moved all dependencies of tools package to a tools directory. (#466)
+
+### Removed
+
+- Binary propagators. (#467)
+- NOOP propagator. (#467)
+
+### Fixed
+
+- Upgraded `github.com/golangci/golangci-lint` from `v1.21.0` to `v1.23.6` in `tools/`. (#492)
+- Fix a possible nil-dereference crash (#478)
+- Correct comments for `InstallNewPipeline` in the stdout exporter. (#483)
+- Correct comments for `InstallNewPipeline` in the dogstatsd exporter. (#484)
+- Correct comments for `InstallNewPipeline` in the prometheus exporter. (#482)
+- Initialize `onError` based on `Config` in prometheus exporter. (#486)
+- Correct module name in prometheus exporter README. (#475)
+- Remove tracer name prefix from span names. (#430)
+- Fix `aggregator_test.go` import package comment. (#431)
+- Improved detail in stdout exporter. (#436)
+- Fix a dependency issue (generate target should depend on stringer, not lint target) in Makefile. (#442)
+- Reorders the Makefile targets within `precommit` target so we generate files and build the code before doing linting, so we can get much nicer errors about syntax errors from the compiler. (#442)
+- Reword function documentation in gRPC plugin. (#446)
+- Send the `span.kind` tag to Jaeger from the jaeger exporter. (#441)
+- Fix `metadataSupplier` in the jaeger exporter to overwrite the header if existing instead of appending to it. (#441)
+- Upgraded to Go 1.13 in CI. (#465)
+- Correct opentelemetry.io URL in trace SDK documentation. (#464)
+- Refactored reference counting logic in SDK determination of stale records. (#468)
+- Add call to `runtime.Gosched` in instrument `acquireHandle` logic to not block the collector. (#469)
+
 ## [0.2.1.1] - 2020-01-13
 
 ### Fixes
