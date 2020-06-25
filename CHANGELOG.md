@@ -21,6 +21,47 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - 
 
 ## [0.6.0] - 2020-05-21
+
+### Added
+
+- Support for `Resource`s in the prometheus exporter. (#757)
+- New pull controller. (#751)
+- New `UpDownSumObserver` instrument. (#750)
+- OpenTelemetry collector demo. (#711)
+- New `SumObserver` instrument. (#747)
+- New `UpDownCounter` instrument. (#745)
+- New timeout `Option` and configuration function `WithTimeout` to the push controller. (#742)
+- New `api/standards` package to implement semantic conventions and standard key-value generation. (#731)
+
+### Changed
+
+- Rename `Register*` functions in the metric API to `New*` for all `Observer` instruments. (#761)
+- Use `[]float64` for histogram boundaries, not `[]metric.Number`. (#758)
+- Change OTLP example to use exporter as a trace `Syncer` instead of as an unneeded `Batcher`. (#756)
+- Replace `WithResourceAttributes()` with `WithResource()` in the trace SDK. (#754)
+- The prometheus exporter now uses the new pull controller. (#751)
+- Rename `ScheduleDelayMillis` to `BatchTimeout` in the trace `BatchSpanProcessor`.(#752)
+- Support use of synchronous instruments in asynchronous callbacks (#725)
+- Move `Resource` from the `Export` method parameter into the metric export `Record`. (#739)
+- Rename `Observer` instrument to `ValueObserver`. (#734)
+- The push controller now has a method (`Provider()`) to return a `metric.Provider` instead of the old `Meter` method that acted as a `metric.Provider`. (#738)
+- Replace `Measure` instrument by `ValueRecorder` instrument. (#732)
+- Rename correlation context header from `"Correlation-Context"` to `"otcorrelations"` to match the OpenTelemetry specification. 727)
+
+### Fixed
+
+- Ensure gRPC `ClientStream` override methods do not panic in grpctrace package. (#755)
+- Disable parts of `BatchSpanProcessor` test until a fix is found. (#743)
+- Fix `string` case in `kv` `Infer` function. (#746)
+- Fix panic in grpctrace client interceptors. (#740)
+- Refactor the `api/metrics` push controller and add `CheckpointSet` synchronization. (#737)
+- Rewrite span batch process queue batching logic. (#719)
+- Remove the push controller named Meter map. (#738)
+- Fix Histogram aggregator initial state (fix #735). (#736)
+- Ensure golang alpine image is running `golang-1.14` for examples. (#733)
+- Added test for grpctrace `UnaryInterceptorClient`. (#695)
+- Rearrange `api/metric` code layout. (#724)
+
 ## [0.5.0] - 2020-05-13
 
 ### Added
