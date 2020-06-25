@@ -26,6 +26,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.4.2] - 2020-03-31
 ## [0.4.1] - 2020-03-31
 ## [0.4.0] - 2020-03-30
+
+### Added
+
+- New API package `api/metric/registry` that exposes a `MeterImpl` wrapper for use by SDKs to generate unique instruments. (#580)
+- Script to verify examples after a new release. (#579)
+
+### Removed
+
+- The dogstatsd exporter due to lack of support.
+   This additionally removes support for statsd. (#591)
+- `LabelSet` from the metric API.
+   This is replaced by a `[]core.KeyValue` slice. (#595)
+- `Labels` from the metric API's `Meter` interface. (#595)
+
+### Changed
+
+- The metric `export.Labels` became an interface which the SDK implements and the `export` package provides a simple, immutable implementation of this interface intended for testing purposes. (#574)
+- Renamed `internal/metric.Meter` to `MeterImpl`. (#580)
+- Renamed `api/global/internal.obsImpl` to `asyncImpl`. (#580)
+
+### Fixed
+
+- Corrected missing return in mock span. (#582)
+- Update License header for all source files to match CNCF guidelines and include a test to ensure it is present. (#586) (#596)
+- Update to v0.3.0 of the OTLP in the OTLP exporter. (#588)
+- Update pre-release script to be compatible between GNU and BSD based systems. (#592)
+- Add a `RecordBatch` benchmark. (#594)
+- Moved span transforms of the OTLP exporter to the internal pacakge. (#593)
+- Build both go-1.13 and go-1.14 in circleci to test for all supported versions of Go. (#569)
+- Remove unneeded allocation on empty labels in OLTP exporter. (#597)
+- Update `BatchedSpanProcessor` to process the queue until no data but respect max batch size. (#599)
+- Update project documentation godoc.org links to pkg.go.dev. (#602)
+
 ## [0.3.0] - 2020-03-21
 
 This is a first official beta release, which provides almost fully complete metrics, tracing, and context propagation functionality.
