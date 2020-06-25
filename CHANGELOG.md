@@ -27,6 +27,73 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.4.1] - 2020-03-31
 ## [0.4.0] - 2020-03-30
 ## [0.3.0] - 2020-03-21
+
+This is a first official beta release, which provides almost fully complete metrics, tracing, and context propagation functionality.
+There is still a possibility of breaking changes.
+
+### Added
+
+- Add `Observer` metric instrument. (#474)
+- Add global `Propagators` functionality to enable deferred initialization for propagators registered before the first Meter SDK is installed. (#494)
+- Simplified export setup pipeline for the jaeger exporter to match other exporters. (#459)
+- The zipkin trace exporter. (#495)
+- The OTLP exporter to export metric and trace telemetry to the OpenTelemetry collector. (#497) (#544) (#545)
+- The `StatusMessage` field was add to the trace `Span`. (#524)
+- Context propagation in OpenTracing bridge in terms of OpenTelemetry context propagation. (#525)
+- The `Resource` type was added to the SDK. (#528)
+- The global API now supports a `Tracer` and `Meter` function as shortcuts to getting a global `*Provider` and calling these methods directly. (#538)
+- The metric API now defines a generic `MeterImpl` interface to support general purpose `Meter` construction.
+   Additionally, `SyncImpl` and `AsyncImpl` are added to support general purpose instrument construction. (#560)
+- A metric `Kind` is added to represent the `MeasureKind`, `ObserverKind`, and `CounterKind`. (#560)
+- Scripts to better automate the release process. (#576)
+
+### Changed
+
+- Default to to use `AlwaysSampler` instead of `ProbabilitySampler` to match OpenTelemetry specification. (#506)
+- Renamed `AlwaysSampleSampler` to `AlwaysOnSampler` in the trace API. (#511)
+- Renamed `NeverSampleSampler` to `AlwaysOffSampler` in the trace API. (#511)
+- The `Status` field of the `Span` was changed to `StatusCode` to disambiguate with the added `StatusMessage`. (#524)
+- Updated the trace `Sampler` interface conform to the OpenTelemetry specification. (#531)
+- Rename metric API `Options` to `Config`. (#541)
+- Rename metric `Counter` aggregator to be `Sum`. (#541)
+- Unify metric options into `Option` from instrument specific options. (#541)
+- The trace API's `TraceProvider` now support `Resource`s. (#545)
+- Correct error in zipkin module name. (#548)
+- The jaeger trace exporter now supports `Resource`s. (#551)
+- Metric SDK now supports `Resource`s.
+   The `WithResource` option was added to configure a `Resource` on creation and the `Resource` method was added to the metric `Descriptor` to return the associated `Resource`. (#552)
+- Replace `ErrNoLastValue` and `ErrEmptyDataSet` by `ErrNoData` in the metric SDK. (#557)
+- The stdout trace exporter now supports `Resource`s. (#558)
+- The metric `Descriptor` is now included at the API instead of the SDK. (#560)
+- Replace `Ordered` with an iterator in `export.Labels`. (#567)
+
+### Removed
+
+- The vendor specific Stackdriver. It is now hosted on 3rd party vendor infrastructure. (#452)
+- The `Unregister` method for metric observers as it is not in the OpenTelemetry specification. (#560)
+- `GetDescriptor` from the metric SDK. (#575)
+- The `Gauge` instrument from the metric API. (#537)
+
+### Fixed
+
+- Make histogram aggregator checkpoint consistent. (#438)
+- Update README with import instructions and how to build and test. (#505)
+- The default label encoding was updated to be unique. (#508)
+- Use `NewRoot` in the othttp plugin for public endpoints. (#513)
+- Fix data race in `BatchedSpanProcessor`. (#518)
+- Skip test-386 for Mac OS 10.15.x (Catalina and upwards). #521
+- Use a variable-size array to represent ordered labels in maps. (#523)
+- Update the OTLP protobuf and update changed import path. (#532)
+- Use `StateLocker` implementation in `MinMaxSumCount`. (#546)
+- Eliminate goroutine leak in histogram stress test. (#547)
+- Update OTLP exporter with latest protobuf. (#550)
+- Add filters to the othttp plugin. (#556)
+- Provide an implementation of the `Header*` filters that do not depend on Go 1.14. (#565)
+- Encode labels once during checkpoint.
+   The checkpoint function is executed in a single thread so we can do the encoding lazily before passing the encoded version of labels to the exporter.
+   This is a cheap and quick way to avoid encoding the labels on every collection interval. (#572)
+- Run coverage over all packages in `COVERAGE_MOD_DIR`. (#573)
+
 ## [0.2.3] - 2020-03-04
 
 ### Added
@@ -41,7 +108,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This resulted in all subsequent releases not becoming the default latest.
    A consequence of this was that all `go get`s pulled in the incompatible `v0.1.0` release of that package when pulling in more recent packages from other otel packages.
    Renaming the `exporter` directory to `exporters` fixes this issue by renaming the package and therefore clearing any existing dependency tags.
-   Consequentially, this action also renames *all* exporter packages.
+   Consequentially, this action also renames *all* exporter packages. (#502)
 
 ### Removed
 
