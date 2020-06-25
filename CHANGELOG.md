@@ -24,11 +24,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.5.0] - 2020-05-13
 ## [0.4.3] - 2020-04-24
 ## [0.4.2] - 2020-03-31
+
+### Fixed
+
+- Fix `pre_release.sh` to update version in `sdk/opentelemetry.go`. (#607)
+- Fix time conversion from internal to OTLP in OTLP exporter. (#606)
+
 ## [0.4.1] - 2020-03-31
 
 ### Fixed
 
-- Update tag.sh to creat signed tags. (#604)
+- Update `tag.sh` to create signed tags. (#604)
 
 ## [0.4.0] - 2020-03-30
 
