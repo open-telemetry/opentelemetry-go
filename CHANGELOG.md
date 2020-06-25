@@ -33,11 +33,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `HTTPSupplier` interface in the propagation API to specify methods to retrieve and store a single value for a key to be associated with a carrier. (#467)
-- `HTTPExtractor` interface in the propagation API to extract information from an HTTPSupplier into a context. (#467)
-- `HTTPInjector` interface in the propagation API to inject information into an HTTPSupplier. (#467)
+- `HTTPExtractor` interface in the propagation API to extract information from an `HTTPSupplier` into a context. (#467)
+- `HTTPInjector` interface in the propagation API to inject information into an `HTTPSupplier.` (#467)
 - `Config` and configuring `Option` to the propagator API. (#467)
 - `Propagators` interface in the propagation API to contain the set of injectors and extractors for all supported carrier formats. (#467)
-- `HTTPPropagator` interface in the propagation API to inject and extract from an HTTPSupplier. (#467)
+- `HTTPPropagator` interface in the propagation API to inject and extract from an `HTTPSupplier.` (#467)
 - `WithInjectors` and `WithExtractors` functions to the propagator API to configure injectors and extractors to use. (#467)
 - `ExtractHTTP` and `InjectHTTP` functions to apply configured HTTP extractors and injectors to a passed context. (#467)
 - Histogram aggregator. (#433)
