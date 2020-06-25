@@ -31,6 +31,65 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.2.2] - 2020-02-27
 ## [0.2.1.1] - 2020-01-13
 ## [0.2.1] - 2020-01-08
+
+### Added
+
+- Global meter forwarding implementation.
+   This enables deferred initialization for metric instruments registered before the first Meter SDK is installed. (#392)
+- Global trace forwarding implementation.
+   This enables deferred initialization for tracers registered before the first Trace SDK is installed. (#406)
+- Standardize export pipeline creation in all exporters. (#395)
+- A testing, organization, and comments for 64-bit field alignment. (#418)
+- Script to tag all modules in the project. (#414)
+
+### Changed
+
+- Renamed `propagation` package to `propagators`. (#362)
+- Renamed `B3Propagator` propagator to `B3`. (#362)
+- Renamed `TextFormatPropagator` propagator to `TextFormat`. (#362)
+- Renamed `BinaryPropagator` propagator to `Binary`. (#362)
+- Renamed `BinaryFormatPropagator` propagator to `BinaryFormat`. (#362)
+- Renamed `NoopTextFormatPropagator` propagator to `NoopTextFormat`. (#362)
+- Renamed `TraceContextPropagator` propagator to `TraceContext`. (#362)
+- Renamed `SpanOption` to `StartOption` in the trace API. (#369)
+- Renamed `StartOptions` to `StartConfig` in the trace API. (#369)
+- Renamed `EndOptions` to `EndConfig` in the trace API. (#369)
+- `Number` now has a pointer receiver for its methods. (#375)
+- Renamed `CurrentSpan` to `SpanFromContext` in the trace API. (#379)
+- Renamed `SetCurrentSpan` to `ContextWithSpan` in the trace API. (#379)
+- Renamed `Message` in Event to `Name` in the trace API. (#389)
+- Prometheus exporter no longer aggregates metrics, instead it only exports them. (#385)
+- Renamed `HandleImpl` to `BoundInstrumentImpl` in the metric API. (#400)
+- Renamed `Float64CounterHandle` to `Float64CounterBoundInstrument` in the metric API. (#400)
+- Renamed `Int64CounterHandle` to `Int64CounterBoundInstrument` in the metric API. (#400)
+- Renamed `Float64GaugeHandle` to `Float64GaugeBoundInstrument` in the metric API. (#400)
+- Renamed `Int64GaugeHandle` to `Int64GaugeBoundInstrument` in the metric API. (#400)
+- Renamed `Float64MeasureHandle` to `Float64MeasureBoundInstrument` in the metric API. (#400)
+- Renamed `Int64MeasureHandle` to `Int64MeasureBoundInstrument` in the metric API. (#400)
+- Renamed `Release` method for bound instruments in the metric API to `Unbind`. (#400)
+- Renamed `AcquireHandle` method for bound instruments in the metric API to `Bind`. (#400)
+- Renamed the `File` option in the stdout exporter to `Writer`. (#404)
+- Renamed all `Options` to `Config` for all metric exports where this wasn't already the case.
+
+### Fixed
+
+- Aggregator import path corrected. (#421)
+- Correct links in README. (#368)
+- The README was updated to match latest code changes in its examples. (#374)
+- Don't capitalize error statements. (#375)
+- Fix ignored errors. (#375)
+- Fix ambiguous variable naming. (#375)
+- Remove unnecessary type casting. (#375)
+- Use named parameters. (#375)
+- Updated release schedule. (#378)
+- Correct http-stackdriver example module name. (#394)
+- Removed the `http.request` span in `httptrace` package. (#397)
+- Add comments in the metrics SDK (#399)
+- Initialize checkpoint when creating ddsketch aggregator to prevent panic when merging into a empty one. (#402) (#403)
+- Add documentation of compatible exporters in the README. (#405)
+- Typo fix. (#408)
+- Simplify span check logic in SDK tracer implementation. (#419)
+
 ## [0.2.0] - 2019-12-03
 
 ### Added
