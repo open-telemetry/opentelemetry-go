@@ -22,6 +22,47 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.6.0] - 2020-05-21
 ## [0.5.0] - 2020-05-13
+
+### Added
+
+- Batch `Observer` callback support. (#717)
+- Alias `api` types to root package of project. (#696)
+- Create basic `othttp.Transport` for simple client instrumentation. (#678)
+- `SetAttribute(string, interface{})` to the trace API. (#674)
+- Jaeger exporter option that allows user to specify custom http client. (#671)
+- `Stringer` and `Infer` methods to `key`s. (#662)
+
+### Changed
+
+- Rename `NewKey` in the `kv` package to just `Key`. (#721)
+- Move `core` and `key` to `kv` package. (#720)
+- Make the metric API `Meter` a `struct` so the abstract `MeterImpl` can be passed and simplify implementation. (#709)
+- Rename SDK `Batcher` to `Integrator` to match draft OpenTelemetry SDK specification. (#710)
+- Rename SDK `Ungrouped` integrator to `simple.Integrator` to match draft OpenTelemetry SDK specification. (#710)
+- Rename SDK `SDK` `struct` to `Accumulator` to match draft OpenTelemetry SDK specification. (#710)
+- Move `Number` from `core` to `api/metric` package. (#706)
+- Move `SpanContext` from `core` to `trace` package. (#692)
+- Change traceparent header from `Traceparent` to `traceparent` to implement the W3C specification. (#681)
+
+### Fixed
+
+- Update tooling to run generators in all submodules. (#705)
+- gRPC interceptor regexp to match methods without a service name. (#683)
+- Use a `const` for padding 64-bit B3 trace IDs. (#701)
+- Update `mockZipkin` listen address from `:0` to `127.0.0.1:0`. (#700)
+- Left-pad 64-bit B3 trace IDs with zero. (#698)
+- Propagate at least the first W3C tracestate header. (#694)
+- Remove internal `StateLocker` implementation. (#688)
+- Increase instance size CI system uses. (#690)
+- Add a `key` benchmark and use reflection in `key.Infer()`. (#679)
+- Fix internal `global` test by using `global.Meter` with `RecordBatch()`. (#680)
+- Reimplement histogram using mutex instead of `StateLocker`. (#669)
+- Switch `MinMaxSumCount` to a mutex lock implementation instead of `StateLocker`. (#667)
+- Update documentation to not include any references to `WithKeys`. (#672)
+- Correct misspelling. (#668)
+- Fix clobbering of the span context if extraction fails. (#656)
+- Bump `golangci-lint` and work around the corrupting bug. (#666) (#670)
+
 ## [0.4.3] - 2020-04-24
 
 ### Added
