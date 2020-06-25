@@ -33,6 +33,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.2.1] - 2020-01-08
 ## [0.2.0] - 2019-12-03
 ## [0.1.2] - 2019-11-18
+
+### Removed
+
+- Unnecessary unslicing of parameters that are already a slice. (#324)
+
+### Fixed
+
+- Optimized the `simplelru` map for attributes to reduce the number of allocations. (#328)
+
 ## [0.1.1] - 2019-11-18
 
 This release contains a Metrics SDK with stdout exporter and supports basic aggregations such as counter, gauges, array, maxsumcount, and ddsketch.
