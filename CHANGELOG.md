@@ -28,6 +28,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [0.4.0] - 2020-03-30
 ## [0.3.0] - 2020-03-21
 ## [0.2.3] - 2020-03-04
+
+### Added
+
+- `RecordError` method on `Span`s in the trace API to Simplify adding error events to spans. (#473)
+- Configurable push frequency for exporters setup pipeline. (#504)
+
+### Changed
+
+- Rename the `exporter` directory to `exporters`.
+   The `go.opentelemetry.io/otel/exporter/trace/jaeger` package was mistakenly released with a `v1.0.0` tag instead of `v0.1.0`.
+   This resulted in all subsequent releases not becoming the default latest.
+   A consequence of this was that all `go get`s pulled in the incompatible `v0.1.0` release of that package when pulling in more recent packages from other otel packages.
+   Renaming the `exporter` directory to `exporters` fixes this issue by renaming the package and therefore clearing any existing dependency tags.
+   Consequentially, this action also renames *all* exporter packages.
+
+### Removed
+
+- The `CorrelationContextHeader` constant in the `correlation` package is no longer exported. (#503)
+
 ## [0.2.2] - 2020-02-27
 
 ### Added
