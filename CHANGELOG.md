@@ -8,17 +8,92 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release will implement the v0.5.0 version of the OpenTelemetry specification.
+
 ### Added
 
 - This CHANGELOG file to track all changes in the project going forward.
+- Support for array type attributes. (#798)
+- Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
+- Timestamps are now passed to exporters for each export. (#835)
+- Add new `Accumulation` type to metric SDK to transport telemetry from `Accumulator`s to `Processor`s.
+   This replaces the prior `Record` `struct` use for this purpose. (#835)
+- New dependabot integration to automate package upgrades. (#814)
+- `Meter` and `Tracer` implementations accept instrumentation version version as an optional argument.
+   This instrumentation version is passed on to exporters. (#811) (#805) (#802)
+- The OTLP exporter includes the instrumentation version in telemetry it exports. (#811)
+- Environment variables for Jaeger exporter are supported. (#796)
+- New `aggregation.Kind` in the export metric API. (#808)
+- New example that uses OTLP and the collector. (#790)
+- Handle errors in the span `SetName` during span initialization. (#791)
+- Default service config to enable retries for retry-able failed requests in the OTLP exporter and an option to override this default. (#777)
+- New `go.opentelemetry.io/otel/api/oterror` package to uniformly support error handling and definitions for the project. (#778)
+- New `global` default implementation of the `go.opentelemetry.io/otel/api/oterror.Handler` interface to be used to handle errors prior to an user defined `Handler`.
+   There is also functionality for the user to register their `Handler` as well as a convenience function `Handle` to handle an error with this global `Handler`(#778)
+- Options to specify propagators for httptrace and grpctrace instrumentation. (#784)
+- The required `application/json` header for the Zipkin exporter is included in all exports. (#774)
+- Integrate HTTP semantics helpers from the contrib repository into the `api/standard` package. #769
 
 ### Changed
 
-- 
+- Rename `Integrator` to `Processor` in the metric SDK. (#863)
+- Rename `AggregationSelector` to `AggregatorSelector`. (#859)
+- Rename `SynchronizedCopy` to `SynchronizedMove`. (#858)
+- Rename `simple` integrator to `basic` integrator. (#857)
+- Merge otlp collector examples. (#841)
+- Change the metric SDK to support cumulative, delta, and pass-through exporters directly.
+   With these changes, cumulative and delta specific exporters are able to request the correct kind of aggregation from the SDK. (#840)
+- The `Aggregator.Checkpoint` API is renamed to `SynchronizedCopy` and adds an argument, a different `Aggregator` into which the copy is stored. (#812)
+- The `export.Aggregator` contract is that `Update()` and `SynchronizedCopy()` are synchronized with each other.
+   All the aggregation interfaces (`Sum`, `LastValue`, ...) are not meant to be synchronized, as the caller is expected to synchronize aggregators at a higher level after the `Accumulator`.
+   Some of the `Aggregators` used unnecessary locking and that has been cleaned up. (#812)
+- Use of `metric.Number` was replaced by `int64` now that we use `sync.Mutex` in the `MinMaxSumCount` and `Histogram` `Aggregators`. (#812)
+- Replace `AlwaysParentSample` with `ParentSample(fallback)` to match the OpenTelemetry v0.5.0 specification. (#810)
+- Rename `sdk/export/metric/aggregator` to `sdk/export/metric/aggregation`. #808
+- Send configured headers with every request in the OTLP exporter, instead of just on connection creation. (#806)
+- Update error handling for any one off error handlers, replacing, instead, with the `global.Handle` function. (#791)
+- Rename `plugin` directory to `instrumentation` to match the OpenTelemetry specification. (#779)
+- Makes the argument order to Histogram and DDSketch `New()` consistent. (#781)
 
 ### Removed
 
-- 
+- `Uint64NumberKind` and related functions from the API. (#864)
+- Context arguments from `Aggregator.Checkpoint` and `Integrator.Process` as they were unused. (#803)
+- `SpanID` is no longer included in parameters for sampling decision to match the OpenTelemetry specification. (#775)
+
+### Fixed
+
+- Upgrade OTLP exporter to opentelemetry-proto matching the opentelemetry-collector v0.4.0 release. (#866)
+- Allow changes to `go.sum` and `go.mod` when running dependabot tidy-up. (#871)
+- Bump github.com/stretchr/testify from 1.4.0 to 1.6.1. (#824)
+- Bump github.com/prometheus/client_golang from 1.7.0 to 1.7.1 in /exporters/metric/prometheus. (#867)
+- Bump google.golang.org/grpc from 1.29.1 to 1.30.0 in /exporters/trace/jaeger. (#853)
+- Bump google.golang.org/grpc from 1.29.1 to 1.30.0 in /exporters/trace/zipkin. (#854)
+- Bumps github.com/golang/protobuf from 1.3.2 to 1.4.2 (#848)
+- Bump github.com/stretchr/testify from 1.4.0 to 1.6.1 in /exporters/otlp (#817)
+- Bump github.com/golangci/golangci-lint from 1.25.1 to 1.27.0 in /tools (#828)
+- Bump github.com/prometheus/client_golang from 1.5.0 to 1.7.0 in /exporters/metric/prometheus (#838)
+- Bump github.com/stretchr/testify from 1.4.0 to 1.6.1 in /exporters/trace/jaeger (#829)
+- Bump github.com/benbjohnson/clock from 1.0.0 to 1.0.3 (#815)
+- Bump github.com/stretchr/testify from 1.4.0 to 1.6.1 in /exporters/trace/zipkin (#823)
+- Bump github.com/itchyny/gojq from 0.10.1 to 0.10.3 in /tools (#830)
+- Bump github.com/stretchr/testify from 1.4.0 to 1.6.1 in /exporters/metric/prometheus (#822)
+- Bump google.golang.org/grpc from 1.27.1 to 1.29.1 in /exporters/trace/zipkin (#820)
+- Bump google.golang.org/grpc from 1.27.1 to 1.29.1 in /exporters/trace/jaeger (#831)
+- Bump github.com/google/go-cmp from 0.4.0 to 0.5.0 (#836)
+- Bump github.com/google/go-cmp from 0.4.0 to 0.5.0 in /exporters/trace/jaeger (#837)
+- Bump github.com/google/go-cmp from 0.4.0 to 0.5.0 in /exporters/otlp (#839)
+- Bump google.golang.org/api from 0.20.0 to 0.28.0 in /exporters/trace/jaeger (#843)
+- Set span status from HTTP status code in the othttp instrumentation. (#832)
+- Fixed typo in push controller comment. (#834)
+- The `Aggregator` testing has been updated and cleaned. (#812)
+- `metric.Number(0)` expressions are replaced by `0` where possible. (#812)
+- Fixed `global` `handler_test.go` test failure. #804
+- Fixed `BatchSpanProcessor.Shutdown` to wait until all spans are processed. (#766)
+- Fixed OTLP example's accidental early close of exporter. (#807)
+- Ensure zipkin exporter reads and closes response body. (#788)
+- Update instrumentation to use `api/standard` keys instead of custom keys. (#782)
+- Clean up tools and RELEASING documentation. (#762)
 
 ## [0.6.0] - 2020-05-21
 
