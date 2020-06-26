@@ -148,6 +148,15 @@ func HTTPClientAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 
 func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	attrs := []kv.KeyValue{}
+	if ua := request.UserAgent(); ua != "" {
+		attrs = append(attrs, HTTPUserAgentKey.String(ua))
+	}
+
+	return append(attrs, httpBasicAttributesFromHTTPRequest(request)...)
+}
+
+func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+	attrs := []kv.KeyValue{}
 
 	if request.TLS != nil {
 		attrs = append(attrs, HTTPSchemeHTTPS)
@@ -157,10 +166,6 @@ func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 
 	if request.Host != "" {
 		attrs = append(attrs, HTTPHostKey.String(request.Host))
-	}
-
-	if ua := request.UserAgent(); ua != "" {
-		attrs = append(attrs, HTTPUserAgentKey.String(ua))
 	}
 
 	flavor := ""
@@ -174,6 +179,16 @@ func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	}
 
 	return attrs
+}
+
+// HTTPServerMetricAttributesFromHTTPRequest generates low-cardinality attributes
+// to be used with server-side HTTP metrics.
+func HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.Request) []kv.KeyValue {
+	attrs := []kv.KeyValue{}
+	if serverName != "" {
+		attrs = append(attrs, HTTPServerNameKey.String(serverName))
+	}
+	return append(attrs, httpBasicAttributesFromHTTPRequest(request)...)
 }
 
 // HTTPServerAttributesFromHTTPRequest generates attributes of the

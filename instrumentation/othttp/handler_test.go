@@ -14,34 +14,66 @@
 package othttp
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/standard"
+	mockmeter "go.opentelemetry.io/otel/internal/metric"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
+
+func assertMetricLabels(t *testing.T, expectedLabels []kv.KeyValue, measurementBatches []mockmeter.Batch) {
+	for _, batch := range measurementBatches {
+		assert.ElementsMatch(t, expectedLabels, batch.Labels)
+	}
+}
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var id uint64
 	tracer := mocktrace.MockTracer{StartSpanID: &id}
+	meterimpl, meter := mockmeter.NewMeter()
+
+	operation := "test_handler"
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
-		}), "test_handler",
-		WithTracer(&tracer))
+		}), operation,
+		WithTracer(&tracer),
+		WithMeter(meter),
+	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
+
+	if len(meterimpl.MeasurementBatches) == 0 {
+		t.Fatalf("got 0 recorded measurements, expected 1 or more")
+	}
+
+	labelsToVerify := []kv.KeyValue{
+		standard.HTTPServerNameKey.String(operation),
+		standard.HTTPSchemeHTTP,
+		standard.HTTPHostKey.String(r.Host),
+		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+	}
+
+	standard.HTTPServerMetricAttributesFromHTTPRequest(operation, r)
+	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
+
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}

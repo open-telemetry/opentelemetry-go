@@ -17,9 +17,11 @@ package othttp
 import (
 	"io"
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
@@ -36,12 +38,15 @@ type Handler struct {
 	handler   http.Handler
 
 	tracer            trace.Tracer
+	meter             metric.Meter
 	propagators       propagation.Propagators
 	spanStartOptions  []trace.StartOption
 	readEvent         bool
 	writeEvent        bool
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
+	counters          map[string]metric.Int64Counter
+	valueRecorders    map[string]metric.Int64ValueRecorder
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -56,8 +61,11 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 		operation: operation,
 	}
 
+	const domain = "go.opentelemetry.io/otel/instrumentation/othttp"
+
 	defaultOpts := []Option{
-		WithTracer(global.Tracer("go.opentelemetry.io/otel/instrumentation/othttp")),
+		WithTracer(global.Tracer(domain)),
+		WithMeter(global.Meter(domain)),
 		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 		WithSpanNameFormatter(defaultHandlerFormatter),
@@ -65,12 +73,14 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 
 	c := NewConfig(append(defaultOpts, opts...)...)
 	h.configure(c)
+	h.createMeasures()
 
 	return &h
 }
 
 func (h *Handler) configure(c *Config) {
 	h.tracer = c.Tracer
+	h.meter = c.Meter
 	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
@@ -79,8 +89,33 @@ func (h *Handler) configure(c *Config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 }
 
+func handleErr(err error) {
+	if err != nil {
+		global.Handle(err)
+	}
+}
+
+func (h *Handler) createMeasures() {
+	h.counters = make(map[string]metric.Int64Counter)
+	h.valueRecorders = make(map[string]metric.Int64ValueRecorder)
+
+	requestBytesCounter, err := h.meter.NewInt64Counter(RequestContentLength)
+	handleErr(err)
+
+	responseBytesCounter, err := h.meter.NewInt64Counter(ResponseContentLength)
+	handleErr(err)
+
+	serverLatencyMeasure, err := h.meter.NewInt64ValueRecorder(ServerLatency)
+	handleErr(err)
+
+	h.counters[RequestContentLength] = requestBytesCounter
+	h.counters[ResponseContentLength] = responseBytesCounter
+	h.valueRecorders[ServerLatency] = serverLatencyMeasure
+}
+
 // ServeHTTP serves HTTP requests (http.Handler)
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range h.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -121,6 +156,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 	span.SetStatus(standard.SpanStatusFromHTTPStatusCode(rww.statusCode))
+
+	// Add request metrics
+
+	labels := standard.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
+
+	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
+	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
+
+	elapsedTime := time.Since(requestStartTime).Microseconds()
+
+	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, labels...)
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {

@@ -17,6 +17,7 @@ package othttp
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
@@ -25,6 +26,7 @@ import (
 // and othttp.Transport types.
 type Config struct {
 	Tracer            trace.Tracer
+	Meter             metric.Meter
 	Propagators       propagation.Propagators
 	SpanStartOptions  []trace.StartOption
 	ReadEvent         bool
@@ -60,6 +62,14 @@ func NewConfig(opts ...Option) *Config {
 func WithTracer(tracer trace.Tracer) Option {
 	return OptionFunc(func(c *Config) {
 		c.Tracer = tracer
+	})
+}
+
+// WithMeter configures a specific meter. If this option
+// isn't specified then the global meter is used.
+func WithMeter(meter metric.Meter) Option {
+	return OptionFunc(func(c *Config) {
+		c.Meter = meter
 	})
 }
 
