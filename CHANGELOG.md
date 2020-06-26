@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
+
 ## [0.7.0] - 2020-06-26
 
 This release implements the v0.5.0 version of the OpenTelemetry specification.
@@ -39,7 +43,6 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Changed
 
-- Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Rename `Integrator` to `Processor` in the metric SDK. (#863)
 - Rename `AggregationSelector` to `AggregatorSelector`. (#859)
 - Rename `SynchronizedCopy` to `SynchronizedMove`. (#858)
