@@ -266,7 +266,7 @@ This release will implement the v0.5.0 version of the OpenTelemetry specificatio
 - Update to v0.3.0 of the OTLP in the OTLP exporter. (#588)
 - Update pre-release script to be compatible between GNU and BSD based systems. (#592)
 - Add a `RecordBatch` benchmark. (#594)
-- Moved span transforms of the OTLP exporter to the internal pacakge. (#593)
+- Moved span transforms of the OTLP exporter to the internal package. (#593)
 - Build both go-1.13 and go-1.14 in circleci to test for all supported versions of Go. (#569)
 - Removed unneeded allocation on empty labels in OLTP exporter. (#597)
 - Update `BatchedSpanProcessor` to process the queue until no data but respect max batch size. (#599)
@@ -423,7 +423,7 @@ There is still a possibility of breaking changes.
 
 ## [0.2.1.1] - 2020-01-13
 
-### Fixes
+### Fixed
 
 - Use stateful batcher on Prometheus exporter fixing regresion introduced in #395. (#428)
 
