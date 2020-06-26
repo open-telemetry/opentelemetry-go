@@ -101,7 +101,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
-	require.NoError(t, mmsc.SynchronizedCopy(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
 	min, max, sum, count, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
 		assert.Equal(t, min, metric.NewInt64Number(1))
@@ -133,7 +133,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-a-description",
 				Unit:        "1",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				Labels:      nil,
 			},
 		},
 		{
@@ -148,7 +147,6 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Description: "test-b-description",
 				Unit:        "By",
 				Type:        metricpb.MetricDescriptor_SUMMARY,
-				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
 			},
 		},
 	}
@@ -158,7 +156,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	if !assert.NoError(t, mmsc.Update(ctx, 1, &metric.Descriptor{})) {
 		return
 	}
-	require.NoError(t, mmsc.SynchronizedCopy(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
 	for _, test := range tests {
 		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
 			metric.WithDescription(test.description),
@@ -179,7 +177,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
-	require.NoError(t, mmsc.SynchronizedCopy(ckpt, &desc))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &desc))
 	expected := []*metricpb.SummaryDataPoint{
 		{
 			Count: 2,
@@ -239,8 +237,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Name:        "sum-test-a",
 				Description: "test-a-description",
 				Unit:        "1",
-				Type:        metricpb.MetricDescriptor_COUNTER_INT64,
-				Labels:      nil,
+				Type:        metricpb.MetricDescriptor_INT64,
 			},
 		},
 		{
@@ -254,8 +251,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 				Name:        "sum-test-b",
 				Description: "test-b-description",
 				Unit:        "ms",
-				Type:        metricpb.MetricDescriptor_COUNTER_DOUBLE,
-				Labels:      []*commonpb.StringKeyValue{{Key: "A", Value: "1"}},
+				Type:        metricpb.MetricDescriptor_DOUBLE,
 			},
 		},
 	}
@@ -280,7 +276,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	labels := label.NewSet()
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
-	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
+	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{
@@ -299,7 +295,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	labels := label.NewSet()
 	s, ckpt := test.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
-	require.NoError(t, s.SynchronizedCopy(ckpt, &desc))
+	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)

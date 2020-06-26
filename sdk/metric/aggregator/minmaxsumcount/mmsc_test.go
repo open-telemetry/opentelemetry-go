@@ -120,7 +120,7 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 		test.CheckedUpdate(t, agg, x, descriptor)
 	}
 
-	require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
 	checkZero(t, agg, descriptor)
 
@@ -173,8 +173,8 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 			test.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
-		require.NoError(t, agg1.SynchronizedCopy(ckpt1, descriptor))
-		require.NoError(t, agg2.SynchronizedCopy(ckpt2, descriptor))
+		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
+		require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)
@@ -219,7 +219,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		alloc := New(2, descriptor)
 		agg, ckpt := &alloc[0], &alloc[1]
 
-		require.NoError(t, agg.SynchronizedCopy(ckpt, descriptor))
+		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
 		asum, err := ckpt.Sum()
 		require.Equal(t, metric.Number(0), asum, "Empty checkpoint sum = 0")

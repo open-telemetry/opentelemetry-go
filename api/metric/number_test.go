@@ -15,6 +15,7 @@
 package metric
 
 import (
+	"math"
 	"testing"
 	"unsafe"
 
@@ -155,9 +156,8 @@ func TestNumberZero(t *testing.T) {
 	zero := Number(0)
 	zerof := NewFloat64Number(0)
 	zeroi := NewInt64Number(0)
-	zerou := NewUint64Number(0)
 
-	if zero != zerof || zero != zeroi || zero != zerou {
+	if zero != zerof || zero != zeroi {
 		t.Errorf("Invalid zero representations")
 	}
 }
@@ -165,8 +165,48 @@ func TestNumberZero(t *testing.T) {
 func TestNumberAsInterface(t *testing.T) {
 	i64 := NewInt64Number(10)
 	f64 := NewFloat64Number(11.11)
-	u64 := NewUint64Number(100)
 	require.Equal(t, int64(10), (&i64).AsInterface(Int64NumberKind).(int64))
 	require.Equal(t, 11.11, (&f64).AsInterface(Float64NumberKind).(float64))
-	require.Equal(t, uint64(100), (&u64).AsInterface(Uint64NumberKind).(uint64))
+}
+
+func TestNumberSignChange(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) {
+		posInt := NewInt64Number(10)
+		negInt := NewInt64Number(-10)
+
+		require.Equal(t, posInt, NewNumberSignChange(Int64NumberKind, negInt))
+		require.Equal(t, negInt, NewNumberSignChange(Int64NumberKind, posInt))
+	})
+
+	t.Run("Float64", func(t *testing.T) {
+		posFloat := NewFloat64Number(10)
+		negFloat := NewFloat64Number(-10)
+
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+	})
+
+	t.Run("Float64Zero", func(t *testing.T) {
+		posFloat := NewFloat64Number(0)
+		negFloat := NewFloat64Number(math.Copysign(0, -1))
+
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+	})
+
+	t.Run("Float64Inf", func(t *testing.T) {
+		posFloat := NewFloat64Number(math.Inf(+1))
+		negFloat := NewFloat64Number(math.Inf(-1))
+
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+	})
+
+	t.Run("Float64NaN", func(t *testing.T) {
+		posFloat := NewFloat64Number(math.NaN())
+		negFloat := NewFloat64Number(math.Copysign(math.NaN(), -1))
+
+		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+	})
 }

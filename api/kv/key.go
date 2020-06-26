@@ -158,3 +158,16 @@ func (k Key) Uint(v uint) KeyValue {
 func (k Key) Defined() bool {
 	return len(k) != 0
 }
+
+// Array creates a KeyValue instance with a ARRAY Value.
+//
+// If creating both key and a array value at the same time, then
+// instead of calling kv.Key(name).String(value) consider using a
+// convenience function provided by the api/key package -
+// key.Array(name, value).
+func (k Key) Array(v interface{}) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: value.Array(v),
+	}
+}

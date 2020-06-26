@@ -36,7 +36,7 @@ import (
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 )
 
 const (
@@ -58,7 +58,7 @@ type (
 		impl     testImpl
 		T        *testing.T
 
-		export.AggregationSelector
+		export.AggregatorSelector
 
 		lock  sync.Mutex
 		lused map[string]bool
@@ -287,10 +287,10 @@ func stressTest(t *testing.T, impl testImpl) {
 	ctx := context.Background()
 	t.Parallel()
 	fixture := &testFixture{
-		T:                   t,
-		impl:                impl,
-		lused:               map[string]bool{},
-		AggregationSelector: test.AggregationSelector(),
+		T:                  t,
+		impl:               impl,
+		lused:              map[string]bool{},
+		AggregatorSelector: test.AggregatorSelector(),
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
