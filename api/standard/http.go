@@ -182,7 +182,7 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 }
 
 // HTTPServerMetricAttributesFromHTTPRequest generates low-cardinality attributes
-// to be used with server-side http metrics
+// to be used with server-side HTTP metrics.
 func HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.Request) []kv.KeyValue {
 	attrs := []kv.KeyValue{}
 	if serverName != "" {

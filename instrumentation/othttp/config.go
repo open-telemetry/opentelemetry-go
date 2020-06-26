@@ -66,7 +66,7 @@ func WithTracer(tracer trace.Tracer) Option {
 }
 
 // WithMeter configures a specific meter. If this option
-// isn't specified then the global meter is used
+// isn't specified then the global meter is used.
 func WithMeter(meter metric.Meter) Option {
 	return OptionFunc(func(c *Config) {
 		c.Meter = meter
