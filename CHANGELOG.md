@@ -14,6 +14,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Added
 
+- The othttp instrumentation now includes default metrics. (#861) 
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
 - Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
