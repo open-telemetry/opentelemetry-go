@@ -108,8 +108,8 @@ var (
 	testInstB = resource.New(kv.String("instance", "tester-b"))
 
 	md = &metricpb.MetricDescriptor{
-		Name: "int64-count",
-		Type: metricpb.MetricDescriptor_INT64,
+		Name:      "int64-count",
+		ValueType: metricpb.MetricDescriptor_INT64,
 	}
 
 	cpu1Labels = []*commonpb.StringKeyValue{

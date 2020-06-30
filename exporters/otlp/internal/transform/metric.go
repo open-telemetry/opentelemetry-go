@@ -60,6 +60,13 @@ type result struct {
 	Err                    error
 }
 
+type metricID struct {
+	name  string
+	unit  string
+	vtype metricpb.MetricDescriptor_ValueType
+	kind  metricpb.MetricDescriptor_Kind
+}
+
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
 func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
@@ -152,7 +159,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	type resourceBatch struct {
 		Resource *resourcepb.Resource
 		// Group by instrumentation library name and then the MetricDescriptor.
-		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
+		InstrumentationLibraryBatches map[instrumentation.Library]map[metricID]*metricpb.Metric
 	}
 
 	// group by unique Resource string.
@@ -168,35 +175,30 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		if !ok {
 			rb = resourceBatch{
 				Resource:                      Resource(res.Resource),
-				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
+				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[metricID]*metricpb.Metric),
 			}
 			grouped[rID] = rb
 		}
 
 		mb, ok := rb.InstrumentationLibraryBatches[res.InstrumentationLibrary]
 		if !ok {
-			mb = make(map[string]*metricpb.Metric)
+			mb = make(map[metricID]*metricpb.Metric)
 			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
 		}
 
-		mID := res.Metric.GetMetricDescriptor().String()
+		mdesc := res.Metric.GetMetricDescriptor()
+		mID := metricID{
+			name:  mdesc.Name,
+			unit:  mdesc.Unit,
+			vtype: mdesc.ValueType,
+			kind:  mdesc.Kind,
+		}
 		m, ok := mb[mID]
 		if !ok {
 			mb[mID] = res.Metric
 			continue
 		}
-		if len(res.Metric.Int64DataPoints) > 0 {
-			m.Int64DataPoints = append(m.Int64DataPoints, res.Metric.Int64DataPoints...)
-		}
-		if len(res.Metric.DoubleDataPoints) > 0 {
-			m.DoubleDataPoints = append(m.DoubleDataPoints, res.Metric.DoubleDataPoints...)
-		}
-		if len(res.Metric.HistogramDataPoints) > 0 {
-			m.HistogramDataPoints = append(m.HistogramDataPoints, res.Metric.HistogramDataPoints...)
-		}
-		if len(res.Metric.SummaryDataPoints) > 0 {
-			m.SummaryDataPoints = append(m.SummaryDataPoints, res.Metric.SummaryDataPoints...)
-		}
+		m.Points = append(m.Points, res.Metric.Points...)
 	}
 
 	if len(grouped) == 0 {
@@ -253,35 +255,34 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 		return nil, err
 	}
 
+	kind, err := OTLPKind(desc, a.Kind())
+	if err != nil {
+		return nil, err
+	}
+
 	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
+			Kind:        kind,
+		},
+		Points: []*metricpb.DataPoint{
+			{
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
+				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+			},
 		},
 	}
 
 	switch n := desc.NumberKind(); n {
 	case metric.Int64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
-		m.Int64DataPoints = []*metricpb.Int64DataPoint{
-			{
-				Value:             sum.CoerceToInt64(n),
-				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
-			},
-		}
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_INT64
+		m.Points[0].ValueInt64 = sum.CoerceToInt64(n)
 	case metric.Float64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
-		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
-			{
-				Value:             sum.CoerceToFloat64(n),
-				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
-			},
-		}
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_DOUBLE
+		m.Points[0].ValueDouble = sum.CoerceToFloat64(n)
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
 	}
@@ -316,34 +317,45 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 		return nil, err
 	}
 
-	numKind := desc.NumberKind()
-	return &metricpb.Metric{
+	kind, err := OTLPKind(desc, a.Kind())
+	if err != nil {
+		return nil, err
+	}
+
+	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
-			Type:        metricpb.MetricDescriptor_SUMMARY,
+			Kind:        kind,
+			ValueType:   metricpb.MetricDescriptor_SUMMARY,
 		},
-		SummaryDataPoints: []*metricpb.SummaryDataPoint{
+		Points: []*metricpb.DataPoint{
 			{
-				Labels: stringKeyValues(labels.Iter()),
-				Count:  uint64(count),
-				Sum:    sum.CoerceToFloat64(numKind),
-				PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
-					{
-						Percentile: 0.0,
-						Value:      min.CoerceToFloat64(numKind),
-					},
-					{
-						Percentile: 100.0,
-						Value:      max.CoerceToFloat64(numKind),
-					},
-				},
+				Labels:            stringKeyValues(labels.Iter()),
 				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
 				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				Summary: &metricpb.Summary{
+					Count: uint64(count),
+				},
 			},
 		},
-	}, nil
+	}
+
+	switch n := desc.NumberKind(); n {
+	case metric.Int64NumberKind:
+		m.Points[0].Summary.SumInt64 = sum.CoerceToInt64(n)
+		m.Points[0].Summary.MinInt64 = min.CoerceToInt64(n)
+		m.Points[0].Summary.MaxInt64 = max.CoerceToInt64(n)
+	case metric.Float64NumberKind:
+		m.Points[0].Summary.SumDouble = sum.CoerceToFloat64(n)
+		m.Points[0].Summary.MinDouble = min.CoerceToFloat64(n)
+		m.Points[0].Summary.MaxDouble = max.CoerceToFloat64(n)
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
+	}
+
+	return m, nil
 }
 
 // stringKeyValues transforms a label iterator into an OTLP StringKeyValues.

@@ -132,7 +132,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Name:        "mmsc-test-a",
 				Description: "test-a-description",
 				Unit:        "1",
-				Type:        metricpb.MetricDescriptor_SUMMARY,
+				Kind:        metricpb.MetricDescriptor_GROUPING_DELTA_SYNCHRONOUS,
+				ValueType:   metricpb.MetricDescriptor_SUMMARY,
 			},
 		},
 		{
@@ -146,7 +147,8 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 				Name:        "mmsc-test-b",
 				Description: "test-b-description",
 				Unit:        "By",
-				Type:        metricpb.MetricDescriptor_SUMMARY,
+				Kind:        metricpb.MetricDescriptor_ADDING_MONOTONIC_DELTA_SYNCHRONOUS,
+				ValueType:   metricpb.MetricDescriptor_SUMMARY,
 			},
 		},
 	}
