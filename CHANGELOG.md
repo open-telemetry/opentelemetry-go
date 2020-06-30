@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
+- Use lowercase header names for B3 Multiple Headers. (#881)
+
+### Fixed
+
+- The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
 
 ## [0.7.0] - 2020-06-26
 
