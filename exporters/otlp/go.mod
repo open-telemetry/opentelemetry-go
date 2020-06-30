@@ -5,7 +5,6 @@ replace go.opentelemetry.io/otel => ../..
 replace github.com/open-telemetry/opentelemetry-proto => ../../../github.com/open-telemetry/opentelemetry-proto
 
 require (
-	github.com/gogo/protobuf v1.3.1
 	github.com/google/go-cmp v0.5.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/open-telemetry/opentelemetry-proto v0.4.0

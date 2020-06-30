@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 	"github.com/stretchr/testify/assert"
@@ -360,7 +359,7 @@ func TestSpanData(t *testing.T) {
 	require.Len(t, ilSpans[0].Spans, 1)
 	actualSpan := ilSpans[0].Spans[0]
 
-	if diff := cmp.Diff(expectedSpan, actualSpan, cmp.Comparer(proto.Equal)); diff != "" {
+	if diff := cmp.Diff(expectedSpan, actualSpan); diff != "" {
 		t.Fatalf("transformed span differs %v\n", diff)
 	}
 }

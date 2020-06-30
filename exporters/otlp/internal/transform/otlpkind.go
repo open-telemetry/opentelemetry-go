@@ -15,6 +15,8 @@
 package transform
 
 import (
+	"fmt"
+
 	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -43,10 +45,7 @@ func OTLPKind(mdesc *metric.Descriptor, akind aggregation.Kind) (metricpb.Metric
 	}
 
 	switch akind {
-	case aggregation.SumKind:
-	case aggregation.MinMaxSumCountKind:
-	case aggregation.HistogramKind:
-	case aggregation.ExactKind:
+	case aggregation.SumKind, aggregation.MinMaxSumCountKind, aggregation.HistogramKind, aggregation.ExactKind:
 
 		if mkind.PrecomputedSum() {
 			pkind |= metricpb.MetricDescriptor_CUMULATIVE
@@ -60,6 +59,7 @@ func OTLPKind(mdesc *metric.Descriptor, akind aggregation.Kind) (metricpb.Metric
 		return metricpb.MetricDescriptor_Kind(pkind), nil
 	}
 
+	fmt.Println("HERE", akind, mkind)
 	// Note: this includes aggregation.SketchKind.
 	return metricpb.MetricDescriptor_INVALID_KIND, aggregation.ErrNotSupported
 }
