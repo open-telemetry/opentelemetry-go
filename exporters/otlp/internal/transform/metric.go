@@ -278,10 +278,10 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 
 	switch n := desc.NumberKind(); n {
 	case metric.Int64NumberKind:
-		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_INT64
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_SCALAR_INT64
 		m.Points[0].ValueInt64 = sum.CoerceToInt64(n)
 	case metric.Float64NumberKind:
-		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_DOUBLE
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_SCALAR_DOUBLE
 		m.Points[0].ValueDouble = sum.CoerceToFloat64(n)
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
@@ -328,7 +328,6 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
 			Kind:        kind,
-			ValueType:   metricpb.MetricDescriptor_SUMMARY,
 		},
 		Points: []*metricpb.DataPoint{
 			{
@@ -344,10 +343,12 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 
 	switch n := desc.NumberKind(); n {
 	case metric.Int64NumberKind:
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_SUMMARY_INT64
 		m.Points[0].Summary.SumInt64 = sum.CoerceToInt64(n)
 		m.Points[0].Summary.MinInt64 = min.CoerceToInt64(n)
 		m.Points[0].Summary.MaxInt64 = max.CoerceToInt64(n)
 	case metric.Float64NumberKind:
+		m.MetricDescriptor.ValueType = metricpb.MetricDescriptor_SUMMARY_DOUBLE
 		m.Points[0].Summary.SumDouble = sum.CoerceToFloat64(n)
 		m.Points[0].Summary.MinDouble = min.CoerceToFloat64(n)
 		m.Points[0].Summary.MaxDouble = max.CoerceToFloat64(n)
