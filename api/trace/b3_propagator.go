@@ -23,13 +23,15 @@ import (
 )
 
 const (
-	B3SingleHeader       = "X-B3"
-	B3DebugFlagHeader    = "X-B3-Flags"
-	B3TraceIDHeader      = "X-B3-TraceId"
-	B3SpanIDHeader       = "X-B3-SpanId"
-	B3SampledHeader      = "X-B3-Sampled"
-	B3ParentSpanIDHeader = "X-B3-ParentSpanId"
-	b3TraceIDPadding     = "0000000000000000"
+	// Default B3 Header names.
+	B3SingleHeader       = "b3"
+	B3DebugFlagHeader    = "x-b3-flags"
+	B3TraceIDHeader      = "x-b3-traceid"
+	B3SpanIDHeader       = "x-b3-spanid"
+	B3SampledHeader      = "x-b3-sampled"
+	B3ParentSpanIDHeader = "x-b3-parentspanid"
+
+	b3TraceIDPadding = "0000000000000000"
 )
 
 // B3 propagator serializes SpanContext to/from B3 Headers.
