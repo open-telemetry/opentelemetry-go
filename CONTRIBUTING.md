@@ -67,19 +67,21 @@ Enter the newly created directory and add your fork as a new remote:
 $ git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
 ```
 
-Check out a new branch, make modifications, run linters and tests, and
-push the branch to your fork:
+Check out a new branch, make modifications, run linters and tests, update
+`CHANGELOG.md`, and push the branch to your fork:
 
 ```sh
 $ git checkout -b <YOUR_BRANCH_NAME>
 # edit files
+# update changelog
 $ make precommit
 $ git add -p
 $ git commit
 $ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 ```
 
-Open a pull request against the main `opentelemetry-go` repo.
+Open a pull request against the main `opentelemetry-go` repo. Be sure to add the pull
+request ID to the entry you added to `CHANGELOG.md`.
 
 ### How to Receive Comments
 
@@ -99,6 +101,8 @@ A PR is considered to be **ready to merge** when:
   people reasonable time to review.
 * Trivial change (typo, cosmetic, doc, etc.) doesn't have to wait for
   one day.
+* `CHANGELOG.md` has been updated to reflect what has been
+  added, changed, removed, or fixed.
 * Urgent fix can take exception as long as it has been actively
   communicated.
 

@@ -8,10 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-This release will implement the v0.5.0 version of the OpenTelemetry specification.
+### Changed
+
+- Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
+
+## [0.7.0] - 2020-06-26
+
+This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Added
 
+- The othttp instrumentation now includes default metrics. (#861) 
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
 - Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
@@ -593,7 +600,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.5.0
 [0.4.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.4.3
