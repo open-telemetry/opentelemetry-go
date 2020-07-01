@@ -52,8 +52,8 @@ var (
 )
 
 // B3 propagator serializes SpanContext to/from B3 Headers.
-// This propagator supports both version of B3 headers,
-//  1. Single Header :
+// This propagator supports both versions of B3 headers,
+//  1. Single Header:
 //    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
 //  2. Multiple Headers:
 //    x-b3-traceid: {TraceId}
