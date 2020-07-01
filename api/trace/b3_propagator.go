@@ -133,11 +133,13 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 		err error
 	)
 
+	// Default to Single Header if a valid value exists.
 	if h := supplier.Get(B3SingleHeader); h != "" {
 		sc, err = extractSingle(h)
 		if err == nil && sc.IsValid() {
 			return ContextWithRemoteSpanContext(ctx, sc)
 		}
+		// The Single Header value was invalid, fallback to Multiple Header.
 	}
 
 	var (
