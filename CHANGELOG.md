@@ -10,14 +10,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The B3 propagator can now be configured with the `SingleAndMultiple` `bool` field to inject both Single and Multiple B3 Headers into sent HTTP context. (#882)
-- The B3 propagator and its extract and inject functionality is now tested. (#882)
+- The `B3Encoding` is added to represent the B3 encoding(s) the B3 propagator injects.
+   A value for HTTP supported encodings (Multiple Header and Single Header) are included.
 - The `FlagsNotSampled` trace flag to complement the existing `FlagsSampled`. (#882)
 
 ### Changed
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Use lowercase header names for B3 Multiple Headers. (#881)
+- The B3 propagator `SingleHeader` field has been replaced with `InjectEncoding`.
+   This new field can be set to combinations of the `B3Encoding` bitmasks and will inject trace information in these encodings. (#882)
 - The B3 propagator now extracts from either Single or Multiple B3 Headers based on what is contained in the header (with preference for the Single Header).
    This is instead of only extracting based on the propagator's configuration. (#882)
 - Rename `FlagsUnused` to `FlagsUnset` and clearly defined its purpose to act as a placeholder for systems that have a trinary sampling state (i.e. sample, don't sample, unspecified) to act as the unset state. (#882)

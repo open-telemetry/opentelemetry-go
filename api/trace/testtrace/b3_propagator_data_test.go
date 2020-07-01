@@ -93,7 +93,7 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		// spec explictly states "Debug implies an accept decision, so don't
+		// spec explicitly states "Debug implies an accept decision, so don't
 		// also send the X-B3-Sampled header", make sure sampling is
 		// deferred.
 		name: "debug flag set and sampling state is deny",

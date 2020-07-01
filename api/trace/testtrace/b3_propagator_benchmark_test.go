@@ -25,34 +25,32 @@ import (
 
 func BenchmarkExtractB3(b *testing.B) {
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []extractTest
+		encoding trace.B3Encoding
+		name     string
+		tests    []extractTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        extractMultipleHeaders,
+			name:  "multiple headers",
+			tests: extractMultipleHeaders,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        extractSingleHeader,
+			encoding: trace.SingleHeader,
+			name:     "single headers",
+			tests:    extractSingleHeader,
 		},
 		{
-			singleHeader: false,
-			name:         "invalid multiple headers",
-			tests:        extractInvalidB3MultipleHeaders,
+			name:  "invalid multiple headers",
+			tests: extractInvalidB3MultipleHeaders,
 		},
 		{
-			singleHeader: true,
-			name:         "invalid single headers",
-			tests:        extractInvalidB3SingleHeader,
+			encoding: trace.SingleHeader,
+			name:     "invalid single headers",
+			tests:    extractInvalidB3SingleHeader,
 		},
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		propagator := trace.B3{InjectEncoding: tg.encoding}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -73,19 +71,18 @@ func BenchmarkExtractB3(b *testing.B) {
 func BenchmarkInjectB3(b *testing.B) {
 	var id uint64
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []injectTest
+		encoding trace.B3Encoding
+		name     string
+		tests    []injectTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        injectB3MultipleHeader,
+			name:  "multiple headers",
+			tests: injectB3MultipleHeader,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        injectB3SingleleHeader,
+			encoding: trace.SingleHeader,
+			name:     "single headers",
+			tests:    injectB3SingleleHeader,
 		},
 	}
 
@@ -96,7 +93,7 @@ func BenchmarkInjectB3(b *testing.B) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		propagator := trace.B3{InjectEncoding: tg.encoding}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)

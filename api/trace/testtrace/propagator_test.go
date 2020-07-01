@@ -66,8 +66,9 @@ func TestMultiplePropagators(t *testing.T) {
 	ns := nilSupplier{}
 	testProps := []propagation.HTTPPropagator{
 		trace.TraceContext{},
-		trace.B3{SingleHeader: false},
-		trace.B3{SingleHeader: true},
+		trace.B3{},
+		trace.B3{InjectEncoding: trace.SingleHeader},
+		trace.B3{InjectEncoding: trace.SingleHeader | trace.MultipleHeader},
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really

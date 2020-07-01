@@ -125,7 +125,7 @@ func TestInject(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
-			b3: trace.B3{SingleHeader: true},
+			b3: trace.B3{InjectEncoding: trace.SingleHeader},
 			expected: &Supplier{
 				SingleHeader: "000000000000007b00000000000001c8-000000000000007b-1",
 			},
@@ -135,7 +135,7 @@ func TestInject(t *testing.T) {
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
-			b3: trace.B3{SingleHeader: true},
+			b3: trace.B3{InjectEncoding: trace.SingleHeader},
 			expected: &Supplier{
 				SingleHeader: "000000000000007b00000000000001c8-000000000000007b-0",
 			},
@@ -146,7 +146,7 @@ func TestInject(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsUnset,
 			},
-			b3: trace.B3{SingleHeader: true},
+			b3: trace.B3{InjectEncoding: trace.SingleHeader},
 			expected: &Supplier{
 				SingleHeader: "000000000000007b00000000000001c8-000000000000007b",
 			},
@@ -157,7 +157,7 @@ func TestInject(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
-			b3: trace.B3{SingleHeader: true, SingleAndMultiHeader: true},
+			b3: trace.B3{InjectEncoding: trace.SingleHeader | trace.MultipleHeader},
 			expected: &Supplier{
 				TraceIDHeader: traceIDStr,
 				SpanIDHeader:  spanIDStr,
