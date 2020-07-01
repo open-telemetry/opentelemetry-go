@@ -36,8 +36,9 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 		},
 		wantSc: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 	{
@@ -88,13 +89,13 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 	{
-		// spec is not clear on the behavior for this case. If debug flag is set
-		// then sampled state should not be set. From that perspective debug
-		// takes precedence. Hence, it is sampled.
+		// spec explictly states "Debug implies an accept decision, so don't
+		// also send the X-B3-Sampled header", make sure sampling is
+		// deferred.
 		name: "debug flag set and sampling state is deny",
 		headers: map[string]string{
 			trace.B3TraceIDHeader:   "4bf92f3577b34da6a3ce929d0e0e4736",
@@ -105,7 +106,7 @@ var extractMultipleHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 	{
@@ -136,8 +137,9 @@ var extractMultipleHeaders = []extractTest{
 			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
 		},
 		wantSc: trace.SpanContext{
-			TraceID: traceID64bitPadded,
-			SpanID:  spanID,
+			TraceID:    traceID64bitPadded,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 }
@@ -149,8 +151,9 @@ var extractSingleHeader = []extractTest{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
 		},
 		wantSc: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 	{
@@ -182,7 +185,7 @@ var extractSingleHeader = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 	{
@@ -209,8 +212,9 @@ var extractSingleHeader = []extractTest{
 			trace.B3SingleHeader: "a3ce929d0e0e4736-00f067aa0ba902b7",
 		},
 		wantSc: trace.SpanContext{
-			TraceID: traceID64bitPadded,
-			SpanID:  spanID,
+			TraceID:    traceID64bitPadded,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
 		},
 	},
 }
