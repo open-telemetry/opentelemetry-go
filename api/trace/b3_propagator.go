@@ -39,7 +39,6 @@ var (
 
 	errInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	errInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
-	errInvalidFlagsHeader        = errors.New("invalid B3 Flags header found")
 	errInvalidTraceIDHeader      = errors.New("invalid B3 TraceID header found")
 	errInvalidSpanIDHeader       = errors.New("invalid B3 SpanID header found")
 	errInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
@@ -267,7 +266,7 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 			if headerLen == pos+1 {
 				return empty, errInvalidSampledByte
 			}
-			pos += 1 // {traceID}-{spanID}-
+			pos++ // {traceID}-{spanID}-
 
 			if headerLen == pos+1 {
 				sampling = string(contextHeader[pos])
