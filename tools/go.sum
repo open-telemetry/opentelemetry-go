@@ -144,6 +144,8 @@ github.com/itchyny/astgen-go v0.0.0-20200519013840-cf3ea398f645/go.mod h1:296z3W
 github.com/itchyny/go-flags v1.5.0/go.mod h1:lenkYuCobuxLBAd/HGFE4LRoW8D3B6iXRQfWYJ+MNbA=
 github.com/itchyny/gojq v0.10.3 h1:tO3JpZKDgrj+UyQ1ngCEOkAJtaHIR0JZmroounyOWoY=
 github.com/itchyny/gojq v0.10.3/go.mod h1:ext7wDHQFldBtWb1u4yIZD8Y78itJqYO5r3zor1mKmA=
+github.com/itchyny/gojq v0.10.4 h1:mMafRK6TIhoqYcBjr/7ZMyoY9RhQ/6svzS8UoRUfhfE=
+github.com/itchyny/gojq v0.10.4/go.mod h1:ext7wDHQFldBtWb1u4yIZD8Y78itJqYO5r3zor1mKmA=
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 h1:IPJ3dvxmJ4uczJe5YQdrYB16oTJlGSC/OyZDqUk9xX4=
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869/go.mod h1:cJ6Cj7dQo+O6GJNiMx+Pa94qKj+TG8ONdKHgMNIyyag=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=
