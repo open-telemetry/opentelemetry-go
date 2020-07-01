@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.0
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/opentracing/opentracing-go v1.1.1-0.20190913142402-a7454ce5950e
+	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.6.1
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	google.golang.org/grpc v1.30.0
