@@ -291,10 +291,12 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 		return empty, errInvalidTraceIDValue
 	}
 	switch sampling {
+	case "", "d":
+		sc.TraceFlags = FlagsUnset
 	case "1":
 		sc.TraceFlags = FlagsSampled
-	case "", "d", "0":
-		// Valid but unsupported ("d"), or no-ops ("", "0").
+	case "0":
+		sc.TraceFlags = FlagsNotSampled
 	default:
 		return empty, errInvalidSampledByte
 	}

@@ -195,10 +195,10 @@ func TestExtractSingle(t *testing.T) {
 		expected SpanContext
 		err      error
 	}{
-		{"0", SpanContext{}, nil},
+		{"0", SpanContext{TraceFlags: FlagsNotSampled}, nil},
 		{"1", SpanContext{TraceFlags: FlagsSampled}, nil},
-		// debug flag is valid, but ignored.
-		{"d", SpanContext{}, nil},
+		// debug flag is valid, but ignored. Sampling should be deferred.
+		{"d", SpanContext{TraceFlags: FlagsUnset}, nil},
 		{"a", empty, errInvalidSampledByte},
 		{"3", empty, errInvalidSampledByte},
 		{"000000000000007b", empty, errInvalidScope},
@@ -207,14 +207,19 @@ func TestExtractSingle(t *testing.T) {
 		{
 			"00000000000001c8-000000000000007b",
 			SpanContext{
-				TraceID: ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
-				SpanID:  spanID,
+				TraceID:    ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
+				SpanID:     spanID,
+				TraceFlags: FlagsUnset,
 			},
 			nil,
 		},
 		{
 			"000000000000007b00000000000001c8-000000000000007b",
-			SpanContext{TraceID: traceID, SpanID: spanID},
+			SpanContext{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: FlagsUnset,
+			},
 			nil,
 		},
 		{
