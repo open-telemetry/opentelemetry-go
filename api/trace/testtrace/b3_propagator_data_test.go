@@ -285,24 +285,6 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "bogus debug flag (string)",
-		headers: map[string]string{
-			trace.B3TraceIDHeader:   "ab000000000000000000000000000000",
-			trace.B3SpanIDHeader:    "cd00000000000000",
-			trace.B3SampledHeader:   "1",
-			trace.B3DebugFlagHeader: "d",
-		},
-	},
-	{
-		name: "bogus debug flag (number)",
-		headers: map[string]string{
-			trace.B3TraceIDHeader:   "ab000000000000000000000000000000",
-			trace.B3SpanIDHeader:    "cd00000000000000",
-			trace.B3SampledHeader:   "1",
-			trace.B3DebugFlagHeader: "10",
-		},
-	},
-	{
 		name: "upper case trace ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "AB000000000000000000000000000000",
