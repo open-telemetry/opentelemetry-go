@@ -331,14 +331,6 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "missing trace ID with valid single header",
-		headers: map[string]string{
-			trace.B3SingleHeader:  "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1",
-			trace.B3SpanIDHeader:  "cd00000000000000",
-			trace.B3SampledHeader: "1",
-		},
-	},
-	{
 		name: "sampled header set to 1 but trace ID and span ID are missing",
 		headers: map[string]string{
 			trace.B3SampledHeader: "1",
@@ -420,23 +412,6 @@ var extractInvalidB3SingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "missing single header with valid separate headers",
-		headers: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
-			trace.B3SampledHeader: "1",
-		},
-	},
-	{
-		name: "upper case span ID with valid separate headers",
-		headers: map[string]string{
-			trace.B3SingleHeader:  "ab000000000000000000000000000000-CD00000000000000-1",
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
-			trace.B3SampledHeader: "1",
-		},
-	},
-	{
 		name: "with sampling set to true",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-true",
@@ -483,22 +458,6 @@ var injectB3MultipleHeader = []injectTest{
 			trace.B3ParentSpanIDHeader,
 		},
 	},
-	{
-		name: "valid spancontext, with unsupported bit set in traceflags",
-		parentSc: trace.SpanContext{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: 0xff,
-		},
-		wantHeaders: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "0000000000000003",
-			trace.B3SampledHeader: "1",
-		},
-		doNotWantHeaders: []string{
-			trace.B3ParentSpanIDHeader,
-		},
-	},
 }
 
 var injectB3SingleleHeader = []injectTest{
@@ -527,23 +486,6 @@ var injectB3SingleleHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-0",
-		},
-		doNotWantHeaders: []string{
-			trace.B3TraceIDHeader,
-			trace.B3SpanIDHeader,
-			trace.B3SampledHeader,
-			trace.B3ParentSpanIDHeader,
-		},
-	},
-	{
-		name: "valid spancontext, with unsupported bit set in traceflags",
-		parentSc: trace.SpanContext{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: 0xff,
-		},
-		wantHeaders: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-1",
 		},
 		doNotWantHeaders: []string{
 			trace.B3TraceIDHeader,
