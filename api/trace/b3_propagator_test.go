@@ -44,7 +44,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			"", "", "", "", "",
-			SpanContext{TraceFlags: FlagsUnused},
+			SpanContext{TraceFlags: FlagsUnset},
 			nil,
 		},
 		{
@@ -54,7 +54,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			traceIDStr, spanIDStr, "", "", "",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnused},
+			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnset},
 			nil,
 		},
 		{
@@ -86,7 +86,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			traceIDStr, spanIDStr, "", "1", "1",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnused},
+			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnset},
 			nil,
 		},
 		// Invalid flags are discarded.

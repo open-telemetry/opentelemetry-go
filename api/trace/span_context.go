@@ -21,13 +21,21 @@ import (
 )
 
 const (
-	traceFlagsBitMaskSampled = byte(0x01)
-	traceFlagsBitMaskUnused  = byte(0xFE)
+	traceFlagsBitMaskNotSampled = byte(0x00)
+	traceFlagsBitMaskSampled    = byte(0x01)
+	traceFlagsBitMaskUnset      = byte(0xFE)
 
-	// FlagsSampled is a byte with sampled bit set. It is a convenient value initializer
-	// for SpanContext TraceFlags field when a trace is sampled.
+	// FlagsSampled is a byte with the sampled bit set.
 	FlagsSampled = traceFlagsBitMaskSampled
-	FlagsUnused  = traceFlagsBitMaskUnused
+	// FlagsNotSampled is a byte with the sampled bit unset.
+	FlagsNotSampled = traceFlagsBitMaskNotSampled
+	// FlagsUnset is a byte with the sampled bit unset but all other bits
+	// set (the inverse of FlagsSampled). Some systems (e.g. B3) distinguish
+	// between setting flags to not sample and not making a sampling
+	// decision, usually called a deferred decision. This byte is used
+	// internally to represent this unset state. It is not a valid
+	// representation elsewhere.
+	FlagsUnset = traceFlagsBitMaskUnset
 
 	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 

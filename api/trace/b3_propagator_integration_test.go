@@ -143,7 +143,7 @@ func TestInject(t *testing.T) {
 			sc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsUnused,
+				TraceFlags: trace.FlagsUnset,
 			},
 			b3: trace.B3{SingleHeader: true},
 			expected: &Supplier{
@@ -168,7 +168,7 @@ func TestInject(t *testing.T) {
 			sc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsUnused,
+				TraceFlags: trace.FlagsUnset,
 			},
 			b3: trace.B3{},
 			expected: &Supplier{

@@ -87,7 +87,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			header = append(header, sc.TraceID.String(), sc.SpanID.String())
 		}
 
-		if sc.TraceFlags&FlagsUnused != FlagsUnused {
+		if sc.TraceFlags&FlagsUnset != FlagsUnset {
 			if sc.IsSampled() {
 				header = append(header, "1")
 			} else {
@@ -104,7 +104,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			supplier.Set(B3SpanIDHeader, sc.SpanID.String())
 		}
 
-		if sc.TraceFlags&FlagsUnused != FlagsUnused {
+		if sc.TraceFlags&FlagsUnset != FlagsUnset {
 			if sc.IsSampled() {
 				supplier.Set(B3SampledHeader, "1")
 			} else {
@@ -165,10 +165,11 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 	// allow "true" and "false" as inputs for interop purposes.
 	switch strings.ToLower(sampled) {
 	case "0", "false":
+		sc.TraceFlags = FlagsNotSampled
 	case "1", "true":
 		sc.TraceFlags = FlagsSampled
 	case "":
-		sc.TraceFlags = FlagsUnused
+		sc.TraceFlags = FlagsUnset
 	default:
 		return empty, errInvalidSampledHeader
 	}
@@ -177,7 +178,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 	// other values and omission of header will be ignored.
 	if flags == "1" {
 		// We do not track debug status, but the sampling needs to be unset.
-		sc.TraceFlags = FlagsUnused
+		sc.TraceFlags = FlagsUnset
 	}
 
 	if traceID != "" {

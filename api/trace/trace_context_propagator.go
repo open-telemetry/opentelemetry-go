@@ -137,7 +137,7 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
 		return EmptySpanContext()
 	}
-	sc.TraceFlags = opts[0] &^ FlagsUnused
+	sc.TraceFlags = opts[0] &^ FlagsUnset
 
 	if !sc.IsValid() {
 		return EmptySpanContext()
