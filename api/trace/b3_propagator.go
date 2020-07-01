@@ -16,7 +16,7 @@ package trace
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strings"
 
 	"go.opentelemetry.io/otel/api/propagation"
@@ -32,180 +32,113 @@ const (
 	b3TraceIDPadding     = "0000000000000000"
 )
 
+var (
+	empty = EmptySpanContext()
+
+	errInvalidSampledByte        = errors.New("invalid B3 Sampled found")
+	errInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
+	errInvalidFlagsHeader        = errors.New("invalid B3 Flags header found")
+	errInvalidTraceIDHeader      = errors.New("invalid B3 TraceID header found")
+	errInvalidSpanIDHeader       = errors.New("invalid B3 SpanID header found")
+	errInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
+	errInvalidScope              = errors.New("require either both TraceID and SpanID or none")
+	errInvalidScopeParent        = errors.New("ParentSpanID requires both TraceID and SpanID to be available")
+	errInvalidScopeParentSingle  = errors.New("ParentSpanID requires TraceID, SpanID and Sampled to be available")
+	errEmptyContext              = errors.New("empty request context")
+	errInvalidTraceIDValue       = errors.New("invalid B3 TraceID value found")
+	errInvalidSpanIDValue        = errors.New("invalid B3 SpanID value found")
+	errInvalidParentSpanIDValue  = errors.New("invalid B3 ParentSpanID value found")
+)
+
 // B3 propagator serializes SpanContext to/from B3 Headers.
 // This propagator supports both version of B3 headers,
 //  1. Single Header :
-//    X-B3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
+//    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
 //  2. Multiple Headers:
-//    X-B3-TraceId: {TraceId}
-//    X-B3-ParentSpanId: {ParentSpanId}
-//    X-B3-SpanId: {SpanId}
-//    X-B3-Sampled: {SamplingState}
-//    X-B3-Flags: {DebugFlag}
-//
-// If SingleHeader is set to true then X-B3 header is used to inject and extract. Otherwise,
-// separate headers are used to inject and extract.
+//    x-b3-traceid: {TraceId}
+//    x-b3-parentspanid: {ParentSpanId}
+//    x-b3-spanid: {SpanId}
+//    x-b3-sampled: {SamplingState}
+//    x-b3-flags: {DebugFlag}
 type B3 struct {
+	// SingleAndMultiHeader specifies if both the single and multiple
+	// headers should be included in the context injection. If this is
+	// `true` `SingleHeader` has no effect and the single header will be
+	// included regardless of its value.
+	SingleAndMultiHeader bool
+
+	// SingleHeader specifies if the single header should be included in the
+	// context injection.
 	SingleHeader bool
 }
 
 var _ propagation.HTTPPropagator = B3{}
 
+// Inject injects a context into the supplier as B3 headers.
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
 		return
 	}
-	if b3.SingleHeader {
-		sampled := sc.TraceFlags & FlagsSampled
-		supplier.Set(B3SingleHeader,
-			fmt.Sprintf("%s-%s-%.1d", sc.TraceID, sc.SpanID, sampled))
-	} else {
-		supplier.Set(B3TraceIDHeader, sc.TraceID.String())
-		supplier.Set(B3SpanIDHeader, sc.SpanID.String())
-
-		var sampled string
-		if sc.IsSampled() {
-			sampled = "1"
-		} else {
-			sampled = "0"
+	if b3.SingleHeader || b3.SingleAndMultiHeader {
+		header := []string{}
+		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
+			header = append(header, sc.TraceID.String(), sc.SpanID.String())
 		}
-		supplier.Set(B3SampledHeader, sampled)
+
+		if sc.TraceFlags&FlagsUnused != FlagsUnused {
+			if sc.IsSampled() {
+				header = append(header, "1")
+			} else {
+				header = append(header, "0")
+			}
+		}
+
+		supplier.Set(B3SingleHeader, strings.Join(header, "-"))
+	}
+
+	if !b3.SingleHeader || b3.SingleAndMultiHeader {
+		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
+			supplier.Set(B3TraceIDHeader, sc.TraceID.String())
+			supplier.Set(B3SpanIDHeader, sc.SpanID.String())
+		}
+
+		if sc.TraceFlags&FlagsUnused != FlagsUnused {
+			if sc.IsSampled() {
+				supplier.Set(B3SampledHeader, "1")
+			} else {
+				supplier.Set(B3SampledHeader, "0")
+			}
+		}
 	}
 }
 
-// Extract retrieves B3 Headers from the supplier
+// Extract extracts a context from the supplier if it contains B3 headers.
 func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	var sc SpanContext
-	if b3.SingleHeader {
-		sc = b3.extractSingleHeader(supplier)
-	} else {
-		sc = b3.extract(supplier)
+	var (
+		sc  SpanContext
+		err error
+	)
+
+	if h := supplier.Get(B3SingleHeader); h != "" {
+		sc, err = extractSingle(h)
+		if err == nil && sc.IsValid() {
+			return ContextWithRemoteSpanContext(ctx, sc)
+		}
 	}
-	if !sc.IsValid() {
+
+	var (
+		traceID      = supplier.Get(B3TraceIDHeader)
+		spanID       = supplier.Get(B3SpanIDHeader)
+		parentSpanID = supplier.Get(B3ParentSpanIDHeader)
+		sampled      = supplier.Get(B3SampledHeader)
+		debugFlag    = supplier.Get(B3DebugFlagHeader)
+	)
+	sc, err = extractMultiple(traceID, spanID, parentSpanID, sampled, debugFlag)
+	if err != nil || !sc.IsValid() {
 		return ctx
 	}
 	return ContextWithRemoteSpanContext(ctx, sc)
-}
-
-func fixB3TID(in string) string {
-	if len(in) == 16 {
-		in = b3TraceIDPadding + in
-	}
-	return in
-}
-
-func (b3 B3) extract(supplier propagation.HTTPSupplier) SpanContext {
-	tid, err := IDFromHex(fixB3TID(supplier.Get(B3TraceIDHeader)))
-	if err != nil {
-		return EmptySpanContext()
-	}
-	sid, err := SpanIDFromHex(supplier.Get(B3SpanIDHeader))
-	if err != nil {
-		return EmptySpanContext()
-	}
-	sampled, ok := b3.extractSampledState(supplier.Get(B3SampledHeader))
-	if !ok {
-		return EmptySpanContext()
-	}
-
-	debug, ok := b3.extracDebugFlag(supplier.Get(B3DebugFlagHeader))
-	if !ok {
-		return EmptySpanContext()
-	}
-	if debug == FlagsSampled {
-		sampled = FlagsSampled
-	}
-
-	sc := SpanContext{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: sampled,
-	}
-
-	if !sc.IsValid() {
-		return EmptySpanContext()
-	}
-
-	return sc
-}
-
-func (b3 B3) extractSingleHeader(supplier propagation.HTTPSupplier) SpanContext {
-	h := supplier.Get(B3SingleHeader)
-	if h == "" || h == "0" {
-		return EmptySpanContext()
-	}
-	sc := SpanContext{}
-	parts := strings.Split(h, "-")
-	l := len(parts)
-	if l > 4 {
-		return EmptySpanContext()
-	}
-
-	if l < 2 {
-		return EmptySpanContext()
-	}
-
-	var err error
-	sc.TraceID, err = IDFromHex(fixB3TID(parts[0]))
-	if err != nil {
-		return EmptySpanContext()
-	}
-
-	sc.SpanID, err = SpanIDFromHex(parts[1])
-	if err != nil {
-		return EmptySpanContext()
-	}
-
-	if l > 2 {
-		var ok bool
-		sc.TraceFlags, ok = b3.extractSampledState(parts[2])
-		if !ok {
-			return EmptySpanContext()
-		}
-	}
-	if l == 4 {
-		_, err = SpanIDFromHex(parts[3])
-		if err != nil {
-			return EmptySpanContext()
-		}
-	}
-
-	if !sc.IsValid() {
-		return EmptySpanContext()
-	}
-
-	return sc
-}
-
-// extractSampledState parses the value of the X-B3-Sampled b3Header.
-func (b3 B3) extractSampledState(sampled string) (flag byte, ok bool) {
-	switch sampled {
-	case "", "0":
-		return 0, true
-	case "1":
-		return FlagsSampled, true
-	case "true":
-		if !b3.SingleHeader {
-			return FlagsSampled, true
-		}
-	case "d":
-		if b3.SingleHeader {
-			return FlagsSampled, true
-		}
-	}
-	return 0, false
-}
-
-// extracDebugFlag parses the value of the X-B3-Sampled b3Header.
-func (b3 B3) extracDebugFlag(debug string) (flag byte, ok bool) {
-	switch debug {
-	case "", "0":
-		return 0, true
-	case "1":
-		return FlagsSampled, true
-	}
-	return 0, false
 }
 
 func (b3 B3) GetAllKeys() []string {
@@ -213,4 +146,156 @@ func (b3 B3) GetAllKeys() []string {
 		return []string{B3SingleHeader}
 	}
 	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
+}
+
+// extractMultiple reconstructs a SpanContext from header values based on B3
+// Multiple header. It is based on the implementation found here:
+// https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
+// and adapted to support a SpanContext.
+func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (SpanContext, error) {
+	var (
+		err           error
+		requiredCount int
+		sc            = SpanContext{}
+	)
+
+	// correct values for an existing sampled header are "0" and "1".
+	// For legacy support and  being lenient to other tracing implementations we
+	// allow "true" and "false" as inputs for interop purposes.
+	switch strings.ToLower(sampled) {
+	case "0", "false":
+	case "1", "true":
+		sc.TraceFlags = FlagsSampled
+	case "":
+		sc.TraceFlags = FlagsUnused
+	default:
+		return empty, errInvalidSampledHeader
+	}
+
+	// The only accepted value for Flags is "1". This will set Debug to true. All
+	// other values and omission of header will be ignored.
+	if flags == "1" {
+		// We do not track debug status, but the sampling needs to be unset.
+		sc.TraceFlags = FlagsUnused
+	}
+
+	if traceID != "" {
+		requiredCount++
+		id := traceID
+		if len(traceID) == 16 {
+			// Pad 64-bit trace IDs.
+			id = b3TraceIDPadding + traceID
+		}
+		if sc.TraceID, err = IDFromHex(id); err != nil {
+			return empty, errInvalidTraceIDHeader
+		}
+	}
+
+	if spanID != "" {
+		requiredCount++
+		if sc.SpanID, err = SpanIDFromHex(spanID); err != nil {
+			return empty, errInvalidSpanIDHeader
+		}
+	}
+
+	if requiredCount != 0 && requiredCount != 2 {
+		return empty, errInvalidScope
+	}
+
+	if parentSpanID != "" {
+		if requiredCount == 0 {
+			return empty, errInvalidScopeParent
+		}
+		// Validate parent span ID but we do not use it so do not save it.
+		if _, err = SpanIDFromHex(parentSpanID); err != nil {
+			return empty, errInvalidParentSpanIDHeader
+		}
+	}
+
+	return sc, nil
+}
+
+// extractSingle reconstructs a SpanContext from contextHeader based on a B3
+// Single header. It is based on the implementation found here:
+// https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
+// and adapted to support a SpanContext.
+func extractSingle(contextHeader string) (SpanContext, error) {
+	if contextHeader == "" {
+		return empty, errEmptyContext
+	}
+
+	var (
+		sc       = SpanContext{}
+		sampling string
+	)
+
+	headerLen := len(contextHeader)
+
+	if headerLen == 1 {
+		sampling = contextHeader
+	} else if headerLen == 16 || headerLen == 32 {
+		return empty, errInvalidScope
+	} else if headerLen >= 16+16+1 {
+		pos := 0
+		var traceID string
+		if string(contextHeader[16]) == "-" {
+			// traceID must be 64 bits
+			pos += 16 + 1 // {traceID}-
+			traceID = b3TraceIDPadding + string(contextHeader[0:16])
+		} else if string(contextHeader[32]) == "-" {
+			// traceID must be 128 bits
+			pos += 32 + 1 // {traceID}-
+			traceID = string(contextHeader[0:32])
+		} else {
+			return empty, errInvalidTraceIDValue
+		}
+		var err error
+		sc.TraceID, err = IDFromHex(traceID)
+		if err != nil {
+			return empty, errInvalidTraceIDValue
+		}
+
+		sc.SpanID, err = SpanIDFromHex(contextHeader[pos : pos+16])
+		if err != nil {
+			return empty, errInvalidSpanIDValue
+		}
+		pos += 16 // {traceID}-{spanID}
+
+		if headerLen > pos {
+			if headerLen == pos+1 {
+				return empty, errInvalidSampledByte
+			}
+			pos += 1 // {traceID}-{spanID}-
+
+			if headerLen == pos+1 {
+				sampling = string(contextHeader[pos])
+			} else if headerLen == pos+16 {
+				return empty, errInvalidScopeParentSingle
+			} else if headerLen == pos+1+16+1 {
+				sampling = string(contextHeader[pos])
+				pos += 1 + 1 // {traceID}-{spanID}-{sampling}-
+
+				// Validate parent span ID but we do not use it so do not
+				// save it.
+				_, err = SpanIDFromHex(contextHeader[pos:])
+				if err != nil {
+					return empty, errInvalidParentSpanIDValue
+				}
+			} else {
+				return empty, errInvalidParentSpanIDValue
+			}
+		}
+	} else {
+		return empty, errInvalidTraceIDValue
+	}
+	switch sampling {
+	case "1":
+		sc.TraceFlags = FlagsSampled
+	case "", "d", "0":
+		// Valid but unsupported ("d"), or no-ops ("", "0").
+	default:
+		return empty, errInvalidSampledByte
+	}
+
+	return sc, nil
 }
