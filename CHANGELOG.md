@@ -10,21 +10,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The B3 propagator can now be configured with the `SingleAndMultiple` `bool` field to inject both Single and Multiple B3 Headers into sent HTTP context.
-- The B3 propagator and its extract and inject functionality is now tested.
+- The B3 propagator can now be configured with the `SingleAndMultiple` `bool` field to inject both Single and Multiple B3 Headers into sent HTTP context. (#882)
+- The B3 propagator and its extract and inject functionality is now tested. (#882)
 
 ### Changed
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Use lowercase header names for B3 Multiple Headers. (#881)
 - The B3 propagator now extract from either Single or Multiple B3 Headers based on what is contained in the header (with preference for the Single Header).
-   This is instead of only extracting based on the propagator's configuration.
+   This is instead of only extracting based on the propagator's configuration. (#882)
 
 ### Fixed
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
-- The B3 propagator now correctly supports sampling only values for a Single B3 Header.
-- The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and correctly does not set a sampling value in this case when injecting.
+- The B3 propagator now correctly supports sampling only values for a Single B3 Header. (#882)
+- The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and correctly does not set a sampling value in this case when injecting. (#882)
 
 ## [0.7.0] - 2020-06-26
 
