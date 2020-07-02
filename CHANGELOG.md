@@ -23,8 +23,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use lowercase header names for B3 Multiple Headers. (#881)
 - The B3 propagator `SingleHeader` field has been replaced with `InjectEncoding`.
    This new field can be set to combinations of the `B3Encoding` bitmasks and will inject trace information in these encodings.
-   If no encoding is set, the propagator will default to `MultipleHeader` encoding.(#882)
-- The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header. Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
+   If no encoding is set, the propagator will default to `MultipleHeader` encoding. (#882)
+- The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header.
+   Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
 
 ### Removed
