@@ -32,7 +32,7 @@ const (
 	// FlagsUnset is a byte with the sampled bit unset but all other bits
 	// set (the inverse of FlagsSampled). Some systems (e.g. B3) distinguish
 	// between setting flags to not sample and not making a sampling
-	// decision, usually called a deferred decision. This byte is used
+	// decision, usually called a deferred decision. This byte mask is used
 	// internally to represent this unset state. It is not a valid
 	// representation elsewhere.
 	FlagsUnset = traceFlagsBitMaskUnset
