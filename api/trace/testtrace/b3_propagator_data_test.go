@@ -15,6 +15,8 @@
 package testtrace_test
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -28,12 +30,17 @@ var (
 	traceID64bitPadded = mustTraceIDFromHex("0000000000000000a3ce929d0e0e4736")
 )
 
-var extractMultipleHeaders = []extractTest{
+var extractHeaders = []extractTest{
 	{
-		name: "sampling state defer",
+		name:    "empty",
+		headers: map[string]string{},
+		wantSc:  trace.EmptySpanContext(),
+	},
+	{
+		name: "multiple: sampling state defer",
 		headers: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
@@ -42,22 +49,23 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "sampling state deny",
+		name: "multiple: sampling state deny",
 		headers: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "0",
 		},
 		wantSc: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
 		},
 	},
 	{
-		name: "sampling state accept",
+		name: "multiple: sampling state accept",
 		headers: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "1",
 		},
 		wantSc: trace.SpanContext{
@@ -67,10 +75,10 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "sampling state as a boolean",
+		name: "multiple: sampling state as a boolean",
 		headers: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "true",
 		},
 		wantSc: trace.SpanContext{
@@ -80,10 +88,10 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "debug flag set",
+		name: "multiple: debug flag set",
 		headers: map[string]string{
-			trace.B3TraceIDHeader:   "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:    "00f067aa0ba902b7",
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
 			trace.B3DebugFlagHeader: "1",
 		},
 		wantSc: trace.SpanContext{
@@ -93,13 +101,27 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
+		name: "multiple: debug flag set to not 1 (ignored)",
+		headers: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3SampledHeader:   "1",
+			trace.B3DebugFlagHeader: "2",
+		},
+		wantSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	{
 		// spec explicitly states "Debug implies an accept decision, so don't
 		// also send the X-B3-Sampled header", make sure sampling is
 		// deferred.
-		name: "debug flag set and sampling state is deny",
+		name: "multiple: debug flag set and sampling state is deny",
 		headers: map[string]string{
-			trace.B3TraceIDHeader:   "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:    "00f067aa0ba902b7",
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
 			trace.B3SampledHeader:   "0",
 			trace.B3DebugFlagHeader: "1",
 		},
@@ -110,10 +132,10 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "with parent span id",
+		name: "multiple: with parent span id",
 		headers: map[string]string{
-			trace.B3TraceIDHeader:      "4bf92f3577b34da6a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:       "00f067aa0ba902b7",
+			trace.B3TraceIDHeader:      traceIDStr,
+			trace.B3SpanIDHeader:       spanIDStr,
 			trace.B3SampledHeader:      "1",
 			trace.B3ParentSpanIDHeader: "00f067aa0ba90200",
 		},
@@ -124,17 +146,17 @@ var extractMultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "with only sampled state header",
+		name: "multiple: with only sampled state header",
 		headers: map[string]string{
 			trace.B3SampledHeader: "0",
 		},
 		wantSc: trace.EmptySpanContext(),
 	},
 	{
-		name: "left-padding 64-bit traceID",
+		name: "multiple: left-padding 64-bit traceID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "a3ce929d0e0e4736",
-			trace.B3SpanIDHeader:  "00f067aa0ba902b7",
+			trace.B3SpanIDHeader:  spanIDStr,
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID64bitPadded,
@@ -142,13 +164,10 @@ var extractMultipleHeaders = []extractTest{
 			TraceFlags: trace.FlagsUnset,
 		},
 	},
-}
-
-var extractSingleHeader = []extractTest{
 	{
-		name: "sampling state defer",
+		name: "single: sampling state defer",
 		headers: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
@@ -157,9 +176,9 @@ var extractSingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "sampling state deny",
+		name: "single: sampling state deny",
 		headers: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-0",
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-0", traceIDStr, spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID: traceID,
@@ -167,9 +186,9 @@ var extractSingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "sampling state accept",
+		name: "single: sampling state accept",
 		headers: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1",
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-1", traceIDStr, spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
@@ -178,9 +197,9 @@ var extractSingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "sampling state debug",
+		name: "single: sampling state debug",
 		headers: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-d",
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
@@ -189,9 +208,9 @@ var extractSingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "with parent span id",
+		name: "single: with parent span id",
 		headers: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1-00000000000000cd",
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-1-00000000000000cd", traceIDStr, spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
@@ -200,16 +219,16 @@ var extractSingleHeader = []extractTest{
 		},
 	},
 	{
-		name: "with only sampling state deny",
+		name: "single: with only sampling state deny",
 		headers: map[string]string{
 			trace.B3SingleHeader: "0",
 		},
 		wantSc: trace.EmptySpanContext(),
 	},
 	{
-		name: "left-padding 64-bit traceID",
+		name: "single: left-padding 64-bit traceID",
 		headers: map[string]string{
-			trace.B3SingleHeader: "a3ce929d0e0e4736-00f067aa0ba902b7",
+			trace.B3SingleHeader: fmt.Sprintf("a3ce929d0e0e4736-%s", spanIDStr),
 		},
 		wantSc: trace.SpanContext{
 			TraceID:    traceID64bitPadded,
@@ -217,11 +236,55 @@ var extractSingleHeader = []extractTest{
 			TraceFlags: trace.FlagsUnset,
 		},
 	},
+	{
+		name: "both single and multiple: single priority",
+		headers: map[string]string{
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s-1", traceIDStr, spanIDStr),
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
+			trace.B3SampledHeader: "0",
+		},
+		wantSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	// An invalid Single Headers should fallback to multiple.
+	{
+		name: "both single and multiple: invalid single",
+		headers: map[string]string{
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s-", traceIDStr, spanIDStr),
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
+			trace.B3SampledHeader: "0",
+		},
+		wantSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
+		},
+	},
+	// Invalid Mult Header should not be noticed as Single takes precedence.
+	{
+		name: "both single and multiple: invalid multiple",
+		headers: map[string]string{
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s-1", traceIDStr, spanIDStr),
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  spanIDStr,
+			trace.B3SampledHeader: "invalid",
+		},
+		wantSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
 }
 
-var extractInvalidB3MultipleHeaders = []extractTest{
+var extractInvalidHeaders = []extractTest{
 	{
-		name: "trace ID length > 32",
+		name: "multiple: trace ID length > 32",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab00000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -229,7 +292,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "trace ID length >16 and <32",
+		name: "multiple: trace ID length >16 and <32",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab0000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -237,7 +300,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "trace ID length <16",
+		name: "multiple: trace ID length <16",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab0000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -245,7 +308,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "wrong span ID length",
+		name: "multiple: wrong span ID length",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd0000000000000000",
@@ -253,7 +316,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "wrong sampled flag length",
+		name: "multiple: wrong sampled flag length",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -261,7 +324,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "bogus trace ID",
+		name: "multiple: bogus trace ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "qw000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -269,7 +332,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "bogus span ID",
+		name: "multiple: bogus span ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "qw00000000000000",
@@ -277,7 +340,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "bogus sampled flag",
+		name: "multiple: bogus sampled flag",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -285,7 +348,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "upper case trace ID",
+		name: "multiple: upper case trace ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "AB000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -293,7 +356,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "upper case span ID",
+		name: "multiple: upper case span ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "CD00000000000000",
@@ -301,7 +364,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "zero trace ID",
+		name: "multiple: zero trace ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "00000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "cd00000000000000",
@@ -309,7 +372,7 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "zero span ID",
+		name: "multiple: zero span ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SpanIDHeader:  "0000000000000000",
@@ -317,102 +380,99 @@ var extractInvalidB3MultipleHeaders = []extractTest{
 		},
 	},
 	{
-		name: "missing span ID",
+		name: "multiple: missing span ID",
 		headers: map[string]string{
 			trace.B3TraceIDHeader: "ab000000000000000000000000000000",
 			trace.B3SampledHeader: "1",
 		},
 	},
 	{
-		name: "missing trace ID",
+		name: "multiple: missing trace ID",
 		headers: map[string]string{
 			trace.B3SpanIDHeader:  "cd00000000000000",
 			trace.B3SampledHeader: "1",
 		},
 	},
 	{
-		name: "sampled header set to 1 but trace ID and span ID are missing",
+		name: "multiple: sampled header set to 1 but trace ID and span ID are missing",
 		headers: map[string]string{
 			trace.B3SampledHeader: "1",
 		},
 	},
-}
-
-var extractInvalidB3SingleHeader = []extractTest{
 	{
-		name: "wrong trace ID length",
+		name: "single: wrong trace ID length",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab00000000000000000000000000000000-cd00000000000000-1",
 		},
 	},
 	{
-		name: "wrong span ID length",
+		name: "single: wrong span ID length",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd0000000000000000-1",
 		},
 	},
 	{
-		name: "wrong sampled state length",
+		name: "single: wrong sampled state length",
 		headers: map[string]string{
 			trace.B3SingleHeader: "00-ab000000000000000000000000000000-cd00000000000000-01",
 		},
 	},
 	{
-		name: "wrong parent span ID length",
+		name: "single: wrong parent span ID length",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-1-cd0000000000000000",
 		},
 	},
 	{
-		name: "bogus trace ID",
+		name: "single: bogus trace ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "qw000000000000000000000000000000-cd00000000000000-1",
 		},
 	},
 	{
-		name: "bogus span ID",
+		name: "single: bogus span ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-qw00000000000000-1",
 		},
 	},
 	{
-		name: "bogus sampled flag",
+		name: "single: bogus sampled flag",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-q",
 		},
 	},
 	{
-		name: "bogus parent span ID",
+		name: "single: bogus parent span ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-1-qw00000000000000",
 		},
 	},
 	{
-		name: "upper case trace ID",
+		name: "single: upper case trace ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "AB000000000000000000000000000000-cd00000000000000-1",
 		},
 	},
 	{
-		name: "upper case span ID",
+		name: "single: upper case span ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-CD00000000000000-1",
 		},
 	},
 	{
-		name: "upper case parent span ID",
+		name: "single: upper case parent span ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-1-EF00000000000000",
 		},
 	},
 	{
-		name: "zero trace ID and span ID",
+		name: "single: zero trace ID and span ID",
 		headers: map[string]string{
 			trace.B3SingleHeader: "00000000000000000000000000000000-0000000000000000-1",
 		},
 	},
 	{
-		name: "with sampling set to true",
+		name: "single: with sampling set to true",
 		headers: map[string]string{
 			trace.B3SingleHeader: "ab000000000000000000000000000000-cd00000000000000-true",
 		},
@@ -421,77 +481,303 @@ var extractInvalidB3SingleHeader = []extractTest{
 
 type injectTest struct {
 	name             string
+	encoding         trace.B3Encoding
 	parentSc         trace.SpanContext
 	wantHeaders      map[string]string
 	doNotWantHeaders []string
 }
 
-var injectB3MultipleHeader = []injectTest{
+var injectHeader = []injectTest{
 	{
-		name: "valid spancontext, sampled",
+		name: "none: sampled",
 		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
+			trace.B3TraceIDHeader: traceIDStr,
 			trace.B3SpanIDHeader:  "0000000000000001",
 			trace.B3SampledHeader: "1",
 		},
 		doNotWantHeaders: []string{
 			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
 		},
 	},
 	{
-		name: "valid spancontext, not sampled",
+		name: "none: not sampled",
 		parentSc: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
 		},
 		wantHeaders: map[string]string{
-			trace.B3TraceIDHeader: "4bf92f3577b34da6a3ce929d0e0e4736",
+			trace.B3TraceIDHeader: traceIDStr,
 			trace.B3SpanIDHeader:  "0000000000000002",
 			trace.B3SampledHeader: "0",
 		},
 		doNotWantHeaders: []string{
 			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
 		},
 	},
-}
-
-var injectB3SingleleHeader = []injectTest{
 	{
-		name: "valid spancontext, sampled",
+		name: "none: unset sampled",
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "0000000000000003",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "multiple: sampled",
+		encoding: trace.MultipleHeader,
 		parentSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-1",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "0000000000000004",
+			trace.B3SampledHeader: "1",
 		},
 		doNotWantHeaders: []string{
-			trace.B3TraceIDHeader,
-			trace.B3SpanIDHeader,
-			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
 		},
 	},
 	{
-		name: "valid spancontext, not sampled",
+		name:     "multiple: not sampled",
+		encoding: trace.MultipleHeader,
 		parentSc: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
 		},
 		wantHeaders: map[string]string{
-			trace.B3SingleHeader: "4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-0",
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "0000000000000005",
+			trace.B3SampledHeader: "0",
+		},
+		doNotWantHeaders: []string{
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "multiple: unset sampled",
+		encoding: trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "0000000000000006",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "single: sampled",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000007-1", traceIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3TraceIDHeader,
 			trace.B3SpanIDHeader,
 			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
 		},
 	},
+	{
+		name:     "single: not sampled",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000008-0", traceIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single: unset sampled",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000009", traceIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single+multiple: sampled",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "000000000000000a",
+			trace.B3SampledHeader: "1",
+			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000a-1", traceIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single+multiple: not sampled",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsNotSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "000000000000000b",
+			trace.B3SampledHeader: "0",
+			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000b-0", traceIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single+multiple: unset sampled",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsUnset,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader: traceIDStr,
+			trace.B3SpanIDHeader:  "000000000000000c",
+			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000c", traceIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+}
+
+var injectInvalidHeaderGenerator = []injectTest{
+	{
+		name:     "empty",
+		parentSc: trace.SpanContext{},
+	},
+	{
+		name: "missing traceID",
+		parentSc: trace.SpanContext{
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	{
+		name: "missing spanID",
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	{
+		name: "missing traceID and spanID",
+		parentSc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+}
+
+var injectInvalidHeader []injectTest
+
+func init() {
+	injectInvalidHeader = make([]injectTest, 0, len(injectInvalidHeaderGenerator)*4)
+	allHeaders := []string{
+		trace.B3TraceIDHeader,
+		trace.B3SpanIDHeader,
+		trace.B3SampledHeader,
+		trace.B3ParentSpanIDHeader,
+		trace.B3DebugFlagHeader,
+		trace.B3SingleHeader,
+	}
+	// Nothing should be set for any header regardless of encoding.
+	for _, t := range injectInvalidHeaderGenerator {
+		injectInvalidHeader = append(injectInvalidHeader, injectTest{
+			name:             "none: " + t.name,
+			parentSc:         t.parentSc,
+			doNotWantHeaders: allHeaders,
+		})
+		injectInvalidHeader = append(injectInvalidHeader, injectTest{
+			name:             "multiple: " + t.name,
+			encoding:         trace.MultipleHeader,
+			parentSc:         t.parentSc,
+			doNotWantHeaders: allHeaders,
+		})
+		injectInvalidHeader = append(injectInvalidHeader, injectTest{
+			name:             "single: " + t.name,
+			encoding:         trace.SingleHeader,
+			parentSc:         t.parentSc,
+			doNotWantHeaders: allHeaders,
+		})
+		injectInvalidHeader = append(injectInvalidHeader, injectTest{
+			name:             "single+multiple: " + t.name,
+			encoding:         trace.SingleHeader | trace.MultipleHeader,
+			parentSc:         t.parentSc,
+			doNotWantHeaders: allHeaders,
+		})
+	}
 }

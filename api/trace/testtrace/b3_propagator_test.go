@@ -28,32 +28,21 @@ import (
 
 func TestExtractB3(t *testing.T) {
 	testGroup := []struct {
-		encoding trace.B3Encoding
-		name     string
-		tests    []extractTest
+		name  string
+		tests []extractTest
 	}{
 		{
-			name:  "multiple headers",
-			tests: extractMultipleHeaders,
+			name:  "valid headers",
+			tests: extractHeaders,
 		},
 		{
-			encoding: trace.SingleHeader,
-			name:     "single headers",
-			tests:    extractSingleHeader,
-		},
-		{
-			name:  "invalid multiple headers",
-			tests: extractInvalidB3MultipleHeaders,
-		},
-		{
-			encoding: trace.SingleHeader,
-			name:     "invalid single headers",
-			tests:    extractInvalidB3SingleHeader,
+			name:  "invalid headers",
+			tests: extractInvalidHeaders,
 		},
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{InjectEncoding: tg.encoding}
+		propagator := trace.B3{}
 		props := propagation.New(propagation.WithExtractors(propagator))
 
 		for _, tt := range tg.tests {
@@ -77,18 +66,16 @@ func TestExtractB3(t *testing.T) {
 func TestInjectB3(t *testing.T) {
 	var id uint64
 	testGroup := []struct {
-		encoding trace.B3Encoding
-		name     string
-		tests    []injectTest
+		name  string
+		tests []injectTest
 	}{
 		{
-			name:  "multiple headers",
-			tests: injectB3MultipleHeader,
+			name:  "valid headers",
+			tests: injectHeader,
 		},
 		{
-			encoding: trace.SingleHeader,
-			name:     "single headers",
-			tests:    injectB3SingleleHeader,
+			name:  "invalid headers",
+			tests: injectInvalidHeader,
 		},
 	}
 
@@ -99,9 +86,9 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := trace.B3{InjectEncoding: tg.encoding}
-		props := propagation.New(propagation.WithInjectors(propagator))
 		for _, tt := range tg.tests {
+			propagator := trace.B3{InjectEncoding: tt.encoding}
+			props := propagation.New(propagation.WithInjectors(propagator))
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()

@@ -25,32 +25,21 @@ import (
 
 func BenchmarkExtractB3(b *testing.B) {
 	testGroup := []struct {
-		encoding trace.B3Encoding
-		name     string
-		tests    []extractTest
+		name  string
+		tests []extractTest
 	}{
 		{
-			name:  "multiple headers",
-			tests: extractMultipleHeaders,
+			name:  "valid headers",
+			tests: extractHeaders,
 		},
 		{
-			encoding: trace.SingleHeader,
-			name:     "single headers",
-			tests:    extractSingleHeader,
-		},
-		{
-			name:  "invalid multiple headers",
-			tests: extractInvalidB3MultipleHeaders,
-		},
-		{
-			encoding: trace.SingleHeader,
-			name:     "invalid single headers",
-			tests:    extractInvalidB3SingleHeader,
+			name:  "invalid headers",
+			tests: extractInvalidHeaders,
 		},
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{InjectEncoding: tg.encoding}
+		propagator := trace.B3{}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -71,18 +60,12 @@ func BenchmarkExtractB3(b *testing.B) {
 func BenchmarkInjectB3(b *testing.B) {
 	var id uint64
 	testGroup := []struct {
-		encoding trace.B3Encoding
-		name     string
-		tests    []injectTest
+		name  string
+		tests []injectTest
 	}{
 		{
-			name:  "multiple headers",
-			tests: injectB3MultipleHeader,
-		},
-		{
-			encoding: trace.SingleHeader,
-			name:     "single headers",
-			tests:    injectB3SingleleHeader,
+			name:  "valid headers",
+			tests: injectHeader,
 		},
 	}
 
@@ -93,8 +76,8 @@ func BenchmarkInjectB3(b *testing.B) {
 
 	for _, tg := range testGroup {
 		id = 0
-		propagator := trace.B3{InjectEncoding: tg.encoding}
 		for _, tt := range tg.tests {
+			propagator := trace.B3{InjectEncoding: tt.encoding}
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := context.Background()

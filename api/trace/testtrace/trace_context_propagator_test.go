@@ -26,18 +26,31 @@ import (
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
+const (
+	traceIDStr = "4bf92f3577b34da6a3ce929d0e0e4736"
+	spanIDStr  = "00f067aa0ba902b7"
+)
+
 var (
-	traceID = mustTraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID  = mustSpanIDFromHex("00f067aa0ba902b7")
+	traceID = mustTraceIDFromHex(traceIDStr)
+	spanID  = mustSpanIDFromHex(spanIDStr)
 )
 
 func mustTraceIDFromHex(s string) (t trace.ID) {
-	t, _ = trace.IDFromHex(s)
+	var err error
+	t, err = trace.IDFromHex(s)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
 func mustSpanIDFromHex(s string) (t trace.SpanID) {
-	t, _ = trace.SpanIDFromHex(s)
+	var err error
+	t, err = trace.SpanIDFromHex(s)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
