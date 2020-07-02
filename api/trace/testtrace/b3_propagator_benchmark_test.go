@@ -67,6 +67,10 @@ func BenchmarkInjectB3(b *testing.B) {
 			name:  "valid headers",
 			tests: injectHeader,
 		},
+		{
+			name:  "invalid headers",
+			tests: injectInvalidHeader,
+		},
 	}
 
 	mockTracer := &mocktrace.MockTracer{
