@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `B3Encoding` is added to represent the B3 encoding(s) the B3 propagator injects.
    A value for HTTP supported encodings (Multiple Header: `MultipleHeader`, Single Header: `SingleHeader`) are included. (#882)
-- The `FlagsDeferr` trace flag to indicate if the trace sampling decision has been deferred.
+- The `FlagsDeferred` trace flag to indicate if the trace sampling decision has been deferred.
    This addition is to support the B3 propagation specification, though it might support future trace systems. (#882)
 - The `FlagsDebug` trace flag to indicate if the trace is a debug trace.
    This addition is to support the B3 propagation specification. (#882)
