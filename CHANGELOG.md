@@ -10,12 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `B3Encoding` is added to represent the B3 encoding(s) the B3 propagator injects.
+- The `B3Encoding` type to represent the B3 encoding(s) the B3 propagator can inject.
    A value for HTTP supported encodings (Multiple Header: `MultipleHeader`, Single Header: `SingleHeader`) are included. (#882)
-- The `FlagsDeferred` trace flag to indicate if the trace sampling decision has been deferred.
-   This addition is to support the B3 propagation specification, though it might support future trace systems. (#882)
-- The `FlagsDebug` trace flag to indicate if the trace is a debug trace.
-   This addition is to support the B3 propagation specification. (#882)
+- The `FlagsDeferred` trace flag to indicate if the trace sampling decision has been deferred. (#882)
+- The `FlagsDebug` trace flag to indicate if the trace is a debug trace. (#882)
 
 ### Changed
 
@@ -30,17 +28,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The `FlagsUnset` trace flag is removed.
+- The `FlagsUnused` trace flag is removed.
    The purpose of this flag was to act as the inverse of `FlagsSampled`, the inverse of `FlagsSampled` is used instead. (#882)
 
 ### Fixed
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
-- The B3 propagator now correctly supports sampling only values for a Single B3 Header. (#882)
+- The B3 propagator now correctly supports sampling only values (`b3: 0`, `b3: 1`, or `b3: d`) for a Single B3 Header. (#882)
 - The B3 propagator now propagates the debug flag.
-   This includes changing the presences of the debug flag into a sampling bit set.
+   This removes the behavior of changing the debug flag into a set sampling bit.
    Instead, this now follow the B3 specification and omits the `X-B3-Sampling` header. (#882)
-- The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and correctly does not set a sampling value in this case when injecting. (#882)
+- The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and does not set the `X-B3-Sampling` header when injecting. (#882)
 
 ## [0.7.0] - 2020-06-26
 
