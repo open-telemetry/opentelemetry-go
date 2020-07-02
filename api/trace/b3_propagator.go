@@ -91,9 +91,6 @@ var _ propagation.HTTPPropagator = B3{}
 // SpanContext.
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
-	if !sc.IsValid() {
-		return
-	}
 
 	if b3.supports(SingleHeader) {
 		header := []string{}
