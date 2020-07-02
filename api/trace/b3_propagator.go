@@ -161,10 +161,14 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 }
 
 func (b3 B3) GetAllKeys() []string {
+	header := []string{}
 	if b3.supports(SingleHeader) {
-		return []string{B3SingleHeader}
+		header = append(header, B3SingleHeader)
 	}
-	return []string{B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader}
+	if b3.supports(MultipleHeader) || b3.InjectEncoding == 0 {
+		header = append(header, B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader, B3DebugFlagHeader)
+	}
+	return header
 }
 
 // extractMultiple reconstructs a SpanContext from header values based on B3

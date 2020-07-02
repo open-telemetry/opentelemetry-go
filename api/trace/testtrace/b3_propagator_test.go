@@ -115,25 +115,54 @@ func TestInjectB3(t *testing.T) {
 }
 
 func TestB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := trace.B3{}
-	want := []string{
-		trace.B3TraceIDHeader,
-		trace.B3SpanIDHeader,
-		trace.B3SampledHeader,
+	tests := []struct {
+		name       string
+		propagator trace.B3
+		want       []string
+	}{
+		{
+			name:       "no encoding specified",
+			propagator: trace.B3{},
+			want: []string{
+				trace.B3TraceIDHeader,
+				trace.B3SpanIDHeader,
+				trace.B3SampledHeader,
+				trace.B3DebugFlagHeader,
+			},
+		},
+		{
+			name:       "MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.MultipleHeader},
+			want: []string{
+				trace.B3TraceIDHeader,
+				trace.B3SpanIDHeader,
+				trace.B3SampledHeader,
+				trace.B3DebugFlagHeader,
+			},
+		},
+		{
+			name:       "SingleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.SingleHeader},
+			want: []string{
+				trace.B3SingleHeader,
+			},
+		},
+		{
+			name:       "SingleHeader and MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.SingleHeader | trace.MultipleHeader},
+			want: []string{
+				trace.B3SingleHeader,
+				trace.B3TraceIDHeader,
+				trace.B3SpanIDHeader,
+				trace.B3SampledHeader,
+				trace.B3DebugFlagHeader,
+			},
+		},
 	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
-	}
-}
 
-func TestB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := trace.B3{InjectEncoding: trace.SingleHeader}
-	want := []string{
-		trace.B3SingleHeader,
-	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
+	for _, test := range tests {
+		if diff := cmp.Diff(test.propagator.GetAllKeys(), test.want); diff != "" {
+			t.Errorf("%s: GetAllKeys: -got +want %s", test.name, diff)
+		}
 	}
 }
