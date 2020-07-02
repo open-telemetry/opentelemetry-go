@@ -87,6 +87,8 @@ func (b3 B3) supports(e B3Encoding) bool {
 var _ propagation.HTTPPropagator = B3{}
 
 // Inject injects a context into the supplier as B3 headers.
+// The parent span ID is omitted because it is not tracked in the
+// SpanContext.
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
@@ -99,7 +101,9 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			header = append(header, sc.TraceID.String(), sc.SpanID.String())
 		}
 
-		if sc.TraceFlags&FlagsUnset != FlagsUnset {
+		if sc.isDebug() {
+			header = append(header, "d")
+		} else if !sc.isDeferred() {
 			if sc.IsSampled() {
 				header = append(header, "1")
 			} else {
@@ -116,7 +120,10 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			supplier.Set(B3SpanIDHeader, sc.SpanID.String())
 		}
 
-		if sc.TraceFlags&FlagsUnset != FlagsUnset {
+		if sc.isDebug() {
+			// Since Debug implies deferred, don't also send "X-B3-Sampled".
+			supplier.Set(B3DebugFlagHeader, "1")
+		} else if !sc.isDeferred() {
 			if sc.IsSampled() {
 				supplier.Set(B3SampledHeader, "1")
 			} else {
@@ -179,20 +186,19 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 	// allow "true" and "false" as inputs for interop purposes.
 	switch strings.ToLower(sampled) {
 	case "0", "false":
-		sc.TraceFlags = FlagsNotSampled
+		// Zero value for TraceFlags sample bit is unset.
 	case "1", "true":
 		sc.TraceFlags = FlagsSampled
 	case "":
-		sc.TraceFlags = FlagsUnset
+		sc.TraceFlags = FlagsDeferred
 	default:
 		return empty, errInvalidSampledHeader
 	}
 
-	// The only accepted value for Flags is "1". This will set Debug to true. All
-	// other values and omission of header will be ignored.
+	// The only accepted value for Flags is "1". This will set Debug to
+	// true. All other values and omission of header will be ignored.
 	if flags == "1" {
-		// We do not track debug status, but the sampling needs to be unset.
-		sc.TraceFlags = FlagsUnset
+		sc.TraceFlags |= FlagsDebug
 	}
 
 	if traceID != "" {
@@ -305,12 +311,14 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 		return empty, errInvalidTraceIDValue
 	}
 	switch sampling {
-	case "", "d":
-		sc.TraceFlags = FlagsUnset
+	case "":
+		sc.TraceFlags = FlagsDeferred
+	case "d":
+		sc.TraceFlags = FlagsDebug
 	case "1":
 		sc.TraceFlags = FlagsSampled
 	case "0":
-		sc.TraceFlags = FlagsNotSampled
+		// Zero value for TraceFlags sample bit is unset.
 	default:
 		return empty, errInvalidSampledByte
 	}

@@ -21,21 +21,15 @@ import (
 )
 
 const (
-	traceFlagsBitMaskNotSampled = byte(0x00)
-	traceFlagsBitMaskSampled    = byte(0x01)
-	traceFlagsBitMaskUnset      = byte(0xFE)
-
-	// FlagsSampled is a byte with the sampled bit set.
-	FlagsSampled = traceFlagsBitMaskSampled
-	// FlagsNotSampled is a byte with the sampled bit unset.
-	FlagsNotSampled = traceFlagsBitMaskNotSampled
-	// FlagsUnset is a byte with the sampled bit unset but all other bits
-	// set (the inverse of FlagsSampled). Some systems (e.g. B3) distinguish
-	// between setting flags to not sample and not making a sampling
-	// decision, usually called a deferred decision. This byte mask is used
-	// internally to represent this unset state. It is not a valid
-	// representation elsewhere.
-	FlagsUnset = traceFlagsBitMaskUnset
+	// FlagsSampled is a bitmask with the sampled bit set. A SpanContext
+	// with the sampling bit set means the span is sampled.
+	FlagsSampled = byte(0x01)
+	// FlagsDeferred is a bitmask with the deferred bit set. A SpanContext
+	// with the deferred bit set means the sampling decision has been
+	// defered to the receiver.
+	FlagsDeferred = byte(0x02)
+	// FlagsDebug is a bitmask with the debug bit set.
+	FlagsDebug = byte(0x04)
 
 	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
@@ -187,7 +181,17 @@ func (sc SpanContext) HasSpanID() bool {
 	return sc.SpanID.IsValid()
 }
 
-// IsSampled check if the sampling bit in trace flags is set.
+// isDeferred returns if the deferred bit is set in the trace flags.
+func (sc SpanContext) isDeferred() bool {
+	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
+}
+
+// isDebug returns if the debug bit is set in the trace flags.
+func (sc SpanContext) isDebug() bool {
+	return sc.TraceFlags&FlagsDebug == FlagsDebug
+}
+
+// IsSampled returns if the span should be sampled.
 func (sc SpanContext) IsSampled() bool {
-	return sc.TraceFlags&traceFlagsBitMaskSampled == traceFlagsBitMaskSampled
+	return sc.isDebug() || sc.TraceFlags&FlagsSampled == FlagsSampled
 }

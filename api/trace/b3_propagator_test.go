@@ -44,7 +44,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			"", "", "", "", "",
-			SpanContext{TraceFlags: FlagsUnset},
+			SpanContext{TraceFlags: FlagsDeferred},
 			nil,
 		},
 		{
@@ -53,8 +53,23 @@ func TestExtractMultiple(t *testing.T) {
 			nil,
 		},
 		{
+			"", "", "", "", "1",
+			SpanContext{TraceFlags: FlagsDeferred | FlagsDebug},
+			nil,
+		},
+		{
+			"", "", "", "0", "1",
+			SpanContext{TraceFlags: FlagsDebug},
+			nil,
+		},
+		{
+			"", "", "", "1", "1",
+			SpanContext{TraceFlags: FlagsSampled | FlagsDebug},
+			nil,
+		},
+		{
 			traceIDStr, spanIDStr, "", "", "",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnset},
+			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsDeferred},
 			nil,
 		},
 		{
@@ -86,7 +101,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			traceIDStr, spanIDStr, "", "1", "1",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsUnset},
+			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled | FlagsDebug},
 			nil,
 		},
 		// Invalid flags are discarded.
@@ -195,10 +210,9 @@ func TestExtractSingle(t *testing.T) {
 		expected SpanContext
 		err      error
 	}{
-		{"0", SpanContext{TraceFlags: FlagsNotSampled}, nil},
+		{"0", SpanContext{}, nil},
 		{"1", SpanContext{TraceFlags: FlagsSampled}, nil},
-		// debug flag is valid, but ignored. Sampling should be deferred.
-		{"d", SpanContext{TraceFlags: FlagsUnset}, nil},
+		{"d", SpanContext{TraceFlags: FlagsDebug}, nil},
 		{"a", empty, errInvalidSampledByte},
 		{"3", empty, errInvalidSampledByte},
 		{"000000000000007b", empty, errInvalidScope},
@@ -209,7 +223,7 @@ func TestExtractSingle(t *testing.T) {
 			SpanContext{
 				TraceID:    ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:     spanID,
-				TraceFlags: FlagsUnset,
+				TraceFlags: FlagsDeferred,
 			},
 			nil,
 		},
@@ -218,7 +232,7 @@ func TestExtractSingle(t *testing.T) {
 			SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: FlagsUnset,
+				TraceFlags: FlagsDeferred,
 			},
 			nil,
 		},
