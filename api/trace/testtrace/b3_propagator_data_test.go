@@ -507,7 +507,7 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000001",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "1",
 		},
 		doNotWantHeaders: []string{
@@ -524,7 +524,7 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000002",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "0",
 		},
 		doNotWantHeaders: []string{
@@ -542,12 +542,64 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000003",
+			trace.B3SpanIDHeader:  spanIDStr,
 		},
 		doNotWantHeaders: []string{
 			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
 			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name: "none: sampled only",
+		parentSc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SampledHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name: "none: debug",
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name: "none: debug omitting sample",
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
 			trace.B3SingleHeader,
 		},
 	},
@@ -561,7 +613,7 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000004",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "1",
 		},
 		doNotWantHeaders: []string{
@@ -579,7 +631,7 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000005",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "0",
 		},
 		doNotWantHeaders: []string{
@@ -598,12 +650,67 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "0000000000000006",
+			trace.B3SpanIDHeader:  spanIDStr,
 		},
 		doNotWantHeaders: []string{
 			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
 			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "multiple: sampled only",
+		encoding: trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SampledHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "multiple: debug",
+		encoding: trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "multiple: debug omitting sample",
+		encoding: trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
 			trace.B3SingleHeader,
 		},
 	},
@@ -616,7 +723,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
-			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000007-1", traceIDStr),
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-1", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3TraceIDHeader,
@@ -634,7 +741,7 @@ var injectHeader = []injectTest{
 			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
-			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000008-0", traceIDStr),
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-0", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3TraceIDHeader,
@@ -653,7 +760,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsDeferred,
 		},
 		wantHeaders: map[string]string{
-			trace.B3SingleHeader: fmt.Sprintf("%s-0000000000000009", traceIDStr),
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3TraceIDHeader,
@@ -661,6 +768,64 @@ var injectHeader = []injectTest{
 			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
 			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single: sampled only",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "single: debug",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3SingleHeader,
+		},
+	},
+	{
+		name:     "single: debug omitting sample",
+		encoding: trace.SingleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader: fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3DebugFlagHeader,
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3SingleHeader,
 		},
 	},
 	{
@@ -673,9 +838,9 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "000000000000000a",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "1",
-			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000a-1", traceIDStr),
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s-1", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3ParentSpanIDHeader,
@@ -691,9 +856,9 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "000000000000000b",
+			trace.B3SpanIDHeader:  spanIDStr,
 			trace.B3SampledHeader: "0",
-			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000b-0", traceIDStr),
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s-0", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3ParentSpanIDHeader,
@@ -710,13 +875,68 @@ var injectHeader = []injectTest{
 		},
 		wantHeaders: map[string]string{
 			trace.B3TraceIDHeader: traceIDStr,
-			trace.B3SpanIDHeader:  "000000000000000c",
-			trace.B3SingleHeader:  fmt.Sprintf("%s-000000000000000c", traceIDStr),
+			trace.B3SpanIDHeader:  spanIDStr,
+			trace.B3SingleHeader:  fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			trace.B3SampledHeader,
 			trace.B3ParentSpanIDHeader,
 			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single+multiple: sampled only",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			trace.B3SingleHeader:  "1",
+			trace.B3SampledHeader: "1",
+		},
+		doNotWantHeaders: []string{
+			trace.B3TraceIDHeader,
+			trace.B3SpanIDHeader,
+			trace.B3ParentSpanIDHeader,
+			trace.B3DebugFlagHeader,
+		},
+	},
+	{
+		name:     "single+multiple: debug",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+			trace.B3SingleHeader:    fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
+		},
+	},
+	{
+		name:     "single+multiple: debug omitting sample",
+		encoding: trace.SingleHeader | trace.MultipleHeader,
+		parentSc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			trace.B3TraceIDHeader:   traceIDStr,
+			trace.B3SpanIDHeader:    spanIDStr,
+			trace.B3DebugFlagHeader: "1",
+			trace.B3SingleHeader:    fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
+		},
+		doNotWantHeaders: []string{
+			trace.B3SampledHeader,
+			trace.B3ParentSpanIDHeader,
 		},
 	},
 }
