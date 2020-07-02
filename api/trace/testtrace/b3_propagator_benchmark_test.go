@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func BenchmarkExtractB3(b *testing.B) {
@@ -58,7 +57,6 @@ func BenchmarkExtractB3(b *testing.B) {
 }
 
 func BenchmarkInjectB3(b *testing.B) {
-	var id uint64
 	testGroup := []struct {
 		name  string
 		tests []injectTest
@@ -73,22 +71,15 @@ func BenchmarkInjectB3(b *testing.B) {
 		},
 	}
 
-	mockTracer := &mocktrace.MockTracer{
-		Sampled:     false,
-		StartSpanID: &id,
-	}
-
 	for _, tg := range testGroup {
-		id = 0
 		for _, tt := range tg.tests {
 			propagator := trace.B3{InjectEncoding: tt.encoding}
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := context.Background()
-				if tt.parentSc.IsValid() {
-					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
-				}
-				ctx, _ = mockTracer.Start(ctx, "inject")
+				ctx := trace.ContextWithSpan(
+					context.Background(),
+					testSpan{sc: tt.parentSc},
+				)
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {

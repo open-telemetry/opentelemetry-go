@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func TestExtractB3(t *testing.T) {
@@ -63,8 +62,16 @@ func TestExtractB3(t *testing.T) {
 	}
 }
 
+type testSpan struct {
+	trace.NoopSpan
+	sc trace.SpanContext
+}
+
+func (s testSpan) SpanContext() trace.SpanContext {
+	return s.sc
+}
+
 func TestInjectB3(t *testing.T) {
-	var id uint64
 	testGroup := []struct {
 		name  string
 		tests []injectTest
@@ -79,24 +86,16 @@ func TestInjectB3(t *testing.T) {
 		},
 	}
 
-	mockTracer := &mocktrace.MockTracer{
-		Sampled:     false,
-		StartSpanID: &id,
-	}
-
 	for _, tg := range testGroup {
-		id = 0
 		for _, tt := range tg.tests {
 			propagator := trace.B3{InjectEncoding: tt.encoding}
-			props := propagation.New(propagation.WithInjectors(propagator))
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := context.Background()
-				if tt.parentSc.IsValid() {
-					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
-				}
-				ctx, _ = mockTracer.Start(ctx, "inject")
-				propagation.InjectHTTP(ctx, props, req.Header)
+				ctx := trace.ContextWithSpan(
+					context.Background(),
+					testSpan{sc: tt.parentSc},
+				)
+				propagator.Inject(ctx, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v
