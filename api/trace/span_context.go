@@ -191,7 +191,7 @@ func (sc SpanContext) isDebug() bool {
 	return sc.TraceFlags&FlagsDebug == FlagsDebug
 }
 
-// IsSampled returns if the span should be sampled.
+// IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanContext) IsSampled() bool {
-	return sc.isDebug() || sc.TraceFlags&FlagsSampled == FlagsSampled
+	return sc.TraceFlags&FlagsSampled == FlagsSampled
 }
