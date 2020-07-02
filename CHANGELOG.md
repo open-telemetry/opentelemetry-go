@@ -11,24 +11,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `B3Encoding` is added to represent the B3 encoding(s) the B3 propagator injects.
-   A value for HTTP supported encodings (Multiple Header and Single Header) are included.
-- The `FlagsNotSampled` trace flag to complement the existing `FlagsSampled`. (#882)
+   A value for HTTP supported encodings (Multiple Header: `MultipleHeader`, Single Header: `SingleHeader`) are included. (#882)
+- The `FlagsDeferr` trace flag to indicate if the trace sampling decision has been deferred.
+   This addition is to support the B3 propagation specification, though it might support future trace systems. (#882)
+- The `FlagsDebug` trace flag to indicate if the trace is a debug trace.
+   This addition is to support the B3 propagation specification. (#882)
 
 ### Changed
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Use lowercase header names for B3 Multiple Headers. (#881)
 - The B3 propagator `SingleHeader` field has been replaced with `InjectEncoding`.
-   This new field can be set to combinations of the `B3Encoding` bitmasks and will inject trace information in these encodings. (#882)
-- The B3 propagator now extracts from either Single or Multiple B3 Headers based on what is contained in the header (with preference for the Single Header).
-   This is instead of only extracting based on the propagator's configuration. (#882)
-- Rename `FlagsUnused` to `FlagsUnset` and clearly defined its purpose to act as a placeholder for systems that have a trinary sampling state (i.e. sample, don't sample, unspecified) to act as the unset state. (#882)
+   This new field can be set to combinations of the `B3Encoding` bitmasks and will inject trace information in these encodings.
+   If no encoding is set, the propagator will default to `MultipleHeader` encoding.(#882)
+- The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header. Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
+   This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
 
+### Removed
+
+- The `FlagsUnset` trace flag is removed.
+   The purpose of this flag was to act as the inverse of `FlagsSampled`, the inverse of `FlagsSampled` is used instead. (#882)
 
 ### Fixed
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
 - The B3 propagator now correctly supports sampling only values for a Single B3 Header. (#882)
+- The B3 propagator now propagates the debug flag.
+   This includes changing the presences of the debug flag into a sampling bit set.
+   Instead, this now follow the B3 specification and omits the `X-B3-Sampling` header. (#882)
 - The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and correctly does not set a sampling value in this case when injecting. (#882)
 
 ## [0.7.0] - 2020-06-26
