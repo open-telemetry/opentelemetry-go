@@ -93,7 +93,7 @@ func TestInjectB3(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
 					context.Background(),
-					testSpan{sc: tt.parentSc},
+					testSpan{sc: tt.sc},
 				)
 				propagator.Inject(ctx, req.Header)
 
