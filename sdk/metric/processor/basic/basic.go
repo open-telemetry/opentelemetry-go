@@ -36,6 +36,16 @@ type (
 	}
 
 	stateKey struct {
+		// TODO: This code is organized to support multiple
+		// accumulators which could theoretically produce the
+		// data for the same instrument with the same
+		// resources, and this code has logic to combine data
+		// properly from multiple accumulators.  However, the
+		// use of *metric.Descriptor in the stateKey makes
+		// such combination impossible, because each
+		// accumulator allocates its own instruments.  This
+		// can be fixed by using the instrument name and kind
+		// instead of the descriptor pointer.
 		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
@@ -291,11 +301,16 @@ func (b *Processor) FinishCollection() error {
 
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
+		updated := value.updated == b.finishedCollection
 
-		if !value.stateful {
-			if value.updated != b.finishedCollection {
-				delete(b.values, key)
-			}
+		fmt.Println("FINISH", updated, value.stateful, mkind)
+
+		if !updated && !value.stateful {
+			delete(b.values, key)
+			continue
+		}
+
+		if !value.stateful || !updated {
 			continue
 		}
 

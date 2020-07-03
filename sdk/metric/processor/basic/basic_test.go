@@ -194,7 +194,7 @@ func testSynchronousIntegration(
 							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
 							return
 						} else if err != nil {
-							t.Fatal(fmt.Sprint("unexpected FinishCollection error: ", err))
+							t.Fatal("unexpected FinishCollection error: ", err)
 						}
 
 						if nc < NCheckpoint-1 {
@@ -203,50 +203,61 @@ func testSynchronousIntegration(
 
 						checkpointSet := processor.CheckpointSet()
 
-						// Test the final checkpoint state.
-						records1 := test.NewOutput(label.DefaultEncoder())
-						err = checkpointSet.ForEach(ekind, records1.AddRecord)
+						for testTwice := 0; testTwice < 2; testTwice++ {
+							if testTwice == 1 {
+								// We're repeating the test after another
+								// interval with no updates.
+								processor.StartCollection()
+								if err := processor.FinishCollection(); err != nil {
+									t.Fatal("unexpected collection error: ", err)
+								}
+							}
 
-						// Test for an allowed error:
-						if err != nil && err != aggregation.ErrNoSubtraction {
-							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
-						}
-						var multiplier int64
+							// Test the final checkpoint state.
+							records1 := test.NewOutput(label.DefaultEncoder())
+							err = checkpointSet.ForEach(ekind, records1.AddRecord)
 
-						if mkind.Asynchronous() {
-							// Because async instruments take the last value,
-							// the number of accumulators doesn't matter.
-							if mkind.PrecomputedSum() {
-								if ekind == export.DeltaExporter {
-									multiplier = 1
+							// Test for an allowed error:
+							if err != nil && err != aggregation.ErrNoSubtraction {
+								t.Fatal("unexpected checkpoint error: ", err)
+							}
+							var multiplier int64
+
+							if mkind.Asynchronous() {
+								// Because async instruments take the last value,
+								// the number of accumulators doesn't matter.
+								if mkind.PrecomputedSum() {
+									if ekind == export.DeltaExporter {
+										multiplier = 1
+									} else {
+										multiplier = cumulativeMultiplier
+									}
 								} else {
-									multiplier = cumulativeMultiplier
+									if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
+										multiplier = cumulativeMultiplier
+									} else {
+										multiplier = 1
+									}
 								}
 							} else {
-								if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
-									multiplier = cumulativeMultiplier
-								} else {
+								// Synchronous accumulate results from multiple accumulators,
+								// use that number as the baseline multiplier.
+								multiplier = int64(NAccum)
+								if ekind == export.CumulativeExporter {
+									// If a cumulative exporter, include prior checkpoints.
+									multiplier *= cumulativeMultiplier
+								}
+								if akind == aggregation.LastValueKind {
+									// If a last-value aggregator, set multiplier to 1.0.
 									multiplier = 1
 								}
 							}
-						} else {
-							// Synchronous accumulate results from multiple accumulators,
-							// use that number as the baseline multiplier.
-							multiplier = int64(NAccum)
-							if ekind == export.CumulativeExporter {
-								// If a cumulative exporter, include prior checkpoints.
-								multiplier *= cumulativeMultiplier
-							}
-							if akind == aggregation.LastValueKind {
-								// If a last-value aggregator, set multiplier to 1.0.
-								multiplier = 1
-							}
-						}
 
-						require.EqualValues(t, map[string]float64{
-							"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
-							"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
-						}, records1.Map)
+							require.EqualValues(t, map[string]float64{
+								"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
+								"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
+							}, records1.Map)
+						}
 					}
 				})
 			}
