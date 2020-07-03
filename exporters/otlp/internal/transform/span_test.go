@@ -93,7 +93,7 @@ func TestSpanEvent(t *testing.T) {
 	if !assert.Len(t, got, 2) {
 		return
 	}
-	uNow := uint64(now.Nanosecond())
+	uNow := uint64(now.UnixNano())
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: uNow}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: Attributes(attrs), TimeUnixNano: uNow}, got[1])

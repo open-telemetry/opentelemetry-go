@@ -176,7 +176,7 @@ func spanEvents(es []export.Event) []*tracepb.Span_Event {
 		events = append(events,
 			&tracepb.Span_Event{
 				Name:         e.Name,
-				TimeUnixNano: uint64(e.Time.Nanosecond()),
+				TimeUnixNano: uint64(e.Time.UnixNano()),
 				Attributes:   Attributes(e.Attributes),
 				// TODO (rghetia) : Add Drop Counts when supported.
 			},
