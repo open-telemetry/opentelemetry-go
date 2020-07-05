@@ -77,26 +77,26 @@ func TestEmptySpanEvent(t *testing.T) {
 
 func TestSpanEvent(t *testing.T) {
 	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
-	now := time.Now()
+	eventTime := time.Date(2020, 5, 20, 0, 0, 0, 0, time.UTC)
 	got := spanEvents([]export.Event{
 		{
 			Name:       "test 1",
 			Attributes: []kv.KeyValue{},
-			Time:       now,
+			Time:       eventTime,
 		},
 		{
 			Name:       "test 2",
 			Attributes: attrs,
-			Time:       now,
+			Time:       eventTime,
 		},
 	})
 	if !assert.Len(t, got, 2) {
 		return
 	}
-	uNow := uint64(now.Nanosecond())
-	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: uNow}, got[0])
+	eventTimestamp := uint64(1589932800 * 1e9)
+	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: eventTimestamp}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
-	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: Attributes(attrs), TimeUnixNano: uNow}, got[1])
+	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: Attributes(attrs), TimeUnixNano: eventTimestamp}, got[1])
 }
 
 func TestExcessiveSpanEvents(t *testing.T) {
