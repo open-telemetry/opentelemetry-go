@@ -97,7 +97,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		{
 			name: "/github.com.serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("/github.com.serviceName/bar"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -117,7 +119,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		{
 			name: "/serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("/serviceName/bar"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -137,7 +141,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		{
 			name: "serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("serviceName/bar"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -157,7 +163,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		{
 			name: "invalidName",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String(""),
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("invalidName"),
+				standard.RPCMethodKey:   value.String(""),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -177,7 +185,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		{
 			name: "/github.com.foo.serviceName_123/method",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName_123"),
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("/github.com.foo.serviceName_123/method"),
+				standard.RPCMethodKey:   value.String("method"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -346,7 +356,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	attrs := spanData.Attributes
 	expectedAttr := map[kv.Key]string{
-		standard.RPCServiceKey:  "serviceName",
+		standard.RPCSystemKey:   "grpc",
+		standard.RPCServiceKey:  "/github.com.serviceName/bar",
+		standard.RPCMethodKey:   "bar",
 		standard.NetPeerIPKey:   "fake",
 		standard.NetPeerPortKey: "connection",
 	}

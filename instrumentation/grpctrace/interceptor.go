@@ -86,7 +86,11 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 			ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(
+				standard.RPCSystemGRPC,
+				standard.RPCServiceKey.String(method),
+				standard.RPCMethodKey.String(methodFromFullName(method)),
+			),
 		)
 		defer span.End()
 
@@ -264,7 +268,11 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 			ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(
+				standard.RPCSystemGRPC,
+				standard.RPCServiceKey.String(method),
+				standard.RPCMethodKey.String(methodFromFullName(method)),
+			),
 		)
 
 		Inject(ctx, &metadataCopy)
@@ -318,7 +326,11 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(
+				standard.RPCSystemGRPC,
+				standard.RPCServiceKey.String(info.FullMethod),
+				standard.RPCMethodKey.String(methodFromFullName(info.FullMethod)),
+			),
 		)
 		defer span.End()
 
@@ -408,7 +420,11 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 			info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(
+				standard.RPCSystemGRPC,
+				standard.RPCServiceKey.String(info.FullMethod),
+				standard.RPCMethodKey.String(methodFromFullName(info.FullMethod)),
+			),
 		)
 		defer span.End()
 
@@ -450,10 +466,10 @@ func peerInfoFromContext(ctx context.Context) []kv.KeyValue {
 	return peerInfoFromTarget(p.Addr.String())
 }
 
-var fullMethodRegexp = regexp.MustCompile(`^\/?(?:\S+\.)?(\S+)\/\S+$`)
+var methodRegexp = regexp.MustCompile(`^\/?(?:\S+\.)?(?:\S+)\/(\S+)$`)
 
-func serviceFromFullMethod(method string) string {
-	match := fullMethodRegexp.FindStringSubmatch(method)
+func methodFromFullName(method string) string {
+	match := methodRegexp.FindStringSubmatch(method)
 	if len(match) == 0 {
 		return ""
 	}
