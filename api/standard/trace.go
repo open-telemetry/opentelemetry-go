@@ -50,6 +50,13 @@ var (
 	NetTransportOther  = NetTransportKey.String("other")
 )
 
+// General attribute keys for spans.
+const (
+	// Service name of the remote service. Should equal the actual
+	// `service.name` resource attribute of the remote service, if any.
+	PeerServiceKey = kv.Key("peer.service")
+)
+
 // Standard attribute keys used to identify an authorized enduser.
 const (
 	// Username or the client identifier extracted from the access token or
