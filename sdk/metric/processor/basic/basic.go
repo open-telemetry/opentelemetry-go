@@ -311,8 +311,14 @@ func (b *Processor) FinishCollection() error {
 		stale := value.updated != b.finishedCollection
 		stateless := !value.stateful
 
-		// If the
+		// The following branch updates stateful aggregators.  Skip
+		// these updates if the aggregator is not stateful or if the
+		// aggregator is stale.
 		if stale || stateless {
+			// If this processor does not require memeory,
+			// stale, stateless entries can be removed.
+			// This implies that they were not updated
+			// over the previous full collection interval.
 			if stale && stateless && !b.config.Memory {
 				delete(b.values, key)
 			}
