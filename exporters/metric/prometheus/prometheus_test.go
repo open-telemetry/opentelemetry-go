@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,9 +35,13 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewExportPipeline(prometheus.Config{
-		DefaultHistogramBoundaries: []float64{-0.5, 1},
-	}, pull.WithResource(resource.New(kv.String("R", "V"))))
+	exporter, err := prometheus.NewExportPipeline(
+		prometheus.Config{
+			DefaultHistogramBoundaries: []float64{-0.5, 1},
+		},
+		pull.WithCachePeriod(0),
+		pull.WithResource(resource.New(kv.String("R", "V"))),
+	)
 	require.NoError(t, err)
 
 	meter := exporter.Provider().Meter("test")
@@ -68,6 +73,8 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `valuerecorder_count{A="B",C="D",R="V"} 4`)
 	expected = append(expected, `valuerecorder_sum{A="B",C="D",R="V"} 19.6`)
 
+	compareExport(t, exporter, expected)
+	time.Sleep(3 * time.Second)
 	compareExport(t, exporter, expected)
 }
 
