@@ -45,7 +45,8 @@ type (
 		// such combination impossible, because each
 		// accumulator allocates its own instruments.  This
 		// can be fixed by using the instrument name and kind
-		// instead of the descriptor pointer.
+		// instead of the descriptor pointer.  See
+		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
 		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
