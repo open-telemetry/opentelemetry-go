@@ -23,7 +23,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -74,7 +73,6 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `valuerecorder_sum{A="B",C="D",R="V"} 19.6`)
 
 	compareExport(t, exporter, expected)
-	time.Sleep(3 * time.Second)
 	compareExport(t, exporter, expected)
 }
 
