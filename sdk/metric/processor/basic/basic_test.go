@@ -84,7 +84,7 @@ func TestProcessor(t *testing.T) {
 								{kind: aggregation.SketchKind},
 							} {
 								t.Run(ac.kind.String(), func(t *testing.T) {
-									testSynchronousIntegration(
+									testProcessor(
 										t,
 										tc.kind,
 										ic.kind,
@@ -124,7 +124,7 @@ func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export
 	}
 }
 
-func testSynchronousIntegration(
+func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
 	mkind metric.Kind,
@@ -164,7 +164,10 @@ func testSynchronousIntegration(
 			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
 				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
 
-					processor := basic.New(selector, ekind)
+					// These tests all run with Memory==true and verify in the final
+					// round that a collection interval with no updates continues
+					// to export identical data in all export modes.
+					processor := basic.New(selector, ekind, basic.WithMemory(true))
 
 					for nc := 0; nc < NCheckpoint; nc++ {
 
@@ -206,7 +209,8 @@ func testSynchronousIntegration(
 						for testTwice := 0; testTwice < 2; testTwice++ {
 							if testTwice == 1 {
 								// We're repeating the test after another
-								// interval with no updates.
+								// interval with no updates.  This test relies
+								// on the Memory==true option.
 								processor.StartCollection()
 								if err := processor.FinishCollection(); err != nil {
 									t.Fatal("unexpected collection error: ", err)

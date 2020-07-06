@@ -33,6 +33,7 @@ type (
 		export.AggregatorSelector
 
 		state
+		config Config
 	}
 
 	stateKey struct {
@@ -122,7 +123,11 @@ var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector) *Processor {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
+	var config Config
+	for _, opt := range opts {
+		opt.ApplyProcessor(&config)
+	}
 	now := time.Now()
 	return &Processor{
 		AggregatorSelector: aselector,
@@ -132,6 +137,7 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 			processStart:  now,
 			intervalStart: now,
 		},
+		config: config,
 	}
 }
 
@@ -301,16 +307,14 @@ func (b *Processor) FinishCollection() error {
 
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
-		updated := value.updated == b.finishedCollection
+		stale := value.updated != b.finishedCollection
+		stateless := !value.stateful
 
-		fmt.Println("FINISH", updated, value.stateful, mkind)
-
-		if !updated && !value.stateful {
-			delete(b.values, key)
-			continue
-		}
-
-		if !value.stateful || !updated {
+		// If the
+		if stale || stateless {
+			if stale && stateless && !b.config.Memory {
+				delete(b.values, key)
+			}
 			continue
 		}
 
