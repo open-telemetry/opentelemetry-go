@@ -235,6 +235,10 @@ const (
 	// String containing the execution identifier of the function.
 	FaaSExecutionKey = kv.Key("faas.execution")
 
+	// A boolean indicating that the serverless function is executed
+	// for the first time (aka cold start).
+	FaaSColdstartKey = kv.Key("faas.coldstart")
+
 	// The name of the source on which the operation was performed.
 	// For example, in Cloud Storage or S3 corresponds to the bucket name,
 	// and in Cosmos DB to the database name.

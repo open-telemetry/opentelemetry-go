@@ -66,6 +66,10 @@ const (
 	// A uniquely identifying name for the Container.
 	ContainerNameKey = kv.Key("container.name")
 
+	// Container ID, usually a UUID, as for example used to
+	// identify Docker containers. The UUID might be abbreviated.
+	ContainerIDKey = kv.Key("container.id")
+
 	// Name of the image the container was built on.
 	ContainerImageNameKey = kv.Key("container.image.name")
 
