@@ -420,14 +420,15 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 		serverName string
 		route      string
 
-		method     string
-		requestURI string
-		proto      string
-		remoteAddr string
-		host       string
-		url        *url.URL
-		header     http.Header
-		tls        tlsOption
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
 
 		expected []otelkv.KeyValue
 	}
@@ -658,9 +659,22 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				otelkv.String("http.client_ip", "1.2.3.4"),
 			},
 		},
+		{
+			name:          "with content length",
+			method:        "GET",
+			requestURI:    "/user/123",
+			contentLength: 100,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.Int64("http.request_content_length", 100),
+			},
+		},
 	}
 	for idx, tc := range testcases {
 		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+		r.ContentLength = tc.contentLength
 		got := HTTPServerAttributesFromHTTPRequest(tc.serverName, tc.route, r)
 		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
 	}
