@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Use lowercase header names for B3 Multiple Headers. (#881)
-- Extend semantic convetions for RPC. (#900)
+- Extend semantic conventions for RPC. (#900)
 
 ### Fixed
 
