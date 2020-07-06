@@ -33,7 +33,6 @@ type (
 		export.AggregatorSelector
 
 		state
-		config Config
 	}
 
 	stateKey struct {
@@ -92,6 +91,8 @@ type (
 	}
 
 	state struct {
+		config Config
+
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
@@ -124,12 +125,8 @@ var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 // data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
 func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
-	var config Config
-	for _, opt := range opts {
-		opt.ApplyProcessor(&config)
-	}
 	now := time.Now()
-	return &Processor{
+	p := &Processor{
 		AggregatorSelector: aselector,
 		ExportKindSelector: eselector,
 		state: state{
@@ -137,8 +134,11 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 			processStart:  now,
 			intervalStart: now,
 		},
-		config: config,
 	}
+	for _, opt := range opts {
+		opt.ApplyProcessor(&p.config)
+	}
+	return p
 }
 
 // Process implements export.Processor.
@@ -357,6 +357,12 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 
 		var agg aggregation.Aggregation
 		var start time.Time
+
+		// If the processor does not have Config.Memory and it was not updated
+		// in the prior round, do not visit this value.
+		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
+			continue
+		}
 
 		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
 		switch ekind {
