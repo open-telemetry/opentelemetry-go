@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
+- Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 
 ## [0.7.0] - 2020-06-26
 
