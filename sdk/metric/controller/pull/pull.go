@@ -53,7 +53,9 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	processor := processor.New(aselector, eselector)
+	// This controller uses WithMemory() as a requirement to
+	// support multiple readers.
+	processor := processor.New(aselector, eselector, processor.WithMemory(true))
 	accum := sdk.NewAccumulator(
 		processor,
 		sdk.WithResource(config.Resource),
