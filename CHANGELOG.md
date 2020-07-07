@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- The `B3Encoding` type to represent the B3 encoding(s) the B3 propagator can inject.
+   A value for HTTP supported encodings (Multiple Header: `MultipleHeader`, Single Header: `SingleHeader`) are included. (#882)
+- The `FlagsDeferred` trace flag to indicate if the trace sampling decision has been deferred. (#882)
+- The `FlagsDebug` trace flag to indicate if the trace is a debug trace. (#882)
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
@@ -18,10 +22,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#879)
 - Use lowercase header names for B3 Multiple Headers. (#881)
+- The B3 propagator `SingleHeader` field has been replaced with `InjectEncoding`.
+   This new field can be set to combinations of the `B3Encoding` bitmasks and will inject trace information in these encodings.
+   If no encoding is set, the propagator will default to `MultipleHeader` encoding. (#882)
+- The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header.
+   Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
+   This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
+
+### Removed
+
+- The `FlagsUnused` trace flag is removed.
+   The purpose of this flag was to act as the inverse of `FlagsSampled`, the inverse of `FlagsSampled` is used instead. (#882)
+- The B3 header constants (`B3SingleHeader`, `B3DebugFlagHeader`, `B3TraceIDHeader`, `B3SpanIDHeader`, `B3SampledHeader`, `B3ParentSpanIDHeader`) are removed.
+   If B3 header keys are needed [the authoritative OpenZipkin package constants](https://pkg.go.dev/github.com/openzipkin/zipkin-go@v0.2.2/propagation/b3?tab=doc#pkg-constants) should be used instead. (#882)
 
 ### Fixed
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
+- The B3 propagator now correctly supports sampling only values (`b3: 0`, `b3: 1`, or `b3: d`) for a Single B3 Header. (#882)
+- The B3 propagator now propagates the debug flag.
+   This removes the behavior of changing the debug flag into a set sampling bit.
+   Instead, this now follow the B3 specification and omits the `X-B3-Sampling` header. (#882)
+- The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and does not set the `X-B3-Sampling` header when injecting. (#882)
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
