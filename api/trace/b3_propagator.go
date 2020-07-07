@@ -24,12 +24,12 @@ import (
 
 const (
 	// Default B3 Header names.
-	B3SingleHeader       = "b3"
-	B3DebugFlagHeader    = "x-b3-flags"
-	B3TraceIDHeader      = "x-b3-traceid"
-	B3SpanIDHeader       = "x-b3-spanid"
-	B3SampledHeader      = "x-b3-sampled"
-	B3ParentSpanIDHeader = "x-b3-parentspanid"
+	b3ContextHeader      = "b3"
+	b3DebugFlagHeader    = "x-b3-flags"
+	b3TraceIDHeader      = "x-b3-traceid"
+	b3SpanIDHeader       = "x-b3-spanid"
+	b3SampledHeader      = "x-b3-sampled"
+	b3ParentSpanIDHeader = "x-b3-parentspanid"
 
 	b3TraceIDPadding = "0000000000000000"
 )
@@ -108,23 +108,23 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			}
 		}
 
-		supplier.Set(B3SingleHeader, strings.Join(header, "-"))
+		supplier.Set(b3ContextHeader, strings.Join(header, "-"))
 	}
 
 	if b3.supports(MultipleHeader) || b3.InjectEncoding == 0 {
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
-			supplier.Set(B3TraceIDHeader, sc.TraceID.String())
-			supplier.Set(B3SpanIDHeader, sc.SpanID.String())
+			supplier.Set(b3TraceIDHeader, sc.TraceID.String())
+			supplier.Set(b3SpanIDHeader, sc.SpanID.String())
 		}
 
 		if sc.isDebug() {
 			// Since Debug implies deferred, don't also send "X-B3-Sampled".
-			supplier.Set(B3DebugFlagHeader, "1")
+			supplier.Set(b3DebugFlagHeader, "1")
 		} else if !sc.isDeferred() {
 			if sc.IsSampled() {
-				supplier.Set(B3SampledHeader, "1")
+				supplier.Set(b3SampledHeader, "1")
 			} else {
-				supplier.Set(B3SampledHeader, "0")
+				supplier.Set(b3SampledHeader, "0")
 			}
 		}
 	}
@@ -138,7 +138,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	)
 
 	// Default to Single Header if a valid value exists.
-	if h := supplier.Get(B3SingleHeader); h != "" {
+	if h := supplier.Get(b3ContextHeader); h != "" {
 		sc, err = extractSingle(h)
 		if err == nil && sc.IsValid() {
 			return ContextWithRemoteSpanContext(ctx, sc)
@@ -147,11 +147,11 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	}
 
 	var (
-		traceID      = supplier.Get(B3TraceIDHeader)
-		spanID       = supplier.Get(B3SpanIDHeader)
-		parentSpanID = supplier.Get(B3ParentSpanIDHeader)
-		sampled      = supplier.Get(B3SampledHeader)
-		debugFlag    = supplier.Get(B3DebugFlagHeader)
+		traceID      = supplier.Get(b3TraceIDHeader)
+		spanID       = supplier.Get(b3SpanIDHeader)
+		parentSpanID = supplier.Get(b3ParentSpanIDHeader)
+		sampled      = supplier.Get(b3SampledHeader)
+		debugFlag    = supplier.Get(b3DebugFlagHeader)
 	)
 	sc, err = extractMultiple(traceID, spanID, parentSpanID, sampled, debugFlag)
 	if err != nil || !sc.IsValid() {
@@ -163,10 +163,10 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 func (b3 B3) GetAllKeys() []string {
 	header := []string{}
 	if b3.supports(SingleHeader) {
-		header = append(header, B3SingleHeader)
+		header = append(header, b3ContextHeader)
 	}
 	if b3.supports(MultipleHeader) || b3.InjectEncoding == 0 {
-		header = append(header, B3TraceIDHeader, B3SpanIDHeader, B3SampledHeader, B3DebugFlagHeader)
+		header = append(header, b3TraceIDHeader, b3SpanIDHeader, b3SampledHeader, b3DebugFlagHeader)
 	}
 	return header
 }
