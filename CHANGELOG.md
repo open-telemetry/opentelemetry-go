@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The B3 Single Header name is now correctly `b3` instead of the previous `X-B3`. (#881)
+- Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 
 ## [0.7.0] - 2020-06-26
 
