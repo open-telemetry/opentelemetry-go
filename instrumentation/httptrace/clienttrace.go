@@ -203,6 +203,9 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 }
 
 func (ct *clientTracer) wroteHeaders() {
+	if ct.span("http.headers") != nil {
+		ct.end("http.headers", nil)
+	}
 	ct.start("http.send", "http.send")
 }
 

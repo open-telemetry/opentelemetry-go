@@ -122,6 +122,10 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			parent: "test",
 		},
 		{
+			name:   "http.headers",
+			parent: "test",
+		},
+		{
 			name:   "http.send",
 			parent: "test",
 		},
