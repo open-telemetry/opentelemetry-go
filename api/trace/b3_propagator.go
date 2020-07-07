@@ -54,13 +54,20 @@ var (
 // B3Encoding is a bitmask representation of the B3 encoding type.
 type B3Encoding uint8
 
+// supports returns if e has o bit(s) set.
+func (e B3Encoding) supports(o B3Encoding) bool {
+	return e&o == o
+}
+
 const (
-	// MultipleHeader is a B3 encoding that uses multiple headers to
+	// B3MultipleHeader is a B3 encoding that uses multiple headers to
 	// transmit tracing information all prefixed with `x-b3-`.
-	MultipleHeader B3Encoding = 1
-	// SingleHeader is a B3 encoding that uses a single header named `b3 to
-	// transmit tracing information.
-	SingleHeader B3Encoding = 2
+	B3MultipleHeader B3Encoding = 1 << iota
+	// B3SingleHeader is a B3 encoding that uses a single header named `b3`
+	// to transmit tracing information.
+	B3SingleHeader
+	// B3Unspecified is an unspecified B3 encoding.
+	B3Unspecified B3Encoding = 0
 )
 
 // B3 propagator serializes SpanContext to/from B3 Headers.
@@ -75,13 +82,9 @@ const (
 //    x-b3-flags: {DebugFlag}
 type B3 struct {
 	// InjectEncoding are the B3 encodings used when injecting trace
-	// information. If no encoding is specific it defaults to
-	// `MultipleHeader`.
+	// information. If no encoding is specific (i.e. `B3Unspecified`)
+	// `B3MultipleHeader` will be used as the default.
 	InjectEncoding B3Encoding
-}
-
-func (b3 B3) supports(e B3Encoding) bool {
-	return b3.InjectEncoding&e != 0
 }
 
 var _ propagation.HTTPPropagator = B3{}
@@ -92,7 +95,7 @@ var _ propagation.HTTPPropagator = B3{}
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := SpanFromContext(ctx).SpanContext()
 
-	if b3.supports(SingleHeader) {
+	if b3.InjectEncoding.supports(B3SingleHeader) {
 		header := []string{}
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
 			header = append(header, sc.TraceID.String(), sc.SpanID.String())
@@ -111,7 +114,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 		supplier.Set(b3ContextHeader, strings.Join(header, "-"))
 	}
 
-	if b3.supports(MultipleHeader) || b3.InjectEncoding == 0 {
+	if b3.InjectEncoding.supports(B3MultipleHeader) || b3.InjectEncoding == B3Unspecified {
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
 			supplier.Set(b3TraceIDHeader, sc.TraceID.String())
 			supplier.Set(b3SpanIDHeader, sc.SpanID.String())
@@ -162,10 +165,10 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 
 func (b3 B3) GetAllKeys() []string {
 	header := []string{}
-	if b3.supports(SingleHeader) {
+	if b3.InjectEncoding.supports(B3SingleHeader) {
 		header = append(header, b3ContextHeader)
 	}
-	if b3.supports(MultipleHeader) || b3.InjectEncoding == 0 {
+	if b3.InjectEncoding.supports(B3MultipleHeader) || b3.InjectEncoding == B3Unspecified {
 		header = append(header, b3TraceIDHeader, b3SpanIDHeader, b3SampledHeader, b3DebugFlagHeader)
 	}
 	return header

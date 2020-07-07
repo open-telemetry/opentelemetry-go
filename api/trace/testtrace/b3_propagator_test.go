@@ -31,11 +31,11 @@ func TestExtractB3(t *testing.T) {
 		tests []extractTest
 	}{
 		{
-			name:  "valid headers",
+			name:  "valid extract headers",
 			tests: extractHeaders,
 		},
 		{
-			name:  "invalid headers",
+			name:  "invalid extract headers",
 			tests: extractInvalidHeaders,
 		},
 	}
@@ -77,11 +77,11 @@ func TestInjectB3(t *testing.T) {
 		tests []injectTest
 	}{
 		{
-			name:  "valid headers",
+			name:  "valid inject headers",
 			tests: injectHeader,
 		},
 		{
-			name:  "invalid headers",
+			name:  "invalid inject headers",
 			tests: injectInvalidHeader,
 		},
 	}
@@ -131,8 +131,8 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 			},
 		},
 		{
-			name:       "MultipleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.MultipleHeader},
+			name:       "B3MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3MultipleHeader},
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -141,15 +141,15 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 			},
 		},
 		{
-			name:       "SingleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.SingleHeader},
+			name:       "B3SingleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader},
 			want: []string{
 				b3Context,
 			},
 		},
 		{
-			name:       "SingleHeader and MultipleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.SingleHeader | trace.MultipleHeader},
+			name:       "B3SingleHeader and B3MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader | trace.B3MultipleHeader},
 			want: []string{
 				b3Context,
 				b3TraceID,

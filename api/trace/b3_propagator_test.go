@@ -279,3 +279,46 @@ func TestExtractSingle(t *testing.T) {
 		assert.Equal(t, test.expected, actual, "header: %s", test.header)
 	}
 }
+
+func TestB3EncodingOperations(t *testing.T) {
+	encodings := []B3Encoding{
+		B3MultipleHeader,
+		B3SingleHeader,
+		B3Unspecified,
+	}
+
+	// Test for overflow (or something really unexpected).
+	for i, e := range encodings {
+		for j := i + 1; j < i+len(encodings); j++ {
+			o := encodings[j%len(encodings)]
+			assert.False(t, e == o, "%v == %v", e, o)
+		}
+	}
+
+	// B3Unspecified is a special case, it supports only itself, but is
+	// supported by everything.
+	assert.True(t, B3Unspecified.supports(B3Unspecified))
+	for _, e := range encodings[:len(encodings)-1] {
+		assert.False(t, B3Unspecified.supports(e), e)
+		assert.True(t, e.supports(B3Unspecified), e)
+	}
+
+	// Skip the special case for B3Unspecified.
+	for i, e := range encodings[:len(encodings)-1] {
+		// Everything should support itself.
+		assert.True(t, e.supports(e))
+		for j := i + 1; j < i+len(encodings); j++ {
+			o := encodings[j%len(encodings)]
+			// Any "or" combination should be supportive of an operand.
+			assert.True(t, (e | o).supports(e), "(%[0]v|%[1]v).supports(%[0]v)", e, o)
+			// Bitmasks should be unique.
+			assert.False(t, o.supports(e), "%v.supports(%v)", o, e)
+		}
+	}
+
+	// B3Encoding.supports should be more inclusive than equality.
+	all := ^B3Unspecified
+	for _, e := range encodings {
+		assert.True(t, all.supports(e))
+	}
+}
