@@ -32,6 +32,14 @@ const (
 	b3ParentSpanIDHeader = "x-b3-parentspanid"
 
 	b3TraceIDPadding = "0000000000000000"
+
+	// B3 Single Header encoding widths.
+	separatorWidth      = 1       // Single "-" character.
+	samplingWidth       = 1       // Single hex character.
+	traceID64BitsWidth  = 64 / 4  // 16 hex character Trace ID.
+	traceID128BitsWidth = 128 / 4 // 32 hex character Trace ID.
+	spanIDWidth         = 16      // 16 hex character ID.
+	parentSpanIDWidth   = 16      // 16 hex character ID.
 )
 
 var (
@@ -257,21 +265,22 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 
 	headerLen := len(contextHeader)
 
-	if headerLen == 1 {
+	if headerLen == samplingWidth {
 		sampling = contextHeader
-	} else if headerLen == 16 || headerLen == 32 {
+	} else if headerLen == traceID64BitsWidth || headerLen == traceID128BitsWidth {
+		// Trace ID by itself is invalid.
 		return empty, errInvalidScope
-	} else if headerLen >= 16+16+1 {
+	} else if headerLen >= traceID64BitsWidth+spanIDWidth+separatorWidth {
 		pos := 0
 		var traceID string
-		if string(contextHeader[16]) == "-" {
+		if string(contextHeader[traceID64BitsWidth]) == "-" {
 			// traceID must be 64 bits
-			pos += 16 + 1 // {traceID}-
-			traceID = b3TraceIDPadding + string(contextHeader[0:16])
+			pos += traceID64BitsWidth // {traceID}
+			traceID = b3TraceIDPadding + string(contextHeader[0:pos])
 		} else if string(contextHeader[32]) == "-" {
 			// traceID must be 128 bits
-			pos += 32 + 1 // {traceID}-
-			traceID = string(contextHeader[0:32])
+			pos += traceID128BitsWidth // {traceID}
+			traceID = string(contextHeader[0:pos])
 		} else {
 			return empty, errInvalidTraceIDValue
 		}
@@ -280,26 +289,29 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 		if err != nil {
 			return empty, errInvalidTraceIDValue
 		}
+		pos += separatorWidth // {traceID}-
 
-		sc.SpanID, err = SpanIDFromHex(contextHeader[pos : pos+16])
+		sc.SpanID, err = SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
 		if err != nil {
 			return empty, errInvalidSpanIDValue
 		}
-		pos += 16 // {traceID}-{spanID}
+		pos += spanIDWidth // {traceID}-{spanID}
 
 		if headerLen > pos {
-			if headerLen == pos+1 {
+			if headerLen == pos+separatorWidth {
+				// {traceID}-{spanID}- is invalid.
 				return empty, errInvalidSampledByte
 			}
-			pos++ // {traceID}-{spanID}-
+			pos += separatorWidth // {traceID}-{spanID}-
 
-			if headerLen == pos+1 {
+			if headerLen == pos+samplingWidth {
 				sampling = string(contextHeader[pos])
-			} else if headerLen == pos+16 {
+			} else if headerLen == pos+parentSpanIDWidth {
+				// {traceID}-{spanID}-{parentSpanID} is invalid.
 				return empty, errInvalidScopeParentSingle
-			} else if headerLen == pos+1+16+1 {
+			} else if headerLen == pos+samplingWidth+separatorWidth+parentSpanIDWidth {
 				sampling = string(contextHeader[pos])
-				pos += 1 + 1 // {traceID}-{spanID}-{sampling}-
+				pos += samplingWidth + separatorWidth // {traceID}-{spanID}-{sampling}-
 
 				// Validate parent span ID but we do not use it so do not
 				// save it.
