@@ -1,11 +1,11 @@
 version: 2.1
 executors:
   current-go:
-    resource_class: medium+
+    resource_class: large
     docker:
       - image: cimg/go:1.14
   prior-go:
-    resource_class: medium+
+    resource_class: large
     docker:
       - image: cimg/go:1.13
 
