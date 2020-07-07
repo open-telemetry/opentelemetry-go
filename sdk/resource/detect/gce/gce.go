@@ -15,13 +15,14 @@
 package gce
 
 import (
-	"cloud.google.com/go/compute/metadata"
+	"strings"
 	"context"
-	"go.opencensus.io/resource/resourcekeys" // TODO: replace by "go.opentelemetry.io/otel/sdk/resource/resourcekeys" after publish
-	"strings"
-
 	"log"
-	"strings"
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"cloud.google.com/go/compute/metadata"
+	"go.opencensus.io/resource/resourcekeys" // TODO: replace by "go.opentelemetry.io/otel/sdk/resource/resourcekeys" after publish
+
 )
 
 // Detect detects associated resources when running on GCE hosts.
