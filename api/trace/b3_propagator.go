@@ -90,7 +90,7 @@ const (
 //    x-b3-flags: {DebugFlag}
 type B3 struct {
 	// InjectEncoding are the B3 encodings used when injecting trace
-	// information. If no encoding is specific (i.e. `B3Unspecified`)
+	// information. If no encoding is specified (i.e. `B3Unspecified`)
 	// `B3MultipleHeader` will be used as the default.
 	InjectEncoding B3Encoding
 }
