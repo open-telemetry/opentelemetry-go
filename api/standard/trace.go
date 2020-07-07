@@ -50,6 +50,13 @@ var (
 	NetTransportOther  = NetTransportKey.String("other")
 )
 
+// General attribute keys for spans.
+const (
+	// Service name of the remote service. Should equal the actual
+	// `service.name` resource attribute of the remote service, if any.
+	PeerServiceKey = kv.Key("peer.service")
+)
+
 // Standard attribute keys used to identify an authorized enduser.
 const (
 	// Username or the client identifier extracted from the access token or
@@ -270,6 +277,10 @@ const (
 
 	// String containing the execution identifier of the function.
 	FaaSExecutionKey = kv.Key("faas.execution")
+
+	// A boolean indicating that the serverless function is executed
+	// for the first time (aka cold start).
+	FaaSColdstartKey = kv.Key("faas.coldstart")
 
 	// The name of the source on which the operation was performed.
 	// For example, in Cloud Storage or S3 corresponds to the bucket name,
