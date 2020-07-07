@@ -28,7 +28,7 @@ type Option interface {
 }
 
 // WithMemory sets the memory behavior of a Processor.  If this is
-// true, the processor will report metrics instruments and label sets
+// true, the processor will report metric instruments and label sets
 // that were previously reported but not updated in the most recent
 // interval.
 func WithMemory(memory bool) Option {
