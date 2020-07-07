@@ -76,7 +76,6 @@ func (w *respWriterWrapper) Header() http.Header {
 func (w *respWriterWrapper) Write(p []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
-		w.wroteHeader = true
 	}
 	n, err := w.ResponseWriter.Write(p)
 	n1 := int64(n)

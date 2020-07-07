@@ -50,6 +50,13 @@ var (
 	NetTransportOther  = NetTransportKey.String("other")
 )
 
+// General attribute keys for spans.
+const (
+	// Service name of the remote service. Should equal the actual
+	// `service.name` resource attribute of the remote service, if any.
+	PeerServiceKey = kv.Key("peer.service")
+)
+
 // Standard attribute keys used to identify an authorized enduser.
 const (
 	// Username or the client identifier extracted from the access token or
@@ -117,23 +124,66 @@ var (
 	HTTPFlavorQUIC = HTTPFlavorKey.String("QUIC")
 )
 
-// Standard attribute keys for database clients.
+// Standard attribute keys for database connections.
 const (
-	// Database type. For any SQL database, "sql". For others, the
-	// lower-case database category, e.g. "cassandra", "hbase", or "redis".
-	DBTypeKey = kv.Key("db.type")
+	// Identifier for the database system (DBMS) being used.
+	DBSystemKey = kv.Key("db.system")
 
+	// Database Connection String with embedded credentials removed.
+	DBConnectionStringKey = kv.Key("db.connection_string")
+
+	// Username for accessing database.
+	DBUserKey = kv.Key("db.user")
+)
+
+var (
+	DBSystemDB2       = DBSystemKey.String("db2")        // IBM DB2
+	DBSystemDerby     = DBSystemKey.String("derby")      // Apache Derby
+	DBSystemHive      = DBSystemKey.String("hive")       // Apache Hive
+	DBSystemMariaDB   = DBSystemKey.String("mariadb")    // MariaDB
+	DBSystemMSSql     = DBSystemKey.String("mssql")      // Microsoft SQL Server
+	DBSystemMySQL     = DBSystemKey.String("mysql")      // MySQL
+	DBSystemOracle    = DBSystemKey.String("oracle")     // Oracle Database
+	DBSystemPostgres  = DBSystemKey.String("postgresql") // PostgreSQL
+	DBSystemSqlite    = DBSystemKey.String("sqlite")     // SQLite
+	DBSystemTeradata  = DBSystemKey.String("teradata")   // Teradata
+	DBSystemOtherSQL  = DBSystemKey.String("other_sql")  // Some other Sql database. Fallback only
+	DBSystemCassandra = DBSystemKey.String("cassandra")  // Cassandra
+	DBSystemCosmosDB  = DBSystemKey.String("cosmosdb")   // Microsoft Azure CosmosDB
+	DBSystemCouchbase = DBSystemKey.String("couchbase")  // Couchbase
+	DBSystemCouchDB   = DBSystemKey.String("couchdb")    // CouchDB
+	DBSystemDynamoDB  = DBSystemKey.String("dynamodb")   // Amazon DynamoDB
+	DBSystemHBase     = DBSystemKey.String("hbase")      // HBase
+	DBSystemMongodb   = DBSystemKey.String("mongodb")    // MongoDB
+	DBSystemNeo4j     = DBSystemKey.String("neo4j")      // Neo4j
+	DBSystemRedis     = DBSystemKey.String("redis")      // Redis
+)
+
+// Standard attribute keys for database calls.
+const (
 	// Database instance name.
-	DBInstanceKey = kv.Key("db.instance")
+	DBNameKey = kv.Key("db.name")
 
 	// A database statement for the given database type.
 	DBStatementKey = kv.Key("db.statement")
 
-	// Username for accessing database.
-	DBUserKey = kv.Key("db.user")
+	// A database operation for the given database type.
+	DBOperationKey = kv.Key("db.operation")
+)
 
-	// Database URL.
-	DBUrlKey = kv.Key("db.url")
+// Database technology-specific attributes
+const (
+	// Name of the Cassandra keyspace accessed. Use instead of `db.name`.
+	DBCassandraKeyspaceKey = kv.Key("db.cassandra.keyspace")
+
+	// HBase namespace accessed. Use instead of `db.name`.
+	DBHBaseNamespaceKey = kv.Key("db.hbase.namespace")
+
+	// Index of Redis database accessed. Use instead of `db.name`.
+	DBRedisDBIndexKey = kv.Key("db.redis.database_index")
+
+	// Collection being accessed within the database in `db.name`.
+	DBMongoDBCollectionKey = kv.Key("db.mongodb.collection")
 )
 
 // Standard attribute keys for RPC.
@@ -227,6 +277,10 @@ const (
 
 	// String containing the execution identifier of the function.
 	FaaSExecutionKey = kv.Key("faas.execution")
+
+	// A boolean indicating that the serverless function is executed
+	// for the first time (aka cold start).
+	FaaSColdstartKey = kv.Key("faas.coldstart")
 
 	// The name of the source on which the operation was performed.
 	// For example, in Cloud Storage or S3 corresponds to the bucket name,
