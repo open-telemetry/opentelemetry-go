@@ -469,7 +469,7 @@ var fullMethodRegexp = regexp.MustCompile(`^\/?(((?:\S+\.)?\S+)\/(\S+))$`)
 func parseFullMethod(full string) (string, []kv.KeyValue) {
 	match := fullMethodRegexp.FindStringSubmatch(full)
 	if len(match) == 0 {
-		// Worse than incorrectly named spans is empty named spans.
+		// Worse than incorrectly named spans are empty named spans.
 		return full, nil
 	}
 
