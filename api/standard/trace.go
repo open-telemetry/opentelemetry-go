@@ -111,6 +111,20 @@ const (
 	// The IP address of the original client behind all proxies, if known
 	// (e.g. from X-Forwarded-For).
 	HTTPClientIPKey = kv.Key("http.client_ip")
+
+	// The size of the request payload body in bytes.
+	HTTPRequestContentLengthKey = kv.Key("http.request_content_length")
+
+	// The size of the uncompressed request payload body after transport decoding.
+	// Not set if transport encoding not used.
+	HTTPRequestContentLengthUncompressedKey = kv.Key("http.request_content_length_uncompressed")
+
+	// The size of the response payload body in bytes.
+	HTTPResponseContentLengthKey = kv.Key("http.response_content_length")
+
+	// The size of the uncompressed response payload body after transport decoding.
+	// Not set if transport encoding not used.
+	HTTPResponseContentLengthUncompressedKey = kv.Key("http.response_content_length_uncompressed")
 )
 
 var (
