@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
-- Add semantic conventions for operating system process resource attribute keys.
+- Add semantic conventions for operating system process resource attribute keys. (#919)
 
 ### Changed
 
