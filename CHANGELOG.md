@@ -47,6 +47,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
+- The `grpctrace` instrumentation uses a span name conforming to the OpenTelemetry semantic conventions (does not contain a leading slash (`/`)). (#922)
+- The `grpctrace` instrumentation `rpc.service` attribute now contains the package name if one exists.
+   This is in accordance with OpenTelemetry semantic conventions. (#922)
 
 ## [0.7.0] - 2020-06-26
 
