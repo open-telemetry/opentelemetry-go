@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header.
    Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
+- Extend semantic conventions for RPC. (#900)
 
 ### Removed
 
