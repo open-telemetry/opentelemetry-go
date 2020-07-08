@@ -28,7 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header.
    Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
-- To match constant naming conventions in the `api/standard` package, the `FaaS*` key names are appended with a suffix of `Key`.
+- To match constant naming conventions in the `api/standard` package, the `FaaS*` key names are appended with a suffix of `Key`. (#920)
   - `"api/standard".FaaSName` -> `FaaSNameKey`
   - `"api/standard".FaaSID` -> `FaaSIDKey`
   - `"api/standard".FaaSVersion` -> `FaaSVersionKey`
