@@ -20,39 +20,25 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func BenchmarkExtractB3(b *testing.B) {
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []extractTest
+		name  string
+		tests []extractTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        extractMultipleHeaders,
+			name:  "valid headers",
+			tests: extractHeaders,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        extractSingleHeader,
-		},
-		{
-			singleHeader: false,
-			name:         "invalid multiple headers",
-			tests:        extractInvalidB3MultipleHeaders,
-		},
-		{
-			singleHeader: true,
-			name:         "invalid single headers",
-			tests:        extractInvalidB3SingleHeader,
+			name:  "invalid headers",
+			tests: extractInvalidHeaders,
 		},
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		propagator := trace.B3{}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -71,40 +57,29 @@ func BenchmarkExtractB3(b *testing.B) {
 }
 
 func BenchmarkInjectB3(b *testing.B) {
-	var id uint64
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []injectTest
+		name  string
+		tests []injectTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        injectB3MultipleHeader,
+			name:  "valid headers",
+			tests: injectHeader,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        injectB3SingleleHeader,
+			name:  "invalid headers",
+			tests: injectInvalidHeader,
 		},
-	}
-
-	mockTracer := &mocktrace.MockTracer{
-		Sampled:     false,
-		StartSpanID: &id,
 	}
 
 	for _, tg := range testGroup {
-		id = 0
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
 		for _, tt := range tg.tests {
+			propagator := trace.B3{InjectEncoding: tt.encoding}
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := context.Background()
-				if tt.parentSc.IsValid() {
-					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
-				}
-				ctx, _ = mockTracer.Start(ctx, "inject")
+				ctx := trace.ContextWithSpan(
+					context.Background(),
+					testSpan{sc: tt.sc},
+				)
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {

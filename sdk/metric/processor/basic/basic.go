@@ -36,6 +36,17 @@ type (
 	}
 
 	stateKey struct {
+		// TODO: This code is organized to support multiple
+		// accumulators which could theoretically produce the
+		// data for the same instrument with the same
+		// resources, and this code has logic to combine data
+		// properly from multiple accumulators.  However, the
+		// use of *metric.Descriptor in the stateKey makes
+		// such combination impossible, because each
+		// accumulator allocates its own instruments.  This
+		// can be fixed by using the instrument name and kind
+		// instead of the descriptor pointer.  See
+		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
 		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
@@ -81,6 +92,8 @@ type (
 	}
 
 	state struct {
+		config Config
+
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
@@ -112,9 +125,9 @@ var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector) *Processor {
+func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
 	now := time.Now()
-	return &Processor{
+	p := &Processor{
 		AggregatorSelector: aselector,
 		ExportKindSelector: eselector,
 		state: state{
@@ -123,6 +136,10 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 			intervalStart: now,
 		},
 	}
+	for _, opt := range opts {
+		opt.ApplyProcessor(&p.config)
+	}
+	return p
 }
 
 // Process implements export.Processor.
@@ -291,9 +308,18 @@ func (b *Processor) FinishCollection() error {
 
 	for key, value := range b.values {
 		mkind := key.descriptor.MetricKind()
+		stale := value.updated != b.finishedCollection
+		stateless := !value.stateful
 
-		if !value.stateful {
-			if value.updated != b.finishedCollection {
+		// The following branch updates stateful aggregators.  Skip
+		// these updates if the aggregator is not stateful or if the
+		// aggregator is stale.
+		if stale || stateless {
+			// If this processor does not require memeory,
+			// stale, stateless entries can be removed.
+			// This implies that they were not updated
+			// over the previous full collection interval.
+			if stale && stateless && !b.config.Memory {
 				delete(b.values, key)
 			}
 			continue
@@ -338,6 +364,12 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 
 		var agg aggregation.Aggregation
 		var start time.Time
+
+		// If the processor does not have Config.Memory and it was not updated
+		// in the prior round, do not visit this value.
+		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
+			continue
+		}
 
 		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
 		switch ekind {

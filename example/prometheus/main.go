@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -40,6 +41,8 @@ func initMeter() {
 	go func() {
 		_ = http.ListenAndServe(":2222", nil)
 	}()
+
+	fmt.Println("Prometheus server running on :2222")
 }
 
 func main() {
@@ -105,5 +108,7 @@ func main() {
 		counter.Measurement(13.0),
 	)
 
-	time.Sleep(100 * time.Second)
+	fmt.Println("Example finished updating, please visit :2222")
+
+	select {}
 }
