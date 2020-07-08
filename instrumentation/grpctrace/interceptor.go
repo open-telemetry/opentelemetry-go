@@ -81,12 +81,14 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
+		name, attr := parseFullMethod(method)
 		var span trace.Span
 		ctx, span = tracer.Start(
-			ctx, method,
+			ctx,
+			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -259,12 +261,14 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
+		name, attr := parseFullMethod(method)
 		var span trace.Span
 		ctx, span = tracer.Start(
-			ctx, method,
+			ctx,
+			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(method))),
+			trace.WithAttributes(attr...),
 		)
 
 		Inject(ctx, &metadataCopy)
@@ -313,12 +317,13 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			MultiKV: entries,
 		}))
 
+		name, attr := parseFullMethod(info.FullMethod)
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
-			info.FullMethod,
+			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -403,12 +408,13 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 			MultiKV: entries,
 		}))
 
+		name, attr := parseFullMethod(info.FullMethod)
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
-			info.FullMethod,
+			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCServiceKey.String(serviceFromFullMethod(info.FullMethod))),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -427,7 +433,7 @@ func peerInfoFromTarget(target string) []kv.KeyValue {
 	host, port, err := net.SplitHostPort(target)
 
 	if err != nil {
-		return []kv.KeyValue{}
+		return []kv.KeyValue(nil)
 	}
 
 	if host == "" {
@@ -444,19 +450,32 @@ func peerInfoFromContext(ctx context.Context) []kv.KeyValue {
 	p, ok := peer.FromContext(ctx)
 
 	if !ok {
-		return []kv.KeyValue{}
+		return []kv.KeyValue(nil)
 	}
 
 	return peerInfoFromTarget(p.Addr.String())
 }
 
-var fullMethodRegexp = regexp.MustCompile(`^\/?(?:\S+\.)?(\S+)\/\S+$`)
+var fullMethodRegexp = regexp.MustCompile(`^\/?(((?:\S+\.)?\S+)\/(\S+))$`)
 
-func serviceFromFullMethod(method string) string {
-	match := fullMethodRegexp.FindStringSubmatch(method)
+// parseFullMethod returns an span name following the OpenTelemetry semantic
+// conventions as well as all applicable span kv.KeyValue attributes based
+// on a gRPC's FullMethod. If no name is parsable, full is returned with an
+// empty attribute slice.
+func parseFullMethod(full string) (string, []kv.KeyValue) {
+	match := fullMethodRegexp.FindStringSubmatch(full)
 	if len(match) == 0 {
-		return ""
+		// Worse than incorrectly named spans is empty named spans.
+		return full, nil
 	}
 
-	return match[1]
+	var attrs []kv.KeyValue
+	if match[2] != "" {
+		attrs = append(attrs, standard.RPCServiceKey.String(match[2]))
+	}
+	// TODO [MrAlias]: uncomment when #900 merges
+	//if match[3] != "" {
+	//	attrs = append(attrs, standard.RPCMethodKey.String(match[3]))
+	//}
+	return match[1], attrs
 }

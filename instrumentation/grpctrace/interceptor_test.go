@@ -90,12 +90,35 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	uniInterceptorInvoker := &mockUICInvoker{}
 
 	checks := []struct {
+		method       string
 		name         string
 		expectedAttr map[kv.Key]value.Value
 		eventsAttr   []map[kv.Key]value.Value
 	}{
 		{
-			name: "/github.com.serviceName/bar",
+			method: "/github.com.serviceName/bar",
+			name:   "github.com.serviceName/bar",
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCServiceKey:  value.String("github.com.serviceName"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
+			},
+			eventsAttr: []map[kv.Key]value.Value{
+				{
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
+				},
+				{
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
+				},
+			},
+		},
+		{
+			method: "/serviceName/bar",
+			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
 				standard.RPCServiceKey:  value.String("serviceName"),
 				standard.NetPeerIPKey:   value.String("fake"),
@@ -115,7 +138,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 		},
 		{
-			name: "/serviceName/bar",
+			method: "serviceName/bar",
+			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
 				standard.RPCServiceKey:  value.String("serviceName"),
 				standard.NetPeerIPKey:   value.String("fake"),
@@ -135,9 +159,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 		},
 		{
-			name: "serviceName/bar",
+			method: "invalidName",
+			name:   "invalidName",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -155,29 +179,10 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 		},
 		{
-			name: "invalidName",
+			method: "/github.com.foo.serviceName_123/method",
+			name:   "github.com.foo.serviceName_123/method",
 			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String(""),
-				standard.NetPeerIPKey:   value.String("fake"),
-				standard.NetPeerPortKey: value.String("connection"),
-			},
-			eventsAttr: []map[kv.Key]value.Value{
-				{
-					standard.RPCMessageTypeKey:             value.String("SENT"),
-					standard.RPCMessageIDKey:               value.Int(1),
-					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
-				},
-				{
-					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
-					standard.RPCMessageIDKey:               value.Int(1),
-					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
-				},
-			},
-		},
-		{
-			name: "/github.com.foo.serviceName_123/method",
-			expectedAttr: map[kv.Key]value.Value{
-				standard.RPCServiceKey:  value.String("serviceName_123"),
+				standard.RPCServiceKey:  value.String("github.com.foo.serviceName_123"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -197,7 +202,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 
 	for _, check := range checks {
-		err = unaryInterceptor(context.Background(), check.name, req, reply, clientConn, uniInterceptorInvoker.invoker)
+		err = unaryInterceptor(context.Background(), check.method, req, reply, clientConn, uniInterceptorInvoker.invoker)
 		if err != nil {
 			t.Errorf("failed to run unary interceptor: %v", err)
 			continue
@@ -290,12 +295,13 @@ func TestStreamClientInterceptor(t *testing.T) {
 	streamCI := StreamClientInterceptor(tracer)
 
 	var mockClStr mockClientStream
-	methodName := "/github.com.serviceName/bar"
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
 
 	streamClient, err := streamCI(context.Background(),
 		&grpc.StreamDesc{ServerStreams: true},
 		clientConn,
-		methodName,
+		method,
 		func(ctx context.Context,
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
@@ -310,7 +316,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 
 	// no span exported while stream is open
-	if _, ok := exp.spanMap[methodName]; ok {
+	if _, ok := exp.spanMap[method]; ok {
 		t.Fatalf("span shouldn't end while stream is open")
 	}
 
@@ -333,7 +339,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	for retry := 0; retry < 5; retry++ {
 		ok := false
 		exp.mu.Lock()
-		spanData, ok = exp.spanMap[methodName]
+		spanData, ok = exp.spanMap[name]
 		exp.mu.Unlock()
 		if ok {
 			break
@@ -341,12 +347,12 @@ func TestStreamClientInterceptor(t *testing.T) {
 		time.Sleep(time.Second * 1)
 	}
 	if spanData == nil {
-		t.Fatalf("no span data found for name < %s >", methodName)
+		t.Fatalf("no span data found for name < %s >", name)
 	}
 
 	attrs := spanData.Attributes
 	expectedAttr := map[kv.Key]string{
-		standard.RPCServiceKey:  "serviceName",
+		standard.RPCServiceKey:  "github.com.serviceName",
 		standard.NetPeerIPKey:   "fake",
 		standard.NetPeerPortKey: "connection",
 	}
@@ -355,7 +361,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 		expected, ok := expectedAttr[attr.Key]
 		if ok {
 			if expected != attr.Value.AsString() {
-				t.Errorf("name: %s invalid %s found. expected %s, actual %s", methodName, string(attr.Key),
+				t.Errorf("name: %s invalid %s found. expected %s, actual %s", name, string(attr.Key),
 					expected, attr.Value.AsString())
 			}
 		}
@@ -417,4 +423,59 @@ func TestServerInterceptorError(t *testing.T) {
 		kv.Int("message.id", 1),
 		kv.Int("message.uncompressed_size", 26),
 	}, span.MessageEvents[1].Attributes)
+}
+
+func TestParseFullMethod(t *testing.T) {
+	tests := []struct {
+		fullMethod string
+		name       string
+		attr       []kv.KeyValue
+	}{
+		{
+			fullMethod: "/grpc.test.EchoService/Echo",
+			name:       "grpc.test.EchoService/Echo",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("grpc.test.EchoService"),
+				//standard.RPCMethodKey.String("Echo"),
+			},
+		}, {
+			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
+			name:       "com.example.ExampleRmiService/exampleMethod",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("com.example.ExampleRmiService"),
+				//standard.RPCMethodKey.String("exampleMethod"),
+			},
+		}, {
+			fullMethod: "/MyCalcService.Calculator/Add",
+			name:       "MyCalcService.Calculator/Add",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("MyCalcService.Calculator"),
+				//standard.RPCMethodKey.String("Add"),
+			},
+		}, {
+			fullMethod: "/MyServiceReference.ICalculator/Add",
+			name:       "MyServiceReference.ICalculator/Add",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("MyServiceReference.ICalculator"),
+				//standard.RPCMethodKey.String("Add"),
+			},
+		}, {
+			fullMethod: "/MyServiceWithNoPackage/theMethod",
+			name:       "MyServiceWithNoPackage/theMethod",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("MyServiceWithNoPackage"),
+				//standard.RPCMethodKey.String("theMethod"),
+			},
+		}, {
+			fullMethod: "/pkg.srv/",
+			name:       "/pkg.srv/",
+			attr:       []kv.KeyValue(nil),
+		},
+	}
+
+	for _, test := range tests {
+		n, a := parseFullMethod(test.fullMethod)
+		assert.Equal(t, test.name, n)
+		assert.Equal(t, test.attr, a)
+	}
 }
