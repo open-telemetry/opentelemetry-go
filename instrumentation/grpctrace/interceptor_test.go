@@ -478,9 +478,15 @@ func TestParseFullMethod(t *testing.T) {
 				standard.RPCMethodKey.String("theMethod"),
 			},
 		}, {
-			fullMethod: "/pkg.srv/",
-			name:       "/pkg.srv/",
+			fullMethod: "/pkg.srv",
+			name:       "pkg.srv",
 			attr:       []kv.KeyValue(nil),
+		}, {
+			fullMethod: "/pkg.srv/",
+			name:       "pkg.srv/",
+			attr: []kv.KeyValue{
+				standard.RPCServiceKey.String("pkg.srv"),
+			},
 		},
 	}
 

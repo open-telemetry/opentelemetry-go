@@ -20,7 +20,7 @@ import (
 	"context"
 	"io"
 	"net"
-	"regexp"
+	"strings"
 
 	"go.opentelemetry.io/otel/api/standard"
 
@@ -460,25 +460,23 @@ func peerInfoFromContext(ctx context.Context) []kv.KeyValue {
 	return peerInfoFromTarget(p.Addr.String())
 }
 
-var fullMethodRegexp = regexp.MustCompile(`^\/?(((?:\S+\.)?\S+)\/(\S+))$`)
-
 // parseFullMethod returns an span name following the OpenTelemetry semantic
 // conventions as well as all applicable span kv.KeyValue attributes based
-// on a gRPC's FullMethod. If no name is parsable, full is returned with an
-// empty attribute slice.
+// on a gRPC's FullMethod.
 func parseFullMethod(full string) (string, []kv.KeyValue) {
-	match := fullMethodRegexp.FindStringSubmatch(full)
-	if len(match) == 0 {
-		// Worse than incorrectly named spans are empty named spans.
-		return full, nil
+	name := strings.TrimLeft(full, "/")
+	parts := strings.SplitN(name, "/", 2)
+	if len(parts) != 2 {
+		// Invalid format, does not follow `/package.service/method`.
+		return name, nil
 	}
 
 	var attrs []kv.KeyValue
-	if match[2] != "" {
-		attrs = append(attrs, standard.RPCServiceKey.String(match[2]))
+	if service := parts[0]; service != "" {
+		attrs = append(attrs, standard.RPCServiceKey.String(service))
 	}
-	if match[3] != "" {
-		attrs = append(attrs, standard.RPCMethodKey.String(match[3]))
+	if method := parts[1]; method != "" {
+		attrs = append(attrs, standard.RPCMethodKey.String(method))
 	}
-	return match[1], attrs
+	return name, attrs
 }
