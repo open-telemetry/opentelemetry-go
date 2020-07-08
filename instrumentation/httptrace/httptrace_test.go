@@ -87,23 +87,24 @@ func TestRoundtrip(t *testing.T) {
 	address := ts.Listener.Addr()
 	hp := strings.Split(address.String(), ":")
 	expectedAttrs = map[kv.Key]string{
-		standard.HTTPFlavorKey:    "1.1",
-		standard.HTTPHostKey:      address.String(),
-		standard.HTTPMethodKey:    "GET",
-		standard.HTTPSchemeKey:    "http",
-		standard.HTTPTargetKey:    "/",
-		standard.HTTPUserAgentKey: "Go-http-client/1.1",
-		standard.NetHostIPKey:     hp[0],
-		standard.NetHostPortKey:   hp[1],
-		standard.NetPeerIPKey:     "127.0.0.1",
-		standard.NetTransportKey:  "IP.TCP",
+		standard.HTTPFlavorKey:               "1.1",
+		standard.HTTPHostKey:                 address.String(),
+		standard.HTTPMethodKey:               "GET",
+		standard.HTTPSchemeKey:               "http",
+		standard.HTTPTargetKey:               "/",
+		standard.HTTPUserAgentKey:            "Go-http-client/1.1",
+		standard.HTTPRequestContentLengthKey: "3",
+		standard.NetHostIPKey:                hp[0],
+		standard.NetHostPortKey:              hp[1],
+		standard.NetPeerIPKey:                "127.0.0.1",
+		standard.NetTransportKey:             "IP.TCP",
 	}
 
 	client := ts.Client()
 	err := tr.WithSpan(context.Background(), "test",
 		func(ctx context.Context) error {
 			ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: kv.Key("foo").String("bar")}))
-			req, _ := http.NewRequest("GET", ts.URL, nil)
+			req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
 			httptrace.Inject(ctx, req)
 
 			res, err := client.Do(req)

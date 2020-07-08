@@ -17,6 +17,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
+- Add http content size semantic conventions. (#905)
+- Include `http.request_content_length` in HTTP request basic attributes. (#905)
 
 ### Changed
 
@@ -51,6 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
+- Add test for api.standard `HTTPClientAttributesFromHTTPRequest`. (#905)
 - Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.1 in /tools. (#901, #913)
 - Update otel-colector example to use the v0.5.0 collector. (#915)
 
