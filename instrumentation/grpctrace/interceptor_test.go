@@ -325,7 +325,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 
 	// no span exported while stream is open
-	if _, ok := exp.spanMap[method]; ok {
+	if _, ok := exp.spanMap[name]; ok {
 		t.Fatalf("span shouldn't end while stream is open")
 	}
 
