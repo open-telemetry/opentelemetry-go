@@ -22,9 +22,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/api/trace"
 	mockmeter "go.opentelemetry.io/otel/internal/metric"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
@@ -71,7 +73,6 @@ func TestHandlerBasics(t *testing.T) {
 		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 	}
 
-	standard.HTTPServerMetricAttributesFromHTTPRequest(operation, r)
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
@@ -89,5 +90,45 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	if got, expected := string(d), "hello world"; got != expected {
 		t.Fatalf("got %q, expected %q", got, expected)
+	}
+}
+
+func TestHandlerNoWrite(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	var id uint64
+	tracer := mocktrace.MockTracer{StartSpanID: &id}
+
+	operation := "test_handler"
+	var span trace.Span
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			span = trace.SpanFromContext(r.Context())
+		}), operation,
+		WithTracer(&tracer),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+	if got := rr.Header().Get("Traceparent"); got != "" {
+		t.Fatal("expected empty trace header")
+	}
+	if got, expected := id, uint64(1); got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+	if mockSpan, ok := span.(*mocktrace.MockSpan); ok {
+		if got, expected := mockSpan.Status, codes.OK; got != expected {
+			t.Fatalf("got %q, expected %q", got, expected)
+		}
+	} else {
+		t.Fatalf("Expected *moctrace.MockSpan, got %T", span)
 	}
 }
