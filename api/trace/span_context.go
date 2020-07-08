@@ -21,13 +21,15 @@ import (
 )
 
 const (
-	traceFlagsBitMaskSampled = byte(0x01)
-	traceFlagsBitMaskUnused  = byte(0xFE)
-
-	// FlagsSampled is a byte with sampled bit set. It is a convenient value initializer
-	// for SpanContext TraceFlags field when a trace is sampled.
-	FlagsSampled = traceFlagsBitMaskSampled
-	FlagsUnused  = traceFlagsBitMaskUnused
+	// FlagsSampled is a bitmask with the sampled bit set. A SpanContext
+	// with the sampling bit set means the span is sampled.
+	FlagsSampled = byte(0x01)
+	// FlagsDeferred is a bitmask with the deferred bit set. A SpanContext
+	// with the deferred bit set means the sampling decision has been
+	// defered to the receiver.
+	FlagsDeferred = byte(0x02)
+	// FlagsDebug is a bitmask with the debug bit set.
+	FlagsDebug = byte(0x04)
 
 	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
@@ -179,7 +181,17 @@ func (sc SpanContext) HasSpanID() bool {
 	return sc.SpanID.IsValid()
 }
 
-// IsSampled check if the sampling bit in trace flags is set.
+// isDeferred returns if the deferred bit is set in the trace flags.
+func (sc SpanContext) isDeferred() bool {
+	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
+}
+
+// isDebug returns if the debug bit is set in the trace flags.
+func (sc SpanContext) isDebug() bool {
+	return sc.TraceFlags&FlagsDebug == FlagsDebug
+}
+
+// IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanContext) IsSampled() bool {
-	return sc.TraceFlags&traceFlagsBitMaskSampled == traceFlagsBitMaskSampled
+	return sc.TraceFlags&FlagsSampled == FlagsSampled
 }

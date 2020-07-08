@@ -23,39 +23,25 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
 )
 
 func TestExtractB3(t *testing.T) {
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []extractTest
+		name  string
+		tests []extractTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        extractMultipleHeaders,
+			name:  "valid extract headers",
+			tests: extractHeaders,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        extractSingleHeader,
-		},
-		{
-			singleHeader: false,
-			name:         "invalid multiple headers",
-			tests:        extractInvalidB3MultipleHeaders,
-		},
-		{
-			singleHeader: true,
-			name:         "invalid single headers",
-			tests:        extractInvalidB3SingleHeader,
+			name:  "invalid extract headers",
+			tests: extractInvalidHeaders,
 		},
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
+		propagator := trace.B3{}
 		props := propagation.New(propagation.WithExtractors(propagator))
 
 		for _, tt := range tg.tests {
@@ -76,43 +62,40 @@ func TestExtractB3(t *testing.T) {
 	}
 }
 
+type testSpan struct {
+	trace.NoopSpan
+	sc trace.SpanContext
+}
+
+func (s testSpan) SpanContext() trace.SpanContext {
+	return s.sc
+}
+
 func TestInjectB3(t *testing.T) {
-	var id uint64
 	testGroup := []struct {
-		singleHeader bool
-		name         string
-		tests        []injectTest
+		name  string
+		tests []injectTest
 	}{
 		{
-			singleHeader: false,
-			name:         "multiple headers",
-			tests:        injectB3MultipleHeader,
+			name:  "valid inject headers",
+			tests: injectHeader,
 		},
 		{
-			singleHeader: true,
-			name:         "single headers",
-			tests:        injectB3SingleleHeader,
+			name:  "invalid inject headers",
+			tests: injectInvalidHeader,
 		},
-	}
-
-	mockTracer := &mocktrace.MockTracer{
-		Sampled:     false,
-		StartSpanID: &id,
 	}
 
 	for _, tg := range testGroup {
-		id = 0
-		propagator := trace.B3{SingleHeader: tg.singleHeader}
-		props := propagation.New(propagation.WithInjectors(propagator))
 		for _, tt := range tg.tests {
+			propagator := trace.B3{InjectEncoding: tt.encoding}
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := context.Background()
-				if tt.parentSc.IsValid() {
-					ctx = trace.ContextWithRemoteSpanContext(ctx, tt.parentSc)
-				}
-				ctx, _ = mockTracer.Start(ctx, "inject")
-				propagation.InjectHTTP(ctx, props, req.Header)
+				ctx := trace.ContextWithSpan(
+					context.Background(),
+					testSpan{sc: tt.sc},
+				)
+				propagator.Inject(ctx, req.Header)
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v
@@ -132,25 +115,54 @@ func TestInjectB3(t *testing.T) {
 }
 
 func TestB3Propagator_GetAllKeys(t *testing.T) {
-	propagator := trace.B3{SingleHeader: false}
-	want := []string{
-		trace.B3TraceIDHeader,
-		trace.B3SpanIDHeader,
-		trace.B3SampledHeader,
+	tests := []struct {
+		name       string
+		propagator trace.B3
+		want       []string
+	}{
+		{
+			name:       "no encoding specified",
+			propagator: trace.B3{},
+			want: []string{
+				b3TraceID,
+				b3SpanID,
+				b3Sampled,
+				b3Flags,
+			},
+		},
+		{
+			name:       "B3MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3MultipleHeader},
+			want: []string{
+				b3TraceID,
+				b3SpanID,
+				b3Sampled,
+				b3Flags,
+			},
+		},
+		{
+			name:       "B3SingleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader},
+			want: []string{
+				b3Context,
+			},
+		},
+		{
+			name:       "B3SingleHeader and B3MultipleHeader encoding specified",
+			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader | trace.B3MultipleHeader},
+			want: []string{
+				b3Context,
+				b3TraceID,
+				b3SpanID,
+				b3Sampled,
+				b3Flags,
+			},
+		},
 	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
-	}
-}
 
-func TestB3PropagatorWithSingleHeader_GetAllKeys(t *testing.T) {
-	propagator := trace.B3{SingleHeader: true}
-	want := []string{
-		trace.B3SingleHeader,
-	}
-	got := propagator.GetAllKeys()
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("GetAllKeys: -got +want %s", diff)
+	for _, test := range tests {
+		if diff := cmp.Diff(test.propagator.GetAllKeys(), test.want); diff != "" {
+			t.Errorf("%s: GetAllKeys: -got +want %s", test.name, diff)
+		}
 	}
 }

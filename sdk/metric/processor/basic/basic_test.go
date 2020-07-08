@@ -84,7 +84,7 @@ func TestProcessor(t *testing.T) {
 								{kind: aggregation.SketchKind},
 							} {
 								t.Run(ac.kind.String(), func(t *testing.T) {
-									testSynchronousIntegration(
+									testProcessor(
 										t,
 										tc.kind,
 										ic.kind,
@@ -124,32 +124,31 @@ func (ts testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export
 	}
 }
 
-func testSynchronousIntegration(
+func asNumber(nkind metric.NumberKind, value int64) metric.Number {
+	if nkind == metric.Int64NumberKind {
+		return metric.NewInt64Number(value)
+	}
+	return metric.NewFloat64Number(float64(value))
+}
+
+func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...kv.KeyValue) export.Accumulation {
+	ls := label.NewSet(labs...)
+	var agg export.Aggregator
+	selector.AggregatorFor(desc, &agg)
+	require.NoError(t, agg.Update(context.Background(), asNumber(desc.NumberKind(), value), desc))
+
+	return export.NewAccumulation(desc, &ls, res, agg)
+}
+
+func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
 	mkind metric.Kind,
 	nkind metric.NumberKind,
 	akind aggregation.Kind,
 ) {
-	ctx := context.Background()
 	selector := testSelector{akind}
 	res := resource.New(kv.String("R", "V"))
-
-	asNumber := func(value int64) metric.Number {
-		if nkind == metric.Int64NumberKind {
-			return metric.NewInt64Number(value)
-		}
-		return metric.NewFloat64Number(float64(value))
-	}
-
-	updateFor := func(desc *metric.Descriptor, value int64, labs []kv.KeyValue) export.Accumulation {
-		ls := label.NewSet(labs...)
-		var agg export.Aggregator
-		selector.AggregatorFor(desc, &agg)
-		_ = agg.Update(ctx, asNumber(value), desc)
-
-		return export.NewAccumulation(desc, &ls, res, agg)
-	}
 
 	labs1 := []kv.KeyValue{kv.String("L1", "V")}
 	labs2 := []kv.KeyValue{kv.String("L2", "V")}
@@ -157,96 +156,118 @@ func testSynchronousIntegration(
 	desc1 := metric.NewDescriptor("inst1", mkind, nkind)
 	desc2 := metric.NewDescriptor("inst2", mkind, nkind)
 
-	// For 1 to 3 checkpoints:
-	for NAccum := 1; NAccum <= 3; NAccum++ {
-		t.Run(fmt.Sprintf("NumAccum=%d", NAccum), func(t *testing.T) {
-			// For 1 to 3 accumulators:
-			for NCheckpoint := 1; NCheckpoint <= 3; NCheckpoint++ {
-				t.Run(fmt.Sprintf("NumCkpt=%d", NCheckpoint), func(t *testing.T) {
+	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
+		processor := basic.New(selector, ekind, basic.WithMemory(hasMemory))
 
-					processor := basic.New(selector, ekind)
+		for nc := 0; nc < nCheckpoint; nc++ {
 
-					for nc := 0; nc < NCheckpoint; nc++ {
+			// The input is 10 per update, scaled by
+			// the number of checkpoints for
+			// cumulative instruments:
+			input := int64(10)
+			cumulativeMultiplier := int64(nc + 1)
+			if mkind.PrecomputedSum() {
+				input *= cumulativeMultiplier
+			}
 
-						// The input is 10 per update, scaled by
-						// the number of checkpoints for
-						// cumulative instruments:
-						input := int64(10)
-						cumulativeMultiplier := int64(nc + 1)
-						if mkind.PrecomputedSum() {
-							input *= cumulativeMultiplier
-						}
+			processor.StartCollection()
 
-						processor.StartCollection()
+			for na := 0; na < nAccum; na++ {
+				_ = processor.Process(updateFor(t, &desc1, selector, res, input, labs1...))
+				_ = processor.Process(updateFor(t, &desc2, selector, res, input, labs2...))
+			}
 
-						for na := 0; na < NAccum; na++ {
-							_ = processor.Process(updateFor(&desc1, input, labs1))
-							_ = processor.Process(updateFor(&desc2, input, labs2))
-						}
+			err := processor.FinishCollection()
+			if err == aggregation.ErrNoSubtraction {
+				var subr export.Aggregator
+				selector.AggregatorFor(&desc1, &subr)
+				_, canSub := subr.(export.Subtractor)
 
-						err := processor.FinishCollection()
-						if err == aggregation.ErrNoSubtraction {
-							var subr export.Aggregator
-							selector.AggregatorFor(&desc1, &subr)
-							_, canSub := subr.(export.Subtractor)
+				// Allow unsupported subraction case only when it is called for.
+				require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
+				return
+			} else if err != nil {
+				t.Fatal("unexpected FinishCollection error: ", err)
+			}
 
-							// Allow unsupported subraction case only when it is called for.
-							require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
-							return
-						} else if err != nil {
-							t.Fatal(fmt.Sprint("unexpected FinishCollection error: ", err))
-						}
+			if nc < nCheckpoint-1 {
+				continue
+			}
 
-						if nc < NCheckpoint-1 {
-							continue
-						}
+			checkpointSet := processor.CheckpointSet()
 
-						checkpointSet := processor.CheckpointSet()
+			for _, repetitionAfterEmptyInterval := range []bool{false, true} {
+				if repetitionAfterEmptyInterval {
+					// We're repeating the test after another
+					// interval with no updates.
+					processor.StartCollection()
+					if err := processor.FinishCollection(); err != nil {
+						t.Fatal("unexpected collection error: ", err)
+					}
+				}
 
-						// Test the final checkpoint state.
-						records1 := test.NewOutput(label.DefaultEncoder())
-						err = checkpointSet.ForEach(ekind, records1.AddRecord)
+				// Test the final checkpoint state.
+				records1 := test.NewOutput(label.DefaultEncoder())
+				err = checkpointSet.ForEach(ekind, records1.AddRecord)
 
-						// Test for an allowed error:
-						if err != nil && err != aggregation.ErrNoSubtraction {
-							t.Fatal(fmt.Sprint("unexpected checkpoint error: ", err))
-						}
-						var multiplier int64
+				// Test for an allowed error:
+				if err != nil && err != aggregation.ErrNoSubtraction {
+					t.Fatal("unexpected checkpoint error: ", err)
+				}
+				var multiplier int64
 
-						if mkind.Asynchronous() {
-							// Because async instruments take the last value,
-							// the number of accumulators doesn't matter.
-							if mkind.PrecomputedSum() {
-								if ekind == export.DeltaExporter {
-									multiplier = 1
-								} else {
-									multiplier = cumulativeMultiplier
-								}
-							} else {
-								if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
-									multiplier = cumulativeMultiplier
-								} else {
-									multiplier = 1
-								}
-							}
+				if mkind.Asynchronous() {
+					// Because async instruments take the last value,
+					// the number of accumulators doesn't matter.
+					if mkind.PrecomputedSum() {
+						if ekind == export.DeltaExporter {
+							multiplier = 1
 						} else {
-							// Synchronous accumulate results from multiple accumulators,
-							// use that number as the baseline multiplier.
-							multiplier = int64(NAccum)
-							if ekind == export.CumulativeExporter {
-								// If a cumulative exporter, include prior checkpoints.
-								multiplier *= cumulativeMultiplier
-							}
-							if akind == aggregation.LastValueKind {
-								// If a last-value aggregator, set multiplier to 1.0.
-								multiplier = 1
-							}
+							multiplier = cumulativeMultiplier
 						}
+					} else {
+						if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
+							multiplier = cumulativeMultiplier
+						} else {
+							multiplier = 1
+						}
+					}
+				} else {
+					// Synchronous accumulate results from multiple accumulators,
+					// use that number as the baseline multiplier.
+					multiplier = int64(nAccum)
+					if ekind == export.CumulativeExporter {
+						// If a cumulative exporter, include prior checkpoints.
+						multiplier *= cumulativeMultiplier
+					}
+					if akind == aggregation.LastValueKind {
+						// If a last-value aggregator, set multiplier to 1.0.
+						multiplier = 1
+					}
+				}
 
-						require.EqualValues(t, map[string]float64{
-							"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
-							"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
-						}, records1.Map)
+				exp := map[string]float64{}
+				if hasMemory || !repetitionAfterEmptyInterval {
+					exp = map[string]float64{
+						"inst1/L1=V/R=V": float64(multiplier * 10), // labels1
+						"inst2/L2=V/R=V": float64(multiplier * 10), // labels2
+					}
+				}
+				require.EqualValues(t, exp, records1.Map, "with repetition=%v", repetitionAfterEmptyInterval)
+			}
+		}
+	}
+
+	for _, hasMem := range []bool{false, true} {
+		t.Run(fmt.Sprintf("HasMemory=%v", hasMem), func(t *testing.T) {
+			// For 1 to 3 checkpoints:
+			for nAccum := 1; nAccum <= 3; nAccum++ {
+				t.Run(fmt.Sprintf("NumAccum=%d", nAccum), func(t *testing.T) {
+					// For 1 to 3 accumulators:
+					for nCheckpoint := 1; nCheckpoint <= 3; nCheckpoint++ {
+						t.Run(fmt.Sprintf("NumCkpt=%d", nCheckpoint), func(t *testing.T) {
+							testBody(t, hasMem, nAccum, nCheckpoint)
+						})
 					}
 				})
 			}
@@ -355,5 +376,73 @@ func TestBasicTimestamps(t *testing.T) {
 
 		start1 = start2
 		end1 = end2
+	}
+}
+
+func TestStatefulNoMemoryCumulative(t *testing.T) {
+	res := resource.New(kv.String("R", "V"))
+	ekind := export.CumulativeExporter
+
+	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
+	selector := testSelector{aggregation.SumKind}
+
+	processor := basic.New(selector, ekind, basic.WithMemory(false))
+	checkpointSet := processor.CheckpointSet()
+
+	for i := 1; i < 3; i++ {
+		// Empty interval
+		processor.StartCollection()
+		require.NoError(t, processor.FinishCollection())
+
+		// Verify zero elements
+		records := test.NewOutput(label.DefaultEncoder())
+		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.EqualValues(t, map[string]float64{}, records.Map)
+
+		// Add 10
+		processor.StartCollection()
+		_ = processor.Process(updateFor(t, &desc, selector, res, 10, kv.String("A", "B")))
+		require.NoError(t, processor.FinishCollection())
+
+		// Verify one element
+		records = test.NewOutput(label.DefaultEncoder())
+		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.EqualValues(t, map[string]float64{
+			"inst/A=B/R=V": float64(i * 10),
+		}, records.Map)
+	}
+}
+
+func TestStatefulNoMemoryDelta(t *testing.T) {
+	res := resource.New(kv.String("R", "V"))
+	ekind := export.DeltaExporter
+
+	desc := metric.NewDescriptor("inst", metric.SumObserverKind, metric.Int64NumberKind)
+	selector := testSelector{aggregation.SumKind}
+
+	processor := basic.New(selector, ekind, basic.WithMemory(false))
+	checkpointSet := processor.CheckpointSet()
+
+	for i := 1; i < 3; i++ {
+		// Empty interval
+		processor.StartCollection()
+		require.NoError(t, processor.FinishCollection())
+
+		// Verify zero elements
+		records := test.NewOutput(label.DefaultEncoder())
+		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.EqualValues(t, map[string]float64{}, records.Map)
+
+		// Add 10
+		processor.StartCollection()
+		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+		require.NoError(t, processor.FinishCollection())
+
+		// Verify one element
+		records = test.NewOutput(label.DefaultEncoder())
+		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.EqualValues(t, map[string]float64{
+			"inst/A=B/R=V": 10,
+		}, records.Map)
 	}
 }

@@ -26,9 +26,11 @@ import (
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
-	sc     apitrace.SpanContext
-	tracer apitrace.Tracer
-	Name   string
+	sc        apitrace.SpanContext
+	tracer    apitrace.Tracer
+	Name      string
+	Status    codes.Code
+	StatusMsg string
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
@@ -49,6 +51,8 @@ func (ms *MockSpan) IsRecording() bool {
 
 // SetStatus does nothing.
 func (ms *MockSpan) SetStatus(status codes.Code, msg string) {
+	ms.Status = status
+	ms.StatusMsg = msg
 }
 
 // SetError does nothing.
