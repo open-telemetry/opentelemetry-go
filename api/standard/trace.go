@@ -138,7 +138,7 @@ const (
 
 // Standard attribute keys for RPC.
 const (
-	// A string identfying the remoting system.
+	// A string identifying the remoting system.
 	RPCSystemKey = kv.Key("rpc.system")
 
 	// The full name of the service being called.
