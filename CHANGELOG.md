@@ -47,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
+- Correlation Context extractor will no longer insert an empty map into the returned context when no valid values are extracted. (#923)
 
 ## [0.7.0] - 2020-06-26
 
