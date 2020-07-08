@@ -72,7 +72,7 @@ func TestHandlerBasics(t *testing.T) {
 		standard.HTTPSchemeHTTP,
 		standard.HTTPHostKey.String(r.Host),
 		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		standard.HTTPRequestContentLength.Int64(3),
+		standard.HTTPRequestContentLengthKey.Int64(3),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)

@@ -178,7 +178,7 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 		attrs = append(attrs, HTTPFlavorKey.String(flavor))
 	}
 	if request.ContentLength > 0 {
-		attrs = append(attrs, HTTPRequestContentLength.Int64(request.ContentLength))
+		attrs = append(attrs, HTTPRequestContentLengthKey.Int64(request.ContentLength))
 	}
 
 	return attrs

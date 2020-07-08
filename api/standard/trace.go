@@ -113,18 +113,18 @@ const (
 	HTTPClientIPKey = kv.Key("http.client_ip")
 
 	// The size of the request payload body in bytes.
-	HTTPRequestContentLength = kv.Key("http.request_content_length")
+	HTTPRequestContentLengthKey = kv.Key("http.request_content_length")
 
 	// The size of the uncompressed request payload body after transport decoding.
 	// Not set if transport encoding not used.
-	HTTPRequestContentLengthUncompressed = kv.Key("http.request_content_length_uncompressed")
+	HTTPRequestContentLengthUncompressedKey = kv.Key("http.request_content_length_uncompressed")
 
 	// The size of the response payload body in bytes.
-	HTTPResponseContentLength = kv.Key("http.response_content_length")
+	HTTPResponseContentLengthKey = kv.Key("http.response_content_length")
 
 	// The size of the uncompressed response payload body after transport decoding.
 	// Not set if transport encoding not used.
-	HTTPResponseContentLengthUncompressed = kv.Key("http.response_content_length_uncompressed")
+	HTTPResponseContentLengthUncompressedKey = kv.Key("http.response_content_length_uncompressed")
 )
 
 var (
