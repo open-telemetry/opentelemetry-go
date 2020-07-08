@@ -88,6 +88,7 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
+			trace.WithAttributes(standard.RPCSystemGRPC),
 			trace.WithAttributes(attr...),
 		)
 		defer span.End()
@@ -268,6 +269,7 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
+			trace.WithAttributes(standard.RPCSystemGRPC),
 			trace.WithAttributes(attr...),
 		)
 
@@ -323,6 +325,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
+			trace.WithAttributes(standard.RPCSystemGRPC),
 			trace.WithAttributes(attr...),
 		)
 		defer span.End()
@@ -414,6 +417,7 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(peerInfoFromContext(ctx)...),
+			trace.WithAttributes(standard.RPCSystemGRPC),
 			trace.WithAttributes(attr...),
 		)
 		defer span.End()
@@ -473,9 +477,8 @@ func parseFullMethod(full string) (string, []kv.KeyValue) {
 	if match[2] != "" {
 		attrs = append(attrs, standard.RPCServiceKey.String(match[2]))
 	}
-	// TODO [MrAlias]: uncomment when #900 merges
-	//if match[3] != "" {
-	//	attrs = append(attrs, standard.RPCMethodKey.String(match[3]))
-	//}
+	if match[3] != "" {
+		attrs = append(attrs, standard.RPCMethodKey.String(match[3]))
+	}
 	return match[1], attrs
 }

@@ -188,8 +188,14 @@ const (
 
 // Standard attribute keys for RPC.
 const (
-	// The RPC service name.
+	// A string identifying the remoting system.
+	RPCSystemKey = kv.Key("rpc.system")
+
+	// The full name of the service being called.
 	RPCServiceKey = kv.Key("rpc.service")
+
+	// The name of the method being called.
+	RPCMethodKey = kv.Key("rpc.method")
 
 	// Name of message transmitted or received.
 	RPCNameKey = kv.Key("name")
@@ -209,6 +215,8 @@ const (
 )
 
 var (
+	RPCSystemGRPC = RPCSystemKey.String("grpc")
+
 	RPCNameMessage = RPCNameKey.String("message")
 
 	RPCMessageTypeSent     = RPCMessageTypeKey.String("SENT")

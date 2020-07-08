@@ -99,7 +99,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
 				standard.RPCServiceKey:  value.String("github.com.serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -120,7 +122,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
 				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -141,7 +145,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
 				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -162,6 +168,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "invalidName",
 			name:   "invalidName",
 			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -182,7 +189,9 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
 			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
 				standard.RPCServiceKey:  value.String("github.com.foo.serviceName_123"),
+				standard.RPCMethodKey:   value.String("method"),
 				standard.NetPeerIPKey:   value.String("fake"),
 				standard.NetPeerPortKey: value.String("connection"),
 			},
@@ -352,7 +361,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	attrs := spanData.Attributes
 	expectedAttr := map[kv.Key]string{
+		standard.RPCSystemKey:   "grpc",
 		standard.RPCServiceKey:  "github.com.serviceName",
+		standard.RPCMethodKey:   "bar",
 		standard.NetPeerIPKey:   "fake",
 		standard.NetPeerPortKey: "connection",
 	}
@@ -436,35 +447,35 @@ func TestParseFullMethod(t *testing.T) {
 			name:       "grpc.test.EchoService/Echo",
 			attr: []kv.KeyValue{
 				standard.RPCServiceKey.String("grpc.test.EchoService"),
-				//standard.RPCMethodKey.String("Echo"),
+				standard.RPCMethodKey.String("Echo"),
 			},
 		}, {
 			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
 			name:       "com.example.ExampleRmiService/exampleMethod",
 			attr: []kv.KeyValue{
 				standard.RPCServiceKey.String("com.example.ExampleRmiService"),
-				//standard.RPCMethodKey.String("exampleMethod"),
+				standard.RPCMethodKey.String("exampleMethod"),
 			},
 		}, {
 			fullMethod: "/MyCalcService.Calculator/Add",
 			name:       "MyCalcService.Calculator/Add",
 			attr: []kv.KeyValue{
 				standard.RPCServiceKey.String("MyCalcService.Calculator"),
-				//standard.RPCMethodKey.String("Add"),
+				standard.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceReference.ICalculator/Add",
 			name:       "MyServiceReference.ICalculator/Add",
 			attr: []kv.KeyValue{
 				standard.RPCServiceKey.String("MyServiceReference.ICalculator"),
-				//standard.RPCMethodKey.String("Add"),
+				standard.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceWithNoPackage/theMethod",
 			name:       "MyServiceWithNoPackage/theMethod",
 			attr: []kv.KeyValue{
 				standard.RPCServiceKey.String("MyServiceWithNoPackage"),
-				//standard.RPCMethodKey.String("theMethod"),
+				standard.RPCMethodKey.String("theMethod"),
 			},
 		}, {
 			fullMethod: "/pkg.srv/",
