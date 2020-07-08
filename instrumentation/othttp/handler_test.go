@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,7 +57,7 @@ func TestHandlerBasics(t *testing.T) {
 		WithMeter(meter),
 	)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +72,7 @@ func TestHandlerBasics(t *testing.T) {
 		standard.HTTPSchemeHTTP,
 		standard.HTTPHostKey.String(r.Host),
 		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		standard.HTTPRequestContentLengthKey.Int64(3),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
