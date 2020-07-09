@@ -15,6 +15,7 @@
 package trace_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/trace"
@@ -62,11 +63,11 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
-func TestIsValidFromHex(t *testing.T) {
+func TestIsValidIDFromHex(t *testing.T) {
 	for _, testcase := range []struct {
 		name  string
-		hex   string
 		tid   trace.ID
+		hex   string
 		valid bool
 	}{
 		{
@@ -101,6 +102,144 @@ func TestIsValidFromHex(t *testing.T) {
 
 			if tid != testcase.tid {
 				t.Errorf("Want: %v, but have: %v", testcase.tid, tid)
+			}
+		})
+	}
+}
+
+func TestIsValidSpanIDFromHex(t *testing.T) {
+	for _, testcase := range []struct {
+		name  string
+		sid   trace.SpanID
+		hex   string
+		valid bool
+	}{
+		{
+			name:  "Valid SpanID",
+			sid:   trace.SpanID([8]byte{128, 241, 152, 238, 86, 52, 59, 168}),
+			hex:   "80f198ee56343ba8",
+			valid: true,
+		}, {
+			name:  "Invalid SpanID with invalid length",
+			hex:   "80f198ee56343ba",
+			valid: false,
+		}, {
+			name:  "Invalid SpanID with invalid char",
+			hex:   "80f198ee56343bg8",
+			valid: false,
+		}, {
+			name:  "Invalid SpanID with uppercase",
+			hex:   "80f198ee56343bA8",
+			valid: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sid, err := trace.SpanIDFromHex(testcase.hex)
+
+			if testcase.valid && err != nil {
+				t.Errorf("Expected SpanID %s to be valid but end with error %s", testcase.hex, err.Error())
+			}
+
+			if !testcase.valid && err == nil {
+				t.Errorf("Expected SpanID %s to be invalid but end no error", testcase.hex)
+			}
+
+			if sid != testcase.sid {
+				t.Errorf("Want: %v, but have: %v", testcase.sid, sid)
+			}
+		})
+	}
+}
+
+func TestMarshalTraceID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tid  trace.ID
+		want string
+	}{
+		{
+			name: "Marshal TraceID",
+			tid:  trace.ID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
+			want: `"80f198ee56343ba864fe8b2a57d3eff7"`,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			tid, err := json.Marshal(testcase.tid)
+			if err != nil {
+				t.Errorf("There is an error %s", err.Error())
+			} else if string(tid) != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, string(tid))
+			}
+		})
+	}
+}
+
+func TestUnmarshalTraceID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		data []byte
+		want trace.ID
+	}{
+		{
+			name: "Unmarshal TraceID",
+			data: []byte(`{"TraceID": "80f198ee56343ba864fe8b2a57d3eff7"}`),
+			want: trace.ID([16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247}),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var tid trace.ID
+			err := json.Unmarshal(testcase.data, &tid)
+			if err != nil {
+				t.Errorf("There is an error %s", err.Error())
+			} else if tid != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, tid)
+			}
+		})
+	}
+}
+
+func TestMarshalSpanID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		sid  trace.SpanID
+		want string
+	}{
+		{
+			name: "Marshal SpanID",
+			sid:  trace.SpanID([8]byte{128, 241, 152, 238, 86, 52, 59, 168}),
+			want: `"80f198ee56343ba8"`,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sid, err := json.Marshal(testcase.sid)
+			if err != nil {
+				t.Errorf("There is an error %s", err.Error())
+			} else if string(sid) != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, string(sid))
+			}
+		})
+	}
+}
+
+func TestUnmarshalSpanID(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		data []byte
+		want trace.SpanID
+	}{
+		{
+			name: "Unmarshal SpanID",
+			data: []byte(`{"SpanID": "80f198ee56343ba8"}`),
+			want: trace.SpanID([8]byte{128, 241, 152, 238, 86, 52, 59, 168}),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var sid trace.SpanID
+			err := json.Unmarshal(testcase.data, &sid)
+			if err != nil {
+				t.Errorf("There is an error %s", err.Error())
+			} else if sid != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, sid)
 			}
 		})
 	}

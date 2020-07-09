@@ -64,6 +64,23 @@ func (t ID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// UnmarshalJSON implements a custom unmarshal function to decode
+// hex string as a TraceID.
+func (t *ID) UnmarshalJSON(b []byte) error {
+	data := struct {
+		TraceID string `json:"TraceID"`
+	}{}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+	tid, err := IDFromHex(data.TraceID)
+	if err != nil {
+		return err
+	}
+	*t = tid
+	return nil
+}
+
 // String returns the hex string representation form of a TraceID
 func (t ID) String() string {
 	return hex.EncodeToString(t[:])
@@ -85,6 +102,23 @@ func (s SpanID) IsValid() bool {
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
+}
+
+// UnmarshalJSON implements a custom unmarshal function to decode
+// hex string as a SpanID.
+func (s *SpanID) UnmarshalJSON(b []byte) error {
+	data := struct {
+		SpanID string `json:"SpanID"`
+	}{}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+	sid, err := SpanIDFromHex(data.SpanID)
+	if err != nil {
+		return err
+	}
+	*s = sid
+	return nil
 }
 
 // String returns the hex string representation form of a SpanID
