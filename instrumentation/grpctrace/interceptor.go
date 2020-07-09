@@ -81,13 +81,13 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
+		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
 		ctx, span = tracer.Start(
-			ctx, method,
+			ctx,
+			name,
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCSystemGRPC),
-			trace.WithAttributes(serviceAndMethodFromFullName(method)...),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -260,13 +260,13 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
+		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
 		ctx, span = tracer.Start(
-			ctx, method,
+			ctx,
+			name,
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(peerInfoFromTarget(cc.Target())...),
-			trace.WithAttributes(standard.RPCSystemGRPC),
-			trace.WithAttributes(serviceAndMethodFromFullName(method)...),
+			trace.WithAttributes(attr...),
 		)
 
 		Inject(ctx, &metadataCopy)
@@ -315,13 +315,12 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 			MultiKV: entries,
 		}))
 
+		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
-			info.FullMethod,
+			name,
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCSystemGRPC),
-			trace.WithAttributes(serviceAndMethodFromFullName(info.FullMethod)...),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -406,13 +405,12 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 			MultiKV: entries,
 		}))
 
+		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
-			info.FullMethod,
+			name,
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(peerInfoFromContext(ctx)...),
-			trace.WithAttributes(standard.RPCSystemGRPC),
-			trace.WithAttributes(serviceAndMethodFromFullName(info.FullMethod)...),
+			trace.WithAttributes(attr...),
 		)
 		defer span.End()
 
@@ -427,11 +425,21 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 	}
 }
 
-func peerInfoFromTarget(target string) []kv.KeyValue {
-	host, port, err := net.SplitHostPort(target)
+// spanInfo returns a span name and all appropriate attributes from the gRPC
+// method and peer address.
+func spanInfo(fullMethod, peerAddress string) (string, []kv.KeyValue) {
+	attrs := []kv.KeyValue{standard.RPCSystemGRPC}
+	name, mAttrs := parseFullMethod(fullMethod)
+	attrs = append(attrs, mAttrs...)
+	attrs = append(attrs, peerAttr(peerAddress)...)
+	return name, attrs
+}
 
+// peerAttr returns attributes about the peer address.
+func peerAttr(addr string) []kv.KeyValue {
+	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return []kv.KeyValue{}
+		return []kv.KeyValue(nil)
 	}
 
 	if host == "" {
@@ -444,24 +452,32 @@ func peerInfoFromTarget(target string) []kv.KeyValue {
 	}
 }
 
-func peerInfoFromContext(ctx context.Context) []kv.KeyValue {
+// peerFromCtx returns a peer address from a context, if one exists.
+func peerFromCtx(ctx context.Context) string {
 	p, ok := peer.FromContext(ctx)
-
 	if !ok {
-		return []kv.KeyValue{}
+		return ""
 	}
-
-	return peerInfoFromTarget(p.Addr.String())
+	return p.Addr.String()
 }
 
-func serviceAndMethodFromFullName(method string) []kv.KeyValue {
-	l := strings.LastIndexByte(method, '/')
-	if l == -1 {
-		return []kv.KeyValue{}
+// parseFullMethod returns a span name following the OpenTelemetry semantic
+// conventions as well as all applicable span kv.KeyValue attributes based
+// on a gRPC's FullMethod.
+func parseFullMethod(fullMethod string) (string, []kv.KeyValue) {
+	name := strings.TrimLeft(fullMethod, "/")
+	parts := strings.SplitN(name, "/", 2)
+	if len(parts) != 2 {
+		// Invalid format, does not follow `/package.service/method`.
+		return name, []kv.KeyValue(nil)
 	}
 
-	return []kv.KeyValue{
-		standard.RPCServiceKey.String(method[:l]),
-		standard.RPCMethodKey.String(method[l+1:]),
+	var attrs []kv.KeyValue
+	if service := parts[0]; service != "" {
+		attrs = append(attrs, standard.RPCServiceKey.String(service))
 	}
+	if method := parts[1]; method != "" {
+		attrs = append(attrs, standard.RPCMethodKey.String(method))
+	}
+	return name, attrs
 }

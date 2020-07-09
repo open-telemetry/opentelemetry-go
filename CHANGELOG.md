@@ -32,6 +32,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
 - Extend semantic conventions for RPC. (#900)
+- To match constant naming conventions in the `api/standard` package, the `FaaS*` key names are appended with a suffix of `Key`. (#920)
+  - `"api/standard".FaaSName` -> `FaaSNameKey`
+  - `"api/standard".FaaSID` -> `FaaSIDKey`
+  - `"api/standard".FaaSVersion` -> `FaaSVersionKey`
+  - `"api/standard".FaaSInstance` -> `FaaSInstanceKey`
 
 ### Removed
 
@@ -57,6 +62,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add test for api.standard `HTTPClientAttributesFromHTTPRequest`. (#905)
 - Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.1 in /tools. (#901, #913)
 - Update otel-colector example to use the v0.5.0 collector. (#915)
+- The `grpctrace` instrumentation uses a span name conforming to the OpenTelemetry semantic conventions (does not contain a leading slash (`/`)). (#922)
+- The `grpctrace` instrumentation includes an `rpc.method` attribute now set to the gRPC method name. (#900, #922)
+- The `grpctrace` instrumentation `rpc.service` attribute now contains the package name if one exists.
+   This is in accordance with OpenTelemetry semantic conventions. (#922)
+- Correlation Context extractor will no longer insert an empty map into the returned context when no valid values are extracted. (#923)
 
 ## [0.7.0] - 2020-06-26
 
