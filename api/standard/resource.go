@@ -92,6 +92,34 @@ const (
 	FaaSInstanceKey = kv.Key("faas.instance")
 )
 
+// Standard operating system process resource attribute keys.
+const (
+	// Process identifier (PID).
+	ProcessPIDKey = kv.Key("process.pid")
+	// The name of the process executable. On Linux based systems, can be
+	// set to the `Name` in `proc/[pid]/status`. On Windows, can be set to
+	// the base name of `GetProcessImageFileNameW`.
+	ProcessExecutableNameKey = kv.Key("process.executable.name")
+	// The full path to the process executable. On Linux based systems, can
+	// be set to the target of `proc/[pid]/exe`. On Windows, can be set to
+	// the result of `GetProcessImageFileNameW`.
+	ProcessExecutablePathKey = kv.Key("process.executable.path")
+	// The command used to launch the process (i.e. the command name). On
+	// Linux based systems, can be set to the zeroth string in
+	// `proc/[pid]/cmdline`. On Windows, can be set to the first parameter
+	// extracted from `GetCommandLineW`.
+	ProcessCommandKey = kv.Key("process.command")
+	// The full command used to launch the process. The value can be either
+	// a list of strings representing the ordered list of arguments, or a
+	// single string representing the full command. On Linux based systems,
+	// can be set to the list of null-delimited strings extracted from
+	// `proc/[pid]/cmdline`. On Windows, can be set to the result of
+	// `GetCommandLineW`.
+	ProcessCommandLineKey = kv.Key("process.command_line")
+	// The username of the user that owns the process.
+	ProcessOwnerKey = kv.Key("process.owner")
+)
+
 // Standard Kubernetes resource attribute keys.
 const (
 	// A uniquely identifying name for the Kubernetes cluster. Kubernetes

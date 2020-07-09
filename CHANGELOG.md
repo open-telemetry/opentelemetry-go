@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
 - Add http content size semantic conventions. (#905)
 - Include `http.request_content_length` in HTTP request basic attributes. (#905)
+- Add semantic conventions for operating system process resource attribute keys. (#919)
 
 ### Changed
 
