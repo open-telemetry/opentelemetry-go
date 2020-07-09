@@ -65,7 +65,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	correlationContext := supplier.Get(correlationContextHeader)
 	if correlationContext == "" {
-		return ContextWithMap(ctx, NewEmptyMap())
+		return ctx
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
@@ -101,9 +101,15 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 
 		keyValues = append(keyValues, kv.Key(trimmedName).String(trimmedValueWithProps.String()))
 	}
-	return ContextWithMap(ctx, NewMap(MapUpdate{
-		MultiKV: keyValues,
-	}))
+
+	if len(keyValues) > 0 {
+		// Only update the context if valid values were found
+		return ContextWithMap(ctx, NewMap(MapUpdate{
+			MultiKV: keyValues,
+		}))
+	}
+
+	return ctx
 }
 
 // GetAllKeys implements HTTPPropagator.
