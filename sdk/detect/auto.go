@@ -20,18 +20,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// ResourceDetector attempts to detect resource information.
-// If the detector cannot find resource information, the returned resource is nil but no
-// error is returned.
-// An error is only returned on unexpected failures.
-type ResourceDetector func(ctx context.Context) (*resource.Resource, error)
+// ResourceDetector is an interface type that implments the detection of OpenTelemetry Resources
+type ResourceDetector interface {
+	Detect(ctx context.Context) (*resource.Resource, error)
+}
 
 // AutoDetect calls all input detectors sequentially and merges each result with the previous one.
 // It returns on the first error that a sub-detector encounters.
 func AutoDetect(ctx context.Context, detectors ...ResourceDetector) (*resource.Resource, error) {
 	var autoDetectedRes *resource.Resource
 	for _, detector := range detectors {
-		res, err := detector(ctx)
+		res, err := detector.Detect(ctx)
 		if err != nil {
 			return nil, err
 		}
