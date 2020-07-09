@@ -16,7 +16,7 @@
 // use in OpenTelemetry. These standardizations are specified in the
 // OpenTelemetry specification:
 //
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/resource/semantic_conventions
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/trace/semantic_conventions
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.4.0/specification/metrics/semantic_conventions
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/resource/semantic_conventions
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/trace/semantic_conventions
+// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/metrics/semantic_conventions
 package standard

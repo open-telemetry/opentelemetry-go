@@ -22,9 +22,6 @@ github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAE
 github.com/OpenPeeDeeP/depguard v1.0.1 h1:VlW4R6jmBIv3/u1JNlawEvJMM4J+dPORPaZasQee8Us=
 github.com/OpenPeeDeeP/depguard v1.0.1/go.mod h1:xsIw86fROiiwelg+jB2uM9PiKihMMmUx/1V+TNhjQvM=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/alecthomas/participle v0.5.0 h1:tT0WyXKiXyzwoCaXCfFlJQjFo1p54xWg9ZccCYJURnE=
-github.com/alecthomas/participle v0.5.0/go.mod h1:HfdmEuwvr12HXQN44HPWXR0lHmVolVYe4dyL6lQ3duY=
-github.com/alecthomas/repr v0.0.0-20181024024818-d37bc2a10ba1/go.mod h1:xTS7Pm1pD1mvyM075QCDSRqH6qRLXylzS24ZTpRiSzQ=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -202,8 +199,8 @@ github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANyt
 github.com/itchyny/astgen-go v0.0.0-20200519013840-cf3ea398f645 h1:3gyXljUyTWWTv/NMFPvwgxJSdE9Mamg2r3x8HMBl+Uo=
 github.com/itchyny/astgen-go v0.0.0-20200519013840-cf3ea398f645/go.mod h1:296z3W7Xsrp2mlIY88ruDKscuvrkL6zXCNRtaYVshzw=
 github.com/itchyny/go-flags v1.5.0/go.mod h1:lenkYuCobuxLBAd/HGFE4LRoW8D3B6iXRQfWYJ+MNbA=
-github.com/itchyny/gojq v0.10.4 h1:mMafRK6TIhoqYcBjr/7ZMyoY9RhQ/6svzS8UoRUfhfE=
-github.com/itchyny/gojq v0.10.4/go.mod h1:ext7wDHQFldBtWb1u4yIZD8Y78itJqYO5r3zor1mKmA=
+github.com/itchyny/gojq v0.11.0 h1:z7HnaKZ6erVzxPo3BkhJBG7jHmzKdAW8Hcse5N6YAic=
+github.com/itchyny/gojq v0.11.0/go.mod h1:my6D2qN2Sm6qa+/5GsPDUZlCWGR+U8Qsa9he76sudv0=
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 h1:IPJ3dvxmJ4uczJe5YQdrYB16oTJlGSC/OyZDqUk9xX4=
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869/go.mod h1:cJ6Cj7dQo+O6GJNiMx+Pa94qKj+TG8ONdKHgMNIyyag=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=

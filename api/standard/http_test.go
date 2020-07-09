@@ -420,14 +420,15 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 		serverName string
 		route      string
 
-		method     string
-		requestURI string
-		proto      string
-		remoteAddr string
-		host       string
-		url        *url.URL
-		header     http.Header
-		tls        tlsOption
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
 
 		expected []otelkv.KeyValue
 	}
@@ -658,9 +659,22 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				otelkv.String("http.client_ip", "1.2.3.4"),
 			},
 		},
+		{
+			name:          "with content length",
+			method:        "GET",
+			requestURI:    "/user/123",
+			contentLength: 100,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.Int64("http.request_content_length", 100),
+			},
+		},
 	}
 	for idx, tc := range testcases {
 		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+		r.ContentLength = tc.contentLength
 		got := HTTPServerAttributesFromHTTPRequest(tc.serverName, tc.route, r)
 		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
 	}
@@ -774,4 +788,185 @@ func kvStr(kvs []otelkv.KeyValue) string {
 	}
 	sb.WriteRune(']')
 	return sb.String()
+}
+
+func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
+
+		expected []otelkv.KeyValue
+	}{
+		{
+			name:       "stripped",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    noTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.String("http.flavor", "1.0"),
+			},
+		},
+		{
+			name:       "with tls",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+			},
+		},
+		{
+			name:       "with host",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with user agent",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent": []string{"foodownloader"},
+			},
+			tls: withTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+			},
+		},
+		{
+			name:       "with http 1.1",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.1",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent": []string{"foodownloader"},
+			},
+			tls: withTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.1"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+			},
+		},
+		{
+			name:       "with http 2",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/2.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent": []string{"foodownloader"},
+			},
+			tls: withTLS,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "2"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+			},
+		},
+		{
+			name:   "with content length",
+			method: "GET",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			contentLength: 100,
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.Int64("http.request_content_length", 100),
+			},
+		},
+		{
+			name:   "with empty method (fallback to GET)",
+			method: "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.url", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+			r.ContentLength = tc.contentLength
+			got := HTTPClientAttributesFromHTTPRequest(r)
+			assert.ElementsMatch(t, tc.expected, got)
+		})
+	}
 }

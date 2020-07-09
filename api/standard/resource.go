@@ -80,16 +80,16 @@ const (
 // Standard Function-as-a-Service resource attribute keys.
 const (
 	// A uniquely identifying name for the FaaS.
-	FaaSName = kv.Key("faas.name")
+	FaaSNameKey = kv.Key("faas.name")
 
 	// The unique name of the function being executed.
-	FaaSID = kv.Key("faas.id")
+	FaaSIDKey = kv.Key("faas.id")
 
 	// The version of the function being executed.
-	FaaSVersion = kv.Key("faas.version")
+	FaaSVersionKey = kv.Key("faas.version")
 
 	// The execution environment identifier.
-	FaaSInstance = kv.Key("faas.instance")
+	FaaSInstanceKey = kv.Key("faas.instance")
 )
 
 // Standard Kubernetes resource attribute keys.

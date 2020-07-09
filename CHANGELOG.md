@@ -17,6 +17,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
+- Add http content size semantic conventions. (#905)
+- Include `http.request_content_length` in HTTP request basic attributes. (#905)
 
 ### Changed
 
@@ -28,6 +30,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The B3 propagator now extracts from either HTTP encoding of B3 (Single Header or Multiple Header) based on what is contained in the header.
    Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
+- Extend semantic conventions for RPC. (#900)
+- To match constant naming conventions in the `api/standard` package, the `FaaS*` key names are appended with a suffix of `Key`. (#920)
+  - `"api/standard".FaaSName` -> `FaaSNameKey`
+  - `"api/standard".FaaSID` -> `FaaSIDKey`
+  - `"api/standard".FaaSVersion` -> `FaaSVersionKey`
+  - `"api/standard".FaaSInstance` -> `FaaSInstanceKey`
 
 ### Removed
 
@@ -44,9 +52,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This removes the behavior of changing the debug flag into a set sampling bit.
    Instead, this now follow the B3 specification and omits the `X-B3-Sampling` header. (#882)
 - The B3 propagator now tracks "unset" sampling state (meaning "defer the decision") and does not set the `X-B3-Sampling` header when injecting. (#882)
+- Bump github.com/itchyny/gojq from 0.10.3 to 0.10.4 in /tools. (#883)
+- Bump github.com/opentracing/opentracing-go from v1.1.1-0.20190913142402-a7454ce5950e to v1.2.0. (#885)
+- The tracing time conversion for OTLP spans is now correctly set to `UnixNano`. (#896)
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
+- Add test for api.standard `HTTPClientAttributesFromHTTPRequest`. (#905)
+- Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.1 in /tools. (#901, #913)
+- Update otel-colector example to use the v0.5.0 collector. (#915)
 - Correlation Context extractor will no longer insert an empty map into the returned context when no valid values are extracted. (#923)
 
 ## [0.7.0] - 2020-06-26
