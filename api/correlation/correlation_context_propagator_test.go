@@ -123,10 +123,27 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
+		hasKVs []kv.KeyValue
 	}{
 		{
 			name:   "no key values",
 			header: "header1",
+		},
+		{
+			name:   "invalid header with existing context",
+			header: "header2",
+			hasKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
+			},
+		},
+		{
+			name:   "empty header value",
+			header: "",
+			hasKVs: []kv.KeyValue{
+				kv.Key("key1").String("val1"),
+				kv.Key("key2").String("val2"),
+			},
 		},
 	}
 
@@ -135,12 +152,26 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			req.Header.Set("otcorrelations", tt.header)
 
-			ctx := context.Background()
+			ctx := correlation.NewContext(context.Background(), tt.hasKVs...)
+			wantCorCtx := correlation.MapFromContext(ctx)
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
 			gotCorCtx := correlation.MapFromContext(ctx)
-			if gotCorCtx.Len() != 0 {
-				t.Errorf("Got and Want CorCtx are not the same size %d != %d", gotCorCtx.Len(), 0)
+			if gotCorCtx.Len() != wantCorCtx.Len() {
+				t.Errorf(
+					"Got and Want CorCtx are not the same size %d != %d",
+					gotCorCtx.Len(),
+					wantCorCtx.Len(),
+				)
 			}
+			totalDiff := ""
+			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
+				val, _ := gotCorCtx.Value(keyValue.Key)
+				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(value.Value{}))
+				if diff != "" {
+					totalDiff += diff + "\n"
+				}
+				return true
+			})
 		})
 	}
 }
