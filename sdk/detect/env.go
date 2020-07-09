@@ -54,7 +54,7 @@ var labelRegex = regexp.MustCompile(`\s*([[:ascii:]]{1,256}?)\s*=\s*([[:ascii:]]
 func constructOTResources(s string) (*resource.Resource, error) {
 	matches := labelRegex.FindAllStringSubmatchIndex(s, -1)
 
-	for len(matches) == 0 {
+	if len(matches) == 0 {
 		return resource.Empty(), fmt.Errorf("invalid resource format: %q", s)
 	}
 
