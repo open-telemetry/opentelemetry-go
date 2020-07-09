@@ -461,7 +461,7 @@ func peerFromCtx(ctx context.Context) string {
 	return p.Addr.String()
 }
 
-// parseFullMethod returns an span name following the OpenTelemetry semantic
+// parseFullMethod returns a span name following the OpenTelemetry semantic
 // conventions as well as all applicable span kv.KeyValue attributes based
 // on a gRPC's FullMethod.
 func parseFullMethod(fullMethod string) (string, []kv.KeyValue) {
