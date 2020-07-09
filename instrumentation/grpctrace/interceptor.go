@@ -469,7 +469,7 @@ func parseFullMethod(fullMethod string) (string, []kv.KeyValue) {
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) != 2 {
 		// Invalid format, does not follow `/package.service/method`.
-		return []kv.KeyValue(nil)
+		return name, []kv.KeyValue(nil)
 	}
 
 	var attrs []kv.KeyValue
