@@ -9,6 +9,6 @@ require (
 	github.com/google/go-cmp v0.5.0
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/otel v0.7.0
-	google.golang.org/api v0.28.0
+	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.30.0
 )
