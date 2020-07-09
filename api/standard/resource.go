@@ -92,7 +92,7 @@ const (
 	FaaSInstance = kv.Key("faas.instance")
 )
 
-// Standard operation system process resource attribute keys.
+// Standard operating system process resource attribute keys.
 const (
 	// Process identifier (PID).
 	ProcessPIDKey = kv.Key("process.pid")
@@ -100,7 +100,7 @@ const (
 	// to the `Name` in `proc/[pid]/status`. On Windows, can be set to the
 	// base name of `GetProcessImageFileNameW`.
 	ProcessExecutableNameKey = kv.Key("process.executable.name")
-	// The full oath to the process executable. On Unix based systems, can
+	// The full path to the process executable. On Unix based systems, can
 	// be set to the target of `proc/[pid]/exe`. On Windows, can be set to
 	// the result of `GetProcessImageFileNameW`.
 	ProcessExecutablePathKey = kv.Key("process.executable.path")
