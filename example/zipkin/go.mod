@@ -8,6 +8,6 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.7.0
-	go.opentelemetry.io/otel/exporters/trace/zipkin v0.7.0
+	go.opentelemetry.io/otel v0.8.0
+	go.opentelemetry.io/otel/exporters/trace/zipkin v0.8.0
 )
