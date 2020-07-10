@@ -46,7 +46,6 @@ func (d *FromEnv) Detect(context.Context) (*resource.Resource, error) {
 }
 
 func constructOTResources(s string) (*resource.Resource, error) {
-
 	pairs := strings.Split(s, ",")
 	labels := make([]kv.KeyValue, len(pairs))
 	for i, p := range pairs {
