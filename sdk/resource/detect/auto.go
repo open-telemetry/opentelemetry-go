@@ -17,6 +17,8 @@ package detect
 import (
 	"context"
 
+	"go.uber.org/multierr"
+
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -29,12 +31,14 @@ type ResourceDetector interface {
 // It returns on the first error that a sub-detector encounters.
 func AutoDetect(ctx context.Context, detectors ...ResourceDetector) (*resource.Resource, error) {
 	var autoDetectedRes *resource.Resource
+	var aggregatedErr error
 	for _, detector := range detectors {
 		res, err := detector.Detect(ctx)
 		if err != nil {
-			return nil, err
+			aggregatedErr = multierr.Append(aggregatedErr, err)
+			continue
 		}
 		autoDetectedRes = resource.Merge(autoDetectedRes, res)
 	}
-	return autoDetectedRes, nil
+	return autoDetectedRes, aggregatedErr
 }

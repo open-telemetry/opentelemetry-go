@@ -16,6 +16,7 @@ package detect
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -26,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func TestDetectOnePairTrue(t *testing.T) {
+func TestDetectOnePair(t *testing.T) {
 	os.Setenv(envVar, "key=value")
 
 	detector := &FromEnv{}
@@ -35,16 +36,22 @@ func TestDetectOnePairTrue(t *testing.T) {
 	assert.Equal(t, resource.New(kv.String("key", "value")), res)
 }
 
-func TestDetectMultiplePairsTrue(t *testing.T) {
-	os.Setenv(envVar, "key= value, k = v ")
+func TestDetectEnvTrue(t *testing.T) {
+	os.Setenv("x", "1")
+	os.Setenv(envVar, "key=value, k = v , a=${x:y}, a=${z:y}")
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, resource.New(kv.String("key", "value"), kv.String("k", "v")), res)
+	assert.Equal(t, res, resource.New(
+		kv.String("key", "value"),
+		kv.String("k", "v"),
+		kv.String("a", "1"),
+		kv.String("a", "y"),
+	))
 }
 
-func TestDetectFalse(t *testing.T) {
+func TestEmptyFalse(t *testing.T) {
 	os.Setenv(envVar, "")
 
 	detector := &FromEnv{}
@@ -53,11 +60,22 @@ func TestDetectFalse(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
-func TestDetectError(t *testing.T) {
+func TestMissingKeyError(t *testing.T) {
 	os.Setenv(envVar, "key=value,key")
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
+	assert.Equal(t, err, fmt.Errorf("key missing tag value"))
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestEnvError(t *testing.T) {
+	os.Setenv(envVar, "key=value, a=${1}")
+
+	detector := &FromEnv{}
+	res, err := detector.Detect(context.Background())
+	assert.Error(t, err)
+	assert.Equal(t, err, fmt.Errorf("${1} missing default value for tag environment value"))
 	assert.Equal(t, resource.Empty(), res)
 }
