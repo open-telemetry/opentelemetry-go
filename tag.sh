@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright The OpenTelemetry Authors
 #
@@ -14,76 +14,165 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+readonly PROGNAME=$(basename "$0")
+readonly PROGDIR=$(readlink -m "$(dirname "$0")")
 
-help()
-{
-   printf "\n"
-   printf "Usage: $0 -t tag -c commit-hash\n"
-   printf "\t-t New tag that you would like to create\n"
-   printf "\t-c Commit hash to associate with the new tag\n"
-   exit 1 # Exit script after printing help
+readonly EXCLUDE_PACKAGES="tools"
+readonly SEMVER_REGEX="v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?"
+
+usage() {
+    cat <<- EOF
+Usage: $PROGNAME [OPTIONS] SEMVER_TAG COMMIT_HASH
+
+Creates git tag for all Go packages in project.
+
+OPTIONS:
+  -h --help        Show this help.
+
+ARGUMENTS:
+  SEMVER_TAG       Semantic version to tag with.
+  COMMIT_HASH      Git commit hash to tag.
+EOF
 }
 
-while getopts "t:c:" opt
-do
-   case "$opt" in
-      t ) TAG="$OPTARG" ;;
-      c ) COMMIT_HASH="$OPTARG" ;;
-      ? ) help ;; # Print help
-   esac
-done
+cmdline() {
+    local arg commit
 
-# Print help in case parameters are empty
-if [ -z "$TAG" ] || [ -z "${COMMIT_HASH}" ]
-then
-   printf "Some or all of the parameters are missing\n";
-   help
-fi
+    for arg
+    do
+        local delim=""
+        case "$arg" in
+            # Translate long form options to short form.
+            --help)           args="${args}-h ";;
+            # Pass through for everything else.
+            *) [[ "${arg:0:1}" == "-" ]] || delim="\""
+                args="${args}${delim}${arg}${delim} ";;
+        esac
+    done
 
-# Validate semver
-SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    # Reset and process short form options.
+    eval set -- "$args"
 
+    while getopts "h" OPTION
+    do
+         case $OPTION in
+         h)
+             usage
+             exit 0
+             ;;
+         *)
+             echo "unknown option: $OPTION"
+             usage
+             exit 1
+             ;;
+        esac
+    done
 
-if [[ "${TAG}" =~ ${SEMVER_REGEX} ]]; then
-        printf "${TAG} is valid semver tag.\n"
-else
-        printf "${TAG} is not a valid semver tag.\n"
-        exit -1
-fi
+    # Positional arguments.
+    shift $((OPTIND-1))
+    readonly TAG="$1"
+    if [ -z "$TAG" ]
+    then
+        echo "missing SEMVER_TAG"
+        usage
+        exit 1
+    fi
+    if [[ ! "$TAG" =~ $SEMVER_REGEX ]]
+    then
+        printf "invalid semantic version: %s\n" "$TAG"
+        exit 2
+    fi
+    if [[ "$( git tag --list "$TAG" )" ]]
+    then
+        printf "tag already exists: %s\n" "$TAG"
+        exit 2
+    fi
 
-cd $(dirname $0)
+    shift
+    commit="$1"
+    if [ -z "$commit" ]
+    then
+        echo "missing COMMIT_HASH"
+        usage
+        exit 1
+    fi
+    # Verify rev is for a commit and unify hashes into a complete SHA1.
+    readonly SHA="$( git rev-parse --quiet --verify "${commit}^{commit}" )"
+    if [ -z "$SHA" ]
+    then
+        printf "invalid commit hash: %s\n" "$commit"
+        exit 2
+    fi
+    if [ "$( git merge-base "$SHA" HEAD )" != "$SHA" ]
+    then
+        printf "commit '%s' not found on this branch\n" "$commit"
+        exit 2
+    fi
+}
 
-# Check if the commit-hash is valid
-COMMIT_FOUND=`git log -50 --pretty=format:"%H" | grep ${COMMIT_HASH}`
-if [ "${COMMIT_FOUND}" != "${COMMIT_HASH}" ] ; then
-	printf "Commit ${COMMIT_HASH} not found\n"
-	exit -1
-fi
+package_dirs() {
+    # Return a list of package directories in the form:
+    #
+    #  package/directory/a
+    #  package/directory/b
+    #  deeper/package/directory/a
+    #  ...
+    #
+    # Making sure to exclude any packages in the EXCLUDE_PACKAGES regexp.
+    find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
+        | grep -E -v "$EXCLUDE_PACKAGES" \
+        | sed 's/^\.\///' \
+        | sort
+}
 
-# Check if the tag doesn't alread exists.
-TAG_FOUND=`git tag --list ${TAG}`
-if [ "${TAG_FOUND}" = "${TAG}" ] ; then
-	printf "Tag ${TAG} already exists\n"
-	exit -1
-fi
+git_tag() {
+    local tag="$1"
+    local commit="$2"
 
-# Save most recent tag for generating logs
-TAG_CURRENT=`git tag | grep '^v' | tail -1`
+    git tag -a "$tag" -s -m "Version $tag" "$commit"
+}
 
-PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; | egrep -v 'tools' | sed 's/^\.\///' | sort)
+previous_version() {
+    local current="$1"
 
-# Create tag for root module
-git tag -a "${TAG}" -s -m "Version ${TAG}" ${COMMIT_HASH}
+    # Requires git > 2.0
+    git tag -l --sort=v:refname \
+        | grep -E "^${SEMVER_REGEX}$" \
+        | grep -v "$current" \
+        | tail -1
+}
 
-# Create tag for submodules
-for dir in $PACKAGE_DIRS; do
-	git tag -a "${dir}/${TAG}" -s -m "Version ${dir}/${TAG}" ${COMMIT_HASH}
-done
+print_changes() {
+    local tag="$1"
+    local previous
 
-# Generate commit logs
-printf "New tag ${TAG} created.\n"
-printf "\n\n\nChange log since previous tag ${TAG_CURRENT}\n"
-printf "======================================\n"
-git --no-pager log --pretty=oneline ${TAG_CURRENT}..${TAG}
+    previous="$( previous_version "$tag" )"
+    if [ -n "$previous" ]
+    then
+        printf "\nRaw changes made between %s and %s\n" "$previous" "$tag"
+        printf "======================================\n"
+        git --no-pager log --pretty=oneline "${previous}..$tag"
+    fi
+}
 
+main() {
+    local dir
+
+    cmdline "$@"
+
+    cd "$PROGDIR" || exit 3
+
+    # Create tag for root package.
+    git_tag "$TAG" "$SHA"
+    printf "created tag: %s\n" "$TAG"
+
+    # Create tag for all sub-packages.
+    for dir in $( package_dirs )
+    do
+        git_tag "${dir}/$TAG" "$SHA"
+        printf "created tag: %s\n" "${dir}/$TAG"
+    done
+
+    print_changes "$TAG"
+}
+main "$@"
