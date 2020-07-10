@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.8.0] - 2020-07-09
+
 ### Added
 
 - The `B3Encoding` type to represent the B3 encoding(s) the B3 propagator can inject.
@@ -17,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
+- Add http content size semantic conventions. (#905)
+- Include `http.request_content_length` in HTTP request basic attributes. (#905)
+- Add semantic conventions for operating system process resource attribute keys. (#919)
+- The Jaeger exporter now has a `WithBatchMaxCount` option to specify the maximum number of spans sent in a batch. (#931)
 
 ### Changed
 
@@ -29,6 +35,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    Preference is given to Single Header encoding with Multiple Header being the fallback if Single Header is not found or is invalid.
    This behavior change is made to dynamically support all correctly encoded traces received instead of having to guess the expected encoding prior to receiving. (#882)
 - Extend semantic conventions for RPC. (#900)
+- To match constant naming conventions in the `api/standard` package, the `FaaS*` key names are appended with a suffix of `Key`. (#920)
+  - `"api/standard".FaaSName` -> `FaaSNameKey`
+  - `"api/standard".FaaSID` -> `FaaSIDKey`
+  - `"api/standard".FaaSVersion` -> `FaaSVersionKey`
+  - `"api/standard".FaaSInstance` -> `FaaSInstanceKey`
 
 ### Removed
 
@@ -51,8 +62,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ensure span status is not set to `Unknown` when no HTTP status code is provided as it is assumed to be `200 OK`. (#908)
 - Ensure `httptrace.clientTracer` closes `http.headers` span. (#912)
 - Prometheus exporter will not apply stale updates or forget inactive metrics. (#903)
+- Add test for api.standard `HTTPClientAttributesFromHTTPRequest`. (#905)
 - Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.1 in /tools. (#901, #913)
 - Update otel-colector example to use the v0.5.0 collector. (#915)
+- The `grpctrace` instrumentation uses a span name conforming to the OpenTelemetry semantic conventions (does not contain a leading slash (`/`)). (#922)
+- The `grpctrace` instrumentation includes an `rpc.method` attribute now set to the gRPC method name. (#900, #922)
+- The `grpctrace` instrumentation `rpc.service` attribute now contains the package name if one exists.
+   This is in accordance with OpenTelemetry semantic conventions. (#922)
+- Correlation Context extractor will no longer insert an empty map into the returned context when no valid values are extracted. (#923)
+- Bump google.golang.org/api from 0.28.0 to 0.29.0 in /exporters/trace/jaeger. (#925)
+- Bump github.com/itchyny/gojq from 0.10.4 to 0.11.0 in /tools. (#926)
+- Bump github.com/golangci/golangci-lint from 1.28.1 to 1.28.2 in /tools. (#930)
 
 ## [0.7.0] - 2020-06-26
 
@@ -642,7 +662,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.5.0
