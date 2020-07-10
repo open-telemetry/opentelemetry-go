@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add http content size semantic conventions. (#905)
 - Include `http.request_content_length` in HTTP request basic attributes. (#905)
 - Add semantic conventions for operating system process resource attribute keys. (#919)
+- The Jaeger exporter now has a `WithBatchMaxCount` option to specify the maximum number of spans sent in a batch. (#931)
 
 ### Changed
 
@@ -71,6 +72,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Correlation Context extractor will no longer insert an empty map into the returned context when no valid values are extracted. (#923)
 - Bump google.golang.org/api from 0.28.0 to 0.29.0 in /exporters/trace/jaeger. (#925)
 - Bump github.com/itchyny/gojq from 0.10.4 to 0.11.0 in /tools. (#926)
+- Bump github.com/golangci/golangci-lint from 1.28.1 to 1.28.2 in /tools. (#930)
 
 ## [0.7.0] - 2020-06-26
 
