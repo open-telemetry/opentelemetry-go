@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// ResourceDetector is an interface type that implments the detection of OpenTelemetry Resources
+// ResourceDetector is an interface type that implements the detection of OpenTelemetry Resources
 type ResourceDetector interface {
 	Detect(ctx context.Context) (*resource.Resource, error)
 }
