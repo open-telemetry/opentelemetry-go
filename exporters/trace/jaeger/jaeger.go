@@ -42,6 +42,9 @@ type options struct {
 	// BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
 
+	// BatchMaxCount defines the maximum number of spans sent in one batch
+	BatchMaxCount int
+
 	Config *sdktrace.Config
 
 	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
@@ -62,6 +65,13 @@ func WithProcess(process Process) Option {
 func WithBufferMaxCount(bufferMaxCount int) Option {
 	return func(o *options) {
 		o.BufferMaxCount = bufferMaxCount
+	}
+}
+
+// WithBatchMaxCount defines the maximum number of spans in one batch
+func WithBatchMaxCount(batchMaxCount int) Option {
+	return func(o *options) {
+		o.BatchMaxCount = batchMaxCount
 	}
 }
 
@@ -132,6 +142,11 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	// 1G messages to be held in memory since that is the default value of BufferedByteLimit.
 	if o.BufferMaxCount != 0 {
 		bundler.BufferedByteLimit = o.BufferMaxCount
+	}
+
+	// The default value bundler uses is 10, increase to send larger batches
+	if o.BatchMaxCount != 0 {
+		bundler.BundleCountThreshold = o.BatchMaxCount
 	}
 
 	e.bundler = bundler
