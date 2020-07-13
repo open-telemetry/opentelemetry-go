@@ -32,7 +32,7 @@ build-template: &build-template
           # copy from here into the proto-src directory
           docker cp ./gen proto-orig:/defs
           docker cp ./Makefile proto-orig:/defs
-          docker run --volumes-from proto-orig alpine:3.4 ls -R /defs
+
     - run:
         name: "Precommit and Coverage Report"
         command: |

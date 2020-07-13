@@ -165,7 +165,7 @@ SRC_PROTO_FILES := $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOGEN_OUTPUT_DIR),$(ORIG
 
 
 define exec-protoc-all
-docker run -v `pwd`:/defs namely/protoc-all $(1)
+docker run --volumes-from proto-orig namely/protoc-all $(1)
 
 endef
 
@@ -179,7 +179,10 @@ endef
 protobufs: src-protobufs | $(PROTOBUF_GEN_DIR)/
 	rm -fr ./gen/go
 	$(foreach file,$(subst ${PROTOGEN_OUTPUT_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTOGEN_OUTPUT_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
-	mv $(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go gen/
+	docker run --volumes-from proto-orig alpine:3.4 ls -R /defs
+	docker cp proto-orig:/defs/gen/pb-go/go.opentelemetry.io/otel/gen/go ./gen/
+
+#	mv $(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go gen/
 
 .PHONY: src-protobufs
 src-protobufs: $(SRC_PROTO_FILES)
