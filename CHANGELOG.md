@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Protobuf sources are now imported as a git submodule from open-telemetry/opentelemetry-proto.
+- Protobuf sources are now imported as a git submodule from open-telemetry/opentelemetry-proto. (#935)
    Makefile changed to build .go files from .proto sources using docker protoc image.
 
 ## [0.8.0] - 2020-07-09
