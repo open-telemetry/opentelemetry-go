@@ -156,7 +156,7 @@ license-check:
 	   fi
 
 # Find all .proto files.
-PROTOBUF_GEN_DIR=gen/go
+PROTOBUF_GEN_DIR=gen/pb-go
 OTEL_PROTO_SUBMODULE := opentelemetry-proto
 PROTOGEN_OUTPUT_DIR := gen/proto
 ORIG_PROTO_FILES := $(wildcard $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/*/v1/*.proto \
@@ -171,13 +171,14 @@ endef
 
 # This step can be omitted assuming go_package changes are made in opentelemetry-proto repo
 define exec-replace-pkgname
-sed  's|option go_package = "github.com/open-telemetry/opentelemetry-proto/|option go_package = "go.opentelemetry.io/otel/|' < $(1) > $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOGEN_OUTPUT_DIR),$(1))
+sed  's|option go_package = "github.com/open-telemetry/opentelemetry-proto/gen/go|option go_package = "go.opentelemetry.io/otel/gen/go/opentelemetry/proto|' < $(1) > $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOGEN_OUTPUT_DIR),$(1))
 
 endef
 
 .PHONY: protobufs
 protobufs: $(SRC_PROTO_FILES) | $(PROTOBUF_GEN_DIR)/
-	$(foreach file,$(subst ${PROTOGEN_OUTPUT_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, --go-source-relative -i $(PROTOGEN_OUTPUT_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
+	$(foreach file,$(subst ${PROTOGEN_OUTPUT_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTOGEN_OUTPUT_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
+	mv $(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go gen/
 
 # replace opentelemetry-proto v0.4.0 package name by repo-local version
 $(SRC_PROTO_FILES): $(PROTOGEN_OUTPUT_DIR)/%.proto: $(OTEL_PROTO_SUBMODULE)/%.proto
