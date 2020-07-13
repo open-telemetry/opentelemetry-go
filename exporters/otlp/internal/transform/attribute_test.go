@@ -17,8 +17,8 @@ package transform
 import (
 	"testing"
 
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	"github.com/stretchr/testify/assert"
+	commonpb "go.opentelemetry.io/otel/gen/go/common/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
 )

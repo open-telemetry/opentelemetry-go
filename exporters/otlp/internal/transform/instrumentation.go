@@ -15,7 +15,7 @@
 package transform
 
 import (
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
+	commonpb "go.opentelemetry.io/otel/gen/go/common/v1"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
