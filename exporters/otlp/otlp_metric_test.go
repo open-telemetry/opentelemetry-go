@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	colmetricpb "go.opentelemetry.io/otel/gen/go/collector/metrics/v1"
 	commonpb "go.opentelemetry.io/otel/gen/go/common/v1"
 	metricpb "go.opentelemetry.io/otel/gen/go/metrics/v1"

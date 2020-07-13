@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	commonpb "go.opentelemetry.io/otel/gen/go/common/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
