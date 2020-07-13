@@ -31,9 +31,10 @@ ifeq ($(UNAME_S),Darwin)
 	endif
 endif
 
+GOCOVER_PKGS = $(shell go list ./... | grep -v 'internal/opentelemetry-proto' | paste -s -d, - )
 GOTEST_MIN = go test -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=$(go list ./... | grep -v 'internal/opentelemetry-proto')
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=$(GOCOVER_PKGS)
 
 .DEFAULT_GOAL := precommit
 
