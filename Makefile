@@ -171,7 +171,8 @@ copy-protos-to:
 	# copy from here into the proto-src directory
 	docker cp ./gen proto-orig:/defs
 
-copy-protobuf-from: | $(PROTO_GEN_DIR)/
+copy-protobuf-from:
+	rm -fr ./$(PROTO_GEN_DIR)
 	# copy from dummy volume back to our source directory
 	docker cp proto-orig:/defs/$(PROTOBUF_TEMP_DIR)/go.opentelemetry.io/otel/$(PROTO_GEN_DIR) ./$(PROTO_GEN_DIR)
 
@@ -179,8 +180,9 @@ else
 copy-protos-to:
 	@:    # nop
 
-copy-protobuf-from: | $(PROTO_GEN_DIR)/
-	mv ./$(PROTOBUF_TEMP_DIR)/go.opentelemetry.io/otel/$(PROTO_GEN_DIR)/* ./$(PROTO_GEN_DIR)
+copy-protobuf-from:
+	rm -fr ./$(PROTO_GEN_DIR)
+	mv ./$(PROTOBUF_TEMP_DIR)/go.opentelemetry.io/otel/$(PROTO_GEN_DIR) ./$(PROTO_GEN_DIR)
 endif
 
 
