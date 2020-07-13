@@ -156,12 +156,13 @@ license-check:
 	   fi
 
 # Find all .proto files.
-PROTOBUF_GEN_DIR=gen/pb-go
-OTEL_PROTO_SUBMODULE := opentelemetry-proto
-PROTOBUF_SOURCE_DIR := gen/proto
-ORIG_PROTO_FILES := $(wildcard $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/*/v1/*.proto \
+OTEL_PROTO_SUBMODULE := internal/opentelemetry-proto
+PROTO_GEN_DIR        := internal/opentelemetry-proto-gen
+PROTOBUF_TEMP_DIR    := gen/pb-go
+PROTOBUF_SOURCE_DIR  := gen/proto
+ORIG_PROTO_FILES     := $(wildcard $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/*/v1/*.proto \
                            $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/collector/*/v1/*.proto)
-SRC_PROTO_FILES := $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOBUF_SOURCE_DIR),$(ORIG_PROTO_FILES))
+SOURCE_PROTO_FILES   := $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOBUF_SOURCE_DIR),$(ORIG_PROTO_FILES))
 
 ifeq ($(CIRCLECI),true)
 copy-protos-to:
@@ -170,17 +171,35 @@ copy-protos-to:
 	# copy from here into the proto-src directory
 	docker cp ./gen proto-orig:/defs
 
-copy-protobuf-from:
+copy-protobuf-from: | $(PROTO_GEN_DIR)/
 	# copy from dummy volume back to our source directory
-	docker cp proto-orig:/defs/$(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go ./gen/
+	docker cp proto-orig:/defs/$(PROTOBUF_TEMP_DIR)/go.opentelemetry.io/otel/$(PROTO_GEN_DIR) ./$(PROTO_GEN_DIR)
 
 else
 copy-protos-to:
+	@:    # nop
 
-copy-protobuf-from:
-	mv $(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go ./gen/
+copy-protobuf-from: | $(PROTO_GEN_DIR)/
+	mv ./$(PROTOBUF_TEMP_DIR)/go.opentelemetry.io/otel/$(PROTO_GEN_DIR)/* ./$(PROTO_GEN_DIR)
 endif
 
+
+# This step can be omitted assuming go_package changes are made in opentelemetry-proto repo
+define exec-replace-pkgname
+sed  's+go_package = "github.com/open-telemetry/opentelemetry-proto/gen/go+go_package = "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen+' < $(1) > $(2)
+
+endef
+
+.PHONY: protobuf make-protobufs
+protobuf: protobuf-source copy-protos-to make-protobufs copy-protobuf-from
+
+.PHONY: protobuf-source
+protobuf-source: $(SOURCE_PROTO_FILES) | $(PROTOBUF_SOURCE_DIR)/
+
+# replace opentelemetry-proto v0.4.0 package name by repo-local version
+$(SOURCE_PROTO_FILES): $(PROTOBUF_SOURCE_DIR)/%.proto: $(OTEL_PROTO_SUBMODULE)/%.proto
+	@mkdir -p $(@D)
+	$(call exec-replace-pkgname,$<,$@)
 
 ifeq ($(CIRCLECI),true)
 VOLUMES_MOUNT=--volumes-from proto-orig
@@ -193,32 +212,15 @@ docker run $(VOLUMES_MOUNT) namely/protoc-all $(1)
 
 endef
 
-# This step can be omitted assuming go_package changes are made in opentelemetry-proto repo
-define exec-replace-pkgname
-sed  's|option go_package = "github.com/open-telemetry/opentelemetry-proto/gen/go|option go_package = "go.opentelemetry.io/otel/gen/go/opentelemetry/proto|' < $(1) > $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOBUF_SOURCE_DIR),$(1))
-
-endef
-
-.PHONY: protobuf make-protobufs
-protobuf: protobuf-source copy-protos-to make-protobufs copy-protobuf-from
-
-make-protobufs: $(SRC_PROTO_FILES)  | $(PROTOBUF_GEN_DIR)/
-	$(foreach file,$(subst ${PROTOBUF_SOURCE_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTOBUF_SOURCE_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
+make-protobufs: $(SOURCE_PROTO_FILES)  | $(PROTOBUF_GEN_DIR)/
+	$(foreach file,$(subst ${PROTOBUF_SOURCE_DIR}/,,$(SOURCE_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTOBUF_SOURCE_DIR) -f ${file} -l go -o ${PROTOBUF_TEMP_DIR}))
 	rm -fr ./gen/go
 
-.PHONY: protobuf-source
-protobuf-source: $(SRC_PROTO_FILES) | $(PROTOBUF_SOURCE_DIR)/
 
-# replace opentelemetry-proto v0.4.0 package name by repo-local version
-$(SRC_PROTO_FILES): $(PROTOBUF_SOURCE_DIR)/%.proto: $(OTEL_PROTO_SUBMODULE)/%.proto
-	mkdir -p $(@D)
-	sed 's|go_package[[:space:]]*=[[:space:]]*"github.com/open-telemetry/opentelemetry-proto/|go_package = "go.opentelemetry.io/otel/|' $< \
-		> $@
-
-$(PROTOBUF_SOURCE_DIR)/ $(PROTOBUF_GEN_DIR)/:
+$(PROTOBUF_SOURCE_DIR)/ $(PROTO_GEN_DIR)/:
 	mkdir -p $@
 
 .PHONY: protobuf-clean
 protobuf-clean:
-	rm -rf ./$(PROTOBUF_GEN_DIR)
+	rm -rf ./gen ./$(PROTO_GEN_DIR)
 
