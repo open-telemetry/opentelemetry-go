@@ -134,7 +134,11 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	    go mod tidy); \
 	done
 
-generate: $(TOOLS_DIR)/stringer
+.PHONY: generate
+generate: stringer protobufs
+
+.PHONY: stringer
+stringer: $(TOOLS_DIR)/stringer
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "running generators in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -150,3 +154,41 @@ license-check:
 	           echo "license header checking failed:"; echo "$${licRes}"; \
 	           exit 1; \
 	   fi
+
+# Find all .proto files.
+PROTOBUF_GEN_DIR=gen/go
+OTEL_PROTO_SUBMODULE := opentelemetry-proto
+PROTOGEN_OUTPUT_DIR := gen/proto
+ORIG_PROTO_FILES := $(wildcard $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/*/v1/*.proto \
+                           $(OTEL_PROTO_SUBMODULE)/opentelemetry/proto/collector/*/v1/*.proto)
+SRC_PROTO_FILES := $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOGEN_OUTPUT_DIR),$(ORIG_PROTO_FILES))
+
+
+define exec-protoc-all
+docker run -v `pwd`:/defs namely/protoc-all $(1)
+
+endef
+
+# This step can be omitted assuming go_package changes are made in opentelemetry-proto repo
+define exec-replace-pkgname
+sed  's|option go_package = "github.com/open-telemetry/opentelemetry-proto/|option go_package = "go.opentelemetry.io/otel/|' < $(1) > $(subst $(OTEL_PROTO_SUBMODULE),$(PROTOGEN_OUTPUT_DIR),$(1))
+
+endef
+
+.PHONY: protobufs
+protobufs: $(SRC_PROTO_FILES) | $(PROTOBUF_GEN_DIR)/
+	$(foreach file,$(subst ${PROTOGEN_OUTPUT_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, --go-source-relative -i $(PROTOGEN_OUTPUT_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
+
+# replace opentelemetry-proto v0.4.0 package name by repo-local version
+$(SRC_PROTO_FILES): $(PROTOGEN_OUTPUT_DIR)/%.proto: $(OTEL_PROTO_SUBMODULE)/%.proto
+	mkdir -p $(@D)
+	sed 's|go_package[[:space:]]*=[[:space:]]*"github.com/open-telemetry/opentelemetry-proto/|go_package = "go.opentelemetry.io/otel/|' $< \
+		> $@
+
+$(PROTOGEN_OUTPUT_DIR)/ $(PROTOBUF_GEN_DIR)/:
+	mkdir -p $@
+
+.PHONY: protobuf-clean
+protobufs-clean:
+	rm -rf ./$(PROTO_GEN_DIR)
+
