@@ -24,6 +24,15 @@ build-template: &build-template
         keys:
           - cimg-go-pkg-mod-{{ checksum "go.sum" }}
 
+    - run: |
+          # create a dummy container to hold the protobufs
+          docker create -v /defs --name proto-orig alpine:3.4 /bin/true
+          # change the protobuf package_names (temporary)
+          make src-protobufs
+          # copy from here into the proto-src directory
+          docker cp ./gen proto-orig:/defs
+          docker cp ./Makefile proto-orig:/defs
+          docker run --volumes-from proto-orig alpine:3.4 ls -R /defs
     - run:
         name: "Precommit and Coverage Report"
         command: |

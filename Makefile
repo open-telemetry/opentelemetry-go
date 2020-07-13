@@ -176,10 +176,13 @@ sed  's|option go_package = "github.com/open-telemetry/opentelemetry-proto/gen/g
 endef
 
 .PHONY: protobufs
-protobufs: $(SRC_PROTO_FILES) | $(PROTOBUF_GEN_DIR)/
+protobufs: src-protobufs | $(PROTOBUF_GEN_DIR)/
 	rm -fr ./gen/go
 	$(foreach file,$(subst ${PROTOGEN_OUTPUT_DIR}/,,$(SRC_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTOGEN_OUTPUT_DIR) -f ${file} -l go -o ${PROTOBUF_GEN_DIR}))
 	mv $(PROTOBUF_GEN_DIR)/go.opentelemetry.io/otel/gen/go gen/
+
+.PHONY: src-protobufs
+src-protobufs: $(SRC_PROTO_FILES)
 
 # replace opentelemetry-proto v0.4.0 package name by repo-local version
 $(SRC_PROTO_FILES): $(PROTOGEN_OUTPUT_DIR)/%.proto: $(OTEL_PROTO_SUBMODULE)/%.proto
