@@ -17,10 +17,10 @@ package transform
 import (
 	"testing"
 
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/kv"
+	commonpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
 )
 
 func TestAttributes(t *testing.T) {

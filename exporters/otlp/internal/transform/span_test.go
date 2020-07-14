@@ -21,10 +21,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
-	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
+
+	tracepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/trace/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"

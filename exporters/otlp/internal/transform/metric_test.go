@@ -20,10 +20,11 @@ import (
 	"testing"
 	"time"
 
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
-	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	commonpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
+	metricpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
