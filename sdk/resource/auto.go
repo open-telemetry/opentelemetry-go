@@ -12,25 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package detect
+package resource
 
 import (
 	"context"
 
 	"go.uber.org/multierr"
-
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // ResourceDetector is an interface type that implements the detection of OpenTelemetry Resources
 type ResourceDetector interface {
-	Detect(ctx context.Context) (*resource.Resource, error)
+	Detect(ctx context.Context) (*Resource, error)
 }
 
-// AutoDetect calls all input detectors sequentially and merges each result with the previous one.
+// Detect calls all input detectors sequentially and merges each result with the previous one.
 // It returns the merged error too.
-func AutoDetect(ctx context.Context, detectors ...ResourceDetector) (*resource.Resource, error) {
-	var autoDetectedRes *resource.Resource
+func Detect(ctx context.Context, detectors ...ResourceDetector) (*Resource, error) {
+	var autoDetectedRes *Resource
 	var aggregatedErr error
 	for _, detector := range detectors {
 		res, err := detector.Detect(ctx)
@@ -38,7 +36,7 @@ func AutoDetect(ctx context.Context, detectors ...ResourceDetector) (*resource.R
 			aggregatedErr = multierr.Append(aggregatedErr, err)
 			continue
 		}
-		autoDetectedRes = resource.Merge(autoDetectedRes, res)
+		autoDetectedRes = Merge(autoDetectedRes, res)
 	}
 	return autoDetectedRes, aggregatedErr
 }

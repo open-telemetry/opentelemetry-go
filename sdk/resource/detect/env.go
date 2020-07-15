@@ -29,7 +29,7 @@ import (
 )
 
 // Environment variable used by "env" to decode a resource.
-const envVar = "OTEL_RESOURCE"
+const envVar = "OTEL_RESOURCE_LABELS"
 
 // FromEnv is a detector that implments the ResourceDetector and collects resources
 // from environment
