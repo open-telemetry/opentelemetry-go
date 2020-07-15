@@ -28,7 +28,7 @@ type ResourceDetector interface {
 }
 
 // AutoDetect calls all input detectors sequentially and merges each result with the previous one.
-// It returns the merged error as well.
+// It returns the merged error too.
 func AutoDetect(ctx context.Context, detectors ...ResourceDetector) (*resource.Resource, error) {
 	var autoDetectedRes *resource.Resource
 	var aggregatedErr error
