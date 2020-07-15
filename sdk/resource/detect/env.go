@@ -55,18 +55,6 @@ func constructOTResources(s string) (*resource.Resource, error) {
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
 
-		if strings.HasPrefix(v, "${") && strings.HasSuffix(v, "}") {
-			ed := strings.SplitN(v[2:len(v)-1], ":", 2)
-			if len(ed) != 2 {
-				return resource.Empty(), fmt.Errorf("%v missing default value for tag environment value", v)
-			}
-			e, d := ed[0], ed[1]
-			v = os.Getenv(e)
-			if v == "" && d != "" {
-				v = d
-			}
-		}
-
 		labels[i] = kv.String(k, v)
 	}
 

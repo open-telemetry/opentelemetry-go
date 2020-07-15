@@ -36,9 +36,9 @@ func TestDetectOnePair(t *testing.T) {
 	assert.Equal(t, resource.New(kv.String("key", "value")), res)
 }
 
-func TestDetectEnvTrue(t *testing.T) {
+func TestDetectMultiPair(t *testing.T) {
 	os.Setenv("x", "1")
-	os.Setenv(envVar, "key=value, k = v , a=${x:y}, a=${z:y}")
+	os.Setenv(envVar, "key=value, k = v , a= x, a=z")
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -46,8 +46,8 @@ func TestDetectEnvTrue(t *testing.T) {
 	assert.Equal(t, res, resource.New(
 		kv.String("key", "value"),
 		kv.String("k", "v"),
-		kv.String("a", "1"),
-		kv.String("a", "y"),
+		kv.String("a", "x"),
+		kv.String("a", "z"),
 	))
 }
 
@@ -67,15 +67,5 @@ func TestMissingKeyError(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("key missing tag value"))
-	assert.Equal(t, resource.Empty(), res)
-}
-
-func TestEnvError(t *testing.T) {
-	os.Setenv(envVar, "key=value, a=${1}")
-
-	detector := &FromEnv{}
-	res, err := detector.Detect(context.Background())
-	assert.Error(t, err)
-	assert.Equal(t, err, fmt.Errorf("${1} missing default value for tag environment value"))
 	assert.Equal(t, resource.Empty(), res)
 }
