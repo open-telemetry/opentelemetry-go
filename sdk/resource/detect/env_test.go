@@ -51,7 +51,7 @@ func TestDetectMultiPair(t *testing.T) {
 	))
 }
 
-func TestEmptyFalse(t *testing.T) {
+func TestEmpty(t *testing.T) {
 	os.Setenv(envVar, "")
 
 	detector := &FromEnv{}
