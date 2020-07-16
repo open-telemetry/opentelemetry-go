@@ -47,10 +47,6 @@ type options struct {
 
 	Config *sdktrace.Config
 
-	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
-	// registered as Global Trace Provider
-	RegisterGlobal bool
-
 	Disabled bool
 }
 
@@ -79,14 +75,6 @@ func WithBatchMaxCount(batchMaxCount int) Option {
 func WithSDK(config *sdktrace.Config) Option {
 	return func(o *options) {
 		o.Config = config
-	}
-}
-
-// RegisterAsGlobal enables the registration of the trace provider of the new pipeline
-// as Global Trace Provider.
-func RegisterAsGlobal() Option {
-	return func(o *options) {
-		o.RegisterGlobal = true
 	}
 }
 
@@ -177,11 +165,32 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 	if exporter.o.Config != nil {
 		tp.ApplyConfig(*exporter.o.Config)
 	}
-	if exporter.o.RegisterGlobal {
-		global.SetTraceProvider(tp)
-	}
 
 	return tp, exporter.Flush, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
+// Typically called as:
+//
+// 	flushFn, err := jaeger.InstallNewPipeline(
+//		jaeger.WithCollectorEndpoint("...")
+//		jaeger.WithSDK(&sdktrace.Config{...})
+// 	)
+//
+// 	if err != nil {
+// 		...
+// 	}
+//
+// 	defer flushFn()
+// 	... Done
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
+	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	global.SetTraceProvider(tp)
+	return flushFn, nil
 }
 
 // Process contains the information exported to jaeger about the source
