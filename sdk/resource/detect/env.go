@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package detect provides a detector that loads resource information from
-// the OTEL_RESOURCE environment variable. A list of labels of the form
-// `<key1>=<value1>,<key2>=<value2>,...` is accepted. Domain names and
-// paths are accepted as label keys.
 package detect
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"net/url"
 	"os"
 	"strings"
 
@@ -30,6 +27,14 @@ import (
 
 // Environment variable used by "env" to decode a resource.
 const envVar = "OTEL_RESOURCE_LABELS"
+
+var (
+	//ErrMissingPairValue happens when a pair does not include value
+	ErrMissingPairValue = errors.New("missing pair value")
+
+	//ErrUnescape happens when '%' is not followed by two hexadecimal digits
+	ErrUnescape = errors.New("invalid resource format in attribute")
+)
 
 // FromEnv is a detector that implments the ResourceDetector and collects resources
 // from environment
@@ -51,9 +56,14 @@ func constructOTResources(s string) (*resource.Resource, error) {
 	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		if len(field) != 2 {
-			return resource.Empty(), fmt.Errorf("%v missing tag value", p)
+			return resource.Empty(), ErrMissingPairValue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
+
+		var err error
+		if v, err = url.QueryUnescape(v); err != nil {
+			return resource.Empty(), ErrUnescape
+		}
 
 		labels[i] = kv.String(k, v)
 	}

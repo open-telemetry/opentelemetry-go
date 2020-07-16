@@ -36,7 +36,16 @@ func TestDetectOnePair(t *testing.T) {
 	assert.Equal(t, resource.New(kv.String("key", "value")), res)
 }
 
-func TestDetectMultiPair(t *testing.T) {
+func TestDetectEscapePair(t *testing.T) {
+	os.Setenv(envVar, ` example.org/test-1 =  test $ %3A \"`)
+
+	detector := &FromEnv{}
+	res, err := detector.Detect(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, resource.New(kv.String("example.org/test-1", `test $ : \"`)), res)
+}
+
+func TestDetectMultiPairs(t *testing.T) {
 	os.Setenv("x", "1")
 	os.Setenv(envVar, "key=value, k = v , a= x, a=z")
 
@@ -66,6 +75,16 @@ func TestMissingKeyError(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
-	assert.Equal(t, err, fmt.Errorf("key missing tag value"))
+	assert.Equal(t, err, fmt.Errorf("missing pair value"))
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestDetectEscapeErr(t *testing.T) {
+	os.Setenv(envVar, ` example.org/test-1 =  test $ %GA \"`)
+
+	detector := &FromEnv{}
+	res, err := detector.Detect(context.Background())
+	assert.Error(t, err)
+	assert.Equal(t, err, fmt.Errorf("invalid resource format in attribute"))
 	assert.Equal(t, resource.Empty(), res)
 }
