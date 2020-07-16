@@ -1,0 +1,23 @@
+name: Proto-go-generator
+on:
+  pull_request:
+    paths:
+    - 'internal/opentelemetry-proto'
+
+jobs:
+  protogen:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+        submodules: true
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.14.0'
+    - run: sudo apt-get -y install pax
+    - run: make -f Makefile.proto protobuf
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      id: commit-changes
+      with:
+        commit_message: Commit changes in updated/new protobuf files

@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Github action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
+
 ## [0.8.0] - 2020-07-09
 
 ### Added
