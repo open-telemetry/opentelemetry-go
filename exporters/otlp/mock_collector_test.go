@@ -26,12 +26,12 @@ import (
 	"google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 
-	colmetricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/metrics/v1"
-	coltracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/trace/v1"
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
-	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
-	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
-	tracepb "github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1"
+	colmetricpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/collector/metrics/v1"
+	coltracepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/collector/trace/v1"
+	commonpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
+	metricpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/metrics/v1"
+	resourcepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/resource/v1"
+	tracepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/trace/v1"
 )
 
 func makeMockCollector(t *testing.T) *mockCol {
