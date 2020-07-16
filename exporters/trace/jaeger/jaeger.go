@@ -78,6 +78,8 @@ func WithSDK(config *sdktrace.Config) Option {
 	}
 }
 
+// WithDisabled option will cause pipeline methods to use
+// a no-op provider
 func WithDisabled(disabled bool) Option {
 	return func(o *options) {
 		o.Disabled = disabled
@@ -169,20 +171,8 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 	return tp, exporter.Flush, nil
 }
 
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-//
-// 	flushFn, err := jaeger.InstallNewPipeline(
-//		jaeger.WithCollectorEndpoint("...")
-//		jaeger.WithSDK(&sdktrace.Config{...})
-// 	)
-//
-// 	if err != nil {
-// 		...
-// 	}
-//
-// 	defer flushFn()
-// 	... Done
+// InstallNewPipeline instantiates a NewExportPipeline with the
+// recommended configuration and registers it globally.
 func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
 	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
 	if err != nil {

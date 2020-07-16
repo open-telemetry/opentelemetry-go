@@ -37,17 +37,26 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestNewExporterPipelineWithRegistration(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
+func TestInstallNewPipeline(t *testing.T) {
+	fn, err := InstallNewPipeline(
 		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		RegisterAsGlobal(),
 	)
 	defer fn()
 	assert.NoError(t, err)
-	assert.Same(t, tp, global.TraceProvider())
+	assert.IsType(t, &sdktrace.Provider{}, global.TraceProvider())
 }
 
-func TestNewExporterPipelineWithoutRegistration(t *testing.T) {
+func TestInstallNewPipeline_WithDisabled(t *testing.T) {
+	fn, err := InstallNewPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithDisabled(true),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, global.TraceProvider())
+}
+
+func TestNewExporterPipeline(t *testing.T) {
 	tp, fn, err := NewExportPipeline(
 		WithCollectorEndpoint("http://localhost:14268/api/traces"),
 	)
@@ -55,8 +64,7 @@ func TestNewExporterPipelineWithoutRegistration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, tp, global.TraceProvider())
 }
-
-func TestNewExporterPipelineWithSDK(t *testing.T) {
+func TestNewExporterPipeline_WithSDK(t *testing.T) {
 	tp, fn, err := NewExportPipeline(
 		WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		WithSDK(&sdktrace.Config{
@@ -84,6 +92,34 @@ func TestNewExporterPipelineWithSDK(t *testing.T) {
 	span2.End()
 }
 
+func TestNewExporterPipeline_WithDisabled(t *testing.T) {
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		WithDisabled(true),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
+}
+
+func TestNewExporterPipeline_WithDisabledFromEnv(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "true",
+	})
+	require.NoError(t, err)
+	envStore.Record(envDisabled)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint("http://localhost:14268/api/traces"),
+	)
+	defer fn()
+	assert.NoError(t, err)
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
+}
+
 func TestNewRawExporter(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
@@ -107,7 +143,7 @@ func TestNewRawExporter(t *testing.T) {
 	assert.Len(t, exp.process.Tags, 1)
 }
 
-func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+func TestNewRawExporter_ShouldFailIfCollectorEndpointEmpty(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -122,6 +158,29 @@ func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
 		WithCollectorEndpoint(""),
 	)
 
+	assert.Error(t, err)
+}
+
+func TestNewRawExporter_WithAgentEndpoint(t *testing.T) {
+	const agentEndpoint = "localhost:6831"
+	// Create Jaeger Exporter
+	_, err := NewRawExporter(
+		WithAgentEndpoint(agentEndpoint),
+	)
+	assert.NoError(t, err)
+}
+
+func TestNewRawExporter_WithAgentShouldFailIfEndpointInvalid(t *testing.T) {
+	//empty
+	_, err := NewRawExporter(
+		WithAgentEndpoint(""),
+	)
+	assert.Error(t, err)
+
+	//invalid endpoint addr
+	_, err = NewRawExporter(
+		WithAgentEndpoint("http://localhost"),
+	)
 	assert.Error(t, err)
 }
 
@@ -176,29 +235,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
 	assert.True(t, len(tc.spansUploaded) == 1)
-}
-
-func TestNewRawExporterWithAgentEndpoint(t *testing.T) {
-	const agentEndpoint = "localhost:6831"
-	// Create Jaeger Exporter
-	_, err := NewRawExporter(
-		WithAgentEndpoint(agentEndpoint),
-	)
-	assert.NoError(t, err)
-}
-
-func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
-	//empty
-	_, err := NewRawExporter(
-		WithAgentEndpoint(""),
-	)
-	assert.Error(t, err)
-
-	//invalid endpoint addr
-	_, err = NewRawExporter(
-		WithAgentEndpoint("http://localhost"),
-	)
-	assert.Error(t, err)
 }
 
 func Test_spanDataToThrift(t *testing.T) {
@@ -315,32 +351,4 @@ func Test_spanDataToThrift(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestNewExporterPipelineWithDisabled(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		WithDisabled(true),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, &apitrace.NoopProvider{}, tp)
-}
-
-func TestNewExporterPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
-	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }

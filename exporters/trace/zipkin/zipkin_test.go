@@ -27,12 +27,96 @@ import (
 	"time"
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+func TestInstallNewPipeline(t *testing.T) {
+	err := InstallNewPipeline(
+		"http://localhost:9411/api/v2/spans",
+	)
+	assert.NoError(t, err)
+	assert.IsType(t, &sdktrace.Provider{}, global.TraceProvider())
+}
+
+func TestNewExportPipeline(t *testing.T) {
+	tp, err := NewExportPipeline(
+		"http://localhost:9411/api/v2/spans",
+	)
+	assert.NoError(t, err)
+	assert.NotEqual(t, tp, global.TraceProvider())
+}
+
+func TestNewExportPipeline_WithSDK(t *testing.T) {
+	tp1, err := NewExportPipeline(
+		"http://localhost:9411/api/v2/spans",
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.AlwaysSample(),
+		}),
+	)
+	assert.NoError(t, err)
+
+	_, span := tp1.Tracer("zipkin test").Start(context.Background(), "always-on")
+	spanCtx := span.SpanContext()
+	assert.True(t, spanCtx.IsSampled())
+	span.End()
+
+	tp2, err := NewExportPipeline(
+		"http://localhost:9411/api/v2/spans",
+		WithSDK(&sdktrace.Config{
+			DefaultSampler: sdktrace.NeverSample(),
+		}),
+	)
+	assert.NoError(t, err)
+
+	_, span2 := tp2.Tracer("zipkin test").Start(context.Background(), "never")
+	span2Ctx := span2.SpanContext()
+	assert.False(t, span2Ctx.IsSampled())
+	span2.End()
+}
+
+func TestNewRawExporter(t *testing.T) {
+	const serviceName = "test-service"
+
+	exp, err := NewRawExporter(
+		"http://localhost:9411/api/v2/spans",
+		WithServiceName(serviceName),
+	)
+
+	assert.NoError(t, err)
+	assert.EqualValues(t, serviceName, exp.serviceName)
+}
+
+func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
+	var (
+		exp *Exporter
+		err error
+	)
+
+	// cannot be empty
+	exp, err = NewRawExporter(
+		"",
+	)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "collector URL cannot be empty")
+	assert.Nil(t, exp)
+
+	// invalid URL
+	exp, err = NewRawExporter(
+		"localhost",
+	)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "invalid collector URL")
+	assert.Nil(t, exp)
+}
 
 type mockZipkinCollector struct {
 	t       *testing.T
@@ -230,9 +314,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	_, err := NewExporter(collector.url, "", WithLogger(logger))
-	require.Error(t, err, "service name must be non-empty string")
-	exporter, err := NewExporter(collector.url, "exporter-test", WithLogger(logger))
+	exporter, err := NewRawExporter(collector.url, WithServiceName("exporter-test"), WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
