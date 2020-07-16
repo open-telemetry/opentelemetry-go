@@ -28,13 +28,12 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
@@ -57,7 +56,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
-			kv.Key(conventions.AttributeServiceName).String("test-service"),
+			kv.Key(standard.ServiceNameKey).String("test-service"),
 		)),
 		sdktrace.WithSyncer(exp),
 	)
