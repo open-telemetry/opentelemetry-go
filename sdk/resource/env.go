@@ -12,61 +12,57 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package detect
+package resource
 
 import (
 	"context"
 	"errors"
-	"net/url"
 	"os"
 	"strings"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Environment variable used by "env" to decode a resource.
+// envVar is the environment variable name OpenTelemetry Resource information can be assigned to.
 const envVar = "OTEL_RESOURCE_LABELS"
 
 var (
-	//ErrMissingPairValue happens when a pair does not include value
-	ErrMissingPairValue = errors.New("missing pair value")
+	//ErrMissingValue is returned when a resource value is missing.
+	ErrMissingValue = errors.New("missing value")
 
 	//ErrUnescape happens when '%' is not followed by two hexadecimal digits
 	ErrUnescape = errors.New("invalid resource format in attribute")
 )
 
-// FromEnv is a detector that implments the ResourceDetector and collects resources
+// FromEnv is a detector that implements the Detector and collects resources
 // from environment
 type FromEnv struct{}
 
-// Detect is a function that collects resources from environment
-func (d *FromEnv) Detect(context.Context) (*resource.Resource, error) {
+// compile time assertion that FromEnv implements Detector interface
+var _ Detector = (*FromEnv)(nil)
+
+// Detect collects resources from environment
+func (d *FromEnv) Detect(context.Context) (*Resource, error) {
 	labels := strings.TrimSpace(os.Getenv(envVar))
 
 	if labels == "" {
-		return resource.Empty(), nil
+		return Empty(), nil
 	}
 	return constructOTResources(labels)
 }
 
-func constructOTResources(s string) (*resource.Resource, error) {
+func constructOTResources(s string) (*Resource, error) {
 	pairs := strings.Split(s, ",")
 	labels := make([]kv.KeyValue, len(pairs))
 	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		if len(field) != 2 {
-			return resource.Empty(), ErrMissingPairValue
+			return Empty(), ErrMissingValue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
-
-		var err error
-		if v, err = url.QueryUnescape(v); err != nil {
-			return resource.Empty(), ErrUnescape
-		}
 
 		labels[i] = kv.String(k, v)
 	}
 
-	return resource.New(labels...), nil
+	return New(labels...), nil
 }

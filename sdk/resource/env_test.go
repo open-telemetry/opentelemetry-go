@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package detect
+package resource
 
 import (
 	"context"
@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestDetectOnePair(t *testing.T) {
@@ -33,16 +32,7 @@ func TestDetectOnePair(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, resource.New(kv.String("key", "value")), res)
-}
-
-func TestDetectEscapePair(t *testing.T) {
-	os.Setenv(envVar, ` example.org/test-1 =  test $ %3A \"`)
-
-	detector := &FromEnv{}
-	res, err := detector.Detect(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, resource.New(kv.String("example.org/test-1", `test $ : \"`)), res)
+	assert.Equal(t, New(kv.String("key", "value")), res)
 }
 
 func TestDetectMultiPairs(t *testing.T) {
@@ -52,7 +42,7 @@ func TestDetectMultiPairs(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, resource.New(
+	assert.Equal(t, res, New(
 		kv.String("key", "value"),
 		kv.String("k", "v"),
 		kv.String("a", "x"),
@@ -66,7 +56,7 @@ func TestEmpty(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+	assert.Equal(t, Empty(), res)
 }
 
 func TestMissingKeyError(t *testing.T) {
@@ -75,16 +65,6 @@ func TestMissingKeyError(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
-	assert.Equal(t, err, fmt.Errorf("missing pair value"))
-	assert.Equal(t, resource.Empty(), res)
-}
-
-func TestDetectEscapeErr(t *testing.T) {
-	os.Setenv(envVar, ` example.org/test-1 =  test $ %GA \"`)
-
-	detector := &FromEnv{}
-	res, err := detector.Detect(context.Background())
-	assert.Error(t, err)
-	assert.Equal(t, err, fmt.Errorf("invalid resource format in attribute"))
-	assert.Equal(t, resource.Empty(), res)
+	assert.Equal(t, err, fmt.Errorf("missing value"))
+	assert.Equal(t, Empty(), res)
 }
