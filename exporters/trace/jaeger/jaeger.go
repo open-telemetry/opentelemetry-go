@@ -324,6 +324,20 @@ func keyValueToTag(keyValue kv.KeyValue) *gen.Tag {
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
+	case value.UINT32:
+		i := int64(keyValue.Value.AsUint32())
+		tag = &gen.Tag{
+			Key:   string(keyValue.Key),
+			VLong: &i,
+			VType: gen.TagType_LONG,
+		}
+	case value.UINT64:
+		i := int64(keyValue.Value.AsUint64())
+		tag = &gen.Tag{
+			Key:   string(keyValue.Key),
+			VLong: &i,
+			VType: gen.TagType_LONG,
+		}
 	case value.FLOAT32:
 		f := float64(keyValue.Value.AsFloat32())
 		tag = &gen.Tag{

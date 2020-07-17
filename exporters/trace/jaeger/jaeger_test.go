@@ -213,6 +213,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	keyValue := "value"
 	statusCodeValue := int64(2)
 	doubleValue := 123.456
+	uintValue := int64(123)
 	boolTrue := true
 	statusMessage := "this is a problem"
 	spanKind := "client"
@@ -245,8 +246,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				Attributes: []kv.KeyValue{
 					kv.String("key", keyValue),
 					kv.Float64("double", doubleValue),
-					// Jaeger doesn't handle Uint tags, this should be ignored.
-					kv.Uint64("ignored", 123),
+					kv.Uint32("uint", 123),
 				},
 				MessageEvents: []export.Event{
 					{Name: eventNameValue, Attributes: []kv.KeyValue{kv.String("k1", keyValue)}, Time: now},
@@ -266,6 +266,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
+					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
