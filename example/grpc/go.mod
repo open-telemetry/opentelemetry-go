@@ -7,6 +7,6 @@ replace go.opentelemetry.io/otel => ../..
 require (
 	github.com/golang/protobuf v1.4.2
 	go.opentelemetry.io/otel v0.8.0
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
 	google.golang.org/grpc v1.30.0
 )
