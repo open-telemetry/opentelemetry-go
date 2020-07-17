@@ -16,7 +16,7 @@ package resource
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,11 +27,8 @@ import (
 const envVar = "OTEL_RESOURCE_LABELS"
 
 var (
-	//ErrMissingValue is returned when a resource value is missing.
-	ErrMissingValue = errors.New("missing value")
-
-	//ErrUnescape happens when '%' is not followed by two hexadecimal digits
-	ErrUnescape = errors.New("invalid resource format in attribute")
+	//errMissingValue is returned when a resource value is missing.
+	errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
 )
 
 // FromEnv is a detector that implements the Detector and collects resources
@@ -46,7 +43,7 @@ func (d *FromEnv) Detect(context.Context) (*Resource, error) {
 	labels := strings.TrimSpace(os.Getenv(envVar))
 
 	if labels == "" {
-		return Empty(), nil
+		return Empty(), ErrMissingResource
 	}
 	return constructOTResources(labels)
 }
@@ -57,7 +54,7 @@ func constructOTResources(s string) (*Resource, error) {
 	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		if len(field) != 2 {
-			return Empty(), ErrMissingValue
+			return Empty(), errMissingValue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
 

@@ -16,7 +16,6 @@ package resource
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -55,7 +54,8 @@ func TestEmpty(t *testing.T) {
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.Equal(t, err, ErrMissingResource)
 	assert.Equal(t, Empty(), res)
 }
 
@@ -65,6 +65,6 @@ func TestMissingKeyError(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
-	assert.Equal(t, err, fmt.Errorf("missing value"))
+	assert.Equal(t, err, errMissingValue)
 	assert.Equal(t, Empty(), res)
 }

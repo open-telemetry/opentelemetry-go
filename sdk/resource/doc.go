@@ -12,9 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resource provides a Detector that loads resource information from
-// the OTEL_RESOURCE_LABELS environment variable. A list of labels of the form
-// `<key1>=<value1>,<key2>=<value2>,...` is accepted. Domain names and
-// paths are accepted as label keys. Besides, it would unescape values. Thus,
-// any % should be followed by two hexadecimal digits.
+// Package resource provides detecting and representing resources.
+//
+// The fundamental struct is a Resource which holds identifying information
+// about the entities for which telemetry is exported.
+//
+// To automatically construct Resources from an environment a Detector
+// interface is defined. Implementations of this interface can be passed to
+// the Detect function to generate a Resource from the merged information.
+//
+// To load a user defined Resource from the environment variable
+// OTEL_RESOURCE_LABELS the FromEnv Detector can be used. It will interpret
+// the value as a list of comma delimited key/value pairs
+// (e.g. `<key1>=<value1>,<key2>=<value2>,...`).
 package resource

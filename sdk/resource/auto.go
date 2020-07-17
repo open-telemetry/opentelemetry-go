@@ -16,18 +16,18 @@ package resource
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 )
 
 var (
 	// ErrMissingResource is returned by a detector when source information
 	// is unavailable for a Resource.
-	ErrMissingResource error
+	ErrMissingResource = errors.New("missing resource")
 	// ErrPartialResource is returned by a detector when complete source
 	// information for a Resource is unavailable or the source information
 	// contains invalid values that are omitted from the returned Resource.
-	ErrPartialResource error
+	ErrPartialResource = errors.New("partial resource")
 )
 
 // Detector detects OpenTelemetry resource information
@@ -52,14 +52,16 @@ func Detect(ctx context.Context, detectors ...Detector) (*Resource, error) {
 		res, err := detector.Detect(ctx)
 		if err != nil {
 			errInfo = append(errInfo, err.Error())
-			continue
+			if !errors.Is(err, ErrPartialResource) {
+				continue
+			}
 		}
 		autoDetectedRes = Merge(autoDetectedRes, res)
 	}
 
 	var aggregatedError error
 	if len(errInfo) > 0 {
-		aggregatedError = fmt.Errorf("detecting resources:\n%s", strings.Join(errInfo, "\n"))
+		aggregatedError = fmt.Errorf("detecting resources: %s", errInfo)
 	}
 	return autoDetectedRes, aggregatedError
 }
