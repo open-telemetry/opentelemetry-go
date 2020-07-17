@@ -16,6 +16,7 @@ package resource
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -65,6 +66,8 @@ func TestMissingKeyError(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
-	assert.Equal(t, err, errMissingValue)
-	assert.Equal(t, Empty(), res)
+	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
+	assert.Equal(t, res, New(
+		kv.String("key", "value"),
+	))
 }

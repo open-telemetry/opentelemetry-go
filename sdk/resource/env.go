@@ -50,16 +50,20 @@ func (d *FromEnv) Detect(context.Context) (*Resource, error) {
 
 func constructOTResources(s string) (*Resource, error) {
 	pairs := strings.Split(s, ",")
-	labels := make([]kv.KeyValue, len(pairs))
-	for i, p := range pairs {
+	labels := []kv.KeyValue{}
+	var invalid []string
+	for _, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		if len(field) != 2 {
-			return Empty(), errMissingValue
+			invalid = append(invalid, p)
+			continue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
-
-		labels[i] = kv.String(k, v)
+		labels = append(labels, kv.String(k, v))
 	}
-
-	return New(labels...), nil
+	var err error
+	if len(invalid) > 0 {
+		err = fmt.Errorf("%w: %v", errMissingValue, invalid)
+	}
+	return New(labels...), err
 }
