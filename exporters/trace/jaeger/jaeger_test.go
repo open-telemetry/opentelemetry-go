@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"math"
 	"os"
 	"sort"
 	"testing"
@@ -246,7 +247,8 @@ func Test_spanDataToThrift(t *testing.T) {
 				Attributes: []kv.KeyValue{
 					kv.String("key", keyValue),
 					kv.Float64("double", doubleValue),
-					kv.Uint32("uint", 123),
+					kv.Uint64("uint", uint64(uintValue)),
+					kv.Uint64("overflows", math.MaxUint64),
 				},
 				MessageEvents: []export.Event{
 					{Name: eventNameValue, Attributes: []kv.KeyValue{kv.String("k1", keyValue)}, Time: now},
