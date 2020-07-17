@@ -124,6 +124,17 @@ func TestKeyValueConstructors(t *testing.T) {
 func TestInfer(t *testing.T) {
 	builder := &strings.Builder{}
 	builder.WriteString("foo")
+	jsonifyStruct := struct {
+		Public    string
+		private   string
+		Tagged    string `json:"tagName"`
+		Empty     string
+		OmitEmpty string `json:",omitempty"`
+		Omit      string `json:"-"`
+	}{"foo", "bar", "baz", "", "", "omitted"}
+	invalidStruct := struct {
+		N complex64
+	}{complex(0, 0)}
 	for _, testcase := range []struct {
 		key       string
 		value     interface{}
@@ -189,6 +200,18 @@ func TestInfer(t *testing.T) {
 			value:     nil,
 			wantType:  value.STRING,
 			wantValue: "<nil>",
+		},
+		{
+			key:       "JSON struct serialized correctly",
+			value:     &jsonifyStruct,
+			wantType:  value.STRING,
+			wantValue: `{"Public":"foo","tagName":"baz","Empty":""}`,
+		},
+		{
+			key:       "Invalid JSON struct falls back to string",
+			value:     &invalidStruct,
+			wantType:  value.STRING,
+			wantValue: "&{(0+0i)}",
 		},
 	} {
 		t.Logf("Running test case %s", testcase.key)

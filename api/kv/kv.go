@@ -15,6 +15,7 @@
 package kv
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -137,6 +138,9 @@ func Infer(k string, value interface{}) KeyValue {
 		return Float64(k, rv.Float())
 	case reflect.String:
 		return String(k, rv.String())
+	}
+	if b, err := json.Marshal(value); value != nil && err == nil {
+		return String(k, string(b))
 	}
 	return String(k, fmt.Sprint(value))
 }
