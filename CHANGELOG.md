@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Define a general Resources Detector Interface and allow resources to be detected from environment variables. (#939)
 - Github action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
 - OTLP .proto files from `open-telemetry/opentelemetry-proto` imported as a git submodule under `internal/opentelemetry-proto`.
    References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#942)
