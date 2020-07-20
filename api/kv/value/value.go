@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/internal"
@@ -139,23 +138,22 @@ func Uint(v uint) Value {
 func Array(array interface{}) Value {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Array, reflect.Slice:
-		isValidType := func() bool {
-			// get array type regardless of dimensions
-			typeName := reflect.TypeOf(array).String()
-			typeName = typeName[strings.LastIndex(typeName, "]")+1:]
-			switch typeName {
-			case "bool", "int", "int32", "int64",
-				"float32", "float64", "string",
-				"uint", "uint32", "uint64":
-				return true
-			}
-			return false
-		}()
-		if isValidType {
+		// get array type regardless of dimensions
+		typ := reflect.TypeOf(array).Elem()
+		kind := typ.Kind()
+		switch kind {
+		case reflect.Bool, reflect.Int, reflect.Int32, reflect.Int64,
+			reflect.Float32, reflect.Float64, reflect.String,
+			reflect.Uint, reflect.Uint32, reflect.Uint64:
+			length := reflect.ValueOf(array).Len()
+			frozen := reflect.Indirect(reflect.New(reflect.ArrayOf(length, typ)))
+			reflect.Copy(frozen, reflect.ValueOf(array))
 			return Value{
 				vtype: ARRAY,
-				array: array,
+				array: frozen.Interface(),
 			}
+		default:
+			return Value{vtype: INVALID}
 		}
 	}
 	return Value{vtype: INVALID}
