@@ -8,16 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.9.0] - 2020-07-20
+
 ### Added
 
-- Define a general Resources Detector Interface and allow resources to be detected from environment variables. (#939)
+- A new Resource Detector interface is included to allow resources to be automatically detected and included. (#939)
+- A Detector to automatically detect resources from an environment variable. (#939)
 - Github action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
 - OTLP .proto files from `open-telemetry/opentelemetry-proto` imported as a git submodule under `internal/opentelemetry-proto`.
    References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#942)
 
 ### Changed
 
-- Non-nil value structs for key-value pairs will be marshalled using JSON rather than Sprintf. (#948)
+- Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
 
 ### Removed
 
@@ -677,7 +680,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.6.0
