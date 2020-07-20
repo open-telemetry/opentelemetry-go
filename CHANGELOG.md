@@ -18,10 +18,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Non-nil value structs for key-value pairs will be marshalled using JSON rather than Sprintf. (#948)
+- Arrays and slices passed to kv.Array() and kv.Infer() will be cloned for safety. (#950)
 
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
+- Nested array/slice support has been removed. (#950)
 
 ## [0.8.0] - 2020-07-09
 
