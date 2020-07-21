@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout
+package stdout_test
 
 import (
 	"bytes"
@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -32,7 +33,7 @@ import (
 func TestExporter_ExportSpan(t *testing.T) {
 	// write to buffer for testing
 	var b bytes.Buffer
-	ex, err := NewExporter(Options{Writer: &b})
+	ex, err := stdout.NewExporter(stdout.WithWriter(&b))
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}

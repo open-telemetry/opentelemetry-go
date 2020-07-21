@@ -27,8 +27,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
@@ -49,11 +49,11 @@ type testFixture struct {
 
 var testResource = resource.New(kv.String("R", "V"))
 
-func newFixture(t *testing.T, config stdout.Config) testFixture {
+func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
 	buf := &bytes.Buffer{}
-	config.Writer = buf
-	config.DoNotPrintTime = true
-	exp, err := stdout.NewRawExporter(config)
+	opts = append(opts, stdout.WithWriter(buf))
+	opts = append(opts, stdout.WithoutTimestamps())
+	exp, err := stdout.NewExporter(opts...)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -77,19 +77,18 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 }
 
 func TestStdoutInvalidQuantile(t *testing.T) {
-	_, err := stdout.NewRawExporter(stdout.Config{
-		Quantiles: []float64{1.1, 0.9},
-	})
+	_, err := stdout.NewExporter(
+		stdout.WithQuantiles([]float64{1.1, 0.9}),
+	)
 	require.Error(t, err, "Invalid quantile error expected")
 	require.Equal(t, aggregation.ErrInvalidQuantile, err)
 }
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.NewRawExporter(stdout.Config{
-		Writer:         &buf,
-		DoNotPrintTime: false,
-	})
+	exporter, err := stdout.NewExporter(
+		stdout.WithWriter(&buf),
+	)
 	if err != nil {
 		t.Fatal("Invalid config: ", err)
 	}
@@ -142,7 +141,7 @@ func TestStdoutTimestamp(t *testing.T) {
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -161,7 +160,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -179,7 +178,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -199,9 +198,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{
-		PrettyPrint: true,
-	})
+	fix := newFixture(t, stdout.WithPrettyPrint())
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -252,7 +249,7 @@ func TestStdoutNoData(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
 			t.Parallel()
 
-			fix := newFixture(t, stdout.Config{})
+			fix := newFixture(t)
 
 			checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -271,7 +268,7 @@ func TestStdoutNoData(t *testing.T) {
 }
 
 func TestStdoutLastValueNotSet(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -322,7 +319,7 @@ func TestStdoutResource(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		fix := newFixture(t, stdout.Config{})
+		fix := newFixture(t)
 
 		checkpointSet := test.NewCheckpointSet(tc.res)
 

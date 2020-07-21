@@ -15,39 +15,49 @@
 package stdout_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 )
 
-func ExampleNewExportPipeline() {
-	// Create a meter
-	pusher, err := stdout.NewExportPipeline(stdout.Config{
-		PrettyPrint:    true,
-		DoNotPrintTime: true,
-	})
+func ExampleExport() {
+	// Default output is STDOUT.
+	buf := &bytes.Buffer{}
+	exportOpts := []stdout.Option{
+		stdout.WithPrettyPrint(),
+		// Used in testing to make output predictable.
+		stdout.WithoutTimestamps(),
+		stdout.WithWriter(buf),
+	}
+	_, pusher, err := stdout.NewExportPipeline(exportOpts, nil)
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}
-	defer pusher.Stop()
 
-	ctx := context.Background()
-
-	key := kv.Key("key")
 	meter := pusher.Provider().Meter(
 		"github.com/instrumentron",
 		metric.WithInstrumentationVersion("v0.1.0"),
 	)
 
-	// Create and update a single counter:
-	counter := metric.Must(meter).NewInt64Counter("a.counter")
-	labels := []kv.KeyValue{key.String("value")}
+	// Create a counter.
+	counter, err := meter.NewInt64Counter("a.counter")
+	if err != nil {
+		log.Fatal("Could not initialize a.counter:", err)
+	}
 
-	counter.Add(ctx, 100, labels...)
+	// Update the counter.
+	ctx := context.Background()
+	counter.Add(ctx, 100, kv.String("key", "value"))
 
+	// Flush everything.
+	pusher.Stop()
+
+	fmt.Println(buf.String())
 	// Output:
 	// {
 	// 	"updates": [
