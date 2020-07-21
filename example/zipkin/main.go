@@ -40,7 +40,7 @@ func initTracer(url string) {
 	// probability.
 	err := zipkin.InstallNewPipeline(
 		url,
-		zipkin.WithServiceName("zipkin-test"),
+		"zipkin-test",
 		zipkin.WithLogger(logger),
 		zipkin.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)

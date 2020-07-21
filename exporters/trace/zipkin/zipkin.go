@@ -30,8 +30,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-const defaultServiceName = "OpenTelemetry"
-
 // Exporter exports SpanData to the zipkin collector. It implements
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.

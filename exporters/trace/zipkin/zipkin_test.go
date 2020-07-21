@@ -37,67 +37,82 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+const (
+	collectorURL = "http://localhost:9411/api/v2/spans"
+	serviceName  = "zipkin-test"
+)
+
 func TestInstallNewPipeline(t *testing.T) {
 	err := InstallNewPipeline(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-test",
+		collectorURL,
+		serviceName,
 	)
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.Provider{}, global.TraceProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {
-	tp, err := NewExportPipeline(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-test",
-	)
-	assert.NoError(t, err)
-	assert.NotEqual(t, tp, global.TraceProvider())
-}
+	testCases := []struct {
+		name                                  string
+		options                               []Option
+		testSpanSampling, spanShouldBeSampled bool
+	}{
+		{
+			name: "simple pipeline",
+		},
+		{
+			name: "always on",
+			options: []Option{
+				WithSDK(&sdktrace.Config{
+					DefaultSampler: sdktrace.AlwaysSample(),
+				}),
+			},
+			testSpanSampling:    true,
+			spanShouldBeSampled: true,
+		},
+		{
+			name: "never",
+			options: []Option{
+				WithSDK(&sdktrace.Config{
+					DefaultSampler: sdktrace.NeverSample(),
+				}),
+			},
+			testSpanSampling:    true,
+			spanShouldBeSampled: false,
+		},
+	}
 
-func TestNewExportPipeline_WithSDK(t *testing.T) {
-	tp1, err := NewExportPipeline(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-test",
-		WithSDK(&sdktrace.Config{
-			DefaultSampler: sdktrace.AlwaysSample(),
-		}),
-	)
-	assert.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tp, err := NewExportPipeline(
+				collectorURL,
+				serviceName,
+				tc.options...,
+			)
+			assert.NoError(t, err)
+			assert.NotEqual(t, tp, global.TraceProvider())
 
-	_, span := tp1.Tracer("zipkin test").Start(context.Background(), "always-on")
-	spanCtx := span.SpanContext()
-	assert.True(t, spanCtx.IsSampled())
-	span.End()
-
-	tp2, err := NewExportPipeline(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-test",
-		WithSDK(&sdktrace.Config{
-			DefaultSampler: sdktrace.NeverSample(),
-		}),
-	)
-	assert.NoError(t, err)
-
-	_, span2 := tp2.Tracer("zipkin test").Start(context.Background(), "never")
-	span2Ctx := span2.SpanContext()
-	assert.False(t, span2Ctx.IsSampled())
-	span2.End()
+			if tc.testSpanSampling {
+				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)
+				spanCtx := span.SpanContext()
+				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
+				span.End()
+			}
+		})
+	}
 }
 
 func TestNewRawExporter(t *testing.T) {
-	const serviceName = "zipkin-test"
-
 	exp, err := NewRawExporter(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-test",
+		collectorURL,
+		serviceName,
 	)
 
 	assert.NoError(t, err)
 	assert.EqualValues(t, serviceName, exp.serviceName)
 }
 
-func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
+func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	var (
 		exp *Exporter
 		err error
@@ -106,7 +121,7 @@ func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
 	// cannot be empty
 	exp, err = NewRawExporter(
 		"",
-		"zipkin-test",
+		serviceName,
 	)
 
 	assert.Error(t, err)
@@ -116,7 +131,7 @@ func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
 	// invalid URL
 	exp, err = NewRawExporter(
 		"localhost",
-		"zipkin-test",
+		serviceName,
 	)
 
 	assert.Error(t, err)
