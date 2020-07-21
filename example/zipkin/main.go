@@ -40,7 +40,7 @@ func initTracer(url string) {
 	// probability.
 	err := zipkin.InstallNewPipeline(
 		url,
-		zipkin.WithServiceName("zipkin-example"),
+		zipkin.WithServiceName("zipkin-test"),
 		zipkin.WithLogger(logger),
 		zipkin.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)
@@ -63,7 +63,9 @@ func main() {
 	bar(ctx)
 	<-time.After(6 * time.Millisecond)
 	span.End()
-	<-time.After(24 * time.Millisecond)
+
+	// Wait for the spans to be exported.
+	<-time.After(5 * time.Second)
 }
 
 func bar(ctx context.Context) {
