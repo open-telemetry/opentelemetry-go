@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Jaeger exporter helpers: added InstallNewPipeline and removed RegisterGlobal option instead. (#944)
+- Zipkin exporter helpers: pipeline methods introduced, new exporter method adjusted. (#944)
+
 ## [0.9.0] - 2020-07-20
 
 ### Added
@@ -21,10 +26,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
-
-### Changed
-
-- Unify trace and metric exporter helpers. (#944)
 
 ### Removed
 
