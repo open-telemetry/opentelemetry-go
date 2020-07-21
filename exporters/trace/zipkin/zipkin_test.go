@@ -40,6 +40,7 @@ import (
 func TestInstallNewPipeline(t *testing.T) {
 	err := InstallNewPipeline(
 		"http://localhost:9411/api/v2/spans",
+		"zipkin-test",
 	)
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.Provider{}, global.TraceProvider())
@@ -48,6 +49,7 @@ func TestInstallNewPipeline(t *testing.T) {
 func TestNewExportPipeline(t *testing.T) {
 	tp, err := NewExportPipeline(
 		"http://localhost:9411/api/v2/spans",
+		"zipkin-test",
 	)
 	assert.NoError(t, err)
 	assert.NotEqual(t, tp, global.TraceProvider())
@@ -56,6 +58,7 @@ func TestNewExportPipeline(t *testing.T) {
 func TestNewExportPipeline_WithSDK(t *testing.T) {
 	tp1, err := NewExportPipeline(
 		"http://localhost:9411/api/v2/spans",
+		"zipkin-test",
 		WithSDK(&sdktrace.Config{
 			DefaultSampler: sdktrace.AlwaysSample(),
 		}),
@@ -69,6 +72,7 @@ func TestNewExportPipeline_WithSDK(t *testing.T) {
 
 	tp2, err := NewExportPipeline(
 		"http://localhost:9411/api/v2/spans",
+		"zipkin-test",
 		WithSDK(&sdktrace.Config{
 			DefaultSampler: sdktrace.NeverSample(),
 		}),
@@ -82,11 +86,11 @@ func TestNewExportPipeline_WithSDK(t *testing.T) {
 }
 
 func TestNewRawExporter(t *testing.T) {
-	const serviceName = "test-service"
+	const serviceName = "zipkin-test"
 
 	exp, err := NewRawExporter(
 		"http://localhost:9411/api/v2/spans",
-		WithServiceName(serviceName),
+		"zipkin-test",
 	)
 
 	assert.NoError(t, err)
@@ -102,6 +106,7 @@ func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
 	// cannot be empty
 	exp, err = NewRawExporter(
 		"",
+		"zipkin-test",
 	)
 
 	assert.Error(t, err)
@@ -111,6 +116,7 @@ func TestNewRawExporter_ShouldFailInvalidCollectorURL(t *testing.T) {
 	// invalid URL
 	exp, err = NewRawExporter(
 		"localhost",
+		"zipkin-test",
 	)
 
 	assert.Error(t, err)
@@ -314,7 +320,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := NewRawExporter(collector.url, WithServiceName("exporter-test"), WithLogger(logger))
+	exporter, err := NewRawExporter(collector.url, "exporter-test", WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)

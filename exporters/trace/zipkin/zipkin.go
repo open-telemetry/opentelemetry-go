@@ -49,21 +49,13 @@ var (
 
 // Options contains configuration for the exporter.
 type options struct {
-	serviceName string
-	client      *http.Client
-	logger      *log.Logger
-	config      *sdktrace.Config
+	client *http.Client
+	logger *log.Logger
+	config *sdktrace.Config
 }
 
 // Option defines a function that configures the exporter.
 type Option func(*options)
-
-// WithServiceName sets the exporter to use the passed service name.
-func WithServiceName(serviceName string) Option {
-	return func(opts *options) {
-		opts.serviceName = serviceName
-	}
-}
 
 // WithLogger configures the exporter to use the passed logger.
 func WithLogger(logger *log.Logger) Option {
@@ -87,7 +79,7 @@ func WithSDK(config *sdktrace.Config) Option {
 }
 
 // NewRawExporter creates a new Zipkin exporter.
-func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
+func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
 		return nil, errors.New("collector URL cannot be empty")
 	}
@@ -103,9 +95,6 @@ func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
 	for _, opt := range opts {
 		opt(&o)
 	}
-	if o.serviceName == "" {
-		o.serviceName = defaultServiceName
-	}
 	if o.client == nil {
 		o.client = http.DefaultClient
 	}
@@ -113,15 +102,15 @@ func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
 		url:         collectorURL,
 		client:      o.client,
 		logger:      o.logger,
-		serviceName: o.serviceName,
+		serviceName: serviceName,
 		o:           o,
 	}, nil
 }
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.Provider, error) {
-	exp, err := NewRawExporter(collectorURL, opts...)
+func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.Provider, error) {
+	exp, err := NewRawExporter(collectorURL, serviceName, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +129,8 @@ func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.Provider,
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(collectorURL string, opts ...Option) error {
-	tp, err := NewExportPipeline(collectorURL, opts...)
+func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error {
+	tp, err := NewExportPipeline(collectorURL, serviceName, opts...)
 	if err != nil {
 		return err
 	}
