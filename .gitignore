@@ -8,6 +8,8 @@ Thumbs.db
 *.so
 coverage.*
 
+gen/
+
 /example/basic/basic
 /example/grpc/client/client
 /example/grpc/server/server

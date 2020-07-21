@@ -15,7 +15,7 @@
 package transform
 
 import (
-	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
+	resourcepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/resource/v1"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )
