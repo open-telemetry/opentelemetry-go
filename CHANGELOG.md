@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Arrays and slices passed to kv.Array() and kv.Infer() will be cloned for safety. (#950)
 
+### Removed
+
+- Nested array/slice support has been removed. (#950)
+
 ## [0.9.0] - 2020-07-20
 
 ### Added
@@ -29,7 +33,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
-- Nested array/slice support has been removed. (#950)
 
 ## [0.8.0] - 2020-07-09
 
