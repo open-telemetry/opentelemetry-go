@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -38,32 +37,6 @@ type Exporter struct {
 }
 
 var _ export.Exporter = &Exporter{}
-
-// Config is the configuration to be used when initializing a stdout export.
-type Config struct {
-	// Writer is the destination.  If not set, os.Stdout is used.
-	Writer io.Writer
-
-	// PrettyPrint will pretty the json representation of the span,
-	// making it print "pretty". Default is false.
-	PrettyPrint bool
-
-	// DoNotPrintTime suppresses timestamp printing.  This is
-	// useful to create deterministic test conditions.
-	DoNotPrintTime bool
-
-	// Quantiles are the desired aggregation quantiles for distribution
-	// summaries, used when the configured aggregator supports
-	// quantiles.
-	//
-	// Note: this exporter is meant as a demonstration; a real
-	// exporter may wish to configure quantiles on a per-metric
-	// basis.
-	Quantiles []float64
-
-	// LabelEncoder encodes the labels
-	LabelEncoder label.Encoder
-}
 
 type expoBatch struct {
 	Timestamp *time.Time `json:"time,omitempty"`
@@ -154,7 +127,7 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.Ex
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
-	if !e.config.DoNotPrintTime {
+	if e.config.Timestamps {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
@@ -227,7 +200,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 			}
 			expose.LastValue = value.AsInterface(kind)
 
-			if !e.config.DoNotPrintTime {
+			if e.config.Timestamps {
 				expose.Timestamp = &timestamp
 			}
 		}
