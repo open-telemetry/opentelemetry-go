@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -34,35 +33,31 @@ type Options struct {
 }
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
-type Exporter struct {
-	pretty       bool
-	outputWriter io.Writer
-}
-
-func NewExporter(o Options) (*Exporter, error) {
-	if o.Writer == nil {
-		o.Writer = os.Stdout
-	}
-	return &Exporter{
-		pretty:       o.PrettyPrint,
-		outputWriter: o.Writer,
-	}, nil
+type traceExporter struct {
+	config Config
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
-func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
+func (e *traceExporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	var jsonSpan []byte
 	var err error
-	if e.pretty {
+	if e.config.PrettyPrint {
 		jsonSpan, err = json.MarshalIndent(data, "", "\t")
 	} else {
 		jsonSpan, err = json.Marshal(data)
 	}
 	if err != nil {
 		// ignore writer failures for now
-		_, _ = e.outputWriter.Write([]byte("Error converting spanData to json: " + err.Error()))
+		_, _ = e.config.Writer.Write([]byte("Error converting spanData to json: " + err.Error()))
 		return
 	}
 	// ignore writer failures for now
-	_, _ = e.outputWriter.Write(append(jsonSpan, byte('\n')))
+	_, _ = e.config.Writer.Write(append(jsonSpan, byte('\n')))
+}
+
+// ExportSpans writes SpanData in json format to stdout.
+func (e *traceExporter) ExportSpans(ctx context.Context, data []*export.SpanData) {
+	for _, sd := range data {
+		e.ExportSpan(ctx, sd)
+	}
 }

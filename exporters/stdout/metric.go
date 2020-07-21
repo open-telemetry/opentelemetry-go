@@ -18,25 +18,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-type Exporter struct {
+type metricExporter struct {
 	config Config
 }
 
-var _ export.Exporter = &Exporter{}
+var _ export.Exporter = &metricExporter{}
 
 type expoBatch struct {
 	Timestamp *time.Time `json:"time,omitempty"`
@@ -62,69 +58,11 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-// NewRawExporter creates a stdout Exporter for use in a pipeline.
-func NewRawExporter(config Config) (*Exporter, error) {
-	if config.Writer == nil {
-		config.Writer = os.Stdout
-	}
-	if config.Quantiles == nil {
-		config.Quantiles = []float64{0.5, 0.9, 0.99}
-	} else {
-		for _, q := range config.Quantiles {
-			if q < 0 || q > 1 {
-				return nil, aggregation.ErrInvalidQuantile
-			}
-		}
-	}
-	if config.LabelEncoder == nil {
-		config.LabelEncoder = label.DefaultEncoder()
-	}
-	return &Exporter{
-		config: config,
-	}, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-//
-// 	pipeline, err := stdout.InstallNewPipeline(stdout.Config{...})
-// 	if err != nil {
-// 		...
-// 	}
-// 	defer pipeline.Stop()
-// 	... Done
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, options...)
-	if err != nil {
-		return controller, err
-	}
-	global.SetMeterProvider(controller.Provider())
-	return controller, err
-}
-
-// NewExportPipeline sets up a complete export pipeline with the
-// recommended setup, chaining a NewRawExporter into the recommended
-// selectors and processors.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
-	exporter, err := NewRawExporter(config)
-	if err != nil {
-		return nil, err
-	}
-	pusher := push.New(
-		simple.NewWithExactDistribution(),
-		exporter,
-		options...,
-	)
-	pusher.Start()
-
-	return pusher, nil
-}
-
-func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+func (e *metricExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	return export.PassThroughExporter
 }
 
-func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *metricExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
 	if e.config.Timestamps {
