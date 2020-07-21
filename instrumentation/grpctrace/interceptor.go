@@ -296,7 +296,7 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 // for use in a grpc.NewServer call.
 //
 // For example:
-//     tracer := global.Tracer("client-tracer")
+//     tracer := global.Tracer("server-tracer")
 //     s := grpc.Dial(
 //         grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(tracer)),
 //         ...,  // (existing ServerOptions))
@@ -339,7 +339,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 	}
 }
 
-// clientStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
+// serverStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
 // SendMsg method call.
 type serverStream struct {
 	grpc.ServerStream
@@ -384,7 +384,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 // for use in a grpc.NewServer call.
 //
 // For example:
-//     tracer := global.Tracer("client-tracer")
+//     tracer := global.Tracer("server-tracer")
 //     s := grpc.Dial(
 //         grpc.StreamInterceptor(grpctrace.StreamServerInterceptor(tracer)),
 //         ...,  // (existing ServerOptions))

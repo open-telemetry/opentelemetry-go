@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resource provides functionality for resource, which capture
-// identifying information about the entities for which signals are exported.
 package resource
 
 import (
@@ -34,7 +32,7 @@ type Resource struct {
 
 var emptyResource Resource
 
-// Key creates a resource from a set of attributes.  If there are
+// New creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
 func New(kvs ...kv.KeyValue) *Resource {
