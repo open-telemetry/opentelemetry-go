@@ -17,20 +17,9 @@ package stdout
 import (
 	"context"
 	"encoding/json"
-	"io"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/export/trace"
 )
-
-// Options are the options to be used when initializing a stdout export.
-type Options struct {
-	// Writer is the destination.  If not set, os.Stdout is used.
-	Writer io.Writer
-
-	// PrettyPrint will pretty the json representation of the span,
-	// making it print "pretty". Default is false.
-	PrettyPrint bool
-}
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type traceExporter struct {
@@ -38,7 +27,7 @@ type traceExporter struct {
 }
 
 // ExportSpan writes a SpanData in json format to stdout.
-func (e *traceExporter) ExportSpan(ctx context.Context, data *export.SpanData) {
+func (e *traceExporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	var jsonSpan []byte
 	var err error
 	if e.config.PrettyPrint {
@@ -56,7 +45,7 @@ func (e *traceExporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 }
 
 // ExportSpans writes SpanData in json format to stdout.
-func (e *traceExporter) ExportSpans(ctx context.Context, data []*export.SpanData) {
+func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) {
 	for _, sd := range data {
 		e.ExportSpan(ctx, sd)
 	}

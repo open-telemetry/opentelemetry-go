@@ -23,8 +23,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
-	"go.opentelemetry.io/otel/api/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	apimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
@@ -32,7 +32,7 @@ type metricExporter struct {
 	config Config
 }
 
-var _ export.Exporter = &metricExporter{}
+var _ metric.Exporter = &metricExporter{}
 
 type expoBatch struct {
 	Timestamp *time.Time `json:"time,omitempty"`
@@ -58,18 +58,18 @@ type expoQuantile struct {
 	V interface{} `json:"v"`
 }
 
-func (e *metricExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.PassThroughExporter
+func (e *metricExporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
+	return metric.PassThroughExporter
 }
 
-func (e *metricExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *metricExporter) Export(_ context.Context, checkpointSet metric.CheckpointSet) error {
 	var aggError error
 	var batch expoBatch
 	if e.config.Timestamps {
 		ts := time.Now()
 		batch.Timestamp = &ts
 	}
-	aggError = checkpointSet.ForEach(e, func(record export.Record) error {
+	aggError = checkpointSet.ForEach(e, func(record metric.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregation()
 		kind := desc.NumberKind()

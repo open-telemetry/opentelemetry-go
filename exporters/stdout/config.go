@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 var (
@@ -55,7 +56,8 @@ type Config struct {
 	LabelEncoder label.Encoder
 }
 
-func Configure(opts ...Option) Config {
+// Configure creates a validated Config configured with options.
+func Configure(options ...Option) (Config, error) {
 	config := Config{
 		Writer:       defaultWriter,
 		PrettyPrint:  defaultPrettyPrint,
@@ -63,11 +65,16 @@ func Configure(opts ...Option) Config {
 		Quantiles:    defaultQuantiles,
 		LabelEncoder: defaultLabelEncoder,
 	}
-	for _, opt := range opts {
+	for _, opt := range options {
 		opt.Apply(&config)
 
 	}
-	return config
+	for _, q := range config.Quantiles {
+		if q < 0 || q > 1 {
+			return config, aggregation.ErrInvalidQuantile
+		}
+	}
+	return config, nil
 }
 
 // Option sets the value of an option for a Config.

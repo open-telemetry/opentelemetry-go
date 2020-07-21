@@ -37,7 +37,10 @@ var (
 
 // NewExporter creates an Exporter with the passed options.
 func NewExporter(options ...Option) (*Exporter, error) {
-	config := Configure(options...)
+	config, err := Configure(options...)
+	if err != nil {
+		return nil, err
+	}
 	return &Exporter{
 		traceExporter:  traceExporter{config},
 		metricExporter: metricExporter{config},
