@@ -31,6 +31,11 @@ const (
 )
 
 var (
+	tracer = global.TraceProvider().Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(instrumentationVersion),
+	)
+
 	meter = global.MeterProvider().Meter(
 		instrumentationName,
 		metric.WithInstrumentationVersion(instrumentationVersion),
@@ -40,11 +45,6 @@ var (
 	paramValue  = metric.Must(meter).NewFloat64ValueRecorder("function.param")
 
 	nameKey = kv.Key("function.name")
-
-	tracer = global.TraceProvider().Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(instrumentationVersion),
-	)
 )
 
 func myFunction(ctx context.Context, values ...float64) error {
@@ -58,12 +58,10 @@ func myFunction(ctx context.Context, values ...float64) error {
 	return nil
 }
 
-func ExampleExport() {
+func Example() {
 	exportOpts := []stdout.Option{
 		stdout.WithQuantiles([]float64{0.5}),
 		stdout.WithPrettyPrint(),
-		// Used in testing to make output predictable.
-		stdout.WithoutTimestamps(),
 	}
 	// Registers both a trace and meter Provider globally.
 	pusher, err := stdout.InstallNewPipeline(exportOpts, nil)
