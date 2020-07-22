@@ -13,5 +13,5 @@
 // limitations under the License.
 
 // Package stdout contains an OpenTelemetry exporter for both tracing and
-// metric teletemtry to be written to an output destination as JSON.
+// metric telemetry to be written to an output destination as JSON.
 package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
