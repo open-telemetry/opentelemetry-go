@@ -15,6 +15,7 @@
 package metric_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -25,24 +26,25 @@ import (
 )
 
 func ExampleNew() {
+	buf := bytes.Buffer{}
 	_, pusher, err := stdout.NewExportPipeline([]stdout.Option{
+		// Defaults to STDOUT.
+		stdout.WithWriter(&buf),
 		stdout.WithPrettyPrint(),
 		stdout.WithoutTimestamps(), // This makes the output deterministic
 	}, nil)
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
-	defer pusher.Stop()
 
-	ctx := context.Background()
+	meter := metric.Must(pusher.Provider().Meter("example"))
+	counter := meter.NewInt64Counter("a.counter")
+	counter.Add(context.Background(), 100, kv.String("key", "value"))
 
-	key := kv.Key("key")
-	meter := pusher.Provider().Meter("example")
+	// Flush everything
+	pusher.Stop()
 
-	counter := metric.Must(meter).NewInt64Counter("a.counter")
-
-	counter.Add(ctx, 100, key.String("value"))
-
+	fmt.Println(buf.String())
 	// Output:
 	// [
 	// 	{
