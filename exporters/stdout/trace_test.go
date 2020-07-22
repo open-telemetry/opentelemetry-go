@@ -72,7 +72,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	expectedSerializedNow, _ := json.Marshal(now)
 
 	got := b.String()
-	expectedOutput := `{"SpanContext":{` +
+	expectedOutput := `[{"SpanContext":{` +
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
 		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":"0000000000000000",` +
@@ -127,7 +127,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"InstrumentationLibrary":{` +
 		`"Name":"",` +
 		`"Version":""` +
-		`}}` + "\n"
+		`}}]` + "\n"
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)

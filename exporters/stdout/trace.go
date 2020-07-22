@@ -17,6 +17,7 @@ package stdout
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -28,25 +29,27 @@ type traceExporter struct {
 
 // ExportSpan writes a SpanData in json format to stdout.
 func (e *traceExporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
-	var jsonSpan []byte
-	var err error
-	if e.config.PrettyPrint {
-		jsonSpan, err = json.MarshalIndent(data, "", "\t")
-	} else {
-		jsonSpan, err = json.Marshal(data)
-	}
-	if err != nil {
-		// ignore writer failures for now
-		_, _ = e.config.Writer.Write([]byte("Error converting spanData to json: " + err.Error()))
-		return
-	}
-	// ignore writer failures for now
-	_, _ = e.config.Writer.Write(append(jsonSpan, byte('\n')))
+	e.ExportSpans(ctx, []*trace.SpanData{data})
 }
 
 // ExportSpans writes SpanData in json format to stdout.
 func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) {
-	for _, sd := range data {
-		e.ExportSpan(ctx, sd)
+	if len(data) == 0 {
+		return
 	}
+	out, err := e.marshal(data)
+	if err != nil {
+		e.config.Writer.Write([]byte("Error converting spanData to json: " + err.Error()))
+		return
+
+	}
+	fmt.Fprintln(e.config.Writer, string(out))
+}
+
+// marshal v with approriate indentation.
+func (e *traceExporter) marshal(v interface{}) ([]byte, error) {
+	if e.config.PrettyPrint {
+		return json.MarshalIndent(v, "", "\t")
+	}
+	return json.Marshal(v)
 }
