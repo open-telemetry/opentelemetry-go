@@ -39,7 +39,7 @@ func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData)
 	}
 	out, err := e.marshal(data)
 	if err != nil {
-		e.config.Writer.Write([]byte("Error converting spanData to json: " + err.Error()))
+		fmt.Fprintf(e.config.Writer, "error converting spanData to json: %v", err)
 		return
 
 	}
