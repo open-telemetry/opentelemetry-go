@@ -23,12 +23,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/exporters/metric/test"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
@@ -49,11 +50,11 @@ type testFixture struct {
 
 var testResource = resource.New(kv.String("R", "V"))
 
-func newFixture(t *testing.T, config stdout.Config) testFixture {
+func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
 	buf := &bytes.Buffer{}
-	config.Writer = buf
-	config.DoNotPrintTime = true
-	exp, err := stdout.NewRawExporter(config)
+	opts = append(opts, stdout.WithWriter(buf))
+	opts = append(opts, stdout.WithoutTimestamps())
+	exp, err := stdout.NewExporter(opts...)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -77,19 +78,18 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 }
 
 func TestStdoutInvalidQuantile(t *testing.T) {
-	_, err := stdout.NewRawExporter(stdout.Config{
-		Quantiles: []float64{1.1, 0.9},
-	})
+	_, err := stdout.NewExporter(
+		stdout.WithQuantiles([]float64{1.1, 0.9}),
+	)
 	require.Error(t, err, "Invalid quantile error expected")
 	require.Equal(t, aggregation.ErrInvalidQuantile, err)
 }
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.NewRawExporter(stdout.Config{
-		Writer:         &buf,
-		DoNotPrintTime: false,
-	})
+	exporter, err := stdout.NewExporter(
+		stdout.WithWriter(&buf),
+	)
 	if err != nil {
 		t.Fatal("Invalid config: ", err)
 	}
@@ -114,35 +114,27 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	after := time.Now()
 
-	var printed map[string]interface{}
-
+	var printed []interface{}
 	if err := json.Unmarshal(buf.Bytes(), &printed); err != nil {
 		t.Fatal("JSON parse error: ", err)
 	}
 
-	updateTS := printed["time"].(string)
-	updateTimestamp, err := time.Parse(time.RFC3339Nano, updateTS)
-	if err != nil {
-		t.Fatal("JSON parse error: ", updateTS, ": ", err)
-	}
-
-	lastValueTS := printed["updates"].([]interface{})[0].(map[string]interface{})["time"].(string)
+	require.Len(t, printed, 1)
+	lastValue, ok := printed[0].(map[string]interface{})
+	require.True(t, ok, "last value format")
+	require.Contains(t, lastValue, "Timestamp")
+	lastValueTS := lastValue["Timestamp"].(string)
 	lastValueTimestamp, err := time.Parse(time.RFC3339Nano, lastValueTS)
 	if err != nil {
 		t.Fatal("JSON parse error: ", lastValueTS, ": ", err)
 	}
 
-	require.True(t, updateTimestamp.After(before))
-	require.True(t, updateTimestamp.Before(after))
-
-	require.True(t, lastValueTimestamp.After(before))
-	require.True(t, lastValueTimestamp.Before(after))
-
-	require.True(t, lastValueTimestamp.Before(updateTimestamp))
+	assert.True(t, lastValueTimestamp.After(before))
+	assert.True(t, lastValueTimestamp.Before(after))
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -157,11 +149,11 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","sum":123}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Sum":123}]`, fix.Output())
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -175,11 +167,11 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","last":123.456}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Last":123.456}]`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -195,13 +187,11 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
-	fix := newFixture(t, stdout.Config{
-		PrettyPrint: true,
-	})
+	fix := newFixture(t, stdout.WithPrettyPrint())
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -218,31 +208,29 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{
-	"updates": [
-		{
-			"name": "test.name{R=V,A=B,C=D}",
-			"min": 0.5,
-			"max": 999.5,
-			"sum": 500000,
-			"count": 1000,
-			"quantiles": [
-				{
-					"q": 0.5,
-					"v": 500.5
-				},
-				{
-					"q": 0.9,
-					"v": 900.5
-				},
-				{
-					"q": 0.99,
-					"v": 990.5
-				}
-			]
-		}
-	]
-}`, fix.Output())
+	require.Equal(t, `[
+	{
+		"Name": "test.name{R=V,A=B,C=D}",
+		"Min": 0.5,
+		"Max": 999.5,
+		"Sum": 500000,
+		"Count": 1000,
+		"Quantiles": [
+			{
+				"Quantile": 0.5,
+				"Value": 500.5
+			},
+			{
+				"Quantile": 0.9,
+				"Value": 900.5
+			},
+			{
+				"Quantile": 0.99,
+				"Value": 990.5
+			}
+		]
+	}
+]`, fix.Output())
 }
 
 func TestStdoutNoData(t *testing.T) {
@@ -252,7 +240,7 @@ func TestStdoutNoData(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
 			t.Parallel()
 
-			fix := newFixture(t, stdout.Config{})
+			fix := newFixture(t)
 
 			checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -262,7 +250,7 @@ func TestStdoutNoData(t *testing.T) {
 
 			fix.Export(checkpointSet)
 
-			require.Equal(t, `{"updates":null}`, fix.Output())
+			require.Equal(t, "", fix.Output())
 		})
 	}
 
@@ -271,7 +259,7 @@ func TestStdoutNoData(t *testing.T) {
 }
 
 func TestStdoutLastValueNotSet(t *testing.T) {
-	fix := newFixture(t, stdout.Config{})
+	fix := newFixture(t)
 
 	checkpointSet := test.NewCheckpointSet(testResource)
 
@@ -284,7 +272,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":null}`, fix.Output())
+	require.Equal(t, "", fix.Output())
 }
 
 func TestStdoutResource(t *testing.T) {
@@ -322,7 +310,7 @@ func TestStdoutResource(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		fix := newFixture(t, stdout.Config{})
+		fix := newFixture(t)
 
 		checkpointSet := test.NewCheckpointSet(tc.res)
 
@@ -336,6 +324,6 @@ func TestStdoutResource(t *testing.T) {
 
 		fix.Export(checkpointSet)
 
-		require.Equal(t, `{"updates":[{"name":"test.name{`+tc.expect+`}","last":123.456}]}`, fix.Output())
+		require.Equal(t, `[{"Name":"test.name{`+tc.expect+`}","Last":123.456}]`, fix.Output())
 	}
 }

@@ -30,7 +30,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporters/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/instrumentation/httptrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -38,7 +38,7 @@ import (
 func initTracer() {
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
+	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}

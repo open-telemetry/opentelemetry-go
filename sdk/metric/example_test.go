@@ -15,41 +15,41 @@
 package metric_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"go.opentelemetry.io/otel/api/kv"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 )
 
 func ExampleNew() {
-	pusher, err := stdout.NewExportPipeline(stdout.Config{
-		PrettyPrint:    true,
-		DoNotPrintTime: true, // This makes the output deterministic
-	})
+	buf := bytes.Buffer{}
+	_, pusher, err := stdout.NewExportPipeline([]stdout.Option{
+		// Defaults to STDOUT.
+		stdout.WithWriter(&buf),
+		stdout.WithPrettyPrint(),
+		stdout.WithoutTimestamps(), // This makes the output deterministic
+	}, nil)
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
-	defer pusher.Stop()
 
-	ctx := context.Background()
+	meter := metric.Must(pusher.Provider().Meter("example"))
+	counter := meter.NewInt64Counter("a.counter")
+	counter.Add(context.Background(), 100, kv.String("key", "value"))
 
-	key := kv.Key("key")
-	meter := pusher.Provider().Meter("example")
+	// Flush everything
+	pusher.Stop()
 
-	counter := metric.Must(meter).NewInt64Counter("a.counter")
-
-	counter.Add(ctx, 100, key.String("value"))
-
+	fmt.Println(buf.String())
 	// Output:
-	// {
-	// 	"updates": [
-	// 		{
-	// 			"name": "a.counter{instrumentation.name=example,key=value}",
-	// 			"sum": 100
-	// 		}
-	// 	]
-	// }
+	// [
+	// 	{
+	// 		"Name": "a.counter{instrumentation.name=example,key=value}",
+	// 		"Sum": 100
+	// 	}
+	// ]
 }
