@@ -58,6 +58,9 @@ func (e *metricExporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) 
 }
 
 func (e *metricExporter) Export(_ context.Context, checkpointSet metric.CheckpointSet) error {
+	if e.config.DisableMetricExport {
+		return nil
+	}
 	var aggError error
 	var batch []line
 	aggError = checkpointSet.ForEach(e, func(record metric.Record) error {

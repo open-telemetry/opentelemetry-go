@@ -23,11 +23,13 @@ import (
 )
 
 var (
-	defaultWriter       = os.Stdout
-	defaultPrettyPrint  = false
-	defaultTimestamps   = true
-	defaultQuantiles    = []float64{0.5, 0.9, 0.99}
-	defaultLabelEncoder = label.DefaultEncoder()
+	defaultWriter              = os.Stdout
+	defaultPrettyPrint         = false
+	defaultTimestamps          = true
+	defaultQuantiles           = []float64{0.5, 0.9, 0.99}
+	defaultLabelEncoder        = label.DefaultEncoder()
+	defaultDisableTraceExport  = false
+	defaultDisableMetricExport = false
 )
 
 // Config contains options for the STDOUT exporter.
@@ -52,18 +54,26 @@ type Config struct {
 	// basis.
 	Quantiles []float64
 
-	// LabelEncoder encodes the labels
+	// LabelEncoder encodes the labels.
 	LabelEncoder label.Encoder
+
+	// DisableTraceExport prevents any export of trace telemetry.
+	DisableTraceExport bool
+
+	// DisableMetricExport prevents any export of metric telemetry.
+	DisableMetricExport bool
 }
 
 // Configure creates a validated Config configured with options.
 func Configure(options ...Option) (Config, error) {
 	config := Config{
-		Writer:       defaultWriter,
-		PrettyPrint:  defaultPrettyPrint,
-		Timestamps:   defaultTimestamps,
-		Quantiles:    defaultQuantiles,
-		LabelEncoder: defaultLabelEncoder,
+		Writer:              defaultWriter,
+		PrettyPrint:         defaultPrettyPrint,
+		Timestamps:          defaultTimestamps,
+		Quantiles:           defaultQuantiles,
+		LabelEncoder:        defaultLabelEncoder,
+		DisableTraceExport:  defaultDisableTraceExport,
+		DisableMetricExport: defaultDisableMetricExport,
 	}
 	for _, opt := range options {
 		opt.Apply(&config)
@@ -140,4 +150,26 @@ type labelEncoderOption struct {
 
 func (o labelEncoderOption) Apply(config *Config) {
 	config.LabelEncoder = o.LabelEncoder
+}
+
+// WithoutTraceExport disables all trace exporting.
+func WithoutTraceExport() Option {
+	return disableTraceExportOption(true)
+}
+
+type disableTraceExportOption bool
+
+func (o disableTraceExportOption) Apply(config *Config) {
+	config.DisableTraceExport = bool(o)
+}
+
+// WithoutMetricExport disables all metric exporting.
+func WithoutMetricExport() Option {
+	return disableMetricExportOption(true)
+}
+
+type disableMetricExportOption bool
+
+func (o disableMetricExportOption) Apply(config *Config) {
+	config.DisableMetricExport = bool(o)
 }

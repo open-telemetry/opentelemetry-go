@@ -29,12 +29,15 @@ type traceExporter struct {
 
 // ExportSpan writes a SpanData in json format to stdout.
 func (e *traceExporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
+	if e.config.DisableTraceExport {
+		return
+	}
 	e.ExportSpans(ctx, []*trace.SpanData{data})
 }
 
 // ExportSpans writes SpanData in json format to stdout.
 func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) {
-	if len(data) == 0 {
+	if e.config.DisableTraceExport || len(data) == 0 {
 		return
 	}
 	out, err := e.marshal(data)
