@@ -33,30 +33,20 @@ var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongf
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
 func initTracer(url string) {
-	// Create Zipkin Exporter
-	exporter, err := zipkin.NewExporter(
-		url,
-		"zipkin-example",
-		zipkin.WithLogger(logger),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	// Create Zipkin Exporter and install it as a global tracer.
+	//
 	// For demoing purposes, always sample. In a production application, you should
-	// configure this to a trace.ProbabilitySampler set at the desired
+	// configure the sampler to a trace.ProbabilitySampler set at the desired
 	// probability.
-	tp, err := sdktrace.NewProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exporter,
-			sdktrace.WithBatchTimeout(5),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
+	err := zipkin.InstallNewPipeline(
+		url,
+		"zipkin-test",
+		zipkin.WithLogger(logger),
+		zipkin.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTraceProvider(tp)
 }
 
 func main() {
@@ -73,7 +63,9 @@ func main() {
 	bar(ctx)
 	<-time.After(6 * time.Millisecond)
 	span.End()
-	<-time.After(24 * time.Millisecond)
+
+	// Wait for the spans to be exported.
+	<-time.After(5 * time.Second)
 }
 
 func bar(ctx context.Context) {
