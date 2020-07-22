@@ -21,14 +21,14 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 )
 
 func ExampleNew() {
-	pusher, err := stdout.NewExportPipeline(stdout.Config{
-		PrettyPrint:    true,
-		DoNotPrintTime: true, // This makes the output deterministic
-	})
+	_, pusher, err := stdout.NewExportPipeline([]stdout.Option{
+		stdout.WithPrettyPrint(),
+		stdout.WithoutTimestamps(), // This makes the output deterministic
+	}, nil)
 	if err != nil {
 		panic(fmt.Sprintln("Could not initialize stdout exporter:", err))
 	}
@@ -44,12 +44,10 @@ func ExampleNew() {
 	counter.Add(ctx, 100, key.String("value"))
 
 	// Output:
-	// {
-	// 	"updates": [
-	// 		{
-	// 			"name": "a.counter{instrumentation.name=example,key=value}",
-	// 			"sum": 100
-	// 		}
-	// 	]
-	// }
+	// [
+	// 	{
+	// 		"Name": "a.counter{instrumentation.name=example,key=value}",
+	// 		"Sum": 100
+	// 	}
+	// ]
 }

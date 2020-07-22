@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
 
@@ -243,10 +243,10 @@ func TestDefaultSDK(t *testing.T) {
 	counter.Add(ctx, 1, labels1...)
 
 	in, out := io.Pipe()
-	pusher, err := stdout.InstallNewPipeline(stdout.Config{
-		Writer:         out,
-		DoNotPrintTime: true,
-	})
+	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
+		stdout.WithWriter(out),
+		stdout.WithoutTimestamps(),
+	}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -262,7 +262,7 @@ func TestDefaultSDK(t *testing.T) {
 	pusher.Stop()
 	out.Close()
 
-	require.Equal(t, `{"updates":[{"name":"test.builtin{instrumentation.name=builtin,A=B}","sum":1}]}
+	require.Equal(t, `[{"Name":"test.builtin{instrumentation.name=builtin,A=B}","Sum":1}]
 `, <-ch)
 }
 
@@ -408,10 +408,10 @@ func TestRecordBatchRealSDK(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	pusher, err := stdout.InstallNewPipeline(stdout.Config{
-		Writer:         &buf,
-		DoNotPrintTime: true,
-	})
+	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
+		stdout.WithWriter(&buf),
+		stdout.WithoutTimestamps(),
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,6 +420,6 @@ func TestRecordBatchRealSDK(t *testing.T) {
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	pusher.Stop()
 
-	require.Equal(t, `{"updates":[{"name":"test.counter{instrumentation.name=builtin}","sum":1}]}
+	require.Equal(t, `[{"Name":"test.counter{instrumentation.name=builtin}","Sum":1}]
 `, buf.String())
 }

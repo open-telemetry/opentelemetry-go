@@ -38,25 +38,17 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporters/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func initTracer() {
-	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
-	if err != nil {
-		log.Fatal(err)
-	}
-	global.SetTraceProvider(tp)
-}
-
 func main() {
-	initTracer()
+    pusher, err := stdout.InstallNewPipeline(nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pusher.Stop()
+
 	tracer := global.Tracer("ex.com/basic")
 
 	tracer.WithSpan(context.Background(), "foo",
