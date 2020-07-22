@@ -47,10 +47,6 @@ type options struct {
 
 	Config *sdktrace.Config
 
-	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
-	// registered as Global Trace Provider
-	RegisterGlobal bool
-
 	Disabled bool
 }
 
@@ -82,14 +78,8 @@ func WithSDK(config *sdktrace.Config) Option {
 	}
 }
 
-// RegisterAsGlobal enables the registration of the trace provider of the new pipeline
-// as Global Trace Provider.
-func RegisterAsGlobal() Option {
-	return func(o *options) {
-		o.RegisterGlobal = true
-	}
-}
-
+// WithDisabled option will cause pipeline methods to use
+// a no-op provider
 func WithDisabled(disabled bool) Option {
 	return func(o *options) {
 		o.Disabled = disabled
@@ -177,11 +167,20 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 	if exporter.o.Config != nil {
 		tp.ApplyConfig(*exporter.o.Config)
 	}
-	if exporter.o.RegisterGlobal {
-		global.SetTraceProvider(tp)
-	}
 
 	return tp, exporter.Flush, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline with the
+// recommended configuration and registers it globally.
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
+	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	global.SetTraceProvider(tp)
+	return flushFn, nil
 }
 
 // Process contains the information exported to jaeger about the source

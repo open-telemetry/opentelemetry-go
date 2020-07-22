@@ -26,10 +26,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/testing"
@@ -38,77 +40,251 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestNewExporterPipelineWithRegistration(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		RegisterAsGlobal(),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.Same(t, tp, global.TraceProvider())
+const (
+	collectorEndpoint = "http://localhost:14268/api/traces"
+	agentEndpoint     = "localhost:6831"
+)
+
+func TestInstallNewPipeline(t *testing.T) {
+	testCases := []struct {
+		name             string
+		endpoint         EndpointOption
+		options          []Option
+		expectedProvider trace.Provider
+	}{
+		{
+			name:             "simple pipeline",
+			endpoint:         WithCollectorEndpoint(collectorEndpoint),
+			expectedProvider: &sdktrace.Provider{},
+		},
+		{
+			name:             "with agent endpoint",
+			endpoint:         WithAgentEndpoint(agentEndpoint),
+			expectedProvider: &sdktrace.Provider{},
+		},
+		{
+			name:     "with disabled",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithDisabled(true),
+			},
+			expectedProvider: &apitrace.NoopProvider{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fn, err := InstallNewPipeline(
+				tc.endpoint,
+				tc.options...,
+			)
+			defer fn()
+
+			assert.NoError(t, err)
+			assert.IsType(t, tc.expectedProvider, global.TraceProvider())
+
+			global.SetTraceProvider(nil)
+		})
+	}
 }
 
-func TestNewExporterPipelineWithoutRegistration(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.NotEqual(t, tp, global.TraceProvider())
+func TestNewExportPipeline(t *testing.T) {
+	testCases := []struct {
+		name                                  string
+		endpoint                              EndpointOption
+		options                               []Option
+		expectedProviderType                  trace.Provider
+		testSpanSampling, spanShouldBeSampled bool
+	}{
+		{
+			name:                 "simple pipeline",
+			endpoint:             WithCollectorEndpoint(collectorEndpoint),
+			expectedProviderType: &sdktrace.Provider{},
+		},
+		{
+			name:     "with disabled",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithDisabled(true),
+			},
+			expectedProviderType: &apitrace.NoopProvider{},
+		},
+		{
+			name:     "always on",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithSDK(&sdktrace.Config{
+					DefaultSampler: sdktrace.AlwaysSample(),
+				}),
+			},
+			expectedProviderType: &sdktrace.Provider{},
+			testSpanSampling:     true,
+			spanShouldBeSampled:  true,
+		},
+		{
+			name:     "never",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithSDK(&sdktrace.Config{
+					DefaultSampler: sdktrace.NeverSample(),
+				}),
+			},
+			expectedProviderType: &sdktrace.Provider{},
+			testSpanSampling:     true,
+			spanShouldBeSampled:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tp, fn, err := NewExportPipeline(
+				tc.endpoint,
+				tc.options...,
+			)
+			defer fn()
+
+			assert.NoError(t, err)
+			assert.NotEqual(t, tp, global.TraceProvider())
+			assert.IsType(t, tc.expectedProviderType, tp)
+
+			if tc.testSpanSampling {
+				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
+				spanCtx := span.SpanContext()
+				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
+				span.End()
+			}
+		})
+	}
 }
 
-func TestNewExporterPipelineWithSDK(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		WithSDK(&sdktrace.Config{
-			DefaultSampler: sdktrace.AlwaysSample(),
-		}),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	_, span := tp.Tracer("jaeger test").Start(context.Background(), "always-on")
-	spanCtx := span.SpanContext()
-	assert.True(t, spanCtx.IsSampled())
-	span.End()
+func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "true",
+	})
+	require.NoError(t, err)
+	envStore.Record(envDisabled)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
 
-	tp2, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		WithSDK(&sdktrace.Config{
-			DefaultSampler: sdktrace.NeverSample(),
-		}),
+	tp, fn, err := NewExportPipeline(
+		WithCollectorEndpoint(collectorEndpoint),
 	)
 	defer fn()
 	assert.NoError(t, err)
-	_, span2 := tp2.Tracer("jaeger test").Start(context.Background(), "never")
-	span2Ctx := span2.SpanContext()
-	assert.False(t, span2Ctx.IsSampled())
-	span2.End()
+	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }
 
 func TestNewRawExporter(t *testing.T) {
-	const (
-		collectorEndpoint = "http://localhost"
-		serviceName       = "test-service"
-		tagKey            = "key"
-		tagVal            = "val"
-	)
-	// Create Jaeger Exporter
-	exp, err := NewRawExporter(
-		WithCollectorEndpoint(collectorEndpoint),
-		WithProcess(Process{
-			ServiceName: serviceName,
-			Tags: []kv.KeyValue{
-				kv.String(tagKey, tagVal),
+	testCases := []struct {
+		name                                                           string
+		endpoint                                                       EndpointOption
+		options                                                        []Option
+		expectedServiceName                                            string
+		expectedTagsLen, expectedBufferMaxCount, expectedBatchMaxCount int
+	}{
+		{
+			name:                   "default exporter",
+			endpoint:               WithCollectorEndpoint(collectorEndpoint),
+			expectedServiceName:    defaultServiceName,
+			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
+			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+		},
+		{
+			name:                   "default exporter with agent endpoint",
+			endpoint:               WithAgentEndpoint(agentEndpoint),
+			expectedServiceName:    defaultServiceName,
+			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
+			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+		},
+		{
+			name:     "with process",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithProcess(
+					Process{
+						ServiceName: "jaeger-test",
+						Tags: []kv.KeyValue{
+							kv.String("key", "val"),
+						},
+					},
+				),
 			},
-		}),
-	)
+			expectedServiceName:    "jaeger-test",
+			expectedTagsLen:        1,
+			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
+			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+		},
+		{
+			name:     "with buffer and batch max count",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithProcess(
+					Process{
+						ServiceName: "jaeger-test",
+					},
+				),
+				WithBufferMaxCount(99),
+				WithBatchMaxCount(99),
+			},
+			expectedServiceName:    "jaeger-test",
+			expectedBufferMaxCount: 99,
+			expectedBatchMaxCount:  99,
+		},
+	}
 
-	assert.NoError(t, err)
-	assert.EqualValues(t, serviceName, exp.process.ServiceName)
-	assert.Len(t, exp.process.Tags, 1)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exp, err := NewRawExporter(
+				tc.endpoint,
+				tc.options...,
+			)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedServiceName, exp.process.ServiceName)
+			assert.Len(t, exp.process.Tags, tc.expectedTagsLen)
+			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
+			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
+		})
+	}
 }
 
-func TestNewRawExporterShouldFailIfCollectorEndpointEmpty(t *testing.T) {
+func TestNewRawExporterShouldFail(t *testing.T) {
+	testCases := []struct {
+		name           string
+		endpoint       EndpointOption
+		expectedErrMsg string
+	}{
+		{
+			name:           "with empty collector endpoint",
+			endpoint:       WithCollectorEndpoint(""),
+			expectedErrMsg: "collectorEndpoint must not be empty",
+		},
+		{
+			name:           "with empty agent endpoint",
+			endpoint:       WithAgentEndpoint(""),
+			expectedErrMsg: "agentEndpoint must not be empty",
+		},
+		{
+			name:           "with invalid agent endpoint",
+			endpoint:       WithAgentEndpoint("localhost"),
+			expectedErrMsg: "address localhost: missing port in address",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewRawExporter(
+				tc.endpoint,
+			)
+
+			assert.Error(t, err)
+			assert.EqualError(t, err, tc.expectedErrMsg)
+		})
+	}
+}
+
+func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -177,29 +353,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
 	assert.True(t, len(tc.spansUploaded) == 1)
-}
-
-func TestNewRawExporterWithAgentEndpoint(t *testing.T) {
-	const agentEndpoint = "localhost:6831"
-	// Create Jaeger Exporter
-	_, err := NewRawExporter(
-		WithAgentEndpoint(agentEndpoint),
-	)
-	assert.NoError(t, err)
-}
-
-func TestNewRawExporterWithAgentShouldFailIfEndpointInvalid(t *testing.T) {
-	//empty
-	_, err := NewRawExporter(
-		WithAgentEndpoint(""),
-	)
-	assert.Error(t, err)
-
-	//invalid endpoint addr
-	_, err = NewRawExporter(
-		WithAgentEndpoint("http://localhost"),
-	)
-	assert.Error(t, err)
 }
 
 func Test_spanDataToThrift(t *testing.T) {
@@ -318,32 +471,4 @@ func Test_spanDataToThrift(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestNewExporterPipelineWithDisabled(t *testing.T) {
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		WithDisabled(true),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, &apitrace.NoopProvider{}, tp)
-}
-
-func TestNewExporterPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
-	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint("http://localhost:14268/api/traces"),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, &apitrace.NoopProvider{}, tp)
 }
