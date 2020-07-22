@@ -34,28 +34,23 @@ type metricExporter struct {
 
 var _ metric.Exporter = &metricExporter{}
 
-type expoBatch struct {
-	Timestamp *time.Time `json:"time,omitempty"`
-	Updates   []expoLine `json:"updates"`
-}
+type line struct {
+	Name      string      `json:"Name"`
+	Min       interface{} `json:"Min,omitempty"`
+	Max       interface{} `json:"Max,omitempty"`
+	Sum       interface{} `json:"Sum,omitempty"`
+	Count     interface{} `json:"Count,omitempty"`
+	LastValue interface{} `json:"Last,omitempty"`
 
-type expoLine struct {
-	Name      string      `json:"name"`
-	Min       interface{} `json:"min,omitempty"`
-	Max       interface{} `json:"max,omitempty"`
-	Sum       interface{} `json:"sum,omitempty"`
-	Count     interface{} `json:"count,omitempty"`
-	LastValue interface{} `json:"last,omitempty"`
-
-	Quantiles interface{} `json:"quantiles,omitempty"`
+	Quantiles []quantile `json:"Quantiles,omitempty"`
 
 	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
-	Timestamp *time.Time `json:"time,omitempty"`
+	Timestamp *time.Time `json:"Timestamp,omitempty"`
 }
 
-type expoQuantile struct {
-	Q interface{} `json:"q"`
-	V interface{} `json:"v"`
+type quantile struct {
+	Quantile interface{} `json:"Quantile"`
+	Value    interface{} `json:"Value"`
 }
 
 func (e *metricExporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
@@ -64,11 +59,7 @@ func (e *metricExporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) 
 
 func (e *metricExporter) Export(_ context.Context, checkpointSet metric.CheckpointSet) error {
 	var aggError error
-	var batch expoBatch
-	if e.config.Timestamps {
-		ts := time.Now()
-		batch.Timestamp = &ts
-	}
+	var batch []line
 	aggError = checkpointSet.ForEach(e, func(record metric.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregation()
@@ -85,7 +76,7 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 		instSet := label.NewSet(instLabels...)
 		encodedInstLabels := instSet.Encoded(e.config.LabelEncoder)
 
-		var expose expoLine
+		var expose line
 
 		if sum, ok := agg.(aggregation.Sum); ok {
 			value, err := sum.Sum()
@@ -115,19 +106,17 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 			expose.Min = min.AsInterface(kind)
 
 			if dist, ok := agg.(aggregation.Distribution); ok && len(e.config.Quantiles) != 0 {
-				summary := make([]expoQuantile, len(e.config.Quantiles))
+				summary := make([]quantile, len(e.config.Quantiles))
 				expose.Quantiles = summary
 
 				for i, q := range e.config.Quantiles {
-					var vstr interface{}
 					value, err := dist.Quantile(q)
 					if err != nil {
 						return err
 					}
-					vstr = value.AsInterface(kind)
-					summary[i] = expoQuantile{
-						Q: q,
-						V: vstr,
+					summary[i] = quantile{
+						Quantile: q,
+						Value:    value.AsInterface(kind),
 					}
 				}
 			}
@@ -169,23 +158,26 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 
 		expose.Name = sb.String()
 
-		batch.Updates = append(batch.Updates, expose)
+		batch = append(batch, expose)
 		return nil
 	})
-
-	var data []byte
-	var err error
-	if e.config.PrettyPrint {
-		data, err = json.MarshalIndent(batch, "", "\t")
-	} else {
-		data, err = json.Marshal(batch)
+	if len(batch) == 0 {
+		return aggError
 	}
 
-	if err == nil {
-		fmt.Fprintln(e.config.Writer, string(data))
-	} else {
+	data, err := e.marshal(batch)
+	if err != nil {
 		return err
 	}
+	fmt.Fprintln(e.config.Writer, string(data))
 
 	return aggError
+}
+
+// marshal v with approriate indentation.
+func (e *metricExporter) marshal(v interface{}) ([]byte, error) {
+	if e.config.PrettyPrint {
+		return json.MarshalIndent(v, "", "\t")
+	}
+	return json.Marshal(v)
 }

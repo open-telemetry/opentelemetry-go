@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -113,31 +114,23 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	after := time.Now()
 
-	var printed map[string]interface{}
-
+	var printed []interface{}
 	if err := json.Unmarshal(buf.Bytes(), &printed); err != nil {
 		t.Fatal("JSON parse error: ", err)
 	}
 
-	updateTS := printed["time"].(string)
-	updateTimestamp, err := time.Parse(time.RFC3339Nano, updateTS)
-	if err != nil {
-		t.Fatal("JSON parse error: ", updateTS, ": ", err)
-	}
-
-	lastValueTS := printed["updates"].([]interface{})[0].(map[string]interface{})["time"].(string)
+	require.Len(t, printed, 1)
+	lastValue, ok := printed[0].(map[string]interface{})
+	require.True(t, ok, "last value format")
+	require.Contains(t, lastValue, "Timestamp")
+	lastValueTS := lastValue["Timestamp"].(string)
 	lastValueTimestamp, err := time.Parse(time.RFC3339Nano, lastValueTS)
 	if err != nil {
 		t.Fatal("JSON parse error: ", lastValueTS, ": ", err)
 	}
 
-	require.True(t, updateTimestamp.After(before))
-	require.True(t, updateTimestamp.Before(after))
-
-	require.True(t, lastValueTimestamp.After(before))
-	require.True(t, lastValueTimestamp.Before(after))
-
-	require.True(t, lastValueTimestamp.Before(updateTimestamp))
+	assert.True(t, lastValueTimestamp.After(before))
+	assert.True(t, lastValueTimestamp.Before(after))
 }
 
 func TestStdoutCounterFormat(t *testing.T) {
@@ -156,7 +149,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","sum":123}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Sum":123}]`, fix.Output())
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
@@ -174,7 +167,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","last":123.456}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Last":123.456}]`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
@@ -194,7 +187,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":[{"name":"test.name{R=V,A=B,C=D}","min":123.456,"max":876.543,"sum":999.999,"count":2}]}`, fix.Output())
+	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
@@ -215,31 +208,29 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{
-	"updates": [
-		{
-			"name": "test.name{R=V,A=B,C=D}",
-			"min": 0.5,
-			"max": 999.5,
-			"sum": 500000,
-			"count": 1000,
-			"quantiles": [
-				{
-					"q": 0.5,
-					"v": 500.5
-				},
-				{
-					"q": 0.9,
-					"v": 900.5
-				},
-				{
-					"q": 0.99,
-					"v": 990.5
-				}
-			]
-		}
-	]
-}`, fix.Output())
+	require.Equal(t, `[
+	{
+		"Name": "test.name{R=V,A=B,C=D}",
+		"Min": 0.5,
+		"Max": 999.5,
+		"Sum": 500000,
+		"Count": 1000,
+		"Quantiles": [
+			{
+				"Quantile": 0.5,
+				"Value": 500.5
+			},
+			{
+				"Quantile": 0.9,
+				"Value": 900.5
+			},
+			{
+				"Quantile": 0.99,
+				"Value": 990.5
+			}
+		]
+	}
+]`, fix.Output())
 }
 
 func TestStdoutNoData(t *testing.T) {
@@ -259,7 +250,7 @@ func TestStdoutNoData(t *testing.T) {
 
 			fix.Export(checkpointSet)
 
-			require.Equal(t, `{"updates":null}`, fix.Output())
+			require.Equal(t, "", fix.Output())
 		})
 	}
 
@@ -281,7 +272,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	fix.Export(checkpointSet)
 
-	require.Equal(t, `{"updates":null}`, fix.Output())
+	require.Equal(t, "", fix.Output())
 }
 
 func TestStdoutResource(t *testing.T) {
@@ -333,6 +324,6 @@ func TestStdoutResource(t *testing.T) {
 
 		fix.Export(checkpointSet)
 
-		require.Equal(t, `{"updates":[{"name":"test.name{`+tc.expect+`}","last":123.456}]}`, fix.Output())
+		require.Equal(t, `[{"Name":"test.name{`+tc.expect+`}","Last":123.456}]`, fix.Output())
 	}
 }
