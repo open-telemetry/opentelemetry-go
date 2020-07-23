@@ -43,7 +43,7 @@ import (
 )
 
 func main() {
-    pusher, err := stdout.InstallNewPipeline(nil, nil)
+	pusher, err := stdout.InstallNewPipeline(nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +67,6 @@ func main() {
 		},
 	)
 }
-
 ```
 
 See the [API
