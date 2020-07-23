@@ -30,7 +30,7 @@ import (
 // initTracer creates a new trace provider instance and registers it as global trace provider.
 func initTracer() func() {
 	// Create and install Jaeger export pipeline
-	_, flush, err := jaeger.NewExportPipeline(
+	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
@@ -39,7 +39,6 @@ func initTracer() func() {
 				kv.Float64("float", 312.23),
 			},
 		}),
-		jaeger.RegisterAsGlobal(),
 		jaeger.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)
 	if err != nil {
