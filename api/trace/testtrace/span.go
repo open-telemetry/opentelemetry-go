@@ -21,8 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -48,7 +46,7 @@ type Span struct {
 	endTime       time.Time
 	statusCode    codes.Code
 	statusMessage string
-	attributes    map[kv.Key]value.Value
+	attributes    map[kv.Key]kv.Value
 	events        []Event
 	links         map[trace.SpanContext][]kv.KeyValue
 }
@@ -122,7 +120,7 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, n
 		return
 	}
 
-	attributes := make(map[kv.Key]value.Value)
+	attributes := make(map[kv.Key]kv.Value)
 
 	for _, attr := range attrs {
 		attributes[attr.Key] = attr.Value
@@ -199,11 +197,11 @@ func (s *Span) ParentSpanID() trace.SpanID {
 // Attributes returns the attributes set on the Span, either at or after creation time.
 // If the same attribute key was set multiple times, the last call will be used.
 // Attributes cannot be changed after End has been called on the Span.
-func (s *Span) Attributes() map[kv.Key]value.Value {
+func (s *Span) Attributes() map[kv.Key]kv.Value {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	attributes := make(map[kv.Key]value.Value)
+	attributes := make(map[kv.Key]kv.Value)
 
 	for k, v := range s.attributes {
 		attributes[k] = v
