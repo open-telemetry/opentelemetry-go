@@ -18,14 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 // KeyValue holds a key and value pair.
 type KeyValue struct {
 	Key   Key
-	Value value.Value
+	Value Value
 }
 
 // Bool creates a new key-value pair with a passed name and a bool

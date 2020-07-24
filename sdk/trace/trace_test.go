@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv/value"
 
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
@@ -617,7 +616,7 @@ func TestSetSpanStatus(t *testing.T) {
 
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
-		cmp.AllowUnexported(value.Value{}),
+		cmp.AllowUnexported(kv.Value{}),
 		cmp.AllowUnexported(export.Event{}))
 }
 
