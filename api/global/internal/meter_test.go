@@ -19,8 +19,6 @@ import (
 	"errors"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -35,7 +33,7 @@ type measured struct {
 	Name                   string
 	InstrumentationName    string
 	InstrumentationVersion string
-	Labels                 map[kv.Key]value.Value
+	Labels                 map[kv.Key]kv.Value
 	Number                 metric.Number
 }
 
@@ -55,8 +53,8 @@ func asStructs(batches []metrictest.Batch) []measured {
 	return r
 }
 
-func asMap(kvs ...kv.KeyValue) map[kv.Key]value.Value {
-	m := map[kv.Key]value.Value{}
+func asMap(kvs ...kv.KeyValue) map[kv.Key]kv.Value {
+	m := map[kv.Key]kv.Value{}
 	for _, kv := range kvs {
 		m[kv.Key] = kv.Value
 	}

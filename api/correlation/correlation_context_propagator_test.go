@@ -20,8 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/correlation"
@@ -105,7 +103,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 			totalDiff := ""
 			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
 				val, _ := gotCorCtx.Value(keyValue.Key)
-				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(value.Value{}))
+				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(kv.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -166,7 +164,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			totalDiff := ""
 			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
 				val, _ := gotCorCtx.Value(keyValue.Key)
-				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(value.Value{}))
+				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(kv.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
