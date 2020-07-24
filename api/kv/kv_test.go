@@ -21,7 +21,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
@@ -35,7 +34,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Bool("k1", true),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Bool(true),
+				Value: kv.BoolValue(true),
 			},
 		},
 		{
@@ -43,7 +42,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Int64("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Int64(123),
+				Value: kv.Int64Value(123),
 			},
 		},
 		{
@@ -51,7 +50,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Uint64("k1", 1),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Uint64(1),
+				Value: kv.Uint64Value(1),
 			},
 		},
 		{
@@ -59,7 +58,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Float64("k1", 123.5),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Float64(123.5),
+				Value: kv.Float64Value(123.5),
 			},
 		},
 		{
@@ -67,7 +66,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Int32("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Int32(123),
+				Value: kv.Int32Value(123),
 			},
 		},
 		{
@@ -75,7 +74,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Uint32("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Uint32(123),
+				Value: kv.Uint32Value(123),
 			},
 		},
 		{
@@ -83,7 +82,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Float32("k1", 123.5),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Float32(123.5),
+				Value: kv.Float32Value(123.5),
 			},
 		},
 		{
@@ -91,7 +90,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.String("k1", "123.5"),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.String("123.5"),
+				Value: kv.StringValue("123.5"),
 			},
 		},
 		{
@@ -99,7 +98,7 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Int("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Int(123),
+				Value: kv.IntValue(123),
 			},
 		},
 		{
@@ -107,14 +106,14 @@ func TestKeyValueConstructors(t *testing.T) {
 			actual: kv.Uint("k1", 123),
 			expected: kv.KeyValue{
 				Key:   "k1",
-				Value: value.Uint(123),
+				Value: kv.UintValue(123),
 			},
 		},
 	}
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(value.Value{})); diff != "" {
+			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(kv.Value{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -138,79 +137,79 @@ func TestInfer(t *testing.T) {
 	for _, testcase := range []struct {
 		key       string
 		value     interface{}
-		wantType  value.Type
+		wantType  kv.Type
 		wantValue interface{}
 	}{
 		{
 			key:       "bool type inferred",
 			value:     true,
-			wantType:  value.BOOL,
+			wantType:  kv.BOOL,
 			wantValue: true,
 		},
 		{
 			key:       "int64 type inferred",
 			value:     int64(42),
-			wantType:  value.INT64,
+			wantType:  kv.INT64,
 			wantValue: int64(42),
 		},
 		{
 			key:       "uint64 type inferred",
 			value:     uint64(42),
-			wantType:  value.UINT64,
+			wantType:  kv.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			key:       "float64 type inferred",
 			value:     float64(42.1),
-			wantType:  value.FLOAT64,
+			wantType:  kv.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			key:       "int32 type inferred",
 			value:     int32(42),
-			wantType:  value.INT32,
+			wantType:  kv.INT32,
 			wantValue: int32(42),
 		},
 		{
 			key:       "uint32 type inferred",
 			value:     uint32(42),
-			wantType:  value.UINT32,
+			wantType:  kv.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			key:       "float32 type inferred",
 			value:     float32(42.1),
-			wantType:  value.FLOAT32,
+			wantType:  kv.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			key:       "string type inferred",
 			value:     "foo",
-			wantType:  value.STRING,
+			wantType:  kv.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "stringer type inferred",
 			value:     builder,
-			wantType:  value.STRING,
+			wantType:  kv.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "unknown value serialized as %v",
 			value:     nil,
-			wantType:  value.STRING,
+			wantType:  kv.STRING,
 			wantValue: "<nil>",
 		},
 		{
 			key:       "JSON struct serialized correctly",
 			value:     &jsonifyStruct,
-			wantType:  value.STRING,
+			wantType:  kv.STRING,
 			wantValue: `{"Public":"foo","tagName":"baz","Empty":""}`,
 		},
 		{
 			key:       "Invalid JSON struct falls back to string",
 			value:     &invalidStruct,
-			wantType:  value.STRING,
+			wantType:  kv.STRING,
 			wantValue: "&{(0+0i)}",
 		},
 	} {
