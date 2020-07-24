@@ -65,11 +65,6 @@ func (i *Iterator) IndexedLabel() (int, kv.KeyValue) {
 	return i.idx, i.Label()
 }
 
-// IndexedAttribute is a synonym for IndexedLabel().
-func (i *Iterator) IndexedAttribute() (int, kv.KeyValue) {
-	return i.IndexedLabel()
-}
-
 // Len returns a number of labels in the iterator's `*Set`.
 func (i *Iterator) Len() int {
 	return i.storage.Len()
