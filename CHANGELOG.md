@@ -32,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
 - Remove `IndexedAttribute` from `go.opentelemetry.io/otel/api/label`.
-    Use `IndexedLabel` which is synonymous instead. (#969)
+    Use `IndexedLabel` which is synonymous instead. (#970)
 
 ## [0.8.0] - 2020-07-09
 
