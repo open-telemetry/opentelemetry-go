@@ -20,8 +20,6 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"go.opentelemetry.io/otel/api/kv"
 )
 
@@ -114,9 +112,9 @@ func (l *Set) Get(idx int) (kv.KeyValue, bool) {
 }
 
 // Value returns the value of a specified key in this set.
-func (l *Set) Value(k kv.Key) (value.Value, bool) {
+func (l *Set) Value(k kv.Key) (kv.Value, bool) {
 	if l == nil {
-		return value.Value{}, false
+		return kv.Value{}, false
 	}
 	rValue := l.equivalent.reflect()
 	vlen := rValue.Len()
@@ -125,13 +123,13 @@ func (l *Set) Value(k kv.Key) (value.Value, bool) {
 		return rValue.Index(idx).Interface().(kv.KeyValue).Key >= k
 	})
 	if idx >= vlen {
-		return value.Value{}, false
+		return kv.Value{}, false
 	}
 	keyValue := rValue.Index(idx).Interface().(kv.KeyValue)
 	if k == keyValue.Key {
 		return keyValue.Value, true
 	}
-	return value.Value{}, false
+	return kv.Value{}, false
 }
 
 // HasValue tests whether a key is defined in this set.

@@ -18,13 +18,11 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
-
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 // Event encapsulates the properties of calls to AddEvent or AddEventWithTimestamp.
 type Event struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes map[kv.Key]value.Value
+	Attributes map[kv.Key]kv.Value
 }

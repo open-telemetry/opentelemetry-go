@@ -16,10 +16,9 @@ package correlation
 
 import (
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
-type rawMap map[kv.Key]value.Value
+type rawMap map[kv.Key]kv.Value
 type keySet map[kv.Key]struct{}
 
 // Map is an immutable storage for correlations.
@@ -147,7 +146,7 @@ func getNewMapSize(m rawMap, delSet, addSet keySet) int {
 
 // Value gets a value from correlations map and returns a boolean
 // value indicating whether the key exist in the map.
-func (m Map) Value(k kv.Key) (value.Value, bool) {
+func (m Map) Value(k kv.Key) (kv.Value, bool) {
 	value, ok := m.m[k]
 	return value, ok
 }

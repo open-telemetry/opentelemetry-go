@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
+- Removed `go.opentelemetry.io/otel/api/kv/value` by flattening all value functionality and structures into the `go.opentelemetry.io/otel/api/kv` package. (#968)
 
 ## [0.8.0] - 2020-07-09
 

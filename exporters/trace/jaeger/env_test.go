@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
@@ -48,7 +47,7 @@ func Test_parseTags(t *testing.T) {
 			expectedTags: []kv.KeyValue{
 				{
 					Key:   "key",
-					Value: value.String("value"),
+					Value: kv.StringValue("value"),
 				},
 			},
 		},
@@ -58,11 +57,11 @@ func Test_parseTags(t *testing.T) {
 			expectedTags: []kv.KeyValue{
 				{
 					Key:   "k",
-					Value: value.Int64(math.MaxInt64),
+					Value: kv.Int64Value(math.MaxInt64),
 				},
 				{
 					Key:   "k2",
-					Value: value.Int64(math.MinInt64),
+					Value: kv.Int64Value(math.MinInt64),
 				},
 			},
 		},
@@ -72,15 +71,15 @@ func Test_parseTags(t *testing.T) {
 			expectedTags: []kv.KeyValue{
 				{
 					Key:   "k",
-					Value: value.Float64(math.MaxFloat64),
+					Value: kv.Float64Value(math.MaxFloat64),
 				},
 				{
 					Key:   "k2",
-					Value: value.Float64(math.SmallestNonzeroFloat64),
+					Value: kv.Float64Value(math.SmallestNonzeroFloat64),
 				},
 				{
 					Key:   "k3",
-					Value: value.Float64(-1.2),
+					Value: kv.Float64Value(-1.2),
 				},
 			},
 		},
@@ -90,27 +89,27 @@ func Test_parseTags(t *testing.T) {
 			expectedTags: []kv.KeyValue{
 				{
 					Key:   "k",
-					Value: value.String("v"),
+					Value: kv.StringValue("v"),
 				},
 				{
 					Key:   "k2",
-					Value: value.Int64(123),
+					Value: kv.Int64Value(123),
 				},
 				{
 					Key:   "k3",
-					Value: value.String("v3"),
+					Value: kv.StringValue("v3"),
 				},
 				{
 					Key:   "k4",
-					Value: value.Float64(-1.2),
+					Value: kv.Float64Value(-1.2),
 				},
 				{
 					Key:   "k5",
-					Value: value.String("not-default"),
+					Value: kv.StringValue("not-default"),
 				},
 				{
 					Key:   "k6",
-					Value: value.String("default"),
+					Value: kv.StringValue("default"),
 				},
 			},
 		},
@@ -145,52 +144,52 @@ func Test_parseValue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		str      string
-		expected value.Value
+		expected kv.Value
 	}{
 		{
 			name:     "bool: true",
 			str:      "true",
-			expected: value.Bool(true),
+			expected: kv.BoolValue(true),
 		},
 		{
 			name:     "bool: false",
 			str:      "false",
-			expected: value.Bool(false),
+			expected: kv.BoolValue(false),
 		},
 		{
 			name:     "int64: 012340",
 			str:      "012340",
-			expected: value.Int64(12340),
+			expected: kv.Int64Value(12340),
 		},
 		{
 			name:     "int64: -012340",
 			str:      "-012340",
-			expected: value.Int64(-12340),
+			expected: kv.Int64Value(-12340),
 		},
 		{
 			name:     "int64: 0",
 			str:      "0",
-			expected: value.Int64(0),
+			expected: kv.Int64Value(0),
 		},
 		{
 			name:     "float64: -0.1",
 			str:      "-0.1",
-			expected: value.Float64(-0.1),
+			expected: kv.Float64Value(-0.1),
 		},
 		{
 			name:     "float64: 00.001",
 			str:      "00.001",
-			expected: value.Float64(0.001),
+			expected: kv.Float64Value(0.001),
 		},
 		{
 			name:     "float64: 1E23",
 			str:      "1E23",
-			expected: value.Float64(1e23),
+			expected: kv.Float64Value(1e23),
 		},
 		{
 			name:     "string: foo",
 			str:      "foo",
-			expected: value.String("foo"),
+			expected: kv.StringValue("foo"),
 		},
 	}
 

@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 // Environment variable names
@@ -147,17 +146,17 @@ func parseKeyValue(k, v string) kv.KeyValue {
 	}
 }
 
-func parseValue(str string) value.Value {
+func parseValue(str string) kv.Value {
 	if v, err := strconv.ParseInt(str, 10, 64); err == nil {
-		return value.Int64(v)
+		return kv.Int64Value(v)
 	}
 	if v, err := strconv.ParseFloat(str, 64); err == nil {
-		return value.Float64(v)
+		return kv.Float64Value(v)
 	}
 	if v, err := strconv.ParseBool(str); err == nil {
-		return value.Bool(v)
+		return kv.BoolValue(v)
 	}
 
 	// Fallback
-	return value.String(str)
+	return kv.StringValue(str)
 }
