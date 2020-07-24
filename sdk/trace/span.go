@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
@@ -105,7 +104,7 @@ func (s *span) SetAttributes(attributes ...kv.KeyValue) {
 
 func (s *span) SetAttribute(k string, v interface{}) {
 	attr := kv.Infer(k, v)
-	if attr.Value.Type() != value.INVALID {
+	if attr.Value.Type() != kv.INVALID {
 		s.SetAttributes(attr)
 	}
 }
@@ -297,7 +296,7 @@ func (s *span) copyToCappedAttributes(attributes ...kv.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		if a.Value.Type() != value.INVALID {
+		if a.Value.Type() != kv.INVALID {
 			s.attributes.add(a)
 		}
 	}
