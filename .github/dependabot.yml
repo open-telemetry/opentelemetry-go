@@ -18,6 +18,10 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/exporters/stdout" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/exporters/metric/prometheus" # Location of package manifests
     schedule:
       interval: "daily"

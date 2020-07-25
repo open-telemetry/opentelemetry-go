@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/instrumentation/othttp"
 )
 
@@ -43,16 +42,6 @@ func ExampleNewHandler() {
 	You sent me this:
 	a painting
 	*/
-
-	// Write spans to stdout
-	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
-		stdout.WithPrettyPrint(),
-		stdout.WithoutTimestamps(), // This makes the output deterministic
-	}, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer pusher.Stop()
 
 	figureOutName := func(ctx context.Context, s string) (string, error) {
 		pp := strings.SplitN(s, "/", 2)
