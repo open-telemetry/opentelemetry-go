@@ -30,9 +30,9 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -92,7 +92,7 @@ func TestStringKeyValues(t *testing.T) {
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
-	mmsc, ckpt := test.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &metric.Descriptor{}))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
@@ -153,7 +153,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	mmsc, ckpt := test.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
 	if !assert.NoError(t, mmsc.Update(ctx, 1, &metric.Descriptor{})) {
 		return
 	}
@@ -174,7 +174,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
 	labels := label.NewSet()
-	mmsc, ckpt := test.Unslice2(minmaxsumcount.New(2, &desc))
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
@@ -275,7 +275,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 func TestSumInt64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
 	labels := label.NewSet()
-	s, ckpt := test.Unslice2(sumAgg.New(2))
+	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
@@ -294,7 +294,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 func TestSumFloat64DataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Float64NumberKind)
 	labels := label.NewSet()
-	s, ckpt := test.Unslice2(sumAgg.New(2))
+	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
