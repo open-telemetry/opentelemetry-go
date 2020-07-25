@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Rename `kv.Infer` to `kv.Any`. (#969)
 - Jaeger exporter helpers: added InstallNewPipeline and removed RegisterGlobal option instead. (#944)
 - Zipkin exporter helpers: pipeline methods introduced, new exporter method adjusted. (#944)
 - The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`. (#956)

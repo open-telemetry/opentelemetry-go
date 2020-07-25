@@ -120,7 +120,7 @@ func TestKeyValueConstructors(t *testing.T) {
 	}
 }
 
-func TestInfer(t *testing.T) {
+func TestAny(t *testing.T) {
 	builder := &strings.Builder{}
 	builder.WriteString("foo")
 	jsonifyStruct := struct {
@@ -214,7 +214,7 @@ func TestInfer(t *testing.T) {
 		},
 	} {
 		t.Logf("Running test case %s", testcase.key)
-		keyValue := kv.Infer(testcase.key, testcase.value)
+		keyValue := kv.Any(testcase.key, testcase.value)
 		if keyValue.Value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", keyValue.Value.Type(), testcase.wantType)
 		}
