@@ -52,12 +52,12 @@ func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
 }
 
-func (fix *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return fix.meter
+func (f *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+	return f.meter
 }
 
-func (fix *benchFixture) meterMust() metric.MeterMust {
-	return metric.Must(fix.meter)
+func (f *benchFixture) meterMust() metric.MeterMust {
+	return metric.Must(f.meter)
 }
 
 func makeManyLabels(n int) [][]kv.KeyValue {
