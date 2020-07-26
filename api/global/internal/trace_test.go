@@ -22,28 +22,23 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/internal/sdk"
 )
 
-type testSpanProcesor struct {
-	// Names of Spans started.
-	spansStarted []string
-	// Names of Spans ended.
-	spansEnded []string
+type SpanRecorder struct {
+	Started []string
+	Ended   []string
 }
 
-func (t *testSpanProcesor) OnStart(s *export.SpanData) {
-	t.spansStarted = append(t.spansStarted, s.Name)
+func (sr *SpanRecorder) OnStart(s *sdk.Span) {
+	sr.Started = append(sr.Started, s.Name)
 }
 
-func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
-	t.spansEnded = append(t.spansEnded, s.Name)
+func (sr *SpanRecorder) OnEnd(s *sdk.Span) {
+	sr.Ended = append(sr.Ended, s.Name)
 }
 
-func (t *testSpanProcesor) Shutdown() {}
-
-func TestTraceDefaultSDK(t *testing.T) {
+func TestTraceWithSDK(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
@@ -56,13 +51,8 @@ func TestTraceDefaultSDK(t *testing.T) {
 		t.Errorf("failed to wrap function with span prior to initialization: %v", err)
 	}
 
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	tsp := &testSpanProcesor{}
-	tp.RegisterSpanProcessor(tsp)
-
+	sr := SpanRecorder{}
+	tp := sdk.NewTraceProvider(sdk.WithSpanRecorder(&sr))
 	global.SetTraceProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
@@ -84,6 +74,6 @@ func TestTraceDefaultSDK(t *testing.T) {
 	}
 
 	expected := []string{"span2", "withSpan2", "span3", "withSpan3"}
-	require.Equal(t, tsp.spansStarted, expected)
-	require.Equal(t, tsp.spansEnded, expected)
+	require.Equal(t, sr.Started, expected)
+	require.Equal(t, sr.Ended, expected)
 }
