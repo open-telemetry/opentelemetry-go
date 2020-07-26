@@ -18,9 +18,10 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
-	"google.golang.org/grpc/codes"
 )
 
 // Event is a Span Event.
@@ -124,7 +125,7 @@ func (s *Span) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) 
 	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-// AddEvent records an event occuring at timestamp.
+// AddEvent records an event occurring at timestamp.
 func (s *Span) AddEventWithTimestamp(_ context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
 	s.Events = append(s.Events, Event{
 		Name:       name,
