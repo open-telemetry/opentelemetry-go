@@ -28,6 +28,8 @@ import (
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
 
+var Must = metric.Must
+
 // Note: Maybe this should be factored into ../../../internal/metric?
 type measured struct {
 	Name                   string
