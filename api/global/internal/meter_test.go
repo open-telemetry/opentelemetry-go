@@ -15,14 +15,9 @@
 package internal_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io"
-	"io/ioutil"
 	"testing"
-
-	"go.opentelemetry.io/otel/api/kv/value"
 
 	"github.com/stretchr/testify/require"
 
@@ -30,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/stdout"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
 )
 
@@ -39,7 +33,7 @@ type measured struct {
 	Name                   string
 	InstrumentationName    string
 	InstrumentationVersion string
-	Labels                 map[kv.Key]value.Value
+	Labels                 map[kv.Key]kv.Value
 	Number                 metric.Number
 }
 
@@ -59,8 +53,8 @@ func asStructs(batches []metrictest.Batch) []measured {
 	return r
 }
 
-func asMap(kvs ...kv.KeyValue) map[kv.Key]value.Value {
-	m := map[kv.Key]value.Value{}
+func asMap(kvs ...kv.KeyValue) map[kv.Key]kv.Value {
+	m := map[kv.Key]kv.Value{}
 	for _, kv := range kvs {
 		m[kv.Key] = kv.Value
 	}
@@ -231,41 +225,6 @@ func TestUnbind(t *testing.T) {
 	boundM.Unbind()
 }
 
-func TestDefaultSDK(t *testing.T) {
-	internal.ResetForTest()
-
-	ctx := context.Background()
-	meter1 := global.Meter("builtin")
-	labels1 := []kv.KeyValue{kv.String("A", "B")}
-
-	counter := Must(meter1).NewInt64Counter("test.builtin")
-	counter.Add(ctx, 1, labels1...)
-	counter.Add(ctx, 1, labels1...)
-
-	in, out := io.Pipe()
-	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
-		stdout.WithWriter(out),
-		stdout.WithoutTimestamps(),
-	}, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	counter.Add(ctx, 1, labels1...)
-
-	ch := make(chan string)
-	go func() {
-		data, _ := ioutil.ReadAll(in)
-		ch <- string(data)
-	}()
-
-	pusher.Stop()
-	out.Close()
-
-	require.Equal(t, `[{"Name":"test.builtin{instrumentation.name=builtin,A=B}","Sum":1}]
-`, <-ch)
-}
-
 func TestUnbindThenRecordOne(t *testing.T) {
 	internal.ResetForTest()
 
@@ -395,31 +354,4 @@ func TestRecordBatchMock(t *testing.T) {
 			},
 		},
 		asStructs(mock.MeasurementBatches))
-}
-
-func TestRecordBatchRealSDK(t *testing.T) {
-	internal.ResetForTest()
-
-	meter := global.MeterProvider().Meter("builtin")
-
-	counter := Must(meter).NewInt64Counter("test.counter")
-
-	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
-
-	var buf bytes.Buffer
-
-	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
-		stdout.WithWriter(&buf),
-		stdout.WithoutTimestamps(),
-	}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	global.SetMeterProvider(pusher.Provider())
-
-	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
-	pusher.Stop()
-
-	require.Equal(t, `[{"Name":"test.counter{instrumentation.name=builtin}","Sum":1}]
-`, buf.String())
 }

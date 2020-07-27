@@ -19,7 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/kv/value"
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 type (
@@ -119,7 +119,7 @@ func (d *defaultLabelEncoder) Encode(iter Iterator) string {
 
 		_, _ = buf.WriteRune('=')
 
-		if keyValue.Value.Type() == value.STRING {
+		if keyValue.Value.Type() == kv.STRING {
 			copyAndEscape(buf, keyValue.Value.AsString())
 		} else {
 			_, _ = buf.WriteString(keyValue.Value.Emit())

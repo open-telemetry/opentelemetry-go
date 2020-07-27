@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package value
+package kv
 
 import (
 	"encoding/json"
@@ -53,40 +53,40 @@ const (
 	ARRAY               // Array value of arbitrary type, use AsArray() to get it.
 )
 
-// Bool creates a BOOL Value.
-func Bool(v bool) Value {
+// BoolValue creates a BOOL Value.
+func BoolValue(v bool) Value {
 	return Value{
 		vtype:   BOOL,
 		numeric: internal.BoolToRaw(v),
 	}
 }
 
-// Int64 creates an INT64 Value.
-func Int64(v int64) Value {
+// Int64Value creates an INT64 Value.
+func Int64Value(v int64) Value {
 	return Value{
 		vtype:   INT64,
 		numeric: internal.Int64ToRaw(v),
 	}
 }
 
-// Uint64 creates a UINT64 Value.
-func Uint64(v uint64) Value {
+// Uint64Value creates a UINT64 Value.
+func Uint64Value(v uint64) Value {
 	return Value{
 		vtype:   UINT64,
 		numeric: internal.Uint64ToRaw(v),
 	}
 }
 
-// Float64 creates a FLOAT64 Value.
-func Float64(v float64) Value {
+// Float64Value creates a FLOAT64 Value.
+func Float64Value(v float64) Value {
 	return Value{
 		vtype:   FLOAT64,
 		numeric: internal.Float64ToRaw(v),
 	}
 }
 
-// Int32 creates an INT32 Value.
-func Int32(v int32) Value {
+// Int32Value creates an INT32 Value.
+func Int32Value(v int32) Value {
 	return Value{
 		vtype:   INT32,
 		numeric: internal.Int32ToRaw(v),
@@ -94,7 +94,7 @@ func Int32(v int32) Value {
 }
 
 // Uint32 creates a UINT32 Value.
-func Uint32(v uint32) Value {
+func Uint32Value(v uint32) Value {
 	return Value{
 		vtype:   UINT32,
 		numeric: internal.Uint32ToRaw(v),
@@ -102,7 +102,7 @@ func Uint32(v uint32) Value {
 }
 
 // Float32 creates a FLOAT32 Value.
-func Float32(v float32) Value {
+func Float32Value(v float32) Value {
 	return Value{
 		vtype:   FLOAT32,
 		numeric: internal.Float32ToRaw(v),
@@ -110,7 +110,7 @@ func Float32(v float32) Value {
 }
 
 // String creates a STRING Value.
-func String(v string) Value {
+func StringValue(v string) Value {
 	return Value{
 		vtype:    STRING,
 		stringly: v,
@@ -119,24 +119,24 @@ func String(v string) Value {
 
 // Int creates either an INT32 or an INT64 Value, depending on whether
 // the int type is 32 or 64 bits wide.
-func Int(v int) Value {
+func IntValue(v int) Value {
 	if unsafe.Sizeof(v) == 4 {
-		return Int32(int32(v))
+		return Int32Value(int32(v))
 	}
-	return Int64(int64(v))
+	return Int64Value(int64(v))
 }
 
 // Uint creates either a UINT32 or a UINT64 Value, depending on
 // whether the uint type is 32 or 64 bits wide.
-func Uint(v uint) Value {
+func UintValue(v uint) Value {
 	if unsafe.Sizeof(v) == 4 {
-		return Uint32(uint32(v))
+		return Uint32Value(uint32(v))
 	}
-	return Uint64(uint64(v))
+	return Uint64Value(uint64(v))
 }
 
 // Array creates an ARRAY value.
-func Array(array interface{}) Value {
+func ArrayValue(array interface{}) Value {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Array, reflect.Slice:
 		isValidType := func() bool {
