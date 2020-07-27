@@ -224,7 +224,7 @@ corresponding `config` is (if at all).
 
 #### Options
 
-All user configurable options for a `conifg` must have a related unexported
+All user configurable options for a `config` must have a related unexported
 implementation of the `Option` interface and an exported configuration
 function that wraps this implementation.
 
