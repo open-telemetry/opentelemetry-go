@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Rename `kv.Infer` to `kv.Any`. (#969)
 - Jaeger exporter helpers: added InstallNewPipeline and removed RegisterGlobal option instead. (#944)
 - Zipkin exporter helpers: pipeline methods introduced, new exporter method adjusted. (#944)
 - The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`. (#956)
@@ -32,6 +33,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
 - Removed `go.opentelemetry.io/otel/api/kv/value` by flattening all value functionality and structures into the `go.opentelemetry.io/otel/api/kv` package. (#968)
+- Remove `IndexedAttribute` from `go.opentelemetry.io/otel/api/label`.
+    Use `IndexedLabel` which is synonymous instead. (#970)
 
 ## [0.8.0] - 2020-07-09
 

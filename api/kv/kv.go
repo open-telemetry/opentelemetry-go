@@ -100,9 +100,9 @@ func Array(k string, v interface{}) KeyValue {
 	return Key(k).Array(v)
 }
 
-// Infer creates a new key-value pair instance with a passed name and
+// Any creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
-func Infer(k string, value interface{}) KeyValue {
+func Any(k string, value interface{}) KeyValue {
 	if value == nil {
 		return String(k, "<nil>")
 	}

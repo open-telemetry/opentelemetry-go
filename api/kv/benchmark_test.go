@@ -79,10 +79,10 @@ func BenchmarkArrayKey(b *testing.B) {
 	}
 }
 
-func BenchmarkArrayKeyInfer(b *testing.B) {
+func BenchmarkArrayKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("array", arrayVal)
+		_ = kv.Any("array", arrayVal)
 	}
 }
 
@@ -93,10 +93,10 @@ func BenchmarkBoolKey(b *testing.B) {
 	}
 }
 
-func BenchmarkBoolKeyInfer(b *testing.B) {
+func BenchmarkBoolKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("bool", boolVal)
+		_ = kv.Any("bool", boolVal)
 	}
 }
 
@@ -107,24 +107,24 @@ func BenchmarkIntKey(b *testing.B) {
 	}
 }
 
-func BenchmarkIntKeyInfer(b *testing.B) {
+func BenchmarkIntKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("int", intVal)
+		_ = kv.Any("int", intVal)
 	}
 }
 
-func BenchmarkInt8KeyInfer(b *testing.B) {
+func BenchmarkInt8KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("int8", int8Val)
+		_ = kv.Any("int8", int8Val)
 	}
 }
 
-func BenchmarkInt16KeyInfer(b *testing.B) {
+func BenchmarkInt16KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("int16", int16Val)
+		_ = kv.Any("int16", int16Val)
 	}
 }
 
@@ -135,10 +135,10 @@ func BenchmarkInt32Key(b *testing.B) {
 	}
 }
 
-func BenchmarkInt32KeyInfer(b *testing.B) {
+func BenchmarkInt32KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("int32", int32Val)
+		_ = kv.Any("int32", int32Val)
 	}
 }
 
@@ -149,10 +149,10 @@ func BenchmarkInt64Key(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64KeyInfer(b *testing.B) {
+func BenchmarkInt64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("int64", int64Val)
+		_ = kv.Any("int64", int64Val)
 	}
 }
 
@@ -163,24 +163,24 @@ func BenchmarkUintKey(b *testing.B) {
 	}
 }
 
-func BenchmarkUintKeyInfer(b *testing.B) {
+func BenchmarkUintKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("uint", uintVal)
+		_ = kv.Any("uint", uintVal)
 	}
 }
 
-func BenchmarkUint8KeyInfer(b *testing.B) {
+func BenchmarkUint8KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("uint8", uint8Val)
+		_ = kv.Any("uint8", uint8Val)
 	}
 }
 
-func BenchmarkUint16KeyInfer(b *testing.B) {
+func BenchmarkUint16KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("uint16", uint16Val)
+		_ = kv.Any("uint16", uint16Val)
 	}
 }
 
@@ -191,10 +191,10 @@ func BenchmarkUint32Key(b *testing.B) {
 	}
 }
 
-func BenchmarkUint32KeyInfer(b *testing.B) {
+func BenchmarkUint32KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("uint32", uint32Val)
+		_ = kv.Any("uint32", uint32Val)
 	}
 }
 
@@ -205,10 +205,10 @@ func BenchmarkUint64Key(b *testing.B) {
 	}
 }
 
-func BenchmarkUint64KeyInfer(b *testing.B) {
+func BenchmarkUint64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("uint64", uint64Val)
+		_ = kv.Any("uint64", uint64Val)
 	}
 }
 
@@ -219,10 +219,10 @@ func BenchmarkFloat32Key(b *testing.B) {
 	}
 }
 
-func BenchmarkFloat32KeyInfer(b *testing.B) {
+func BenchmarkFloat32KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("float32", float32Val)
+		_ = kv.Any("float32", float32Val)
 	}
 }
 
@@ -233,10 +233,10 @@ func BenchmarkFloat64Key(b *testing.B) {
 	}
 }
 
-func BenchmarkFloat64KeyInfer(b *testing.B) {
+func BenchmarkFloat64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("float64", float64Val)
+		_ = kv.Any("float64", float64Val)
 	}
 }
 
@@ -247,25 +247,24 @@ func BenchmarkStringKey(b *testing.B) {
 	}
 }
 
-func BenchmarkStringKeyInfer(b *testing.B) {
+func BenchmarkStringKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("string", stringVal)
+		_ = kv.Any("string", stringVal)
 	}
 }
 
-func BenchmarkBytesKeyInfer(b *testing.B) {
+func BenchmarkBytesKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("bytes", bytesVal)
-		// TODO struct json
+		_ = kv.Any("bytes", bytesVal)
 	}
 }
 
-func BenchmarkStructKeyInfer(b *testing.B) {
+func BenchmarkStructKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = kv.Infer("struct", structVal)
+		_ = kv.Any("struct", structVal)
 	}
 }
 
