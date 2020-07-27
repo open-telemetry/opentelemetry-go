@@ -103,7 +103,7 @@ func (s *span) SetAttributes(attributes ...kv.KeyValue) {
 }
 
 func (s *span) SetAttribute(k string, v interface{}) {
-	attr := kv.Infer(k, v)
+	attr := kv.Any(k, v)
 	if attr.Value.Type() != kv.INVALID {
 		s.SetAttributes(attr)
 	}

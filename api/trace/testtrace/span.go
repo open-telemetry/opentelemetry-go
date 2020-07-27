@@ -178,7 +178,7 @@ func (s *Span) SetAttributes(attrs ...kv.KeyValue) {
 }
 
 func (s *Span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(kv.Infer(k, v))
+	s.SetAttributes(kv.Any(k, v))
 }
 
 // Name returns the name most recently set on the Span, either at or after creation time.

@@ -34,9 +34,9 @@ func getSpan() trace.Span {
 	return sp
 }
 
-func BenchmarkKeyInfer(b *testing.B) {
+func BenchmarkKeyAny(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		kv.Infer("Attr", int(256))
+		kv.Any("Attr", int(256))
 	}
 }
 
@@ -58,7 +58,7 @@ func BenchmarkMultiWithKeyInference(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sp.SetAttributes(kv.Infer("Attr", 1))
+		sp.SetAttributes(kv.Any("Attr", 1))
 	}
 }
 
