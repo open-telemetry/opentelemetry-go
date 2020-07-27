@@ -16,7 +16,9 @@ package testtrace_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,9 +30,15 @@ import (
 )
 
 func TestTracer(t *testing.T) {
-	testharness.NewHarness(t).TestTracer(func() trace.Tracer {
-		return testtrace.NewTracer()
-	})
+	tp := testtrace.NewProvider()
+
+	testharness.NewHarness(t).TestTracer(func() func() trace.Tracer {
+		tp := testtrace.NewProvider()
+		var i uint64
+		return func() trace.Tracer {
+			return tp.Tracer(fmt.Sprintf("tracer %d", atomic.AddUint64(&i, 1)))
+		}
+	}())
 
 	t.Run("#Start", func(t *testing.T) {
 		testTracedSpan(t, func(tracer trace.Tracer, name string) (trace.Span, error) {
@@ -46,7 +54,7 @@ func TestTracer(t *testing.T) {
 
 			expectedStartTime := time.Now().AddDate(5, 0, 0)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithStartTime(expectedStartTime))
 
 			testSpan, ok := span.(*testtrace.Span)
@@ -63,7 +71,7 @@ func TestTracer(t *testing.T) {
 			attr1 := kv.String("a", "1")
 			attr2 := kv.String("b", "2")
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
 
 			testSpan, ok := span.(*testtrace.Span)
@@ -79,7 +87,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			parent, parentSpan := subject.Start(context.Background(), "parent")
 			parentSpanContext := parentSpan.SpanContext()
@@ -100,7 +108,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			parent, parentSpan := subject.Start(context.Background(), "parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
@@ -123,7 +131,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			_, remoteParentSpan := subject.Start(context.Background(), "remote parent")
 			parent := trace.ContextWithRemoteSpanContext(context.Background(), remoteParentSpan.SpanContext())
@@ -145,7 +153,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			_, parentSpan := subject.Start(context.Background(), "not-a-parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
@@ -170,7 +178,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			parentCtx, parentSpan := subject.Start(context.Background(), "not-a-parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
@@ -220,7 +228,7 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
@@ -270,7 +278,7 @@ func TestTracer(t *testing.T) {
 			attr1 := kv.String("a", "1")
 			attr2 := kv.String("b", "2")
 
-			subject := testtrace.NewTracer()
+			subject := tp.Tracer(t.Name())
 			var span trace.Span
 			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
 				span = trace.SpanFromContext(ctx)
@@ -291,12 +299,13 @@ func TestTracer(t *testing.T) {
 }
 
 func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (trace.Span, error)) {
+	tp := testtrace.NewProvider()
 	t.Run("starts a span with the expected name", func(t *testing.T) {
 		t.Parallel()
 
 		e := matchers.NewExpecter(t)
 
-		subject := testtrace.NewTracer()
+		subject := tp.Tracer(t.Name())
 
 		expectedName := "test name"
 		span, err := fn(subject, expectedName)
@@ -314,7 +323,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		subject := testtrace.NewTracer()
+		subject := tp.Tracer(t.Name())
 
 		start := time.Now()
 		span, err := fn(subject, "test")
@@ -329,20 +338,21 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 		e.Expect(testSpan.StartTime()).ToBeTemporally(matchers.BeforeOrSameTime, end)
 	})
 
-	t.Run("appends the span to the list of Spans", func(t *testing.T) {
+	t.Run("calls SpanRecorder.OnStart", func(t *testing.T) {
 		t.Parallel()
 
 		e := matchers.NewExpecter(t)
 
-		subject := testtrace.NewTracer()
+		sr := new(testtrace.StandardSpanRecorder)
+		subject := testtrace.NewProvider(testtrace.WithSpanRecorder(sr)).Tracer(t.Name())
 		subject.Start(context.Background(), "span1")
 
-		e.Expect(len(subject.Spans())).ToEqual(1)
+		e.Expect(len(sr.Started())).ToEqual(1)
 
 		span, err := fn(subject, "span2")
 		e.Expect(err).ToBeNil()
 
-		spans := subject.Spans()
+		spans := sr.Started()
 
 		e.Expect(len(spans)).ToEqual(2)
 		e.Expect(spans[1]).ToEqual(span)
@@ -353,7 +363,8 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		subject := testtrace.NewTracer()
+		sr := new(testtrace.StandardSpanRecorder)
+		subject := testtrace.NewProvider(testtrace.WithSpanRecorder(sr)).Tracer(t.Name())
 
 		numSpans := 2
 
@@ -372,6 +383,6 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		wg.Wait()
 
-		e.Expect(len(subject.Spans())).ToEqual(numSpans)
+		e.Expect(len(sr.Started())).ToEqual(numSpans)
 	})
 }

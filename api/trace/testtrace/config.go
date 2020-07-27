@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdk
+package testtrace
 
 import (
 	"context"
 	"encoding/binary"
+	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/trace"
 )
 
+// defaultSpanContextFunc returns the default SpanContextFunc.
 func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
 	var traceID, spanID uint64 = 1, 1
 	return func(ctx context.Context) trace.SpanContext {
@@ -38,7 +40,7 @@ func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
 	}
 }
 
-type TracingConfig struct {
+type config struct {
 	// SpanContextFunc returns a SpanContext from an parent Context for a
 	// new span.
 	SpanContextFunc func(context.Context) trace.SpanContext
@@ -47,19 +49,30 @@ type TracingConfig struct {
 	SpanRecorder SpanRecorder
 }
 
-type TracingOption interface {
-	Apply(*TracingConfig)
+func configure(opts ...Option) config {
+	conf := config{}
+	for _, opt := range opts {
+		opt.Apply(&conf)
+	}
+	if conf.SpanContextFunc == nil {
+		conf.SpanContextFunc = defaultSpanContextFunc()
+	}
+	return conf
+}
+
+type Option interface {
+	Apply(*config)
 }
 
 type spanContextFuncOption struct {
 	SpanContextFunc func(context.Context) trace.SpanContext
 }
 
-func (o spanContextFuncOption) Apply(c *TracingConfig) {
+func (o spanContextFuncOption) Apply(c *config) {
 	c.SpanContextFunc = o.SpanContextFunc
 }
 
-func WithSpanContextFunc(f func(context.Context) trace.SpanContext) TracingOption {
+func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
 	return spanContextFuncOption{f}
 }
 
@@ -67,11 +80,11 @@ type spanRecorderOption struct {
 	SpanRecorder SpanRecorder
 }
 
-func (o spanRecorderOption) Apply(c *TracingConfig) {
+func (o spanRecorderOption) Apply(c *config) {
 	c.SpanRecorder = o.SpanRecorder
 }
 
-func WithSpanRecorder(sr SpanRecorder) TracingOption {
+func WithSpanRecorder(sr SpanRecorder) Option {
 	return spanRecorderOption{sr}
 }
 
@@ -80,31 +93,42 @@ type SpanRecorder interface {
 	OnEnd(*Span)
 }
 
-type TraceProvider struct {
-	Config TracingConfig
+type StandardSpanRecorder struct {
+	startedMu sync.RWMutex
+	started   []*Span
+
+	doneMu sync.RWMutex
+	done   []*Span
 }
 
-var _ trace.Provider = TraceProvider{}
-
-func NewTraceProvider(opts ...TracingOption) TraceProvider {
-	conf := TracingConfig{}
-	for _, opt := range opts {
-		opt.Apply(&conf)
-	}
-	if conf.SpanContextFunc == nil {
-		conf.SpanContextFunc = defaultSpanContextFunc()
-	}
-	return TraceProvider{Config: conf}
+func (ssr *StandardSpanRecorder) OnStart(span *Span) {
+	ssr.startedMu.Lock()
+	defer ssr.startedMu.Unlock()
+	ssr.started = append(ssr.started, span)
 }
 
-func (p TraceProvider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
-	conf := new(trace.TracerConfig)
-	for _, o := range opts {
-		o(conf)
+func (ssr *StandardSpanRecorder) OnEnd(span *Span) {
+	ssr.doneMu.Lock()
+	defer ssr.doneMu.Unlock()
+	ssr.done = append(ssr.done, span)
+}
+
+func (ssr *StandardSpanRecorder) Started() []*Span {
+	ssr.startedMu.RLock()
+	defer ssr.startedMu.RUnlock()
+	started := make([]*Span, len(ssr.started))
+	for i := range ssr.started {
+		started[i] = ssr.started[i]
 	}
-	return &Tracer{
-		Name:    instName,
-		Version: conf.InstrumentationVersion,
-		Config:  &p.Config,
+	return started
+}
+
+func (ssr *StandardSpanRecorder) Completed() []*Span {
+	ssr.doneMu.RLock()
+	defer ssr.doneMu.RUnlock()
+	done := make([]*Span, len(ssr.done))
+	for i := range ssr.done {
+		done[i] = ssr.done[i]
 	}
+	return done
 }

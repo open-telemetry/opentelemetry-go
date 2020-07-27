@@ -18,25 +18,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/internal/sdk"
+	"go.opentelemetry.io/otel/api/trace/testtrace"
 )
-
-type SpanRecorder struct {
-	Started []string
-	Ended   []string
-}
-
-func (sr *SpanRecorder) OnStart(s *sdk.Span) {
-	sr.Started = append(sr.Started, s.Name)
-}
-
-func (sr *SpanRecorder) OnEnd(s *sdk.Span) {
-	sr.Ended = append(sr.Ended, s.Name)
-}
 
 func TestTraceWithSDK(t *testing.T) {
 	internal.ResetForTest()
@@ -51,8 +38,8 @@ func TestTraceWithSDK(t *testing.T) {
 		t.Errorf("failed to wrap function with span prior to initialization: %v", err)
 	}
 
-	sr := SpanRecorder{}
-	tp := sdk.NewTraceProvider(sdk.WithSpanRecorder(&sr))
+	sr := new(testtrace.StandardSpanRecorder)
+	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
 	global.SetTraceProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
@@ -73,7 +60,14 @@ func TestTraceWithSDK(t *testing.T) {
 		t.Errorf("failed to wrap function with span post initialization with new tracer: %v", err)
 	}
 
+	filterNames := func(spans []*testtrace.Span) []string {
+		names := make([]string, len(spans))
+		for i := range spans {
+			names[i] = spans[i].Name()
+		}
+		return names
+	}
 	expected := []string{"span2", "withSpan2", "span3", "withSpan3"}
-	require.Equal(t, sr.Started, expected)
-	require.Equal(t, sr.Ended, expected)
+	assert.ElementsMatch(t, expected, filterNames(sr.Started()))
+	assert.ElementsMatch(t, expected, filterNames(sr.Completed()))
 }
