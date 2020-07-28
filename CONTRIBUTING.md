@@ -136,8 +136,211 @@ https://github.com/open-telemetry/opentelemetry-specification/issues/165
 
 ## Style Guide
 
-* Make sure to run `make precommit` - this will find and fix the code
-  formatting.
+One of the primary goals of this project is that it is actually used by
+developers. With this goal in mind the project strives to build
+user-friendly and idiomatic Go code adhering to the Go community's best
+practices.
+
+For a non-comprehensive but foundational overview of these best practices
+the [Effective Go](https://golang.org/doc/effective_go.html) documentation
+is an excellent starting place.
+
+As a convenience for developers building this project the `make precommit`
+will format, lint, validate, and in some cases fix the changes you plan to
+submit. This check will need to pass for your changes to be able to be
+merged.
+
+In addition to idiomatic Go, the project has adopted certain standards for
+implementations of common patterns. These standards should be followed as a
+default, and if they are not followed documentation needs to be included as
+to the reasons why.
+
+### Configuration
+
+When creating an instantiation function for a complex `struct` it is useful
+to allow variable number of options to be applied. However, the strong type
+system of Go restricts the function design options. There are a few ways to
+solve this problem, but we have landed on the following design.
+
+#### `config`
+
+Configuration should be held in a `struct` named `config`, or prefixed with
+specific type name this Configuration applies to if there are multiple
+`config` in the package. This `struct` must contain configuration options.
+
+```go
+// config contains configuration options for a thing.
+type config struct {
+    // options ...
+}
+```
+
+In general the `config` `struct` will not need to be used externally to the
+package and should be unexported. If, however, it is expected that the user
+will likely want to build custom options for the configuration, the `config`
+should be exported. Please, include in the documentation for the `config`
+how the user can extend the configuration.
+
+It is important that `config` are not shared across package boundaries.
+Meaning a `config` from one package should not be directly used by another.
+
+Optionally, it is common to include a `configure` function (with the same
+naming scheme). This function wraps any defaults setting and looping over
+all options to create a configured `config`.
+
+```go
+// configure returns an appropriately configured config.
+func configure([]Option) config {
+    // Set default values for config.
+    config := config{/* […] */}
+    for _, option := range options {
+        option.Apply(&config)
+    }
+    // Preform any validation here.
+    return config
+}
+```
+
+If validation of the `config` options is also preformed this can return an
+error as well that is expected to be handled by the instantiation function
+or propagated to the user.
+
+Given the design goal of not having the user need to work with the `config`,
+the `configure` function should also be unexported.
+
+#### `Option`
+
+To set the value of the options a `config` contains, a corresponding
+`Option` interface type should be used.
+
+```go
+type Option interface {
+  Apply(*Config)
+}
+```
+
+The name of the interface should be prefixed in the same way the
+corresponding `config` is (if at all).
+
+#### Options
+
+All user configurable options for a `config` must have a related unexported
+implementation of the `Option` interface and an exported configuration
+function that wraps this implementation.
+
+The wrapping function name should be prefixed with `With*` (or in the
+special case of a boolean options `Without*`) and should have the following
+function signature.
+
+```go
+func With*(…) Option { … }
+```
+
+##### `bool` Options
+
+```go
+type defaultFalseOption bool
+
+func (o defaultFalseOption) Apply(c *Config) {
+    c.Bool = bool(o)
+}
+
+// WithOption sets a T* to have an option included.
+func WithOption() Option {
+    return defaultFalseOption(true)
+}
+```
+
+```go
+type defaultTrueOption bool
+
+func (o defaultTrueOption) Apply(c *Config) {
+    c.Bool = bool(o)
+}
+
+// WithoutOption sets a T* to have Bool option excluded.
+func WithoutOption() Option {
+    return defaultTrueOption(false)
+}
+````
+
+##### Declared Type Options
+
+```go
+type myTypeOption struct {
+    MyType MyType
+}
+
+func (o myTypeOption) Apply(c *Config) {
+    c.MyType = o.MyType
+}
+
+// WithMyType sets T* to have include MyType.
+func WithMyType(t MyType) Option {
+    return myTypeOption{t}
+}
+```
+
+#### Instantiation
+
+Using this configuration pattern to configure instantiation with a `New*`
+function.
+
+```go
+func NewT*(options ...Option) T* {…}
+```
+
+Any required parameters can be declared before the variadic `options`.
+
+#### Dealing with Overlap
+
+Sometimes there are multiple complex `struct` that share common
+configuration and also have distinct configuration. To avoid repeated
+portions of `config`s, a common `config` can be used with the union of
+options being handled with the `Option` interface.
+
+For example.
+
+```go
+// config holds options for all animals.
+type config struct {
+	Weight      float64
+	Color       string
+	MaxAltitude float64
+}
+
+// DogOption apply Dog specific options.
+type DogOption interface {
+	ApplyDog(*config)
+}
+
+// BirdOption apply Bird specific options.
+type BirdOption interface {
+	ApplyBird(*config)
+}
+
+// Option apply options for all animals.
+type Option interface {
+	BirdOption
+	DogOption
+}
+
+type weightOption float64
+func (o weightOption) ApplyDog(c *config)  { c.Weight = float64(o) }
+func (o weightOption) ApplyBird(c *config) { c.Weight = float64(o) }
+func WithWeight(w float64) Option          { return weightOption(w) }
+
+type furColorOption string
+func (o furColorOption) ApplyDog(c *config) { c.Color = string(o) }
+func WithFurColor(c string) DogOption       { return furColorOption(c) }
+
+type maxAltitudeOption float64
+func (o maxAltitudeOption) ApplyBird(c *config) { c.MaxAltitude = float64(o) }
+func WithMaxAltitude(a float64) BirdOption      { return maxAltitudeOption(a) }
+
+func NewDog(name string, o ...DogOption) Dog    {…}
+func NewBird(name string, o ...BirdOption) Bird {…}
+```
 
 ## Approvers and Maintainers
 
