@@ -24,23 +24,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/instrumentation/httptrace"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestRoundtrip(t *testing.T) {
-	exp := &testExporter{
-		spanMap: make(map[string][]*export.SpanData),
-	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
-
-	tr := tp.Tracer("httptrace/client")
+	tr := testtrace.NewProvider().Tracer("httptrace/client")
 
 	var expectedAttrs map[kv.Key]string
 	expectedCorrs := map[kv.Key]string{kv.Key("foo"): "bar"}
@@ -121,13 +113,7 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	exp := &testExporter{
-		spanMap: make(map[string][]*export.SpanData),
-	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
-
-	tr := tp.Tracer("httptrace/client")
+	tr := testtrace.NewProvider().Tracer("httptrace/client")
 
 	expectedCorrs := map[kv.Key]string{kv.Key("foo"): "bar"}
 
