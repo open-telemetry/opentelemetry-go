@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/metric/prometheus
 
-go 1.13
+go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../../..

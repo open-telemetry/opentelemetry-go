@@ -1,6 +1,6 @@
 module go.opentelemetry.go/otel/example/zipkin
 
-go 1.13
+go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..

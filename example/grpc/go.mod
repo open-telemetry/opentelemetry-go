@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/grpc
 
-go 1.13
+go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..
