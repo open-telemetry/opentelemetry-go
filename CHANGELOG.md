@@ -39,6 +39,7 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
   - `value.Uint` was replaced with `kv.UintValue`.
   - `value.Array` was replaced with `kv.ArrayValue`.
 - Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+- Change `othttp` to use the `httpsnoop` package to wrap the `ResponseWriter` so that optional interfaces (`http.Hijacker`, `http.Flusher`, etc.) that are implemented by the original `ResponseWriter`are also implemented by the wrapped `ResponseWriter`. (#979)
 - Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
 - Make the SDK into its own Go module called `go.opentelemetry.io/otel/sdk`. (#985)
 - Changed the default trace `Sampler` from `AlwaysOn` to `ParentOrElse(AlwaysOn)`. (#989)
@@ -147,7 +148,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Added
 
-- The othttp instrumentation now includes default metrics. (#861) 
+- The othttp instrumentation now includes default metrics. (#861)
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
 - Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
