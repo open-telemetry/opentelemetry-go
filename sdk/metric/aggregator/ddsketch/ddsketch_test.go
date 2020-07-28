@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
 const count = 1000
@@ -65,19 +65,19 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	require.Equal(t, kind.Zero(), min)
 }
 
-func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 	agg, ckpt := new2(descriptor)
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(t, agg, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 
 		y := profile.Random(-1)
 		all.Append(y)
-		test.CheckedUpdate(t, agg, y, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, y, descriptor)
 	}
 
 	err := agg.SynchronizedMove(ckpt, descriptor)
@@ -119,40 +119,40 @@ func (ut *updateTest) run(t *testing.T, profile test.Profile) {
 
 func TestDDSketchUpdate(t *testing.T) {
 	ut := updateTest{}
-	test.RunProfiles(t, ut.run)
+	aggregatortest.RunProfiles(t, ut.run)
 }
 
 type mergeTest struct {
 	absolute bool
 }
 
-func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(t, agg1, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg1, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(t, agg1, y, descriptor)
+			aggregatortest.CheckedUpdate(t, agg1, y, descriptor)
 		}
 	}
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(t, agg2, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg2, x, descriptor)
 
 		if !mt.absolute {
 			y := profile.Random(-1)
 			all.Append(y)
-			test.CheckedUpdate(t, agg2, y, descriptor)
+			aggregatortest.CheckedUpdate(t, agg2, y, descriptor)
 		}
 	}
 
@@ -162,7 +162,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg1, descriptor)
 
-	test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
+	aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 	all.Sort()
 
@@ -204,7 +204,7 @@ func TestDDSketchMerge(t *testing.T) {
 				absolute: absolute,
 			}
 			// Test integer and floating point
-			test.RunProfiles(t, mt.run)
+			aggregatortest.RunProfiles(t, mt.run)
 		})
 	}
 }

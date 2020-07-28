@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `value.Uint` was replaced with `kv.UintValue`.
   - `value.Array` was replaced with `kv.ArrayValue`.
 - Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+- Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
 
 ### Removed
 

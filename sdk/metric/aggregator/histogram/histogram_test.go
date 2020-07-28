@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 )
 
 const count = 100
@@ -90,35 +90,35 @@ func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor)
 }
 
 func TestHistogramAbsolute(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		testHistogram(t, profile, positiveOnly)
 	})
 }
 
 func TestHistogramNegativeOnly(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		testHistogram(t, profile, negativeOnly)
 	})
 }
 
 func TestHistogramPositiveAndNegative(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		testHistogram(t, profile, positiveAndNegative)
 	})
 }
 
 // Validates count, sum and buckets for a given profile and policy
-func testHistogram(t *testing.T, profile test.Profile, policy policy) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(policy.sign())
 		all.Append(x)
-		test.CheckedUpdate(t, agg, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 	}
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
@@ -153,8 +153,8 @@ func testHistogram(t *testing.T, profile test.Profile, policy policy) {
 }
 
 func TestHistogramInitial(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg := &histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
@@ -166,28 +166,28 @@ func TestHistogramInitial(t *testing.T) {
 }
 
 func TestHistogramMerge(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
-		all := test.NewNumbers(profile.NumberKind)
+		all := aggregatortest.NewNumbers(profile.NumberKind)
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			test.CheckedUpdate(t, agg1, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg1, x, descriptor)
 		}
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			test.CheckedUpdate(t, agg2, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
 		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
 		require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
-		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
+		aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		all.Sort()
 
@@ -218,8 +218,8 @@ func TestHistogramMerge(t *testing.T) {
 }
 
 func TestHistogramNotSet(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor)
 
@@ -231,7 +231,7 @@ func TestHistogramNotSet(t *testing.T) {
 	})
 }
 
-func calcBuckets(points []metric.Number, profile test.Profile) []uint64 {
+func calcBuckets(points []metric.Number, profile aggregatortest.Profile) []uint64 {
 	sortedBoundaries := make([]float64, len(boundaries))
 
 	copy(sortedBoundaries, boundaries)
