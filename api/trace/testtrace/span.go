@@ -36,7 +36,7 @@ const (
 var _ trace.Span = (*Span)(nil)
 
 type Span struct {
-	lock          *sync.RWMutex
+	lock          sync.RWMutex
 	tracer        *Tracer
 	spanContext   trace.SpanContext
 	parentSpanID  trace.SpanID
@@ -64,7 +64,6 @@ func (s *Span) End(opts ...trace.EndOption) {
 	}
 
 	var c trace.EndConfig
-
 	for _, opt := range opts {
 		opt(&c)
 	}
@@ -76,6 +75,9 @@ func (s *Span) End(opts ...trace.EndOption) {
 	}
 
 	s.ended = true
+	if s.tracer.config.SpanRecorder != nil {
+		s.tracer.config.SpanRecorder.OnEnd(s)
+	}
 }
 
 func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {

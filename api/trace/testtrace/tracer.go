@@ -16,132 +16,79 @@ package testtrace
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
-
-	"go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 var _ trace.Tracer = (*Tracer)(nil)
 
-// Tracer is a type of OpenTelemetry Tracer that tracks both active and ended spans,
-// and which creates Spans that may be inspected to see what data has been set on them.
+// Tracer is an OpenTelemetry Tracer implementation used for testing.
 type Tracer struct {
-	lock      *sync.RWMutex
-	generator Generator
-	spans     []*Span
-}
+	// Name is the instrumentation name.
+	Name string
+	// Version is the instrumentation version.
+	Version string
 
-func NewTracer(opts ...TracerOption) *Tracer {
-	c := newTracerConfig(opts...)
-
-	return &Tracer{
-		lock:      &sync.RWMutex{},
-		generator: c.generator,
-	}
+	config *config
 }
 
 func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
 	var c trace.StartConfig
-
 	for _, opt := range opts {
 		opt(&c)
 	}
 
-	var traceID trace.ID
-	var parentSpanID trace.SpanID
-
-	parentSpanContext, _, links := parent.GetSpanContextAndLinks(ctx, c.NewRoot)
-
-	if parentSpanContext.IsValid() {
-		traceID = parentSpanContext.TraceID
-		parentSpanID = parentSpanContext.SpanID
-	} else {
-		traceID = t.generator.TraceID()
-	}
-
-	spanID := t.generator.SpanID()
-
 	startTime := time.Now()
-
 	if st := c.StartTime; !st.IsZero() {
 		startTime = st
 	}
 
 	span := &Span{
-		lock:      &sync.RWMutex{},
-		tracer:    t,
-		startTime: startTime,
-		spanContext: trace.SpanContext{
-			TraceID: traceID,
-			SpanID:  spanID,
-		},
-		parentSpanID: parentSpanID,
-		attributes:   make(map[kv.Key]kv.Value),
-		links:        make(map[trace.SpanContext][]kv.KeyValue),
+		tracer:     t,
+		startTime:  startTime,
+		attributes: make(map[kv.Key]kv.Value),
+		links:      make(map[trace.SpanContext][]kv.KeyValue),
+	}
+
+	if c.NewRoot {
+		span.spanContext = trace.EmptySpanContext()
+
+		iodKey := kv.Key("ignored-on-demand")
+		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+			span.links[lsc] = []kv.KeyValue{iodKey.String("current")}
+		}
+		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+			span.links[rsc] = []kv.KeyValue{iodKey.String("remote")}
+		}
+	} else {
+		span.spanContext = t.config.SpanContextFunc(ctx)
+		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+			span.spanContext.TraceID = lsc.TraceID
+			span.parentSpanID = lsc.SpanID
+		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+			span.spanContext.TraceID = rsc.TraceID
+			span.parentSpanID = rsc.SpanID
+		}
+	}
+
+	for _, link := range c.Links {
+		span.links[link.SpanContext] = link.Attributes
 	}
 
 	span.SetName(name)
 	span.SetAttributes(c.Attributes...)
 
-	for _, link := range links {
-		span.links[link.SpanContext] = link.Attributes
+	if t.config.SpanRecorder != nil {
+		t.config.SpanRecorder.OnStart(span)
 	}
-	for _, link := range c.Links {
-		span.links[link.SpanContext] = link.Attributes
-	}
-
-	t.lock.Lock()
-
-	t.spans = append(t.spans, span)
-
-	t.lock.Unlock()
-
 	return trace.ContextWithSpan(ctx, span), span
 }
 
 func (t *Tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error, opts ...trace.StartOption) error {
-	ctx, _ = t.Start(ctx, name, opts...)
+	ctx, span := t.Start(ctx, name, opts...)
+	defer span.End()
 
 	return body(ctx)
-}
-
-// Spans returns the list of current and ended Spans started via the Tracer.
-func (t *Tracer) Spans() []*Span {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return append([]*Span{}, t.spans...)
-}
-
-// TracerOption enables configuration of a new Tracer.
-type TracerOption func(*tracerConfig)
-
-// TracerWithGenerator enables customization of the Generator that the Tracer will use
-// to create new trace and span IDs.
-// By default, new Tracers will use the CountGenerator.
-func TracerWithGenerator(generator Generator) TracerOption {
-	return func(c *tracerConfig) {
-		c.generator = generator
-	}
-}
-
-type tracerConfig struct {
-	generator Generator
-}
-
-func newTracerConfig(opts ...TracerOption) tracerConfig {
-	var c tracerConfig
-	defaultOpts := []TracerOption{
-		TracerWithGenerator(NewCountGenerator()),
-	}
-
-	for _, opt := range append(defaultOpts, opts...) {
-		opt(&c)
-	}
-
-	return c
 }

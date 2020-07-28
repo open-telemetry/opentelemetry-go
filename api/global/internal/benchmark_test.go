@@ -21,48 +21,12 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var Must = metric.Must
-
-// benchFixture is copied from sdk/metric/benchmark_test.go.
-// TODO refactor to share this code.
-type benchFixture struct {
-	export.AggregatorSelector
-	accumulator *sdk.Accumulator
-	meter       metric.Meter
-	B           *testing.B
-}
-
-var _ metric.Provider = &benchFixture{}
-
-func newFixture(b *testing.B) *benchFixture {
-	b.ReportAllocs()
-	bf := &benchFixture{
-		B:                  b,
-		AggregatorSelector: test.AggregatorSelector(),
-	}
-
-	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.WrapMeterImpl(bf.accumulator, "test")
-	return bf
-}
-
-func (*benchFixture) Process(export.Accumulation) error {
-	return nil
-}
-
-func (fix *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return fix.meter
-}
-
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
+	// Compare with BenchmarkGlobalInt64CounterAddWithSDK() in
+	// ../../../sdk/metric/benchmark_test.go to see the overhead of the
+	// global no-op system against a registered SDK.
 	internal.ResetForTest()
 	ctx := context.Background()
 	sdk := global.Meter("test")
@@ -76,60 +40,15 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	}
 }
 
-func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
-	// Comapare with BenchmarkInt64CounterAdd() in ../../sdk/meter/benchmark_test.go
-	ctx := context.Background()
-	fix := newFixture(b)
-
-	sdk := global.Meter("test")
-
-	global.SetMeterProvider(fix)
-
-	labs := []kv.KeyValue{kv.String("A", "B")}
-	cnt := Must(sdk).NewInt64Counter("int64.counter")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1, labs...)
-	}
-}
-
-func BenchmarkStartEndSpan(b *testing.B) {
-	// Comapare with BenchmarkStartEndSpan() in ../../sdk/trace/benchmark_test.go
-	traceBenchmark(b, func(b *testing.B) {
-		t := global.Tracer("Benchmark StartEndSpan")
-		ctx := context.Background()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, span := t.Start(ctx, "/foo")
-			span.End()
-		}
-	})
-}
-
-func traceBenchmark(b *testing.B, fn func(*testing.B)) {
+func BenchmarkStartEndSpanNoSDK(b *testing.B) {
+	// Compare with BenchmarkStartEndSpan() in
+	// ../../../sdk/trace/benchmark_test.go.
 	internal.ResetForTest()
-	b.Run("No SDK", func(b *testing.B) {
-		b.ReportAllocs()
-		fn(b)
-	})
-	b.Run("Default SDK (AlwaysSample)", func(b *testing.B) {
-		b.ReportAllocs()
-		global.SetTraceProvider(traceProvider(b, sdktrace.AlwaysSample()))
-		fn(b)
-	})
-	b.Run("Default SDK (NeverSample)", func(b *testing.B) {
-		b.ReportAllocs()
-		global.SetTraceProvider(traceProvider(b, sdktrace.NeverSample()))
-		fn(b)
-	})
-}
-
-func traceProvider(b *testing.B, sampler sdktrace.Sampler) trace.Provider {
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
-	if err != nil {
-		b.Fatalf("Failed to create trace provider with sampler: %v", err)
+	t := global.Tracer("Benchmark StartEndSpan")
+	ctx := context.Background()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, span := t.Start(ctx, "/foo")
+		span.End()
 	}
-	return tp
 }
