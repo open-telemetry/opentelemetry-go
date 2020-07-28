@@ -8,15 +8,43 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.10.0] - 2020-07-28
+
+### Added
+
+- The Zipkin exporter now has `NewExportPipeline` and `InstallNewPipeline` constructor functions to match the common pattern.
+    These function build a new exporter with default SDK options and register the exporter with the `global` package respectively. (#944)
+
 ### Changed
 
-- Rename `kv.Infer` to `kv.Any`. (#969)
-- Jaeger exporter helpers: added InstallNewPipeline and removed RegisterGlobal option instead. (#944)
-- Zipkin exporter helpers: pipeline methods introduced, new exporter method adjusted. (#944)
-- The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`. (#956)
+- Replace the `RegisterGlobal` `Option` in the Jaeger exporter with an `InstallNewPipeline` constructor function.
+   This matches the other exporter constructor patterns and will register a new exporter after building it with default configuration. (#944)
+- The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`.
+   This new exporter was made into its own Go module to follow the pattern of all exporters and decouple it from the `go.opentelemetry.io/otel` module. (#956)
+- The `go.opentelemetry.io/otel/api/kv/value` package was merged into the parent `go.opentelemetry.io/otel/api/kv` package. (#968)
+  - `value.Bool` was replaced with `kv.BoolValue`.
+  - `value.Int64` was replaced with `kv.Int64Value`.
+  - `value.Uint64` was replaced with `kv.Uint64Value`.
+  - `value.Float64` was replaced with `kv.Float64Value`.
+  - `value.Int32` was replaced with `kv.Int32Value`.
+  - `value.Uint32` was replaced with `kv.Uint32Value`.
+  - `value.Float32` was replaced with `kv.Float32Value`.
+  - `value.String` was replaced with `kv.StringValue`.
+  - `value.Int` was replaced with `kv.IntValue`.
+  - `value.Uint` was replaced with `kv.UintValue`.
+  - `value.Array` was replaced with `kv.ArrayValue`.
+- Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+
+### Removed
+
+- The `IndexedAttribute` function from the `go.opentelemetry.io/otel/api/label` package was removed in favor of `IndexedLabel` which it was synonymous with. (#970)
 
 ### Fixed
 
+- Bump github.com/golangci/golangci-lint from 1.28.3 to 1.29.0 in /tools. (#953)
+- Bump github.com/google/go-cmp from 0.5.0 to 0.5.1. (#957)
+- Use `global.Handle` for span export errors in the OTLP exporter. (#946)
+- Correct Go language formatting in the README documentation. (#961)
 - Remove default SDK dependencies from the `go.opentelemetry.io/otel/api` package. (#977)
 
 ## [0.9.0] - 2020-07-20
@@ -36,9 +64,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
-- Removed `go.opentelemetry.io/otel/api/kv/value` by flattening all value functionality and structures into the `go.opentelemetry.io/otel/api/kv` package. (#968)
-- Remove `IndexedAttribute` from `go.opentelemetry.io/otel/api/label`.
-    Use `IndexedLabel` which is synonymous instead. (#970)
 
 ## [0.8.0] - 2020-07-09
 
@@ -694,7 +719,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0
