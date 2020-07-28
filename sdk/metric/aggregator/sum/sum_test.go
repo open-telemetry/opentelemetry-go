@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	ottest "go.opentelemetry.io/otel/internal/testing"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
 const count = 100
@@ -62,16 +62,16 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 }
 
 func TestCounterSum(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			test.CheckedUpdate(t, agg, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 		}
 
 		err := agg.SynchronizedMove(ckpt, descriptor)
@@ -86,18 +86,18 @@ func TestCounterSum(t *testing.T) {
 }
 
 func TestValueRecorderSum(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 
 		for i := 0; i < count; i++ {
 			r1 := profile.Random(+1)
 			r2 := profile.Random(-1)
-			test.CheckedUpdate(t, agg, r1, descriptor)
-			test.CheckedUpdate(t, agg, r2, descriptor)
+			aggregatortest.CheckedUpdate(t, agg, r1, descriptor)
+			aggregatortest.CheckedUpdate(t, agg, r2, descriptor)
 			sum.AddNumber(profile.NumberKind, r1)
 			sum.AddNumber(profile.NumberKind, r2)
 		}
@@ -112,17 +112,17 @@ func TestValueRecorderSum(t *testing.T) {
 }
 
 func TestCounterMerge(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := test.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
-			test.CheckedUpdate(t, agg1, x, descriptor)
-			test.CheckedUpdate(t, agg2, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg1, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
 		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
@@ -131,7 +131,7 @@ func TestCounterMerge(t *testing.T) {
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)
 
-		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
+		aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		sum.AddNumber(descriptor.NumberKind(), sum)
 
