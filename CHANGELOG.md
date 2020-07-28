@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use `global.Handle` for span export errors in the OTLP exporter. (#946)
 - Correct Go language formatting in the README documentation. (#961)
 - Remove default SDK dependencies from the `go.opentelemetry.io/otel/api` package. (#977)
+- Move documented examples for `go.opentelemetry.io/otel/instrumentation/grpctrace` interceptors into Go example tests. (#984)
 
 ## [0.9.0] - 2020-07-20
 
