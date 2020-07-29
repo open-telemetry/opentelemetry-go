@@ -49,6 +49,7 @@ type Span struct {
 	attributes    map[kv.Key]kv.Value
 	events        []Event
 	links         map[trace.SpanContext][]kv.KeyValue
+	spanKind      trace.SpanKind
 }
 
 func (s *Span) Tracer() trace.Tracer {
@@ -261,4 +262,9 @@ func (s *Span) StatusCode() codes.Code {
 // Span or the empty string if no status mesaage was set.
 func (s *Span) StatusMessage() string {
 	return s.statusMessage
+}
+
+// SpanKind returns the span kind of this span.
+func (s *Span) SpanKind() trace.SpanKind {
+	return s.spanKind
 }
