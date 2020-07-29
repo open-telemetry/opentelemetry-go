@@ -18,46 +18,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	nhtrace "net/http/httptrace"
-	"sync"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/trace/testtrace"
 	"go.opentelemetry.io/otel/instrumentation/httptrace"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type testExporter struct {
-	mu      sync.Mutex
-	spanMap map[string][]*export.SpanData
-}
+type SpanRecorder map[string]*testtrace.Span
 
-func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	var spans []*export.SpanData
-	var ok bool
-
-	if spans, ok = t.spanMap[s.Name]; !ok {
-		spans = []*export.SpanData{}
-		t.spanMap[s.Name] = spans
-	}
-	spans = append(spans, s)
-	t.spanMap[s.Name] = spans
-}
-
-var _ export.SpanSyncer = (*testExporter)(nil)
+func (sr *SpanRecorder) OnStart(span *testtrace.Span) {}
+func (sr *SpanRecorder) OnEnd(span *testtrace.Span)   { (*sr)[span.Name()] = span }
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
-	exp := &testExporter{
-		spanMap: make(map[string][]*export.SpanData),
-	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
+	sr := SpanRecorder{}
+	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(&sr))
 	global.SetTraceProvider(tp)
-
 	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
@@ -86,34 +66,23 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		panic("unexpected error in http request: " + err.Error())
 	}
 
-	getSpan := func(name string) *export.SpanData {
-		spans, ok := exp.spanMap[name]
-		if !ok {
-			t.Fatalf("no spans found with the name %s, %v", name, exp.spanMap)
-		}
-
-		if len(spans) != 1 {
-			t.Fatalf("Expected exactly one span for %s but found %d", name, len(spans))
-		}
-
-		return spans[0]
-	}
-
 	testLen := []struct {
 		name       string
-		attributes []kv.KeyValue
+		attributes map[kv.Key]kv.Value
 		parent     string
 	}{
 		{
-			name:       "http.connect",
-			attributes: []kv.KeyValue{kv.String("http.remote", address.String())},
-			parent:     "http.getconn",
+			name: "http.connect",
+			attributes: map[kv.Key]kv.Value{
+				kv.Key("http.remote"): kv.StringValue(address.String()),
+			},
+			parent: "http.getconn",
 		},
 		{
 			name: "http.getconn",
-			attributes: []kv.KeyValue{
-				kv.String("http.remote", address.String()),
-				kv.String("http.host", address.String()),
+			attributes: map[kv.Key]kv.Value{
+				kv.Key("http.remote"): kv.StringValue(address.String()),
+				kv.Key("http.host"):   kv.StringValue(address.String()),
 			},
 			parent: "test",
 		},
@@ -134,51 +103,42 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		},
 	}
 	for _, tl := range testLen {
-		span := getSpan(tl.name)
-
+		if !assert.Contains(t, sr, tl.name) {
+			continue
+		}
+		span := sr[tl.name]
 		if tl.parent != "" {
-			parentSpan := getSpan(tl.parent)
-
-			if span.ParentSpanID != parentSpan.SpanContext.SpanID {
-				t.Fatalf("[span %s] does not have expected parent span %s", tl.name, tl.parent)
+			if assert.Contains(t, sr, tl.parent) {
+				assert.Equal(t, span.ParentSpanID(), sr[tl.parent].SpanContext().SpanID)
 			}
 		}
-
-		actualAttrs := make(map[kv.Key]string)
-		for _, attr := range span.Attributes {
-			actualAttrs[attr.Key] = attr.Value.Emit()
-		}
-
-		expectedAttrs := make(map[kv.Key]string)
-		for _, attr := range tl.attributes {
-			expectedAttrs[attr.Key] = attr.Value.Emit()
-		}
-
-		if tl.name == "http.getconn" {
-			local := kv.Key("http.local")
-			// http.local attribute is not deterministic, just make sure it exists for `getconn`.
-			if _, ok := actualAttrs[local]; ok {
-				delete(actualAttrs, local)
-			} else {
-				t.Fatalf("[span %s] is missing attribute %v", tl.name, local)
+		if len(tl.attributes) > 0 {
+			attrs := span.Attributes()
+			if tl.name == "http.getconn" {
+				// http.local attribute uses a non-deterministic port.
+				local := kv.Key("http.local")
+				assert.Contains(t, attrs, local)
+				delete(attrs, local)
 			}
-		}
-
-		if diff := cmp.Diff(actualAttrs, expectedAttrs); diff != "" {
-			t.Fatalf("[span %s] Attributes are different: %v", tl.name, diff)
+			assert.Equal(t, tl.attributes, attrs)
 		}
 	}
 }
 
+type MultiSpanRecorder map[string][]*testtrace.Span
+
+func (sr *MultiSpanRecorder) Reset()                       { (*sr) = MultiSpanRecorder{} }
+func (sr *MultiSpanRecorder) OnStart(span *testtrace.Span) {}
+func (sr *MultiSpanRecorder) OnEnd(span *testtrace.Span) {
+	(*sr)[span.Name()] = append((*sr)[span.Name()], span)
+}
+
 func TestConcurrentConnectionStart(t *testing.T) {
-	exp := &testExporter{
-		spanMap: make(map[string][]*export.SpanData),
-	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
-
+	sr := MultiSpanRecorder{}
+	global.SetTraceProvider(
+		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
+	)
 	ct := httptrace.NewClientTrace(context.Background())
-
 	tts := []struct {
 		name string
 		run  func()
@@ -186,8 +146,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open1Close1Open2Close2",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
 				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
 				ct.ConnectStart("tcp", "[::1]:3000")
@@ -197,8 +155,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open2Close2Open1Close1",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "[::1]:3000")
 				ct.ConnectDone("tcp", "[::1]:3000", nil)
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
@@ -208,8 +164,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open1Open2Close1Close2",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
 				ct.ConnectStart("tcp", "[::1]:3000")
 				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
@@ -219,8 +173,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open1Open2Close2Close1",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
 				ct.ConnectStart("tcp", "[::1]:3000")
 				ct.ConnectDone("tcp", "[::1]:3000", nil)
@@ -230,8 +182,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open2Open1Close1Close2",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "[::1]:3000")
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
 				ct.ConnectDone("tcp", "127.0.0.1:3000", nil)
@@ -241,8 +191,6 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		{
 			name: "Open2Open1Close2Close1",
 			run: func() {
-				exp.spanMap = make(map[string][]*export.SpanData)
-
 				ct.ConnectStart("tcp", "[::1]:3000")
 				ct.ConnectStart("tcp", "127.0.0.1:3000")
 				ct.ConnectDone("tcp", "[::1]:3000", nil)
@@ -251,70 +199,40 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		},
 	}
 
+	expectedRemotes := []kv.KeyValue{
+		kv.String("http.remote", "127.0.0.1:3000"),
+		kv.String("http.remote", "[::1]:3000"),
+	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
+			sr.Reset()
 			tt.run()
-			spans := exp.spanMap["http.connect"]
+			spans := sr["http.connect"]
+			require.Len(t, spans, 2)
 
-			if l := len(spans); l != 2 {
-				t.Fatalf("Expected 2 'http.connect' traces but found %d", l)
-			}
-
-			remotes := make(map[string]struct{})
+			var gotRemotes []kv.KeyValue
 			for _, span := range spans {
-				if l := len(span.Attributes); l != 1 {
-					t.Fatalf("Expected 1 attribute on each span but found %d", l)
-				}
-
-				attr := span.Attributes[0]
-				if attr.Key != "http.remote" {
-					t.Fatalf("Expected attribute to be 'http.remote' but found %s", attr.Key)
-				}
-				remotes[attr.Value.Emit()] = struct{}{}
-			}
-
-			if l := len(remotes); l != 2 {
-				t.Fatalf("Expected 2 different 'http.remote' but found %d", l)
-			}
-
-			for _, remote := range []string{"127.0.0.1:3000", "[::1]:3000"} {
-				if _, ok := remotes[remote]; !ok {
-					t.Fatalf("Missing remote %s", remote)
+				for k, v := range span.Attributes() {
+					gotRemotes = append(gotRemotes, kv.Any(string(k), v.AsInterface()))
 				}
 			}
+			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
 		})
 	}
 }
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
-	exp := &testExporter{
-		spanMap: make(map[string][]*export.SpanData),
-	}
-	tp, _ := sdktrace.NewProvider(sdktrace.WithSyncer(exp), sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
-	global.SetTraceProvider(tp)
+	sr := MultiSpanRecorder{}
+	global.SetTraceProvider(
+		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
+	)
 
-	tr := tp.Tracer("httptrace/client")
-	ctx, span := tr.Start(context.Background(), "test")
-	defer span.End()
-
-	ct := httptrace.NewClientTrace(ctx)
-
+	ct := httptrace.NewClientTrace(context.Background())
 	ct.DNSDone(nhtrace.DNSDoneInfo{})
 	ct.DNSStart(nhtrace.DNSStartInfo{Host: "example.com"})
 
-	getSpan := func(name string) *export.SpanData {
-		spans, ok := exp.spanMap[name]
-		if !ok {
-			t.Fatalf("no spans found with the name %s, %v", name, exp.spanMap)
-		}
-
-		if len(spans) != 1 {
-			t.Fatalf("Expected exactly one span for %s but found %d", name, len(spans))
-		}
-
-		return spans[0]
-	}
-
-	getSpan("http.dns")
-
+	name := "http.dns"
+	require.Contains(t, sr, name)
+	spans := sr[name]
+	require.Len(t, spans, 1)
 }
