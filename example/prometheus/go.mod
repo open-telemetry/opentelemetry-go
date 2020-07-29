@@ -1,10 +1,11 @@
 module go.opentelemetry.io/otel/example/prometheus
 
-go 1.13
+go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..
 	go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
 require (
