@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
 type updateTest struct {
@@ -61,20 +61,20 @@ func new4() (_, _, _, _ *Aggregator) {
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func (ut *updateTest) run(t *testing.T, profile test.Profile) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 	agg, ckpt := new2()
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
-		test.CheckedUpdate(t, agg, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 
 		y := profile.Random(-1)
 		all.Append(y)
-		test.CheckedUpdate(t, agg, y, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, y, descriptor)
 	}
 
 	err := agg.SynchronizedMove(ckpt, descriptor)
@@ -118,7 +118,7 @@ func TestArrayUpdate(t *testing.T) {
 			}
 
 			// Test integer and floating point
-			test.RunProfiles(t, ut.run)
+			aggregatortest.RunProfiles(t, ut.run)
 		})
 	}
 }
@@ -128,29 +128,29 @@ type mergeTest struct {
 	absolute bool
 }
 
-func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
-		test.CheckedUpdate(t, agg1, x1, descriptor)
+		aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
-		test.CheckedUpdate(t, agg2, x2, descriptor)
+		aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
-			test.CheckedUpdate(t, agg1, y1, descriptor)
+			aggregatortest.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
-			test.CheckedUpdate(t, agg2, y2, descriptor)
+			aggregatortest.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
 
@@ -160,7 +160,7 @@ func (mt *mergeTest) run(t *testing.T, profile test.Profile) {
 	checkZero(t, agg1, descriptor)
 	checkZero(t, agg2, descriptor)
 
-	test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
+	aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 	all.Sort()
 
@@ -202,7 +202,7 @@ func TestArrayMerge(t *testing.T) {
 					}
 
 					// Test integer and floating point
-					test.RunProfiles(t, mt.run)
+					aggregatortest.RunProfiles(t, mt.run)
 				})
 			}
 		})
@@ -210,7 +210,7 @@ func TestArrayMerge(t *testing.T) {
 }
 
 func TestArrayErrors(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
 		_, err := ckpt.Max()
@@ -225,12 +225,12 @@ func TestArrayErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
-		test.CheckedUpdate(t, agg, metric.Number(0), descriptor)
+		aggregatortest.CheckedUpdate(t, agg, metric.Number(0), descriptor)
 
 		if profile.NumberKind == metric.Float64NumberKind {
-			test.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
+			aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
@@ -253,7 +253,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, metric.Float64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, metric.Float64NumberKind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
@@ -282,18 +282,18 @@ func TestArrayFloat64(t *testing.T) {
 		}
 	}
 
-	all := test.NewNumbers(metric.Float64NumberKind)
+	all := aggregatortest.NewNumbers(metric.Float64NumberKind)
 
 	agg, ckpt := new2()
 
 	for _, f := range fpsf(1) {
 		all.Append(metric.NewFloat64Number(f))
-		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
+		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
 		all.Append(metric.NewFloat64Number(f))
-		test.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
+		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
 	}
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))

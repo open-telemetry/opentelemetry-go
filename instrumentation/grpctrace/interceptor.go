@@ -63,12 +63,6 @@ var (
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.NewServer(
-//         grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor(tracer)),
-//         ...,  // (existing DialOptions))
 func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -242,12 +236,6 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.Dial(
-//         grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor(tracer)),
-//         ...,  // (existing DialOptions))
 func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -294,12 +282,6 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
-//
-// For example:
-//     tracer := global.Tracer("server-tracer")
-//     s := grpc.Dial(
-//         grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(tracer)),
-//         ...,  // (existing ServerOptions))
 func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -382,12 +364,6 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
-//
-// For example:
-//     tracer := global.Tracer("server-tracer")
-//     s := grpc.Dial(
-//         grpc.StreamInterceptor(grpctrace.StreamServerInterceptor(tracer)),
-//         ...,  // (existing ServerOptions))
 func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},

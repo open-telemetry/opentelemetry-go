@@ -32,12 +32,12 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -103,7 +103,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
-	aggtest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
+	aggregatortest.CheckedUpdate(t, lvagg, metric.NewInt64Number(321), &desc)
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
 
 	checkpointSet.Add(&desc, ckpt)
@@ -142,7 +142,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	cagg, ckpt := metrictest.Unslice2(sum.New(2))
 
-	aggtest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
+	aggregatortest.CheckedUpdate(fix.t, cagg, metric.NewInt64Number(123), &desc)
 	require.NoError(t, cagg.SynchronizedMove(ckpt, &desc))
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
@@ -160,7 +160,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
-	aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
+	aggregatortest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
@@ -179,8 +179,8 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	magg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
-	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
-	aggtest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
+	aggregatortest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(123.456), &desc)
+	aggregatortest.CheckedUpdate(fix.t, magg, metric.NewFloat64Number(876.543), &desc)
 	require.NoError(t, magg.SynchronizedMove(ckpt, &desc))
 
 	checkpointSet.Add(&desc, ckpt, kv.String("A", "B"), kv.String("C", "D"))
@@ -199,7 +199,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 	aagg, ckpt := metrictest.Unslice2(array.New(2))
 
 	for i := 0; i < 1000; i++ {
-		aggtest.CheckedUpdate(fix.t, aagg, metric.NewFloat64Number(float64(i)+0.5), &desc)
+		aggregatortest.CheckedUpdate(fix.t, aagg, metric.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 
 	require.NoError(t, aagg.SynchronizedMove(ckpt, &desc))
@@ -317,7 +317,7 @@ func TestStdoutResource(t *testing.T) {
 		desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
 		lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
-		aggtest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
+		aggregatortest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
 		require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
 
 		checkpointSet.Add(&desc, ckpt, tc.attrs...)
