@@ -50,6 +50,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOpti
 		startTime:  startTime,
 		attributes: make(map[kv.Key]kv.Value),
 		links:      make(map[trace.SpanContext][]kv.KeyValue),
+		spanKind:   c.SpanKind,
 	}
 
 	if c.NewRoot {
