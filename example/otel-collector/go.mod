@@ -9,7 +9,6 @@ replace (
 )
 
 require (
-	github.com/google/gofuzz v1.1.0 // indirect
 	go.opentelemetry.io/otel v0.9.0
 	go.opentelemetry.io/otel/exporters/otlp v0.9.0
 	go.opentelemetry.io/otel/sdk v0.9.0
