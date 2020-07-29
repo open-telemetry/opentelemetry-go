@@ -1,10 +1,11 @@
 module go.opentelemetry.io/otel/example/basic
 
-go 1.13
+go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..
 	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
+	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
 require (
