@@ -114,8 +114,12 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		}
 		if len(tl.attributes) > 0 {
 			attrs := span.Attributes()
-			// http.local attribute uses a non-deterministic port.
-			delete(attrs, "http.local")
+			if tl.name == "http.getconn" {
+				// http.local attribute uses a non-deterministic port.
+				local := kv.Key("http.local")
+				assert.Contains(t, attrs, local)
+				delete(attrs, local)
+			}
 			assert.Equal(t, tl.attributes, attrs)
 		}
 	}
