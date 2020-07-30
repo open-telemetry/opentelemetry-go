@@ -25,6 +25,7 @@ build-template: &build-template
         name: "Precommit and Coverage Report"
         command: |
           make ci
+          bash <(curl -s https://codecov.io/bash)
           mv coverage.html $TEST_RESULTS/
 
     - save_cache:
