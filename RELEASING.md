@@ -42,7 +42,7 @@ Failure to do so will leave things in a broken state.
 
 ***IMPORTANT***: [There is currently no way to remove an incorrectly tagged version of a Go module](https://github.com/golang/go/issues/34189).
 It is critical you make sure the version you push upstream is correct.
-[Failure to do so will lead to minor emergencies and tough work around](https://github.com/open-telemetry/opentelemetry-go/issues/331).
+[Failure to do so will lead to minor emergencies and tough to work around](https://github.com/open-telemetry/opentelemetry-go/issues/331).
 
 1. Run the tag.sh script using the `<commit-hash>` of the commit on the master branch for the merged Pull Request.
 
