@@ -32,6 +32,9 @@ type noopSpanBatcher struct {
 // ExportSpans implements the trace.SpanBatcher interface.
 func (nsb *noopSpanBatcher) ExportSpans(context.Context, []*trace.SpanData) {}
 
+// ExportSpan implements the trace.SpanSyncer interface.
+￼func (nsb *noopSpanBatcher) ExportSpan(context.Context, trace.SpanData) {}
+
 // NewInMemorySpanBatcher returns a new trace.SpanBatcher that stores in-memory all exported spans.
 func NewInMemorySpanBatcher() *InMemorySpanBatcher {
 	return new(InMemorySpanBatcher)
