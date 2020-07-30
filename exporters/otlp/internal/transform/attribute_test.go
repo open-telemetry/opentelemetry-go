@@ -160,14 +160,24 @@ func TestAttributes(t *testing.T) {
 }
 
 func TestArrayAttributes(t *testing.T) {
+	// Array KeyValue supports only arrays of primitive types:
+	// "bool", "int", "int32", "int64",
+	// "float32", "float64", "string",
+	// "uint", "uint32", "uint64"
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
 			[]kv.KeyValue{
+				kv.Array("bool array to bool array", []bool{true, false}),
 				kv.Array("int array to int array", []int{1, 2, 3}),
+				kv.Array("int32 array to int array", []int32{1, 2, 3}),
+				kv.Array("int64 array to int array", []int64{1, 2, 3}),
 			},
 			[]*commonpb.KeyValue{
-				newCommonpbIntArray("int array to int array", []int{1, 2, 3}),
+				newOtelBoolArray("bool array to bool array", []bool{true, false}),
+				newOtelIntArray("int array to int array", []int{1, 2, 3}),
+				newOtelIntArray("int32 array to int array", []int{1, 2, 3}),
+				newOtelIntArray("int64 array to int array", []int{1, 2, 3}),
 			},
 		},
 	} {
@@ -196,7 +206,32 @@ func assertExpectedAttributes(t *testing.T, test attributeTest) {
 	}
 }
 
-func newCommonpbIntArray(key string, values []int) *commonpb.KeyValue {
+func newOtelBoolArray(key string, values []bool) *commonpb.KeyValue {
+
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, b := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_BoolValue{
+				BoolValue: b,
+			},
+		})
+	}
+
+	result := &commonpb.KeyValue{
+		Key: key,
+		Value: &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_ArrayValue{
+				ArrayValue: &commonpb.ArrayValue{
+					Values: arrayValues,
+				},
+			},
+		},
+	}
+	return result
+}
+
+func newOtelIntArray(key string, values []int) *commonpb.KeyValue {
 
 	arrayValues := []*commonpb.AnyValue{}
 

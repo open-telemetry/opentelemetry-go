@@ -97,15 +97,34 @@ func toArrayAttribute(v kv.KeyValue) *commonpb.AnyValue_ArrayValue {
 			},
 		},
 	}
-	// Using type assertion is cheaper than reflection, and safer that checking for type names
-	if intArray, ok := array.([]int); ok {
+	// Using type assertion is cheaper then reflection, and safer then checking for type names
+	if boolArray, ok := array.([]bool); ok {
+		resultValues = getValuesFromBoolArray(boolArray)
+	} else if intArray, ok := array.([]int); ok {
 		resultValues = getValuesFromIntArray(intArray)
+	} else if intArray, ok := array.([]int32); ok {
+		resultValues = getValuesFromInt32Array(intArray)
+	} else if intArray, ok := array.([]int64); ok {
+		resultValues = getValuesFromInt64Array(intArray)
 	}
+
 	return &commonpb.AnyValue_ArrayValue{
 		ArrayValue: &commonpb.ArrayValue{
 			Values: resultValues,
 		},
 	}
+}
+
+func getValuesFromBoolArray(boolArray []bool) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, b := range boolArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_BoolValue{
+				BoolValue: b,
+			},
+		})
+	}
+	return result
 }
 
 func getValuesFromIntArray(intArray []int) []*commonpb.AnyValue {
@@ -114,6 +133,30 @@ func getValuesFromIntArray(intArray []int) []*commonpb.AnyValue {
 		result = append(result, &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_IntValue{
 				IntValue: int64(i),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromInt32Array(intArray []int32) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range intArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromInt64Array(intArray []int64) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range intArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: i,
 			},
 		})
 	}
