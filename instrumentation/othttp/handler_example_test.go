@@ -24,12 +24,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
-	mstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
-	"go.opentelemetry.io/otel/exporters/trace/stdout"
 	"go.opentelemetry.io/otel/instrumentation/othttp"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func ExampleNewHandler() {
@@ -46,31 +42,6 @@ func ExampleNewHandler() {
 	You sent me this:
 	a painting
 	*/
-
-	// Write spans to stdout
-	exporter, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	pusher, err := mstdout.NewExportPipeline(mstdout.Config{
-		PrettyPrint:    true,
-		DoNotPrintTime: true, // This makes the output deterministic
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	meterProvider := pusher.Provider()
-	global.SetTraceProvider(tp)
-	global.SetMeterProvider(meterProvider)
 
 	figureOutName := func(ctx context.Context, s string) (string, error) {
 		pp := strings.SplitN(s, "/", 2)

@@ -29,7 +29,7 @@ type EnvStore interface {
 	// Records the environment variable into the store.
 	Record(key string)
 
-	// Restore recover the environment variables in the store.
+	// Restore recovers the environment variables in the store.
 	Restore() error
 }
 

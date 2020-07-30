@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -46,10 +45,6 @@ type options struct {
 	BatchMaxCount int
 
 	Config *sdktrace.Config
-
-	// RegisterGlobal is set to true if the trace provider of the new pipeline should be
-	// registered as Global Trace Provider
-	RegisterGlobal bool
 
 	Disabled bool
 }
@@ -82,14 +77,8 @@ func WithSDK(config *sdktrace.Config) Option {
 	}
 }
 
-// RegisterAsGlobal enables the registration of the trace provider of the new pipeline
-// as Global Trace Provider.
-func RegisterAsGlobal() Option {
-	return func(o *options) {
-		o.RegisterGlobal = true
-	}
-}
-
+// WithDisabled option will cause pipeline methods to use
+// a no-op provider
 func WithDisabled(disabled bool) Option {
 	return func(o *options) {
 		o.Disabled = disabled
@@ -177,11 +166,20 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 	if exporter.o.Config != nil {
 		tp.ApplyConfig(*exporter.o.Config)
 	}
-	if exporter.o.RegisterGlobal {
-		global.SetTraceProvider(tp)
-	}
 
 	return tp, exporter.Flush, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline with the
+// recommended configuration and registers it globally.
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
+	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	global.SetTraceProvider(tp)
+	return flushFn, nil
 }
 
 // Process contains the information exported to jaeger about the source
@@ -296,42 +294,58 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 func keyValueToTag(keyValue kv.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch keyValue.Value.Type() {
-	case value.STRING:
+	case kv.STRING:
 		s := keyValue.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
-	case value.BOOL:
+	case kv.BOOL:
 		b := keyValue.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case value.INT32:
+	case kv.INT32:
 		i := int64(keyValue.Value.AsInt32())
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case value.INT64:
+	case kv.INT64:
 		i := keyValue.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case value.FLOAT32:
+	case kv.UINT32:
+		i := int64(keyValue.Value.AsUint32())
+		tag = &gen.Tag{
+			Key:   string(keyValue.Key),
+			VLong: &i,
+			VType: gen.TagType_LONG,
+		}
+	case kv.UINT64:
+		// we'll ignore the value if it overflows
+		if i := int64(keyValue.Value.AsUint64()); i >= 0 {
+			tag = &gen.Tag{
+				Key:   string(keyValue.Key),
+				VLong: &i,
+				VType: gen.TagType_LONG,
+			}
+		}
+	case kv.FLOAT32:
 		f := float64(keyValue.Value.AsFloat32())
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
 		}
-	case value.FLOAT64:
+	case kv.FLOAT64:
 		f := keyValue.Value.AsFloat64()
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),

@@ -63,20 +63,14 @@ var (
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.NewServer(
-//         grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor(tracer)),
-//         ...,  // (existing DialOptions))
-func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
+func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
 		method string,
 		req, reply interface{},
 		cc *grpc.ClientConn,
 		invoker grpc.UnaryInvoker,
-		opts ...grpc.CallOption,
+		callOpts ...grpc.CallOption,
 	) error {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
@@ -91,12 +85,12 @@ func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 		)
 		defer span.End()
 
-		Inject(ctx, &metadataCopy)
+		Inject(ctx, &metadataCopy, opts...)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		messageSent.Event(ctx, 1, req)
 
-		err := invoker(ctx, method, req, reply, cc, opts...)
+		err := invoker(ctx, method, req, reply, cc, callOpts...)
 
 		messageReceived.Event(ctx, 1, reply)
 
@@ -242,20 +236,14 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.Dial(
-//         grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor(tracer)),
-//         ...,  // (existing DialOptions))
-func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
+func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamClientInterceptor {
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
 		cc *grpc.ClientConn,
 		method string,
 		streamer grpc.Streamer,
-		opts ...grpc.CallOption,
+		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
@@ -269,10 +257,10 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 			trace.WithAttributes(attr...),
 		)
 
-		Inject(ctx, &metadataCopy)
+		Inject(ctx, &metadataCopy, opts...)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
-		s, err := streamer(ctx, desc, cc, method, opts...)
+		s, err := streamer(ctx, desc, cc, method, callOpts...)
 		stream := wrapClientStream(s, desc)
 
 		go func() {
@@ -294,13 +282,7 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.Dial(
-//         grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(tracer)),
-//         ...,  // (existing ServerOptions))
-func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -310,7 +292,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		entries, spanCtx := Extract(ctx, &metadataCopy)
+		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
 		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 			MultiKV: entries,
 		}))
@@ -339,7 +321,7 @@ func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 	}
 }
 
-// clientStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
+// serverStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
 // SendMsg method call.
 type serverStream struct {
 	grpc.ServerStream
@@ -382,13 +364,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
-//
-// For example:
-//     tracer := global.Tracer("client-tracer")
-//     s := grpc.Dial(
-//         grpc.StreamInterceptor(grpctrace.StreamServerInterceptor(tracer)),
-//         ...,  // (existing ServerOptions))
-func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -400,7 +376,7 @@ func StreamServerInterceptor(tracer trace.Tracer) grpc.StreamServerInterceptor {
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		entries, spanCtx := Extract(ctx, &metadataCopy)
+		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
 		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 			MultiKV: entries,
 		}))

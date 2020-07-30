@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/test"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
 const count = 100
@@ -59,19 +59,19 @@ var (
 )
 
 func TestMinMaxSumCountAbsolute(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		minMaxSumCount(t, profile, positiveOnly)
 	})
 }
 
 func TestMinMaxSumCountNegativeOnly(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		minMaxSumCount(t, profile, negativeOnly)
 	})
 }
 
 func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		minMaxSumCount(t, profile, positiveAndNegative)
 	})
 }
@@ -107,17 +107,17 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 }
 
 // Validates min, max, sum and count for a given profile and policy
-func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
-	descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+func minMaxSumCount(t *testing.T, profile aggregatortest.Profile, policy policy) {
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
-	all := test.NewNumbers(profile.NumberKind)
+	all := aggregatortest.NewNumbers(profile.NumberKind)
 
 	for i := 0; i < count; i++ {
 		x := profile.Random(policy.sign())
 		all.Append(x)
-		test.CheckedUpdate(t, agg, x, descriptor)
+		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 	}
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
@@ -155,22 +155,22 @@ func minMaxSumCount(t *testing.T, profile test.Profile, policy policy) {
 }
 
 func TestMinMaxSumCountMerge(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
-		all := test.NewNumbers(profile.NumberKind)
+		all := aggregatortest.NewNumbers(profile.NumberKind)
 
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			test.CheckedUpdate(t, agg1, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg1, x, descriptor)
 		}
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			all.Append(x)
-			test.CheckedUpdate(t, agg2, x, descriptor)
+			aggregatortest.CheckedUpdate(t, agg2, x, descriptor)
 		}
 
 		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
@@ -179,7 +179,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 		checkZero(t, agg1, descriptor)
 		checkZero(t, agg2, descriptor)
 
-		test.CheckedMerge(t, ckpt1, ckpt2, descriptor)
+		aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
 		all.Sort()
 
@@ -213,8 +213,8 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 }
 
 func TestMaxSumCountNotSet(t *testing.T) {
-	test.RunProfiles(t, func(t *testing.T, profile test.Profile) {
-		descriptor := test.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
 
 		alloc := New(2, descriptor)
 		agg, ckpt := &alloc[0], &alloc[1]

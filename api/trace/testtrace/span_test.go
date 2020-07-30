@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv/value"
-
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -35,12 +33,13 @@ import (
 
 func TestSpan(t *testing.T) {
 	t.Run("#Tracer", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns the tracer used to start the span", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
 			e.Expect(subject.Tracer()).ToEqual(tracer)
@@ -48,12 +47,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#End", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("ends the span", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -84,7 +84,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -107,7 +107,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -126,6 +126,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#RecordError", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("records an error", func(t *testing.T) {
 			t.Parallel()
 
@@ -149,7 +150,7 @@ func TestSpan(t *testing.T) {
 			for _, s := range scenarios {
 				e := matchers.NewExpecter(t)
 
-				tracer := testtrace.NewTracer()
+				tracer := tp.Tracer(t.Name())
 				ctx, span := tracer.Start(context.Background(), "test")
 
 				subject, ok := span.(*testtrace.Span)
@@ -161,9 +162,9 @@ func TestSpan(t *testing.T) {
 				expectedEvents := []testtrace.Event{{
 					Timestamp: testTime,
 					Name:      "error",
-					Attributes: map[kv.Key]value.Value{
-						kv.Key("error.type"):    value.String(s.typ),
-						kv.Key("error.message"): value.String(s.msg),
+					Attributes: map[kv.Key]kv.Value{
+						kv.Key("error.type"):    kv.StringValue(s.typ),
+						kv.Key("error.message"): kv.StringValue(s.msg),
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -177,7 +178,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -192,9 +193,9 @@ func TestSpan(t *testing.T) {
 			expectedEvents := []testtrace.Event{{
 				Timestamp: testTime,
 				Name:      "error",
-				Attributes: map[kv.Key]value.Value{
-					kv.Key("error.type"):    value.String("go.opentelemetry.io/otel/internal/testing.TestError"),
-					kv.Key("error.message"): value.String(errMsg),
+				Attributes: map[kv.Key]kv.Value{
+					kv.Key("error.type"):    kv.StringValue("go.opentelemetry.io/otel/internal/testing.TestError"),
+					kv.Key("error.message"): kv.StringValue(errMsg),
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
@@ -206,7 +207,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -223,7 +224,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			ctx, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -236,12 +237,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#IsRecording", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns true", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
 			e.Expect(subject.IsRecording()).ToBeTrue()
@@ -249,12 +251,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#SpanContext", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns a valid SpanContext", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
 			e.Expect(subject.SpanContext().IsValid()).ToBeTrue()
@@ -265,7 +268,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
 			e.Expect(subject.SpanContext()).ToEqual(subject.SpanContext())
@@ -273,12 +276,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Name", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns the most recently set name on the span", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			originalName := "test"
 			_, span := tracer.Start(context.Background(), originalName)
 
@@ -301,7 +305,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			originalName := "test"
 			_, span := tracer.Start(context.Background(), originalName)
 
@@ -316,18 +320,19 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Attributes", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns an empty map by default", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]value.Value{})
+			e.Expect(subject.Attributes()).ToEqual(map[kv.Key]kv.Value{})
 		})
 
 		t.Run("returns the most recently set attributes", func(t *testing.T) {
@@ -335,7 +340,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -361,7 +366,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -384,7 +389,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -411,12 +416,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Links", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns an empty map by default", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -427,12 +433,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Events", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("returns an empty slice by default", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -446,7 +453,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -499,7 +506,7 @@ func TestSpan(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -520,12 +527,13 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Status", func(t *testing.T) {
+		tp := testtrace.NewProvider()
 		t.Run("defaults to OK", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
-			tracer := testtrace.NewTracer()
+			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*testtrace.Span)
@@ -564,7 +572,7 @@ func TestSpan(t *testing.T) {
 
 				e := matchers.NewExpecter(t)
 
-				tracer := testtrace.NewTracer()
+				tracer := tp.Tracer(t.Name())
 				_, span := tracer.Start(context.Background(), "test")
 
 				subject, ok := span.(*testtrace.Span)
@@ -582,7 +590,7 @@ func TestSpan(t *testing.T) {
 
 				e := matchers.NewExpecter(t)
 
-				tracer := testtrace.NewTracer()
+				tracer := tp.Tracer(t.Name())
 				_, span := tracer.Start(context.Background(), "test")
 
 				subject, ok := span.(*testtrace.Span)

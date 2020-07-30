@@ -28,9 +28,9 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
-	exporterTest "go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/metric/processor/test"
@@ -75,12 +75,12 @@ type testExporter struct {
 }
 
 type testFixture struct {
-	checkpointSet *exporterTest.CheckpointSet
+	checkpointSet *metrictest.CheckpointSet
 	exporter      *testExporter
 }
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := exporterTest.NewCheckpointSet(testResource)
+	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	exporter := &testExporter{
 		t: t,

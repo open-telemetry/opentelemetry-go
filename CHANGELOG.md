@@ -10,9 +10,58 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- The Zipkin exporter now has `NewExportPipeline` and `InstallNewPipeline` constructor functions to match the common pattern.
+    These function build a new exporter with default SDK options and register the exporter with the `global` package respectively. (#944)
+- Add propagator option for gRPC instrumentation. (#986)
+
+### Changed
+
+- Replace the `RegisterGlobal` `Option` in the Jaeger exporter with an `InstallNewPipeline` constructor function.
+   This matches the other exporter constructor patterns and will register a new exporter after building it with default configuration. (#944)
+- The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`.
+   This new exporter was made into its own Go module to follow the pattern of all exporters and decouple it from the `go.opentelemetry.io/otel` module. (#956)
+- The `go.opentelemetry.io/otel/api/kv/value` package was merged into the parent `go.opentelemetry.io/otel/api/kv` package. (#968)
+  - `value.Bool` was replaced with `kv.BoolValue`.
+  - `value.Int64` was replaced with `kv.Int64Value`.
+  - `value.Uint64` was replaced with `kv.Uint64Value`.
+  - `value.Float64` was replaced with `kv.Float64Value`.
+  - `value.Int32` was replaced with `kv.Int32Value`.
+  - `value.Uint32` was replaced with `kv.Uint32Value`.
+  - `value.Float32` was replaced with `kv.Float32Value`.
+  - `value.String` was replaced with `kv.StringValue`.
+  - `value.Int` was replaced with `kv.IntValue`.
+  - `value.Uint` was replaced with `kv.UintValue`.
+  - `value.Array` was replaced with `kv.ArrayValue`.
+- Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+- Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
+
+### Removed
+
+- The `IndexedAttribute` function from the `go.opentelemetry.io/otel/api/label` package was removed in favor of `IndexedLabel` which it was synonymous with. (#970)
+
+### Fixed
+
+- Bump github.com/golangci/golangci-lint from 1.28.3 to 1.29.0 in /tools. (#953)
+- Bump github.com/google/go-cmp from 0.5.0 to 0.5.1. (#957)
+- Use `global.Handle` for span export errors in the OTLP exporter. (#946)
+- Correct Go language formatting in the README documentation. (#961)
+- Remove default SDK dependencies from the `go.opentelemetry.io/otel/api` package. (#977)
+- Remove default SDK dependencies from the `go.opentelemetry.io/otel/instrumentation` package. (#983)
+- Move documented examples for `go.opentelemetry.io/otel/instrumentation/grpctrace` interceptors into Go example tests. (#984)
+
+## [0.9.0] - 2020-07-20
+
+### Added
+
+- A new Resource Detector interface is included to allow resources to be automatically detected and included. (#939)
+- A Detector to automatically detect resources from an environment variable. (#939)
 - Github action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
 - OTLP .proto files from `open-telemetry/opentelemetry-proto` imported as a git submodule under `internal/opentelemetry-proto`.
-   References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#948)
+   References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#942)
+
+### Changed
+
+- Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
 
 ### Changed 
 
@@ -676,7 +725,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.6.0

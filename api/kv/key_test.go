@@ -21,8 +21,6 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/api/kv/value"
 )
 
 func TestDefined(t *testing.T) {
@@ -68,47 +66,47 @@ func TestJSONValue(t *testing.T) {
 func TestEmit(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		v    value.Value
+		v    kv.Value
 		want string
 	}{
 		{
 			name: `test Key.Emit() can emit a string representing self.BOOL`,
-			v:    value.Bool(true),
+			v:    kv.BoolValue(true),
 			want: "true",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v:    value.Int32(42),
+			v:    kv.Int32Value(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
-			v:    value.Int64(42),
+			v:    kv.Int64Value(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v:    value.Uint32(42),
+			v:    kv.Uint32Value(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v:    value.Uint64(42),
+			v:    kv.Uint64Value(42),
 			want: "42",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v:    value.Float32(42.1),
+			v:    kv.Float32Value(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
-			v:    value.Float64(42.1),
+			v:    kv.Float64Value(42.1),
 			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.STRING`,
-			v:    value.String("foo"),
+			v:    kv.StringValue("foo"),
 			want: "foo",
 		},
 	} {
@@ -119,45 +117,5 @@ func TestEmit(t *testing.T) {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
-	}
-}
-
-func BenchmarkEmitBool(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		n := value.Bool(i%2 == 0)
-		_ = n.Emit()
-	}
-}
-
-func BenchmarkEmitInt64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		n := value.Int64(int64(i))
-		_ = n.Emit()
-	}
-}
-
-func BenchmarkEmitUInt64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		n := value.Uint64(uint64(i))
-		_ = n.Emit()
-	}
-}
-
-func BenchmarkEmitFloat64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		n := value.Float64(float64(i))
-		_ = n.Emit()
-	}
-}
-
-func BenchmarkEmitFloat32(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		n := value.Float32(float32(i))
-		_ = n.Emit()
 	}
 }
