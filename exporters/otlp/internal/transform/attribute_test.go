@@ -23,11 +23,13 @@ import (
 	commonpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
 )
 
+type attributeTest struct {
+	attrs    []kv.KeyValue
+	expected []*commonpb.KeyValue
+}
+
 func TestAttributes(t *testing.T) {
-	for _, test := range []struct {
-		attrs    []kv.KeyValue
-		expected []*commonpb.KeyValue
-	}{
+	for _, test := range []attributeTest{
 		{nil, nil},
 		{
 			[]kv.KeyValue{
@@ -41,6 +43,7 @@ func TestAttributes(t *testing.T) {
 				kv.Float32("float64 to double", 1.61),
 				kv.String("string to string", "string"),
 				kv.Bool("bool to bool", true),
+				kv.Array("int array to int array", []int{1, 2, 3}),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -123,26 +126,97 @@ func TestAttributes(t *testing.T) {
 						},
 					},
 				},
+				{
+					Key: "int array to int array",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_ArrayValue{
+							ArrayValue: &commonpb.ArrayValue{
+								Values: []*commonpb.AnyValue{
+									&commonpb.AnyValue{
+										Value: &commonpb.AnyValue_IntValue{
+											IntValue: 1,
+										},
+									},
+									&commonpb.AnyValue{
+										Value: &commonpb.AnyValue_IntValue{
+											IntValue: 2,
+										},
+									},
+									&commonpb.AnyValue{
+										Value: &commonpb.AnyValue_IntValue{
+											IntValue: 3,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	} {
-		got := Attributes(test.attrs)
-		if !assert.Len(t, got, len(test.expected)) {
-			continue
-		}
-		for i, actual := range got {
-			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
-				e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
-				if !ok {
-					t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
-					continue
-				}
-				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
-					continue
-				}
-				e.DoubleValue = a.DoubleValue
-			}
-			assert.Equal(t, test.expected[i], actual)
-		}
+		assertExpectedAttributes(t, test)
 	}
+}
+
+func TestArrayAttributes(t *testing.T) {
+	for _, test := range []attributeTest{
+		{nil, nil},
+		{
+			[]kv.KeyValue{
+				kv.Array("int array to int array", []int{1, 2, 3}),
+			},
+			[]*commonpb.KeyValue{
+				newCommonpbIntArray("int array to int array", []int{1, 2, 3}),
+			},
+		},
+	} {
+		assertExpectedAttributes(t, test)
+	}
+}
+
+func assertExpectedAttributes(t *testing.T, test attributeTest) {
+	got := Attributes(test.attrs)
+	if !assert.Len(t, got, len(test.expected)) {
+		return
+	}
+	for i, actual := range got {
+		if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
+			e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+			if !ok {
+				t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
+				return
+			}
+			if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+				return
+			}
+			e.DoubleValue = a.DoubleValue
+		}
+		assert.Equal(t, test.expected[i], actual)
+	}
+}
+
+func newCommonpbIntArray(key string, values []int) *commonpb.KeyValue {
+
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, i := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
+	}
+
+	result := &commonpb.KeyValue{
+		Key: key,
+		Value: &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_ArrayValue{
+				ArrayValue: &commonpb.ArrayValue{
+					Values: arrayValues,
+				},
+			},
+		},
+	}
+	return result
 }

@@ -74,10 +74,48 @@ func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
 		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.Value.AsString(),
 		}
+	case kv.ARRAY:
+		result.Value.Value = toArrayAttribute(v)
 	default:
 		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",
 		}
+	}
+	return result
+}
+
+// Array KeyValue supports only arrays of primitive types:
+// "bool", "int", "int32", "int64",
+// "float32", "float64", "string",
+// "uint", "uint32", "uint64"
+func toArrayAttribute(v kv.KeyValue) *commonpb.AnyValue_ArrayValue {
+	array := v.Value.AsArray()
+	resultValues := []*commonpb.AnyValue{
+		&commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
+				StringValue: "INVALID",
+			},
+		},
+	}
+	// Using type assertion is cheaper than reflection, and safer that checking for type names
+	if intArray, ok := array.([]int); ok {
+		resultValues = getValuesFromIntArray(intArray)
+	}
+	return &commonpb.AnyValue_ArrayValue{
+		ArrayValue: &commonpb.ArrayValue{
+			Values: resultValues,
+		},
+	}
+}
+
+func getValuesFromIntArray(intArray []int) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range intArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
 	}
 	return result
 }
