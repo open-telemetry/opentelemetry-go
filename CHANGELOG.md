@@ -41,6 +41,7 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
 - Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
 - Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
 - Make the SDK into its own Go module called `go.opentelemetry.io/otel/sdk`. (#985)
+- Changed the default trace `Sampler` from `AlwaysOn` to `ParentOrElse(AlwaysOn)`. (#989)
 
 ### Removed
 
@@ -69,10 +70,6 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
 ### Changed
 
 - Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
-
-### Changed 
-
-- Changed the default Sampler to `ParentOrElse(AlwaysOn)`. (#989)
 
 ### Removed
 
