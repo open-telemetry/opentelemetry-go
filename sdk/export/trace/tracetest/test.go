@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest // import "go.opentelemetry.io/otel/sdk/export/trace"
+// tracetest is a testing helper package for the SDK. User can configure no-op or in-memory exporters to verify
+// different SDK behaviors or custom instrumentation.
+package tracetest // import "go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 
 import (
 	"context"
@@ -21,46 +23,62 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-// NewNoopSpanBatcher returns a new no-op trace.SpanBatcher.
-func NewNoopSpanBatcher() trace.SpanBatcher {
-	return new(noopSpanBatcher)
+var _ trace.SpanBatcher = (*NoopExporter)(nil)
+var _ trace.SpanSyncer = (*NoopExporter)(nil)
+
+// NewNoopExporter returns a new no-op exporter.
+// It implements both trace.SpanBatcher and trace.SpanSyncer.
+func NewNoopExporter() *NoopExporter {
+	return new(NoopExporter)
 }
 
-type noopSpanBatcher struct {
-}
+// NoopExporter is an exporter that does nothing.
+type NoopExporter struct{}
 
 // ExportSpans implements the trace.SpanBatcher interface.
-func (nsb *noopSpanBatcher) ExportSpans(context.Context, []*trace.SpanData) {}
+func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanData) {}
 
 // ExportSpan implements the trace.SpanSyncer interface.
-￼func (nsb *noopSpanBatcher) ExportSpan(context.Context, trace.SpanData) {}
+func (nsb *NoopExporter) ExportSpan(context.Context, *trace.SpanData) {}
 
-// NewInMemorySpanBatcher returns a new trace.SpanBatcher that stores in-memory all exported spans.
-func NewInMemorySpanBatcher() *InMemorySpanBatcher {
-	return new(InMemorySpanBatcher)
+var _ trace.SpanBatcher = (*InMemoryExporter)(nil)
+var _ trace.SpanSyncer = (*InMemoryExporter)(nil)
+
+// NewInMemoryExporter returns a new trace.SpanBatcher that stores in-memory all exported spans.
+// It implements both trace.SpanBatcher and trace.SpanSyncer.
+func NewInMemoryExporter() *InMemoryExporter {
+	return new(InMemoryExporter)
 }
 
-type InMemorySpanBatcher struct {
+// InMemoryExporter is an exporter that stores in-memory all exported spans.
+type InMemoryExporter struct {
 	mu  sync.Mutex
 	sds []*trace.SpanData
 }
 
 // ExportSpans implements the trace.SpanBatcher interface.
-func (imsb *InMemorySpanBatcher) ExportSpans(_ context.Context, sds []*trace.SpanData) {
+func (imsb *InMemoryExporter) ExportSpans(_ context.Context, sds []*trace.SpanData) {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
 	imsb.sds = append(imsb.sds, sds...)
 }
 
+// ExportSpan implements the trace.SpanSyncer interface.
+func (imsb *InMemoryExporter) ExportSpan(_ context.Context, sd *trace.SpanData) {
+	imsb.mu.Lock()
+	defer imsb.mu.Unlock()
+	imsb.sds = append(imsb.sds, sd)
+}
+
 // Reset the current in-memory storage.
-func (imsb *InMemorySpanBatcher) Reset() {
+func (imsb *InMemoryExporter) Reset() {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
 	imsb.sds = nil
 }
 
 // GetSpans returns the current in-memory stored spans.
-func (imsb *InMemorySpanBatcher) GetSpans() []*trace.SpanData {
+func (imsb *InMemoryExporter) GetSpans() []*trace.SpanData {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
 	ret := make([]*trace.SpanData, len(imsb.sds))

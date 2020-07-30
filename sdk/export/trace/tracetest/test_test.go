@@ -23,19 +23,18 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-var _ trace.SpanBatcher = (*InMemorySpanBatcher)(nil)
-
 // TestNoop tests only that the no-op does not crash in different scenarios.
 func TestNoop(t *testing.T) {
-	nsb := NewNoopSpanBatcher()
+	nsb := NewNoopExporter()
 
 	nsb.ExportSpans(context.Background(), nil)
 	nsb.ExportSpans(context.Background(), make([]*trace.SpanData, 10))
 	nsb.ExportSpans(context.Background(), make([]*trace.SpanData, 0, 10))
+	nsb.ExportSpan(context.Background(), nil)
 }
 
-func TestSink(t *testing.T) {
-	imsb := NewInMemorySpanBatcher()
+func TestNewInMemoryExporter(t *testing.T) {
+	imsb := NewInMemoryExporter()
 
 	imsb.ExportSpans(context.Background(), nil)
 	assert.Len(t, imsb.GetSpans(), 0)
@@ -54,4 +53,9 @@ func TestSink(t *testing.T) {
 	// Ensure that operations on the internal storage does not change the previously returned value.
 	assert.Len(t, sds, 10)
 	assert.Len(t, imsb.GetSpans(), 0)
+
+	imsb.ExportSpan(context.Background(), input[0])
+	sds = imsb.GetSpans()
+	assert.Len(t, sds, 1)
+	assert.Same(t, input[0], sds[0])
 }
