@@ -84,28 +84,35 @@ func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
 	return result
 }
 
-// Array KeyValue supports only arrays of primitive types:
-// "bool", "int", "int32", "int64",
-// "float32", "float64", "string",
-// "uint", "uint32", "uint64"
 func toArrayAttribute(v kv.KeyValue) *commonpb.AnyValue_ArrayValue {
 	array := v.Value.AsArray()
 	resultValues := []*commonpb.AnyValue{
-		&commonpb.AnyValue{
+		{
 			Value: &commonpb.AnyValue_StringValue{
 				StringValue: "INVALID",
 			},
 		},
 	}
-	// Using type assertion is cheaper then reflection, and safer then checking for type names
 	if boolArray, ok := array.([]bool); ok {
 		resultValues = getValuesFromBoolArray(boolArray)
 	} else if intArray, ok := array.([]int); ok {
 		resultValues = getValuesFromIntArray(intArray)
-	} else if intArray, ok := array.([]int32); ok {
-		resultValues = getValuesFromInt32Array(intArray)
-	} else if intArray, ok := array.([]int64); ok {
-		resultValues = getValuesFromInt64Array(intArray)
+	} else if int32Array, ok := array.([]int32); ok {
+		resultValues = getValuesFromInt32Array(int32Array)
+	} else if int64Array, ok := array.([]int64); ok {
+		resultValues = getValuesFromInt64Array(int64Array)
+	} else if uintArray, ok := array.([]uint); ok {
+		resultValues = getValuesFromUIntArray(uintArray)
+	} else if uint32Array, ok := array.([]uint32); ok {
+		resultValues = getValuesFromUInt32Array(uint32Array)
+	} else if uint64Array, ok := array.([]uint64); ok {
+		resultValues = getValuesFromUInt64Array(uint64Array)
+	} else if float32Array, ok := array.([]float32); ok {
+		resultValues = getValuesFromFloat32Array(float32Array)
+	} else if float64Array, ok := array.([]float64); ok {
+		resultValues = getValuesFromFloat64Array(float64Array)
+	} else if stringArray, ok := array.([]string); ok {
+		resultValues = getValuesFromStringArray(stringArray)
 	}
 
 	return &commonpb.AnyValue_ArrayValue{
@@ -139,9 +146,9 @@ func getValuesFromIntArray(intArray []int) []*commonpb.AnyValue {
 	return result
 }
 
-func getValuesFromInt32Array(intArray []int32) []*commonpb.AnyValue {
+func getValuesFromInt32Array(int32Array []int32) []*commonpb.AnyValue {
 	result := []*commonpb.AnyValue{}
-	for _, i := range intArray {
+	for _, i := range int32Array {
 		result = append(result, &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_IntValue{
 				IntValue: int64(i),
@@ -151,12 +158,84 @@ func getValuesFromInt32Array(intArray []int32) []*commonpb.AnyValue {
 	return result
 }
 
-func getValuesFromInt64Array(intArray []int64) []*commonpb.AnyValue {
+func getValuesFromInt64Array(int64Array []int64) []*commonpb.AnyValue {
 	result := []*commonpb.AnyValue{}
-	for _, i := range intArray {
+	for _, i := range int64Array {
 		result = append(result, &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_IntValue{
 				IntValue: i,
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromUIntArray(uintArray []uint) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range uintArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromUInt32Array(uint32Array []uint32) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range uint32Array {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromUInt64Array(uint64Array []uint64) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, i := range uint64Array {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: int64(i),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromFloat32Array(float32Array []float32) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, f := range float32Array {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_DoubleValue{
+				DoubleValue: float64(f),
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromFloat64Array(float64Array []float64) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, f := range float64Array {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_DoubleValue{
+				DoubleValue: f,
+			},
+		})
+	}
+	return result
+}
+
+func getValuesFromStringArray(stringArray []string) []*commonpb.AnyValue {
+	result := []*commonpb.AnyValue{}
+	for _, s := range stringArray {
+		result = append(result, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
+				StringValue: s,
 			},
 		})
 	}

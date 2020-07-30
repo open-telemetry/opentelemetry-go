@@ -132,17 +132,17 @@ func TestAttributes(t *testing.T) {
 						Value: &commonpb.AnyValue_ArrayValue{
 							ArrayValue: &commonpb.ArrayValue{
 								Values: []*commonpb.AnyValue{
-									&commonpb.AnyValue{
+									{
 										Value: &commonpb.AnyValue_IntValue{
 											IntValue: 1,
 										},
 									},
-									&commonpb.AnyValue{
+									{
 										Value: &commonpb.AnyValue_IntValue{
 											IntValue: 2,
 										},
 									},
-									&commonpb.AnyValue{
+									{
 										Value: &commonpb.AnyValue_IntValue{
 											IntValue: 3,
 										},
@@ -155,7 +155,24 @@ func TestAttributes(t *testing.T) {
 			},
 		},
 	} {
-		assertExpectedAttributes(t, test)
+		got := Attributes(test.attrs)
+		if !assert.Len(t, got, len(test.expected)) {
+			return
+		}
+		for i, actual := range got {
+			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
+				e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+				if !ok {
+					t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
+					return
+				}
+				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+					return
+				}
+				e.DoubleValue = a.DoubleValue
+			}
+			assert.Equal(t, test.expected[i], actual)
+		}
 	}
 }
 
@@ -169,47 +186,74 @@ func TestArrayAttributes(t *testing.T) {
 		{
 			[]kv.KeyValue{
 				kv.Array("bool array to bool array", []bool{true, false}),
-				kv.Array("int array to int array", []int{1, 2, 3}),
-				kv.Array("int32 array to int array", []int32{1, 2, 3}),
-				kv.Array("int64 array to int array", []int64{1, 2, 3}),
+				kv.Array("int array to int64 array", []int{1, 2, 3}),
+				kv.Array("uint array to int64 array", []uint{1, 2, 3}),
+				kv.Array("int32 array to int64 array", []int32{1, 2, 3}),
+				kv.Array("uint32 array to int64 array", []uint32{1, 2, 3}),
+				kv.Array("int64 array to int64 array", []int64{1, 2, 3}),
+				kv.Array("uint64 array to int64 array", []uint64{1, 2, 3}),
+				kv.Array("float32 array to double array", []float32{1.11, 2.22, 3.33}),
+				kv.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				kv.Array("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
 				newOtelBoolArray("bool array to bool array", []bool{true, false}),
-				newOtelIntArray("int array to int array", []int{1, 2, 3}),
-				newOtelIntArray("int32 array to int array", []int{1, 2, 3}),
-				newOtelIntArray("int64 array to int array", []int{1, 2, 3}),
+				newOtelIntArray("int array to int64 array", []int64{1, 2, 3}),
+				newOtelIntArray("uint array to int64 array", []int64{1, 2, 3}),
+				newOtelIntArray("int32 array to int64 array", []int64{1, 2, 3}),
+				newOtelIntArray("uint32 array to int64 array", []int64{1, 2, 3}),
+				newOtelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
+				newOtelIntArray("uint64 array to int64 array", []int64{1, 2, 3}),
+				newOtelDoubleArray("float32 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOtelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOtelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 		},
 	} {
-		assertExpectedAttributes(t, test)
+		actualArrayAttributes := Attributes(test.attrs)
+		expectedArrayAttributes := test.expected
+		if !assert.Len(t, actualArrayAttributes, len(expectedArrayAttributes)) {
+			continue
+		}
+
+		for i, actualArrayAttr := range actualArrayAttributes {
+			expectedArrayAttr := expectedArrayAttributes[i]
+			if actualArrayAttr.Key != expectedArrayAttr.Key {
+				continue
+			}
+
+			expectedArrayValue := expectedArrayAttr.Value.GetArrayValue()
+			assert.NotNil(t, expectedArrayValue)
+
+			actualArrayValue := actualArrayAttr.Value.GetArrayValue()
+			assert.NotNil(t, actualArrayValue)
+
+			assertExpectedArrayValues(t, expectedArrayValue.Values, actualArrayValue.Values)
+		}
+
 	}
 }
 
-func assertExpectedAttributes(t *testing.T, test attributeTest) {
-	got := Attributes(test.attrs)
-	if !assert.Len(t, got, len(test.expected)) {
-		return
-	}
-	for i, actual := range got {
-		if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
-			e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+func assertExpectedArrayValues(t *testing.T, expectedValues, actualValues []*commonpb.AnyValue) {
+	for i, actual := range actualValues {
+		expected := expectedValues[i]
+		if a, ok := actual.Value.(*commonpb.AnyValue_DoubleValue); ok {
+			e, ok := expected.Value.(*commonpb.AnyValue_DoubleValue)
 			if !ok {
-				t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
-				return
+				t.Errorf("expected AnyValue_DoubleValue, got %T", expected.Value)
+				continue
 			}
 			if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
-				return
+				continue
 			}
 			e.DoubleValue = a.DoubleValue
 		}
-		assert.Equal(t, test.expected[i], actual)
+		assert.Equal(t, expected, actual)
 	}
 }
 
 func newOtelBoolArray(key string, values []bool) *commonpb.KeyValue {
-
 	arrayValues := []*commonpb.AnyValue{}
-
 	for _, b := range values {
 		arrayValues = append(arrayValues, &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_BoolValue{
@@ -218,32 +262,53 @@ func newOtelBoolArray(key string, values []bool) *commonpb.KeyValue {
 		})
 	}
 
-	result := &commonpb.KeyValue{
-		Key: key,
-		Value: &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_ArrayValue{
-				ArrayValue: &commonpb.ArrayValue{
-					Values: arrayValues,
-				},
-			},
-		},
-	}
-	return result
+	return newOtelArray(key, arrayValues)
 }
 
-func newOtelIntArray(key string, values []int) *commonpb.KeyValue {
-
+func newOtelIntArray(key string, values []int64) *commonpb.KeyValue {
 	arrayValues := []*commonpb.AnyValue{}
 
 	for _, i := range values {
 		arrayValues = append(arrayValues, &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
+				IntValue: i,
 			},
 		})
 	}
 
-	result := &commonpb.KeyValue{
+	return newOtelArray(key, arrayValues)
+}
+
+func newOtelDoubleArray(key string, values []float64) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, d := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_DoubleValue{
+				DoubleValue: d,
+			},
+		})
+	}
+
+	return newOtelArray(key, arrayValues)
+}
+
+func newOtelStringArray(key string, values []string) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, s := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
+				StringValue: s,
+			},
+		})
+	}
+
+	return newOtelArray(key, arrayValues)
+}
+
+func newOtelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyValue {
+	return &commonpb.KeyValue{
 		Key: key,
 		Value: &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_ArrayValue{
@@ -253,5 +318,4 @@ func newOtelIntArray(key string, values []int) *commonpb.KeyValue {
 			},
 		},
 	}
-	return result
 }
