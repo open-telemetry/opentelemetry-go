@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The Zipkin exporter now has `NewExportPipeline` and `InstallNewPipeline` constructor functions to match the common pattern.
     These function build a new exporter with default SDK options and register the exporter with the `global` package respectively. (#944)
 - Add propagator option for gRPC instrumentation. (#986)
+- The `testtrace` package now tracks the `trace.SpanKind` for each span. (#987)
 
 ### Changed
 

@@ -607,4 +607,23 @@ func TestSpan(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("#SpanKind", func(t *testing.T) {
+		tp := testtrace.NewProvider()
+		t.Run("returns the value given at start", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tracer := tp.Tracer(t.Name())
+			_, span := tracer.Start(context.Background(), "test",
+				trace.WithSpanKind(trace.SpanKindConsumer))
+
+			subject, ok := span.(*testtrace.Span)
+			e.Expect(ok).ToBeTrue()
+			subject.End()
+
+			e.Expect(subject.SpanKind()).ToEqual(trace.SpanKindConsumer)
+		})
+	})
 }
