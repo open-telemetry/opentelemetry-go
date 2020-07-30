@@ -43,7 +43,6 @@ func TestAttributes(t *testing.T) {
 				kv.Float32("float64 to double", 1.61),
 				kv.String("string to string", "string"),
 				kv.Bool("bool to bool", true),
-				kv.Array("int array to int array", []int{1, 2, 3}),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -126,48 +125,22 @@ func TestAttributes(t *testing.T) {
 						},
 					},
 				},
-				{
-					Key: "int array to int array",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_ArrayValue{
-							ArrayValue: &commonpb.ArrayValue{
-								Values: []*commonpb.AnyValue{
-									{
-										Value: &commonpb.AnyValue_IntValue{
-											IntValue: 1,
-										},
-									},
-									{
-										Value: &commonpb.AnyValue_IntValue{
-											IntValue: 2,
-										},
-									},
-									{
-										Value: &commonpb.AnyValue_IntValue{
-											IntValue: 3,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
 			},
 		},
 	} {
 		got := Attributes(test.attrs)
 		if !assert.Len(t, got, len(test.expected)) {
-			return
+			continue
 		}
 		for i, actual := range got {
 			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
 				e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
 				if !ok {
 					t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
-					return
+					continue
 				}
 				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
-					return
+					continue
 				}
 				e.DoubleValue = a.DoubleValue
 			}
