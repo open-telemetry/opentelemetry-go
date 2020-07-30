@@ -64,6 +64,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
 
+### Changed 
+
+- Changed the default Sampler to `ParentOrElse(AlwaysOn)`. (#989)
+
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
