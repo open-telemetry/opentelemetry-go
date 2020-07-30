@@ -134,3 +134,33 @@ func TestHandlerNoWrite(t *testing.T) {
 		t.Fatalf("Expected *moctrace.MockSpan, got %T", span)
 	}
 }
+
+func TestResponseWriterOptionalInterfaces(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	var id uint64
+	tracer := mocktrace.MockTracer{StartSpanID: &id}
+
+	// ResponseRecorder implements the Flusher interface. Make sure the
+	// wrapped ResponseWriter passed to the handler still implements
+	// Flusher.
+
+	var isFlusher bool
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, isFlusher = w.(http.Flusher)
+			if _, err := io.WriteString(w, "hello world"); err != nil {
+				t.Fatal(err)
+			}
+		}), "test_handler",
+		WithTracer(&tracer))
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+	if !isFlusher {
+		t.Fatal("http.Flusher interface not exposed")
+	}
+}
