@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OTLP .proto files from `open-telemetry/opentelemetry-proto` imported as a git submodule under `internal/opentelemetry-proto`.
    References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#948)
 
+### Changed 
+
+- Changed the default Sampler to `ParentOrElse(AlwaysOn)`. (#989)
+
 ### Removed
 
 - Removed dependency on `github.com/open-telemetry/opentelemetry-collector`. (#943)
