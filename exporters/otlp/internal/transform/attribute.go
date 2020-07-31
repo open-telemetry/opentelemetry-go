@@ -86,33 +86,37 @@ func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
 
 func toArrayAttribute(v kv.KeyValue) *commonpb.AnyValue_ArrayValue {
 	array := v.Value.AsArray()
-	resultValues := []*commonpb.AnyValue{
-		{
-			Value: &commonpb.AnyValue_StringValue{
-				StringValue: "INVALID",
+	var resultValues []*commonpb.AnyValue
+
+	switch typedArray := array.(type) {
+	case []bool:
+		resultValues = getValuesFromBoolArray(typedArray)
+	case []int:
+		resultValues = getValuesFromIntArray(typedArray)
+	case []int32:
+		resultValues = getValuesFromInt32Array(typedArray)
+	case []int64:
+		resultValues = getValuesFromInt64Array(typedArray)
+	case []uint:
+		resultValues = getValuesFromUIntArray(typedArray)
+	case []uint32:
+		resultValues = getValuesFromUInt32Array(typedArray)
+	case []uint64:
+		resultValues = getValuesFromUInt64Array(typedArray)
+	case []float32:
+		resultValues = getValuesFromFloat32Array(typedArray)
+	case []float64:
+		resultValues = getValuesFromFloat64Array(typedArray)
+	case []string:
+		resultValues = getValuesFromStringArray(typedArray)
+	default:
+		resultValues = []*commonpb.AnyValue{
+			{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: "INVALID",
+				},
 			},
-		},
-	}
-	if boolArray, ok := array.([]bool); ok {
-		resultValues = getValuesFromBoolArray(boolArray)
-	} else if intArray, ok := array.([]int); ok {
-		resultValues = getValuesFromIntArray(intArray)
-	} else if int32Array, ok := array.([]int32); ok {
-		resultValues = getValuesFromInt32Array(int32Array)
-	} else if int64Array, ok := array.([]int64); ok {
-		resultValues = getValuesFromInt64Array(int64Array)
-	} else if uintArray, ok := array.([]uint); ok {
-		resultValues = getValuesFromUIntArray(uintArray)
-	} else if uint32Array, ok := array.([]uint32); ok {
-		resultValues = getValuesFromUInt32Array(uint32Array)
-	} else if uint64Array, ok := array.([]uint64); ok {
-		resultValues = getValuesFromUInt64Array(uint64Array)
-	} else if float32Array, ok := array.([]float32); ok {
-		resultValues = getValuesFromFloat32Array(float32Array)
-	} else if float64Array, ok := array.([]float64); ok {
-		resultValues = getValuesFromFloat64Array(float64Array)
-	} else if stringArray, ok := array.([]string); ok {
-		resultValues = getValuesFromStringArray(stringArray)
+		}
 	}
 
 	return &commonpb.AnyValue_ArrayValue{

@@ -170,16 +170,16 @@ func TestArrayAttributes(t *testing.T) {
 				kv.Array("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
-				newOtelBoolArray("bool array to bool array", []bool{true, false}),
-				newOtelIntArray("int array to int64 array", []int64{1, 2, 3}),
-				newOtelIntArray("uint array to int64 array", []int64{1, 2, 3}),
-				newOtelIntArray("int32 array to int64 array", []int64{1, 2, 3}),
-				newOtelIntArray("uint32 array to int64 array", []int64{1, 2, 3}),
-				newOtelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
-				newOtelIntArray("uint64 array to int64 array", []int64{1, 2, 3}),
-				newOtelDoubleArray("float32 array to double array", []float64{1.11, 2.22, 3.33}),
-				newOtelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				newOtelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
+				newOTelBoolArray("bool array to bool array", []bool{true, false}),
+				newOTelIntArray("int array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("int32 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint32 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint64 array to int64 array", []int64{1, 2, 3}),
+				newOTelDoubleArray("float32 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOTelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOTelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 		},
 	} {
@@ -191,7 +191,7 @@ func TestArrayAttributes(t *testing.T) {
 
 		for i, actualArrayAttr := range actualArrayAttributes {
 			expectedArrayAttr := expectedArrayAttributes[i]
-			if actualArrayAttr.Key != expectedArrayAttr.Key {
+			if !assert.Equal(t, expectedArrayAttr.Key, actualArrayAttr.Key) {
 				continue
 			}
 
@@ -225,7 +225,7 @@ func assertExpectedArrayValues(t *testing.T, expectedValues, actualValues []*com
 	}
 }
 
-func newOtelBoolArray(key string, values []bool) *commonpb.KeyValue {
+func newOTelBoolArray(key string, values []bool) *commonpb.KeyValue {
 	arrayValues := []*commonpb.AnyValue{}
 	for _, b := range values {
 		arrayValues = append(arrayValues, &commonpb.AnyValue{
@@ -235,10 +235,10 @@ func newOtelBoolArray(key string, values []bool) *commonpb.KeyValue {
 		})
 	}
 
-	return newOtelArray(key, arrayValues)
+	return newOTelArray(key, arrayValues)
 }
 
-func newOtelIntArray(key string, values []int64) *commonpb.KeyValue {
+func newOTelIntArray(key string, values []int64) *commonpb.KeyValue {
 	arrayValues := []*commonpb.AnyValue{}
 
 	for _, i := range values {
@@ -249,10 +249,10 @@ func newOtelIntArray(key string, values []int64) *commonpb.KeyValue {
 		})
 	}
 
-	return newOtelArray(key, arrayValues)
+	return newOTelArray(key, arrayValues)
 }
 
-func newOtelDoubleArray(key string, values []float64) *commonpb.KeyValue {
+func newOTelDoubleArray(key string, values []float64) *commonpb.KeyValue {
 	arrayValues := []*commonpb.AnyValue{}
 
 	for _, d := range values {
@@ -263,10 +263,10 @@ func newOtelDoubleArray(key string, values []float64) *commonpb.KeyValue {
 		})
 	}
 
-	return newOtelArray(key, arrayValues)
+	return newOTelArray(key, arrayValues)
 }
 
-func newOtelStringArray(key string, values []string) *commonpb.KeyValue {
+func newOTelStringArray(key string, values []string) *commonpb.KeyValue {
 	arrayValues := []*commonpb.AnyValue{}
 
 	for _, s := range values {
@@ -277,10 +277,10 @@ func newOtelStringArray(key string, values []string) *commonpb.KeyValue {
 		})
 	}
 
-	return newOtelArray(key, arrayValues)
+	return newOTelArray(key, arrayValues)
 }
 
-func newOtelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyValue {
+func newOTelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyValue {
 	return &commonpb.KeyValue{
 		Key: key,
 		Value: &commonpb.AnyValue{
