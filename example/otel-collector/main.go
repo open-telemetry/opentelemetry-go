@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/standard"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -102,7 +103,10 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	// work begins
-	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
+	ctx, span := tracer.Start(
+		context.Background(),
+		"CollectorExporter-Example",
+		apitrace.WithAttributes(commonLabels...))
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
