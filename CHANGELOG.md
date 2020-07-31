@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.10.0] - 2020-07-29
+
+This release migrates the default OpenTelemetry SDK into its own Go module, decoupling the SDK from the API and reducing dependencies for instrumentation packages.
+
 ### Added
 
 - The Zipkin exporter now has `NewExportPipeline` and `InstallNewPipeline` constructor functions to match the common pattern.
@@ -20,7 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Replace the `RegisterGlobal` `Option` in the Jaeger exporter with an `InstallNewPipeline` constructor function.
    This matches the other exporter constructor patterns and will register a new exporter after building it with default configuration. (#944)
 - The trace (`go.opentelemetry.io/otel/exporters/trace/stdout`) and metric (`go.opentelemetry.io/otel/exporters/metric/stdout`) `stdout` exporters are now merged into a single exporter at `go.opentelemetry.io/otel/exporters/stdout`.
-   This new exporter was made into its own Go module to follow the pattern of all exporters and decouple it from the `go.opentelemetry.io/otel` module. (#956)
+   This new exporter was made into its own Go module to follow the pattern of all exporters and decouple it from the `go.opentelemetry.io/otel` module. (#956, #963)
+- Move the `go.opentelemetry.io/otel/exporters/test` test package to `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#962)
 - The `go.opentelemetry.io/otel/api/kv/value` package was merged into the parent `go.opentelemetry.io/otel/api/kv` package. (#968)
   - `value.Bool` was replaced with `kv.BoolValue`.
   - `value.Int64` was replaced with `kv.Int64Value`.
@@ -34,7 +39,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `value.Uint` was replaced with `kv.UintValue`.
   - `value.Array` was replaced with `kv.ArrayValue`.
 - Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+- Change `othttp` to use the `httpsnoop` package to wrap the `ResponseWriter` so that optional interfaces (`http.Hijacker`, `http.Flusher`, etc.) that are implemented by the original `ResponseWriter`are also implemented by the wrapped `ResponseWriter`. (#979)
 - Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
+- Make the SDK into its own Go module called `go.opentelemetry.io/otel/sdk`. (#985)
+- Changed the default trace `Sampler` from `AlwaysOn` to `ParentOrElse(AlwaysOn)`. (#989)
 
 ### Removed
 
@@ -63,10 +71,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Non-nil value `struct`s for key-value pairs will be marshalled using JSON rather than `Sprintf`. (#948)
-
-### Changed 
-
-- Changed the default Sampler to `ParentOrElse(AlwaysOn)`. (#989)
 
 ### Removed
 
@@ -144,7 +148,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Added
 
-- The othttp instrumentation now includes default metrics. (#861) 
+- The othttp instrumentation now includes default metrics. (#861)
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
 - Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
@@ -726,7 +730,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0

@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/felixge/httpsnoop"
+
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
@@ -152,7 +154,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.propagators}
 
-	h.handler.ServeHTTP(rww, r.WithContext(ctx))
+	// Wrap w to use our ResponseWriter methods while also exposing
+	// other interfaces that w may implement (http.CloseNotifier,
+	// http.Flusher, http.Hijacker, http.Pusher, io.ReaderFrom).
+
+	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+		Header: func(httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
+			return rww.Header
+		},
+		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return rww.Write
+		},
+		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return rww.WriteHeader
+		},
+	})
+
+	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
