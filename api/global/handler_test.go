@@ -66,7 +66,7 @@ func (s *HandlerTestSuite) SetupTest() {
 
 func (s *HandlerTestSuite) TestGlobalHandler() {
 	errs := []string{"one", "two"}
-	Handler().Handle(errors.New(errs[0]))
+	ErrorHandler().Handle(errors.New(errs[0]))
 	Handle(errors.New(errs[1]))
 	s.Assert().Equal(errs, s.errLogger.Got())
 }
@@ -125,7 +125,7 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	secondary := &handler{
 		l: log.New(newErrLogger, "", 0),
 	}
-	SetHandler(secondary)
+	SetErrorHandler(secondary)
 	s.Require().NoError(wait(pause), "switched to new Handler")
 
 	// Testing done, stop sending errors.
