@@ -20,11 +20,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/oterror"
+	"go.opentelemetry.io/otel"
 )
 
 var (
-	// globalHandler provides an oterror.Handler that can be used throughout
+	// globalHandler provides a Handler that can be used throughout
 	// an OpenTelemetry instrumented project. When a user specified Handler
 	// is registered (`SetHandler`) all calls to `Handle` will be delegated
 	// to the registered Handler.
@@ -36,8 +36,8 @@ var (
 	// registered once.
 	delegateHanderOnce sync.Once
 
-	// Ensure the handler implements oterror.Handle at build time.
-	_ oterror.Handler = (*handler)(nil)
+	// Ensure the handler implements Handle at build time.
+	_ otel.ErrorHandler = (*handler)(nil)
 )
 
 // handler logs all errors to STDERR.
@@ -48,7 +48,7 @@ type handler struct {
 }
 
 // setDelegate sets the handler delegate if one is not already set.
-func (h *handler) setDelegate(d oterror.Handler) {
+func (h *handler) setDelegate(d otel.ErrorHandler) {
 	if h.delegate.Load() != nil {
 		// Delegate already registered
 		return
@@ -56,27 +56,27 @@ func (h *handler) setDelegate(d oterror.Handler) {
 	h.delegate.Store(d)
 }
 
-// Handle implements oterror.Handler.
+// Handle implements otle.ErrorHandler.
 func (h *handler) Handle(err error) {
 	if d := h.delegate.Load(); d != nil {
-		d.(oterror.Handler).Handle(err)
+		d.(otel.ErrorHandler).Handle(err)
 		return
 	}
 	h.l.Print(err)
 }
 
-// Handler returns the global Handler instance. If no Handler instance has
-// be explicitly set yet, a default Handler is returned that logs to STDERR
-// until an Handler is set (all functionality is delegated to the set
-// Handler once it is set).
-func Handler() oterror.Handler {
+// ErrorHandler returns the global ErrorHandler instance. If no ErrorHandler
+// instance has be explicitly set yet, a default ErrorHandler is returned
+// that logs to STDERR until an ErrorHandler is set (all functionality is
+// delegated to the set ErrorHandler once it is set).
+func ErrorHandler() otel.ErrorHandler {
 	return globalHandler
 }
 
-// SetHandler sets the global Handler to be h.
-func SetHandler(h oterror.Handler) {
+// SetErrorHandler sets the global ErrorHandler to be h.
+func SetErrorHandler(h otel.ErrorHandler) {
 	delegateHanderOnce.Do(func() {
-		current := Handler()
+		current := ErrorHandler()
 		if current == h {
 			return
 		}
@@ -86,7 +86,7 @@ func SetHandler(h oterror.Handler) {
 	})
 }
 
-// Handle is a convience function for Handler().Handle(err)
+// Handle is a convience function for ErrorHandler().Handle(err)
 func Handle(err error) {
-	globalHandler.Handle(err)
+	ErrorHandler().Handle(err)
 }
