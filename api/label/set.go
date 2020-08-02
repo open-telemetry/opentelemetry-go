@@ -236,12 +236,13 @@ func empty() Set {
 //
 // Except for empty sets, this method adds an additional allocation
 // compared with a call to `NewSetWithSortable`.
-func NewSet(kvs ...kv.KeyValue) (Set, []kv.KeyValue) {
+func NewSet(kvs ...kv.KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return empty(), nil
+		return empty()
 	}
-	return NewSetWithSortableEquivalency(kvs, new(Sortable), nil)
+	s, _ := NewSetWithSortableEquivalency(kvs, new(Sortable), nil)
+	return s
 }
 
 // NewSetWithSortable returns a new `*Set`.
@@ -265,12 +266,13 @@ func NewSet(kvs ...kv.KeyValue) (Set, []kv.KeyValue) {
 //
 // The result maintains a cache of encoded labels, by label.EncoderID.
 // This value should not be copied after its first use.
-func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) (Set, []kv.KeyValue) {
+func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return empty(), nil
+		return empty()
 	}
-	return NewSetWithSortableEquivalency(kvs, tmp, nil)
+	s, _ := NewSetWithSortableEquivalency(kvs, tmp, nil)
+	return s
 }
 
 func NewSetWithEquivalency(kvs []kv.KeyValue, keyRe *regexp.Regexp) (Set, []kv.KeyValue) {

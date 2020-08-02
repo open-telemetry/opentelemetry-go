@@ -28,7 +28,7 @@ import (
 func TestIterator(t *testing.T) {
 	one := kv.String("one", "1")
 	two := kv.Int("two", 2)
-	lbl, _ := label.NewSet(one, two)
+	lbl := label.NewSet(one, two)
 	iter := lbl.Iter()
 	require.Equal(t, 2, iter.Len())
 
@@ -51,7 +51,7 @@ func TestIterator(t *testing.T) {
 }
 
 func TestEmptyIterator(t *testing.T) {
-	lbl, _ := label.NewSet()
+	lbl := label.NewSet()
 	iter := lbl.Iter()
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
@@ -133,8 +133,8 @@ func TestMergedIterator(t *testing.T) {
 			labels1 := makeLabels(input.keys1, 1)
 			labels2 := makeLabels(input.keys2, 2)
 
-			set1, _ := label.NewSet(labels1...)
-			set2, _ := label.NewSet(labels2...)
+			set1 := label.NewSet(labels1...)
+			set2 := label.NewSet(labels2...)
 
 			merge := label.NewMergeIterator(&set1, &set2)
 

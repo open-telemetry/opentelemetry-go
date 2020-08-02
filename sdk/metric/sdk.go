@@ -17,6 +17,7 @@ package metric
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -68,6 +69,9 @@ type (
 
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
+
+		// keyRe is used for dimensionality reduction.
+		keyRe *regexp.Regexp
 	}
 
 	syncInstrument struct {
@@ -223,7 +227,8 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
+		// @@@ Note we are ignoring the unique
+		rec.storage, _ = label.NewSetWithSortableEquivalency(kvs, &rec.sortSlice, s.instrument.meter.keyRe)
 		rec.labels = &rec.storage
 		equiv = rec.storage.Equivalent()
 	} else {
@@ -316,6 +321,7 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
+		keyRe:            c.KeyRegexp,
 	}
 }
 

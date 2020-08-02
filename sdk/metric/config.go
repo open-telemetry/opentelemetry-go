@@ -49,15 +49,15 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
-// WithRegexp sets the Regexp configuration option of a Config.
-func WithRegexp(res *resource.Regexp) Option {
-	return resourceOption{res}
+// WithKeyRegexp sets the Regexp configuration option of a Config.
+func WithKeyRegexp(res *regexp.Regexp) Option {
+	return regexpOption{res}
 }
 
-type resourceOption struct {
+type regexpOption struct {
 	*regexp.Regexp
 }
 
-func (o resourceOption) Apply(config *Config) {
-	config.Regexp = o.Regexp
+func (o regexpOption) Apply(config *Config) {
+	config.KeyRegexp = o.Regexp
 }

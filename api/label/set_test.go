@@ -70,7 +70,7 @@ func TestSetDedup(t *testing.T) {
 	for _, tc := range cases {
 		cpy := make([]kv.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		sl, _ := label.NewSet(cpy...)
+		sl := label.NewSet(cpy...)
 
 		// Ensure that the input was reordered but no elements went missing.
 		require.ElementsMatch(t, tc.kvs, cpy)
@@ -162,7 +162,7 @@ func TestUniqueness(t *testing.T) {
 		copy(cpy, tc.kvs)
 		distinct, uniq := label.NewSetWithEquivalency(cpy, tc.keyRe)
 
-		full, _ := label.NewSet(uniq...)
+		full := label.NewSet(uniq...)
 
 		require.Equal(t, tc.encoding, distinct.Encoded(enc))
 		require.Equal(t, tc.fullEnc, full.Encoded(enc))
