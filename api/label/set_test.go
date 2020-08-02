@@ -15,6 +15,7 @@
 package label_test
 
 import (
+	"regexp"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -24,14 +25,27 @@ import (
 )
 
 type testCase struct {
-	kvs      []kv.KeyValue
+	kvs []kv.KeyValue
+
+	keyRe *regexp.Regexp
+
 	encoding string
+	fullEnc  string
 }
 
 func expect(enc string, kvs ...kv.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		encoding: enc,
+	}
+}
+
+func expectFiltered(enc, filter, fullEnc string, kvs ...kv.KeyValue) testCase {
+	return testCase{
+		kvs:      kvs,
+		keyRe:    regexp.MustCompile(filter),
+		encoding: enc,
+		fullEnc:  fullEnc,
 	}
 }
 
@@ -56,7 +70,7 @@ func TestSetDedup(t *testing.T) {
 	for _, tc := range cases {
 		cpy := make([]kv.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		sl := label.NewSet(cpy...)
+		sl, _ := label.NewSet(cpy...)
 
 		// Ensure that the input was reordered but no elements went missing.
 		require.ElementsMatch(t, tc.kvs, cpy)
@@ -112,5 +126,45 @@ func TestSetDedup(t *testing.T) {
 				require.NotEqual(t, otherDistinct, d)
 			}
 		}
+	}
+}
+
+func TestUniqueness(t *testing.T) {
+	short := []kv.KeyValue{
+		kv.String("A", "0"),
+		kv.String("B", "2"),
+		kv.String("A", "1"),
+	}
+	long := []kv.KeyValue{
+		kv.String("B", "2"),
+		kv.String("C", "5"),
+		kv.String("B", "2"),
+		kv.String("C", "1"),
+		kv.String("A", "4"),
+		kv.String("C", "3"),
+		kv.String("A", "1"),
+	}
+	cases := []testCase{
+		expectFiltered("A=1", "^A$", "A=1,B=2", short...),
+		expectFiltered("B=2", "^B$", "A=1,B=2", short...),
+		expectFiltered("A=1,B=2", "^A|B$", "A=1,B=2", short...),
+		expectFiltered("", "^C", "A=1,B=2", short...),
+
+		expectFiltered("A=1,C=3", "A|C", "A=1,B=2,C=3", long...),
+		expectFiltered("B=2,C=3", "C|B", "A=1,B=2,C=3", long...),
+		expectFiltered("C=3", "C", "A=1,B=2,C=3", long...),
+		expectFiltered("", "D", "A=1,B=2,C=3", long...),
+	}
+	enc := label.DefaultEncoder()
+
+	for _, tc := range cases {
+		cpy := make([]kv.KeyValue, len(tc.kvs))
+		copy(cpy, tc.kvs)
+		distinct, uniq := label.NewSetWithEquivalency(cpy, tc.keyRe)
+
+		full, _ := label.NewSet(uniq...)
+
+		require.Equal(t, tc.encoding, distinct.Encoded(enc))
+		require.Equal(t, tc.fullEnc, full.Encoded(enc))
 	}
 }

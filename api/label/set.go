@@ -17,6 +17,7 @@ package label // import "go.opentelemetry.io/otel/api/label"
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"sort"
 	"sync"
 
@@ -100,6 +101,7 @@ func (l *Set) Get(idx int) (kv.KeyValue, bool) {
 	if l == nil {
 		return kv.KeyValue{}, false
 	}
+
 	value := l.equivalent.reflect()
 
 	if idx >= 0 && idx < value.Len() {
@@ -116,8 +118,10 @@ func (l *Set) Value(k kv.Key) (kv.Value, bool) {
 	if l == nil {
 		return kv.Value{}, false
 	}
-	rValue := l.equivalent.reflect()
-	vlen := rValue.Len()
+	var vlen int
+	var rValue reflect.Value
+	vlen = rValue.Len()
+	rValue = l.equivalent.reflect()
 
 	idx := sort.Search(vlen, func(idx int) bool {
 		return rValue.Index(idx).Interface().(kv.KeyValue).Key >= k
@@ -221,20 +225,23 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
+func empty() Set {
+	return Set{
+		equivalent: emptySet.equivalent,
+	}
+}
+
 // NewSet returns a new `*Set`.  See the documentation for
 // `NewSetWithSortable` for more details.
 //
 // Except for empty sets, this method adds an additional allocation
 // compared with a call to `NewSetWithSortable`.
-func NewSet(kvs ...kv.KeyValue) Set {
+func NewSet(kvs ...kv.KeyValue) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return Set{
-			equivalent: emptySet.equivalent,
-		}
+		return empty(), nil
 	}
-
-	return NewSetWithSortable(kvs, new(Sortable))
+	return NewSetWithSortableEquivalency(kvs, new(Sortable), nil)
 }
 
 // NewSetWithSortable returns a new `*Set`.
@@ -258,12 +265,26 @@ func NewSet(kvs ...kv.KeyValue) Set {
 //
 // The result maintains a cache of encoded labels, by label.EncoderID.
 // This value should not be copied after its first use.
-func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
+func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return Set{
-			equivalent: emptySet.equivalent,
-		}
+		return empty(), nil
+	}
+	return NewSetWithSortableEquivalency(kvs, tmp, nil)
+}
+
+func NewSetWithEquivalency(kvs []kv.KeyValue, keyRe *regexp.Regexp) (Set, []kv.KeyValue) {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty(), nil
+	}
+	return NewSetWithSortableEquivalency(kvs, new(Sortable), keyRe)
+}
+
+func NewSetWithSortableEquivalency(kvs []kv.KeyValue, tmp *Sortable, distinctRe *regexp.Regexp) (Set, []kv.KeyValue) {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty(), nil
 	}
 
 	*tmp = kvs
@@ -287,13 +308,36 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 		if kvs[offset].Key == kvs[position].Key {
 			continue
 		}
-		kvs[offset], kvs[position-1] = kvs[position-1], kvs[offset]
 		position--
+		kvs[offset], kvs[position] = kvs[position], kvs[offset]
+	}
+
+	// move labels that do not match the optional regexp so
+	// they're adjacent before calling computeDistinct().
+	var full []kv.KeyValue
+
+	distinctPosition := position
+
+	if distinctRe != nil {
+		full = kvs[position:]
+		distinctPosition = len(kvs)
+
+		// Similar to the logic above, swap indistinct keys
+		// forward and distinct keys toward the end of the
+		// slice.
+		offset = len(kvs) - 1
+		for ; offset >= position; offset-- {
+			if distinctRe.MatchString(string(kvs[offset].Key)) {
+				distinctPosition--
+				kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
+				continue
+			}
+		}
 	}
 
 	return Set{
-		equivalent: computeDistinct(kvs[position:]),
-	}
+		equivalent: computeDistinct(kvs[distinctPosition:]),
+	}, full
 }
 
 // computeDistinct returns a `Distinct` using either the fixed- or
