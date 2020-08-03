@@ -17,7 +17,6 @@ package metric
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -70,8 +69,8 @@ type (
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
 
-		// keyRegexpFunc is used for dimensionality reduction.
-		keyRegexpFunc KeyRegexpFunc
+		// keyFilterFunc is used for dimensionality reduction.
+		keyFilterFunc KeyFilterFunc
 	}
 
 	syncInstrument struct {
@@ -130,7 +129,7 @@ type (
 	instrument struct {
 		meter      *Accumulator
 		descriptor metric.Descriptor
-		filter     *regexp.Regexp
+		filter     label.Filter
 	}
 
 	asyncInstrument struct {
@@ -138,7 +137,7 @@ type (
 		// records maps ordered labels to the pair of
 		// labelset and recorder
 		records map[label.Distinct]*asyncRecord
-		filter  *regexp.Regexp
+		filter  label.Filter
 	}
 
 	asyncRecord struct {
@@ -326,7 +325,7 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
-		keyRegexpFunc:    c.KeyRegexpFunc,
+		keyFilterFunc:    c.KeyFilterFunc,
 	}
 }
 
@@ -338,8 +337,8 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 			meter:      m,
 		},
 	}
-	if m.keyRegexpFunc != nil {
-		s.filter = m.keyRegexpFunc(&s.descriptor)
+	if m.keyFilterFunc != nil {
+		s.filter = m.keyFilterFunc(&s.descriptor)
 	}
 	return s, nil
 }
@@ -352,8 +351,8 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 			meter:      m,
 		},
 	}
-	if m.keyRegexpFunc != nil {
-		a.filter = m.keyRegexpFunc(&a.descriptor)
+	if m.keyFilterFunc != nil {
+		a.filter = m.keyFilterFunc(&a.descriptor)
 	}
 
 	m.asyncLock.Lock()

@@ -160,7 +160,7 @@ func TestUniqueness(t *testing.T) {
 	for _, tc := range cases {
 		cpy := make([]kv.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		distinct, uniq := label.NewSetWithFiltered(cpy, tc.keyRe)
+		distinct, uniq := label.NewSetWithFiltered(cpy, tc.keyRe.MatchString)
 
 		full := label.NewSet(uniq...)
 

@@ -17,7 +17,6 @@ package label // import "go.opentelemetry.io/otel/api/label"
 import (
 	"encoding/json"
 	"reflect"
-	"regexp"
 	"sort"
 	"sync"
 
@@ -43,6 +42,8 @@ type (
 		encoders [maxConcurrentEncoders]EncoderID
 		encoded  [maxConcurrentEncoders]string
 	}
+
+	Filter func(string) bool
 
 	// Distinct wraps a variable-size array of `kv.KeyValue`,
 	// constructed with keys in sorted order.  This can be used as
@@ -275,15 +276,15 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 	return s
 }
 
-func NewSetWithFiltered(kvs []kv.KeyValue, keyRe *regexp.Regexp) (Set, []kv.KeyValue) {
+func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
 	}
-	return NewSetWithSortableFiltered(kvs, new(Sortable), keyRe)
+	return NewSetWithSortableFiltered(kvs, new(Sortable), filter)
 }
 
-func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filterRe *regexp.Regexp) (Set, []kv.KeyValue) {
+func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
@@ -313,15 +314,15 @@ func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filterRe *rege
 		position--
 		kvs[offset], kvs[position] = kvs[position], kvs[offset]
 	}
-	if filterRe != nil {
-		return filterSet(kvs[position:], filterRe)
+	if filter != nil {
+		return filterSet(kvs[position:], filter)
 	}
 	return Set{
 		equivalent: computeDistinct(kvs[position:]),
 	}, nil
 }
 
-func filterSet(kvs []kv.KeyValue, filterRe *regexp.Regexp) (Set, []kv.KeyValue) {
+func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	var excluded []kv.KeyValue
 
 	// move labels that do not match the optional regexp so
@@ -333,7 +334,7 @@ func filterSet(kvs []kv.KeyValue, filterRe *regexp.Regexp) (Set, []kv.KeyValue) 
 	// slice.
 	offset := len(kvs) - 1
 	for ; offset >= 0; offset-- {
-		if filterRe.MatchString(string(kvs[offset].Key)) {
+		if filter(string(kvs[offset].Key)) {
 			distinctPosition--
 			kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
 			continue
@@ -346,15 +347,15 @@ func filterSet(kvs []kv.KeyValue, filterRe *regexp.Regexp) (Set, []kv.KeyValue) 
 	}, excluded
 }
 
-func (l *Set) Filter(re *regexp.Regexp) (Set, []kv.KeyValue) {
+func (l *Set) Filter(re Filter) (Set, []kv.KeyValue) {
 	if re == nil {
 		return Set{
 			equivalent: l.equivalent,
 		}, nil
 	}
 
-	// Note: consider whether the caller should provide temporary
-	// space, as an optimization.
+	// Note: This could be refactored to avoid the temporary slice
+	// allocation, if it proves to be expensive.
 	return filterSet(l.ToSlice(), re)
 }
 

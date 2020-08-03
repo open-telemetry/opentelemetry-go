@@ -87,7 +87,7 @@ func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*expor
 	test.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
-func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
+func newSDK(t *testing.T, opts ...metricsdk.Option) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
 	testHandler.Reset()
 	processor := &correctnessProcessor{
 		t:            t,
@@ -95,7 +95,7 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessPro
 	}
 	accum := metricsdk.NewAccumulator(
 		processor,
-		metricsdk.WithResource(testResource),
+		append(opts, metricsdk.WithResource(testResource))...,
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, processor
@@ -583,5 +583,48 @@ func TestSyncInAsync(t *testing.T) {
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
+	}, out.Map)
+}
+
+func TestLabelFilter(t *testing.T) {
+	filter := func(_ *metric.Descriptor) label.Filter {
+		return func(k string) bool {
+			return k == "A" || k == "C"
+		}
+	}
+
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t, metricsdk.WithKeyFilterFunc(filter))
+	kvs1 := []kv.KeyValue{
+		kv.Int("A", 1),
+		kv.Int("B", 2),
+		kv.Int("C", 3),
+	}
+	kvs2 := []kv.KeyValue{
+		kv.Int("A", 1),
+		kv.Int("B", 0),
+		kv.Int("C", 3),
+	}
+	counter := Must(meter).NewFloat64Counter("counter.sum")
+
+	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			result.Observe(10, kvs1...)
+			result.Observe(10, kvs2...)
+		},
+	)
+
+	counter.Add(ctx, 100, kvs1...)
+	counter.Add(ctx, 100, kvs2...)
+
+	sdk.Collect(ctx)
+
+	out := batchTest.NewOutput(label.DefaultEncoder())
+	for _, rec := range processor.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
+	}
+	require.EqualValues(t, map[string]float64{
+		"counter.sum/A=1,C=3/R=V":        200,
+		"observer.lastvalue/A=1,C=3/R=V": 20,
 	}, out.Map)
 }
