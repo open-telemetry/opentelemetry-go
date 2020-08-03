@@ -87,7 +87,7 @@ func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*expor
 	test.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
-func newSDK(t *testing.T, opts ...metricsdk.Option) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
+func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
 	testHandler.Reset()
 	processor := &correctnessProcessor{
 		t:            t,
@@ -95,7 +95,7 @@ func newSDK(t *testing.T, opts ...metricsdk.Option) (metric.Meter, *metricsdk.Ac
 	}
 	accum := metricsdk.NewAccumulator(
 		processor,
-		append(opts, metricsdk.WithResource(testResource))...,
+		metricsdk.WithResource(testResource),
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, processor

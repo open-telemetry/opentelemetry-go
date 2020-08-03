@@ -67,10 +67,29 @@ type (
 		// being maintained, taken from the process start time.
 		stateful bool
 
+		// currentOwned indicates that "current" was allocated
+		// by the processor in order to merge results from
+		// multiple Accuulators during a single collection
+		// round, which may happen either because:
+		// (1) multiple Accumulators output the same Metric
+		// (2) one Accumulator is configured with dimensionality reduction.
 		currentOwned bool
-		current      export.Aggregator // refers to single-accumulator checkpoint or is owned
-		delta        export.Aggregator // owned if stateful / precomputed-sum.
-		cumulative   export.Aggregator // owned if stateful else nil.
+
+		// current refers the output frmo a single Accumulator
+		// (if !currentOwned) or it refers to an Aggregator
+		// owned by the processor used to accumulate multiple
+		// values in a single collection round.
+		current export.Aggregator
+
+		// delta if non-nil refers to an Aggregator owned by
+		// the processor used to compute deltas between
+		// precomputed sums.
+		delta export.Aggregator
+
+		// cumulative if non-nil refers to an Aggregator owned
+		// by the processor used to store the last cumulative
+		// value.
+		cumulative export.Aggregator
 	}
 
 	state struct {
@@ -154,10 +173,8 @@ func (b *Processor) Process(accum export.Accumulation) error {
 				// If we know we need to compute deltas, allocate two aggregators.
 				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
 			} else {
-				// In this case we are not certain to need a delta, only allocate a
-				// cumulative aggregator.  We _may_ need a delta accumulator if
-				// multiple synchronous Accumulators produce an Accumulation (handled
-				// below), which requires merging them into a temporary Aggregator.
+				// In this case we are certain not to need a delta, only allocate
+				// a cumulative aggregator.
 				b.AggregatorFor(desc, &newValue.cumulative)
 			}
 		}
@@ -194,15 +211,16 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
 	// been seen in the same collection.  When this happens, it
-	// implies that multiple Accumulators are being used because
-	// the Accumulator outputs a maximum of one Accumulation per
-	// instrument and label set.
+	// implies that multiple Accumulators are being used, or that
+	// a single Accumulator has been configured with a label key
+	// filter.
 
 	if !sameCollection {
 		if !value.currentOwned {
-			// This is the first Accumulation we've seen for this
-			// stateKey during this collection.  Just keep a
-			// reference to the Accumulator's Aggregator.
+			// This is the first Accumulation we've seen
+			// for this stateKey during this collection.
+			// Just keep a reference to the Accumulator's
+			// Aggregator.
 			value.current = agg
 			return nil
 		}
@@ -213,7 +231,6 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// Accumulator's Aggregator.  The remaining cases address
 	// synchronous instruments, which always merge multiple
 	// Accumulations using `value.delta` for temporary storage.
-
 	if !value.currentOwned {
 		tmp := value.current
 		b.AggregatorSelector.AggregatorFor(desc, &value.current)
@@ -222,6 +239,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 			return err
 		}
 	}
+
 	// The two statements above ensures that `value.current` refers
 	// to `value.delta` and not to an Accumulator's Aggregator.  Now
 	// combine this Accumulation with the prior Accumulation.
@@ -278,8 +296,6 @@ func (b *Processor) FinishCollection() error {
 		// delta or a cumulative aggregation.
 		var err error
 		if mkind.PrecomputedSum() {
-			//panic("CONFUSED")
-
 			if currentSubtractor, ok := value.current.(export.Subtractor); ok {
 				// This line is equivalent to:
 				// value.delta = currentSubtractor - value.cumulative
@@ -300,7 +316,6 @@ func (b *Processor) FinishCollection() error {
 			return err
 		}
 	}
-
 	return nil
 }
 

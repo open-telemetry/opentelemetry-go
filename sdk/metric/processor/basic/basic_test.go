@@ -119,7 +119,9 @@ func testProcessor(
 	nkind metric.NumberKind,
 	akind aggregation.Kind,
 ) {
-	selector := test.AggregatorSelector() // Note: Aggregation kind is set by name, see below
+	// Note: this selector uses the instrument name to dictate
+	// aggregation kind.
+	selector := test.AggregatorSelector()
 	res := resource.New(kv.String("R", "V"))
 
 	labs1 := []kv.KeyValue{kv.String("L1", "V")}
@@ -177,7 +179,6 @@ func testProcessor(
 					processor.StartCollection()
 					if err := processor.FinishCollection(); err != nil {
 						t.Fatal("unexpected collection error: ", err)
-
 					}
 				}
 
@@ -192,8 +193,9 @@ func testProcessor(
 				var multiplier int64
 
 				if mkind.Asynchronous() {
-					// Because async instruments take the last value,
-					// the number of accumulators doesn't matter.
+					// Asynchronous tests accumulate results multiply by the
+					// number of Accumulators, unless LastValue aggregation.
+					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
 						if ekind == export.DeltaExporter && akind != aggregation.LastValueKind {
 							multiplier = int64(nAccum)
@@ -232,6 +234,7 @@ func testProcessor(
 						fmt.Sprintf("inst2%s/L2=V/R=V", instSuffix): float64(multiplier * 10), // labels2
 					}
 				}
+
 				require.EqualValues(t, exp, records1.Map(), "with repetition=%v", repetitionAfterEmptyInterval)
 			}
 		}
@@ -423,5 +426,43 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/R=V": 10,
 		}, records.Map())
+	}
+}
+
+func TestMultiObserverSum(t *testing.T) {
+	for _, ekind := range []export.ExportKind{
+		export.PassThroughExporter,
+		export.CumulativeExporter,
+		export.DeltaExporter,
+	} {
+
+		res := resource.New(kv.String("R", "V"))
+		desc := metric.NewDescriptor("observe.sum", metric.SumObserverKind, metric.Int64NumberKind)
+		selector := test.AggregatorSelector()
+
+		processor := basic.New(selector, ekind, basic.WithMemory(false))
+		checkpointSet := processor.CheckpointSet()
+
+		for i := 1; i < 3; i++ {
+			// Add i*10*3 times
+			processor.StartCollection()
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+			require.NoError(t, processor.FinishCollection())
+
+			// Multiplier is 1 for deltas, otherwise i.
+			multiplier := i
+			if ekind == export.DeltaExporter {
+				multiplier = 1
+			}
+
+			// Verify one element
+			records := test.NewOutput(label.DefaultEncoder())
+			require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+			require.EqualValues(t, map[string]float64{
+				"observe.sum/A=B/R=V": float64(3 * 10 * multiplier),
+			}, records.Map())
+		}
 	}
 }
