@@ -137,7 +137,6 @@ type (
 		// records maps ordered labels to the pair of
 		// labelset and recorder
 		records map[label.Distinct]*asyncRecord
-		filter  label.Filter
 	}
 
 	asyncRecord struct {
@@ -226,7 +225,7 @@ func (s *syncInstrument) acquireHandleSingle(kvs []kv.KeyValue) *record {
 	// Note: We filter and ignore the disregarded keys
 	// that were excluded here.  A sampling API for metric
 	// events would want to see these.
-	rec.storage, _ = label.NewSetWithSortableFiltered(kvs, &rec.sortSlice, s.filter)
+	rec.storage, _ = label.NewSetWithSortableFiltered(kvs, &rec.sortSlice, s.instrument.filter)
 	equiv := rec.storage.Equivalent()
 
 	return s.acquireHandleRecord(equiv, &rec.storage, rec)
@@ -338,7 +337,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 		},
 	}
 	if m.keyFilterFunc != nil {
-		s.filter = m.keyFilterFunc(&s.descriptor)
+		s.instrument.filter = m.keyFilterFunc(&s.descriptor)
 	}
 	return s, nil
 }
@@ -352,7 +351,7 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 		},
 	}
 	if m.keyFilterFunc != nil {
-		a.filter = m.keyFilterFunc(&a.descriptor)
+		a.instrument.filter = m.keyFilterFunc(&a.descriptor)
 	}
 
 	m.asyncLock.Lock()
@@ -428,17 +427,20 @@ func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) 
 	if len(obs) == 0 {
 		return
 	}
+	// Note complete is never encoded, only copied. The //nolint
+	// below bypasses the copylocks lint checker: this is safe
+	// because it is never encoded.
 	complete := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
 		if a := m.fromAsync(ob.AsyncImpl()); a != nil {
 			rec := &asyncRecord{}
 			rec.asyncInstrument = a
-			rec.complete = complete
-			if a.filter == nil {
-				rec.filtered = complete
+			rec.complete = complete //nolint
+			if a.instrument.filter == nil {
+				rec.filtered = complete //nolint
 			} else {
-				rec.filtered, _ = rec.complete.Filter(a.filter)
+				rec.filtered, _ = rec.complete.Filter(a.instrument.filter)
 			}
 			a.observe(ob.Number(), rec)
 		}

@@ -18,7 +18,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -374,8 +373,4 @@ func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
 	// will become an error when the exporter tries to access a
 	// checkpoint, presumably, so let it be.
 	return false
-}
-
-func (a Accumulation) String() string {
-	return fmt.Sprintf("%v", a.Aggregator())
 }

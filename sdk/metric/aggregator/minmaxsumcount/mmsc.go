@@ -16,7 +16,6 @@ package minmaxsumcount // import "go.opentelemetry.io/otel/sdk/metric/aggregator
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/metric"
@@ -163,10 +162,4 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		c.max.SetNumber(o.max)
 	}
 	return nil
-}
-
-func (c *Aggregator) String() string {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return fmt.Sprint("sum:", c.sum)
 }

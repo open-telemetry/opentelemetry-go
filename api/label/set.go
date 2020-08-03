@@ -243,7 +243,7 @@ func NewSet(kvs ...kv.KeyValue) Set {
 		return empty()
 	}
 	s, _ := NewSetWithSortableFiltered(kvs, new(Sortable), nil)
-	return s
+	return s //nolint
 }
 
 // NewSetWithSortable returns a new `*Set`.
@@ -273,7 +273,7 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 		return empty()
 	}
 	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
-	return s
+	return s //nolint
 }
 
 func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {

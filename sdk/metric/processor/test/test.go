@@ -122,8 +122,7 @@ func (o Output) AddRecord(rec export.Record) error {
 		testAggregatorSelector{}.AggregatorFor(rec.Descriptor(), &agg)
 		o.m[key] = agg
 	}
-	o.m[key].Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
-	return nil
+	return o.m[key].Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
 }
 
 func (o Output) Map() map[string]float64 {
