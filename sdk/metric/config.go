@@ -15,8 +15,6 @@
 package metric
 
 import (
-	"go.opentelemetry.io/otel/api/label"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -25,13 +23,7 @@ type Config struct {
 	// Resource describes all the metric records processed by the
 	// Accumulator.
 	Resource *resource.Resource
-
-	// KeyFilter supports dimensionality reduction by identifying
-	// the set of keys used to form a distinct metric.
-	KeyFilterFunc KeyFilterFunc
 }
-
-type KeyFilterFunc func(*metric.Descriptor) label.Filter
 
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
@@ -50,17 +42,4 @@ type resourceOption struct {
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
-}
-
-// WithKeyFilterFunc sets the function used to filter keys by metric descrtiptor.
-func WithKeyFilterFunc(krf KeyFilterFunc) Option {
-	return regexpFuncOption{krf}
-}
-
-type regexpFuncOption struct {
-	KeyFilterFunc
-}
-
-func (o regexpFuncOption) Apply(config *Config) {
-	config.KeyFilterFunc = o.KeyFilterFunc
 }
