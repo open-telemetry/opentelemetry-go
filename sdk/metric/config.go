@@ -17,6 +17,7 @@ package metric
 import (
 	"regexp"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -26,9 +27,12 @@ type Config struct {
 	// Accumulator.
 	Resource *resource.Resource
 
-	// KeyRegexp is
-	KeyRegexp *regexp.Regexp
+	// KeyRegexp supports dimensionality reduction by identifying
+	// the set of keys used to form a distinct metric.
+	KeyRegexpFunc KeyRegexpFunc
 }
+
+type KeyRegexpFunc func(*metric.Descriptor) *regexp.Regexp
 
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
@@ -49,15 +53,15 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
-// WithKeyRegexp sets the Regexp configuration option of a Config.
-func WithKeyRegexp(res *regexp.Regexp) Option {
-	return regexpOption{res}
+// WithKeyRegexpFunc sets the function used to filter keys by metric descrtiptor.
+func WithKeyRegexpFunc(krf func(*metric.Descriptor) *regexp.Regexp) Option {
+	return regexpFuncOption{krf}
 }
 
-type regexpOption struct {
-	*regexp.Regexp
+type regexpFuncOption struct {
+	KeyRegexpFunc
 }
 
-func (o regexpOption) Apply(config *Config) {
-	config.KeyRegexp = o.Regexp
+func (o regexpFuncOption) Apply(config *Config) {
+	config.KeyRegexpFunc = o.KeyRegexpFunc
 }

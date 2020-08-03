@@ -145,14 +145,14 @@ func TestUniqueness(t *testing.T) {
 		kv.String("A", "1"),
 	}
 	cases := []testCase{
-		expectFiltered("A=1", "^A$", "A=1,B=2", short...),
-		expectFiltered("B=2", "^B$", "A=1,B=2", short...),
-		expectFiltered("A=1,B=2", "^A|B$", "A=1,B=2", short...),
+		expectFiltered("A=1", "^A$", "B=2", short...),
+		expectFiltered("B=2", "^B$", "A=1", short...),
+		expectFiltered("A=1,B=2", "^A|B$", "", short...),
 		expectFiltered("", "^C", "A=1,B=2", short...),
 
-		expectFiltered("A=1,C=3", "A|C", "A=1,B=2,C=3", long...),
-		expectFiltered("B=2,C=3", "C|B", "A=1,B=2,C=3", long...),
-		expectFiltered("C=3", "C", "A=1,B=2,C=3", long...),
+		expectFiltered("A=1,C=3", "A|C", "B=2", long...),
+		expectFiltered("B=2,C=3", "C|B", "A=1", long...),
+		expectFiltered("C=3", "C", "A=1,B=2", long...),
 		expectFiltered("", "D", "A=1,B=2,C=3", long...),
 	}
 	enc := label.DefaultEncoder()
@@ -160,7 +160,7 @@ func TestUniqueness(t *testing.T) {
 	for _, tc := range cases {
 		cpy := make([]kv.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		distinct, uniq := label.NewSetWithEquivalency(cpy, tc.keyRe)
+		distinct, uniq := label.NewSetWithFiltered(cpy, tc.keyRe)
 
 		full := label.NewSet(uniq...)
 

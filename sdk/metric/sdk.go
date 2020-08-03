@@ -70,8 +70,8 @@ type (
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
 
-		// keyRe is used for dimensionality reduction.
-		keyRe *regexp.Regexp
+		// keyRegexpFunc is used for dimensionality reduction.
+		keyRegexpFunc KeyRegexpFunc
 	}
 
 	syncInstrument struct {
@@ -130,18 +130,22 @@ type (
 	instrument struct {
 		meter      *Accumulator
 		descriptor metric.Descriptor
+		filter     *regexp.Regexp
 	}
 
 	asyncInstrument struct {
 		instrument
-		// recorders maps ordered labels to the pair of
+		// records maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[label.Distinct]*labeledRecorder
+		records map[label.Distinct]*asyncRecord
+		filter  *regexp.Regexp
 	}
 
-	labeledRecorder struct {
+	asyncRecord struct {
+		*asyncInstrument
+		complete      label.Set
+		filtered      label.Set
 		observedEpoch int64
-		labels        *label.Set
 		observed      export.Aggregator
 	}
 )
@@ -167,25 +171,25 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
+func (a *asyncInstrument) observe(number api.Number, rec *asyncRecord) {
 	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
-	recorder := a.getRecorder(labels)
-	if recorder == nil {
+	agg := a.getAggregator(rec)
+	if agg == nil {
 		// The instrument is disabled according to the
 		// AggregatorSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
+	if err := agg.Update(context.Background(), number, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
 }
 
-func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
-	lrec, ok := a.recorders[labels.Equivalent()]
+func (a *asyncInstrument) getAggregator(rec *asyncRecord) export.Aggregator {
+	lrec, ok := a.records[rec.complete.Equivalent()]
 	if ok {
 		if lrec.observedEpoch == a.meter.currentEpoch {
 			// last value wins for Observers, so if we see the same labels
@@ -194,46 +198,46 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 		} else {
 			lrec.observedEpoch = a.meter.currentEpoch
 		}
-		a.recorders[labels.Equivalent()] = lrec
+		a.records[rec.complete.Equivalent()] = lrec
 		return lrec.observed
 	}
-	var rec export.Aggregator
-	a.meter.processor.AggregatorFor(&a.descriptor, &rec)
-	if a.recorders == nil {
-		a.recorders = make(map[label.Distinct]*labeledRecorder)
+	var agg export.Aggregator
+	a.meter.processor.AggregatorFor(&a.descriptor, &agg)
+	if a.records == nil {
+		a.records = make(map[label.Distinct]*asyncRecord)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,
 	// but will be revisited later.
-	a.recorders[labels.Equivalent()] = &labeledRecorder{
-		observed:      rec,
-		labels:        labels,
-		observedEpoch: a.meter.currentEpoch,
-	}
-	return rec
+	rec.observed = agg
+	rec.observedEpoch = a.meter.currentEpoch
+	a.records[rec.complete.Equivalent()] = rec
+	return agg
 }
 
-// acquireHandle gets or creates a `*record` corresponding to `kvs`,
-// the input labels.  The second argument `labels` is passed in to
-// support re-use of the orderedLabels computed by a previous
-// measurement in the same batch.   This performs two allocations
-// in the common case.
-func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *record {
-	var rec *record
-	var equiv label.Distinct
+// acquireHandleSingle gets or creates a `*record` corresponding to a
+// specific set of labels. This acquires the handle for a single use
+// (i.e., not a RecordBatch).  This performs two allocations.
+func (s *syncInstrument) acquireHandleSingle(kvs []kv.KeyValue) *record {
+	// This memory allocation may not be used, but it's
+	// needed for the `sortSlice` field, to avoid an
+	// allocation while sorting.
+	rec := &record{}
 
-	if labelPtr == nil {
-		// This memory allocation may not be used, but it's
-		// needed for the `sortSlice` field, to avoid an
-		// allocation while sorting.
-		rec = &record{}
-		// @@@ Note we are ignoring the unique
-		rec.storage, _ = label.NewSetWithSortableEquivalency(kvs, &rec.sortSlice, s.instrument.meter.keyRe)
-		rec.labels = &rec.storage
-		equiv = rec.storage.Equivalent()
-	} else {
-		equiv = labelPtr.Equivalent()
-	}
+	// Note: We filter and ignore the disregarded keys
+	// that were excluded here.  A sampling API for metric
+	// events would want to see these.
+	rec.storage, _ = label.NewSetWithSortableFiltered(kvs, &rec.sortSlice, s.filter)
+	equiv := rec.storage.Equivalent()
+
+	return s.acquireHandleRecord(equiv, &rec.storage, rec)
+}
+
+// The second argument `labels` is passed in to
+// support re-use of the orderedLabels computed by a previous
+// measurement in the same batch.
+
+func (s *syncInstrument) acquireHandleRecord(equiv label.Distinct, labels *label.Set, tmpRec *record) *record {
 
 	// Create lookup key for sync.Map (one allocation, as this
 	// passes through an interface{})
@@ -253,11 +257,12 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 		// This entry is no longer mapped, try to add a new entry.
 	}
 
+	rec := tmpRec
 	if rec == nil {
 		rec = &record{}
-		rec.labels = labelPtr
 	}
 	rec.refMapped = refcountMapped{value: 2}
+	rec.labels = labels
 	rec.inst = s
 
 	s.meter.processor.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
@@ -293,11 +298,11 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 }
 
 func (s *syncInstrument) Bind(kvs []kv.KeyValue) api.BoundSyncImpl {
-	return s.acquireHandle(kvs, nil)
+	return s.acquireHandleSingle(kvs)
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []kv.KeyValue) {
-	h := s.acquireHandle(kvs, nil)
+	h := s.acquireHandleSingle(kvs)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
 }
@@ -321,18 +326,22 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
-		keyRe:            c.KeyRegexp,
+		keyRegexpFunc:    c.KeyRegexpFunc,
 	}
 }
 
 // NewSyncInstrument implements api.MetricImpl.
 func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
-	return &syncInstrument{
+	s := &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
 			meter:      m,
 		},
-	}, nil
+	}
+	if m.keyRegexpFunc != nil {
+		s.filter = m.keyRegexpFunc(&s.descriptor)
+	}
+	return s, nil
 }
 
 // NewAsyncInstrument implements api.MetricImpl.
@@ -343,6 +352,10 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 			meter:      m,
 		},
 	}
+	if m.keyRegexpFunc != nil {
+		a.filter = m.keyRegexpFunc(&a.descriptor)
+	}
+
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 	m.asyncInstruments.Register(a, runner)
@@ -413,11 +426,22 @@ func (m *Accumulator) collectSyncInstruments() int {
 
 // CollectAsync implements internal.AsyncCollector.
 func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) {
-	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
+	if len(obs) == 0 {
+		return
+	}
+	complete := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
 		if a := m.fromAsync(ob.AsyncImpl()); a != nil {
-			a.observe(ob.Number(), &labels)
+			rec := &asyncRecord{}
+			rec.asyncInstrument = a
+			rec.complete = complete
+			if a.filter == nil {
+				rec.filtered = complete
+			} else {
+				rec.filtered, _ = rec.complete.Filter(a.filter)
+			}
+			a.observe(ob.Number(), rec)
 		}
 	}
 }
@@ -428,7 +452,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 
 	asyncCollected := 0
 
-	// TODO: change this to `ctx` (in a separate PR, with tests)
+	// TODO: change this to `ctx` (in a separate PR, with tests).
 	m.asyncInstruments.Run(context.Background(), m)
 
 	for _, inst := range m.asyncInstruments.Instruments() {
@@ -459,16 +483,16 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 }
 
 func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
-	if len(a.recorders) == 0 {
+	if len(a.records) == 0 {
 		return 0
 	}
 	checkpointed := 0
-	for encodedLabels, lrec := range a.recorders {
-		lrec := lrec
-		epochDiff := m.currentEpoch - lrec.observedEpoch
+	for unique, rec := range a.records {
+		rec := rec
+		epochDiff := m.currentEpoch - rec.observedEpoch
 		if epochDiff == 0 {
-			if lrec.observed != nil {
-				a := export.NewAccumulation(&a.descriptor, lrec.labels, m.resource, lrec.observed)
+			if rec.observed != nil {
+				a := export.NewAccumulation(&a.descriptor, &rec.filtered, m.resource, rec.observed)
 				err := m.processor.Process(a)
 				if err != nil {
 					global.Handle(err)
@@ -479,34 +503,38 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 			// This is second collection cycle with no
 			// observations for this labelset. Remove the
 			// recorder.
-			delete(a.recorders, encodedLabels)
+			delete(a.records, unique)
 		}
 	}
-	if len(a.recorders) == 0 {
-		a.recorders = nil
+	if len(a.records) == 0 {
+		a.records = nil
 	}
 	return checkpointed
 }
 
 // RecordBatch enters a batch of metric events.
 func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measurements ...api.Measurement) {
-	// Labels will be computed the first time acquireHandle is
-	// called.  Subsequent calls to acquireHandle will re-use the
-	// previously computed value instead of recomputing the
-	// ordered labels.
-	var labelsPtr *label.Set
-	for i, meas := range measurements {
+	labelHolder := &record{}
+	labelHolder.storage = label.NewSetWithSortable(kvs, &labelHolder.sortSlice)
+
+	for _, meas := range measurements {
 		s := m.fromSync(meas.SyncImpl())
 		if s == nil {
 			continue
 		}
-		h := s.acquireHandle(kvs, labelsPtr)
 
-		// Re-use labels for the next measurement.
-		if i == 0 {
-			labelsPtr = h.labels
+		var rec *record
+		labels := &labelHolder.storage
+		if s.filter != nil {
+			// Note we are discarding the excluded labels
+			// here.  A sampling API would want to see
+			// these.
+			rec = &record{}
+			rec.storage, _ = labels.Filter(s.filter)
+			labels = &rec.storage
 		}
 
+		h := s.acquireHandleRecord(labels.Equivalent(), labels, rec)
 		defer h.Unbind()
 		h.RecordOne(ctx, meas.Number())
 	}

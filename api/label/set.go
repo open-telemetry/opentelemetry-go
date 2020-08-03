@@ -241,7 +241,7 @@ func NewSet(kvs ...kv.KeyValue) Set {
 	if len(kvs) == 0 {
 		return empty()
 	}
-	s, _ := NewSetWithSortableEquivalency(kvs, new(Sortable), nil)
+	s, _ := NewSetWithSortableFiltered(kvs, new(Sortable), nil)
 	return s
 }
 
@@ -271,19 +271,19 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 	if len(kvs) == 0 {
 		return empty()
 	}
-	s, _ := NewSetWithSortableEquivalency(kvs, tmp, nil)
+	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
 	return s
 }
 
-func NewSetWithEquivalency(kvs []kv.KeyValue, keyRe *regexp.Regexp) (Set, []kv.KeyValue) {
+func NewSetWithFiltered(kvs []kv.KeyValue, keyRe *regexp.Regexp) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
 	}
-	return NewSetWithSortableEquivalency(kvs, new(Sortable), keyRe)
+	return NewSetWithSortableFiltered(kvs, new(Sortable), keyRe)
 }
 
-func NewSetWithSortableEquivalency(kvs []kv.KeyValue, tmp *Sortable, distinctRe *regexp.Regexp) (Set, []kv.KeyValue) {
+func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filterRe *regexp.Regexp) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
@@ -313,33 +313,49 @@ func NewSetWithSortableEquivalency(kvs []kv.KeyValue, tmp *Sortable, distinctRe 
 		position--
 		kvs[offset], kvs[position] = kvs[position], kvs[offset]
 	}
+	if filterRe != nil {
+		return filterSet(kvs[position:], filterRe)
+	}
+	return Set{
+		equivalent: computeDistinct(kvs[position:]),
+	}, nil
+}
+
+func filterSet(kvs []kv.KeyValue, filterRe *regexp.Regexp) (Set, []kv.KeyValue) {
+	var excluded []kv.KeyValue
 
 	// move labels that do not match the optional regexp so
 	// they're adjacent before calling computeDistinct().
-	var full []kv.KeyValue
+	distinctPosition := len(kvs)
 
-	distinctPosition := position
-
-	if distinctRe != nil {
-		full = kvs[position:]
-		distinctPosition = len(kvs)
-
-		// Similar to the logic above, swap indistinct keys
-		// forward and distinct keys toward the end of the
-		// slice.
-		offset = len(kvs) - 1
-		for ; offset >= position; offset-- {
-			if distinctRe.MatchString(string(kvs[offset].Key)) {
-				distinctPosition--
-				kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
-				continue
-			}
+	// Similar to the logic above, swap indistinct keys
+	// forward and distinct keys toward the end of the
+	// slice.
+	offset := len(kvs) - 1
+	for ; offset >= 0; offset-- {
+		if filterRe.MatchString(string(kvs[offset].Key)) {
+			distinctPosition--
+			kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
+			continue
 		}
 	}
+	excluded = kvs[:distinctPosition]
 
 	return Set{
 		equivalent: computeDistinct(kvs[distinctPosition:]),
-	}, full
+	}, excluded
+}
+
+func (l *Set) Filter(re *regexp.Regexp) (Set, []kv.KeyValue) {
+	if re == nil {
+		return Set{
+			equivalent: l.equivalent,
+		}, nil
+	}
+
+	// Note: consider whether the caller should provide temporary
+	// space, as an optimization.
+	return filterSet(l.ToSlice(), re)
 }
 
 // computeDistinct returns a `Distinct` using either the fixed- or
