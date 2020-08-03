@@ -365,7 +365,7 @@ func TestObserverCollection(t *testing.T) {
 		"float.updownsumobserver.sum/C=D/R=V": 1,
 		"int.updownsumobserver.sum//R=V":      -1,
 		"int.updownsumobserver.sum/A=B/R=V":   1,
-	}, out.Map)
+	}, out.Map())
 }
 
 func TestSumObserverInputRange(t *testing.T) {
@@ -468,7 +468,7 @@ func TestObserverBatch(t *testing.T) {
 		"float.valueobserver.lastvalue/C=D/R=V": -1,
 		"int.valueobserver.lastvalue//R=V":      1,
 		"int.valueobserver.lastvalue/A=B/R=V":   1,
-	}, out.Map)
+	}, out.Map())
 }
 
 func TestRecordBatch(t *testing.T) {
@@ -503,7 +503,7 @@ func TestRecordBatch(t *testing.T) {
 		"float64.sum/A=B,C=D/R=V":   2,
 		"int64.exact/A=B,C=D/R=V":   3,
 		"float64.exact/A=B,C=D/R=V": 4,
-	}, out.Map)
+	}, out.Map())
 }
 
 // TestRecordPersistence ensures that a direct-called instrument that
@@ -583,7 +583,7 @@ func TestSyncInAsync(t *testing.T) {
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
-	}, out.Map)
+	}, out.Map())
 }
 
 func TestLabelFilter(t *testing.T) {
@@ -607,7 +607,7 @@ func TestLabelFilter(t *testing.T) {
 	}
 	counter := Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
+	_ = Must(meter).NewInt64SumObserver("observer.sum",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10, kvs1...)
 			result.Observe(10, kvs2...)
@@ -624,7 +624,7 @@ func TestLabelFilter(t *testing.T) {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
-		"counter.sum/A=1,C=3/R=V":        200,
-		"observer.lastvalue/A=1,C=3/R=V": 20,
-	}, out.Map)
+		"counter.sum/A=1,C=3/R=V":  200,
+		"observer.sum/A=1,C=3/R=V": 20,
+	}, out.Map())
 }

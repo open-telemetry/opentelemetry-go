@@ -16,6 +16,7 @@ package lastvalue // import "go.opentelemetry.io/otel/sdk/metric/aggregator/last
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -127,4 +128,9 @@ func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 
 	g.value = unsafe.Pointer(ogd)
 	return nil
+}
+
+func (g *Aggregator) String() string {
+	ggd := (*lastValueData)(atomic.LoadPointer(&g.value))
+	return fmt.Sprint("lv:", ggd.value)
 }
