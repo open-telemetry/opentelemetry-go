@@ -72,7 +72,6 @@ func TestHandlerBasics(t *testing.T) {
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPRequestContentLengthKey.Int64(3),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
