@@ -26,10 +26,10 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
 	mockmeter "go.opentelemetry.io/otel/internal/metric"
 	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func assertMetricLabels(t *testing.T, expectedLabels []kv.KeyValue, measurementBatches []mockmeter.Batch) {
@@ -68,11 +68,11 @@ func TestHandlerBasics(t *testing.T) {
 	}
 
 	labelsToVerify := []kv.KeyValue{
-		standard.HTTPServerNameKey.String(operation),
-		standard.HTTPSchemeHTTP,
-		standard.HTTPHostKey.String(r.Host),
-		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		standard.HTTPRequestContentLengthKey.Int64(3),
+		semconv.HTTPServerNameKey.String(operation),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPHostKey.String(r.Host),
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPRequestContentLengthKey.Int64(3),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
