@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 // Option is a function that allows configuration of the httptrace Extract()
@@ -55,8 +55,8 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]kv.KeyVa
 	ctx = propagation.ExtractHTTP(ctx, c.propagators, req.Header)
 
 	attrs := append(
-		standard.HTTPServerAttributesFromHTTPRequest("", "", req),
-		standard.NetAttributesFromHTTPRequest("tcp", req)...,
+		semconv.HTTPServerAttributesFromHTTPRequest("", "", req),
+		semconv.NetAttributesFromHTTPRequest("tcp", req)...,
 	)
 
 	var correlationCtxKVs []kv.KeyValue

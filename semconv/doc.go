@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package standard contains keys and values that have been standardized for
-// use in OpenTelemetry. These standardizations are specified in the
-// OpenTelemetry specification:
+// Package semconv implements OpenTelemetry semantic conventions.
 //
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/resource/semantic_conventions
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/trace/semantic_conventions
-// - https://github.com/open-telemetry/opentelemetry-specification/tree/v0.6.0/specification/metrics/semantic_conventions
-package standard
+// OpenTelemetry semantic conventions are agreed standardized naming
+// patterns for OpenTelemetry things. This package aims to be the
+// centralized place to interact with these conventions.
+package semconv // import "go.opentelemetry.io/otel/semconv"
