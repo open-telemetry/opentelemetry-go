@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package standard
+package semconv
 
 import "go.opentelemetry.io/otel/api/kv"
 
-// Standard attribute keys used for network related operations.
+// Semantic conventions for attribute keys used for network related
+// operations.
 const (
 	// Transport protocol used.
 	NetTransportKey = kv.Key("net.transport")
@@ -57,7 +58,8 @@ const (
 	PeerServiceKey = kv.Key("peer.service")
 )
 
-// Standard attribute keys used to identify an authorized enduser.
+// Semantic conventions for attribute keys used to identify an authorized
+// user.
 const (
 	// Username or the client identifier extracted from the access token or
 	// authorization header in the inbound request from outside the system.
@@ -70,7 +72,7 @@ const (
 	EnduserScopeKey = kv.Key("enduser.scope")
 )
 
-// Standard attribute keys for HTTP.
+// Semantic conventions for attribute keys for HTTP.
 const (
 	// HTTP request method.
 	HTTPMethodKey = kv.Key("http.method")
@@ -138,7 +140,7 @@ var (
 	HTTPFlavorQUIC = HTTPFlavorKey.String("QUIC")
 )
 
-// Standard attribute keys for database connections.
+// Semantic conventions for attribute keys for database connections.
 const (
 	// Identifier for the database system (DBMS) being used.
 	DBSystemKey = kv.Key("db.system")
@@ -173,7 +175,7 @@ var (
 	DBSystemRedis     = DBSystemKey.String("redis")      // Redis
 )
 
-// Standard attribute keys for database calls.
+// Semantic conventions for attribute keys for database calls.
 const (
 	// Database instance name.
 	DBNameKey = kv.Key("db.name")
@@ -200,7 +202,7 @@ const (
 	DBMongoDBCollectionKey = kv.Key("db.mongodb.collection")
 )
 
-// Standard attribute keys for RPC.
+// Semantic conventions for attribute keys for RPC.
 const (
 	// A string identifying the remoting system.
 	RPCSystemKey = kv.Key("rpc.system")
@@ -237,7 +239,7 @@ var (
 	RPCMessageTypeReceived = RPCMessageTypeKey.String("RECEIVED")
 )
 
-// Standard attribute keys for messaging systems.
+// Semantic conventions for attribute keys for messaging systems.
 const (
 	// A unique identifier describing the messaging system. For example,
 	// kafka, rabbitmq or activemq.
@@ -291,7 +293,7 @@ var (
 	MessagingOperationProcess = MessagingOperationKey.String("process")
 )
 
-// Standard attribute keys for FaaS systems.
+// Semantic conventions for attribute keys for FaaS systems.
 const (
 
 	// Type of the trigger on which the function is executed.
