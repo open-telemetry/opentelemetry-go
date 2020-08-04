@@ -24,31 +24,31 @@ import (
 )
 
 var (
-	// globalHandler provides a Handler that can be used throughout
-	// an OpenTelemetry instrumented project. When a user specified Handler
-	// is registered (`SetHandler`) all calls to `Handle` will be delegated
-	// to the registered Handler.
-	globalHandler = &handler{
+	// globalErrorHandler provides an ErrorHandler that can be used
+	// throughout an OpenTelemetry instrumented project. When a user
+	// specified ErrorHandler is registered (`SetErrorHandler`) all calls to
+	// `Handle` and will be delegated to the registered ErrorHandler.
+	globalErrorHandler = &loggingErrorHandler{
 		l: log.New(os.Stderr, "", log.LstdFlags),
 	}
 
-	// delegateHanderOnce ensures that a user provided Handler is only ever
-	// registered once.
-	delegateHanderOnce sync.Once
+	// delegateErrorHandlerOnce ensures that a user provided ErrorHandler is
+	// only ever registered once.
+	delegateErrorHandlerOnce sync.Once
 
-	// Ensure the handler implements Handle at build time.
-	_ otel.ErrorHandler = (*handler)(nil)
+	// Comiple time check that loggingErrorHandler implements ErrorHandler.
+	_ otel.ErrorHandler = (*loggingErrorHandler)(nil)
 )
 
-// handler logs all errors to STDERR.
-type handler struct {
+// loggingErrorHandler logs all errors to STDERR.
+type loggingErrorHandler struct {
 	delegate atomic.Value
 
 	l *log.Logger
 }
 
-// setDelegate sets the handler delegate if one is not already set.
-func (h *handler) setDelegate(d otel.ErrorHandler) {
+// setDelegate sets the ErrorHandler delegate if one is not already set.
+func (h *loggingErrorHandler) setDelegate(d otel.ErrorHandler) {
 	if h.delegate.Load() != nil {
 		// Delegate already registered
 		return
@@ -56,8 +56,8 @@ func (h *handler) setDelegate(d otel.ErrorHandler) {
 	h.delegate.Store(d)
 }
 
-// Handle implements otle.ErrorHandler.
-func (h *handler) Handle(err error) {
+// Handle implements otel.ErrorHandler.
+func (h *loggingErrorHandler) Handle(err error) {
 	if d := h.delegate.Load(); d != nil {
 		d.(otel.ErrorHandler).Handle(err)
 		return
@@ -66,21 +66,20 @@ func (h *handler) Handle(err error) {
 }
 
 // ErrorHandler returns the global ErrorHandler instance. If no ErrorHandler
-// instance has be explicitly set yet, a default ErrorHandler is returned
-// that logs to STDERR until an ErrorHandler is set (all functionality is
-// delegated to the set ErrorHandler once it is set).
+// instance has been set (`SetErrorHandler`), the default ErrorHandler which
+// logs errors to STDERR is returned.
 func ErrorHandler() otel.ErrorHandler {
-	return globalHandler
+	return globalErrorHandler
 }
 
 // SetErrorHandler sets the global ErrorHandler to be h.
 func SetErrorHandler(h otel.ErrorHandler) {
-	delegateHanderOnce.Do(func() {
+	delegateErrorHandlerOnce.Do(func() {
 		current := ErrorHandler()
 		if current == h {
 			return
 		}
-		if internalHandler, ok := current.(*handler); ok {
+		if internalHandler, ok := current.(*loggingErrorHandler); ok {
 			internalHandler.setDelegate(h)
 		}
 	})

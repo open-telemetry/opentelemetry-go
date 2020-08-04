@@ -44,20 +44,20 @@ func (l *errLogger) Got() []string {
 type HandlerTestSuite struct {
 	suite.Suite
 
-	origHandler *handler
+	origHandler *loggingErrorHandler
 	errLogger   *errLogger
 }
 
 func (s *HandlerTestSuite) SetupSuite() {
 	s.errLogger = new(errLogger)
-	s.origHandler = globalHandler
-	globalHandler = &handler{
+	s.origHandler = globalErrorHandler
+	globalErrorHandler = &loggingErrorHandler{
 		l: log.New(s.errLogger, "", 0),
 	}
 }
 
 func (s *HandlerTestSuite) TearDownSuite() {
-	globalHandler = s.origHandler
+	globalErrorHandler = s.origHandler
 }
 
 func (s *HandlerTestSuite) SetupTest() {
@@ -122,7 +122,7 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 
 	// Change to another Handler. We are testing this is loss-less.
 	newErrLogger := new(errLogger)
-	secondary := &handler{
+	secondary := &loggingErrorHandler{
 		l: log.New(newErrLogger, "", 0),
 	}
 	SetErrorHandler(secondary)

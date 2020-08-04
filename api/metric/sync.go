@@ -22,8 +22,6 @@ import (
 )
 
 // ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
-//
-// TODO: Move this to the top-level once the import cycle can be resolved.
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 // Measurement is used for reporting a synchronous batch of metric
