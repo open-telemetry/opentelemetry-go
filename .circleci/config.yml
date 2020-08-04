@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.2
 executors:
   current-go:
     resource_class: large
@@ -31,6 +33,9 @@ build-template: &build-template
         key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
         paths:
           - "/home/circleci/go/pkg/mod"
+
+    - codecov/upload:
+        file: $TEST_RESULTS/coverage.html
 
     - store_artifacts:
         path: /tmp/test-results
