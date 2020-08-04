@@ -22,8 +22,8 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 
 	"net/http"
 	"time"
@@ -83,7 +83,7 @@ func main() {
 
 			return err
 		},
-		trace.WithAttributes(standard.PeerServiceKey.String("ExampleService")))
+		trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
 
 	if err != nil {
 		panic(err)

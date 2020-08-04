@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/semconv"
 
 	"google.golang.org/grpc/codes"
 
@@ -152,7 +152,7 @@ func (ct *clientTracer) span(hook string) trace.Span {
 }
 
 func (ct *clientTracer) getConn(host string) {
-	ct.start("http.getconn", "http.getconn", standard.HTTPHostKey.String(host))
+	ct.start("http.getconn", "http.getconn", semconv.HTTPHostKey.String(host))
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -172,7 +172,7 @@ func (ct *clientTracer) gotFirstResponseByte() {
 }
 
 func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
-	ct.start("http.dns", "http.dns", standard.HTTPHostKey.String(info.Host))
+	ct.start("http.dns", "http.dns", semconv.HTTPHostKey.String(info.Host))
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
