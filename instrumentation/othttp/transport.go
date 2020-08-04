@@ -21,8 +21,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 
 	"google.golang.org/grpc/codes"
 )
@@ -89,7 +89,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
 
 	r = r.WithContext(ctx)
-	span.SetAttributes(standard.HTTPClientAttributesFromHTTPRequest(r)...)
+	span.SetAttributes(semconv.HTTPClientAttributesFromHTTPRequest(r)...)
 	propagation.InjectHTTP(ctx, t.propagators, r.Header)
 
 	res, err := t.rt.RoundTrip(r)
@@ -99,8 +99,8 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
-	span.SetAttributes(standard.HTTPAttributesFromHTTPStatusCode(res.StatusCode)...)
-	span.SetStatus(standard.SpanStatusFromHTTPStatusCode(res.StatusCode))
+	span.SetAttributes(semconv.HTTPAttributesFromHTTPStatusCode(res.StatusCode)...)
+	span.SetStatus(semconv.SpanStatusFromHTTPStatusCode(res.StatusCode))
 	res.Body = &wrappedBody{ctx: ctx, span: span, body: res.Body}
 
 	return res, err

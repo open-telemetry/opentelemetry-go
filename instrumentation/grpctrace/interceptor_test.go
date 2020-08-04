@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/semconv"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,22 +105,22 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
 			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+				semconv.RPCSystemKey:   kv.StringValue("grpc"),
+				semconv.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
+				semconv.RPCMethodKey:   kv.StringValue("bar"),
+				semconv.NetPeerIPKey:   kv.StringValue("fake"),
+				semconv.NetPeerPortKey: kv.StringValue("connection"),
 			},
 			eventsAttr: []map[kv.Key]kv.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -128,22 +128,22 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+				semconv.RPCSystemKey:   kv.StringValue("grpc"),
+				semconv.RPCServiceKey:  kv.StringValue("serviceName"),
+				semconv.RPCMethodKey:   kv.StringValue("bar"),
+				semconv.NetPeerIPKey:   kv.StringValue("fake"),
+				semconv.NetPeerPortKey: kv.StringValue("connection"),
 			},
 			eventsAttr: []map[kv.Key]kv.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -151,22 +151,22 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+				semconv.RPCSystemKey:   kv.StringValue("grpc"),
+				semconv.RPCServiceKey:  kv.StringValue("serviceName"),
+				semconv.RPCMethodKey:   kv.StringValue("bar"),
+				semconv.NetPeerIPKey:   kv.StringValue("fake"),
+				semconv.NetPeerPortKey: kv.StringValue("connection"),
 			},
 			eventsAttr: []map[kv.Key]kv.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -174,20 +174,20 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "invalidName",
 			name:   "invalidName",
 			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+				semconv.RPCSystemKey:   kv.StringValue("grpc"),
+				semconv.NetPeerIPKey:   kv.StringValue("fake"),
+				semconv.NetPeerPortKey: kv.StringValue("connection"),
 			},
 			eventsAttr: []map[kv.Key]kv.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -195,22 +195,22 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
 			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.foo.serviceName_123"),
-				standard.RPCMethodKey:   kv.StringValue("method"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+				semconv.RPCSystemKey:   kv.StringValue("grpc"),
+				semconv.RPCServiceKey:  kv.StringValue("github.com.foo.serviceName_123"),
+				semconv.RPCMethodKey:   kv.StringValue("method"),
+				semconv.NetPeerIPKey:   kv.StringValue("fake"),
+				semconv.NetPeerPortKey: kv.StringValue("connection"),
 			},
 			eventsAttr: []map[kv.Key]kv.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               kv.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -309,11 +309,11 @@ func TestStreamClientInterceptor(t *testing.T) {
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := map[kv.Key]kv.Value{
-		standard.RPCSystemKey:   kv.StringValue("grpc"),
-		standard.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
-		standard.RPCMethodKey:   kv.StringValue("bar"),
-		standard.NetPeerIPKey:   kv.StringValue("fake"),
-		standard.NetPeerPortKey: kv.StringValue("connection"),
+		semconv.RPCSystemKey:   kv.StringValue("grpc"),
+		semconv.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:   kv.StringValue("bar"),
+		semconv.NetPeerIPKey:   kv.StringValue("fake"),
+		semconv.NetPeerPortKey: kv.StringValue("connection"),
 	}
 	assert.Equal(t, expectedAttr, span.Attributes())
 
@@ -323,10 +323,10 @@ func TestStreamClientInterceptor(t *testing.T) {
 		msgID := i/2 + 1
 		validate := func(eventName string, attrs map[kv.Key]kv.Value) {
 			for k, v := range attrs {
-				if k == standard.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == standard.RPCMessageIDKey && v != kv.IntValue(msgID) {
+				if k == semconv.RPCMessageIDKey && v != kv.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt32())
 				}
 			}
@@ -376,36 +376,36 @@ func TestParseFullMethod(t *testing.T) {
 			fullMethod: "/grpc.test.EchoService/Echo",
 			name:       "grpc.test.EchoService/Echo",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("grpc.test.EchoService"),
-				standard.RPCMethodKey.String("Echo"),
+				semconv.RPCServiceKey.String("grpc.test.EchoService"),
+				semconv.RPCMethodKey.String("Echo"),
 			},
 		}, {
 			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
 			name:       "com.example.ExampleRmiService/exampleMethod",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("com.example.ExampleRmiService"),
-				standard.RPCMethodKey.String("exampleMethod"),
+				semconv.RPCServiceKey.String("com.example.ExampleRmiService"),
+				semconv.RPCMethodKey.String("exampleMethod"),
 			},
 		}, {
 			fullMethod: "/MyCalcService.Calculator/Add",
 			name:       "MyCalcService.Calculator/Add",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyCalcService.Calculator"),
-				standard.RPCMethodKey.String("Add"),
+				semconv.RPCServiceKey.String("MyCalcService.Calculator"),
+				semconv.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceReference.ICalculator/Add",
 			name:       "MyServiceReference.ICalculator/Add",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyServiceReference.ICalculator"),
-				standard.RPCMethodKey.String("Add"),
+				semconv.RPCServiceKey.String("MyServiceReference.ICalculator"),
+				semconv.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceWithNoPackage/theMethod",
 			name:       "MyServiceWithNoPackage/theMethod",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyServiceWithNoPackage"),
-				standard.RPCMethodKey.String("theMethod"),
+				semconv.RPCServiceKey.String("MyServiceWithNoPackage"),
+				semconv.RPCMethodKey.String("theMethod"),
 			},
 		}, {
 			fullMethod: "/pkg.srv",
@@ -415,7 +415,7 @@ func TestParseFullMethod(t *testing.T) {
 			fullMethod: "/pkg.srv/",
 			name:       "pkg.srv/",
 			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("pkg.srv"),
+				semconv.RPCServiceKey.String("pkg.srv"),
 			},
 		},
 	}
