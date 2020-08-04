@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this respository. (#1027)
+- The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository. (#1027)
 
 ## [0.10.0] - 2020-07-29
 
