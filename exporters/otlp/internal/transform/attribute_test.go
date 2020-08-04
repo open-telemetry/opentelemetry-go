@@ -23,11 +23,13 @@ import (
 	commonpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
 )
 
+type attributeTest struct {
+	attrs    []kv.KeyValue
+	expected []*commonpb.KeyValue
+}
+
 func TestAttributes(t *testing.T) {
-	for _, test := range []struct {
-		attrs    []kv.KeyValue
-		expected []*commonpb.KeyValue
-	}{
+	for _, test := range []attributeTest{
 		{nil, nil},
 		{
 			[]kv.KeyValue{
@@ -144,5 +146,149 @@ func TestAttributes(t *testing.T) {
 			}
 			assert.Equal(t, test.expected[i], actual)
 		}
+	}
+}
+
+func TestArrayAttributes(t *testing.T) {
+	// Array KeyValue supports only arrays of primitive types:
+	// "bool", "int", "int32", "int64",
+	// "float32", "float64", "string",
+	// "uint", "uint32", "uint64"
+	for _, test := range []attributeTest{
+		{nil, nil},
+		{
+			[]kv.KeyValue{
+				kv.Array("bool array to bool array", []bool{true, false}),
+				kv.Array("int array to int64 array", []int{1, 2, 3}),
+				kv.Array("uint array to int64 array", []uint{1, 2, 3}),
+				kv.Array("int32 array to int64 array", []int32{1, 2, 3}),
+				kv.Array("uint32 array to int64 array", []uint32{1, 2, 3}),
+				kv.Array("int64 array to int64 array", []int64{1, 2, 3}),
+				kv.Array("uint64 array to int64 array", []uint64{1, 2, 3}),
+				kv.Array("float32 array to double array", []float32{1.11, 2.22, 3.33}),
+				kv.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				kv.Array("string array to string array", []string{"foo", "bar", "baz"}),
+			},
+			[]*commonpb.KeyValue{
+				newOTelBoolArray("bool array to bool array", []bool{true, false}),
+				newOTelIntArray("int array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("int32 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint32 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("uint64 array to int64 array", []int64{1, 2, 3}),
+				newOTelDoubleArray("float32 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOTelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				newOTelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
+			},
+		},
+	} {
+		actualArrayAttributes := Attributes(test.attrs)
+		expectedArrayAttributes := test.expected
+		if !assert.Len(t, actualArrayAttributes, len(expectedArrayAttributes)) {
+			continue
+		}
+
+		for i, actualArrayAttr := range actualArrayAttributes {
+			expectedArrayAttr := expectedArrayAttributes[i]
+			if !assert.Equal(t, expectedArrayAttr.Key, actualArrayAttr.Key) {
+				continue
+			}
+
+			expectedArrayValue := expectedArrayAttr.Value.GetArrayValue()
+			assert.NotNil(t, expectedArrayValue)
+
+			actualArrayValue := actualArrayAttr.Value.GetArrayValue()
+			assert.NotNil(t, actualArrayValue)
+
+			assertExpectedArrayValues(t, expectedArrayValue.Values, actualArrayValue.Values)
+		}
+
+	}
+}
+
+func assertExpectedArrayValues(t *testing.T, expectedValues, actualValues []*commonpb.AnyValue) {
+	for i, actual := range actualValues {
+		expected := expectedValues[i]
+		if a, ok := actual.Value.(*commonpb.AnyValue_DoubleValue); ok {
+			e, ok := expected.Value.(*commonpb.AnyValue_DoubleValue)
+			if !ok {
+				t.Errorf("expected AnyValue_DoubleValue, got %T", expected.Value)
+				continue
+			}
+			if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+				continue
+			}
+			e.DoubleValue = a.DoubleValue
+		}
+		assert.Equal(t, expected, actual)
+	}
+}
+
+func newOTelBoolArray(key string, values []bool) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+	for _, b := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_BoolValue{
+				BoolValue: b,
+			},
+		})
+	}
+
+	return newOTelArray(key, arrayValues)
+}
+
+func newOTelIntArray(key string, values []int64) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, i := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: i,
+			},
+		})
+	}
+
+	return newOTelArray(key, arrayValues)
+}
+
+func newOTelDoubleArray(key string, values []float64) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, d := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_DoubleValue{
+				DoubleValue: d,
+			},
+		})
+	}
+
+	return newOTelArray(key, arrayValues)
+}
+
+func newOTelStringArray(key string, values []string) *commonpb.KeyValue {
+	arrayValues := []*commonpb.AnyValue{}
+
+	for _, s := range values {
+		arrayValues = append(arrayValues, &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
+				StringValue: s,
+			},
+		})
+	}
+
+	return newOTelArray(key, arrayValues)
+}
+
+func newOTelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyValue {
+	return &commonpb.KeyValue{
+		Key: key,
+		Value: &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_ArrayValue{
+				ArrayValue: &commonpb.ArrayValue{
+					Values: arrayValues,
+				},
+			},
+		},
 	}
 }
