@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package standard // import "go.opentelemetry.io/otel/api/standard"
+package semconv
 
 import "go.opentelemetry.io/otel/api/kv"
 
-// Standard service resource attribute keys.
+// Semantic conventions for service resource attribute keys.
 const (
 	// Name of the service.
 	ServiceNameKey = kv.Key("service.name")
@@ -35,7 +35,7 @@ const (
 	ServiceVersionKey = kv.Key("service.version")
 )
 
-// Standard telemetry SDK resource attribute keys.
+// Semantic conventions for telemetry SDK resource attribute keys.
 const (
 	// The name of the telemetry SDK.
 	//
@@ -56,12 +56,12 @@ const (
 	TelemetrySDKVersionKey = kv.Key("telemetry.sdk.version")
 )
 
-// Standard telemetry SDK resource attributes.
+// Semantic conventions for telemetry SDK resource attributes.
 var (
 	TelemetrySDKLanguageGo = TelemetrySDKLanguageKey.String("go")
 )
 
-// Standard container resource attribute keys.
+// Semantic conventions for container resource attribute keys.
 const (
 	// A uniquely identifying name for the Container.
 	ContainerNameKey = kv.Key("container.name")
@@ -77,7 +77,7 @@ const (
 	ContainerImageTagKey = kv.Key("container.image.tag")
 )
 
-// Standard Function-as-a-Service resource attribute keys.
+// Semantic conventions for Function-as-a-Service resource attribute keys.
 const (
 	// A uniquely identifying name for the FaaS.
 	FaaSNameKey = kv.Key("faas.name")
@@ -92,7 +92,7 @@ const (
 	FaaSInstanceKey = kv.Key("faas.instance")
 )
 
-// Standard operating system process resource attribute keys.
+// Semantic conventions for operating system process resource attribute keys.
 const (
 	// Process identifier (PID).
 	ProcessPIDKey = kv.Key("process.pid")
@@ -120,7 +120,7 @@ const (
 	ProcessOwnerKey = kv.Key("process.owner")
 )
 
-// Standard Kubernetes resource attribute keys.
+// Semantic conventions for Kubernetes resource attribute keys.
 const (
 	// A uniquely identifying name for the Kubernetes cluster. Kubernetes
 	// does not have cluster names as an internal concept so this may be
@@ -138,7 +138,7 @@ const (
 	K8SDeploymentNameKey = kv.Key("k8s.deployment.name")
 )
 
-// Standard host resource attribute keys.
+// Semantic conventions for host resource attribute keys.
 const (
 	// A uniquely identifying name for the host.
 	HostNameKey = kv.Key("host.name")
@@ -162,7 +162,7 @@ const (
 	HostImageVersionKey = kv.Key("host.image.version")
 )
 
-// Standard cloud environment resource attribute keys.
+// Semantic conventions for cloud environment resource attribute keys.
 const (
 	// Name of the cloud provider.
 	CloudProviderKey = kv.Key("cloud.provider")

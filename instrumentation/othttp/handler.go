@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 var _ http.Handler = &Handler{}
@@ -127,9 +127,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := append([]trace.StartOption{
-		trace.WithAttributes(standard.NetAttributesFromHTTPRequest("tcp", r)...),
-		trace.WithAttributes(standard.EndUserAttributesFromHTTPRequest(r)...),
-		trace.WithAttributes(standard.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),
+		trace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
+		trace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
+		trace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),
 	}, h.spanStartOptions...) // start with the configured options
 
 	ctx := propagation.ExtractHTTP(r.Context(), h.propagators, r.Header)
@@ -176,7 +176,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Add request metrics
 
-	labels := standard.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
+	labels := semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
 
 	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
@@ -201,8 +201,8 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 		kv = append(kv, WroteBytesKey.Int64(wrote))
 	}
 	if statusCode > 0 {
-		kv = append(kv, standard.HTTPAttributesFromHTTPStatusCode(statusCode)...)
-		span.SetStatus(standard.SpanStatusFromHTTPStatusCode(statusCode))
+		kv = append(kv, semconv.HTTPAttributesFromHTTPStatusCode(statusCode)...)
+		span.SetStatus(semconv.SpanStatusFromHTTPStatusCode(statusCode))
 	}
 	if werr != nil && werr != io.EOF {
 		kv = append(kv, WriteErrorKey.String(werr.Error()))
@@ -215,7 +215,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
-		span.SetAttributes(standard.HTTPRouteKey.String(route))
+		span.SetAttributes(semconv.HTTPRouteKey.String(route))
 		h.ServeHTTP(w, r)
 	})
 }
