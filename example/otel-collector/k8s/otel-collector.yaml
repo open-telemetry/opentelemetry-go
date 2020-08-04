@@ -36,8 +36,9 @@ data:
     extensions:
       health_check: {}
     exporters:
-      jaeger_grpc:
+      jaeger:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
+        insecure: true
       prometheus:
         endpoint: 0.0.0.0:8889
         namespace: "testapp"
@@ -49,7 +50,7 @@ data:
         traces:
           receivers: [otlp]
           processors: []
-          exporters: [jaeger_grpc]
+          exporters: [jaeger]
 
         metrics:
           receivers: [otlp]
@@ -114,7 +115,7 @@ spec:
           env:
             - name: GOGC
               value: "80"
-          image: otel/opentelemetry-collector:0.5.0
+          image: otel/opentelemetry-collector:0.6.0
           name: otel-collector
           resources:
             limits:
