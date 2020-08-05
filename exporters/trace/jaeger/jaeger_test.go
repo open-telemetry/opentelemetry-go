@@ -375,7 +375,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	rv1 := "rv11"
 	rv2 := int64(5)
 	instrLibName := "instrumentation-library"
-	instrLibVersion := "1.0"
+	instrLibVersion := "semver:1.0.0"
 
 	tests := []struct {
 		name string
