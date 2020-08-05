@@ -232,7 +232,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	if il := data.InstrumentationLibrary; il.Name != "" {
 		tags = append(tags, getStringTag("instrumentation.name", il.Name))
 		if il.Version != "" {
-			tags = append(tags, getStringTag("instrumentation.version", il.Name))
+			tags = append(tags, getStringTag("instrumentation.version", il.Version))
 		}
 	}
 
