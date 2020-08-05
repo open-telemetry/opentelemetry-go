@@ -151,11 +151,15 @@ func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	if ua := request.UserAgent(); ua != "" {
 		attrs = append(attrs, HTTPUserAgentKey.String(ua))
 	}
+	if request.ContentLength > 0 {
+		attrs = append(attrs, HTTPRequestContentLengthKey.Int64(request.ContentLength))
+	}
 
 	return append(attrs, httpBasicAttributesFromHTTPRequest(request)...)
 }
 
 func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+	// as these attributes are used by HTTPServerMetricAttributesFromHTTPRequest, they should be low-cardinality
 	attrs := []kv.KeyValue{}
 
 	if request.TLS != nil {
@@ -176,9 +180,6 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	}
 	if flavor != "" {
 		attrs = append(attrs, HTTPFlavorKey.String(flavor))
-	}
-	if request.ContentLength > 0 {
-		attrs = append(attrs, HTTPRequestContentLengthKey.Int64(request.ContentLength))
 	}
 
 	return attrs
