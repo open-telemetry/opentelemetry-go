@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -126,6 +127,10 @@ func getPeriod() time.Duration {
 		float64(reclaimPeriod)*(1+0.1*rand.NormFloat64()),
 	)
 	return time.Duration(dur)
+}
+
+func (f *testFixture) LabelFilterFor(*metric.Descriptor) label.Filter {
+	return nil
 }
 
 func (f *testFixture) someLabels() []kv.KeyValue {

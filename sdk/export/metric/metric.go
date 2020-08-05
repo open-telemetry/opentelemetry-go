@@ -64,6 +64,13 @@ type Processor interface {
 	// disable metrics with active records.
 	AggregatorSelector
 
+	// LabelFilterSelector allows the Processor to reduce the
+	// dimensionality of input data before it reaches the
+	// Processor.  The label.Set associated with Accumulation
+	// records will not include any of the keys that are removed
+	// by the filter.
+	LabelFilterSelector
+
 	// Process is called by the SDK once per internal record,
 	// passing the export Accumulation (a Descriptor, the corresponding
 	// Labels, and the checkpointed Aggregator).  This call has no
@@ -165,6 +172,20 @@ type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
 	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+}
+
+// LabelFilterSelector supports limiting the keys used to form unique label
+// sets in the Metric Accumulator.  Filtered label sets are associated
+// with aggregated data entering and leaving the Processor.  Label
+// values that are excluded from a label set may be included in raw
+// exemplars.
+type LabelFilterSelector interface {
+	// LabelFilterFor returns the label filter to use for a given
+	// metric descriptor.  Labels excluded by the filter may
+	// appear in raw exemplars, but they will not appear in the
+	// labels of exported records passed from the Accumulator to
+	// the Processor.
+	LabelFilterFor(*metric.Descriptor) label.Filter
 }
 
 // Exporter handles presentation of the checkpoint of aggregate

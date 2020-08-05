@@ -124,6 +124,13 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 	return p
 }
 
+func (b *Processor) LabelFilterFor(desc *metric.Descriptor) label.Filter {
+	if b.config.LabelFilterSelector == nil {
+		return nil
+	}
+	return b.config.LabelFilterSelector.LabelFilterFor(desc)
+}
+
 // Process implements export.Processor.
 func (b *Processor) Process(accum export.Accumulation) error {
 	if b.startedCollection != b.finishedCollection+1 {

@@ -48,6 +48,10 @@ func newFixture(b *testing.B) *benchFixture {
 	return bf
 }
 
+func (f *benchFixture) LabelFilterFor(*metric.Descriptor) label.Filter {
+	return nil
+}
+
 func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
 }

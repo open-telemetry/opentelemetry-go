@@ -68,9 +68,6 @@ type (
 
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
-
-		// keyFilterFunc is used for dimensionality reduction.
-		keyFilterFunc KeyFilterFunc
 	}
 
 	syncInstrument struct {
@@ -324,7 +321,6 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
-		keyFilterFunc:    c.KeyFilterFunc,
 	}
 }
 
@@ -336,9 +332,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 			meter:      m,
 		},
 	}
-	if m.keyFilterFunc != nil {
-		s.instrument.filter = m.keyFilterFunc(&s.descriptor)
-	}
+	s.instrument.filter = m.processor.LabelFilterFor(&s.descriptor)
 	return s, nil
 }
 
@@ -350,10 +344,7 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 			meter:      m,
 		},
 	}
-	if m.keyFilterFunc != nil {
-		a.instrument.filter = m.keyFilterFunc(&a.descriptor)
-	}
-
+	a.instrument.filter = m.processor.LabelFilterFor(&a.descriptor)
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 	m.asyncInstruments.Register(a, runner)

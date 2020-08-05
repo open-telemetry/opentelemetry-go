@@ -14,6 +14,8 @@
 
 package basic // import "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 
+import export "go.opentelemetry.io/otel/sdk/export/metric"
+
 // Config contains the options for configuring a basic metric processor.
 type Config struct {
 	// Memory controls whether the processor remembers metric
@@ -21,6 +23,10 @@ type Config struct {
 	// When Memory is true, CheckpointSet.ForEach() will visit
 	// metrics that were not updated in the most recent interval.
 	Memory bool
+
+	// LabelFilterSelector allows control over the set of labels
+	// used for aggregation on a per-descriptor basis.
+	export.LabelFilterSelector
 }
 
 type Option interface {
@@ -39,4 +45,20 @@ type memoryOption bool
 
 func (m memoryOption) ApplyProcessor(config *Config) {
 	config.Memory = bool(m)
+}
+
+// WithLabelFilter sets the filter behavior of a Processor.  If this is
+// true, the processor will report metric instruments and label sets
+// that were previously reported but not updated in the most recent
+// interval.
+func WithLabelFilterSelector(lfs export.LabelFilterSelector) Option {
+	return labelFilterOption{lfs}
+}
+
+type labelFilterOption struct {
+	export.LabelFilterSelector
+}
+
+func (l labelFilterOption) ApplyProcessor(config *Config) {
+	config.LabelFilterSelector = l.LabelFilterSelector
 }

@@ -73,6 +73,7 @@ func init() {
 type correctnessProcessor struct {
 	t *testing.T
 	*testSelector
+	labelFilterSelector export.LabelFilterSelector
 
 	accumulations []export.Accumulation
 }
@@ -99,6 +100,13 @@ func newSDK(t *testing.T, opts ...metricsdk.Option) (metric.Meter, *metricsdk.Ac
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, processor
+}
+
+func (ci *correctnessProcessor) LabelFilterFor(desc *metric.Descriptor) label.Filter {
+	if ci.labelFilterSelector == nil {
+		return nil
+	}
+	return ci.labelFilterSelector.LabelFilterFor(desc)
 }
 
 func (ci *correctnessProcessor) Process(accumulation export.Accumulation) error {
@@ -586,15 +594,21 @@ func TestSyncInAsync(t *testing.T) {
 	}, out.Map())
 }
 
-func TestLabelFilter(t *testing.T) {
-	filter := func(_ *metric.Descriptor) label.Filter {
-		return func(k string) bool {
-			return k == "A" || k == "C"
-		}
-	}
+type testLabelFilter map[string]bool
 
+func (t testLabelFilter) LabelFilterFor(desc *metric.Descriptor) label.Filter {
+	return func(s string) bool {
+		return t[s]
+	}
+}
+
+func TestLabelFilter(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t, metricsdk.WithKeyFilterFunc(filter))
+	meter, sdk, processor := newSDK(t)
+	processor.labelFilterSelector = testLabelFilter(map[string]bool{
+		"A": true,
+		"C": true,
+	})
 	kvs1 := []kv.KeyValue{
 		kv.Int("A", 1),
 		kv.Int("B", 2),
