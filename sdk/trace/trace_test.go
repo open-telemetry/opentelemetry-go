@@ -52,7 +52,7 @@ func init() {
 	tid, _ = apitrace.IDFromHex("01020304050607080102040810203040")
 	sid, _ = apitrace.SpanIDFromHex("0102040810203040")
 
-	global.SetHandler(new(discardHandler))
+	global.SetErrorHandler(new(discardHandler))
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
