@@ -75,3 +75,7 @@ After releasing verify that examples build outside of the repository.
 
 The script copies examples into a different directory removes any `replace` declarations in `go.mod` and builds them.
 This ensures they build with the published release, not the local copy.
+
+## Contrib Repository
+
+Once verified be sure to [make a release for the `contrib` repository](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/master/RELEASING.md) that uses this release.
