@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oterror
+package otel
 
-import "errors"
-
-var (
-	// ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
-	ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
-)
+// ErrorHandler handles irremediable events.
+type ErrorHandler interface {
+	// Handle handles any error deemed irremediable by an OpenTelemetry
+	// component.
+	Handle(error)
+}

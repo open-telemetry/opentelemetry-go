@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/oterror"
 	"go.opentelemetry.io/otel/api/unit"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
 
@@ -392,7 +391,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 
 	valuerecorder, err := meter.NewInt64ValueRecorder("test.valuerecorder")
 
-	require.Equal(t, err, oterror.ErrSDKReturnedNilImpl)
+	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())
 
 	observer, err := meter.NewInt64ValueObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
