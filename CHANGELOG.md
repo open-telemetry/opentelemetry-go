@@ -17,6 +17,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository.
    This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
 
+### Fixed
+
+- The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
+- Correct instrumentation version tag in Jaeger exporter. (#1037)
+
 ## [0.10.0] - 2020-07-29
 
 This release migrates the default OpenTelemetry SDK into its own Go module, decoupling the SDK from the API and reducing dependencies for instrumentation packages.

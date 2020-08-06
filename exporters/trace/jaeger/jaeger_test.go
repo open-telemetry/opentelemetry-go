@@ -36,6 +36,7 @@ import (
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -373,6 +374,8 @@ func Test_spanDataToThrift(t *testing.T) {
 	spanKind := "client"
 	rv1 := "rv11"
 	rv2 := int64(5)
+	instrLibName := "instrumentation-library"
+	instrLibVersion := "semver:1.0.0"
 
 	tests := []struct {
 		name string
@@ -410,6 +413,10 @@ func Test_spanDataToThrift(t *testing.T) {
 				StatusMessage: statusMessage,
 				SpanKind:      apitrace.SpanKindClient,
 				Resource:      resource.New(kv.String("rk1", rv1), kv.Int64("rk2", rv2)),
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
 			},
 			want: &gen.Span{
 				TraceIdLow:    651345242494996240,
@@ -423,6 +430,8 @@ func Test_spanDataToThrift(t *testing.T) {
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
 					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: "instrumentation.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "instrumentation.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
