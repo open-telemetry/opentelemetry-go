@@ -71,20 +71,6 @@ func (t *WrapperTracer) otelTracer() oteltrace.Tracer {
 	return t.tracer
 }
 
-// WithSpan forwards the call to the wrapped tracer with a modified
-// body callback, which sets the active OpenTracing span before
-// calling the original callback.
-func (t *WrapperTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
-	return t.otelTracer().WithSpan(ctx, name, func(ctx context.Context) error {
-		span := oteltrace.SpanFromContext(ctx)
-		if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
-			spanWithExtension.OverrideTracer(t)
-		}
-		ctx = t.bridge.ContextWithBridgeSpan(ctx, span)
-		return body(ctx)
-	}, opts...)
-}
-
 // Start forwards the call to the wrapped tracer. It also tries to
 // override the tracer of the returned span if the span implements the
 // OverrideTracerSpanExtension interface.
