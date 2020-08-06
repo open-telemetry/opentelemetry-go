@@ -50,9 +50,9 @@ func main() {
 	defer pusher.Stop()
 
 	tracer := global.Tracer("ex.com/basic")
-    ctx, span := tracer.Start(context.Background(), "main")
-    defer span.End()
-    /* … */
+	ctx, span := tracer.Start(context.Background(), "main")
+	defer span.End()
+	/* … */
 }
 ```
 
