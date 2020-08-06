@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
 - The `WithSpan` method of the `Tracer` interface.
    The functionality this method provided was limited compared to what a user can provide themselves.
-   It was removed with the understanding that if there is sufficient demand it can be added back in with an function signature defined by actual use cases or by a helper function. (#1043)
+   It was removed with the understanding that if there is sufficient user need it can be added back based on actual user usage. (#1043)
 
 ### Fixed
 
