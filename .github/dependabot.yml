@@ -14,6 +14,10 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/bridge/opentracing" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/exporters/otlp" # Location of package manifests
     schedule:
       interval: "daily"
