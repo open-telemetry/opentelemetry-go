@@ -111,28 +111,19 @@ func (s *span) SetAttribute(k string, v interface{}) {
 
 // End ends the span adding an error event if it was called while panicking.
 func (s *span) End(options ...apitrace.EndOption) {
+	if s == nil {
+		return
+	}
+
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
-		if s == nil {
-			return
-		}
-		if !s.IsRecording() {
-			return
-		}
 		s.addEventWithTimestamp(
 			time.Now(),
 			errorEventName,
 			errorTypeKey.String(typeStr(recovered)),
 			errorMessageKey.String(fmt.Sprint(recovered)),
 		)
-	}
-	s.end(options...)
-}
-
-func (s *span) end(options ...apitrace.EndOption) {
-	if s == nil {
-		return
 	}
 
 	if s.executionTracerTaskEnd != nil {
