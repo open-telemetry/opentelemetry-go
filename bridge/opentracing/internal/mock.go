@@ -21,11 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelcore "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
