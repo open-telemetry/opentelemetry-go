@@ -24,7 +24,7 @@ import (
 )
 
 // envVar is the environment variable name OpenTelemetry Resource information can be assigned to.
-const envVar = "OTEL_RESOURCE_LABELS"
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 var (
 	//errMissingValue is returned when a resource value is missing.
