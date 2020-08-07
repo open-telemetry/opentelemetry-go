@@ -18,9 +18,8 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type NoopSpan struct {

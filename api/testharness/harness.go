@@ -22,10 +22,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
-
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
 )
 

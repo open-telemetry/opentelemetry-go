@@ -22,11 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 )
