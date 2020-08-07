@@ -59,7 +59,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 			// the service name used to display traces in backends
 			kv.Key(semconv.ServiceNameKey).String("test-service"),
 		)),
-		sdktrace.WithSyncer(exp),
+		sdktrace.WithBatcher(exp),
 	)
 	handleErr(err, "failed to create trace provider")
 
