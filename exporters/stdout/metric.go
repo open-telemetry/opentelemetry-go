@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -44,8 +45,20 @@ type line struct {
 
 	Quantiles []quantile `json:"Quantiles,omitempty"`
 
+	Histogram []bucket `json:"histogram,omitempty"`
+
 	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
+}
+
+type boundary struct {
+	Min float64 `json:"min"`
+	Max float64 `json:"max"`
+}
+
+type bucket struct {
+	boundary `json:"bounds"`
+	Count    float64 `json:"count"`
 }
 
 type quantile struct {
@@ -123,6 +136,34 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 					}
 				}
 			}
+
+			if hist, ok := agg.(aggregation.Histogram); ok {
+				val, err := hist.Histogram()
+				if err != nil {
+					return err
+				}
+				buckets := make([]bucket, 0, len(val.Boundaries))
+				lowerBound := float64(-math.MaxFloat64)
+				upperBound := val.Boundaries[0]
+				for i := 0; i < len(val.Boundaries); i++ {
+					buckets = append(buckets, bucket{
+						boundary: boundary{Min: lowerBound, Max: upperBound},
+						Count:    val.Counts[i],
+					})
+					lowerBound = val.Boundaries[i]
+					if i == len(val.Boundaries)-1 {
+						upperBound = float64(math.MaxFloat64)
+					} else {
+						upperBound = val.Boundaries[i+1]
+					}
+				}
+
+				if e.config.PrettyPrint {
+					e.printHistogram(buckets)
+				} else {
+					expose.Histogram = buckets
+				}
+			}
 		} else if lv, ok := agg.(aggregation.LastValue); ok {
 			value, timestamp, err := lv.LastValue()
 			if err != nil {
@@ -183,4 +224,25 @@ func (e *metricExporter) marshal(v interface{}) ([]byte, error) {
 		return json.MarshalIndent(v, "", "\t")
 	}
 	return json.Marshal(v)
+}
+
+// printHistogram prints histogram in horizontal tabular form
+func (e *metricExporter) printHistogram(hist []bucket) {
+	if len(hist) == 0 {
+		return
+	}
+	var totalCount float64
+	for _, buck := range hist {
+		totalCount += buck.Count
+	}
+	fmt.Fprintf(e.config.Writer, "Total Count: %f", totalCount)
+
+	for _, buck := range hist {
+		fmt.Printf("[%e\t-\t%e)\t\t", buck.Min, buck.Max)
+		for i := 0; i < int((buck.Count/totalCount)*100); i++ {
+			fmt.Print("*")
+		}
+		fmt.Println()
+	}
+
 }
