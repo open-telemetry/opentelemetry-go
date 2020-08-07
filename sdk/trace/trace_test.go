@@ -27,12 +27,13 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 
 	"github.com/google/go-cmp/cmp"
-	"google.golang.org/grpc/codes"
+	grpccodes "google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -590,7 +591,7 @@ func TestSetSpanStatus(t *testing.T) {
 	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
-	span.SetStatus(codes.Canceled, "canceled")
+	span.SetStatus(otelcodes.Canceled, "canceled")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -604,7 +605,7 @@ func TestSetSpanStatus(t *testing.T) {
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               apitrace.SpanKindInternal,
-		StatusCode:             codes.Canceled,
+		StatusCode:             grpccodes.Canceled,
 		StatusMessage:          "canceled",
 		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
@@ -974,7 +975,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 
 	testErr := ottest.NewTestError("test error")
 	errTime := time.Now()
-	testStatus := codes.Unknown
+	testStatus := otelcodes.Unknown
 	span.RecordError(context.Background(), testErr,
 		apitrace.WithErrorTime(errTime),
 		apitrace.WithErrorStatus(testStatus),
@@ -993,7 +994,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        apitrace.SpanKindInternal,
-		StatusCode:      codes.Unknown,
+		StatusCode:      grpccodes.Unknown,
 		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
@@ -1034,7 +1035,7 @@ func TestRecordErrorNil(t *testing.T) {
 		Name:                   "span0",
 		SpanKind:               apitrace.SpanKindInternal,
 		HasRemoteParent:        true,
-		StatusCode:             codes.OK,
+		StatusCode:             grpccodes.OK,
 		StatusMessage:          "",
 		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
 	}

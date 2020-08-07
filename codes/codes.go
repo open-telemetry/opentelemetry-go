@@ -27,6 +27,8 @@ package codes
 // Code is an 32-bit representation of a status state.
 type Code uint32
 
+// WARNING: any changes here must be propagated to the
+// otel/sdk/internal/codes.go file.
 const (
 	// OK means success.
 	OK Code = 0
