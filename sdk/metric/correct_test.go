@@ -67,7 +67,7 @@ var testHandler *handler
 
 func init() {
 	testHandler = new(handler)
-	global.SetHandler(testHandler)
+	global.SetErrorHandler(testHandler)
 }
 
 type correctnessProcessor struct {

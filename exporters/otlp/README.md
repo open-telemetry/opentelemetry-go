@@ -47,7 +47,7 @@ func main() {
 	//   		sdktrace.WithMaxExportBatchSize(100),
 	//   	),
 	//   )
-	traceProvider, err := sdktrace.NewProvider(sdktrace.WithSyncer(exporter))
+	traceProvider, err := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
 	if err != nil {
 		log.Fatal("failed to create trace provider: %v", err)
 	}

@@ -8,6 +8,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The `go.opentelemetry.io/otel/bridge/opentracing` bridge package has been made into its own module.
+   This removes the package dependencies of this bridge from the rest of the OpenTelemetry based project. (#1038)
+- Renamed `go.opentelemetry.io/otel/api/standard` package to `go.opentelemetry.io/otel/semconv` to avoid the ambiguous and generic name `standard` and better describe the package as containing OpenTelemetry semantic conventions. (#1016)
+- The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
+- Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
+
+### Removed
+
+- The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository.
+   This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
+
+### Fixed
+
+- The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
+- Correct instrumentation version tag in Jaeger exporter. (#1037)
+
 ## [0.10.0] - 2020-07-29
 
 This release migrates the default OpenTelemetry SDK into its own Go module, decoupling the SDK from the API and reducing dependencies for instrumentation packages.

@@ -12,23 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
-package api;
-
-service HelloService {
-  rpc SayHello (HelloRequest) returns (HelloResponse);
-
-  rpc SayHelloServerStream (HelloRequest) returns (stream HelloResponse);
-
-  rpc SayHelloClientStream (stream HelloRequest) returns (HelloResponse);
-
-  rpc SayHelloBidiStream (stream HelloRequest) returns (stream HelloResponse);
-}
-
-message HelloRequest {
-  string greeting = 1;
-}
-
-message HelloResponse {
-  string reply = 1;
-}
+// Package semconv implements OpenTelemetry semantic conventions.
+//
+// OpenTelemetry semantic conventions are agreed standardized naming
+// patterns for OpenTelemetry things. This package aims to be the
+// centralized place to interact with these conventions.
+package semconv // import "go.opentelemetry.io/otel/semconv"
