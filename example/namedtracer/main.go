@@ -44,7 +44,7 @@ func initTracer() {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
-	tp, err = sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+	tp, err = sdktrace.NewProvider(sdktrace.WithBatcher(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
