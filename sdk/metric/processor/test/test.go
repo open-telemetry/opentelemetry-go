@@ -38,6 +38,8 @@ type (
 	}
 
 	// Output collects distinct metric/label set outputs.
+	//
+	// TODO(#872) make this internal.
 	Output struct {
 		m            map[nameWithNumKind]export.Aggregator
 		labelEncoder label.Encoder
@@ -47,8 +49,89 @@ type (
 	// the test variables below, needed for testing stateful
 	// processors, which clone Aggregators using AggregatorFor(desc).
 	testAggregatorSelector struct{}
+
+	// testExportKindSelector is a ExportKindSelector
+	testExportKindSelector export.ExportKind
+
+	// Processor is a testing implementation of export.Processor that
+	// assembles its results as a map[string]float64.
+	Processor struct {
+		export.AggregatorSelector
+		output Output
+	}
+
+	// Exporter is a testing implementation of export.Exporter that
+	// assembles its results as a map[string]float64.
+	Exporter struct {
+		export.ExportKindSelector
+		proc export.Processor
+	}
 )
 
+// NewProcessor returns a new testing Processor implementation.
+// Verify expected outputs using Values(), e.g.:
+//
+//     require.EqualValues(t, map[string]float64{
+//         "counter.sum/A=1,B=2/R=V": 100,
+//     }, processor.Values())
+//
+// Where in the example A=1,B=2 is the encoded labels and R=V is the
+// encoded resource value.
+func NewProcessor(selector export.AggregatorSelector, encoder label.Encoder) *Processor {
+	return &Processor{
+		AggregatorSelector: selector,
+		output:             NewOutput(encoder),
+	}
+}
+
+// Process implements export.Processor.
+func (p *Processor) Process(accum export.Accumulation) error {
+	return p.output.AddAccumulation(accum)
+}
+
+// Values returns the mapping from label set to point values for the
+// accumulations that were processed.  Point values are chosen as
+// either the Sum or the LastValue, whichever is implemented.  (All
+// the built-in Aggregators implement one of these interfaces.)
+func (p *Processor) Values() map[string]float64 {
+	return p.output.Map()
+}
+
+// NewExporter returns a new testing Exporter implementation.
+// Verify exporter outputs using Values(), e.g.,:
+//
+//     require.EqualValues(t, map[string]float64{
+//         "counter.sum/A=1,B=2/R=V": 100,
+//     }, exporter.Values())
+//
+// Where in the example A=1,B=2 is the encoded labels and R=V is the
+// encoded resource value.
+func NewExporter(proc export.Processor, selector export.ExportKindSelector, encoder label.Encoder) *Exporter {
+	return &Exporter{
+		ExportKindSelector: selector,
+		proc:               proc,
+	}
+}
+
+// Values returns the mapping from label set to point values for the
+// accumulations that were processed.  Point values are chosen as
+// either the Sum or the LastValue, whichever is implemented.  (All
+// the built-in Aggregators implement one of these interfaces.)
+func (e *Exporter) Values(ckpt export.CheckpointSet) map[string]float64 {
+	output := NewOutput(e.ExportKindSelector)
+	err := ckpt.ForEach(e.ExportKindSelector, func(r Record) error {
+		return e.output.AddRecord(r)
+	})
+	return output.Map()
+}
+
+// NewOutput is a helper for testing an expected set of Accumulations
+// (from an Accumulator) or an expected set of Records (from a
+// Processor).  If testing with an Accumulator, it may be simpler to
+// use the test Processor in this package.
+//
+// TODO(#872): This class should be made internal, and callers should either
+// use a test Processor or a test Exporter to use these facilities.
 func NewOutput(labelEncoder label.Encoder) Output {
 	return Output{
 		m:            make(map[nameWithNumKind]export.Aggregator),
@@ -105,6 +188,16 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 	}
 }
 
+// ExportKindSelector returns a policy with fixed export kind.
+func ExportKindSelector(kind export.ExportKind) export.ExportKindSelector {
+	return testExportKindSelector(kind)
+}
+
+// ExportKindFor implements export.ExportKindSelector.
+func (kind testExportKindSelector) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.ExportKind(kind)
+}
+
 // AddRecord adds a string representation of the exported metric data
 // to a map for use in testing.  The value taken from the record is
 // either the Sum() or the LastValue() of its Aggregation(), whichever
@@ -125,6 +218,10 @@ func (o Output) AddRecord(rec export.Record) error {
 	return o.m[key].Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
 }
 
+// Map returns the calculated values for test validation from a set of
+// Accumulations or a set of Records.  When mapping records or
+// accumulations into floating point values, the Sum() or LastValue()
+// is chosen, whichever is implemented by the underlying Aggregator.
 func (o Output) Map() map[string]float64 {
 	r := make(map[string]float64)
 	for nnk, agg := range o.m {

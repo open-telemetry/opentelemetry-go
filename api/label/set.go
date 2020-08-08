@@ -43,6 +43,8 @@ type (
 		encoded  [maxConcurrentEncoders]string
 	}
 
+	Filter func(string) bool
+
 	// Distinct wraps a variable-size array of `kv.KeyValue`,
 	// constructed with keys in sorted order.  This can be used as
 	// a map key or for equality checking between Sets.
@@ -100,6 +102,7 @@ func (l *Set) Get(idx int) (kv.KeyValue, bool) {
 	if l == nil {
 		return kv.KeyValue{}, false
 	}
+
 	value := l.equivalent.reflect()
 
 	if idx >= 0 && idx < value.Len() {
@@ -116,8 +119,10 @@ func (l *Set) Value(k kv.Key) (kv.Value, bool) {
 	if l == nil {
 		return kv.Value{}, false
 	}
-	rValue := l.equivalent.reflect()
-	vlen := rValue.Len()
+	var vlen int
+	var rValue reflect.Value
+	vlen = rValue.Len()
+	rValue = l.equivalent.reflect()
 
 	idx := sort.Search(vlen, func(idx int) bool {
 		return rValue.Index(idx).Interface().(kv.KeyValue).Key >= k
@@ -221,6 +226,12 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return r
 }
 
+func empty() Set {
+	return Set{
+		equivalent: emptySet.equivalent,
+	}
+}
+
 // NewSet returns a new `*Set`.  See the documentation for
 // `NewSetWithSortable` for more details.
 //
@@ -229,12 +240,10 @@ func (l *Set) Encoded(encoder Encoder) string {
 func NewSet(kvs ...kv.KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return Set{
-			equivalent: emptySet.equivalent,
-		}
+		return empty()
 	}
-
-	return NewSetWithSortable(kvs, new(Sortable))
+	s, _ := NewSetWithSortableFiltered(kvs, new(Sortable), nil)
+	return s //nolint
 }
 
 // NewSetWithSortable returns a new `*Set`.
@@ -261,9 +270,24 @@ func NewSet(kvs ...kv.KeyValue) Set {
 func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return Set{
-			equivalent: emptySet.equivalent,
-		}
+		return empty()
+	}
+	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
+	return s //nolint
+}
+
+func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty(), nil
+	}
+	return NewSetWithSortableFiltered(kvs, new(Sortable), filter)
+}
+
+func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter) (Set, []kv.KeyValue) {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty(), nil
 	}
 
 	*tmp = kvs
@@ -287,13 +311,52 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 		if kvs[offset].Key == kvs[position].Key {
 			continue
 		}
-		kvs[offset], kvs[position-1] = kvs[position-1], kvs[offset]
 		position--
+		kvs[offset], kvs[position] = kvs[position], kvs[offset]
 	}
-
+	if filter != nil {
+		return filterSet(kvs[position:], filter)
+	}
 	return Set{
 		equivalent: computeDistinct(kvs[position:]),
+	}, nil
+}
+
+func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
+	var excluded []kv.KeyValue
+
+	// move labels that do not match the optional regexp so
+	// they're adjacent before calling computeDistinct().
+	distinctPosition := len(kvs)
+
+	// Similar to the logic above, swap indistinct keys
+	// forward and distinct keys toward the end of the
+	// slice.
+	offset := len(kvs) - 1
+	for ; offset >= 0; offset-- {
+		if filter(string(kvs[offset].Key)) {
+			distinctPosition--
+			kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
+			continue
+		}
 	}
+	excluded = kvs[:distinctPosition]
+
+	return Set{
+		equivalent: computeDistinct(kvs[distinctPosition:]),
+	}, excluded
+}
+
+func (l *Set) Filter(re Filter) (Set, []kv.KeyValue) {
+	if re == nil {
+		return Set{
+			equivalent: l.equivalent,
+		}, nil
+	}
+
+	// Note: This could be refactored to avoid the temporary slice
+	// allocation, if it proves to be expensive.
+	return filterSet(l.ToSlice(), re)
 }
 
 // computeDistinct returns a `Distinct` using either the fixed- or

@@ -70,6 +70,9 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
+// correctnessProcessor could be replaced with processor/test.Processor
+// with a non-default aggregator selector
+// TODO(#872) improve this.
 type correctnessProcessor struct {
 	t *testing.T
 	*testSelector
