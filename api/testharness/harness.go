@@ -16,7 +16,6 @@ package testharness
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -177,138 +176,6 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 		})
 	})
 
-	h.t.Run("#WithSpan", func(t *testing.T) {
-		t.Run("returns nil if the body does not return an error", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-		})
-
-		t.Run("propagates the error from the body if the body errors", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			expectedErr := errors.New("test error")
-
-			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				return expectedErr
-			})
-
-			e.Expect(err).ToMatchError(expectedErr)
-		})
-
-		t.Run("propagates the original context to the body", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			ctxKey := testCtxKey{}
-			ctxValue := "ctx value"
-			ctx := context.WithValue(context.Background(), ctxKey, ctxValue)
-
-			var actualCtx context.Context
-
-			err := subject.WithSpan(ctx, "test", func(ctx context.Context) error {
-				actualCtx = ctx
-
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-
-			e.Expect(actualCtx.Value(ctxKey)).ToEqual(ctxValue)
-		})
-
-		t.Run("stores a span containing the expected properties on the context provided to the body function", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			var span trace.Span
-
-			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				span = trace.SpanFromContext(ctx)
-
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-
-			e.Expect(span).NotToBeNil()
-
-			e.Expect(span.Tracer()).ToEqual(subject)
-			e.Expect(span.SpanContext().IsValid()).ToBeTrue()
-		})
-
-		t.Run("starts spans with unique trace and span IDs", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			var span1 trace.Span
-			var span2 trace.Span
-
-			err := subject.WithSpan(context.Background(), "span1", func(ctx context.Context) error {
-				span1 = trace.SpanFromContext(ctx)
-
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-
-			err = subject.WithSpan(context.Background(), "span2", func(ctx context.Context) error {
-				span2 = trace.SpanFromContext(ctx)
-
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-
-			sc1 := span1.SpanContext()
-			sc2 := span2.SpanContext()
-
-			e.Expect(sc1.TraceID).NotToEqual(sc2.TraceID)
-			e.Expect(sc1.SpanID).NotToEqual(sc2.SpanID)
-		})
-
-		t.Run("propagates a parent's trace ID through the context", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			ctx, parent := subject.Start(context.Background(), "parent")
-
-			var child trace.Span
-
-			err := subject.WithSpan(ctx, "child", func(ctx context.Context) error {
-				child = trace.SpanFromContext(ctx)
-
-				return nil
-			})
-
-			e.Expect(err).ToBeNil()
-
-			psc := parent.SpanContext()
-			csc := child.SpanContext()
-
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
-		})
-	})
-
 	h.testSpan(subjectFactory)
 }
 
@@ -339,19 +206,6 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			_, subject := tracer.Start(context.Background(), "test")
 
 			return subject
-		},
-		"Span created via Tracer#WithSpan": func() trace.Span {
-			tracer := tracerFactory()
-
-			var actualCtx context.Context
-
-			_ = tracer.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				actualCtx = ctx
-
-				return nil
-			})
-
-			return trace.SpanFromContext(actualCtx)
 		},
 	}
 
