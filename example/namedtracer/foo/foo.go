@@ -35,6 +35,7 @@ func SubOperation(ctx context.Context) error {
 
 	var span trace.Span
 	ctx, span = tr.Start(ctx, "Sub operation...")
+	defer span.End()
 	span.SetAttributes(lemonsKey.String("five"))
 	span.AddEvent(ctx, "Sub span event")
 
