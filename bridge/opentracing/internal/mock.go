@@ -71,12 +71,6 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
-	ctx, span := t.Start(ctx, name, opts...)
-	defer span.End()
-	return body(ctx)
-}
-
 func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
 	spanOpts := oteltrace.StartConfig{}
 	for _, opt := range opts {

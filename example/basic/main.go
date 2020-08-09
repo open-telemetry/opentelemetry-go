@@ -67,11 +67,13 @@ func main() {
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
-	err = tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
+	err = func(ctx context.Context) error {
+		var span trace.Span
+		ctx, span = tracer.Start(ctx, "operation")
+		defer span.End()
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
-
-		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
+		span.AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
+		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
@@ -81,20 +83,18 @@ func main() {
 			valuerecorderTwo.Measurement(2.0),
 		)
 
-		return tracer.WithSpan(
-			ctx,
-			"Sub operation...",
-			func(ctx context.Context) error {
-				trace.SpanFromContext(ctx).SetAttributes(lemonsKey.String("five"))
+		return func(ctx context.Context) error {
+			var span trace.Span
+			ctx, span = tracer.Start(ctx, "Sub operation...")
+			defer span.End()
 
-				trace.SpanFromContext(ctx).AddEvent(ctx, "Sub span event")
+			span.SetAttributes(lemonsKey.String("five"))
+			span.AddEvent(ctx, "Sub span event")
+			valuerecorder.Record(ctx, 1.3)
 
-				valuerecorder.Record(ctx, 1.3)
-
-				return nil
-			},
-		)
-	})
+			return nil
+		}(ctx)
+	}(ctx)
 	if err != nil {
 		panic(err)
 	}

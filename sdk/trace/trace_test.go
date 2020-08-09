@@ -27,6 +27,8 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -1145,4 +1147,27 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("WithResource:\n  -got +want %s", diff)
 	}
+}
+
+func TestSpanCapturesPanic(t *testing.T) {
+	var te testExporter
+	tp, _ := NewProvider(WithSyncer(&te))
+	_, span := tp.Tracer("CatchPanic").Start(
+		context.Background(),
+		"span",
+		apitrace.WithRecord(),
+	)
+
+	f := func() {
+		defer span.End()
+		panic(errors.New("error message"))
+	}
+	require.PanicsWithError(t, "error message", f)
+	require.Len(t, te.spans, 1)
+	require.Len(t, te.spans[0].MessageEvents, 1)
+	assert.Equal(t, te.spans[0].MessageEvents[0].Name, errorEventName)
+	assert.Equal(t, te.spans[0].MessageEvents[0].Attributes, []kv.KeyValue{
+		errorTypeKey.String("*errors.errorString"),
+		errorMessageKey.String("error message"),
+	})
 }
