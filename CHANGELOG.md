@@ -20,11 +20,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository.
    This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
+- The `WithSpan` method of the `Tracer` interface.
+   The functionality this method provided was limited compared to what a user can provide themselves.
+   It was removed with the understanding that if there is sufficient user need it can be added back based on actual user usage. (#1043)
 
 ### Fixed
 
 - The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
 - Correct instrumentation version tag in Jaeger exporter. (#1037)
+- The SDK span will now set an error event if the `End` method is called during a panic (i.e. it was deferred). (#1043)
 
 ## [0.10.0] - 2020-07-29
 

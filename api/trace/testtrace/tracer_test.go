@@ -256,46 +256,6 @@ func TestTracer(t *testing.T) {
 			e.Expect(links[link2.SpanContext]).ToEqual(link2.Attributes)
 		})
 	})
-
-	t.Run("#WithSpan", func(t *testing.T) {
-		testTracedSpan(t, func(tracer trace.Tracer, name string) (trace.Span, error) {
-			var span trace.Span
-
-			err := tracer.WithSpan(context.Background(), name, func(ctx context.Context) error {
-				span = trace.SpanFromContext(ctx)
-
-				return nil
-			})
-
-			return span, err
-		})
-
-		t.Run("honors StartOptions", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			attr1 := kv.String("a", "1")
-			attr2 := kv.String("b", "2")
-
-			subject := tp.Tracer(t.Name())
-			var span trace.Span
-			err := subject.WithSpan(context.Background(), "test", func(ctx context.Context) error {
-				span = trace.SpanFromContext(ctx)
-
-				return nil
-			}, trace.WithAttributes(attr1, attr2))
-			e.Expect(err).ToBeNil()
-
-			testSpan, ok := span.(*testtrace.Span)
-			e.Expect(ok).ToBeTrue()
-
-			attributes := testSpan.Attributes()
-			e.Expect(attributes[attr1.Key]).ToEqual(attr1.Value)
-			e.Expect(attributes[attr2.Key]).ToEqual(attr2.Value)
-		})
-
-	})
 }
 
 func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (trace.Span, error)) {
