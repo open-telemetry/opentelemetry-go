@@ -107,7 +107,6 @@ func (l *Set) Get(idx int) (kv.KeyValue, bool) {
 	if l == nil {
 		return kv.KeyValue{}, false
 	}
-
 	value := l.equivalent.reflect()
 
 	if idx >= 0 && idx < value.Len() {
