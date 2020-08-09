@@ -115,7 +115,9 @@ func TestFilterBasicProcessor(t *testing.T) {
 
 	basicProc.StartCollection()
 	accum.Collect(ctx)
-	basicProc.FinishCollection()
+	if err := basicProc.FinishCollection(); err != nil {
+		t.Error(err)
+	}
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
