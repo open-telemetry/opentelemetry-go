@@ -43,14 +43,19 @@ type (
 		encoded  [maxConcurrentEncoders]string
 	}
 
-	Filter func(string) bool
-
 	// Distinct wraps a variable-size array of `kv.KeyValue`,
 	// constructed with keys in sorted order.  This can be used as
 	// a map key or for equality checking between Sets.
 	Distinct struct {
 		iface interface{}
 	}
+
+	// Filter supports removing certain keys from label sets.
+	// When the filter returns true, the label key will be kept in
+	// the filtered label set.  When the filter returns false, the
+	// label key is excluded from the filtered label set, and the
+	// value instead appears in the `removed` list of excluded keys.
+	Filter func(string) bool
 
 	// Sortable implements `sort.Interface`, used for sorting
 	// `kv.KeyValue`.  This is an exported type to support a
@@ -232,11 +237,11 @@ func empty() Set {
 	}
 }
 
-// NewSet returns a new `*Set`.  See the documentation for
-// `NewSetWithSortable` for more details.
+// NewSet returns a new `Set`.  See the documentation for
+// `NewSetWithSortableFiltered` for more details.
 //
 // Except for empty sets, this method adds an additional allocation
-// compared with a call to `NewSetWithSortable`.
+// compared with calls that include a `*Sortable`.
 func NewSet(kvs ...kv.KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -246,7 +251,34 @@ func NewSet(kvs ...kv.KeyValue) Set {
 	return s //nolint
 }
 
-// NewSetWithSortable returns a new `*Set`.
+// NewSetWithSortable returns a new `Set`.  See the documentation for
+// `NewSetWithSortableFiltered` for more details.
+//
+// This call includes a `*Sortable` option as a memory optimization.
+func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty()
+	}
+	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
+	return s //nolint
+}
+
+// NewSetWithFiltered returns a new `Set`.  See the documentation for
+// `NewSetWithSortableFiltered` for more details.
+//
+// This call includes a `Filter` to include/exclude label keys from
+// the return value.  Excluded keys are returned as a slice of label
+// values.
+func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return empty(), nil
+	}
+	return NewSetWithSortableFiltered(kvs, new(Sortable), filter)
+}
+
+// NewSetWithSortableFiltered returns a new `Set`.
 //
 // Duplicate keys are eliminated by taking the last value.  This
 // re-orders the input slice so that unique last-values are contiguous
@@ -258,8 +290,8 @@ func NewSet(kvs ...kv.KeyValue) Set {
 // - Caller sees the reordering, but doesn't lose values
 // - Repeated call preserve last-value wins.
 //
-// Note that methods are defined `*Set`, although no allocation for
-// `Set` is required.  Callers can avoid memory allocations by:
+// Note that methods are defined on `*Set`, although this returns `Set`.
+// Callers can avoid memory allocations by:
 //
 // - allocating a `Sortable` for use as a temporary in this method
 // - allocating a `Set` for storing the return value of this
@@ -267,23 +299,9 @@ func NewSet(kvs ...kv.KeyValue) Set {
 //
 // The result maintains a cache of encoded labels, by label.EncoderID.
 // This value should not be copied after its first use.
-func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return empty()
-	}
-	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
-	return s //nolint
-}
-
-func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return empty(), nil
-	}
-	return NewSetWithSortableFiltered(kvs, new(Sortable), filter)
-}
-
+//
+// The second `[]kv.KeyValue` return value is a list of keys that were
+// excluded by the Filter (if non-nil).
 func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter) (Set, []kv.KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -322,16 +340,17 @@ func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter)
 	}, nil
 }
 
+// filterSet reorders `kvs` so that included keys are contiguous at
+// the end of the slice, while excluded keys precede the included keys.
 func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	var excluded []kv.KeyValue
 
-	// move labels that do not match the optional regexp so
+	// Move labels that do not match the optional regexp so
 	// they're adjacent before calling computeDistinct().
 	distinctPosition := len(kvs)
 
-	// Similar to the logic above, swap indistinct keys
-	// forward and distinct keys toward the end of the
-	// slice.
+	// Swap indistinct keys forward and distinct keys toward the
+	// end of the slice.
 	offset := len(kvs) - 1
 	for ; offset >= 0; offset-- {
 		if filter(string(kvs[offset].Key)) {
@@ -347,6 +366,8 @@ func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	}, excluded
 }
 
+// Filter returns a filtered copy of this `Set`.  See the
+// documentation for `NewSetWithSortableFiltered` for more details.
 func (l *Set) Filter(re Filter) (Set, []kv.KeyValue) {
 	if re == nil {
 		return Set{
