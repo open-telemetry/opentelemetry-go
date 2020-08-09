@@ -86,7 +86,8 @@ func TestFilterProcessor(t *testing.T) {
 	}, testProc.Values())
 }
 
-func TestFilterBasic(t *testing.T) {
+// Test a filter with the ../basic Processor.
+func TestFilterBasicProcessor(t *testing.T) {
 	ctx := context.Background()
 	eselector := test.ExportKindSelector(export.CumulativeExporter)
 	basicProc := basic.New(test.AggregatorSelector(), eselector)
@@ -119,5 +120,5 @@ func TestFilterBasic(t *testing.T) {
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
 		"observer.sum/A=1,C=3/R=V": 20,
-	}, exporter.Values(basicProc.CheckpointSet()))
+	}, exporter.Values(basicProc.CheckpointSet(), label.DefaultEncoder()))
 }

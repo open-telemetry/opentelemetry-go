@@ -117,11 +117,14 @@ func NewExporter(proc export.Processor, selector export.ExportKindSelector, enco
 // accumulations that were processed.  Point values are chosen as
 // either the Sum or the LastValue, whichever is implemented.  (All
 // the built-in Aggregators implement one of these interfaces.)
-func (e *Exporter) Values(ckpt export.CheckpointSet) map[string]float64 {
-	output := NewOutput(e.ExportKindSelector)
-	err := ckpt.ForEach(e.ExportKindSelector, func(r Record) error {
-		return e.output.AddRecord(r)
+func (e *Exporter) Values(ckpt export.CheckpointSet, enc label.Encoder) map[string]float64 {
+	output := NewOutput(enc)
+	err := ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
+		return output.AddRecord(r)
 	})
+	if err != nil {
+		panic("Error in Values()")
+	}
 	return output.Map()
 }
 

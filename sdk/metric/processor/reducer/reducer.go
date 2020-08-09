@@ -21,11 +21,15 @@ import (
 )
 
 type (
+	// Processor implements "dimensionality reduction" by
+	// filtering keys from export label sets.
 	Processor struct {
 		next           export.Processor
 		filterSelector LabelFilterSelector
 	}
 
+	// LabelFilterSelector is the interface used to configure a
+	// specific Filter to an instrument.
 	LabelFilterSelector interface {
 		LabelFilterFor(*metric.Descriptor) label.Filter
 	}
@@ -33,6 +37,8 @@ type (
 
 var _ export.Processor = &Processor{}
 
+// New returns a dimensionality-reducing Processor that passes data to
+// the next stage in an export pipeline.
 func New(filterSelector LabelFilterSelector, next export.Processor) *Processor {
 	return &Processor{
 		next:           next,
@@ -40,6 +46,7 @@ func New(filterSelector LabelFilterSelector, next export.Processor) *Processor {
 	}
 }
 
+// Process implements export.Processor.
 func (p *Processor) Process(accum export.Accumulation) error {
 	// Note: the removed labels are returned and ignored here.
 	// Conceivably these inputs could be useful to a sampler.
@@ -58,6 +65,7 @@ func (p *Processor) Process(accum export.Accumulation) error {
 	)
 }
 
+// AggregatorFor implements export.AggregatorSelector
 func (p *Processor) AggregatorFor(desc *metric.Descriptor, aggs ...*export.Aggregator) {
 	p.next.AggregatorFor(desc, aggs...)
 }
