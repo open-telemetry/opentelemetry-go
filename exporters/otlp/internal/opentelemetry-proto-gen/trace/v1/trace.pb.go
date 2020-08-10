@@ -5,10 +5,11 @@ package v1
 
 import (
 	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	v11 "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/common/v1"
-	v1 "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/resource/v1"
 	math "math"
+
+	proto "github.com/golang/protobuf/proto"
+	v11 "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	v1 "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
