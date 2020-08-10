@@ -53,8 +53,24 @@ func (testFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
 	}
 }
 
-func TestFilterProcessor(t *testing.T) {
+func generateData(impl metric.MeterImpl) {
 	ctx := context.Background()
+	meter := metric.WrapMeterImpl(impl, "testing")
+
+	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
+
+	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
+		func(_ context.Context, result metric.Int64ObserverResult) {
+			result.Observe(10, kvs1...)
+			result.Observe(10, kvs2...)
+		},
+	)
+
+	counter.Add(ctx, 100, kvs1...)
+	counter.Add(ctx, 100, kvs2...)
+}
+
+func TestFilterProcessor(t *testing.T) {
 	testProc := processortest.NewProcessor(
 		processortest.AggregatorSelector(),
 		label.DefaultEncoder(),
@@ -65,21 +81,9 @@ func TestFilterProcessor(t *testing.T) {
 			resource.New(kv.String("R", "V")),
 		),
 	)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	generateData(accum)
 
-	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
-
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
-		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, kvs1...)
-			result.Observe(10, kvs2...)
-		},
-	)
-
-	counter.Add(ctx, 100, kvs1...)
-	counter.Add(ctx, 100, kvs2...)
-
-	accum.Collect(ctx)
+	accum.Collect(context.Background())
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
@@ -89,7 +93,6 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	ctx := context.Background()
 	eselector := processortest.ExportKindSelector(export.CumulativeExporter)
 	basicProc := basic.New(processortest.AggregatorSelector(), eselector)
 	accum := metricsdk.NewAccumulator(
@@ -100,22 +103,10 @@ func TestFilterBasicProcessor(t *testing.T) {
 	)
 	exporter := exportertest.NewExporter(basicProc, eselector)
 
-	meter := metric.WrapMeterImpl(accum, "testing")
-
-	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
-
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
-		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, kvs1...)
-			result.Observe(10, kvs2...)
-		},
-	)
-
-	counter.Add(ctx, 100, kvs1...)
-	counter.Add(ctx, 100, kvs2...)
+	generateData(accum)
 
 	basicProc.StartCollection()
-	accum.Collect(ctx)
+	accum.Collect(context.Background())
 	if err := basicProc.FinishCollection(); err != nil {
 		t.Error(err)
 	}
