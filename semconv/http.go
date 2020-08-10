@@ -21,9 +21,8 @@ import (
 	"strconv"
 	"strings"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net

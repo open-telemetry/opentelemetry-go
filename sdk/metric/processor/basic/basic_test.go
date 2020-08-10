@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -207,7 +207,7 @@ func testProcessor(
 				}
 
 				// Test the final checkpoint state.
-				records1 := test.NewOutput(label.DefaultEncoder())
+				records1 := processortest.NewOutput(label.DefaultEncoder())
 				err = checkpointSet.ForEach(ekind, records1.AddRecord)
 
 				// Test for an allowed error:
@@ -287,19 +287,19 @@ func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
 
 func TestBasicInconsistent(t *testing.T) {
 	// Test double-start
-	b := basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b := basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 
 	b.StartCollection()
 	require.Equal(
@@ -312,14 +312,14 @@ func TestBasicInconsistent(t *testing.T) {
 	)
 
 	// Test no start
-	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
-	b = basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 	b.StartCollection()
 	require.NoError(t, b.Process(accum))
 	require.NoError(t, b.FinishCollection())
@@ -334,7 +334,7 @@ func TestBasicInconsistent(t *testing.T) {
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
-	b := basic.New(test.AggregatorSelector(), export.PassThroughExporter)
+	b := basic.New(processortest.AggregatorSelector(), export.PassThroughExporter)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterKind, metric.Int64NumberKind)
@@ -395,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify zero elements
-		records := test.NewOutput(label.DefaultEncoder())
+		records := processortest.NewOutput(label.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map)
 
@@ -405,7 +405,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
-		records = test.NewOutput(label.DefaultEncoder())
+		records = processortest.NewOutput(label.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst/A=B/R=V": float64(i * 10),
@@ -429,7 +429,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify zero elements
-		records := test.NewOutput(label.DefaultEncoder())
+		records := processortest.NewOutput(label.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map)
 
@@ -439,7 +439,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
-		records = test.NewOutput(label.DefaultEncoder())
+		records = processortest.NewOutput(label.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst/A=B/R=V": 10,
