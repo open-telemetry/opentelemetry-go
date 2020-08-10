@@ -25,9 +25,10 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exportertest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/reducer"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	processortest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -54,12 +55,12 @@ func (testFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
 
 func TestFilterProcessor(t *testing.T) {
 	ctx := context.Background()
-	testProc := test.NewProcessor(
-		test.AggregatorSelector(),
+	testProc := processortest.NewProcessor(
+		processortest.AggregatorSelector(),
 		label.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
-		reducer.New(testFilter{}, test.SingleCheckpointer(testProc)),
+		reducer.New(testFilter{}, processortest.SingleCheckpointer(testProc)),
 		metricsdk.WithResource(
 			resource.New(kv.String("R", "V")),
 		),
@@ -89,15 +90,15 @@ func TestFilterProcessor(t *testing.T) {
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
 	ctx := context.Background()
-	eselector := test.ExportKindSelector(export.CumulativeExporter)
-	basicProc := basic.New(test.AggregatorSelector(), eselector)
+	eselector := processortest.ExportKindSelector(export.CumulativeExporter)
+	basicProc := basic.New(processortest.AggregatorSelector(), eselector)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 		metricsdk.WithResource(
 			resource.New(kv.String("R", "V")),
 		),
 	)
-	exporter := test.NewExporter(basicProc, eselector, label.DefaultEncoder())
+	exporter := exportertest.NewExporter(basicProc, eselector)
 
 	meter := metric.WrapMeterImpl(accum, "testing")
 

@@ -109,7 +109,7 @@ type Checkpointer interface {
 	// any time.
 	Processor
 
-	// CheckpointSet returns the curent data set.  Call after
+	// CheckpointSet returns the current data set.  Call after
 	// FinishCollection().
 	CheckpointSet() CheckpointSet
 

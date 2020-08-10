@@ -46,12 +46,15 @@ type (
 		aggregator export.Aggregator
 	}
 
-	// Output collects distinct metric/label set outputs.
+	// Output implements export.CheckpointSet.
 	//
-	// TODO(#872) make this internal.
+	// TODO(#872) make this internal and update callers to use the
+	// Processor, single Checkpointer, or Exporter facilities in
+	// this package.
 	Output struct {
 		m            map[mapKey]mapValue
 		labelEncoder label.Encoder
+		sync.RWMutex
 	}
 
 	// testAggregatorSelector returns aggregators consistent with
@@ -59,11 +62,11 @@ type (
 	// processors, which clone Aggregators using AggregatorFor(desc).
 	testAggregatorSelector struct{}
 
-	// testExportKindSelector is a ExportKindSelector
+	// testExportKindSelector is a export.ExportKindSelector.
 	testExportKindSelector export.ExportKind
 
+	// testSingleCheckpointer is a export.Checkpointer.
 	testSingleCheckpointer struct {
-		sync.RWMutex
 		*Processor
 	}
 
@@ -71,14 +74,7 @@ type (
 	// assembles its results as a map[string]float64.
 	Processor struct {
 		export.AggregatorSelector
-		output Output
-	}
-
-	// Exporter is a testing implementation of export.Exporter that
-	// assembles its results as a map[string]float64.
-	Exporter struct {
-		export.ExportKindSelector
-		proc export.Processor
+		output *Output
 	}
 )
 
@@ -111,6 +107,16 @@ func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
 
+// ExportKindSelector returns a policy with fixed export kind.
+func ExportKindSelector(kind export.ExportKind) export.ExportKindSelector {
+	return testExportKindSelector(kind)
+}
+
+// ExportKindFor implements export.ExportKindSelector.
+func (kind testExportKindSelector) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.ExportKind(kind)
+}
+
 // SingleCheckpointer returns a checkpointer that computes a single
 // interval.
 func SingleCheckpointer(p *Processor) export.Checkpointer {
@@ -129,52 +135,7 @@ func (c *testSingleCheckpointer) FinishCollection() error {
 }
 
 func (c *testSingleCheckpointer) CheckpointSet() export.CheckpointSet {
-	// TODO make NewOutput return pointer.  Let it implement
-	// ForEach.  Let Map() use it--or better let there be a helper
-	// to make the map from a CheckpointSet.  Test that
-	// collections == 1.
-	return c
-}
-
-func (c *testSingleCheckpointer) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
-	for key, value := range c.Processor.output.m {
-		err := ff(export.NewRecord(key.desc, value.labels, value.resource, value.aggregator.Aggregation(), time.Time{}, time.Time{}))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// NewExporter returns a new testing Exporter implementation.
-// Verify exporter outputs using Values(), e.g.,:
-//
-//     require.EqualValues(t, map[string]float64{
-//         "counter.sum/A=1,B=2/R=V": 100,
-//     }, exporter.Values())
-//
-// Where in the example A=1,B=2 is the encoded labels and R=V is the
-// encoded resource value.
-func NewExporter(proc export.Processor, selector export.ExportKindSelector, encoder label.Encoder) *Exporter {
-	return &Exporter{
-		ExportKindSelector: selector,
-		proc:               proc,
-	}
-}
-
-// Values returns the mapping from label set to point values for the
-// accumulations that were processed.  Point values are chosen as
-// either the Sum or the LastValue, whichever is implemented.  (All
-// the built-in Aggregators implement one of these interfaces.)
-func (e *Exporter) Values(ckpt export.CheckpointSet, enc label.Encoder) map[string]float64 {
-	output := NewOutput(enc)
-	err := ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
-		return output.AddRecord(r)
-	})
-	if err != nil {
-		panic("Error in Values()")
-	}
-	return output.Map()
+	return c.Processor.output
 }
 
 // NewOutput is a helper for testing an expected set of Accumulations
@@ -184,8 +145,8 @@ func (e *Exporter) Values(ckpt export.CheckpointSet, enc label.Encoder) map[stri
 //
 // TODO(#872): This class should be made internal, and callers should either
 // use a test Processor or a test Exporter to use these facilities.
-func NewOutput(labelEncoder label.Encoder) Output {
-	return Output{
+func NewOutput(labelEncoder label.Encoder) *Output {
+	return &Output{
 		m:            make(map[mapKey]mapValue),
 		labelEncoder: labelEncoder,
 	}
@@ -240,21 +201,30 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 	}
 }
 
-// ExportKindSelector returns a policy with fixed export kind.
-func ExportKindSelector(kind export.ExportKind) export.ExportKindSelector {
-	return testExportKindSelector(kind)
-}
-
-// ExportKindFor implements export.ExportKindSelector.
-func (kind testExportKindSelector) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.ExportKind(kind)
+// ForEach implements export.CheckpointSet.
+func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
+	for key, value := range o.m {
+		if err := ff(export.NewRecord(
+			key.desc,
+			value.labels,
+			value.resource,
+			value.aggregator.Aggregation(),
+			time.Time{},
+			time.Time{},
+		)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // AddRecord adds a string representation of the exported metric data
 // to a map for use in testing.  The value taken from the record is
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
-func (o Output) AddRecord(rec export.Record) error {
+//
+// TODO: Move this into an exporter test helper package.
+func (o *Output) AddRecord(rec export.Record) error {
 	key := mapKey{
 		desc:     rec.Descriptor(),
 		labels:   rec.Labels().Equivalent(),
@@ -276,23 +246,29 @@ func (o Output) AddRecord(rec export.Record) error {
 // Accumulations or a set of Records.  When mapping records or
 // accumulations into floating point values, the Sum() or LastValue()
 // is chosen, whichever is implemented by the underlying Aggregator.
-func (o Output) Map() map[string]float64 {
+func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	for key, value := range o.m {
-		encoded := value.labels.Encoded(o.labelEncoder)
-		rencoded := value.resource.Encoded(o.labelEncoder)
-		number := 0.0
-		if s, ok := value.aggregator.(aggregation.Sum); ok {
-			sum, _ := s.Sum()
-			number = sum.CoerceToFloat64(key.desc.NumberKind())
-		} else if l, ok := value.aggregator.(aggregation.LastValue); ok {
-			last, _, _ := l.LastValue()
-			number = last.CoerceToFloat64(key.desc.NumberKind())
-		} else {
-			panic(fmt.Sprintf("Unhandled aggregator type: %T", value.aggregator))
+	err := o.ForEach(export.PassThroughExporter, func(record export.Record) error {
+		for key, value := range o.m {
+			encoded := value.labels.Encoded(o.labelEncoder)
+			rencoded := value.resource.Encoded(o.labelEncoder)
+			number := 0.0
+			if s, ok := value.aggregator.(aggregation.Sum); ok {
+				sum, _ := s.Sum()
+				number = sum.CoerceToFloat64(key.desc.NumberKind())
+			} else if l, ok := value.aggregator.(aggregation.LastValue); ok {
+				last, _, _ := l.LastValue()
+				number = last.CoerceToFloat64(key.desc.NumberKind())
+			} else {
+				panic(fmt.Sprintf("Unhandled aggregator type: %T", value.aggregator))
+			}
+			name := fmt.Sprint(key.desc.Name(), "/", encoded, "/", rencoded)
+			r[name] = number
 		}
-		name := fmt.Sprint(key.desc.Name(), "/", encoded, "/", rencoded)
-		r[name] = number
+		return nil
+	})
+	if err != nil {
+		panic(fmt.Sprint("Unexpected processor error: ", err))
 	}
 	return r
 }
@@ -301,7 +277,7 @@ func (o Output) Map() map[string]float64 {
 // data to a map for use in testing.  The value taken from the
 // accumulation is either the Sum() or the LastValue() of its
 // Aggregator().Aggregation(), whichever is defined.
-func (o Output) AddAccumulation(acc export.Accumulation) error {
+func (o *Output) AddAccumulation(acc export.Accumulation) error {
 	return o.AddRecord(
 		export.NewRecord(
 			acc.Descriptor(),
