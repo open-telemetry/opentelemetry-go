@@ -16,6 +16,7 @@ package push_test
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -28,9 +29,11 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	exporterTest "go.opentelemetry.io/otel/sdk/metric/exportertest"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -125,13 +128,13 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exporter.ExportCount)
 	exporter.Reset()
 
-	counter.Add(ctx, 10)
+	counter.Add(ctx, 7)
 
 	mock.Add(time.Second)
 	runtime.Gosched()
 
 	require.EqualValues(t, map[string]float64{
-		"counter.sum//R=V": 13,
+		"counter.sum//R=V": 10,
 	}, exporter.Values())
 
 	require.Equal(t, 1, exporter.ExportCount)
@@ -140,82 +143,93 @@ func TestPushTicker(t *testing.T) {
 	p.Stop()
 }
 
-// func TestPushExportError(t *testing.T) {
-// 	injector := func(name string, e error) func(r export.Record) error {
-// 		return func(r export.Record) error {
-// 			if r.Descriptor().Name() == name {
-// 				return e
-// 			}
-// 			return nil
-// 		}
-// 	}
-// 	var errAggregator = fmt.Errorf("unexpected error")
-// 	var tests = []struct {
-// 		name                string
-// 		injectedError       error
-// 		expectedDescriptors []string
-// 		expectedError       error
-// 	}{
-// 		{"errNone", nil, []string{"counter1.sum{R=V,X=Y}", "counter2.sum{R=V,}"}, nil},
-// 		{"errNoData", aggregation.ErrNoData, []string{"counter2.sum{R=V,}"}, nil},
-// 		{"errUnexpected", errAggregator, []string{}, errAggregator},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			exporter := newExporter(t)
-// 			exporter.InjectErr = injector("counter1.sum", tt.injectedError)
+func TestPushExportError(t *testing.T) {
+	injector := func(name string, e error) func(r export.Record) error {
+		return func(r export.Record) error {
+			if r.Descriptor().Name() == name {
+				return e
+			}
+			return nil
+		}
+	}
+	var errAggregator = fmt.Errorf("unexpected error")
+	var tests = []struct {
+		name          string
+		injectedError error
+		expected      map[string]float64
+		expectedError error
+	}{
+		{"errNone", nil, map[string]float64{
+			"counter1.sum/X=Y/R=V": 3,
+			"counter2.sum//R=V":    5,
+		}, nil},
+		{"errNoData", aggregation.ErrNoData, map[string]float64{
+			"counter2.sum//R=V": 5,
+		}, nil},
+		{"errUnexpected", errAggregator, map[string]float64{}, errAggregator},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exporter := newExporter(t)
+			exporter.InjectErr = injector("counter1.sum", tt.injectedError)
 
-// 			processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
-// 			checkpointer := processorTest.SingleCheckpointer(processor)
-// 			p := push.New(
-// 				checkpointer,
-// 				exporter,
-// 				push.WithPeriod(time.Second),
-// 				push.WithResource(testResource),
-// 			)
+			// This test validates the error handling
+			// behavior of the basic Processor is honored
+			// by the push processor.
+			checkpointer := basic.New(processorTest.AggregatorSelector(), exporter)
+			p := push.New(
+				checkpointer,
+				exporter,
+				push.WithPeriod(time.Second),
+				push.WithResource(testResource),
+			)
 
-// 			mock := controllertest.NewMockClock()
-// 			p.SetClock(mock)
+			mock := controllertest.NewMockClock()
+			p.SetClock(mock)
 
-// 			ctx := context.Background()
+			ctx := context.Background()
 
-// 			meter := p.Provider().Meter("name")
-// 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
-// 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
+			meter := p.Provider().Meter("name")
+			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
+			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
-// 			p.Start()
-// 			runtime.Gosched()
+			p.Start()
+			runtime.Gosched()
 
-// 			counter1.Add(ctx, 3, kv.String("X", "Y"))
-// 			counter2.Add(ctx, 5)
+			counter1.Add(ctx, 3, kv.String("X", "Y"))
+			counter2.Add(ctx, 5)
 
-// 			require.Equal(t, 0, exporter.Exports)
-// 			require.Nil(t, testHandler.Flush())
+			require.Equal(t, 0, exporter.ExportCount)
+			require.Nil(t, testHandler.Flush())
 
-// 			mock.Add(time.Second)
-// 			runtime.Gosched()
+			mock.Add(time.Second)
+			runtime.Gosched()
 
-// 			records, exports := exporter.Reset()
-// 			require.Equal(t, 1, exports)
-// 			if tt.expectedError == nil {
-// 				require.NoError(t, testHandler.Flush())
-// 			} else {
-// 				err := testHandler.Flush()
-// 				require.Error(t, err)
-// 				require.Equal(t, tt.expectedError, err)
-// 			}
-// 			require.Equal(t, len(tt.expectedDescriptors), len(records))
-// 			for _, r := range records {
-// 				require.Contains(t, tt.expectedDescriptors,
-// 					fmt.Sprintf("%s{%s,%s}",
-// 						r.Descriptor().Name(),
-// 						r.Resource().Encoded(label.DefaultEncoder()),
-// 						r.Labels().Encoded(label.DefaultEncoder()),
-// 					),
-// 				)
-// 			}
+			require.EqualValues(t, tt.expected, exporter.Values())
 
-// 			p.Stop()
-// 		})
-// 	}
-// }
+			require.Equal(t, 1, exporter.ExportCount)
+			if tt.expectedError == nil {
+				require.NoError(t, testHandler.Flush())
+			} else {
+				err := testHandler.Flush()
+				require.Error(t, err)
+				require.Equal(t, tt.expectedError, err)
+			}
+
+			// exporter.Reset()
+
+			// require.Equal(t, len(tt.expectedDescriptors), len(records))
+			// for _, r := range records {
+			// 	require.Contains(t, tt.expectedDescriptors,
+			// 		fmt.Sprintf("%s{%s,%s}",
+			// 			r.Descriptor().Name(),
+			// 			r.Resource().Encoded(label.DefaultEncoder()),
+			// 			r.Labels().Encoded(label.DefaultEncoder()),
+			// 		),
+			// 	)
+			// }
+
+			p.Stop()
+		})
+	}
+}
