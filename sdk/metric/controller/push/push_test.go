@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	exporterTest "go.opentelemetry.io/otel/sdk/metric/exportertest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -66,8 +65,8 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
-func newExporter(t *testing.T) *exporterTest.Exporter {
-	return exporterTest.NewExporter(
+func newExporter(t *testing.T) *processorTest.Exporter {
+	return processorTest.NewExporter(
 		export.PassThroughExporter,
 		label.DefaultEncoder(),
 	)
@@ -215,19 +214,6 @@ func TestPushExportError(t *testing.T) {
 				require.Error(t, err)
 				require.Equal(t, tt.expectedError, err)
 			}
-
-			// exporter.Reset()
-
-			// require.Equal(t, len(tt.expectedDescriptors), len(records))
-			// for _, r := range records {
-			// 	require.Contains(t, tt.expectedDescriptors,
-			// 		fmt.Sprintf("%s{%s,%s}",
-			// 			r.Descriptor().Name(),
-			// 			r.Resource().Encoded(label.DefaultEncoder()),
-			// 			r.Labels().Encoded(label.DefaultEncoder()),
-			// 		),
-			// 	)
-			// }
 
 			p.Stop()
 		})
