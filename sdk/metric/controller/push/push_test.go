@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	exporterTest "go.opentelemetry.io/otel/sdk/metric/exportertest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -67,10 +67,9 @@ func init() {
 }
 
 type testExporter struct {
-	t         *testing.T
-	lock      sync.Mutex
-	exports   int
-	records   []export.Record
+	t       *testing.T
+	exports int
+	*exporterTest.Exporter
 	injectErr func(r export.Record) error
 }
 
@@ -83,7 +82,8 @@ func newFixture(t *testing.T) testFixture {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	exporter := &testExporter{
-		t: t,
+		t:        t,
+		Exporter: exporterTest.NewExporter(),
 	}
 	return testFixture{
 		checkpointSet: checkpointSet,
@@ -91,28 +91,14 @@ func newFixture(t *testing.T) testFixture {
 	}
 }
 
-func (e *testExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.PassThroughExporter
-}
-
-func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	e.lock.Lock()
-	defer e.lock.Unlock()
+func (e *testExporter) Export(ctx context.Context, checkpointSet export.CheckpointSet) error {
 	e.exports++
-	var records []export.Record
-	if err := checkpointSet.ForEach(e, func(r export.Record) error {
-		if e.injectErr != nil {
-			if err := e.injectErr(r); err != nil {
-				return err
-			}
+	if e.injectErr != nil {
+		if err := e.injectErr(r); err != nil {
+			return err
 		}
-		records = append(records, r)
-		return nil
-	}); err != nil {
-		return err
 	}
-	e.records = records
-	return nil
+	return e.Processor.Export(ctx, checkpointSet)
 }
 
 func (e *testExporter) resetRecords() ([]export.Record, int) {
@@ -125,7 +111,9 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(processorTest.AggregatorSelector(), fix.exporter)
+	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
+	checkpointer := processorTest.SingleCheckpointer(processor)
+	p := push.New(checkpointer, fix.exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -133,7 +121,9 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(test.AggregatorSelector(), fix.exporter)
+	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
+	checkpointer := processorTest.SingleCheckpointer(processor)
+	p := push.New(checkpointer, fix.exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -141,9 +131,10 @@ func TestPushDoubleStart(t *testing.T) {
 
 func TestPushTicker(t *testing.T) {
 	fix := newFixture(t)
-
+	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
+	checkpointer := processorTest.SingleCheckpointer(processor)
 	p := push.New(
-		test.AggregatorSelector(),
+		checkpointer,
 		fix.exporter,
 		push.WithPeriod(time.Second),
 		push.WithResource(testResource),
@@ -223,8 +214,10 @@ func TestPushExportError(t *testing.T) {
 			fix := newFixture(t)
 			fix.exporter.injectErr = injector("counter1.sum", tt.injectedError)
 
+			processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
+			checkpointer := processorTest.SingleCheckpointer(processor)
 			p := push.New(
-				test.AggregatorSelector(),
+				checkpointer,
 				fix.exporter,
 				push.WithPeriod(time.Second),
 				push.WithResource(testResource),

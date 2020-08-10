@@ -25,7 +25,6 @@ type (
 	// assembles its results as a map[string]float64.
 	Exporter struct {
 		export.ExportKindSelector
-		proc export.Processor
 	}
 )
 
@@ -38,10 +37,9 @@ type (
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewExporter(proc export.Processor, selector export.ExportKindSelector) *Exporter {
+func NewExporter(selector export.ExportKindSelector) *Exporter {
 	return &Exporter{
 		ExportKindSelector: selector,
-		proc:               proc,
 	}
 }
 
