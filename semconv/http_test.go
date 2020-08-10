@@ -1,5 +1,4 @@
 // Copyright The OpenTelemetry Authors
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
 
 	otelkv "go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type tlsOption int

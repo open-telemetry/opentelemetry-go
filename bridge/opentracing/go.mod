@@ -7,5 +7,4 @@ replace go.opentelemetry.io/otel => ../..
 require (
 	github.com/opentracing/opentracing-go v1.2.0
 	go.opentelemetry.io/otel v0.10.0
-	google.golang.org/grpc v1.31.0
 )

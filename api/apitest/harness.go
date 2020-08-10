@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testharness
+package apitest
 
 import (
 	"context"
@@ -21,10 +21,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/kv"
-
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
 )
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testtrace_test
+package tracetest_test
 
 import (
 	"context"
@@ -22,18 +22,18 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/apitest"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/internal/matchers"
 )
 
 func TestTracer(t *testing.T) {
-	tp := testtrace.NewProvider()
+	tp := tracetest.NewProvider()
 
-	testharness.NewHarness(t).TestTracer(func() func() trace.Tracer {
-		tp := testtrace.NewProvider()
+	apitest.NewHarness(t).TestTracer(func() func() trace.Tracer {
+		tp := tracetest.NewProvider()
 		var i uint64
 		return func() trace.Tracer {
 			return tp.Tracer(fmt.Sprintf("tracer %d", atomic.AddUint64(&i, 1)))
@@ -57,7 +57,7 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithStartTime(expectedStartTime))
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			e.Expect(testSpan.StartTime()).ToEqual(expectedStartTime)
@@ -74,7 +74,7 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			attributes := testSpan.Attributes()
@@ -94,7 +94,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(parent, "child")
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
@@ -117,7 +117,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(parent, "child")
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
@@ -139,7 +139,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(parent, "child")
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
@@ -162,7 +162,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(context.Background(), "child")
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
@@ -188,7 +188,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
@@ -248,7 +248,7 @@ func TestTracer(t *testing.T) {
 
 			_, span = subject.Start(context.Background(), "test", trace.LinkedTo(link1.SpanContext, link1.Attributes...), trace.LinkedTo(link2.SpanContext, link2.Attributes...))
 
-			testSpan, ok := span.(*testtrace.Span)
+			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			links := testSpan.Links()
@@ -259,7 +259,7 @@ func TestTracer(t *testing.T) {
 }
 
 func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (trace.Span, error)) {
-	tp := testtrace.NewProvider()
+	tp := tracetest.NewProvider()
 	t.Run("starts a span with the expected name", func(t *testing.T) {
 		t.Parallel()
 
@@ -272,7 +272,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e.Expect(err).ToBeNil()
 
-		testSpan, ok := span.(*testtrace.Span)
+		testSpan, ok := span.(*tracetest.Span)
 		e.Expect(ok).ToBeTrue()
 
 		e.Expect(testSpan.Name()).ToEqual(expectedName)
@@ -291,7 +291,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e.Expect(err).ToBeNil()
 
-		testSpan, ok := span.(*testtrace.Span)
+		testSpan, ok := span.(*tracetest.Span)
 		e.Expect(ok).ToBeTrue()
 
 		e.Expect(testSpan.StartTime()).ToBeTemporally(matchers.AfterOrSameTime, start)
@@ -303,8 +303,8 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(testtrace.StandardSpanRecorder)
-		subject := testtrace.NewProvider(testtrace.WithSpanRecorder(sr)).Tracer(t.Name())
+		sr := new(tracetest.StandardSpanRecorder)
+		subject := tracetest.NewProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
 		subject.Start(context.Background(), "span1")
 
 		e.Expect(len(sr.Started())).ToEqual(1)
@@ -323,8 +323,8 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(testtrace.StandardSpanRecorder)
-		subject := testtrace.NewProvider(testtrace.WithSpanRecorder(sr)).Tracer(t.Name())
+		sr := new(tracetest.StandardSpanRecorder)
+		subject := tracetest.NewProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
 
 		numSpans := 2
 
