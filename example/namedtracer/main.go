@@ -65,15 +65,12 @@ func main() {
 		barKey.String("bar1"),
 	)
 
-	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
-
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
-
-		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
-
-		return foo.SubOperation(ctx)
-	})
-	if err != nil {
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, "operation")
+	defer span.End()
+	span.AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
+	span.SetAttributes(anotherKey.String("yes"))
+	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)
 	}
 }
