@@ -57,7 +57,7 @@ docker run -v `pwd`:/defs $(PROTOC_IMAGE) $(1)
 endef
 
 gen-protobuf: $(SOURCE_PROTO_FILES) | $(PROTOBUF_GEN_DIR)/
-	$(foreach file,$(subst ${PROTO_SOURCE_DIR}/,,$(SOURCE_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTO_SOURCE_DIR) -f ${file} -l go -o ${PROTOBUF_TEMP_DIR}))
+	$(foreach file,$(subst ${PROTO_SOURCE_DIR}/,,$(SOURCE_PROTO_FILES)),$(call exec-protoc-all, -i $(PROTO_SOURCE_DIR) -f ${file} -l gogo -o ${PROTOBUF_TEMP_DIR}))
 
 # requires `pax` to be installed, as it has consistent options for both BSD (Darwin) and Linux
 copy-protobufs: | $(PROTOBUF_GEN_DIR)/
