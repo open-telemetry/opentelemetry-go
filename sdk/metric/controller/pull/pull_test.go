@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -70,7 +70,7 @@ func TestPullWithCache(t *testing.T) {
 		export.CumulativeExporter,
 		pull.WithCachePeriod(time.Second),
 	)
-	mock := controllerTest.NewMockClock()
+	mock := controllertest.NewMockClock()
 	puller.SetClock(mock)
 
 	ctx := context.Background()
