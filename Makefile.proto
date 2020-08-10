@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 # This Makefile.proto has rules to generate *.pb.go files in
-# `internal/opentelemetry-proto-gen` from the .proto files in
-# `internal/opentelemetry-proto` using protoc with a go plugin.
+# `exporters/otlp/internal/opentelemetry-proto-gen` from the .proto files in
+# `exporters/otlp/internal/opentelemetry-proto` using protoc with a go plugin.
 #
-# The protoc binary and other tools are sourced from a docker
-# image `PROTOC_IMAGE`.
+# The protoc binary and other tools are sourced from a docker image
+# `PROTOC_IMAGE`.
 #
 # Prereqs: The archiving utility `pax` is installed.
 
