@@ -31,8 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 	grpccodes "google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/api/apitest"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/testharness"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	otelcodes "go.opentelemetry.io/otel/codes"
@@ -63,7 +63,7 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create provider, err: %v\n", err)
 	}
-	harness := testharness.NewHarness(t)
+	harness := apitest.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
 		return tp.Tracer("")
 	}
