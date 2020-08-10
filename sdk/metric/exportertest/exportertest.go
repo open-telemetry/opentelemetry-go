@@ -15,9 +15,11 @@
 package exportertest
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/api/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	processortest "go.opentelemetry.io/otel/sdk/metric/processor/test"
+	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
 type (
@@ -25,6 +27,9 @@ type (
 	// assembles its results as a map[string]float64.
 	Exporter struct {
 		export.ExportKindSelector
+		output      *processorTest.Output
+		ExportCount int
+		InjectErr   func(export.Record) error
 	}
 )
 
@@ -37,23 +42,34 @@ type (
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewExporter(selector export.ExportKindSelector) *Exporter {
+func NewExporter(selector export.ExportKindSelector, encoder label.Encoder) *Exporter {
 	return &Exporter{
 		ExportKindSelector: selector,
+		output:             processorTest.NewOutput(encoder),
 	}
+}
+
+func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
+	e.ExportCount++
+	return ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
+		if e.InjectErr != nil {
+			if err := e.InjectErr(r); err != nil {
+				return err
+			}
+		}
+		return e.output.AddRecord(r)
+	})
 }
 
 // Values returns the mapping from label set to point values for the
 // accumulations that were processed.  Point values are chosen as
 // either the Sum or the LastValue, whichever is implemented.  (All
 // the built-in Aggregators implement one of these interfaces.)
-func (e *Exporter) Values(ckpt export.CheckpointSet, enc label.Encoder) map[string]float64 {
-	output := processortest.NewOutput(enc)
-	err := ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
-		return output.AddRecord(r)
-	})
-	if err != nil {
-		panic("Error in Values()")
-	}
-	return output.Map()
+func (e *Exporter) Values() map[string]float64 {
+	return e.output.Map()
+}
+
+func (e *Exporter) Reset() {
+	e.output.Reset()
+	e.ExportCount = 0
 }

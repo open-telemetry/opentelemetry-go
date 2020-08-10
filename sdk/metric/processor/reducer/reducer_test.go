@@ -27,8 +27,8 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exportertest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/reducer"
-	processortest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -71,12 +71,12 @@ func generateData(impl metric.MeterImpl) {
 }
 
 func TestFilterProcessor(t *testing.T) {
-	testProc := processortest.NewProcessor(
-		processortest.AggregatorSelector(),
+	testProc := processorTest.NewProcessor(
+		processorTest.AggregatorSelector(),
 		label.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
-		reducer.New(testFilter{}, processortest.SingleCheckpointer(testProc)),
+		reducer.New(testFilter{}, processorTest.SingleCheckpointer(testProc)),
 		metricsdk.WithResource(
 			resource.New(kv.String("R", "V")),
 		),
@@ -93,15 +93,15 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	eselector := processortest.ExportKindSelector(export.CumulativeExporter)
-	basicProc := basic.New(processortest.AggregatorSelector(), eselector)
+	eselector := processorTest.ExportKindSelector(export.CumulativeExporter)
+	basicProc := basic.New(processorTest.AggregatorSelector(), eselector)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 		metricsdk.WithResource(
 			resource.New(kv.String("R", "V")),
 		),
 	)
-	exporter := exportertest.NewExporter(basicProc, eselector)
+	exporter := exportertest.NewExporter(basicProc, label.DefaultEncoder())
 
 	generateData(accum)
 
@@ -111,8 +111,10 @@ func TestFilterBasicProcessor(t *testing.T) {
 		t.Error(err)
 	}
 
+	exporter.Export(context.Background(), basicProc.CheckpointSet())
+
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
 		"observer.sum/A=1,C=3/R=V": 20,
-	}, exporter.Values(basicProc.CheckpointSet(), label.DefaultEncoder()))
+	}, exporter.Values())
 }

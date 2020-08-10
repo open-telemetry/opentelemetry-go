@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test_test
+package processortest_test
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -57,8 +57,8 @@ func generateTestData(proc export.Processor) {
 func TestProcessorTesting(t *testing.T) {
 	// Test the Processor test helper using a real Accumulator to
 	// generate Accumulations.
-	testProc := test.NewProcessor(
-		test.AggregatorSelector(),
+	testProc := processorTest.NewProcessor(
+		processorTest.AggregatorSelector(),
 		label.DefaultEncoder(),
 	)
 

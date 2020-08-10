@@ -30,8 +30,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
-	batchTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -70,7 +69,7 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
-// correctnessProcessor could be replaced with processor/test.Processor
+// correctnessProcessor could be replaced with processortest.Processor
 // with a non-default aggregator selector
 // TODO(#872) improve this.
 type correctnessProcessor struct {
@@ -87,14 +86,14 @@ type testSelector struct {
 
 func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
-	test.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
+	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
 	testHandler.Reset()
 	processor := &correctnessProcessor{
 		t:            t,
-		testSelector: &testSelector{selector: test.AggregatorSelector()},
+		testSelector: &testSelector{selector: processortest.AggregatorSelector()},
 	}
 	accum := metricsdk.NewAccumulator(
 		processor,
@@ -349,7 +348,7 @@ func TestObserverCollection(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -452,7 +451,7 @@ func TestObserverBatch(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -497,7 +496,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -579,7 +578,7 @@ func TestSyncInAsync(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}

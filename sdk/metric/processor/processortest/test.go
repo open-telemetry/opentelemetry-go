@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package processortest
 
 import (
 	"fmt"
@@ -271,6 +271,10 @@ func (o *Output) Map() map[string]float64 {
 		panic(fmt.Sprint("Unexpected processor error: ", err))
 	}
 	return r
+}
+
+func (o *Output) Reset() {
+	o.m = map[mapKey]mapValue{}
 }
 
 // AddAccumulation adds a string representation of the exported metric
