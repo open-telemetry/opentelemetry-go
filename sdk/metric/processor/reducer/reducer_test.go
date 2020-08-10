@@ -59,7 +59,7 @@ func TestFilterProcessor(t *testing.T) {
 		label.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
-		reducer.New(testFilter{}, testProc),
+		reducer.New(testFilter{}, test.SingleCheckpointer(testProc)),
 		metricsdk.WithResource(
 			resource.New(kv.String("R", "V")),
 		),

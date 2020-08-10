@@ -117,6 +117,7 @@ type (
 )
 
 var _ export.Processor = &Processor{}
+var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")

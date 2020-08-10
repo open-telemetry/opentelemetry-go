@@ -17,6 +17,7 @@ package test
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/label"
@@ -29,19 +30,27 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
-	nameWithNumKind struct {
-		name       string
-		numberKind metric.NumberKind
+	mapKey struct {
+		desc     *metric.Descriptor
+		labels   label.Distinct
+		resource label.Distinct
+	}
+
+	mapValue struct {
+		labels     *label.Set
+		resource   *resource.Resource
+		aggregator export.Aggregator
 	}
 
 	// Output collects distinct metric/label set outputs.
 	//
 	// TODO(#872) make this internal.
 	Output struct {
-		m            map[nameWithNumKind]export.Aggregator
+		m            map[mapKey]mapValue
 		labelEncoder label.Encoder
 	}
 
@@ -52,6 +61,11 @@ type (
 
 	// testExportKindSelector is a ExportKindSelector
 	testExportKindSelector export.ExportKind
+
+	testSingleCheckpointer struct {
+		sync.RWMutex
+		*Processor
+	}
 
 	// Processor is a testing implementation of export.Processor that
 	// assembles its results as a map[string]float64.
@@ -97,6 +111,41 @@ func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
 
+// SingleCheckpointer returns a checkpointer that computes a single
+// interval.
+func SingleCheckpointer(p *Processor) export.Checkpointer {
+	return &testSingleCheckpointer{
+		Processor: p,
+	}
+}
+
+func (c *testSingleCheckpointer) StartCollection() {
+	// TODO
+}
+
+func (c *testSingleCheckpointer) FinishCollection() error {
+	// TODO
+	return nil
+}
+
+func (c *testSingleCheckpointer) CheckpointSet() export.CheckpointSet {
+	// TODO make NewOutput return pointer.  Let it implement
+	// ForEach.  Let Map() use it--or better let there be a helper
+	// to make the map from a CheckpointSet.  Test that
+	// collections == 1.
+	return c
+}
+
+func (c *testSingleCheckpointer) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
+	for key, value := range c.Processor.output.m {
+		err := ff(export.NewRecord(key.desc, value.labels, value.resource, value.aggregator.Aggregation(), time.Time{}, time.Time{}))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewExporter returns a new testing Exporter implementation.
 // Verify exporter outputs using Values(), e.g.,:
 //
@@ -137,7 +186,7 @@ func (e *Exporter) Values(ckpt export.CheckpointSet, enc label.Encoder) map[stri
 // use a test Processor or a test Exporter to use these facilities.
 func NewOutput(labelEncoder label.Encoder) Output {
 	return Output{
-		m:            make(map[nameWithNumKind]export.Aggregator),
+		m:            make(map[mapKey]mapValue),
 		labelEncoder: labelEncoder,
 	}
 }
@@ -206,19 +255,21 @@ func (kind testExportKindSelector) ExportKindFor(*metric.Descriptor, aggregation
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
 func (o Output) AddRecord(rec export.Record) error {
-	encoded := rec.Labels().Encoded(o.labelEncoder)
-	rencoded := rec.Resource().Encoded(o.labelEncoder)
-	key := nameWithNumKind{
-		name:       fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded),
-		numberKind: rec.Descriptor().NumberKind(),
+	key := mapKey{
+		desc:     rec.Descriptor(),
+		labels:   rec.Labels().Equivalent(),
+		resource: rec.Resource().Equivalent(),
 	}
-
 	if _, ok := o.m[key]; !ok {
 		var agg export.Aggregator
 		testAggregatorSelector{}.AggregatorFor(rec.Descriptor(), &agg)
-		o.m[key] = agg
+		o.m[key] = mapValue{
+			aggregator: agg,
+			labels:     rec.Labels(),
+			resource:   rec.Resource(),
+		}
 	}
-	return o.m[key].Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
+	return o.m[key].aggregator.Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
 }
 
 // Map returns the calculated values for test validation from a set of
@@ -227,18 +278,21 @@ func (o Output) AddRecord(rec export.Record) error {
 // is chosen, whichever is implemented by the underlying Aggregator.
 func (o Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	for nnk, agg := range o.m {
-		value := 0.0
-		if s, ok := agg.(aggregation.Sum); ok {
+	for key, value := range o.m {
+		encoded := value.labels.Encoded(o.labelEncoder)
+		rencoded := value.resource.Encoded(o.labelEncoder)
+		number := 0.0
+		if s, ok := value.aggregator.(aggregation.Sum); ok {
 			sum, _ := s.Sum()
-			value = sum.CoerceToFloat64(nnk.numberKind)
-		} else if l, ok := agg.(aggregation.LastValue); ok {
+			number = sum.CoerceToFloat64(key.desc.NumberKind())
+		} else if l, ok := value.aggregator.(aggregation.LastValue); ok {
 			last, _, _ := l.LastValue()
-			value = last.CoerceToFloat64(nnk.numberKind)
+			number = last.CoerceToFloat64(key.desc.NumberKind())
 		} else {
-			panic(fmt.Sprintf("Unhandled aggregator type: %T", agg))
+			panic(fmt.Sprintf("Unhandled aggregator type: %T", value.aggregator))
 		}
-		r[nnk.name] = value
+		name := fmt.Sprint(key.desc.Name(), "/", encoded, "/", rencoded)
+		r[name] = number
 	}
 	return r
 }

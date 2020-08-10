@@ -24,7 +24,7 @@ type (
 	// Processor implements "dimensionality reduction" by
 	// filtering keys from export label sets.
 	Processor struct {
-		next           export.Processor
+		export.Checkpointer
 		filterSelector LabelFilterSelector
 	}
 
@@ -36,12 +36,13 @@ type (
 )
 
 var _ export.Processor = &Processor{}
+var _ export.Checkpointer = &Processor{}
 
 // New returns a dimensionality-reducing Processor that passes data to
 // the next stage in an export pipeline.
-func New(filterSelector LabelFilterSelector, next export.Processor) *Processor {
+func New(filterSelector LabelFilterSelector, ckpter export.Checkpointer) *Processor {
 	return &Processor{
-		next:           next,
+		Checkpointer:   ckpter,
 		filterSelector: filterSelector,
 	}
 }
@@ -55,7 +56,7 @@ func (p *Processor) Process(accum export.Accumulation) error {
 			accum.Descriptor(),
 		),
 	)
-	return p.next.Process(
+	return p.Checkpointer.Process(
 		export.NewAccumulation(
 			accum.Descriptor(),
 			&reduced,
@@ -65,7 +66,7 @@ func (p *Processor) Process(accum export.Accumulation) error {
 	)
 }
 
-// AggregatorFor implements export.AggregatorSelector
-func (p *Processor) AggregatorFor(desc *metric.Descriptor, aggs ...*export.Aggregator) {
-	p.next.AggregatorFor(desc, aggs...)
-}
+// // AggregatorFor implements export.AggregatorSelector
+// func (p *Processor) AggregatorFor(desc *metric.Descriptor, aggs ...*export.Aggregator) {
+// 	p.next.AggregatorFor(desc, aggs...)
+// }
