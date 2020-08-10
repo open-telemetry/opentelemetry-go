@@ -12,4 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testtrace // import "go.opentelemetry.io/otel/api/trace/testtrace"
+package tracetest
+
+import (
+	"time"
+
+	"go.opentelemetry.io/otel/api/kv"
+)
+
+// Event encapsulates the properties of calls to AddEvent or AddEventWithTimestamp.
+type Event struct {
+	Timestamp  time.Time
+	Name       string
+	Attributes map[kv.Key]kv.Value
+}
