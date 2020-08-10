@@ -62,9 +62,6 @@ type (
 	// processors, which clone Aggregators using AggregatorFor(desc).
 	testAggregatorSelector struct{}
 
-	// testExportKindSelector is a export.ExportKindSelector.
-	testExportKindSelector export.ExportKind
-
 	// testSingleCheckpointer is a export.Checkpointer.
 	testSingleCheckpointer struct {
 		*Processor
@@ -105,16 +102,6 @@ func (p *Processor) Process(accum export.Accumulation) error {
 // the built-in Aggregators implement one of these interfaces.)
 func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
-}
-
-// ExportKindSelector returns a policy with fixed export kind.
-func ExportKindSelector(kind export.ExportKind) export.ExportKindSelector {
-	return testExportKindSelector(kind)
-}
-
-// ExportKindFor implements export.ExportKindSelector.
-func (kind testExportKindSelector) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.ExportKind(kind)
 }
 
 // SingleCheckpointer returns a checkpointer that computes a single

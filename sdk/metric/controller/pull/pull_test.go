@@ -28,14 +28,18 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
-		selector.NewWithExactDistribution(),
-		export.CumulativeExporter,
+		basic.New(
+			selector.NewWithExactDistribution(),
+			export.CumulativeExporter,
+			basic.WithMemory(true),
+		),
 		pull.WithCachePeriod(0),
 	)
 
@@ -66,8 +70,11 @@ func TestPullNoCache(t *testing.T) {
 
 func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
-		selector.NewWithExactDistribution(),
-		export.CumulativeExporter,
+		basic.New(
+			selector.NewWithExactDistribution(),
+			export.CumulativeExporter,
+			basic.WithMemory(true),
+		),
 		pull.WithCachePeriod(time.Second),
 	)
 	mock := controllertest.NewMockClock()
