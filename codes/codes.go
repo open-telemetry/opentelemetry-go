@@ -16,7 +16,7 @@
 //
 // It conforms to [the OpenTelemetry
 // specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/api.md#statuscanonicalcode).
-// This also means that if follows gRPC codes and is based on
+// This also means that it follows gRPC codes and is based on
 // [google.golang.org/grpc/codes](https://godoc.org/google.golang.org/grpc/codes).
 //
 // This package was added to this project, instead of using that existing
