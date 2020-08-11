@@ -41,7 +41,7 @@ func TestPullNoCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.Provider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
@@ -50,8 +50,8 @@ func TestPullNoCache(t *testing.T) {
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
@@ -60,8 +60,8 @@ func TestPullNoCache(t *testing.T) {
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 20,
-	}, records.Map)
+		"counter.sum/A=B/": 20,
+	}, records.Map())
 }
 
 func TestPullWithCache(t *testing.T) {
@@ -75,7 +75,7 @@ func TestPullWithCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.Provider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
@@ -84,8 +84,8 @@ func TestPullWithCache(t *testing.T) {
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
 	counter.Add(ctx, 10, kv.String("A", "B"))
 
@@ -95,8 +95,8 @@ func TestPullWithCache(t *testing.T) {
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
 	mock.Add(time.Second)
 	runtime.Gosched()
@@ -107,7 +107,7 @@ func TestPullWithCache(t *testing.T) {
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 20,
-	}, records.Map)
+		"counter.sum/A=B/": 20,
+	}, records.Map())
 
 }
