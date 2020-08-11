@@ -220,17 +220,16 @@ func (b *Processor) Process(accum export.Accumulation) error {
 			// This is the first Accumulation we've seen
 			// for this stateKey during this collection.
 			// Just keep a reference to the Accumulator's
-			// Aggregator.
+			// Aggregator.  All the other cases copy
+			// Aggregator state.
 			value.current = agg
 			return nil
 		}
 		return agg.SynchronizedMove(value.current, desc)
 	}
 
-	// The above two cases are keeping a reference to the
-	// Accumulator's Aggregator.  The remaining cases address
-	// synchronous instruments, which always merge multiple
-	// Accumulations using `value.delta` for temporary storage.
+	// If the current is not owned, take ownership of a copy
+	// before merging below.
 	if !value.currentOwned {
 		tmp := value.current
 		b.AggregatorSelector.AggregatorFor(desc, &value.current)
@@ -240,9 +239,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		}
 	}
 
-	// The two statements above ensures that `value.current` refers
-	// to `value.delta` and not to an Accumulator's Aggregator.  Now
-	// combine this Accumulation with the prior Accumulation.
+	// Combine this Accumulation with the prior Accumulation.
 	return value.current.Merge(agg, desc)
 }
 
