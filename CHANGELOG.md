@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
 - Correct instrumentation version tag in Jaeger exporter. (#1037)
 - The SDK span will now set an error event if the `End` method is called during a panic (i.e. it was deferred). (#1043)
+- Move internally generated protobuf code from the `go.opentelemetry.io/otel` to the OTLP exporter to reduce dependency overhead. (#1050)
 
 ## [0.10.0] - 2020-07-29
 
