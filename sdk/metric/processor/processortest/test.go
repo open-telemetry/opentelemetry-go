@@ -32,9 +32,14 @@ import (
 )
 
 type (
+	nameWithNumKind struct {
+		name       string
+		numberKind metric.NumberKind
+	}
+
 	// Output collects distinct metric/label set outputs.
 	Output struct {
-		Map          map[string]float64
+		m            map[nameWithNumKind]export.Aggregator
 		labelEncoder label.Encoder
 	}
 
@@ -46,7 +51,7 @@ type (
 
 func NewOutput(labelEncoder label.Encoder) Output {
 	return Output{
-		Map:          make(map[string]float64),
+		m:            make(map[nameWithNumKind]export.Aggregator),
 		labelEncoder: labelEncoder,
 	}
 }
@@ -107,20 +112,35 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 func (o Output) AddRecord(rec export.Record) error {
 	encoded := rec.Labels().Encoded(o.labelEncoder)
 	rencoded := rec.Resource().Encoded(o.labelEncoder)
-	key := fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded)
-	var value float64
-
-	if s, ok := rec.Aggregation().(aggregation.Sum); ok {
-		sum, _ := s.Sum()
-		value = sum.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else if l, ok := rec.Aggregation().(aggregation.LastValue); ok {
-		last, _, _ := l.LastValue()
-		value = last.CoerceToFloat64(rec.Descriptor().NumberKind())
-	} else {
-		panic(fmt.Sprintf("Unhandled aggregator type: %T", rec.Aggregation()))
+	key := nameWithNumKind{
+		name:       fmt.Sprint(rec.Descriptor().Name(), "/", encoded, "/", rencoded),
+		numberKind: rec.Descriptor().NumberKind(),
 	}
-	o.Map[key] = value
-	return nil
+
+	if _, ok := o.m[key]; !ok {
+		var agg export.Aggregator
+		testAggregatorSelector{}.AggregatorFor(rec.Descriptor(), &agg)
+		o.m[key] = agg
+	}
+	return o.m[key].Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
+}
+
+func (o Output) Map() map[string]float64 {
+	r := make(map[string]float64)
+	for nnk, agg := range o.m {
+		value := 0.0
+		if s, ok := agg.(aggregation.Sum); ok {
+			sum, _ := s.Sum()
+			value = sum.CoerceToFloat64(nnk.numberKind)
+		} else if l, ok := agg.(aggregation.LastValue); ok {
+			last, _, _ := l.LastValue()
+			value = last.CoerceToFloat64(nnk.numberKind)
+		} else {
+			panic(fmt.Sprintf("Unhandled aggregator type: %T", agg))
+		}
+		r[nnk.name] = value
+	}
+	return r
 }
 
 // AddAccumulation adds a string representation of the exported metric
