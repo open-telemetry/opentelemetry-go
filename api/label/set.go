@@ -123,10 +123,8 @@ func (l *Set) Value(k kv.Key) (kv.Value, bool) {
 	if l == nil {
 		return kv.Value{}, false
 	}
-	var vlen int
-	var rValue reflect.Value
-	vlen = rValue.Len()
-	rValue = l.equivalent.reflect()
+	rValue := l.equivalent.reflect()
+	vlen := rValue.Len()
 
 	idx := sort.Search(vlen, func(idx int) bool {
 		return rValue.Index(idx).Interface().(kv.KeyValue).Key >= k

@@ -168,3 +168,22 @@ func TestUniqueness(t *testing.T) {
 		require.Equal(t, tc.fullEnc, full.Encoded(enc))
 	}
 }
+
+func TestLookup(t *testing.T) {
+	set := label.NewSet(kv.Int("C", 3), kv.Int("A", 1), kv.Int("B", 2))
+
+	value, has := set.Value("C")
+	require.True(t, has)
+	require.Equal(t, int64(3), value.AsInt64())
+
+	value, has = set.Value("B")
+	require.True(t, has)
+	require.Equal(t, int64(2), value.AsInt64())
+
+	value, has = set.Value("A")
+	require.True(t, has)
+	require.Equal(t, int64(1), value.AsInt64())
+
+	value, has = set.Value("D")
+	require.False(t, has)
+}
