@@ -50,11 +50,11 @@ type (
 		iface interface{}
 	}
 
-	// Filter supports removing certain keys from label sets.
-	// When the filter returns true, the label key will be kept in
+	// Filter supports removing certain labels from label sets.
+	// When the filter returns true, the label will be kept in
 	// the filtered label set.  When the filter returns false, the
-	// label key is excluded from the filtered label set, and the
-	// value instead appears in the `removed` list of excluded keys.
+	// label is excluded from the filtered label set, and the
+	// label instead appears in the `removed` list of excluded labels.
 	Filter func(kv.KeyValue) bool
 
 	// Sortable implements `sort.Interface`, used for sorting
@@ -297,7 +297,7 @@ func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 // The result maintains a cache of encoded labels, by label.EncoderID.
 // This value should not be copied after its first use.
 //
-// The second `[]kv.KeyValue` return value is a list of keys that were
+// The second `[]kv.KeyValue` return value is a list of labels that were
 // excluded by the Filter (if non-nil).
 func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter) (Set, []kv.KeyValue) {
 	// Check for empty set.
@@ -342,7 +342,7 @@ func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter)
 func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	var excluded []kv.KeyValue
 
-	// Move labels that do not match the optional regexp so
+	// Move labels that do not match the filter so
 	// they're adjacent before calling computeDistinct().
 	distinctPosition := len(kvs)
 
