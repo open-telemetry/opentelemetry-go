@@ -55,7 +55,7 @@ type (
 	// the filtered label set.  When the filter returns false, the
 	// label key is excluded from the filtered label set, and the
 	// value instead appears in the `removed` list of excluded keys.
-	Filter func(string) bool
+	Filter func(kv.KeyValue) bool
 
 	// Sortable implements `sort.Interface`, used for sorting
 	// `kv.KeyValue`.  This is an exported type to support a
@@ -350,7 +350,7 @@ func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 	// end of the slice.
 	offset := len(kvs) - 1
 	for ; offset >= 0; offset-- {
-		if filter(string(kvs[offset].Key)) {
+		if filter(kvs[offset]) {
 			distinctPosition--
 			kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
 			continue
