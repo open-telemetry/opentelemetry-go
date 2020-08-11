@@ -65,17 +65,25 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
-func newExporter(t *testing.T) *processorTest.Exporter {
+func newExporter() *processorTest.Exporter {
 	return processorTest.NewExporter(
 		export.PassThroughExporter,
 		label.DefaultEncoder(),
 	)
 }
 
+func newCheckpointer() export.Checkpointer {
+	return processorTest.Checkpointer(
+		processorTest.NewProcessor(
+			processorTest.AggregatorSelector(),
+			label.DefaultEncoder(),
+		),
+	)
+}
+
 func TestPushDoubleStop(t *testing.T) {
-	exporter := newExporter(t)
-	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
-	checkpointer := processorTest.SingleCheckpointer(processor)
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
 	p := push.New(checkpointer, exporter)
 	p.Start()
 	p.Stop()
@@ -83,19 +91,27 @@ func TestPushDoubleStop(t *testing.T) {
 }
 
 func TestPushDoubleStart(t *testing.T) {
-	exporter := newExporter(t)
-	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
-	checkpointer := processorTest.SingleCheckpointer(processor)
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
 	p := push.New(checkpointer, exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
 }
 
+// delay() puts the caller to sleep briefly and forces a scheduler to
+// run another goroutine.  This reduces flakiness in this test, but
+// does not avoid it completely.  As for this flakiness, we could
+// remove the tests, but testing time-dependencies in Go is
+// practically quite difficult without flakiness.
+func delay() {
+	time.Sleep(100 * time.Millisecond)
+	runtime.Gosched()
+}
+
 func TestPushTicker(t *testing.T) {
-	exporter := newExporter(t)
-	processor := processorTest.NewProcessor(processorTest.AggregatorSelector(), label.DefaultEncoder())
-	checkpointer := processorTest.SingleCheckpointer(processor)
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
 	p := push.New(
 		checkpointer,
 		exporter,
@@ -118,25 +134,25 @@ func TestPushTicker(t *testing.T) {
 	require.EqualValues(t, map[string]float64{}, exporter.Values())
 
 	mock.Add(time.Second)
-	runtime.Gosched()
+	delay()
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V": 3,
 	}, exporter.Values())
 
-	require.Equal(t, 1, exporter.ExportCount)
+	require.Equal(t, 1, exporter.ExportCount())
 	exporter.Reset()
 
 	counter.Add(ctx, 7)
 
 	mock.Add(time.Second)
-	runtime.Gosched()
+	delay()
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V": 10,
 	}, exporter.Values())
 
-	require.Equal(t, 1, exporter.ExportCount)
+	require.Equal(t, 1, exporter.ExportCount())
 	exporter.Reset()
 
 	p.Stop()
@@ -169,7 +185,7 @@ func TestPushExportError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			exporter := newExporter(t)
+			exporter := newExporter()
 			exporter.InjectErr = injector("counter1.sum", tt.injectedError)
 
 			// This test validates the error handling
@@ -193,20 +209,20 @@ func TestPushExportError(t *testing.T) {
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
 			p.Start()
-			runtime.Gosched()
+			delay()
 
 			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
-			require.Equal(t, 0, exporter.ExportCount)
+			require.Equal(t, 0, exporter.ExportCount())
 			require.Nil(t, testHandler.Flush())
 
 			mock.Add(time.Second)
-			runtime.Gosched()
+			delay()
 
 			require.EqualValues(t, tt.expected, exporter.Values())
 
-			require.Equal(t, 1, exporter.ExportCount)
+			require.Equal(t, 1, exporter.ExportCount())
 			if tt.expectedError == nil {
 				require.NoError(t, testHandler.Flush())
 			} else {

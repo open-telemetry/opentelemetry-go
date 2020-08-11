@@ -109,8 +109,12 @@ type Checkpointer interface {
 	// any time.
 	Processor
 
-	// CheckpointSet returns the current data set.  Call after
-	// FinishCollection().
+	// CheckpointSet returns the current data set.  This may be
+	// called Call before and after collection.  The
+	// implementation is required to return the same value
+	// throughout its lifetime, since CheckpointSet exposes a
+	// sync.Locker interface.  The caller is responsible for
+	// locking the CheckpointSet before initiating collection.
 	CheckpointSet() CheckpointSet
 
 	// StartCollection begins a collection interval.

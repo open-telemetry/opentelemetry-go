@@ -35,12 +35,17 @@ import (
 )
 
 type (
+	// mapKey is the unique key for a metric, consisting of its
+	// unique descriptor, distinct labels, and distinct resource
+	// attributes.
 	mapKey struct {
 		desc     *metric.Descriptor
 		labels   label.Distinct
 		resource label.Distinct
 	}
 
+	// mapValue is value stored in a processor used to produce a
+	// CheckpointSet.
 	mapValue struct {
 		labels     *label.Set
 		resource   *resource.Resource
@@ -59,8 +64,10 @@ type (
 	// processors, which clone Aggregators using AggregatorFor(desc).
 	testAggregatorSelector struct{}
 
-	// testSingleCheckpointer is a export.Checkpointer.
-	testSingleCheckpointer struct {
+	// testCheckpointer is a export.Checkpointer.
+	testCheckpointer struct {
+		started  int
+		finished int
 		*Processor
 	}
 
@@ -76,8 +83,12 @@ type (
 	Exporter struct {
 		export.ExportKindSelector
 		output      *Output
-		ExportCount int
-		InjectErr   func(export.Record) error
+		exportCount int
+
+		// InjectErr supports returning conditional errors from
+		// the Export() routine.  This must be set before the
+		// Exporter is first used.
+		InjectErr func(export.Record) error
 	}
 )
 
@@ -110,36 +121,36 @@ func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
 
-// SingleCheckpointer returns a checkpointer that computes a single
+// Checkpointer returns a checkpointer that computes a single
 // interval.
-func SingleCheckpointer(p *Processor) export.Checkpointer {
-	return &testSingleCheckpointer{
+func Checkpointer(p *Processor) export.Checkpointer {
+	return &testCheckpointer{
 		Processor: p,
 	}
 }
 
-func (c *testSingleCheckpointer) StartCollection() {
-	// TODO
+// StartCollection implements export.Checkpointer.
+func (c *testCheckpointer) StartCollection() {
+	if c.started != c.finished {
+		panic(fmt.Sprintf("collection was already started: %d != %d", c.started, c.finished))
+	}
+
+	c.started++
 }
 
-func (c *testSingleCheckpointer) FinishCollection() error {
-	// TODO
+// FinishCollection implements export.Checkpointer.
+func (c *testCheckpointer) FinishCollection() error {
+	if c.started-1 != c.finished {
+		return fmt.Errorf("collection was not started: %d != %d", c.started, c.finished)
+	}
+
+	c.finished++
 	return nil
 }
 
-func (c *testSingleCheckpointer) CheckpointSet() export.CheckpointSet {
+// CheckpointSet implements export.Checkpointer.
+func (c *testCheckpointer) CheckpointSet() export.CheckpointSet {
 	return c.Processor.output
-}
-
-// NewOutput is a helper for testing an expected set of Accumulations
-// (from an Accumulator) or an expected set of Records (from a
-// Processor).  If testing with an Accumulator, it may be simpler to
-// use the test Processor in this package.
-func NewOutput(labelEncoder label.Encoder) *Output {
-	return &Output{
-		m:            make(map[mapKey]mapValue),
-		labelEncoder: labelEncoder,
-	}
 }
 
 // AggregatorSelector returns a policy that is consistent with the
@@ -149,6 +160,7 @@ func AggregatorSelector() export.AggregatorSelector {
 	return testAggregatorSelector{}
 }
 
+// AggregatorFor implements export.AggregatorSelector.
 func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 
 	switch {
@@ -188,6 +200,17 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 		}
 	default:
 		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
+	}
+}
+
+// NewOutput is a helper for testing an expected set of Accumulations
+// (from an Accumulator) or an expected set of Records (from a
+// Processor).  If testing with an Accumulator, it may be simpler to
+// use the test Processor in this package.
+func NewOutput(labelEncoder label.Encoder) *Output {
+	return &Output{
+		m:            make(map[mapKey]mapValue),
+		labelEncoder: labelEncoder,
 	}
 }
 
@@ -261,6 +284,8 @@ func (o *Output) Map() map[string]float64 {
 	return r
 }
 
+// Reset restores the Output to its initial state, with no accumulated
+// metric data.
 func (o *Output) Reset() {
 	o.m = map[mapKey]mapValue{}
 }
@@ -299,7 +324,9 @@ func NewExporter(selector export.ExportKindSelector, encoder label.Encoder) *Exp
 }
 
 func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
-	e.ExportCount++
+	e.output.Lock()
+	defer e.output.Unlock()
+	e.exportCount++
 	return ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
 		if e.InjectErr != nil {
 			if err := e.InjectErr(r); err != nil {
@@ -315,10 +342,24 @@ func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
 // either the Sum or the LastValue, whichever is implemented.  (All
 // the built-in Aggregators implement one of these interfaces.)
 func (e *Exporter) Values() map[string]float64 {
+	e.output.Lock()
+	defer e.output.Unlock()
 	return e.output.Map()
 }
 
+// ExportCount returns the number of times Export() has been called
+// since the last Reset().
+func (e *Exporter) ExportCount() int {
+	e.output.Lock()
+	defer e.output.Unlock()
+	return e.exportCount
+}
+
+// Reset sets the exporter's output to the initial, empty state and
+// resets the export count to zero.
 func (e *Exporter) Reset() {
+	e.output.Lock()
+	defer e.output.Unlock()
 	e.output.Reset()
-	e.ExportCount = 0
+	e.exportCount = 0
 }
