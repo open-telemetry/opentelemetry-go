@@ -44,6 +44,12 @@ type Controller struct {
 }
 
 // New returns a *Controller configured with an export.Checkpointer.
+//
+// Pull controllers are typically used in an environment where there
+// are multiple readers.  It is common, therefore, when configuring a
+// basic Processor for use with this controller, to use a
+// CumulativeExport strategy and the basic.WithMemory(true) option,
+// which ensures that every CheckpointSet includes full state.
 func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
