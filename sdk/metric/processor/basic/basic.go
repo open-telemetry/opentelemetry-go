@@ -69,24 +69,24 @@ type (
 
 		// currentOwned indicates that "current" was allocated
 		// by the processor in order to merge results from
-		// multiple Accuulators during a single collection
+		// multiple Accumulators during a single collection
 		// round, which may happen either because:
-		// (1) multiple Accumulators output the same Metric
+		// (1) multiple Accumulators output the same Accumulation.
 		// (2) one Accumulator is configured with dimensionality reduction.
 		currentOwned bool
 
-		// current refers the output frmo a single Accumulator
+		// current refers to the output from a single Accumulator
 		// (if !currentOwned) or it refers to an Aggregator
 		// owned by the processor used to accumulate multiple
 		// values in a single collection round.
 		current export.Aggregator
 
-		// delta if non-nil refers to an Aggregator owned by
+		// delta, if non-nil, refers to an Aggregator owned by
 		// the processor used to compute deltas between
 		// precomputed sums.
 		delta export.Aggregator
 
-		// cumulative if non-nil refers to an Aggregator owned
+		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
 		cumulative export.Aggregator
@@ -117,7 +117,6 @@ type (
 )
 
 var _ export.Processor = &Processor{}
-var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
@@ -221,17 +220,16 @@ func (b *Processor) Process(accum export.Accumulation) error {
 			// This is the first Accumulation we've seen
 			// for this stateKey during this collection.
 			// Just keep a reference to the Accumulator's
-			// Aggregator.
+			// Aggregator.  All the other cases copy
+			// Aggregator state.
 			value.current = agg
 			return nil
 		}
 		return agg.SynchronizedMove(value.current, desc)
 	}
 
-	// The above two cases are keeping a reference to the
-	// Accumulator's Aggregator.  The remaining cases address
-	// synchronous instruments, which always merge multiple
-	// Accumulations using `value.delta` for temporary storage.
+	// If the current is not owned, take ownership of a copy
+	// before merging below.
 	if !value.currentOwned {
 		tmp := value.current
 		b.AggregatorSelector.AggregatorFor(desc, &value.current)
@@ -241,9 +239,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		}
 	}
 
-	// The two statements above ensures that `value.current` refers
-	// to `value.delta` and not to an Accumulator's Aggregator.  Now
-	// combine this Accumulation with the prior Accumulation.
+	// Combine this Accumulation with the prior Accumulation.
 	return value.current.Merge(agg, desc)
 }
 
