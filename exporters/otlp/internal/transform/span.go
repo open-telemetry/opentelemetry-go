@@ -17,7 +17,7 @@ package transform
 import (
 	"google.golang.org/grpc/codes"
 
-	tracepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/trace/v1"
+	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 
 	"go.opentelemetry.io/otel/api/label"
 	apitrace "go.opentelemetry.io/otel/api/trace"

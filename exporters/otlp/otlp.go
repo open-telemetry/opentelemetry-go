@@ -25,8 +25,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	colmetricpb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	coltracepb "go.opentelemetry.io/otel/internal/opentelemetry-proto-gen/collector/trace/v1"
+	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
+	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
