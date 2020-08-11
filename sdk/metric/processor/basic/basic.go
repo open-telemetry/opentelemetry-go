@@ -69,9 +69,9 @@ type (
 
 		// currentOwned indicates that "current" was allocated
 		// by the processor in order to merge results from
-		// multiple Accuulators during a single collection
+		// multiple Accumulators during a single collection
 		// round, which may happen either because:
-		// (1) multiple Accumulators output the same Metric
+		// (1) multiple Accumulators output the same Accumulation.
 		// (2) one Accumulator is configured with dimensionality reduction.
 		currentOwned bool
 
