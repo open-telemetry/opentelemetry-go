@@ -75,18 +75,18 @@ type (
 		// (2) one Accumulator is configured with dimensionality reduction.
 		currentOwned bool
 
-		// current refers the output frmo a single Accumulator
+		// current refers to the output from a single Accumulator
 		// (if !currentOwned) or it refers to an Aggregator
 		// owned by the processor used to accumulate multiple
 		// values in a single collection round.
 		current export.Aggregator
 
-		// delta if non-nil refers to an Aggregator owned by
+		// delta, if non-nil, refers to an Aggregator owned by
 		// the processor used to compute deltas between
 		// precomputed sums.
 		delta export.Aggregator
 
-		// cumulative if non-nil refers to an Aggregator owned
+		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
 		cumulative export.Aggregator
