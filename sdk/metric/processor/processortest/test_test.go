@@ -65,13 +65,15 @@ func TestProcessorTesting(t *testing.T) {
 
 	generateTestData(checkpointer)
 
-	// Validate the processor's checkpoint directly.
-	require.EqualValues(t, map[string]float64{
+	expect := map[string]float64{
 		"counter.sum/K1=V1/R=V":  100,
 		"counter.sum/K1=V2/R=V":  101,
 		"observer.sum/K1=V1/R=V": 10,
 		"observer.sum/K1=V2/R=V": 11,
-	}, testProc.Values())
+	}
+
+	// Validate the processor's checkpoint directly.
+	require.EqualValues(t, expect, testProc.Values())
 
 	// Export the data and validate it again.
 	exporter := processorTest.NewExporter(
@@ -81,4 +83,5 @@ func TestProcessorTesting(t *testing.T) {
 
 	err := exporter.Export(context.Background(), checkpointer.CheckpointSet())
 	require.NoError(t, err)
+	require.EqualValues(t, expect, exporter.Values())
 }
