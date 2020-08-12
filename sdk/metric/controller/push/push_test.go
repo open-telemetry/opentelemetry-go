@@ -99,16 +99,6 @@ func TestPushDoubleStart(t *testing.T) {
 	p.Stop()
 }
 
-// delay() puts the caller to sleep briefly and forces a scheduler to
-// run another goroutine.  This reduces flakiness in this test, but
-// does not avoid it completely.  As for this flakiness, we could
-// remove the tests, but testing time-dependencies in Go is
-// practically quite difficult without flakiness.
-func delay() {
-	time.Sleep(100 * time.Millisecond)
-	runtime.Gosched()
-}
-
 func TestPushTicker(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
@@ -134,7 +124,7 @@ func TestPushTicker(t *testing.T) {
 	require.EqualValues(t, map[string]float64{}, exporter.Values())
 
 	mock.Add(time.Second)
-	delay()
+	runtime.Gosched()
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V": 3,
@@ -146,7 +136,7 @@ func TestPushTicker(t *testing.T) {
 	counter.Add(ctx, 7)
 
 	mock.Add(time.Second)
-	delay()
+	runtime.Gosched()
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V": 10,
@@ -209,7 +199,7 @@ func TestPushExportError(t *testing.T) {
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
 			p.Start()
-			delay()
+			runtime.Gosched()
 
 			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
@@ -218,12 +208,11 @@ func TestPushExportError(t *testing.T) {
 			require.Nil(t, testHandler.Flush())
 
 			mock.Add(time.Second)
-			delay()
-
-			require.EqualValues(t, tt.expected, exporter.Values())
+			runtime.Gosched()
 
 			require.Equal(t, 1, exporter.ExportCount())
 			if tt.expectedError == nil {
+				require.EqualValues(t, tt.expected, exporter.Values())
 				require.NoError(t, testHandler.Flush())
 			} else {
 				err := testHandler.Flush()
