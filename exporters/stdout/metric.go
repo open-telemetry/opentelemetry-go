@@ -45,25 +45,37 @@ type line struct {
 
 	Quantiles []quantile `json:"Quantiles,omitempty"`
 
-	Histogram []bucket `json:"histogram,omitempty"`
+	Histogram histogram `json:"histogram,omitempty"`
 
 	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
 }
 
-type boundary struct {
-	Min float64 `json:"min"`
-	Max float64 `json:"max"`
-}
+type (
+	boundary struct {
+		Min float64 `json:"min"`
+		Max float64 `json:"max"`
+	}
 
-type bucket struct {
-	boundary `json:"bounds"`
-	Count    float64 `json:"count"`
-}
+	bucket struct {
+		boundary `json:"bounds"`
+		Count    float64 `json:"count"`
+	}
 
-type quantile struct {
-	Quantile interface{} `json:"Quantile"`
-	Value    interface{} `json:"Value"`
+	histogram []bucket
+
+	quantile struct {
+		Quantile interface{} `json:"Quantile"`
+		Value    interface{} `json:"Value"`
+	}
+)
+
+func (hist histogram) MarshalJSON() ([]byte, error) {
+	bytes, err := json.Marshal(hist)
+	if err != nil {
+		return nil, err
+	}
+	return append(bytes, []byte("\n"+printHistogram(hist))...), nil
 }
 
 func (e *metricExporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
@@ -157,12 +169,7 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 						upperBound = val.Boundaries[i+1]
 					}
 				}
-
-				if e.config.PrettyPrint {
-					e.printHistogram(buckets)
-				} else {
-					expose.Histogram = buckets
-				}
+				expose.Histogram = buckets
 			}
 		} else if lv, ok := agg.(aggregation.LastValue); ok {
 			value, timestamp, err := lv.LastValue()
@@ -227,22 +234,22 @@ func (e *metricExporter) marshal(v interface{}) ([]byte, error) {
 }
 
 // printHistogram prints histogram in horizontal tabular form
-func (e *metricExporter) printHistogram(hist []bucket) {
+func printHistogram(hist histogram) string {
 	if len(hist) == 0 {
-		return
+		return ""
 	}
 	var totalCount float64
 	for _, buck := range hist {
 		totalCount += buck.Count
 	}
-	fmt.Fprintf(e.config.Writer, "Total Count: %f", totalCount)
+	str := fmt.Sprintf("Total Count: %f\n", totalCount)
 
 	for _, buck := range hist {
-		fmt.Printf("[%e\t-\t%e)\t\t", buck.Min, buck.Max)
+		str += fmt.Sprintf("[%e\t-\t%e)\t\t", buck.Min, buck.Max)
 		for i := 0; i < int((buck.Count/totalCount)*100); i++ {
-			fmt.Print("*")
+			str += "*"
 		}
-		fmt.Println()
+		str += "\n"
 	}
-
+	return str
 }
