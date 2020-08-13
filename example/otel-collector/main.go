@@ -31,6 +31,7 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -64,7 +65,10 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	handleErr(err, "failed to create trace provider")
 
 	pusher := push.New(
-		simple.NewWithExactDistribution(),
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exp,
+		),
 		exp,
 		push.WithPeriod(2*time.Second),
 	)

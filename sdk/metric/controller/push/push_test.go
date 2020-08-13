@@ -30,10 +30,10 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -65,85 +65,46 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
-type testExporter struct {
-	t         *testing.T
-	lock      sync.Mutex
-	exports   int
-	records   []export.Record
-	injectErr func(r export.Record) error
+func newExporter() *processorTest.Exporter {
+	return processorTest.NewExporter(
+		export.PassThroughExporter,
+		label.DefaultEncoder(),
+	)
 }
 
-type testFixture struct {
-	checkpointSet *metrictest.CheckpointSet
-	exporter      *testExporter
-}
-
-func newFixture(t *testing.T) testFixture {
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-
-	exporter := &testExporter{
-		t: t,
-	}
-	return testFixture{
-		checkpointSet: checkpointSet,
-		exporter:      exporter,
-	}
-}
-
-func (e *testExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.PassThroughExporter
-}
-
-func (e *testExporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	e.exports++
-	var records []export.Record
-	if err := checkpointSet.ForEach(e, func(r export.Record) error {
-		if e.injectErr != nil {
-			if err := e.injectErr(r); err != nil {
-				return err
-			}
-		}
-		records = append(records, r)
-		return nil
-	}); err != nil {
-		return err
-	}
-	e.records = records
-	return nil
-}
-
-func (e *testExporter) resetRecords() ([]export.Record, int) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	r := e.records
-	e.records = nil
-	return r, e.exports
+func newCheckpointer() export.Checkpointer {
+	return processorTest.Checkpointer(
+		processorTest.NewProcessor(
+			processorTest.AggregatorSelector(),
+			label.DefaultEncoder(),
+		),
+	)
 }
 
 func TestPushDoubleStop(t *testing.T) {
-	fix := newFixture(t)
-	p := push.New(processortest.AggregatorSelector(), fix.exporter)
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
+	p := push.New(checkpointer, exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
 }
 
 func TestPushDoubleStart(t *testing.T) {
-	fix := newFixture(t)
-	p := push.New(processortest.AggregatorSelector(), fix.exporter)
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
+	p := push.New(checkpointer, exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
 }
 
 func TestPushTicker(t *testing.T) {
-	fix := newFixture(t)
-
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
 	p := push.New(
-		processortest.AggregatorSelector(),
-		fix.exporter,
+		checkpointer,
+		exporter,
 		push.WithPeriod(time.Second),
 		push.WithResource(testResource),
 	)
@@ -160,39 +121,29 @@ func TestPushTicker(t *testing.T) {
 
 	counter.Add(ctx, 3)
 
-	records, exports := fix.exporter.resetRecords()
-	require.Equal(t, 0, exports)
-	require.Equal(t, 0, len(records))
+	require.EqualValues(t, map[string]float64{}, exporter.Values())
 
 	mock.Add(time.Second)
 	runtime.Gosched()
 
-	records, exports = fix.exporter.resetRecords()
-	require.Equal(t, 1, exports)
-	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
-	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
+	require.EqualValues(t, map[string]float64{
+		"counter.sum//R=V": 3,
+	}, exporter.Values())
 
-	sum, err := records[0].Aggregation().(aggregation.Sum).Sum()
-	require.Equal(t, int64(3), sum.AsInt64())
-	require.Nil(t, err)
-
-	fix.checkpointSet.Reset()
+	require.Equal(t, 1, exporter.ExportCount())
+	exporter.Reset()
 
 	counter.Add(ctx, 7)
 
 	mock.Add(time.Second)
 	runtime.Gosched()
 
-	records, exports = fix.exporter.resetRecords()
-	require.Equal(t, 2, exports)
-	require.Equal(t, 1, len(records))
-	require.Equal(t, "counter.sum", records[0].Descriptor().Name())
-	require.Equal(t, "R=V", records[0].Resource().Encoded(label.DefaultEncoder()))
+	require.EqualValues(t, map[string]float64{
+		"counter.sum//R=V": 10,
+	}, exporter.Values())
 
-	sum, err = records[0].Aggregation().(aggregation.Sum).Sum()
-	require.Equal(t, int64(7), sum.AsInt64())
-	require.Nil(t, err)
+	require.Equal(t, 1, exporter.ExportCount())
+	exporter.Reset()
 
 	p.Stop()
 }
@@ -208,23 +159,32 @@ func TestPushExportError(t *testing.T) {
 	}
 	var errAggregator = fmt.Errorf("unexpected error")
 	var tests = []struct {
-		name                string
-		injectedError       error
-		expectedDescriptors []string
-		expectedError       error
+		name          string
+		injectedError error
+		expected      map[string]float64
+		expectedError error
 	}{
-		{"errNone", nil, []string{"counter1.sum{R=V,X=Y}", "counter2.sum{R=V,}"}, nil},
-		{"errNoData", aggregation.ErrNoData, []string{"counter2.sum{R=V,}"}, nil},
-		{"errUnexpected", errAggregator, []string{}, errAggregator},
+		{"errNone", nil, map[string]float64{
+			"counter1.sum/X=Y/R=V": 3,
+			"counter2.sum//R=V":    5,
+		}, nil},
+		{"errNoData", aggregation.ErrNoData, map[string]float64{
+			"counter2.sum//R=V": 5,
+		}, nil},
+		{"errUnexpected", errAggregator, map[string]float64{}, errAggregator},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fix := newFixture(t)
-			fix.exporter.injectErr = injector("counter1.sum", tt.injectedError)
+			exporter := newExporter()
+			exporter.InjectErr = injector("counter1.sum", tt.injectedError)
 
+			// This test validates the error handling
+			// behavior of the basic Processor is honored
+			// by the push processor.
+			checkpointer := basic.New(processorTest.AggregatorSelector(), exporter)
 			p := push.New(
-				processortest.AggregatorSelector(),
-				fix.exporter,
+				checkpointer,
+				exporter,
 				push.WithPeriod(time.Second),
 				push.WithResource(testResource),
 			)
@@ -244,30 +204,20 @@ func TestPushExportError(t *testing.T) {
 			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
-			require.Equal(t, 0, fix.exporter.exports)
+			require.Equal(t, 0, exporter.ExportCount())
 			require.Nil(t, testHandler.Flush())
 
 			mock.Add(time.Second)
 			runtime.Gosched()
 
-			records, exports := fix.exporter.resetRecords()
-			require.Equal(t, 1, exports)
+			require.Equal(t, 1, exporter.ExportCount())
 			if tt.expectedError == nil {
+				require.EqualValues(t, tt.expected, exporter.Values())
 				require.NoError(t, testHandler.Flush())
 			} else {
 				err := testHandler.Flush()
 				require.Error(t, err)
 				require.Equal(t, tt.expectedError, err)
-			}
-			require.Equal(t, len(tt.expectedDescriptors), len(records))
-			for _, r := range records {
-				require.Contains(t, tt.expectedDescriptors,
-					fmt.Sprintf("%s{%s,%s}",
-						r.Descriptor().Name(),
-						r.Resource().Encoded(label.DefaultEncoder()),
-						r.Labels().Encoded(label.DefaultEncoder()),
-					),
-				)
 			}
 
 			p.Stop()
