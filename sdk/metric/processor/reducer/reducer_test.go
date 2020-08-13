@@ -109,7 +109,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 		t.Error(err)
 	}
 
-	exporter.Export(context.Background(), basicProc.CheckpointSet())
+	require.NoError(t, exporter.Export(context.Background(), basicProc.CheckpointSet()))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
