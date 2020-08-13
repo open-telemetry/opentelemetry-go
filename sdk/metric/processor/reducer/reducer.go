@@ -65,8 +65,3 @@ func (p *Processor) Process(accum export.Accumulation) error {
 		),
 	)
 }
-
-// // AggregatorFor implements export.AggregatorSelector
-// func (p *Processor) AggregatorFor(desc *metric.Descriptor, aggs ...*export.Aggregator) {
-// 	p.next.AggregatorFor(desc, aggs...)
-// }
