@@ -110,7 +110,7 @@ type Checkpointer interface {
 	Processor
 
 	// CheckpointSet returns the current data set.  This may be
-	// called Call before and after collection.  The
+	// called before and after collection.  The
 	// implementation is required to return the same value
 	// throughout its lifetime, since CheckpointSet exposes a
 	// sync.Locker interface.  The caller is responsible for

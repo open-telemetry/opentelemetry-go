@@ -122,7 +122,7 @@ var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
 
-// New returns a basic Processor, also a Checkpointer, using the provided
+// New returns a basic Processor that is also a Checkpointer using the provided
 // AggregatorSelector to select Aggregators.  The ExportKindSelector
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Processor can prepare to compute Delta or
