@@ -21,16 +21,16 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net
 // namespace as specified by the OpenTelemetry specification for a
 // span.  The network parameter is a string that net.Dial function
 // from standard library can understand.
-func NetAttributesFromHTTPRequest(network string, request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{}
+func NetAttributesFromHTTPRequest(network string, request *http.Request) []label.KeyValue {
+	attrs := []label.KeyValue{}
 
 	switch network {
 	case "tcp", "tcp4", "tcp6":
@@ -121,9 +121,9 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []kv.Ke
 // EndUserAttributesFromHTTPRequest generates attributes of the
 // enduser namespace as specified by the OpenTelemetry specification
 // for a span.
-func EndUserAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+func EndUserAttributesFromHTTPRequest(request *http.Request) []label.KeyValue {
 	if username, _, ok := request.BasicAuth(); ok {
-		return []kv.KeyValue{EnduserIDKey.String(username)}
+		return []label.KeyValue{EnduserIDKey.String(username)}
 	}
 	return nil
 }
@@ -131,8 +131,8 @@ func EndUserAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 // HTTPClientAttributesFromHTTPRequest generates attributes of the
 // http namespace as specified by the OpenTelemetry specification for
 // a span on the client side.
-func HTTPClientAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{}
+func HTTPClientAttributesFromHTTPRequest(request *http.Request) []label.KeyValue {
+	attrs := []label.KeyValue{}
 
 	if request.Method != "" {
 		attrs = append(attrs, HTTPMethodKey.String(request.Method))
@@ -145,8 +145,8 @@ func HTTPClientAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	return append(attrs, httpCommonAttributesFromHTTPRequest(request)...)
 }
 
-func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{}
+func httpCommonAttributesFromHTTPRequest(request *http.Request) []label.KeyValue {
+	attrs := []label.KeyValue{}
 	if ua := request.UserAgent(); ua != "" {
 		attrs = append(attrs, HTTPUserAgentKey.String(ua))
 	}
@@ -157,9 +157,9 @@ func httpCommonAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 	return append(attrs, httpBasicAttributesFromHTTPRequest(request)...)
 }
 
-func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
+func httpBasicAttributesFromHTTPRequest(request *http.Request) []label.KeyValue {
 	// as these attributes are used by HTTPServerMetricAttributesFromHTTPRequest, they should be low-cardinality
-	attrs := []kv.KeyValue{}
+	attrs := []label.KeyValue{}
 
 	if request.TLS != nil {
 		attrs = append(attrs, HTTPSchemeHTTPS)
@@ -186,8 +186,8 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []kv.KeyValue {
 
 // HTTPServerMetricAttributesFromHTTPRequest generates low-cardinality attributes
 // to be used with server-side HTTP metrics.
-func HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{}
+func HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.Request) []label.KeyValue {
+	attrs := []label.KeyValue{}
 	if serverName != "" {
 		attrs = append(attrs, HTTPServerNameKey.String(serverName))
 	}
@@ -198,8 +198,8 @@ func HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.
 // http namespace as specified by the OpenTelemetry specification for
 // a span on the server side. Currently, only basic authentication is
 // supported.
-func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []kv.KeyValue {
-	attrs := []kv.KeyValue{
+func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []label.KeyValue {
+	attrs := []label.KeyValue{
 		HTTPMethodKey.String(request.Method),
 		HTTPTargetKey.String(request.RequestURI),
 	}
@@ -220,8 +220,8 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 // HTTPAttributesFromHTTPStatusCode generates attributes of the http
 // namespace as specified by the OpenTelemetry specification for a
 // span.
-func HTTPAttributesFromHTTPStatusCode(code int) []kv.KeyValue {
-	attrs := []kv.KeyValue{
+func HTTPAttributesFromHTTPStatusCode(code int) []label.KeyValue {
+	attrs := []label.KeyValue{
 		HTTPStatusCodeKey.Int(code),
 	}
 	text := http.StatusText(code)

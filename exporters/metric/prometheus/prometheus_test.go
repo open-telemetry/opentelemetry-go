@@ -26,9 +26,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -39,7 +39,7 @@ func TestPrometheusExporter(t *testing.T) {
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
 		},
 		pull.WithCachePeriod(0),
-		pull.WithResource(resource.New(kv.String("R", "V"))),
+		pull.WithResource(resource.New(label.String("R", "V"))),
 	)
 	require.NoError(t, err)
 
@@ -48,9 +48,9 @@ func TestPrometheusExporter(t *testing.T) {
 	counter := metric.Must(meter).NewFloat64Counter("counter")
 	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
 
-	labels := []kv.KeyValue{
-		kv.Key("A").String("B"),
-		kv.Key("C").String("D"),
+	labels := []label.KeyValue{
+		label.Key("A").String("B"),
+		label.Key("C").String("D"),
 	}
 	ctx := context.Background()
 
@@ -128,14 +128,14 @@ func TestPrometheusStatefulness(t *testing.T) {
 		metric.WithDescription("Counts things"),
 	)
 
-	counter.Add(ctx, 100, kv.String("key", "value"))
+	counter.Add(ctx, 100, label.String("key", "value"))
 
 	require.Equal(t, `# HELP a_counter Counts things
 # TYPE a_counter counter
 a_counter{key="value"} 100
 `, scrape())
 
-	counter.Add(ctx, 100, kv.String("key", "value"))
+	counter.Add(ctx, 100, label.String("key", "value"))
 
 	require.Equal(t, `# HELP a_counter Counts things
 # TYPE a_counter counter

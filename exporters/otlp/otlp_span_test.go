@@ -27,8 +27,8 @@ import (
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	"go.opentelemetry.io/otel/label"
 
-	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -91,13 +91,13 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []kv.KeyValue{
-						kv.String("user", "alice"),
-						kv.Bool("authenticated", true),
+					Attributes: []label.KeyValue{
+						label.String("user", "alice"),
+						label.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(kv.String("instance", "tester-a")),
+					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -113,13 +113,13 @@ func TestExportSpans(t *testing.T) {
 					Name:      "secondary parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []kv.KeyValue{
-						kv.String("user", "alice"),
-						kv.Bool("authenticated", true),
+					Attributes: []label.KeyValue{
+						label.String("user", "alice"),
+						label.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(kv.String("instance", "tester-a")),
+					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
@@ -136,13 +136,13 @@ func TestExportSpans(t *testing.T) {
 					Name:         "internal process",
 					StartTime:    startTime,
 					EndTime:      endTime,
-					Attributes: []kv.KeyValue{
-						kv.String("user", "alice"),
-						kv.Bool("authenticated", true),
+					Attributes: []label.KeyValue{
+						label.String("user", "alice"),
+						label.Bool("authenticated", true),
 					},
 					StatusCode:    codes.OK,
 					StatusMessage: "Ok",
-					Resource:      resource.New(kv.String("instance", "tester-a")),
+					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -158,13 +158,13 @@ func TestExportSpans(t *testing.T) {
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []kv.KeyValue{
-						kv.String("user", "bob"),
-						kv.Bool("authenticated", false),
+					Attributes: []label.KeyValue{
+						label.String("user", "bob"),
+						label.Bool("authenticated", false),
 					},
 					StatusCode:    codes.Unauthenticated,
 					StatusMessage: "Unauthenticated",
-					Resource:      resource.New(kv.String("instance", "tester-b")),
+					Resource:      resource.New(label.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",

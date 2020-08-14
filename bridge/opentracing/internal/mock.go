@@ -22,21 +22,21 @@ import (
 	"time"
 
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
-	otelcore "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
+	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 var (
-	ComponentKey     = otelcore.Key("component")
-	ServiceKey       = otelcore.Key("service")
-	StatusCodeKey    = otelcore.Key("status.code")
-	StatusMessageKey = otelcore.Key("status.message")
-	ErrorKey         = otelcore.Key("error")
-	NameKey          = otelcore.Key("name")
+	ComponentKey     = label.Key("component")
+	ServiceKey       = label.Key("service")
+	StatusCodeKey    = label.Key("status.code")
+	StatusMessageKey = label.Key("status.message")
+	ErrorKey         = label.Key("error")
+	NameKey          = label.Key("name")
 )
 
 type MockContextKeyValue struct {
@@ -225,14 +225,14 @@ func (s *MockSpan) SetError(v bool) {
 	s.SetAttributes(ErrorKey.Bool(v))
 }
 
-func (s *MockSpan) SetAttributes(attributes ...otelcore.KeyValue) {
+func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
 	s.applyUpdate(otelcorrelation.MapUpdate{
 		MultiKV: attributes,
 	})
 }
 
 func (s *MockSpan) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(otelcore.Any(k, v))
+	s.SetAttributes(label.Any(k, v))
 }
 
 func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
@@ -281,8 +281,8 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 	}
 
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
-		otelcore.String("error.type", reflect.TypeOf(err).String()),
-		otelcore.String("error.message", err.Error()),
+		label.String("error.type", reflect.TypeOf(err).String()),
+		label.String("error.message", err.Error()),
 	)
 }
 
@@ -290,11 +290,11 @@ func (s *MockSpan) Tracer() oteltrace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...otelcore.KeyValue) {
+func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
+func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
 		CtxAttributes: otelcorrelation.MapFromContext(ctx),
 		Timestamp:     timestamp,

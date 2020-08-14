@@ -22,9 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -47,7 +46,7 @@ func TestPullNoCache(t *testing.T) {
 	meter := puller.Provider().Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
@@ -57,7 +56,7 @@ func TestPullNoCache(t *testing.T) {
 		"counter.sum/A=B/": 10,
 	}, records.Map())
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
@@ -84,7 +83,7 @@ func TestPullWithCache(t *testing.T) {
 	meter := puller.Provider().Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
@@ -94,7 +93,7 @@ func TestPullWithCache(t *testing.T) {
 		"counter.sum/A=B/": 10,
 	}, records.Map())
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))

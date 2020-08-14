@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
@@ -82,7 +82,7 @@ func (s syncInstrument) SyncImpl() SyncImpl {
 	return s.instrument
 }
 
-func (s syncInstrument) bind(labels []kv.KeyValue) syncBoundInstrument {
+func (s syncInstrument) bind(labels []label.KeyValue) syncBoundInstrument {
 	return newSyncBoundInstrument(s.instrument.Bind(labels))
 }
 
@@ -94,7 +94,7 @@ func (s syncInstrument) int64Measurement(value int64) Measurement {
 	return newMeasurement(s.instrument, NewInt64Number(value))
 }
 
-func (s syncInstrument) directRecord(ctx context.Context, number Number, labels []kv.KeyValue) {
+func (s syncInstrument) directRecord(ctx context.Context, number Number, labels []label.KeyValue) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
 

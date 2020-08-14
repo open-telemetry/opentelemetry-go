@@ -18,7 +18,7 @@ import (
 	"regexp"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 
 	"github.com/stretchr/testify/require"
 )
