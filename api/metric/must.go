@@ -95,7 +95,7 @@ func (mm MeterMust) NewFloat64ValueRecorder(name string, mos ...InstrumentOption
 
 // NewInt64ValueObserver calls `Meter.NewInt64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64ValueObserver(name string, callback Int64ObserverCallback, oos ...InstrumentOption) Int64ValueObserver {
+func (mm MeterMust) NewInt64ValueObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64ValueObserver {
 	if inst, err := mm.meter.NewInt64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -105,7 +105,7 @@ func (mm MeterMust) NewInt64ValueObserver(name string, callback Int64ObserverCal
 
 // NewFloat64ValueObserver calls `Meter.NewFloat64ValueObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64ValueObserver(name string, callback Float64ObserverCallback, oos ...InstrumentOption) Float64ValueObserver {
+func (mm MeterMust) NewFloat64ValueObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64ValueObserver {
 	if inst, err := mm.meter.NewFloat64ValueObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -115,7 +115,7 @@ func (mm MeterMust) NewFloat64ValueObserver(name string, callback Float64Observe
 
 // NewInt64SumObserver calls `Meter.NewInt64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64SumObserver(name string, callback Int64ObserverCallback, oos ...InstrumentOption) Int64SumObserver {
+func (mm MeterMust) NewInt64SumObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64SumObserver {
 	if inst, err := mm.meter.NewInt64SumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -125,7 +125,7 @@ func (mm MeterMust) NewInt64SumObserver(name string, callback Int64ObserverCallb
 
 // NewFloat64SumObserver calls `Meter.NewFloat64SumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64SumObserver(name string, callback Float64ObserverCallback, oos ...InstrumentOption) Float64SumObserver {
+func (mm MeterMust) NewFloat64SumObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64SumObserver {
 	if inst, err := mm.meter.NewFloat64SumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -135,7 +135,7 @@ func (mm MeterMust) NewFloat64SumObserver(name string, callback Float64ObserverC
 
 // NewInt64UpDownSumObserver calls `Meter.NewInt64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64UpDownSumObserver(name string, callback Int64ObserverCallback, oos ...InstrumentOption) Int64UpDownSumObserver {
+func (mm MeterMust) NewInt64UpDownSumObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64UpDownSumObserver {
 	if inst, err := mm.meter.NewInt64UpDownSumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -145,7 +145,7 @@ func (mm MeterMust) NewInt64UpDownSumObserver(name string, callback Int64Observe
 
 // NewFloat64UpDownSumObserver calls `Meter.NewFloat64UpDownSumObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64UpDownSumObserver(name string, callback Float64ObserverCallback, oos ...InstrumentOption) Float64UpDownSumObserver {
+func (mm MeterMust) NewFloat64UpDownSumObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64UpDownSumObserver {
 	if inst, err := mm.meter.NewFloat64UpDownSumObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
@@ -155,7 +155,7 @@ func (mm MeterMust) NewFloat64UpDownSumObserver(name string, callback Float64Obs
 
 // NewBatchObserver returns a wrapper around BatchObserver that panics
 // when any instrument constructor returns an error.
-func (mm MeterMust) NewBatchObserver(callback BatchObserverCallback) BatchObserverMust {
+func (mm MeterMust) NewBatchObserver(callback BatchObserverFunc) BatchObserverMust {
 	return BatchObserverMust{
 		batch: mm.meter.NewBatchObserver(callback),
 	}
