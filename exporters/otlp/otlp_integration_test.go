@@ -28,6 +28,8 @@ import (
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
@@ -425,4 +427,86 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	headers := mc.getHeaders()
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
+}
+
+func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
+	mc := runMockCol(t)
+
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	exp, _ := otlp.NewExporter(
+		otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address),
+	)
+
+	defer func() {
+		_ = exp.Stop()
+	}()
+
+	tp, err := sdktrace.NewProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithBatcher(exp, // add following two options to ensure flush
+			sdktrace.WithBatchTimeout(15),
+			sdktrace.WithMaxExportBatchSize(10),
+		))
+	assert.NoError(t, err)
+
+	tr := tp.Tracer("test-tracer")
+	testKvs := []kv.KeyValue{
+		kv.Int("k1", 1),
+		kv.Int32("k2", int32(1)),
+		kv.Int64("k3", int64(1)),
+		kv.Float32("k4", float32(1.11)),
+		kv.Float64("k5", 2.22),
+		kv.Bool("k6", true),
+		kv.String("k7", "test"),
+	}
+	_, span := tr.Start(context.Background(), "AlwaysSample")
+	span.SetAttributes(testKvs...)
+	span.End()
+
+	selector := simple.NewWithExactDistribution()
+	processor := processor.New(selector, metricsdk.PassThroughExporter)
+	pusher := push.New(processor, exp)
+	pusher.Start()
+
+	// Flush and close.
+	pusher.Stop()
+
+	// Wait >2 cycles.
+	<-time.After(40 * time.Millisecond)
+
+	// Now shutdown the exporter
+	if err := exp.Stop(); err != nil {
+		t.Fatalf("failed to stop the exporter: %v", err)
+	}
+
+	// Shutdown the collector too so that we can begin
+	// verification checks of expected data back.
+	_ = mc.stop()
+
+	// Now verify that we only got one span
+	rss := mc.getSpans()
+	if got, want := len(rss), 1; got != want {
+		t.Fatalf("resource span count: got %d, want %d\n", got, want)
+	}
+
+	expecteds := transform.Attributes(testKvs)
+	got := map[string]*commonpb.KeyValue{}
+	for _, atts := range rss[0].Attributes {
+		got[atts.Key] = atts
+	}
+
+	// Verify attributes
+	if !assert.Len(t, got, len(expecteds)) {
+		t.Fatalf("attributes count: got %d, want %d\n", len(got), len(expecteds))
+	}
+	for _, expected := range expecteds {
+		assert.Equal(t, expected, got[expected.Key])
+	}
 }
