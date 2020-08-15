@@ -58,7 +58,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
-			label.String(semconv.ServiceNameKey, "test-service"),
+			semconv.ServiceNameKey.String("test-service"),
 		)),
 		sdktrace.WithBatcher(exp),
 	)
