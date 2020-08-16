@@ -88,7 +88,7 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 		}
 	} else {
 		// host is hostname, setup resolver loop in case host record changes during operation
-		connUDP, err = newReconnectingUDPConn(params.HostPort, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
+		connUDP, err = newReconnectingUDPConn(params.HostPort, params.MaxPacketSize, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
 		if err != nil {
 			return nil, err
 		}
