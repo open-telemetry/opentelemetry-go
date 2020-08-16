@@ -33,7 +33,7 @@ endif
 
 GOTEST_MIN = go test -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=profile.out -covermode=atomic -coverpkg=./...
 
 .DEFAULT_GOAL := precommit
 
@@ -61,12 +61,19 @@ precommit: generate build lint examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	set -e; for dir in $(ALL_COVERAGE_MOD_DIRS); do \
+	printf "" > coverage.txt; cp -f coverage.txt coverage.out; \
+	set -e; \
+	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GOTEST_WITH_COVERAGE) ./... && \
-	    go tool cover -html=coverage.txt -o coverage.html); \
-	done
+	  (cd "$${dir}" && $(GOTEST_WITH_COVERAGE) ./... ); \
+      if [ -f "$${dir}/profile.out" ]; then \
+		cat "$${dir}/profile.out" >> coverage.txt; \
+		rm  "$${dir}/profile.out" ; \
+	  fi; \
+	done; \
+	sed '2,$$ { /^mode: /d; }' < coverage.txt > coverage.out ; \
+	rm coverage.txt; \
+	go tool cover -html=coverage.out -o coverage.html
 
 .PHONY: ci
 ci: precommit check-clean-work-tree license-check test-with-coverage test-386
