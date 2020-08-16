@@ -2,7 +2,7 @@ name: Proto-go-generator
 on:
   pull_request:
     paths:
-    - 'internal/opentelemetry-proto'
+    - 'exporters/otlp/internal/opentelemetry-proto'
 
 jobs:
   protogen:
@@ -10,7 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: ${{ github.head_ref }}
         submodules: true
     - uses: actions/setup-go@v2
       with:

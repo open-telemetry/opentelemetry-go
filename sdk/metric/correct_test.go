@@ -30,8 +30,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
-	batchTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -70,6 +69,9 @@ func init() {
 	global.SetErrorHandler(testHandler)
 }
 
+// correctnessProcessor could be replaced with processortest.Processor
+// with a non-default aggregator selector.  TODO(#872) use the
+// processortest code here.
 type correctnessProcessor struct {
 	t *testing.T
 	*testSelector
@@ -84,14 +86,14 @@ type testSelector struct {
 
 func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
-	test.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
+	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
 	testHandler.Reset()
 	processor := &correctnessProcessor{
 		t:            t,
-		testSelector: &testSelector{selector: test.AggregatorSelector()},
+		testSelector: &testSelector{selector: processortest.AggregatorSelector()},
 	}
 	accum := metricsdk.NewAccumulator(
 		processor,
@@ -346,7 +348,7 @@ func TestObserverCollection(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -365,7 +367,7 @@ func TestObserverCollection(t *testing.T) {
 		"float.updownsumobserver.sum/C=D/R=V": 1,
 		"int.updownsumobserver.sum//R=V":      -1,
 		"int.updownsumobserver.sum/A=B/R=V":   1,
-	}, out.Map)
+	}, out.Map())
 }
 
 func TestSumObserverInputRange(t *testing.T) {
@@ -449,7 +451,7 @@ func TestObserverBatch(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -468,7 +470,7 @@ func TestObserverBatch(t *testing.T) {
 		"float.valueobserver.lastvalue/C=D/R=V": -1,
 		"int.valueobserver.lastvalue//R=V":      1,
 		"int.valueobserver.lastvalue/A=B/R=V":   1,
-	}, out.Map)
+	}, out.Map())
 }
 
 func TestRecordBatch(t *testing.T) {
@@ -494,7 +496,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -503,7 +505,7 @@ func TestRecordBatch(t *testing.T) {
 		"float64.sum/A=B,C=D/R=V":   2,
 		"int64.exact/A=B,C=D/R=V":   3,
 		"float64.exact/A=B,C=D/R=V": 4,
-	}, out.Map)
+	}, out.Map())
 }
 
 // TestRecordPersistence ensures that a direct-called instrument that
@@ -576,12 +578,12 @@ func TestSyncInAsync(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := batchTest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
-	}, out.Map)
+	}, out.Map())
 }

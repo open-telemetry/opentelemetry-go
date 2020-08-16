@@ -97,6 +97,33 @@ type AggregatorSelector interface {
 	AggregatorFor(*metric.Descriptor, ...*Aggregator)
 }
 
+// Checkpointer is the interface used by a Controller to coordinate
+// the Processor with Accumulator(s) and Exporter(s).  The
+// StartCollection() and FinishCollection() methods start and finish a
+// collection interval.  Controllers call the Accumulator(s) during
+// collection to process Accumulations.
+type Checkpointer interface {
+	// Processor processes metric data for export.  The Process
+	// method is bracketed by StartCollection and FinishCollection
+	// calls.  The embedded AggregatorSelector can be called at
+	// any time.
+	Processor
+
+	// CheckpointSet returns the current data set.  This may be
+	// called before and after collection.  The
+	// implementation is required to return the same value
+	// throughout its lifetime, since CheckpointSet exposes a
+	// sync.Locker interface.  The caller is responsible for
+	// locking the CheckpointSet before initiating collection.
+	CheckpointSet() CheckpointSet
+
+	// StartCollection begins a collection interval.
+	StartCollection()
+
+	// FinishCollection ends a collection interval.
+	FinishCollection() error
+}
+
 // Aggregator implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Sum-only
 // instruments commonly use a simple Sum aggregator, but for the

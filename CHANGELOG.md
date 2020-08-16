@@ -10,11 +10,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`
+- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest`
+- Rename `api/testharness` to `api/apitest`
+- Rename `api/trace/testtrace` to `api/trace/tracetest`
 - The `go.opentelemetry.io/otel/bridge/opentracing` bridge package has been made into its own module.
    This removes the package dependencies of this bridge from the rest of the OpenTelemetry based project. (#1038)
 - Renamed `go.opentelemetry.io/otel/api/standard` package to `go.opentelemetry.io/otel/semconv` to avoid the ambiguous and generic name `standard` and better describe the package as containing OpenTelemetry semantic conventions. (#1016)
 - The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
 - Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
+- Replace the `google.golang.org/grpc/codes` dependency in the API with an equivalent `go.opentelemetry.io/otel/codes` package. (#1046)
 
 ### Removed
 
@@ -29,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
 - Correct instrumentation version tag in Jaeger exporter. (#1037)
 - The SDK span will now set an error event if the `End` method is called during a panic (i.e. it was deferred). (#1043)
+- Move internally generated protobuf code from the `go.opentelemetry.io/otel` to the OTLP exporter to reduce dependency overhead. (#1050)
 
 ## [0.10.0] - 2020-07-29
 

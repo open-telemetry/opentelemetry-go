@@ -347,12 +347,12 @@ func NewBird(name string, o ...BirdOption) Bird {…}
 Approvers:
 
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
-- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
+- [Josh MacDonald](https://github.com/jmacd), LightStep
 
 Maintainers:
 
-- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
 - [Tyler Yahn](https://github.com/MrAlias), New Relic
 
 ### Become an Approver or a Maintainer

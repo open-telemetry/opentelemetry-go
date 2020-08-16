@@ -15,6 +15,7 @@
 package label_test
 
 import (
+	"regexp"
 	"testing"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -24,14 +25,27 @@ import (
 )
 
 type testCase struct {
-	kvs      []kv.KeyValue
+	kvs []kv.KeyValue
+
+	keyRe *regexp.Regexp
+
 	encoding string
+	fullEnc  string
 }
 
 func expect(enc string, kvs ...kv.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		encoding: enc,
+	}
+}
+
+func expectFiltered(enc, filter, fullEnc string, kvs ...kv.KeyValue) testCase {
+	return testCase{
+		kvs:      kvs,
+		keyRe:    regexp.MustCompile(filter),
+		encoding: enc,
+		fullEnc:  fullEnc,
 	}
 }
 
@@ -113,4 +127,65 @@ func TestSetDedup(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestUniqueness(t *testing.T) {
+	short := []kv.KeyValue{
+		kv.String("A", "0"),
+		kv.String("B", "2"),
+		kv.String("A", "1"),
+	}
+	long := []kv.KeyValue{
+		kv.String("B", "2"),
+		kv.String("C", "5"),
+		kv.String("B", "2"),
+		kv.String("C", "1"),
+		kv.String("A", "4"),
+		kv.String("C", "3"),
+		kv.String("A", "1"),
+	}
+	cases := []testCase{
+		expectFiltered("A=1", "^A$", "B=2", short...),
+		expectFiltered("B=2", "^B$", "A=1", short...),
+		expectFiltered("A=1,B=2", "^A|B$", "", short...),
+		expectFiltered("", "^C", "A=1,B=2", short...),
+
+		expectFiltered("A=1,C=3", "A|C", "B=2", long...),
+		expectFiltered("B=2,C=3", "C|B", "A=1", long...),
+		expectFiltered("C=3", "C", "A=1,B=2", long...),
+		expectFiltered("", "D", "A=1,B=2,C=3", long...),
+	}
+	enc := label.DefaultEncoder()
+
+	for _, tc := range cases {
+		cpy := make([]kv.KeyValue, len(tc.kvs))
+		copy(cpy, tc.kvs)
+		distinct, uniq := label.NewSetWithFiltered(cpy, func(label kv.KeyValue) bool {
+			return tc.keyRe.MatchString(string(label.Key))
+		})
+
+		full := label.NewSet(uniq...)
+
+		require.Equal(t, tc.encoding, distinct.Encoded(enc))
+		require.Equal(t, tc.fullEnc, full.Encoded(enc))
+	}
+}
+
+func TestLookup(t *testing.T) {
+	set := label.NewSet(kv.Int("C", 3), kv.Int("A", 1), kv.Int("B", 2))
+
+	value, has := set.Value("C")
+	require.True(t, has)
+	require.Equal(t, int64(3), value.AsInt64())
+
+	value, has = set.Value("B")
+	require.True(t, has)
+	require.Equal(t, int64(2), value.AsInt64())
+
+	value, has = set.Value("A")
+	require.True(t, has)
+	require.Equal(t, int64(1), value.AsInt64())
+
+	value, has = set.Value("D")
+	require.False(t, has)
 }

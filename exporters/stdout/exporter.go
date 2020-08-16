@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -62,7 +63,10 @@ func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.Pr
 	}
 
 	pusher := push.New(
-		simple.NewWithExactDistribution(),
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exporter,
+		),
 		exporter,
 		pushOpts...,
 	)
