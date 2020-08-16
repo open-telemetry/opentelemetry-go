@@ -20,6 +20,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
 - Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
 - Replace the `google.golang.org/grpc/codes` dependency in the API with an equivalent `go.opentelemetry.io/otel/codes` package. (#1046)
+- Unify Callback Function Naming.
+   Rename `*Callback` with `*Func`. (#1061)
 
 ### Removed
 

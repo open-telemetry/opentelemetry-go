@@ -60,7 +60,7 @@ type Int64ObserverResult struct {
 	function   func([]kv.KeyValue, ...Observation)
 }
 
-// Float64ObserverResult is passed to an observer callback to captureGetHookFunc
+// Float64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous floating point metric instrument.
 type Float64ObserverResult struct {
 	instrument AsyncImpl
