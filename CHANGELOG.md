@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Integration tests for more OTel Collector Attribute types. (#1062)
+
 ### Changed
 
 - Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`
@@ -20,7 +24,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
 - Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
 - Replace the `google.golang.org/grpc/codes` dependency in the API with an equivalent `go.opentelemetry.io/otel/codes` package. (#1046)
-- Integration tests for OTel Collector Attributes. (#1062)
 
 ### Removed
 
