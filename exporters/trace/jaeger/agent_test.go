@@ -39,8 +39,9 @@ func TestNewAgentClientUDPWithParams(t *testing.T) {
 	defer mockServer.Close()
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:      mockServer.LocalAddr().String(),
-		MaxPacketSize: 25000,
+		HostPort:            mockServer.LocalAddr().String(),
+		MaxPacketSize:       25000,
+		AttemptReconnecting: true,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)
@@ -59,7 +60,8 @@ func TestNewAgentClientUDPWithParamsDefaults(t *testing.T) {
 	defer mockServer.Close()
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort: "localhost:6831",
+		HostPort:            "localhost:6831",
+		AttemptReconnecting: true,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)
@@ -78,7 +80,8 @@ func TestNewAgentClientUDPDefaults(t *testing.T) {
 	defer mockServer.Close()
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort: "localhost:6831",
+		HostPort:            "localhost:6831",
+		AttemptReconnecting: true,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)
@@ -97,9 +100,9 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	defer mockServer.Close()
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:                   mockServer.LocalAddr().String(),
-		Logger:                     nil,
-		DisableAttemptReconnecting: true,
+		HostPort:            mockServer.LocalAddr().String(),
+		Logger:              nil,
+		AttemptReconnecting: false,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)

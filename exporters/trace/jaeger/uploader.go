@@ -46,7 +46,8 @@ func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) End
 
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{
-				HostPort: agentEndpoint,
+				HostPort:            agentEndpoint,
+				AttemptReconnecting: true,
 			},
 		}
 
@@ -79,7 +80,7 @@ func WithLogger(logger *log.Logger) AgentEndpointOption {
 // WithDisableAttemptReconnecting sets option to disable reconnecting udp client.
 func WithDisableAttemptReconnecting() AgentEndpointOption {
 	return func(o *AgentEndpointOptions) {
-		o.DisableAttemptReconnecting = true
+		o.AttemptReconnecting = false
 	}
 }
 
