@@ -28,12 +28,14 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/standard"
+	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
@@ -56,14 +58,17 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
-			kv.Key(standard.ServiceNameKey).String("test-service"),
+			kv.Key(semconv.ServiceNameKey).String("test-service"),
 		)),
-		sdktrace.WithSyncer(exp),
+		sdktrace.WithBatcher(exp),
 	)
 	handleErr(err, "failed to create trace provider")
 
 	pusher := push.New(
-		simple.NewWithExactDistribution(),
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exp,
+		),
 		exp,
 		push.WithPeriod(2*time.Second),
 	)
@@ -102,7 +107,10 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	// work begins
-	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
+	ctx, span := tracer.Start(
+		context.Background(),
+		"CollectorExporter-Example",
+		apitrace.WithAttributes(commonLabels...))
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)

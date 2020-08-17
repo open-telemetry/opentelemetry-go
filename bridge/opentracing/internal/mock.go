@@ -21,11 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelcore "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -69,12 +68,6 @@ func NewMockTracer() *MockTracer {
 
 		rand: rand.New(rand.NewSource(time.Now().Unix())),
 	}
-}
-
-func (t *MockTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
-	ctx, span := t.Start(ctx, name, opts...)
-	defer span.End()
-	return body(ctx)
 }
 
 func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {

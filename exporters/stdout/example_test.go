@@ -42,20 +42,37 @@ var (
 	)
 
 	loopCounter = metric.Must(meter).NewInt64Counter("function.loops")
-	paramValue  = metric.Must(meter).NewFloat64ValueRecorder("function.param")
+	paramValue  = metric.Must(meter).NewInt64ValueRecorder("function.param")
 
 	nameKey = kv.Key("function.name")
 )
 
-func myFunction(ctx context.Context, values ...float64) error {
-	nameKV := nameKey.String("myFunction")
-	boundCount := loopCounter.Bind(nameKV)
-	boundValue := paramValue.Bind(nameKV)
-	for _, value := range values {
-		boundCount.Add(ctx, 1)
-		boundValue.Record(ctx, value)
-	}
-	return nil
+func add(ctx context.Context, x, y int64) int64 {
+	nameKV := nameKey.String("add")
+
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, "Addition")
+	defer span.End()
+
+	loopCounter.Add(ctx, 1, nameKV)
+	paramValue.Record(ctx, x, nameKV)
+	paramValue.Record(ctx, y, nameKV)
+
+	return x + y
+}
+
+func multiply(ctx context.Context, x, y int64) int64 {
+	nameKV := nameKey.String("multiply")
+
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, "Multiplication")
+	defer span.End()
+
+	loopCounter.Add(ctx, 1, nameKV)
+	paramValue.Record(ctx, x, nameKV)
+	paramValue.Record(ctx, y, nameKV)
+
+	return x * y
 }
 
 func Example() {
@@ -70,22 +87,6 @@ func Example() {
 	}
 	defer pusher.Stop()
 
-	err = tracer.WithSpan(
-		context.Background(),
-		"myFunction/call",
-		func(ctx context.Context) error {
-			err := tracer.WithSpan(
-				ctx,
-				"internal/call",
-				func(ctx context.Context) error { return myFunction(ctx, 200, 100, 5000, 600) },
-			)
-			if err != nil {
-				return err
-			}
-			return myFunction(ctx, 100, 200, 500, 800)
-		},
-	)
-	if err != nil {
-		log.Fatal("Failed to call myFunction", err)
-	}
+	ctx := context.Background()
+	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 }

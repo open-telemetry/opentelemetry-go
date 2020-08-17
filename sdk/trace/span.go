@@ -22,11 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
 )
@@ -90,7 +89,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 		return
 	}
 	s.mu.Lock()
-	s.data.StatusCode = code
+	s.data.StatusCode = internal.ConvertCode(code)
 	s.data.StatusMessage = msg
 	s.mu.Unlock()
 }
@@ -109,9 +108,21 @@ func (s *span) SetAttribute(k string, v interface{}) {
 	}
 }
 
+// End ends the span adding an error event if it was called while panicking.
 func (s *span) End(options ...apitrace.EndOption) {
 	if s == nil {
 		return
+	}
+
+	if recovered := recover(); recovered != nil {
+		// Record but don't stop the panic.
+		defer panic(recovered)
+		s.addEventWithTimestamp(
+			time.Now(),
+			errorEventName,
+			errorTypeKey.String(typeStr(recovered)),
+			errorMessageKey.String(fmt.Sprint(recovered)),
+		)
 	}
 
 	if s.executionTracerTaskEnd != nil {
@@ -164,17 +175,19 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
-	errType := reflect.TypeOf(err)
-	errTypeString := fmt.Sprintf("%s.%s", errType.PkgPath(), errType.Name())
-	if errTypeString == "." {
-		// PkgPath() and Name() may be empty for builtin Types
-		errTypeString = errType.String()
-	}
-
 	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
-		errorTypeKey.String(errTypeString),
+		errorTypeKey.String(typeStr(err)),
 		errorMessageKey.String(err.Error()),
 	)
+}
+
+func typeStr(i interface{}) string {
+	t := reflect.TypeOf(i)
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		return t.String()
+	}
+	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
 func (s *span) Tracer() apitrace.Tracer {

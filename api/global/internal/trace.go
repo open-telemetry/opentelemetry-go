@@ -114,15 +114,6 @@ func (t *tracer) setDelegate(provider trace.Provider) {
 	t.once.Do(func() { t.delegate = provider.Tracer(t.name, t.opts...) })
 }
 
-// WithSpan implements trace.Tracer by forwarding the call to t.delegate if
-// set, otherwise it forwards the call to a NoopTracer.
-func (t *tracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...trace.StartOption) error {
-	if t.delegate != nil {
-		return t.delegate.WithSpan(ctx, name, body, opts...)
-	}
-	return trace.NoopTracer{}.WithSpan(ctx, name, body, opts...)
-}
-
 // Start implements trace.Tracer by forwarding the call to t.delegate if
 // set, otherwise it forwards the call to a NoopTracer.
 func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {

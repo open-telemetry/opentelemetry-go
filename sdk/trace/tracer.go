@@ -66,14 +66,3 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 	span.executionTracerTaskEnd = end
 	return apitrace.ContextWithSpan(ctx, span), span
 }
-
-func (tr *tracer) WithSpan(ctx context.Context, name string, body func(ctx context.Context) error, opts ...apitrace.StartOption) error {
-	ctx, span := tr.Start(ctx, name, opts...)
-	defer span.End()
-
-	if err := body(ctx); err != nil {
-		// TODO: set event with boolean attribute for error.
-		return err
-	}
-	return nil
-}

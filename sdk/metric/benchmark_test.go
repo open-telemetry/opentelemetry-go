@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
 type benchFixture struct {
@@ -40,7 +40,7 @@ func newFixture(b *testing.B) *benchFixture {
 	b.ReportAllocs()
 	bf := &benchFixture{
 		B:                  b,
-		AggregatorSelector: test.AggregatorSelector(),
+		AggregatorSelector: processortest.AggregatorSelector(),
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)

@@ -23,7 +23,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -35,17 +34,23 @@ const DefaultCachePeriod time.Duration = 10 * time.Second
 // *basic.Processor.  Use Provider() for obtaining Meters.  Use
 // Foreach() for accessing current records.
 type Controller struct {
-	accumulator *sdk.Accumulator
-	processor   *processor.Processor
-	provider    *registry.Provider
-	period      time.Duration
-	lastCollect time.Time
-	clock       controllerTime.Clock
-	checkpoint  export.CheckpointSet
+	accumulator  *sdk.Accumulator
+	checkpointer export.Checkpointer
+	provider     *registry.Provider
+	period       time.Duration
+	lastCollect  time.Time
+	clock        controllerTime.Clock
+	checkpoint   export.CheckpointSet
 }
 
-// New returns a *Controller configured with an aggregation selector and options.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, options ...Option) *Controller {
+// New returns a *Controller configured with an export.Checkpointer.
+//
+// Pull controllers are typically used in an environment where there
+// are multiple readers.  It is common, therefore, when configuring a
+// basic Processor for use with this controller, to use a
+// CumulativeExport strategy and the basic.WithMemory(true) option,
+// which ensures that every CheckpointSet includes full state.
+func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	config := &Config{
 		Resource:    resource.Empty(),
 		CachePeriod: DefaultCachePeriod,
@@ -53,27 +58,24 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	// This controller uses WithMemory() as a requirement to
-	// support multiple readers.
-	processor := processor.New(aselector, eselector, processor.WithMemory(true))
 	accum := sdk.NewAccumulator(
-		processor,
+		checkpointer,
 		sdk.WithResource(config.Resource),
 	)
 	return &Controller{
-		accumulator: accum,
-		processor:   processor,
-		provider:    registry.NewProvider(accum),
-		period:      config.CachePeriod,
-		checkpoint:  processor.CheckpointSet(),
-		clock:       controllerTime.RealClock{},
+		accumulator:  accum,
+		checkpointer: checkpointer,
+		provider:     registry.NewProvider(accum),
+		period:       config.CachePeriod,
+		checkpoint:   checkpointer.CheckpointSet(),
+		clock:        controllerTime.RealClock{},
 	}
 }
 
 // SetClock sets the clock used for caching.  For testing purposes.
 func (c *Controller) SetClock(clock controllerTime.Clock) {
-	c.processor.Lock()
-	defer c.processor.Unlock()
+	c.checkpointer.CheckpointSet().Lock()
+	defer c.checkpointer.CheckpointSet().Unlock()
 	c.clock = clock
 }
 
@@ -86,8 +88,8 @@ func (c *Controller) Provider() metric.Provider {
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
 func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
-	c.processor.RLock()
-	defer c.processor.RUnlock()
+	c.checkpointer.CheckpointSet().RLock()
+	defer c.checkpointer.CheckpointSet().RUnlock()
 
 	return c.checkpoint.ForEach(ks, f)
 }
@@ -95,8 +97,8 @@ func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record)
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
 func (c *Controller) Collect(ctx context.Context) error {
-	c.processor.Lock()
-	defer c.processor.Unlock()
+	c.checkpointer.CheckpointSet().Lock()
+	defer c.checkpointer.CheckpointSet().Unlock()
 
 	if c.period > 0 {
 		now := c.clock.Now()
@@ -108,9 +110,9 @@ func (c *Controller) Collect(ctx context.Context) error {
 		c.lastCollect = now
 	}
 
-	c.processor.StartCollection()
+	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
-	err := c.processor.FinishCollection()
-	c.checkpoint = c.processor.CheckpointSet()
+	err := c.checkpointer.FinishCollection()
+	c.checkpoint = c.checkpointer.CheckpointSet()
 	return err
 }

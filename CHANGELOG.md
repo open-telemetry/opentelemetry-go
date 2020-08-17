@@ -8,6 +8,36 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`
+- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest`
+- Rename `api/testharness` to `api/apitest`
+- Rename `api/trace/testtrace` to `api/trace/tracetest`
+- The `go.opentelemetry.io/otel/bridge/opentracing` bridge package has been made into its own module.
+   This removes the package dependencies of this bridge from the rest of the OpenTelemetry based project. (#1038)
+- Renamed `go.opentelemetry.io/otel/api/standard` package to `go.opentelemetry.io/otel/semconv` to avoid the ambiguous and generic name `standard` and better describe the package as containing OpenTelemetry semantic conventions. (#1016)
+- The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
+- Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
+- Replace the `google.golang.org/grpc/codes` dependency in the API with an equivalent `go.opentelemetry.io/otel/codes` package. (#1046)
+- Unify Callback Function Naming.
+   Rename `*Callback` with `*Func`. (#1061)
+
+### Removed
+
+- The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository.
+   This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
+- The `WithSpan` method of the `Tracer` interface.
+   The functionality this method provided was limited compared to what a user can provide themselves.
+   It was removed with the understanding that if there is sufficient user need it can be added back based on actual user usage. (#1043)
+
+### Fixed
+
+- The `semconv.HTTPServerMetricAttributesFromHTTPRequest()` function no longer generates the high-cardinality `http.request.content.length` label. (#1031)
+- Correct instrumentation version tag in Jaeger exporter. (#1037)
+- The SDK span will now set an error event if the `End` method is called during a panic (i.e. it was deferred). (#1043)
+- Move internally generated protobuf code from the `go.opentelemetry.io/otel` to the OTLP exporter to reduce dependency overhead. (#1050)
+
 ## [0.10.0] - 2020-07-29
 
 This release migrates the default OpenTelemetry SDK into its own Go module, decoupling the SDK from the API and reducing dependencies for instrumentation packages.
@@ -39,6 +69,7 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
   - `value.Uint` was replaced with `kv.UintValue`.
   - `value.Array` was replaced with `kv.ArrayValue`.
 - Rename `Infer` to `Any` in the `go.opentelemetry.io/otel/api/kv` package. (#972)
+- Change `othttp` to use the `httpsnoop` package to wrap the `ResponseWriter` so that optional interfaces (`http.Hijacker`, `http.Flusher`, etc.) that are implemented by the original `ResponseWriter`are also implemented by the wrapped `ResponseWriter`. (#979)
 - Rename `go.opentelemetry.io/otel/sdk/metric/aggregator/test` package to `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest`. (#980)
 - Make the SDK into its own Go module called `go.opentelemetry.io/otel/sdk`. (#985)
 - Changed the default trace `Sampler` from `AlwaysOn` to `ParentOrElse(AlwaysOn)`. (#989)
@@ -147,7 +178,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 
 ### Added
 
-- The othttp instrumentation now includes default metrics. (#861) 
+- The othttp instrumentation now includes default metrics. (#861)
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
 - Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
