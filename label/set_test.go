@@ -18,14 +18,13 @@ import (
 	"regexp"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 
 	"github.com/stretchr/testify/require"
 )
 
 type testCase struct {
-	kvs []kv.KeyValue
+	kvs []label.KeyValue
 
 	keyRe *regexp.Regexp
 
@@ -33,14 +32,14 @@ type testCase struct {
 	fullEnc  string
 }
 
-func expect(enc string, kvs ...kv.KeyValue) testCase {
+func expect(enc string, kvs ...label.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		encoding: enc,
 	}
 }
 
-func expectFiltered(enc, filter, fullEnc string, kvs ...kv.KeyValue) testCase {
+func expectFiltered(enc, filter, fullEnc string, kvs ...label.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		keyRe:    regexp.MustCompile(filter),
@@ -51,16 +50,16 @@ func expectFiltered(enc, filter, fullEnc string, kvs ...kv.KeyValue) testCase {
 
 func TestSetDedup(t *testing.T) {
 	cases := []testCase{
-		expect("A=B", kv.String("A", "2"), kv.String("A", "B")),
-		expect("A=B", kv.String("A", "2"), kv.Int("A", 1), kv.String("A", "B")),
-		expect("A=B", kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
+		expect("A=B", label.String("A", "2"), label.String("A", "B")),
+		expect("A=B", label.String("A", "2"), label.Int("A", 1), label.String("A", "B")),
+		expect("A=B", label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
 
-		expect("A=B,C=D", kv.String("A", "1"), kv.String("C", "D"), kv.String("A", "B")),
-		expect("A=B,C=D", kv.String("A", "2"), kv.String("A", "B"), kv.String("C", "D")),
-		expect("A=B,C=D", kv.Float64("C", 1.2), kv.String("A", "2"), kv.String("A", "B"), kv.String("C", "D")),
-		expect("A=B,C=D", kv.String("C", "D"), kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
-		expect("A=B,C=D", kv.String("A", "B"), kv.String("C", "D"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B")),
-		expect("A=B,C=D", kv.String("A", "B"), kv.String("A", "C"), kv.String("A", "D"), kv.String("A", "B"), kv.String("C", "D")),
+		expect("A=B,C=D", label.String("A", "1"), label.String("C", "D"), label.String("A", "B")),
+		expect("A=B,C=D", label.String("A", "2"), label.String("A", "B"), label.String("C", "D")),
+		expect("A=B,C=D", label.Float64("C", 1.2), label.String("A", "2"), label.String("A", "B"), label.String("C", "D")),
+		expect("A=B,C=D", label.String("C", "D"), label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
+		expect("A=B,C=D", label.String("A", "B"), label.String("C", "D"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
+		expect("A=B,C=D", label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B"), label.String("C", "D")),
 	}
 	enc := label.DefaultEncoder()
 
@@ -68,7 +67,7 @@ func TestSetDedup(t *testing.T) {
 	d2s := map[label.Distinct][]string{}
 
 	for _, tc := range cases {
-		cpy := make([]kv.KeyValue, len(tc.kvs))
+		cpy := make([]label.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
 		sl := label.NewSet(cpy...)
 
@@ -130,19 +129,19 @@ func TestSetDedup(t *testing.T) {
 }
 
 func TestUniqueness(t *testing.T) {
-	short := []kv.KeyValue{
-		kv.String("A", "0"),
-		kv.String("B", "2"),
-		kv.String("A", "1"),
+	short := []label.KeyValue{
+		label.String("A", "0"),
+		label.String("B", "2"),
+		label.String("A", "1"),
 	}
-	long := []kv.KeyValue{
-		kv.String("B", "2"),
-		kv.String("C", "5"),
-		kv.String("B", "2"),
-		kv.String("C", "1"),
-		kv.String("A", "4"),
-		kv.String("C", "3"),
-		kv.String("A", "1"),
+	long := []label.KeyValue{
+		label.String("B", "2"),
+		label.String("C", "5"),
+		label.String("B", "2"),
+		label.String("C", "1"),
+		label.String("A", "4"),
+		label.String("C", "3"),
+		label.String("A", "1"),
 	}
 	cases := []testCase{
 		expectFiltered("A=1", "^A$", "B=2", short...),
@@ -158,9 +157,9 @@ func TestUniqueness(t *testing.T) {
 	enc := label.DefaultEncoder()
 
 	for _, tc := range cases {
-		cpy := make([]kv.KeyValue, len(tc.kvs))
+		cpy := make([]label.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		distinct, uniq := label.NewSetWithFiltered(cpy, func(label kv.KeyValue) bool {
+		distinct, uniq := label.NewSetWithFiltered(cpy, func(label label.KeyValue) bool {
 			return tc.keyRe.MatchString(string(label.Key))
 		})
 
@@ -172,7 +171,7 @@ func TestUniqueness(t *testing.T) {
 }
 
 func TestLookup(t *testing.T) {
-	set := label.NewSet(kv.Int("C", 3), kv.Int("A", 1), kv.Int("B", 2))
+	set := label.NewSet(label.Int("C", 3), label.Int("A", 1), label.Int("B", 2))
 
 	value, has := set.Value("C")
 	require.True(t, has)

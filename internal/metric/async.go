@@ -21,8 +21,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 )
 
 var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
@@ -32,7 +32,7 @@ var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
 	// CollectAsync passes a batch of observations to the MeterImpl.
-	CollectAsync([]kv.KeyValue, ...metric.Observation)
+	CollectAsync([]label.KeyValue, ...metric.Observation)
 }
 
 // AsyncInstrumentState manages an ordered set of asynchronous

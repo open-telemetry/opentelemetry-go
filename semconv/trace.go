@@ -14,31 +14,31 @@
 
 package semconv
 
-import "go.opentelemetry.io/otel/api/kv"
+import "go.opentelemetry.io/otel/label"
 
 // Semantic conventions for attribute keys used for network related
 // operations.
 const (
 	// Transport protocol used.
-	NetTransportKey = kv.Key("net.transport")
+	NetTransportKey = label.Key("net.transport")
 
 	// Remote address of the peer.
-	NetPeerIPKey = kv.Key("net.peer.ip")
+	NetPeerIPKey = label.Key("net.peer.ip")
 
 	// Remote port number.
-	NetPeerPortKey = kv.Key("net.peer.port")
+	NetPeerPortKey = label.Key("net.peer.port")
 
 	// Remote hostname or similar.
-	NetPeerNameKey = kv.Key("net.peer.name")
+	NetPeerNameKey = label.Key("net.peer.name")
 
 	// Local host IP. Useful in case of a multi-IP host.
-	NetHostIPKey = kv.Key("net.host.ip")
+	NetHostIPKey = label.Key("net.host.ip")
 
 	// Local host port.
-	NetHostPortKey = kv.Key("net.host.port")
+	NetHostPortKey = label.Key("net.host.port")
 
 	// Local hostname or similar.
-	NetHostNameKey = kv.Key("net.host.name")
+	NetHostNameKey = label.Key("net.host.name")
 )
 
 var (
@@ -55,7 +55,7 @@ var (
 const (
 	// Service name of the remote service. Should equal the actual
 	// `service.name` resource attribute of the remote service, if any.
-	PeerServiceKey = kv.Key("peer.service")
+	PeerServiceKey = label.Key("peer.service")
 )
 
 // Semantic conventions for attribute keys used to identify an authorized
@@ -63,70 +63,70 @@ const (
 const (
 	// Username or the client identifier extracted from the access token or
 	// authorization header in the inbound request from outside the system.
-	EnduserIDKey = kv.Key("enduser.id")
+	EnduserIDKey = label.Key("enduser.id")
 
 	// Actual or assumed role the client is making the request with.
-	EnduserRoleKey = kv.Key("enduser.role")
+	EnduserRoleKey = label.Key("enduser.role")
 
 	// Scopes or granted authorities the client currently possesses.
-	EnduserScopeKey = kv.Key("enduser.scope")
+	EnduserScopeKey = label.Key("enduser.scope")
 )
 
 // Semantic conventions for attribute keys for HTTP.
 const (
 	// HTTP request method.
-	HTTPMethodKey = kv.Key("http.method")
+	HTTPMethodKey = label.Key("http.method")
 
 	// Full HTTP request URL in the form:
 	// scheme://host[:port]/path?query[#fragment].
-	HTTPUrlKey = kv.Key("http.url")
+	HTTPUrlKey = label.Key("http.url")
 
 	// The full request target as passed in a HTTP request line or
 	// equivalent, e.g. "/path/12314/?q=ddds#123".
-	HTTPTargetKey = kv.Key("http.target")
+	HTTPTargetKey = label.Key("http.target")
 
 	// The value of the HTTP host header.
-	HTTPHostKey = kv.Key("http.host")
+	HTTPHostKey = label.Key("http.host")
 
 	// The URI scheme identifying the used protocol.
-	HTTPSchemeKey = kv.Key("http.scheme")
+	HTTPSchemeKey = label.Key("http.scheme")
 
 	// HTTP response status code.
-	HTTPStatusCodeKey = kv.Key("http.status_code")
+	HTTPStatusCodeKey = label.Key("http.status_code")
 
 	// HTTP reason phrase.
-	HTTPStatusTextKey = kv.Key("http.status_text")
+	HTTPStatusTextKey = label.Key("http.status_text")
 
 	// Kind of HTTP protocol used.
-	HTTPFlavorKey = kv.Key("http.flavor")
+	HTTPFlavorKey = label.Key("http.flavor")
 
 	// Value of the HTTP User-Agent header sent by the client.
-	HTTPUserAgentKey = kv.Key("http.user_agent")
+	HTTPUserAgentKey = label.Key("http.user_agent")
 
 	// The primary server name of the matched virtual host.
-	HTTPServerNameKey = kv.Key("http.server_name")
+	HTTPServerNameKey = label.Key("http.server_name")
 
 	// The matched route served (path template). For example,
 	// "/users/:userID?".
-	HTTPRouteKey = kv.Key("http.route")
+	HTTPRouteKey = label.Key("http.route")
 
 	// The IP address of the original client behind all proxies, if known
 	// (e.g. from X-Forwarded-For).
-	HTTPClientIPKey = kv.Key("http.client_ip")
+	HTTPClientIPKey = label.Key("http.client_ip")
 
 	// The size of the request payload body in bytes.
-	HTTPRequestContentLengthKey = kv.Key("http.request_content_length")
+	HTTPRequestContentLengthKey = label.Key("http.request_content_length")
 
 	// The size of the uncompressed request payload body after transport decoding.
 	// Not set if transport encoding not used.
-	HTTPRequestContentLengthUncompressedKey = kv.Key("http.request_content_length_uncompressed")
+	HTTPRequestContentLengthUncompressedKey = label.Key("http.request_content_length_uncompressed")
 
 	// The size of the response payload body in bytes.
-	HTTPResponseContentLengthKey = kv.Key("http.response_content_length")
+	HTTPResponseContentLengthKey = label.Key("http.response_content_length")
 
 	// The size of the uncompressed response payload body after transport decoding.
 	// Not set if transport encoding not used.
-	HTTPResponseContentLengthUncompressedKey = kv.Key("http.response_content_length_uncompressed")
+	HTTPResponseContentLengthUncompressedKey = label.Key("http.response_content_length_uncompressed")
 )
 
 var (
@@ -143,13 +143,13 @@ var (
 // Semantic conventions for attribute keys for database connections.
 const (
 	// Identifier for the database system (DBMS) being used.
-	DBSystemKey = kv.Key("db.system")
+	DBSystemKey = label.Key("db.system")
 
 	// Database Connection String with embedded credentials removed.
-	DBConnectionStringKey = kv.Key("db.connection_string")
+	DBConnectionStringKey = label.Key("db.connection_string")
 
 	// Username for accessing database.
-	DBUserKey = kv.Key("db.user")
+	DBUserKey = label.Key("db.user")
 )
 
 var (
@@ -178,56 +178,56 @@ var (
 // Semantic conventions for attribute keys for database calls.
 const (
 	// Database instance name.
-	DBNameKey = kv.Key("db.name")
+	DBNameKey = label.Key("db.name")
 
 	// A database statement for the given database type.
-	DBStatementKey = kv.Key("db.statement")
+	DBStatementKey = label.Key("db.statement")
 
 	// A database operation for the given database type.
-	DBOperationKey = kv.Key("db.operation")
+	DBOperationKey = label.Key("db.operation")
 )
 
 // Database technology-specific attributes
 const (
 	// Name of the Cassandra keyspace accessed. Use instead of `db.name`.
-	DBCassandraKeyspaceKey = kv.Key("db.cassandra.keyspace")
+	DBCassandraKeyspaceKey = label.Key("db.cassandra.keyspace")
 
 	// HBase namespace accessed. Use instead of `db.name`.
-	DBHBaseNamespaceKey = kv.Key("db.hbase.namespace")
+	DBHBaseNamespaceKey = label.Key("db.hbase.namespace")
 
 	// Index of Redis database accessed. Use instead of `db.name`.
-	DBRedisDBIndexKey = kv.Key("db.redis.database_index")
+	DBRedisDBIndexKey = label.Key("db.redis.database_index")
 
 	// Collection being accessed within the database in `db.name`.
-	DBMongoDBCollectionKey = kv.Key("db.mongodb.collection")
+	DBMongoDBCollectionKey = label.Key("db.mongodb.collection")
 )
 
 // Semantic conventions for attribute keys for RPC.
 const (
 	// A string identifying the remoting system.
-	RPCSystemKey = kv.Key("rpc.system")
+	RPCSystemKey = label.Key("rpc.system")
 
 	// The full name of the service being called.
-	RPCServiceKey = kv.Key("rpc.service")
+	RPCServiceKey = label.Key("rpc.service")
 
 	// The name of the method being called.
-	RPCMethodKey = kv.Key("rpc.method")
+	RPCMethodKey = label.Key("rpc.method")
 
 	// Name of message transmitted or received.
-	RPCNameKey = kv.Key("name")
+	RPCNameKey = label.Key("name")
 
 	// Type of message transmitted or received.
-	RPCMessageTypeKey = kv.Key("message.type")
+	RPCMessageTypeKey = label.Key("message.type")
 
 	// Identifier of message transmitted or received.
-	RPCMessageIDKey = kv.Key("message.id")
+	RPCMessageIDKey = label.Key("message.id")
 
 	// The compressed size of the message transmitted or received in bytes.
-	RPCMessageCompressedSizeKey = kv.Key("message.compressed_size")
+	RPCMessageCompressedSizeKey = label.Key("message.compressed_size")
 
 	// The uncompressed size of the message transmitted or received in
 	// bytes.
-	RPCMessageUncompressedSizeKey = kv.Key("message.uncompressed_size")
+	RPCMessageUncompressedSizeKey = label.Key("message.uncompressed_size")
 )
 
 var (
@@ -243,44 +243,44 @@ var (
 const (
 	// A unique identifier describing the messaging system. For example,
 	// kafka, rabbitmq or activemq.
-	MessagingSystemKey = kv.Key("messaging.system")
+	MessagingSystemKey = label.Key("messaging.system")
 
 	// The message destination name, e.g. MyQueue or MyTopic.
-	MessagingDestinationKey = kv.Key("messaging.destination")
+	MessagingDestinationKey = label.Key("messaging.destination")
 
 	// The kind of message destination.
-	MessagingDestinationKindKey = kv.Key("messaging.destination_kind")
+	MessagingDestinationKindKey = label.Key("messaging.destination_kind")
 
 	// Describes if the destination is temporary or not.
-	MessagingTempDestinationKey = kv.Key("messaging.temp_destination")
+	MessagingTempDestinationKey = label.Key("messaging.temp_destination")
 
 	// The name of the transport protocol.
-	MessagingProtocolKey = kv.Key("messaging.protocol")
+	MessagingProtocolKey = label.Key("messaging.protocol")
 
 	// The version of the transport protocol.
-	MessagingProtocolVersionKey = kv.Key("messaging.protocol_version")
+	MessagingProtocolVersionKey = label.Key("messaging.protocol_version")
 
 	// Messaging service URL.
-	MessagingURLKey = kv.Key("messaging.url")
+	MessagingURLKey = label.Key("messaging.url")
 
 	// Identifier used by the messaging system for a message.
-	MessagingMessageIDKey = kv.Key("messaging.message_id")
+	MessagingMessageIDKey = label.Key("messaging.message_id")
 
 	// Identifier used by the messaging system for a conversation.
-	MessagingConversationIDKey = kv.Key("messaging.conversation_id")
+	MessagingConversationIDKey = label.Key("messaging.conversation_id")
 
 	// The (uncompressed) size of the message payload in bytes.
-	MessagingMessagePayloadSizeBytesKey = kv.Key("messaging.message_payload_size_bytes")
+	MessagingMessagePayloadSizeBytesKey = label.Key("messaging.message_payload_size_bytes")
 
 	// The compressed size of the message payload in bytes.
-	MessagingMessagePayloadCompressedSizeBytesKey = kv.Key("messaging.message_payload_compressed_size_bytes")
+	MessagingMessagePayloadCompressedSizeBytesKey = label.Key("messaging.message_payload_compressed_size_bytes")
 
 	// Identifies which part and kind of message consumption is being
 	// preformed.
-	MessagingOperationKey = kv.Key("messaging.operation")
+	MessagingOperationKey = label.Key("messaging.operation")
 
 	// RabbitMQ specific attribute describing the destination routing key.
-	MessagingRabbitMQRoutingKeyKey = kv.Key("messaging.rabbitmq.routing_key")
+	MessagingRabbitMQRoutingKeyKey = label.Key("messaging.rabbitmq.routing_key")
 )
 
 var (
@@ -297,34 +297,34 @@ var (
 const (
 
 	// Type of the trigger on which the function is executed.
-	FaaSTriggerKey = kv.Key("faas.trigger")
+	FaaSTriggerKey = label.Key("faas.trigger")
 
 	// String containing the execution identifier of the function.
-	FaaSExecutionKey = kv.Key("faas.execution")
+	FaaSExecutionKey = label.Key("faas.execution")
 
 	// A boolean indicating that the serverless function is executed
 	// for the first time (aka cold start).
-	FaaSColdstartKey = kv.Key("faas.coldstart")
+	FaaSColdstartKey = label.Key("faas.coldstart")
 
 	// The name of the source on which the operation was performed.
 	// For example, in Cloud Storage or S3 corresponds to the bucket name,
 	// and in Cosmos DB to the database name.
-	FaaSDocumentCollectionKey = kv.Key("faas.document.collection")
+	FaaSDocumentCollectionKey = label.Key("faas.document.collection")
 
 	// The type of the operation that was performed on the data.
-	FaaSDocumentOperationKey = kv.Key("faas.document.operation")
+	FaaSDocumentOperationKey = label.Key("faas.document.operation")
 
 	// A string containing the time when the data was accessed.
-	FaaSDocumentTimeKey = kv.Key("faas.document.time")
+	FaaSDocumentTimeKey = label.Key("faas.document.time")
 
 	// The document name/table subjected to the operation.
-	FaaSDocumentNameKey = kv.Key("faas.document.name")
+	FaaSDocumentNameKey = label.Key("faas.document.name")
 
 	// The function invocation time.
-	FaaSTimeKey = kv.Key("faas.time")
+	FaaSTimeKey = label.Key("faas.time")
 
 	// The schedule period as Cron Expression.
-	FaaSCronKey = kv.Key("faas.cron")
+	FaaSCronKey = label.Key("faas.cron")
 )
 
 var (

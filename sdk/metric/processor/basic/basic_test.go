@@ -24,9 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
@@ -103,7 +102,7 @@ func asNumber(nkind metric.NumberKind, value int64) metric.Number {
 	return metric.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...kv.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
 	ls := label.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
@@ -122,10 +121,10 @@ func testProcessor(
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
-	res := resource.New(kv.String("R", "V"))
+	res := resource.New(label.String("R", "V"))
 
-	labs1 := []kv.KeyValue{kv.String("L1", "V")}
-	labs2 := []kv.KeyValue{kv.String("L2", "V")}
+	labs1 := []label.KeyValue{label.String("L1", "V")}
+	labs2 := []label.KeyValue{label.String("L2", "V")}
 
 	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
 		processor := basic.New(selector, ekind, basic.WithMemory(hasMemory))
@@ -362,7 +361,7 @@ func TestBasicTimestamps(t *testing.T) {
 }
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
-	res := resource.New(kv.String("R", "V"))
+	res := resource.New(label.String("R", "V"))
 	ekind := export.CumulativeExporter
 
 	desc := metric.NewDescriptor("inst.sum", metric.CounterKind, metric.Int64NumberKind)
@@ -383,7 +382,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Add 10
 		processor.StartCollection()
-		_ = processor.Process(updateFor(t, &desc, selector, res, 10, kv.String("A", "B")))
+		_ = processor.Process(updateFor(t, &desc, selector, res, 10, label.String("A", "B")))
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
@@ -396,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 }
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
-	res := resource.New(kv.String("R", "V"))
+	res := resource.New(label.String("R", "V"))
 	ekind := export.DeltaExporter
 
 	desc := metric.NewDescriptor("inst.sum", metric.SumObserverKind, metric.Int64NumberKind)
@@ -417,7 +416,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Add 10
 		processor.StartCollection()
-		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
@@ -436,7 +435,7 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExporter,
 	} {
 
-		res := resource.New(kv.String("R", "V"))
+		res := resource.New(label.String("R", "V"))
 		desc := metric.NewDescriptor("observe.sum", metric.SumObserverKind, metric.Int64NumberKind)
 		selector := processorTest.AggregatorSelector()
 
@@ -446,9 +445,9 @@ func TestMultiObserverSum(t *testing.T) {
 		for i := 1; i < 3; i++ {
 			// Add i*10*3 times
 			processor.StartCollection()
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), kv.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
 			require.NoError(t, processor.FinishCollection())
 
 			// Multiplier is 1 for deltas, otherwise i.

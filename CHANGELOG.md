@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Integration tests for more OTel Collector Attribute types. (#1062)
 - Add reconnecting udp connection type to Jaeger exporter. This change adds a new optional implementation of the udp
     conn interface used to detect changes to an agent's host dns record. It then adopts the new destination address to
     ensure the exporter doesn't get stuck. This change was ported from jaegertracing/jaeger-client-go#520 .
@@ -26,6 +27,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The environment variable used for resource detection has been changed from `OTEL_RESOURCE_LABELS` to `OTEL_RESOURCE_ATTRIBUTES` (#1042)
 - Replace `WithSyncer` with `WithBatcher` in examples. (#1044)
 - Replace the `google.golang.org/grpc/codes` dependency in the API with an equivalent `go.opentelemetry.io/otel/codes` package. (#1046)
+- Merge the `go.opentelemetry.io/otel/api/label` and `go.opentelemetry.io/otel/api/kv` into the new `go.opentelemetry.io/otel/label` package. (#1060)
+- Unify Callback Function Naming.
+   Rename `*Callback` with `*Func`. (#1061)
 
 ### Removed
 

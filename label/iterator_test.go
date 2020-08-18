@@ -18,16 +18,14 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv"
-
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestIterator(t *testing.T) {
-	one := kv.String("one", "1")
-	two := kv.Int("two", 2)
+	one := label.String("one", "1")
+	two := label.Int("two", 2)
 	lbl := label.NewSet(one, two)
 	iter := lbl.Iter()
 	require.Equal(t, 2, iter.Len())
@@ -66,9 +64,9 @@ func TestMergedIterator(t *testing.T) {
 		expect []string
 	}
 
-	makeLabels := func(keys []string, num int) (result []kv.KeyValue) {
+	makeLabels := func(keys []string, num int) (result []label.KeyValue) {
 		for _, k := range keys {
-			result = append(result, kv.Int(k, num))
+			result = append(result, label.Int(k, num))
 		}
 		return
 	}

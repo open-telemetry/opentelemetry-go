@@ -19,12 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/kv"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	"go.opentelemetry.io/otel/label"
 )
 
 type attributeTest struct {
-	attrs    []kv.KeyValue
+	attrs    []label.KeyValue
 	expected []*commonpb.KeyValue
 }
 
@@ -32,17 +32,17 @@ func TestAttributes(t *testing.T) {
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]kv.KeyValue{
-				kv.Int("int to int", 123),
-				kv.Uint("uint to int", 1234),
-				kv.Int32("int32 to int", 12345),
-				kv.Uint32("uint32 to int", 123456),
-				kv.Int64("int64 to int64", 1234567),
-				kv.Uint64("uint64 to int64", 12345678),
-				kv.Float32("float32 to double", 3.14),
-				kv.Float32("float64 to double", 1.61),
-				kv.String("string to string", "string"),
-				kv.Bool("bool to bool", true),
+			[]label.KeyValue{
+				label.Int("int to int", 123),
+				label.Uint("uint to int", 1234),
+				label.Int32("int32 to int", 12345),
+				label.Uint32("uint32 to int", 123456),
+				label.Int64("int64 to int64", 1234567),
+				label.Uint64("uint64 to int64", 12345678),
+				label.Float32("float32 to double", 3.14),
+				label.Float32("float64 to double", 1.61),
+				label.String("string to string", "string"),
+				label.Bool("bool to bool", true),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -157,17 +157,17 @@ func TestArrayAttributes(t *testing.T) {
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]kv.KeyValue{
-				kv.Array("bool array to bool array", []bool{true, false}),
-				kv.Array("int array to int64 array", []int{1, 2, 3}),
-				kv.Array("uint array to int64 array", []uint{1, 2, 3}),
-				kv.Array("int32 array to int64 array", []int32{1, 2, 3}),
-				kv.Array("uint32 array to int64 array", []uint32{1, 2, 3}),
-				kv.Array("int64 array to int64 array", []int64{1, 2, 3}),
-				kv.Array("uint64 array to int64 array", []uint64{1, 2, 3}),
-				kv.Array("float32 array to double array", []float32{1.11, 2.22, 3.33}),
-				kv.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				kv.Array("string array to string array", []string{"foo", "bar", "baz"}),
+			[]label.KeyValue{
+				label.Array("bool array to bool array", []bool{true, false}),
+				label.Array("int array to int64 array", []int{1, 2, 3}),
+				label.Array("uint array to int64 array", []uint{1, 2, 3}),
+				label.Array("int32 array to int64 array", []int32{1, 2, 3}),
+				label.Array("uint32 array to int64 array", []uint32{1, 2, 3}),
+				label.Array("int64 array to int64 array", []int64{1, 2, 3}),
+				label.Array("uint64 array to int64 array", []uint64{1, 2, 3}),
+				label.Array("float32 array to double array", []float32{1.11, 2.22, 3.33}),
+				label.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				label.Array("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
 				newOTelBoolArray("bool array to bool array", []bool{true, false}),

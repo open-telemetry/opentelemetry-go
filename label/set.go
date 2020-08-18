@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label // import "go.opentelemetry.io/otel/api/label"
+package label
 
 import (
 	"encoding/json"
 	"reflect"
 	"sort"
 	"sync"
-
-	"go.opentelemetry.io/otel/api/kv"
 )
 
 type (
@@ -43,7 +41,7 @@ type (
 		encoded  [maxConcurrentEncoders]string
 	}
 
-	// Distinct wraps a variable-size array of `kv.KeyValue`,
+	// Distinct wraps a variable-size array of `KeyValue`,
 	// constructed with keys in sorted order.  This can be used as
 	// a map key or for equality checking between Sets.
 	Distinct struct {
@@ -55,25 +53,25 @@ type (
 	// the filtered label set.  When the filter returns false, the
 	// label is excluded from the filtered label set, and the
 	// label instead appears in the `removed` list of excluded labels.
-	Filter func(kv.KeyValue) bool
+	Filter func(KeyValue) bool
 
 	// Sortable implements `sort.Interface`, used for sorting
-	// `kv.KeyValue`.  This is an exported type to support a
+	// `KeyValue`.  This is an exported type to support a
 	// memory optimization.  A pointer to one of these is needed
 	// for the call to `sort.Stable()`, which the caller may
 	// provide in order to avoid an allocation.  See
 	// `NewSetWithSortable()`.
-	Sortable []kv.KeyValue
+	Sortable []KeyValue
 )
 
 var (
 	// keyValueType is used in `computeDistinctReflect`.
-	keyValueType = reflect.TypeOf(kv.KeyValue{})
+	keyValueType = reflect.TypeOf(KeyValue{})
 
 	// emptySet is returned for empty label sets.
 	emptySet = &Set{
 		equivalent: Distinct{
-			iface: [0]kv.KeyValue{},
+			iface: [0]KeyValue{},
 		},
 	}
 )
@@ -103,44 +101,44 @@ func (l *Set) Len() int {
 }
 
 // Get returns the KeyValue at ordered position `idx` in this set.
-func (l *Set) Get(idx int) (kv.KeyValue, bool) {
+func (l *Set) Get(idx int) (KeyValue, bool) {
 	if l == nil {
-		return kv.KeyValue{}, false
+		return KeyValue{}, false
 	}
 	value := l.equivalent.reflect()
 
 	if idx >= 0 && idx < value.Len() {
 		// Note: The Go compiler successfully avoids an allocation for
 		// the interface{} conversion here:
-		return value.Index(idx).Interface().(kv.KeyValue), true
+		return value.Index(idx).Interface().(KeyValue), true
 	}
 
-	return kv.KeyValue{}, false
+	return KeyValue{}, false
 }
 
 // Value returns the value of a specified key in this set.
-func (l *Set) Value(k kv.Key) (kv.Value, bool) {
+func (l *Set) Value(k Key) (Value, bool) {
 	if l == nil {
-		return kv.Value{}, false
+		return Value{}, false
 	}
 	rValue := l.equivalent.reflect()
 	vlen := rValue.Len()
 
 	idx := sort.Search(vlen, func(idx int) bool {
-		return rValue.Index(idx).Interface().(kv.KeyValue).Key >= k
+		return rValue.Index(idx).Interface().(KeyValue).Key >= k
 	})
 	if idx >= vlen {
-		return kv.Value{}, false
+		return Value{}, false
 	}
-	keyValue := rValue.Index(idx).Interface().(kv.KeyValue)
+	keyValue := rValue.Index(idx).Interface().(KeyValue)
 	if k == keyValue.Key {
 		return keyValue.Value, true
 	}
-	return kv.Value{}, false
+	return Value{}, false
 }
 
 // HasValue tests whether a key is defined in this set.
-func (l *Set) HasValue(k kv.Key) bool {
+func (l *Set) HasValue(k Key) bool {
 	if l == nil {
 		return false
 	}
@@ -158,7 +156,7 @@ func (l *Set) Iter() Iterator {
 
 // ToSlice returns the set of labels belonging to this set, sorted,
 // where keys appear no more than once.
-func (l *Set) ToSlice() []kv.KeyValue {
+func (l *Set) ToSlice() []KeyValue {
 	iter := l.Iter()
 	return iter.ToSlice()
 }
@@ -239,7 +237,7 @@ func empty() Set {
 //
 // Except for empty sets, this method adds an additional allocation
 // compared with calls that include a `*Sortable`.
-func NewSet(kvs ...kv.KeyValue) Set {
+func NewSet(kvs ...KeyValue) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty()
@@ -252,7 +250,7 @@ func NewSet(kvs ...kv.KeyValue) Set {
 // `NewSetWithSortableFiltered` for more details.
 //
 // This call includes a `*Sortable` option as a memory optimization.
-func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
+func NewSetWithSortable(kvs []KeyValue, tmp *Sortable) Set {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty()
@@ -267,7 +265,7 @@ func NewSetWithSortable(kvs []kv.KeyValue, tmp *Sortable) Set {
 // This call includes a `Filter` to include/exclude label keys from
 // the return value.  Excluded keys are returned as a slice of label
 // values.
-func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
+func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
@@ -297,9 +295,9 @@ func NewSetWithFiltered(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 // The result maintains a cache of encoded labels, by label.EncoderID.
 // This value should not be copied after its first use.
 //
-// The second `[]kv.KeyValue` return value is a list of labels that were
+// The second `[]KeyValue` return value is a list of labels that were
 // excluded by the Filter (if non-nil).
-func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter) (Set, []kv.KeyValue) {
+func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
@@ -339,8 +337,8 @@ func NewSetWithSortableFiltered(kvs []kv.KeyValue, tmp *Sortable, filter Filter)
 
 // filterSet reorders `kvs` so that included keys are contiguous at
 // the end of the slice, while excluded keys precede the included keys.
-func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
-	var excluded []kv.KeyValue
+func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
+	var excluded []KeyValue
 
 	// Move labels that do not match the filter so
 	// they're adjacent before calling computeDistinct().
@@ -365,7 +363,7 @@ func filterSet(kvs []kv.KeyValue, filter Filter) (Set, []kv.KeyValue) {
 
 // Filter returns a filtered copy of this `Set`.  See the
 // documentation for `NewSetWithSortableFiltered` for more details.
-func (l *Set) Filter(re Filter) (Set, []kv.KeyValue) {
+func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 	if re == nil {
 		return Set{
 			equivalent: l.equivalent,
@@ -380,7 +378,7 @@ func (l *Set) Filter(re Filter) (Set, []kv.KeyValue) {
 // computeDistinct returns a `Distinct` using either the fixed- or
 // reflect-oriented code path, depending on the size of the input.
 // The input slice is assumed to already be sorted and de-duplicated.
-func computeDistinct(kvs []kv.KeyValue) Distinct {
+func computeDistinct(kvs []KeyValue) Distinct {
 	iface := computeDistinctFixed(kvs)
 	if iface == nil {
 		iface = computeDistinctReflect(kvs)
@@ -392,46 +390,46 @@ func computeDistinct(kvs []kv.KeyValue) Distinct {
 
 // computeDistinctFixed computes a `Distinct` for small slices.  It
 // returns nil if the input is too large for this code path.
-func computeDistinctFixed(kvs []kv.KeyValue) interface{} {
+func computeDistinctFixed(kvs []KeyValue) interface{} {
 	switch len(kvs) {
 	case 1:
-		ptr := new([1]kv.KeyValue)
+		ptr := new([1]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 2:
-		ptr := new([2]kv.KeyValue)
+		ptr := new([2]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 3:
-		ptr := new([3]kv.KeyValue)
+		ptr := new([3]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 4:
-		ptr := new([4]kv.KeyValue)
+		ptr := new([4]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 5:
-		ptr := new([5]kv.KeyValue)
+		ptr := new([5]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 6:
-		ptr := new([6]kv.KeyValue)
+		ptr := new([6]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 7:
-		ptr := new([7]kv.KeyValue)
+		ptr := new([7]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 8:
-		ptr := new([8]kv.KeyValue)
+		ptr := new([8]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 9:
-		ptr := new([9]kv.KeyValue)
+		ptr := new([9]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	case 10:
-		ptr := new([10]kv.KeyValue)
+		ptr := new([10]KeyValue)
 		copy((*ptr)[:], kvs)
 		return *ptr
 	default:
@@ -441,10 +439,10 @@ func computeDistinctFixed(kvs []kv.KeyValue) interface{} {
 
 // computeDistinctReflect computes a `Distinct` using reflection,
 // works for any size input.
-func computeDistinctReflect(kvs []kv.KeyValue) interface{} {
+func computeDistinctReflect(kvs []KeyValue) interface{} {
 	at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
 	for i, keyValue := range kvs {
-		*(at.Index(i).Addr().Interface().(*kv.KeyValue)) = keyValue
+		*(at.Index(i).Addr().Interface().(*KeyValue)) = keyValue
 	}
 	return at.Interface()
 }

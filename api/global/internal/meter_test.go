@@ -23,9 +23,9 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metrictest "go.opentelemetry.io/otel/internal/metric"
+	"go.opentelemetry.io/otel/label"
 )
 
 var Must = metric.Must
@@ -35,7 +35,7 @@ type measured struct {
 	Name                   string
 	InstrumentationName    string
 	InstrumentationVersion string
-	Labels                 map[kv.Key]kv.Value
+	Labels                 map[label.Key]label.Value
 	Number                 metric.Number
 }
 
@@ -55,10 +55,10 @@ func asStructs(batches []metrictest.Batch) []measured {
 	return r
 }
 
-func asMap(kvs ...kv.KeyValue) map[kv.Key]kv.Value {
-	m := map[kv.Key]kv.Value{}
-	for _, kv := range kvs {
-		m[kv.Key] = kv.Value
+func asMap(kvs ...label.KeyValue) map[label.Key]label.Value {
+	m := map[label.Key]label.Value{}
+	for _, label := range kvs {
+		m[label.Key] = label.Value
 	}
 	return m
 }
@@ -72,9 +72,9 @@ func TestDirect(t *testing.T) {
 	ctx := context.Background()
 	meter1 := global.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := global.Meter("test2")
-	labels1 := []kv.KeyValue{kv.String("A", "B")}
-	labels2 := []kv.KeyValue{kv.String("C", "D")}
-	labels3 := []kv.KeyValue{kv.String("E", "F")}
+	labels1 := []label.KeyValue{label.String("A", "B")}
+	labels2 := []label.KeyValue{label.String("C", "D")}
+	labels3 := []label.KeyValue{label.String("E", "F")}
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -171,7 +171,7 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := global.Meter("test")
-	labels1 := []kv.KeyValue{kv.String("A", "B")}
+	labels1 := []label.KeyValue{label.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -215,7 +215,7 @@ func TestUnbind(t *testing.T) {
 	internal.ResetForTest()
 
 	glob := global.Meter("test")
-	labels1 := []kv.KeyValue{kv.String("A", "B")}
+	labels1 := []label.KeyValue{label.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)

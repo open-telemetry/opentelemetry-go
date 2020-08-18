@@ -14,10 +14,6 @@
 
 package label
 
-import (
-	"go.opentelemetry.io/otel/api/kv"
-)
-
 // Iterator allows iterating over the set of labels in order,
 // sorted by key.
 type Iterator struct {
@@ -31,13 +27,13 @@ type Iterator struct {
 type MergeItererator struct {
 	one     oneIterator
 	two     oneIterator
-	current kv.KeyValue
+	current KeyValue
 }
 
 type oneIterator struct {
 	iter  Iterator
 	done  bool
-	label kv.KeyValue
+	label KeyValue
 }
 
 // Next moves the iterator to the next position. Returns false if there
@@ -47,21 +43,21 @@ func (i *Iterator) Next() bool {
 	return i.idx < i.Len()
 }
 
-// Label returns current kv.KeyValue. Must be called only after Next returns
+// Label returns current KeyValue. Must be called only after Next returns
 // true.
-func (i *Iterator) Label() kv.KeyValue {
+func (i *Iterator) Label() KeyValue {
 	kv, _ := i.storage.Get(i.idx)
 	return kv
 }
 
 // Attribute is a synonym for Label().
-func (i *Iterator) Attribute() kv.KeyValue {
+func (i *Iterator) Attribute() KeyValue {
 	return i.Label()
 }
 
 // IndexedLabel returns current index and label. Must be called only
 // after Next returns true.
-func (i *Iterator) IndexedLabel() (int, kv.KeyValue) {
+func (i *Iterator) IndexedLabel() (int, KeyValue) {
 	return i.idx, i.Label()
 }
 
@@ -73,13 +69,13 @@ func (i *Iterator) Len() int {
 // ToSlice is a convenience function that creates a slice of labels
 // from the passed iterator. The iterator is set up to start from the
 // beginning before creating the slice.
-func (i *Iterator) ToSlice() []kv.KeyValue {
+func (i *Iterator) ToSlice() []KeyValue {
 	l := i.Len()
 	if l == 0 {
 		return nil
 	}
 	i.idx = -1
-	slice := make([]kv.KeyValue, 0, l)
+	slice := make([]KeyValue, 0, l)
 	for i.Next() {
 		slice = append(slice, i.Label())
 	}
@@ -142,6 +138,6 @@ func (m *MergeItererator) Next() bool {
 }
 
 // Label returns the current value after Next() returns true.
-func (m *MergeItererator) Label() kv.KeyValue {
+func (m *MergeItererator) Label() KeyValue {
 	return m.current
 }

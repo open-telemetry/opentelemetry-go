@@ -19,8 +19,8 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Temporary header name until W3C finalizes format.
@@ -45,7 +45,7 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	correlationCtx := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv kv.KeyValue) bool {
+	correlationCtx.Foreach(func(kv label.KeyValue) bool {
 		if !firstIter {
 			headerValueBuilder.WriteRune(',')
 		}
@@ -69,7 +69,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 	}
 
 	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]kv.KeyValue, 0, len(contextValues))
+	keyValues := make([]label.KeyValue, 0, len(contextValues))
 	for _, contextValue := range contextValues {
 		valueAndProps := strings.Split(contextValue, ";")
 		if len(valueAndProps) < 1 {
@@ -99,7 +99,7 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 			trimmedValueWithProps.WriteString(prop)
 		}
 
-		keyValues = append(keyValues, kv.Key(trimmedName).String(trimmedValueWithProps.String()))
+		keyValues = append(keyValues, label.String(trimmedName, trimmedValueWithProps.String()))
 	}
 
 	if len(keyValues) > 0 {

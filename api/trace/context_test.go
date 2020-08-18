@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
@@ -93,7 +93,7 @@ func (mockSpan) SetError(v bool) {
 }
 
 // SetAttributes does nothing.
-func (mockSpan) SetAttributes(attributes ...kv.KeyValue) {
+func (mockSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // SetAttribute does nothing.
@@ -114,9 +114,9 @@ func (mockSpan) Tracer() trace.Tracer {
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }

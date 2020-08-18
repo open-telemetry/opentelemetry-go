@@ -19,10 +19,10 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 )
 
 const (
@@ -44,7 +44,7 @@ var (
 	loopCounter = metric.Must(meter).NewInt64Counter("function.loops")
 	paramValue  = metric.Must(meter).NewInt64ValueRecorder("function.param")
 
-	nameKey = kv.Key("function.name")
+	nameKey = label.Key("function.name")
 )
 
 func add(ctx context.Context, x, y int64) int64 {
