@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Integration tests for more OTel Collector Attribute types. (#1062)
+
 ### Changed
 
 - Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`
