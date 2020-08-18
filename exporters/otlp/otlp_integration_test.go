@@ -455,14 +455,14 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	assert.NoError(t, err)
 
 	tr := tp.Tracer("test-tracer")
-	testKvs := []kv.KeyValue{
-		kv.Int("Int", 1),
-		kv.Int32("Int32", int32(2)),
-		kv.Int64("Int64", int64(3)),
-		kv.Float32("Float32", float32(1.11)),
-		kv.Float64("Float64", 2.22),
-		kv.Bool("Bool", true),
-		kv.String("String", "test"),
+	testKvs := []label.KeyValue{
+		label.Int("Int", 1),
+		label.Int32("Int32", int32(2)),
+		label.Int64("Int64", int64(3)),
+		label.Float32("Float32", float32(1.11)),
+		label.Float64("Float64", 2.22),
+		label.Bool("Bool", true),
+		label.String("String", "test"),
 	}
 	_, span := tr.Start(context.Background(), "AlwaysSample")
 	span.SetAttributes(testKvs...)
