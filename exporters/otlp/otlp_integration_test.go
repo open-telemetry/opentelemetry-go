@@ -162,13 +162,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		case metric.ValueObserverKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				callback := func(v int64) metricapi.Int64ObserverCallback {
-					return metricapi.Int64ObserverCallback(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
+				callback := func(v int64) metricapi.Int64ObserverFunc {
+					return metricapi.Int64ObserverFunc(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
 				}(data.val)
 				metricapi.Must(meter).NewInt64ValueObserver(name, callback)
 			case metricapi.Float64NumberKind:
-				callback := func(v float64) metricapi.Float64ObserverCallback {
-					return metricapi.Float64ObserverCallback(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
+				callback := func(v float64) metricapi.Float64ObserverFunc {
+					return metricapi.Float64ObserverFunc(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
 				metricapi.Must(meter).NewFloat64ValueObserver(name, callback)
 			default:
