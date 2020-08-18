@@ -449,7 +449,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithBatchTimeout(15),
+			sdktrace.WithBatchTimeout(15*time.Millisecond),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	assert.NoError(t, err)
