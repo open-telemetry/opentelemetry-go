@@ -24,7 +24,7 @@ import (
 )
 
 func TestExportKindIdentity(t *testing.T) {
-	akind := aggregation.Kind(0)
+	akind := aggregation.Kind("Noop")
 
 	require.Equal(t, CumulativeExporter, CumulativeExporter.ExportKindFor(nil, akind))
 	require.Equal(t, DeltaExporter, DeltaExporter.ExportKindFor(nil, akind))
