@@ -21,14 +21,14 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 const (
-	errorTypeKey    = kv.Key("error.type")
-	errorMessageKey = kv.Key("error.message")
+	errorTypeKey    = label.Key("error.type")
+	errorMessageKey = label.Key("error.message")
 	errorEventName  = "error"
 )
 
@@ -45,9 +45,9 @@ type Span struct {
 	endTime       time.Time
 	statusCode    codes.Code
 	statusMessage string
-	attributes    map[kv.Key]kv.Value
+	attributes    map[label.Key]label.Value
 	events        []Event
-	links         map[trace.SpanContext][]kv.KeyValue
+	links         map[trace.SpanContext][]label.KeyValue
 	spanKind      trace.SpanKind
 }
 
@@ -110,11 +110,11 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 	)
 }
 
-func (s *Span) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (s *Span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -122,7 +122,7 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, n
 		return
 	}
 
-	attributes := make(map[kv.Key]kv.Value)
+	attributes := make(map[label.Key]label.Value)
 
 	for _, attr := range attrs {
 		attributes[attr.Key] = attr.Value
@@ -166,7 +166,7 @@ func (s *Span) SetName(name string) {
 	s.name = name
 }
 
-func (s *Span) SetAttributes(attrs ...kv.KeyValue) {
+func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -180,7 +180,7 @@ func (s *Span) SetAttributes(attrs ...kv.KeyValue) {
 }
 
 func (s *Span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(kv.Any(k, v))
+	s.SetAttributes(label.Any(k, v))
 }
 
 // Name returns the name most recently set on the Span, either at or after creation time.
@@ -199,11 +199,11 @@ func (s *Span) ParentSpanID() trace.SpanID {
 // Attributes returns the attributes set on the Span, either at or after creation time.
 // If the same attribute key was set multiple times, the last call will be used.
 // Attributes cannot be changed after End has been called on the Span.
-func (s *Span) Attributes() map[kv.Key]kv.Value {
+func (s *Span) Attributes() map[label.Key]label.Value {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	attributes := make(map[kv.Key]kv.Value)
+	attributes := make(map[label.Key]label.Value)
 
 	for k, v := range s.attributes {
 		attributes[k] = v
@@ -220,11 +220,11 @@ func (s *Span) Events() []Event {
 
 // Links returns the links set on the Span at creation time.
 // If multiple links for the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[trace.SpanContext][]kv.KeyValue {
-	links := make(map[trace.SpanContext][]kv.KeyValue)
+func (s *Span) Links() map[trace.SpanContext][]label.KeyValue {
+	links := make(map[trace.SpanContext][]label.KeyValue)
 
 	for sc, attributes := range s.links {
-		links[sc] = append([]kv.KeyValue{}, attributes...)
+		links[sc] = append([]label.KeyValue{}, attributes...)
 	}
 
 	return links

@@ -17,15 +17,14 @@ package push
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv"
-
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestWithResource(t *testing.T) {
-	r := resource.New(kv.String("A", "a"))
+	r := resource.New(label.String("A", "a"))
 
 	c := &Config{}
 	WithResource(r).Apply(c)

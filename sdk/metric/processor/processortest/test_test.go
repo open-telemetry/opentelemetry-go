@@ -20,9 +20,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -34,7 +33,7 @@ func generateTestData(proc export.Processor) {
 	accum := metricsdk.NewAccumulator(
 		proc,
 		metricsdk.WithResource(
-			resource.New(kv.String("R", "V")),
+			resource.New(label.String("R", "V")),
 		),
 	)
 	meter := metric.WrapMeterImpl(accum, "testing")
@@ -43,13 +42,13 @@ func generateTestData(proc export.Processor) {
 
 	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, kv.String("K1", "V1"))
-			result.Observe(11, kv.String("K1", "V2"))
+			result.Observe(10, label.String("K1", "V1"))
+			result.Observe(11, label.String("K1", "V2"))
 		},
 	)
 
-	counter.Add(ctx, 100, kv.String("K1", "V1"))
-	counter.Add(ctx, 101, kv.String("K1", "V2"))
+	counter.Add(ctx, 100, label.String("K1", "V1"))
+	counter.Add(ctx, 101, label.String("K1", "V2"))
 
 	accum.Collect(ctx)
 }

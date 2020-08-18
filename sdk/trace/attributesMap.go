@@ -17,7 +17,7 @@ package trace
 import (
 	"container/list"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -26,9 +26,9 @@ import (
 // Updates are allowed and refreshes the usage of the key.
 //
 // This is based from https://github.com/hashicorp/golang-lru/blob/master/simplelru/lru.go
-// With a subset of the its operations and specific for holding kv.KeyValue
+// With a subset of the its operations and specific for holding label.KeyValue
 type attributesMap struct {
-	attributes   map[kv.Key]*list.Element
+	attributes   map[label.Key]*list.Element
 	evictList    *list.List
 	droppedCount int
 	capacity     int
@@ -36,14 +36,14 @@ type attributesMap struct {
 
 func newAttributesMap(capacity int) *attributesMap {
 	lm := &attributesMap{
-		attributes: make(map[kv.Key]*list.Element),
+		attributes: make(map[label.Key]*list.Element),
 		evictList:  list.New(),
 		capacity:   capacity,
 	}
 	return lm
 }
 
-func (am *attributesMap) add(kv kv.KeyValue) {
+func (am *attributesMap) add(kv label.KeyValue) {
 	// Check for existing item
 	if ent, ok := am.attributes[kv.Key]; ok {
 		am.evictList.MoveToFront(ent)
@@ -68,9 +68,9 @@ func (am *attributesMap) toSpanData(sd *trace.SpanData) {
 		return
 	}
 
-	attributes := make([]kv.KeyValue, 0, len)
+	attributes := make([]label.KeyValue, 0, len)
 	for ent := am.evictList.Back(); ent != nil; ent = ent.Prev() {
-		if value, ok := ent.Value.(*kv.KeyValue); ok {
+		if value, ok := ent.Value.(*label.KeyValue); ok {
 			attributes = append(attributes, *value)
 		}
 	}
@@ -84,7 +84,7 @@ func (am *attributesMap) removeOldest() {
 	ent := am.evictList.Back()
 	if ent != nil {
 		am.evictList.Remove(ent)
-		kv := ent.Value.(*kv.KeyValue)
+		kv := ent.Value.(*label.KeyValue)
 		delete(am.attributes, kv.Key)
 	}
 }

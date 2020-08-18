@@ -23,8 +23,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
@@ -32,54 +32,54 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name    string
 		header  string
-		wantKVs []kv.KeyValue
+		wantKVs []label.KeyValue
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "key1=val1,key2=val2",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with spaces",
 			header: "key1 =   val1,  key2 =val2   ",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:   "valid w3cHeader with properties",
 			header: "key1=val1,key2=val2;prop=1",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2;prop=1"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2;prop=1"),
 			},
 		},
 		{
 			name:   "valid header with url-escaped comma",
 			header: "key1=val1,key2=val2%2Cval3",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2,val3"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2,val3"),
 			},
 		},
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:   "valid header with no value",
 			header: "key1=,key2=val2",
-			wantKVs: []kv.KeyValue{
-				kv.Key("key1").String(""),
-				kv.Key("key2").String("val2"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", ""),
+				label.String("key2", "val2"),
 			},
 		},
 	}
@@ -101,9 +101,9 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
+			wantCorCtx.Foreach(func(keyValue label.KeyValue) bool {
 				val, _ := gotCorCtx.Value(keyValue.Key)
-				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(kv.Value{}))
+				diff := cmp.Diff(keyValue, label.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(label.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -121,7 +121,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
-		hasKVs []kv.KeyValue
+		hasKVs []label.KeyValue
 	}{
 		{
 			name:   "no key values",
@@ -130,17 +130,17 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "invalid header with existing context",
 			header: "header2",
-			hasKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			hasKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:   "empty header value",
 			header: "",
-			hasKVs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			hasKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 		},
 	}
@@ -162,9 +162,9 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(keyValue kv.KeyValue) bool {
+			wantCorCtx.Foreach(func(keyValue label.KeyValue) bool {
 				val, _ := gotCorCtx.Value(keyValue.Key)
-				diff := cmp.Diff(keyValue, kv.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(kv.Value{}))
+				diff := cmp.Diff(keyValue, label.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(label.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
 				}
@@ -179,38 +179,38 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
-		kvs          []kv.KeyValue
+		kvs          []label.KeyValue
 		wantInHeader []string
 		wantedLen    int
 	}{
 		{
 			name: "two simple values",
-			kvs: []kv.KeyValue{
-				kv.Key("key1").String("val1"),
-				kv.Key("key2").String("val2"),
+			kvs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key2", "val2"),
 			},
 			wantInHeader: []string{"key1=val1", "key2=val2"},
 		},
 		{
 			name: "two values with escaped chars",
-			kvs: []kv.KeyValue{
-				kv.Key("key1").String("val1,val2"),
-				kv.Key("key2").String("val3=4"),
+			kvs: []label.KeyValue{
+				label.String("key1", "val1,val2"),
+				label.String("key2", "val3=4"),
 			},
 			wantInHeader: []string{"key1=val1%2Cval2", "key2=val3%3D4"},
 		},
 		{
 			name: "values of non-string types",
-			kvs: []kv.KeyValue{
-				kv.Key("key1").Bool(true),
-				kv.Key("key2").Int(123),
-				kv.Key("key3").Int64(123),
-				kv.Key("key4").Int32(123),
-				kv.Key("key5").Uint(123),
-				kv.Key("key6").Uint32(123),
-				kv.Key("key7").Uint64(123),
-				kv.Key("key8").Float64(123.567),
-				kv.Key("key9").Float32(123.567),
+			kvs: []label.KeyValue{
+				label.Bool("key1", true),
+				label.Int("key2", 123),
+				label.Int64("key3", 123),
+				label.Int32("key4", 123),
+				label.Uint("key5", 123),
+				label.Uint32("key6", 123),
+				label.Uint64("key7", 123),
+				label.Float64("key8", 123.567),
+				label.Float32("key9", 123.567),
 			},
 			wantInHeader: []string{
 				"key1=true",

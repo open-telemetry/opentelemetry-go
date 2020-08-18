@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kv_test
+package label_test
 
 import (
 	"strings"
@@ -20,100 +20,100 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
 	tt := []struct {
 		name     string
-		actual   kv.KeyValue
-		expected kv.KeyValue
+		actual   label.KeyValue
+		expected label.KeyValue
 	}{
 		{
 			name:   "Bool",
-			actual: kv.Bool("k1", true),
-			expected: kv.KeyValue{
+			actual: label.Bool("k1", true),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.BoolValue(true),
+				Value: label.BoolValue(true),
 			},
 		},
 		{
 			name:   "Int64",
-			actual: kv.Int64("k1", 123),
-			expected: kv.KeyValue{
+			actual: label.Int64("k1", 123),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Int64Value(123),
+				Value: label.Int64Value(123),
 			},
 		},
 		{
 			name:   "Uint64",
-			actual: kv.Uint64("k1", 1),
-			expected: kv.KeyValue{
+			actual: label.Uint64("k1", 1),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Uint64Value(1),
+				Value: label.Uint64Value(1),
 			},
 		},
 		{
 			name:   "Float64",
-			actual: kv.Float64("k1", 123.5),
-			expected: kv.KeyValue{
+			actual: label.Float64("k1", 123.5),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Float64Value(123.5),
+				Value: label.Float64Value(123.5),
 			},
 		},
 		{
 			name:   "Int32",
-			actual: kv.Int32("k1", 123),
-			expected: kv.KeyValue{
+			actual: label.Int32("k1", 123),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Int32Value(123),
+				Value: label.Int32Value(123),
 			},
 		},
 		{
 			name:   "Uint32",
-			actual: kv.Uint32("k1", 123),
-			expected: kv.KeyValue{
+			actual: label.Uint32("k1", 123),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Uint32Value(123),
+				Value: label.Uint32Value(123),
 			},
 		},
 		{
 			name:   "Float32",
-			actual: kv.Float32("k1", 123.5),
-			expected: kv.KeyValue{
+			actual: label.Float32("k1", 123.5),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.Float32Value(123.5),
+				Value: label.Float32Value(123.5),
 			},
 		},
 		{
 			name:   "String",
-			actual: kv.String("k1", "123.5"),
-			expected: kv.KeyValue{
+			actual: label.String("k1", "123.5"),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.StringValue("123.5"),
+				Value: label.StringValue("123.5"),
 			},
 		},
 		{
 			name:   "Int",
-			actual: kv.Int("k1", 123),
-			expected: kv.KeyValue{
+			actual: label.Int("k1", 123),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.IntValue(123),
+				Value: label.IntValue(123),
 			},
 		},
 		{
 			name:   "Uint",
-			actual: kv.Uint("k1", 123),
-			expected: kv.KeyValue{
+			actual: label.Uint("k1", 123),
+			expected: label.KeyValue{
 				Key:   "k1",
-				Value: kv.UintValue(123),
+				Value: label.UintValue(123),
 			},
 		},
 	}
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(kv.Value{})); diff != "" {
+			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(label.Value{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -137,84 +137,84 @@ func TestAny(t *testing.T) {
 	for _, testcase := range []struct {
 		key       string
 		value     interface{}
-		wantType  kv.Type
+		wantType  label.Type
 		wantValue interface{}
 	}{
 		{
 			key:       "bool type inferred",
 			value:     true,
-			wantType:  kv.BOOL,
+			wantType:  label.BOOL,
 			wantValue: true,
 		},
 		{
 			key:       "int64 type inferred",
 			value:     int64(42),
-			wantType:  kv.INT64,
+			wantType:  label.INT64,
 			wantValue: int64(42),
 		},
 		{
 			key:       "uint64 type inferred",
 			value:     uint64(42),
-			wantType:  kv.UINT64,
+			wantType:  label.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			key:       "float64 type inferred",
 			value:     float64(42.1),
-			wantType:  kv.FLOAT64,
+			wantType:  label.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			key:       "int32 type inferred",
 			value:     int32(42),
-			wantType:  kv.INT32,
+			wantType:  label.INT32,
 			wantValue: int32(42),
 		},
 		{
 			key:       "uint32 type inferred",
 			value:     uint32(42),
-			wantType:  kv.UINT32,
+			wantType:  label.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			key:       "float32 type inferred",
 			value:     float32(42.1),
-			wantType:  kv.FLOAT32,
+			wantType:  label.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			key:       "string type inferred",
 			value:     "foo",
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "stringer type inferred",
 			value:     builder,
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "unknown value serialized as %v",
 			value:     nil,
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: "<nil>",
 		},
 		{
 			key:       "JSON struct serialized correctly",
 			value:     &jsonifyStruct,
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: `{"Public":"foo","tagName":"baz","Empty":""}`,
 		},
 		{
 			key:       "Invalid JSON struct falls back to string",
 			value:     &invalidStruct,
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: "&{(0+0i)}",
 		},
 	} {
 		t.Logf("Running test case %s", testcase.key)
-		keyValue := kv.Any(testcase.key, testcase.value)
+		keyValue := label.Any(testcase.key, testcase.value)
 		if keyValue.Value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", keyValue.Value.Type(), testcase.wantType)
 		}

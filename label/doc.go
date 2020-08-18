@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package kv provides basic key and value types.
-package kv // import "go.opentelemetry.io/otel/api/kv"
+// Package label provides key and value labels.
+package label // import "go.opentelemetry.io/otel/label"

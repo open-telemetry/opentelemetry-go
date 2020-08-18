@@ -18,20 +18,19 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/kv"
-
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var (
-	fooKey     = kv.Key("ex.com/foo")
-	barKey     = kv.Key("ex.com/bar")
-	anotherKey = kv.Key("ex.com/another")
+	fooKey     = label.Key("ex.com/foo")
+	barKey     = label.Key("ex.com/bar")
+	anotherKey = label.Key("ex.com/another")
 )
 
 var tp *sdktrace.Provider
@@ -68,7 +67,7 @@ func main() {
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
-	span.AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
+	span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
 	span.SetAttributes(anotherKey.String("yes"))
 	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)

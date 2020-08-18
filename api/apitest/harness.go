@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
+	"go.opentelemetry.io/otel/label"
 )
 
 type Harness struct {
@@ -195,7 +195,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.SetName("new name")
 		},
 		"#SetAttributes": func(span trace.Span) {
-			span.SetAttributes(kv.String("key1", "value"), kv.Int("key2", 123))
+			span.SetAttributes(label.String("key1", "value"), label.Int("key2", 123))
 		},
 	}
 	var mechanisms = map[string]func() trace.Span{

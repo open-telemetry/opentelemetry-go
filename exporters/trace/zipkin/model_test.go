@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -40,16 +40,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -73,16 +73,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -105,16 +105,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -137,16 +137,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -169,16 +169,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -201,16 +201,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -233,16 +233,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
@@ -265,9 +265,9 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.Uint64("attr1", 42),
-				kv.String("attr2", "bar"),
+			Attributes: []label.KeyValue{
+				label.Uint64("attr1", 42),
+				label.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
 			StatusCode:    codes.NotFound,
@@ -284,15 +284,15 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []kv.KeyValue{
-				kv.String("error", "false"),
+			Attributes: []label.KeyValue{
+				label.String("error", "false"),
 			},
 			MessageEvents: []export.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []kv.KeyValue{
-						kv.Uint64("eventattr1", 123),
+					Attributes: []label.KeyValue{
+						label.Uint64("eventattr1", 123),
 					},
 				},
 				{
