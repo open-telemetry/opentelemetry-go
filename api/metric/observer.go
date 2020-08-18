@@ -57,7 +57,7 @@ type Float64UpDownSumObserver struct {
 	asyncInstrument
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
@@ -68,7 +68,7 @@ func (i Int64ValueObserver) Observation(v int64) Observation {
 	}
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
@@ -79,7 +79,7 @@ func (f Float64ValueObserver) Observation(v float64) Observation {
 	}
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
@@ -90,7 +90,7 @@ func (i Int64SumObserver) Observation(v int64) Observation {
 	}
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
@@ -101,7 +101,7 @@ func (f Float64SumObserver) Observation(v float64) Observation {
 	}
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
@@ -112,7 +112,7 @@ func (i Int64UpDownSumObserver) Observation(v int64) Observation {
 	}
 }
 
-// Observation returns an Observation, a BatchObserverCallback
+// Observation returns an Observation, a BatchObserverFunc
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.

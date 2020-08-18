@@ -28,9 +28,8 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
@@ -98,15 +97,15 @@ type record struct {
 	nKind    metric.NumberKind
 	resource *resource.Resource
 	opts     []metric.InstrumentOption
-	labels   []kv.KeyValue
+	labels   []label.KeyValue
 }
 
 var (
-	baseKeyValues = []kv.KeyValue{kv.String("host", "test.com")}
-	cpuKey        = kv.Key("CPU")
+	baseKeyValues = []label.KeyValue{label.String("host", "test.com")}
+	cpuKey        = label.Key("CPU")
 
-	testInstA = resource.New(kv.String("instance", "tester-a"))
-	testInstB = resource.New(kv.String("instance", "tester-b"))
+	testInstA = resource.New(label.String("instance", "tester-a"))
+	testInstB = resource.New(label.String("instance", "tester-b"))
 
 	md = &metricpb.MetricDescriptor{
 		Name: "int64-count",

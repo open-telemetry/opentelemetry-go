@@ -27,8 +27,8 @@ import (
 
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
+	"go.opentelemetry.io/otel/label"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -91,15 +91,15 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 	tp1, err := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
-			kv.String("rk1", "rv11)"),
-			kv.Int64("rk2", 5),
+			label.String("rk1", "rv11)"),
+			label.Int64("rk2", 5),
 		)))...)
 	assert.NoError(t, err)
 
 	tp2, err := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
-			kv.String("rk1", "rv12)"),
-			kv.Float32("rk3", 6.5),
+			label.String("rk1", "rv12)"),
+			label.Float32("rk3", 6.5),
 		)))...)
 	assert.NoError(t, err)
 
@@ -109,11 +109,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	m := 4
 	for i := 0; i < m; i++ {
 		_, span := tr1.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(kv.Int64("i", int64(i)))
+		span.SetAttributes(label.Int64("i", int64(i)))
 		span.End()
 
 		_, span = tr2.Start(context.Background(), "AlwaysSample")
-		span.SetAttributes(kv.Int64("i", int64(i)))
+		span.SetAttributes(label.Int64("i", int64(i)))
 		span.End()
 	}
 
@@ -124,7 +124,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	ctx := context.Background()
 	meter := pusher.Provider().Meter("test-meter")
-	labels := []kv.KeyValue{kv.Bool("test", true)}
+	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
 		iKind metric.Kind
@@ -162,13 +162,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		case metric.ValueObserverKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				callback := func(v int64) metricapi.Int64ObserverCallback {
-					return metricapi.Int64ObserverCallback(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
+				callback := func(v int64) metricapi.Int64ObserverFunc {
+					return metricapi.Int64ObserverFunc(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
 				}(data.val)
 				metricapi.Must(meter).NewInt64ValueObserver(name, callback)
 			case metricapi.Float64NumberKind:
-				callback := func(v float64) metricapi.Float64ObserverCallback {
-					return metricapi.Float64ObserverCallback(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
+				callback := func(v float64) metricapi.Float64ObserverFunc {
+					return metricapi.Float64ObserverFunc(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
 				metricapi.Must(meter).NewFloat64ValueObserver(name, callback)
 			default:

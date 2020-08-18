@@ -22,11 +22,10 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	api "go.opentelemetry.io/otel/api/metric"
 	internal "go.opentelemetry.io/otel/internal/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -214,7 +213,7 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set) *record {
 	var rec *record
 	var equiv label.Distinct
 
@@ -287,11 +286,11 @@ func (s *syncInstrument) acquireHandle(kvs []kv.KeyValue, labelPtr *label.Set) *
 	}
 }
 
-func (s *syncInstrument) Bind(kvs []kv.KeyValue) api.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []kv.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
@@ -406,7 +405,7 @@ func (m *Accumulator) collectSyncInstruments() int {
 }
 
 // CollectAsync implements internal.AsyncCollector.
-func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) {
+func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...metric.Observation) {
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
@@ -483,7 +482,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []kv.KeyValue, measurements ...api.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...api.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the

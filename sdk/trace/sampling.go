@@ -18,8 +18,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"go.opentelemetry.io/otel/api/kv"
 	api "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Sampler decides whether a trace should be sampled and exported.
@@ -35,7 +35,7 @@ type SamplingParameters struct {
 	Name            string
 	HasRemoteParent bool
 	Kind            api.SpanKind
-	Attributes      []kv.KeyValue
+	Attributes      []label.KeyValue
 	Links           []api.Link
 }
 
@@ -52,7 +52,7 @@ const (
 // SamplingResult conveys a SamplingDecision and a set of Attributes.
 type SamplingResult struct {
 	Decision   SamplingDecision
-	Attributes []kv.KeyValue
+	Attributes []label.KeyValue
 }
 
 type probabilitySampler struct {

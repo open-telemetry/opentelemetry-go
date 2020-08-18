@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Float64UpDownCounter is a metric instrument that sums floating
@@ -47,14 +47,14 @@ type BoundInt64UpDownCounter struct {
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Float64UpDownCounter) Bind(labels ...kv.KeyValue) (h BoundFloat64UpDownCounter) {
+func (c Float64UpDownCounter) Bind(labels ...label.KeyValue) (h BoundFloat64UpDownCounter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Int64UpDownCounter) Bind(labels ...kv.KeyValue) (h BoundInt64UpDownCounter) {
+func (c Int64UpDownCounter) Bind(labels ...label.KeyValue) (h BoundInt64UpDownCounter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
@@ -73,13 +73,13 @@ func (c Int64UpDownCounter) Measurement(value int64) Measurement {
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...kv.KeyValue) {
+func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Int64UpDownCounter) Add(ctx context.Context, value int64, labels ...kv.KeyValue) {
+func (c Int64UpDownCounter) Add(ctx context.Context, value int64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 

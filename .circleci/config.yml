@@ -3,11 +3,11 @@ executors:
   current-go:
     resource_class: large
     docker:
-      - image: cimg/go:1.14
+      - image: cimg/go:1.15
   prior-go:
     resource_class: large
     docker:
-      - image: cimg/go:1.13
+      - image: cimg/go:1.14
 
 build-template: &build-template
   environment:

@@ -18,23 +18,23 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/label"
 )
 
 type (
 	Handle struct {
 		Instrument *Sync
-		Labels     []kv.KeyValue
+		Labels     []label.KeyValue
 	}
 
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context
-		Labels       []kv.KeyValue
+		Labels       []label.KeyValue
 		LibraryName  string
 	}
 
@@ -87,14 +87,14 @@ func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Sync) Bind(labels []kv.KeyValue) apimetric.BoundSyncImpl {
+func (s *Sync) Bind(labels []label.KeyValue) apimetric.BoundSyncImpl {
 	return &Handle{
 		Instrument: s,
 		Labels:     labels,
 	}
 }
 
-func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []kv.KeyValue) {
+func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []label.KeyValue) {
 	s.meter.doRecordSingle(ctx, labels, s, number)
 }
 
@@ -105,7 +105,7 @@ func (h *Handle) RecordOne(ctx context.Context, number apimetric.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []kv.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
 	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
@@ -151,7 +151,7 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metr
 	return a, nil
 }
 
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, measurements ...apimetric.Measurement) {
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...apimetric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -163,7 +163,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, measu
 	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) CollectAsync(labels []kv.KeyValue, obs ...metric.Observation) {
+func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]
@@ -175,7 +175,7 @@ func (m *MeterImpl) CollectAsync(labels []kv.KeyValue, obs ...metric.Observation
 	m.collect(context.Background(), labels, mm)
 }
 
-func (m *MeterImpl) collect(ctx context.Context, labels []kv.KeyValue, measurements []Measurement) {
+func (m *MeterImpl) collect(ctx context.Context, labels []label.KeyValue, measurements []Measurement) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

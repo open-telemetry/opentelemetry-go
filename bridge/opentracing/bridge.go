@@ -27,11 +27,11 @@ import (
 
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelcore "go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
+	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -58,19 +58,19 @@ func newBridgeSpanContext(otelSpanContext oteltrace.SpanContext, parentOtSpanCon
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	c.baggageItems.Foreach(func(kv otelcore.KeyValue) bool {
+	c.baggageItems.Foreach(func(kv label.KeyValue) bool {
 		return handler(string(kv.Key), kv.Value.Emit())
 	})
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: otelcore.Key(crk).String(value)})
+	c.baggageItems = c.baggageItems.Apply(otelcorrelation.MapUpdate{SingleKV: label.String(crk, value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	val, _ := c.baggageItems.Value(otelcore.Key(crk))
+	val, _ := c.baggageItems.Value(label.Key(crk))
 	return val.Emit()
 }
 
@@ -114,7 +114,7 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {
-	s.otelSpan.AddEventWithTimestamp(context.Background(), record.Timestamp, "", otLogFieldsToOtelCoreKeyValues(record.Fields)...)
+	s.otelSpan.AddEventWithTimestamp(context.Background(), record.Timestamp, "", otLogFieldsToOTelLabels(record.Fields)...)
 }
 
 func (s *bridgeSpan) Context() ot.SpanContext {
@@ -135,17 +135,17 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			s.otelSpan.SetStatus(codes.Unknown, "")
 		}
 	default:
-		s.otelSpan.SetAttributes(otTagToOtelCoreKeyValue(key, value))
+		s.otelSpan.SetAttributes(otTagToOTelLabel(key, value))
 	}
 	return s
 }
 
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
-	s.otelSpan.AddEvent(context.Background(), "", otLogFieldsToOtelCoreKeyValues(fields)...)
+	s.otelSpan.AddEvent(context.Background(), "", otLogFieldsToOTelLabels(fields)...)
 }
 
 type bridgeFieldEncoder struct {
-	pairs []otelcore.KeyValue
+	pairs []label.KeyValue
 }
 
 var _ otlog.Encoder = &bridgeFieldEncoder{}
@@ -195,10 +195,10 @@ func (e *bridgeFieldEncoder) EmitLazyLogger(value otlog.LazyLogger) {
 }
 
 func (e *bridgeFieldEncoder) emitCommon(key string, value interface{}) {
-	e.pairs = append(e.pairs, otTagToOtelCoreKeyValue(key, value))
+	e.pairs = append(e.pairs, otTagToOTelLabel(key, value))
 }
 
-func otLogFieldsToOtelCoreKeyValues(fields []otlog.Field) []otelcore.KeyValue {
+func otLogFieldsToOTelLabels(fields []otlog.Field) []label.KeyValue {
 	encoder := &bridgeFieldEncoder{}
 	for _, field := range fields {
 		field.Marshal(encoder)
@@ -215,7 +215,7 @@ func (s *bridgeSpan) LogKV(alternatingKeyValues ...interface{}) {
 }
 
 func (s *bridgeSpan) SetBaggageItem(restrictedKey, value string) ot.Span {
-	s.updateOtelContext(restrictedKey, value)
+	s.updateOTelContext(restrictedKey, value)
 	s.setBaggageItemOnly(restrictedKey, value)
 	return s
 }
@@ -224,7 +224,7 @@ func (s *bridgeSpan) setBaggageItemOnly(restrictedKey, value string) {
 	s.ctx.setBaggageItem(restrictedKey, value)
 }
 
-func (s *bridgeSpan) updateOtelContext(restrictedKey, value string) {
+func (s *bridgeSpan) updateOTelContext(restrictedKey, value string) {
 	if s.extraBaggageItems == nil {
 		s.extraBaggageItems = make(map[string]string)
 	}
@@ -347,7 +347,7 @@ func (t *BridgeTracer) correlationSetHook(ctx context.Context) context.Context {
 	// context, so we don't care about the old hooks.
 	clearCtx, _, _ := otelcorrelation.ContextWithNoHooks(ctx)
 	m := otelcorrelation.MapFromContext(clearCtx)
-	m.Foreach(func(kv otelcore.KeyValue) bool {
+	m.Foreach(func(kv label.KeyValue) bool {
 		bSpan.setBaggageItemOnly(string(kv.Key), kv.Value.Emit())
 		return true
 	})
@@ -369,9 +369,9 @@ func (t *BridgeTracer) correlationGetHook(ctx context.Context, m otelcorrelation
 	if len(items) == 0 {
 		return m
 	}
-	kv := make([]otelcore.KeyValue, 0, len(items))
+	kv := make([]label.KeyValue, 0, len(items))
 	for k, v := range items {
-		kv = append(kv, otelcore.String(k, v))
+		kv = append(kv, label.String(k, v))
 	}
 	return m.Apply(otelcorrelation.MapUpdate{MultiKV: kv})
 }
@@ -384,7 +384,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		opt.Apply(&sso)
 	}
 	parentBridgeSC, links := otSpanReferencesToParentAndLinks(sso.References)
-	attributes, kind, hadTrueErrorTag := otTagsToOtelAttributesKindAndError(sso.Tags)
+	attributes, kind, hadTrueErrorTag := otTagsToOTelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
 	if parentBridgeSC != nil {
 		checkCtx = oteltrace.ContextWithRemoteSpanContext(checkCtx, parentBridgeSC.otelSpanContext)
@@ -457,10 +457,10 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore.KeyValue, oteltrace.SpanKind, bool) {
+func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.KeyValue, oteltrace.SpanKind, bool) {
 	kind := oteltrace.SpanKindInternal
 	err := false
-	var pairs []otelcore.KeyValue
+	var pairs []label.KeyValue
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
@@ -481,14 +481,14 @@ func otTagsToOtelAttributesKindAndError(tags map[string]interface{}) ([]otelcore
 				err = true
 			}
 		default:
-			pairs = append(pairs, otTagToOtelCoreKeyValue(k, v))
+			pairs = append(pairs, otTagToOTelLabel(k, v))
 		}
 	}
 	return pairs, kind, err
 }
 
-func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {
-	key := otTagToOtelCoreKey(k)
+func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
+	key := otTagToOTelLabelKey(k)
 	switch val := v.(type) {
 	case bool:
 		return key.Bool(val)
@@ -515,8 +515,8 @@ func otTagToOtelCoreKeyValue(k string, v interface{}) otelcore.KeyValue {
 	}
 }
 
-func otTagToOtelCoreKey(k string) otelcore.Key {
-	return otelcore.Key(k)
+func otTagToOTelLabelKey(k string) label.Key {
+	return label.Key(k)
 }
 
 func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpanContext, []oteltrace.Link) {
@@ -530,34 +530,34 @@ func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpa
 			// We ignore foreign ot span contexts,
 			// sorry. We have no way of getting any
 			// TraceID and SpanID out of it for form a
-			// otelcore.SpanContext for otelcore.Link. And
+			// OTel SpanContext for OTel Link. And
 			// we can't make it a parent - it also needs a
-			// valid otelcore.SpanContext.
+			// valid OTel SpanContext.
 			continue
 		}
 		if parent != nil {
-			links = append(links, otSpanReferenceToOtelLink(bridgeSC, reference.Type))
+			links = append(links, otSpanReferenceToOTelLink(bridgeSC, reference.Type))
 		} else {
 			if reference.Type == ot.ChildOfRef {
 				parent = bridgeSC
 			} else {
-				links = append(links, otSpanReferenceToOtelLink(bridgeSC, reference.Type))
+				links = append(links, otSpanReferenceToOTelLink(bridgeSC, reference.Type))
 			}
 		}
 	}
 	return parent, links
 }
 
-func otSpanReferenceToOtelLink(bridgeSC *bridgeSpanContext, refType ot.SpanReferenceType) oteltrace.Link {
+func otSpanReferenceToOTelLink(bridgeSC *bridgeSpanContext, refType ot.SpanReferenceType) oteltrace.Link {
 	return oteltrace.Link{
 		SpanContext: bridgeSC.otelSpanContext,
-		Attributes:  otSpanReferenceTypeToOtelLinkAttributes(refType),
+		Attributes:  otSpanReferenceTypeToOTelLinkAttributes(refType),
 	}
 }
 
-func otSpanReferenceTypeToOtelLinkAttributes(refType ot.SpanReferenceType) []otelcore.KeyValue {
-	return []otelcore.KeyValue{
-		otelcore.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
+func otSpanReferenceTypeToOTelLinkAttributes(refType ot.SpanReferenceType) []label.KeyValue {
+	return []label.KeyValue{
+		label.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
 	}
 }
 
