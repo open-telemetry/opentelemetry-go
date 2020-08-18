@@ -28,8 +28,6 @@ import (
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
-
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	metricapi "go.opentelemetry.io/otel/api/metric"
@@ -458,13 +456,13 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []kv.KeyValue{
-		kv.Int("k1", 1),
-		kv.Int32("k2", int32(1)),
-		kv.Int64("k3", int64(1)),
-		kv.Float32("k4", float32(1.11)),
-		kv.Float64("k5", 2.22),
-		kv.Bool("k6", true),
-		kv.String("k7", "test"),
+		kv.Int("Int", 1),
+		kv.Int32("Int32", int32(2)),
+		kv.Int64("Int64", int64(3)),
+		kv.Float32("Float32", float32(1.11)),
+		kv.Float64("Float64", 2.22),
+		kv.Bool("Bool", true),
+		kv.String("String", "test"),
 	}
 	_, span := tr.Start(context.Background(), "AlwaysSample")
 	span.SetAttributes(testKvs...)
@@ -496,17 +494,81 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		t.Fatalf("resource span count: got %d, want %d\n", got, want)
 	}
 
-	expecteds := transform.Attributes(testKvs)
-	got := map[string]*commonpb.KeyValue{}
-	for _, atts := range rss[0].Attributes {
-		got[atts.Key] = atts
+	expected := []*commonpb.KeyValue{
+		{
+			Key: "Int",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: 1,
+				},
+			},
+		},
+		{
+			Key: "Int32",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: 2,
+				},
+			},
+		},
+		{
+			Key: "Int64",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: 3,
+				},
+			},
+		},
+		{
+			Key: "Float32",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_DoubleValue{
+					DoubleValue: 1.11,
+				},
+			},
+		},
+		{
+			Key: "Float64",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_DoubleValue{
+					DoubleValue: 2.22,
+				},
+			},
+		},
+		{
+			Key: "Bool",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_BoolValue{
+					BoolValue: true,
+				},
+			},
+		},
+		{
+			Key: "String",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: "test",
+				},
+			},
+		},
 	}
 
 	// Verify attributes
-	if !assert.Len(t, got, len(expecteds)) {
-		t.Fatalf("attributes count: got %d, want %d\n", len(got), len(expecteds))
+	if !assert.Len(t, rss[0].Attributes, len(expected)) {
+		t.Fatalf("attributes count: got %d, want %d\n", len(rss[0].Attributes), len(expected))
 	}
-	for _, expected := range expecteds {
-		assert.Equal(t, expected, got[expected.Key])
+	for i, actual := range rss[0].Attributes {
+		if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
+			e, ok := expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+			if !ok {
+				t.Errorf("expected AnyValue_DoubleValue, got %T", expected[i].Value.Value)
+				continue
+			}
+			if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+				continue
+			}
+			e.DoubleValue = a.DoubleValue
+		}
+		assert.Equal(t, expected[i], actual)
 	}
 }
