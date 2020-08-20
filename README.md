@@ -59,7 +59,7 @@ func main() {
 See the [API
 documentation](https://pkg.go.dev/go.opentelemetry.io/otel) for more
 detail, and the
-[opentelemetry-example-app](./example/README.md)
+[opentelemetry-example-app](./example/)
 for a complete example.
 
 ## Compatible Exporters
