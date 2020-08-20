@@ -139,13 +139,15 @@ func (c *reconnectingUDPConn) Write(b []byte) (int, error) {
 	var err error
 
 	c.connMtx.RLock()
-	if c.conn == nil {
+	conn := c.conn
+	c.connMtx.RUnlock()
+
+	if conn == nil {
 		// if connection is not initialized indicate this with err in order to hook into retry logic
 		err = fmt.Errorf("UDP connection not yet initialized, an address has not been resolved")
 	} else {
-		bytesWritten, err = c.conn.Write(b)
+		bytesWritten, err = conn.Write(b)
 	}
-	c.connMtx.RUnlock()
 
 	if err == nil {
 		return bytesWritten, nil
@@ -154,8 +156,10 @@ func (c *reconnectingUDPConn) Write(b []byte) (int, error) {
 	// attempt to resolve and dial new address in case that's the problem, if resolve and dial succeeds, try write again
 	if reconnErr := c.attemptResolveAndDial(); reconnErr == nil {
 		c.connMtx.RLock()
-		defer c.connMtx.RUnlock()
-		return c.conn.Write(b)
+		conn := c.conn
+		c.connMtx.RUnlock()
+
+		return conn.Write(b)
 	}
 
 	// return original error if reconn fails
@@ -183,10 +187,12 @@ func (c *reconnectingUDPConn) SetWriteBuffer(bytes int) error {
 	var err error
 
 	c.connMtx.RLock()
-	if c.conn != nil {
+	conn := c.conn
+	c.connMtx.RUnlock()
+
+	if conn != nil {
 		err = c.conn.SetWriteBuffer(bytes)
 	}
-	c.connMtx.RUnlock()
 
 	if err == nil {
 		atomic.StoreInt64(&c.bufferBytes, int64(bytes))

@@ -61,10 +61,6 @@ func newUDPListener() (net.PacketConn, error) {
 	return net.ListenPacket("udp", "127.0.0.1:0")
 }
 
-func newUDPListenerOnPort(port int) (net.PacketConn, error) {
-	return net.ListenPacket("udp", fmt.Sprintf("127.0.0.1:%d", port))
-}
-
 func newUDPConn() (net.PacketConn, *net.UDPConn, error) {
 	mockServer, err := newUDPListener()
 	if err != nil {

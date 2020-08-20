@@ -55,32 +55,12 @@ func TestNewAgentClientUDPWithParams(t *testing.T) {
 }
 
 func TestNewAgentClientUDPWithParamsDefaults(t *testing.T) {
-	mockServer, err := newUDPListenerOnPort(6831)
+	mockServer, err := newUDPListener()
 	require.NoError(t, err)
 	defer mockServer.Close()
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:            "localhost:6831",
-		AttemptReconnecting: true,
-	})
-	assert.NoError(t, err)
-	assert.NotNil(t, agentClient)
-	assert.Equal(t, udpPacketMaxLength, agentClient.maxPacketSize)
-
-	if assert.IsType(t, &reconnectingUDPConn{}, agentClient.connUDP) {
-		assert.Equal(t, (*log.Logger)(nil), agentClient.connUDP.(*reconnectingUDPConn).logger)
-	}
-
-	assert.NoError(t, agentClient.Close())
-}
-
-func TestNewAgentClientUDPDefaults(t *testing.T) {
-	mockServer, err := newUDPListenerOnPort(6831)
-	require.NoError(t, err)
-	defer mockServer.Close()
-
-	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:            "localhost:6831",
+		HostPort:            mockServer.LocalAddr().String(),
 		AttemptReconnecting: true,
 	})
 	assert.NoError(t, err)
