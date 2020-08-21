@@ -48,7 +48,7 @@ type Exporter interface {
 	Shutdown(context.Context)
 }
 
-// SpanData contains all the information collected by a span.
+// SpanData contains all the information collected by a completed span.
 type SpanData struct {
 	SpanContext  apitrace.SpanContext
 	ParentSpanID apitrace.SpanID
@@ -75,17 +75,16 @@ type SpanData struct {
 	Resource *resource.Resource
 
 	// InstrumentationLibrary defines the instrumentation library used to
-	// providing instrumentation.
+	// provide instrumentation.
 	InstrumentationLibrary instrumentation.Library
 }
 
-// Event is used to describe an Event with a message string and set of
-// Attributes.
+// Event is thing that happened during a Span's lifetime.
 type Event struct {
 	// Name is the name of this event
 	Name string
 
-	// Attributes contains a list of key-value pairs.
+	// Attributes describe the aspects of the event.
 	Attributes []label.KeyValue
 
 	// Time is the time at which this event was recorded.
