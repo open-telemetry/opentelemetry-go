@@ -26,25 +26,26 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// SpanSyncer is a type for functions that receive a single sampled trace span.
-//
-// The ExportSpan method is called synchronously. Therefore, it should not take
-// forever to process the span.
-//
-// The SpanData should not be modified.
-type SpanSyncer interface {
-	ExportSpan(context.Context, *SpanData)
-}
-
-// SpanBatcher is a type for functions that receive batched of sampled trace
-// spans.
-//
-// The ExportSpans method is called asynchronously. However its should not take
-// forever to process the spans.
-//
-// The SpanData should not be modified.
-type SpanBatcher interface {
-	ExportSpans(context.Context, []*SpanData)
+// Exporter handles the delivery of SpanData to external receivers. This is
+// the final component in the trace export pipeline.
+type Exporter interface {
+	// ExportSpans exports a batch of SpanData.
+	//
+	// This function is called synchronously, so there is no concurrency
+	// safety requirement. However, due to the synchronous calling pattern,
+	// it is critical that all timeouts and cancellations contained in the
+	// passed context must be honored.
+	//
+	// Any retry logic must be contained in this function. The SDK that
+	// calls this function will not implement any retry logic. All errors
+	// returned by this function are considered unrecoverable and will be
+	// reported to a configured error Handler.
+	ExportSpans(context.Context, []*SpanData) error
+	// Shutdown notifies the exporter of a pending halt to operations. The
+	// exporter is expected to preform any cleanup or synchronization it
+	// requires while honoring all timeouts and cancellations contained in
+	// the passed context.
+	Shutdown(context.Context)
 }
 
 // SpanData contains all the information collected by a span.
