@@ -52,7 +52,7 @@ var _ apitrace.Provider = &Provider{}
 // NewProvider creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
 // to all tracer instances that will be created by this provider.
-func NewProvider(opts ...ProviderOption) (*Provider, error) {
+func NewProvider(opts ...ProviderOption) *Provider {
 	o := &ProviderOptions{}
 
 	for _, opt := range opts {
@@ -76,7 +76,7 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 
 	tp.ApplyConfig(o.config)
 
-	return tp, nil
+	return tp
 }
 
 // Tracer with the given name. If a tracer for the given name does not exist,
