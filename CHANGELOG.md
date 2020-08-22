@@ -35,6 +35,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithSpan` method of the `Tracer` interface.
    The functionality this method provided was limited compared to what a user can provide themselves.
    It was removed with the understanding that if there is sufficient user need it can be added back based on actual user usage. (#1043)
+- The `RegisterSpanProcessor` and `UnregisterSpanProcessor` functions.
+   These were holdovers from an approach prior to the TracerProvider design. They were not used anymore. (#1077)
 
 ### Fixed
 
