@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -72,12 +73,50 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 }
 
 type testExporter struct {
+	mu    sync.RWMutex
+	idx   map[string]int
 	spans []*export.SpanData
 }
 
-func (t *testExporter) ExportSpan(ctx context.Context, d *export.SpanData) {
-	t.spans = append(t.spans, d)
+func (te *testExporter) ExportSpans(_ context.Context, spans []*export.SpanData) error {
+	te.mu.Lock()
+	defer te.mu.Unlock()
+
+	i := len(spans)
+	for _, s := range spans {
+		te.idx[s.Name] = i
+		te.spans = append(te.spans, s)
+		i++
+	}
+	return nil
 }
+
+func (te *testExporter) Spans() []*export.SpanData {
+	te.mu.RLock()
+	defer te.mu.RUnlock()
+
+	cp := make([]*export.SpanData, len(te.spans))
+	copy(cp, te.spans)
+	return cp
+}
+
+func (te *testExporter) GetSpan(name string) (*export.SpanData, bool) {
+	te.mu.RLock()
+	defer te.mu.RUnlock()
+	i, ok := te.idx[name]
+	if !ok {
+		return nil, false
+	}
+	return te.spans[i], true
+}
+
+func (te *testExporter) Len() int {
+	te.mu.RLock()
+	defer te.mu.RUnlock()
+	return len(te.spans)
+}
+
+func (te *testExporter) Shutdown(context.Context) {}
 
 type testSampler struct {
 	callCount int
@@ -719,27 +758,21 @@ func checkTime(x *time.Time) bool {
 	return true
 }
 
-type fakeExporter map[string]*export.SpanData
-
-func (f fakeExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	f[s.Name] = s
-}
-
 func TestEndSpanTwice(t *testing.T) {
-	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithSyncer(spans))
+	te := new(testExporter)
+	tp, _ := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "EndSpanTwice")
 	span.End()
 	span.End()
-	if len(spans) != 1 {
-		t.Fatalf("expected only a single span, got %#v", spans)
+	if te.Len() != 1 {
+		t.Fatalf("expected only a single span, got %#v", te.Spans())
 	}
 }
 
 func TestStartSpanAfterEnd(t *testing.T) {
-	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	te := new(testExporter)
+	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
@@ -751,19 +784,19 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	_, span2 := tr.Start(ctx1, "span-2")
 	span2.End()
 	span0.End()
-	if got, want := len(spans), 3; got != want {
-		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
+	if got, want := te.Len(), 3; got != want {
+		t.Fatalf("len(%#v) = %d; want %d", te.Spans(), got, want)
 	}
 
-	gotParent, ok := spans["parent"]
+	gotParent, ok := te.GetSpan("parent")
 	if !ok {
 		t.Fatal("parent not recorded")
 	}
-	gotSpan1, ok := spans["span-1"]
+	gotSpan1, ok := te.GetSpan("span-1")
 	if !ok {
 		t.Fatal("span-1 not recorded")
 	}
-	gotSpan2, ok := spans["span-2"]
+	gotSpan2, ok := te.GetSpan("span-2")
 	if !ok {
 		t.Fatal("span-2 not recorded")
 	}
@@ -783,8 +816,8 @@ func TestStartSpanAfterEnd(t *testing.T) {
 }
 
 func TestChildSpanCount(t *testing.T) {
-	spans := make(fakeExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(spans))
+	te := new(testExporter)
+	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
 	ctx, span0 := tr.Start(context.Background(), "parent")
@@ -796,23 +829,23 @@ func TestChildSpanCount(t *testing.T) {
 	_, span3 := tr.Start(ctx, "span-3")
 	span3.End()
 	span0.End()
-	if got, want := len(spans), 4; got != want {
-		t.Fatalf("len(%#v) = %d; want %d", spans, got, want)
+	if got, want := te.Len(), 4; got != want {
+		t.Fatalf("len(%#v) = %d; want %d", te.Spans(), got, want)
 	}
 
-	gotParent, ok := spans["parent"]
+	gotParent, ok := te.GetSpan("parent")
 	if !ok {
 		t.Fatal("parent not recorded")
 	}
-	gotSpan1, ok := spans["span-1"]
+	gotSpan1, ok := te.GetSpan("span-1")
 	if !ok {
 		t.Fatal("span-1 not recorded")
 	}
-	gotSpan2, ok := spans["span-2"]
+	gotSpan2, ok := te.GetSpan("span-2")
 	if !ok {
 		t.Fatal("span-2 not recorded")
 	}
-	gotSpan3, ok := spans["span-3"]
+	gotSpan3, ok := te.GetSpan("span-3")
 	if !ok {
 		t.Fatal("span-3 not recorded")
 	}
