@@ -1,4 +1,4 @@
-package metric
+package metrictest
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	kv "go.opentelemetry.io/otel/label"
 )
 
+// ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
 func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
 	t.Helper()
 	switch kind {
@@ -23,7 +24,7 @@ func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) me
 	panic("invalid number kind")
 }
 
-// TODO: ADD doc
+// CheckSyncBatches tests batch metric recording using provided context, mock meter, instrumentation and expected values
 func CheckSyncBatches(ctx context.Context, t *testing.T, labels []kv.KeyValue, mock *MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 	if len(mock.MeasurementBatches) != 3 {

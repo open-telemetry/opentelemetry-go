@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package metrictest
 
 import (
 	"context"
@@ -38,6 +38,7 @@ type (
 		LibraryName  string
 	}
 
+	// MeterImpl is an OpenTelemetry Meter implementation used for testing.
 	MeterImpl struct {
 		lock sync.Mutex
 

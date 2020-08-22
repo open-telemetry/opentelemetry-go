@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/metric"
+	mockTest "go.opentelemetry.io/otel/api/metric/metrictest"
 	"go.opentelemetry.io/otel/api/unit"
-	mockTest "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
 
 	"github.com/google/go-cmp/cmp"
