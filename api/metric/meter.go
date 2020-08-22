@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // The file is organized as follows:
@@ -52,7 +52,7 @@ type Meter struct {
 }
 
 // RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurement) {
+func (m Meter) RecordBatch(ctx context.Context, ls []label.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
 		return
 	}
@@ -61,7 +61,7 @@ func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurem
 
 // NewBatchObserver creates a new BatchObserver that supports
 // making batches of observations for multiple instruments.
-func (m Meter) NewBatchObserver(callback BatchObserverCallback) BatchObserver {
+func (m Meter) NewBatchObserver(callback BatchObserverFunc) BatchObserver {
 	return BatchObserver{
 		meter:  m,
 		runner: newBatchAsyncRunner(callback),
@@ -126,7 +126,7 @@ func (m Meter) NewFloat64ValueRecorder(name string, opts ...InstrumentOption) (F
 // with the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewInt64ValueObserver(name string, callback Int64ObserverCallback, opts ...InstrumentOption) (Int64ValueObserver, error) {
+func (m Meter) NewInt64ValueObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64ValueObserver, error) {
 	if callback == nil {
 		return wrapInt64ValueObserverInstrument(NoopAsync{}, nil)
 	}
@@ -139,7 +139,7 @@ func (m Meter) NewInt64ValueObserver(name string, callback Int64ObserverCallback
 // the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewFloat64ValueObserver(name string, callback Float64ObserverCallback, opts ...InstrumentOption) (Float64ValueObserver, error) {
+func (m Meter) NewFloat64ValueObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64ValueObserver, error) {
 	if callback == nil {
 		return wrapFloat64ValueObserverInstrument(NoopAsync{}, nil)
 	}
@@ -152,7 +152,7 @@ func (m Meter) NewFloat64ValueObserver(name string, callback Float64ObserverCall
 // with the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewInt64SumObserver(name string, callback Int64ObserverCallback, opts ...InstrumentOption) (Int64SumObserver, error) {
+func (m Meter) NewInt64SumObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64SumObserver, error) {
 	if callback == nil {
 		return wrapInt64SumObserverInstrument(NoopAsync{}, nil)
 	}
@@ -165,7 +165,7 @@ func (m Meter) NewInt64SumObserver(name string, callback Int64ObserverCallback, 
 // the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewFloat64SumObserver(name string, callback Float64ObserverCallback, opts ...InstrumentOption) (Float64SumObserver, error) {
+func (m Meter) NewFloat64SumObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64SumObserver, error) {
 	if callback == nil {
 		return wrapFloat64SumObserverInstrument(NoopAsync{}, nil)
 	}
@@ -178,7 +178,7 @@ func (m Meter) NewFloat64SumObserver(name string, callback Float64ObserverCallba
 // with the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewInt64UpDownSumObserver(name string, callback Int64ObserverCallback, opts ...InstrumentOption) (Int64UpDownSumObserver, error) {
+func (m Meter) NewInt64UpDownSumObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64UpDownSumObserver, error) {
 	if callback == nil {
 		return wrapInt64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}
@@ -191,7 +191,7 @@ func (m Meter) NewInt64UpDownSumObserver(name string, callback Int64ObserverCall
 // the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewFloat64UpDownSumObserver(name string, callback Float64ObserverCallback, opts ...InstrumentOption) (Float64UpDownSumObserver, error) {
+func (m Meter) NewFloat64UpDownSumObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64UpDownSumObserver, error) {
 	if callback == nil {
 		return wrapFloat64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}

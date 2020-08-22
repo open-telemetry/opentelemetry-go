@@ -22,9 +22,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -40,7 +40,7 @@ func ExampleNewExportPipeline() {
 	// Create a meter
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{},
-		pull.WithResource(resource.New(kv.String("R", "V"))),
+		pull.WithResource(resource.New(label.String("R", "V"))),
 	)
 	if err != nil {
 		panic(err)
@@ -58,8 +58,8 @@ func ExampleNewExportPipeline() {
 		metric.WithDescription("Records values"),
 	)
 
-	counter.Add(ctx, 100, kv.String("key", "value"))
-	recorder.Record(ctx, 100, kv.String("key", "value"))
+	counter.Add(ctx, 100, label.String("key", "value"))
+	recorder.Record(ctx, 100, label.String("key", "value"))
 
 	// GET the HTTP endpoint
 	var input bytes.Buffer

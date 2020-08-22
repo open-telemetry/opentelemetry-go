@@ -20,17 +20,17 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 )
 
 var (
-	fooKey     = kv.Key("ex.com/foo")
-	barKey     = kv.Key("ex.com/bar")
-	lemonsKey  = kv.Key("ex.com/lemons")
-	anotherKey = kv.Key("ex.com/another")
+	fooKey     = label.Key("ex.com/foo")
+	barKey     = label.Key("ex.com/bar")
+	lemonsKey  = label.Key("ex.com/lemons")
+	anotherKey = label.Key("ex.com/another")
 )
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
-	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
+	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
 	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
@@ -67,11 +67,13 @@ func main() {
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
-	err = tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
+	err = func(ctx context.Context) error {
+		var span trace.Span
+		ctx, span = tracer.Start(ctx, "operation")
+		defer span.End()
 
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
-
-		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
+		span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
+		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
@@ -81,20 +83,18 @@ func main() {
 			valuerecorderTwo.Measurement(2.0),
 		)
 
-		return tracer.WithSpan(
-			ctx,
-			"Sub operation...",
-			func(ctx context.Context) error {
-				trace.SpanFromContext(ctx).SetAttributes(lemonsKey.String("five"))
+		return func(ctx context.Context) error {
+			var span trace.Span
+			ctx, span = tracer.Start(ctx, "Sub operation...")
+			defer span.End()
 
-				trace.SpanFromContext(ctx).AddEvent(ctx, "Sub span event")
+			span.SetAttributes(lemonsKey.String("five"))
+			span.AddEvent(ctx, "Sub span event")
+			valuerecorder.Record(ctx, 1.3)
 
-				valuerecorder.Record(ctx, 1.3)
-
-				return nil
-			},
-		)
-	})
+			return nil
+		}(ctx)
+	}(ctx)
 	if err != nil {
 		panic(err)
 	}

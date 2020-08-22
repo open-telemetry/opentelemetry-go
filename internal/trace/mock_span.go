@@ -18,10 +18,9 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
@@ -35,8 +34,8 @@ type MockSpan struct {
 
 var _ apitrace.Span = (*MockSpan)(nil)
 
-// SpanContext returns associated kv.SpanContext. If the receiver is nil it returns
-// an empty kv.SpanContext
+// SpanContext returns associated label.SpanContext. If the receiver is nil it returns
+// an empty label.SpanContext
 func (ms *MockSpan) SpanContext() apitrace.SpanContext {
 	if ms == nil {
 		return apitrace.EmptySpanContext()
@@ -60,7 +59,7 @@ func (ms *MockSpan) SetError(v bool) {
 }
 
 // SetAttributes does nothing.
-func (ms *MockSpan) SetAttributes(attributes ...kv.KeyValue) {
+func (ms *MockSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // SetAttribute does nothing.
@@ -86,9 +85,9 @@ func (ms *MockSpan) Tracer() apitrace.Tracer {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (ms *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }

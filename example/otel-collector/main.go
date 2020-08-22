@@ -26,11 +26,12 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -57,14 +58,17 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
-			kv.Key(semconv.ServiceNameKey).String("test-service"),
+			semconv.ServiceNameKey.String("test-service"),
 		)),
-		sdktrace.WithSyncer(exp),
+		sdktrace.WithBatcher(exp),
 	)
 	handleErr(err, "failed to create trace provider")
 
 	pusher := push.New(
-		simple.NewWithExactDistribution(),
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exp,
+		),
 		exp,
 		push.WithPeriod(2*time.Second),
 	)
@@ -88,10 +92,10 @@ func main() {
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
-	commonLabels := []kv.KeyValue{
-		kv.String("labelA", "chocolate"),
-		kv.String("labelB", "raspberry"),
-		kv.String("labelC", "vanilla"),
+	commonLabels := []label.KeyValue{
+		label.String("labelA", "chocolate"),
+		label.String("labelB", "raspberry"),
+		label.String("labelC", "vanilla"),
 	}
 
 	// Recorder metric example

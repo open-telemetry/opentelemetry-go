@@ -22,92 +22,98 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
-	"go.opentelemetry.io/otel/sdk/metric/processor/test"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
-		selector.NewWithExactDistribution(),
-		export.CumulativeExporter,
+		basic.New(
+			selector.NewWithExactDistribution(),
+			export.CumulativeExporter,
+			basic.WithMemory(true),
+		),
 		pull.WithCachePeriod(0),
 	)
 
 	ctx := context.Background()
 	meter := puller.Provider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
-	records := test.NewOutput(label.DefaultEncoder())
+	records := processortest.NewOutput(label.DefaultEncoder())
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
-	records = test.NewOutput(label.DefaultEncoder())
+	records = processortest.NewOutput(label.DefaultEncoder())
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 20,
-	}, records.Map)
+		"counter.sum/A=B/": 20,
+	}, records.Map())
 }
 
 func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
-		selector.NewWithExactDistribution(),
-		export.CumulativeExporter,
+		basic.New(
+			selector.NewWithExactDistribution(),
+			export.CumulativeExporter,
+			basic.WithMemory(true),
+		),
 		pull.WithCachePeriod(time.Second),
 	)
-	mock := controllerTest.NewMockClock()
+	mock := controllertest.NewMockClock()
 	puller.SetClock(mock)
 
 	ctx := context.Background()
 	meter := puller.Provider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
-	records := test.NewOutput(label.DefaultEncoder())
+	records := processortest.NewOutput(label.DefaultEncoder())
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
-	counter.Add(ctx, 10, kv.String("A", "B"))
+	counter.Add(ctx, 10, label.String("A", "B"))
 
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))
-	records = test.NewOutput(label.DefaultEncoder())
+	records = processortest.NewOutput(label.DefaultEncoder())
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 10,
-	}, records.Map)
+		"counter.sum/A=B/": 10,
+	}, records.Map())
 
 	mock.Add(time.Second)
 	runtime.Gosched()
 
 	// Re-computed value!
 	require.NoError(t, puller.Collect(ctx))
-	records = test.NewOutput(label.DefaultEncoder())
+	records = processortest.NewOutput(label.DefaultEncoder())
 	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
-		"counter/A=B/": 20,
-	}, records.Map)
+		"counter.sum/A=B/": 20,
+	}, records.Map())
 
 }

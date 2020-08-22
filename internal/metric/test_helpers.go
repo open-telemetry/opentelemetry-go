@@ -7,8 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/api/kv"
+
 	"go.opentelemetry.io/otel/api/metric"
+	kv "go.opentelemetry.io/otel/label"
 )
 
 func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
@@ -23,7 +24,7 @@ func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) me
 }
 
 // TODO: ADD doc
-func CheckSyncBatches(t *testing.T, ctx context.Context, labels []kv.KeyValue, mock *MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
+func CheckSyncBatches(ctx context.Context, t *testing.T, labels []kv.KeyValue, mock *MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 	if len(mock.MeasurementBatches) != 3 {
 		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))

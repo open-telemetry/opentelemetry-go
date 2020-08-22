@@ -50,30 +50,16 @@ func main() {
 	defer pusher.Stop()
 
 	tracer := global.Tracer("ex.com/basic")
-
-	tracer.WithSpan(context.Background(), "foo",
-		func(ctx context.Context) error {
-			tracer.WithSpan(ctx, "bar",
-				func(ctx context.Context) error {
-					tracer.WithSpan(ctx, "baz",
-						func(ctx context.Context) error {
-							return nil
-						},
-					)
-					return nil
-				},
-			)
-			return nil
-		},
-	)
+	ctx, span := tracer.Start(context.Background(), "main")
+	defer span.End()
+	/* … */
 }
 ```
 
 See the [API
 documentation](https://pkg.go.dev/go.opentelemetry.io/otel) for more
 detail, and the
-[opentelemetry-example-app](./example/README.md)
-for a complete example.
+[opentelemetry examples](./example/).
 
 ## Compatible Exporters
 

@@ -19,10 +19,10 @@ import (
 	"errors"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	mockTest "go.opentelemetry.io/otel/internal/metric"
+	"go.opentelemetry.io/otel/label"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -98,12 +98,12 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
-		labels := []kv.KeyValue{kv.String("A", "B")}
+		labels := []label.KeyValue{label.String("A", "B")}
 		c.Add(ctx, 1994.1, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Float64NumberKind, metric.CounterKind, c.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.CounterKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
@@ -111,12 +111,12 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
-		labels := []kv.KeyValue{kv.String("A", "B"), kv.String("C", "D")}
+		labels := []label.KeyValue{label.String("A", "B"), label.String("C", "D")}
 		c.Add(ctx, 42, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Int64NumberKind, metric.CounterKind, c.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.CounterKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
@@ -125,12 +125,12 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewInt64UpDownCounter("test.updowncounter.int")
 		ctx := context.Background()
-		labels := []kv.KeyValue{kv.String("A", "B"), kv.String("C", "D")}
+		labels := []label.KeyValue{label.String("A", "B"), label.String("C", "D")}
 		c.Add(ctx, 100, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Int64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
@@ -138,12 +138,12 @@ func TestCounter(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		c := Must(meter).NewFloat64UpDownCounter("test.updowncounter.float")
 		ctx := context.Background()
-		labels := []kv.KeyValue{kv.String("A", "B"), kv.String("C", "D")}
+		labels := []label.KeyValue{label.String("A", "B"), label.String("C", "D")}
 		c.Add(ctx, 100.1, labels...)
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Float64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -154,12 +154,12 @@ func TestValueRecorder(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewFloat64ValueRecorder("test.valuerecorder.float")
 		ctx := context.Background()
-		labels := []kv.KeyValue{}
+		labels := []label.KeyValue{}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Float64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
@@ -167,12 +167,12 @@ func TestValueRecorder(t *testing.T) {
 		mockSDK, meter := mockTest.NewMeter()
 		m := Must(meter).NewInt64ValueRecorder("test.valuerecorder.int")
 		ctx := context.Background()
-		labels := []kv.KeyValue{kv.Int("I", 1)}
+		labels := []label.KeyValue{label.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		mockTest.CheckSyncBatches(t, ctx, labels, mockSDK, metric.Int64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
+		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -180,7 +180,7 @@ func TestValueRecorder(t *testing.T) {
 
 func TestObserverInstruments(t *testing.T) {
 	t.Run("float valueobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{kv.String("O", "P")}
+		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
@@ -191,7 +191,7 @@ func TestObserverInstruments(t *testing.T) {
 		)
 	})
 	t.Run("int valueobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{}
+		labels := []label.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewInt64ValueObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
@@ -202,7 +202,7 @@ func TestObserverInstruments(t *testing.T) {
 		)
 	})
 	t.Run("float sumobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{kv.String("O", "P")}
+		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
@@ -213,7 +213,7 @@ func TestObserverInstruments(t *testing.T) {
 		)
 	})
 	t.Run("int sumobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{}
+		labels := []label.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewInt64SumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
@@ -224,7 +224,7 @@ func TestObserverInstruments(t *testing.T) {
 		)
 	})
 	t.Run("float updownsumobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{kv.String("O", "P")}
+		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewFloat64UpDownSumObserver("test.updownsumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
@@ -235,7 +235,7 @@ func TestObserverInstruments(t *testing.T) {
 		)
 	})
 	t.Run("int updownsumobserver", func(t *testing.T) {
-		labels := []kv.KeyValue{}
+		labels := []label.KeyValue{}
 		mockSDK, meter := mockTest.NewMeter()
 		o := Must(meter).NewInt64UpDownSumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
@@ -253,9 +253,9 @@ func TestBatchObserverInstruments(t *testing.T) {
 	var obs1 metric.Int64ValueObserver
 	var obs2 metric.Float64ValueObserver
 
-	labels := []kv.KeyValue{
-		kv.String("A", "B"),
-		kv.String("C", "D"),
+	labels := []label.KeyValue{
+		label.String("A", "B"),
+		label.String("C", "D"),
 	}
 
 	cb := Must(meter).NewBatchObserver(
@@ -292,7 +292,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(metric.Float64NumberKind, mockTest.ResolveNumberByKind(t, metric.Float64NumberKind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []kv.KeyValue, mock *mockTest.MeterImpl, nkind metric.NumberKind, mkind metric.Kind, observer metric.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *mockTest.MeterImpl, nkind metric.NumberKind, mkind metric.Kind, observer metric.AsyncImpl, expected float64) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {
@@ -320,7 +320,7 @@ type testWrappedMeter struct {
 
 var _ metric.MeterImpl = testWrappedMeter{}
 
-func (testWrappedMeter) RecordBatch(context.Context, []kv.KeyValue, ...metric.Measurement) {
+func (testWrappedMeter) RecordBatch(context.Context, []label.KeyValue, ...metric.Measurement) {
 }
 
 func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {

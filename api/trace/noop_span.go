@@ -18,9 +18,8 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 type NoopSpan struct {
@@ -47,7 +46,7 @@ func (NoopSpan) SetError(v bool) {
 }
 
 // SetAttributes does nothing.
-func (NoopSpan) SetAttributes(attributes ...kv.KeyValue) {
+func (NoopSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // SetAttribute does nothing.
@@ -68,11 +67,11 @@ func (NoopSpan) Tracer() Tracer {
 }
 
 // AddEvent does nothing.
-func (NoopSpan) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (NoopSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (NoopSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }
 
 // SetName does nothing.

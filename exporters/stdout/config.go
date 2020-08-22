@@ -18,7 +18,7 @@ import (
 	"io"
 	"os"
 
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 

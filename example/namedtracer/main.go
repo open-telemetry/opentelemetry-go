@@ -18,20 +18,19 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/kv"
-
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var (
-	fooKey     = kv.Key("ex.com/foo")
-	barKey     = kv.Key("ex.com/bar")
-	anotherKey = kv.Key("ex.com/another")
+	fooKey     = label.Key("ex.com/foo")
+	barKey     = label.Key("ex.com/bar")
+	anotherKey = label.Key("ex.com/another")
 )
 
 var tp *sdktrace.Provider
@@ -44,7 +43,7 @@ func initTracer() {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
-	tp, err = sdktrace.NewProvider(sdktrace.WithSyncer(exp),
+	tp, err = sdktrace.NewProvider(sdktrace.WithBatcher(exp),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}))
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
@@ -65,15 +64,12 @@ func main() {
 		barKey.String("bar1"),
 	)
 
-	err := tracer.WithSpan(ctx, "operation", func(ctx context.Context) error {
-
-		trace.SpanFromContext(ctx).AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
-
-		trace.SpanFromContext(ctx).SetAttributes(anotherKey.String("yes"))
-
-		return foo.SubOperation(ctx)
-	})
-	if err != nil {
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, "operation")
+	defer span.End()
+	span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
+	span.SetAttributes(anotherKey.String("yes"))
+	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -25,7 +25,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
 // DefaultPushPeriod is the default time interval between pushes.
@@ -33,23 +32,23 @@ const DefaultPushPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
-	lock        sync.Mutex
-	accumulator *sdk.Accumulator
-	provider    *registry.Provider
-	processor   *basic.Processor
-	exporter    export.Exporter
-	wg          sync.WaitGroup
-	ch          chan struct{}
-	period      time.Duration
-	timeout     time.Duration
-	clock       controllerTime.Clock
-	ticker      controllerTime.Ticker
+	lock         sync.Mutex
+	accumulator  *sdk.Accumulator
+	provider     *registry.Provider
+	checkpointer export.Checkpointer
+	exporter     export.Exporter
+	wg           sync.WaitGroup
+	ch           chan struct{}
+	period       time.Duration
+	timeout      time.Duration
+	clock        controllerTime.Clock
+	ticker       controllerTime.Ticker
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
-// using the provided exporter and options to configure an SDK with
-// periodic collection.
-func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...Option) *Controller {
+// using the provided checkpointer, exporter, and options to configure
+// an SDK with periodic collection.
+func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		Period: DefaultPushPeriod,
 	}
@@ -60,20 +59,19 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		c.Timeout = c.Period
 	}
 
-	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
-		processor,
+		checkpointer,
 		sdk.WithResource(c.Resource),
 	)
 	return &Controller{
-		provider:    registry.NewProvider(impl),
-		accumulator: impl,
-		processor:   processor,
-		exporter:    exporter,
-		ch:          make(chan struct{}),
-		period:      c.Period,
-		timeout:     c.Timeout,
-		clock:       controllerTime.RealClock{},
+		provider:     registry.NewProvider(impl),
+		accumulator:  impl,
+		checkpointer: checkpointer,
+		exporter:     exporter,
+		ch:           make(chan struct{}),
+		period:       c.Period,
+		timeout:      c.Timeout,
+		clock:        controllerTime.RealClock{},
 	}
 }
 
@@ -139,16 +137,17 @@ func (c *Controller) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	c.processor.Lock()
-	defer c.processor.Unlock()
+	ckpt := c.checkpointer.CheckpointSet()
+	ckpt.Lock()
+	defer ckpt.Unlock()
 
-	c.processor.StartCollection()
+	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
-	if err := c.processor.FinishCollection(); err != nil {
+	if err := c.checkpointer.FinishCollection(); err != nil {
 		global.Handle(err)
 	}
 
-	if err := c.exporter.Export(ctx, c.processor.CheckpointSet()); err != nil {
+	if err := c.exporter.Export(ctx, ckpt); err != nil {
 		global.Handle(err)
 	}
 }

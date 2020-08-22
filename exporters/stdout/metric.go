@@ -21,9 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	apimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -69,11 +68,11 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet metric.Checkpoi
 		kind := desc.NumberKind()
 		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
 
-		var instLabels []kv.KeyValue
+		var instLabels []label.KeyValue
 		if name := desc.InstrumentationName(); name != "" {
-			instLabels = append(instLabels, kv.String("instrumentation.name", name))
+			instLabels = append(instLabels, label.String("instrumentation.name", name))
 			if version := desc.InstrumentationVersion(); version != "" {
-				instLabels = append(instLabels, kv.String("instrumentation.version", version))
+				instLabels = append(instLabels, label.String("instrumentation.version", version))
 			}
 		}
 		instSet := label.NewSet(instLabels...)

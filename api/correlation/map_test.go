@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 type testCase struct {
 	name    string
 	value   MapUpdate
 	init    []int
-	wantKVs []kv.KeyValue
+	wantKVs []label.KeyValue
 }
 
 func TestMap(t *testing.T) {
@@ -46,13 +46,13 @@ func TestMap(t *testing.T) {
 			}
 		}
 		// test Foreach()
-		got.Foreach(func(kv kv.KeyValue) bool {
+		got.Foreach(func(kv label.KeyValue) bool {
 			for _, want := range testcase.wantKVs {
 				if kv == want {
 					return false
 				}
 			}
-			t.Errorf("Expected kv %v, but not found", kv)
+			t.Errorf("Expected label %v, but not found", kv)
 			return true
 		})
 		if l, exp := got.Len(), len(testcase.wantKVs); l != exp {
@@ -85,192 +85,192 @@ func getTestCases() []testCase {
 	return []testCase{
 		{
 			name: "map with MultiKV",
-			value: MapUpdate{MultiKV: []kv.KeyValue{
-				kv.Int64("key1", 1),
-				kv.String("key2", "val2")},
+			value: MapUpdate{MultiKV: []label.KeyValue{
+				label.Int64("key1", 1),
+				label.String("key2", "val2")},
 			},
 			init: []int{},
-			wantKVs: []kv.KeyValue{
-				kv.Int64("key1", 1),
-				kv.String("key2", "val2"),
+			wantKVs: []label.KeyValue{
+				label.Int64("key1", 1),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:  "map with SingleKV",
-			value: MapUpdate{SingleKV: kv.String("key1", "val1")},
+			value: MapUpdate{SingleKV: label.String("key1", "val1")},
 			init:  []int{},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", "val1"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
 			},
 		},
 		{
 			name: "map with both add fields",
-			value: MapUpdate{SingleKV: kv.Int64("key1", 3),
-				MultiKV: []kv.KeyValue{
-					kv.String("key1", ""),
-					kv.String("key2", "val2")},
+			value: MapUpdate{SingleKV: label.Int64("key1", 3),
+				MultiKV: []label.KeyValue{
+					label.String("key1", ""),
+					label.String("key2", "val2")},
 			},
 			init: []int{},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", ""),
-				kv.String("key2", "val2"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", ""),
+				label.String("key2", "val2"),
 			},
 		},
 		{
 			name:    "map with empty MapUpdate",
 			value:   MapUpdate{},
 			init:    []int{},
-			wantKVs: []kv.KeyValue{},
+			wantKVs: []label.KeyValue{},
 		},
 		{
 			name:    "map with DropSingleK",
-			value:   MapUpdate{DropSingleK: kv.Key("key1")},
+			value:   MapUpdate{DropSingleK: label.Key("key1")},
 			init:    []int{},
-			wantKVs: []kv.KeyValue{},
+			wantKVs: []label.KeyValue{},
 		},
 		{
 			name: "map with DropMultiK",
-			value: MapUpdate{DropMultiK: []kv.Key{
-				kv.Key("key1"), kv.Key("key2"),
+			value: MapUpdate{DropMultiK: []label.Key{
+				label.Key("key1"), label.Key("key2"),
 			}},
 			init:    []int{},
-			wantKVs: []kv.KeyValue{},
+			wantKVs: []label.KeyValue{},
 		},
 		{
 			name: "map with both drop fields",
 			value: MapUpdate{
-				DropSingleK: kv.Key("key1"),
-				DropMultiK: []kv.Key{
-					kv.Key("key1"),
-					kv.Key("key2"),
+				DropSingleK: label.Key("key1"),
+				DropMultiK: []label.Key{
+					label.Key("key1"),
+					label.Key("key2"),
 				},
 			},
 			init:    []int{},
-			wantKVs: []kv.KeyValue{},
+			wantKVs: []label.KeyValue{},
 		},
 		{
 			name: "map with all fields",
 			value: MapUpdate{
-				DropSingleK: kv.Key("key1"),
-				DropMultiK: []kv.Key{
-					kv.Key("key1"),
-					kv.Key("key2"),
+				DropSingleK: label.Key("key1"),
+				DropMultiK: []label.Key{
+					label.Key("key1"),
+					label.Key("key2"),
 				},
-				SingleKV: kv.String("key4", "val4"),
-				MultiKV: []kv.KeyValue{
-					kv.String("key1", ""),
-					kv.String("key2", "val2"),
-					kv.String("key3", "val3"),
+				SingleKV: label.String("key4", "val4"),
+				MultiKV: []label.KeyValue{
+					label.String("key1", ""),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
 				},
 			},
 			init: []int{},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", ""),
-				kv.String("key2", "val2"),
-				kv.String("key3", "val3"),
-				kv.String("key4", "val4"),
+			wantKVs: []label.KeyValue{
+				label.String("key1", ""),
+				label.String("key2", "val2"),
+				label.String("key3", "val3"),
+				label.String("key4", "val4"),
 			},
 		},
 		{
 			name: "Existing map with MultiKV",
-			value: MapUpdate{MultiKV: []kv.KeyValue{
-				kv.Int64("key1", 1),
-				kv.String("key2", "val2")},
+			value: MapUpdate{MultiKV: []label.KeyValue{
+				label.Int64("key1", 1),
+				label.String("key2", "val2")},
 			},
 			init: []int{5},
-			wantKVs: []kv.KeyValue{
-				kv.Int64("key1", 1),
-				kv.String("key2", "val2"),
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.Int64("key1", 1),
+				label.String("key2", "val2"),
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name:  "Existing map with SingleKV",
-			value: MapUpdate{SingleKV: kv.String("key1", "val1")},
+			value: MapUpdate{SingleKV: label.String("key1", "val1")},
 			init:  []int{5},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", "val1"),
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name: "Existing map with both add fields",
-			value: MapUpdate{SingleKV: kv.Int64("key1", 3),
-				MultiKV: []kv.KeyValue{
-					kv.String("key1", ""),
-					kv.String("key2", "val2")},
+			value: MapUpdate{SingleKV: label.Int64("key1", 3),
+				MultiKV: []label.KeyValue{
+					label.String("key1", ""),
+					label.String("key2", "val2")},
 			},
 			init: []int{5},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", ""),
-				kv.String("key2", "val2"),
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.String("key1", ""),
+				label.String("key2", "val2"),
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name:  "Existing map with empty MapUpdate",
 			value: MapUpdate{},
 			init:  []int{5},
-			wantKVs: []kv.KeyValue{
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name:  "Existing map with DropSingleK",
-			value: MapUpdate{DropSingleK: kv.Key("key1")},
+			value: MapUpdate{DropSingleK: label.Key("key1")},
 			init:  []int{1, 5},
-			wantKVs: []kv.KeyValue{
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name: "Existing map with DropMultiK",
-			value: MapUpdate{DropMultiK: []kv.Key{
-				kv.Key("key1"), kv.Key("key2"),
+			value: MapUpdate{DropMultiK: []label.Key{
+				label.Key("key1"), label.Key("key2"),
 			}},
 			init: []int{1, 5},
-			wantKVs: []kv.KeyValue{
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name: "Existing map with both drop fields",
 			value: MapUpdate{
-				DropSingleK: kv.Key("key1"),
-				DropMultiK: []kv.Key{
-					kv.Key("key1"),
-					kv.Key("key2"),
+				DropSingleK: label.Key("key1"),
+				DropMultiK: []label.Key{
+					label.Key("key1"),
+					label.Key("key2"),
 				},
 			},
 			init: []int{1, 2, 5},
-			wantKVs: []kv.KeyValue{
-				kv.Int("key5", 5),
+			wantKVs: []label.KeyValue{
+				label.Int("key5", 5),
 			},
 		},
 		{
 			name: "Existing map with all the fields",
 			value: MapUpdate{
-				DropSingleK: kv.Key("key1"),
-				DropMultiK: []kv.Key{
-					kv.Key("key1"),
-					kv.Key("key2"),
-					kv.Key("key5"),
-					kv.Key("key6"),
+				DropSingleK: label.Key("key1"),
+				DropMultiK: []label.Key{
+					label.Key("key1"),
+					label.Key("key2"),
+					label.Key("key5"),
+					label.Key("key6"),
 				},
-				SingleKV: kv.String("key4", "val4"),
-				MultiKV: []kv.KeyValue{
-					kv.String("key1", ""),
-					kv.String("key2", "val2"),
-					kv.String("key3", "val3"),
+				SingleKV: label.String("key4", "val4"),
+				MultiKV: []label.KeyValue{
+					label.String("key1", ""),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
 				},
 			},
 			init: []int{5, 6, 7},
-			wantKVs: []kv.KeyValue{
-				kv.String("key1", ""),
-				kv.String("key2", "val2"),
-				kv.String("key3", "val3"),
-				kv.String("key4", "val4"),
-				kv.Int("key7", 7),
+			wantKVs: []label.KeyValue{
+				label.String("key1", ""),
+				label.String("key2", "val2"),
+				label.String("key3", "val3"),
+				label.String("key4", "val4"),
+				label.Int("key7", 7),
 			},
 		},
 	}
@@ -279,7 +279,7 @@ func getTestCases() []testCase {
 func makeTestMap(ints []int) Map {
 	r := make(rawMap, len(ints))
 	for _, v := range ints {
-		r[kv.Key(fmt.Sprintf("key%d", v))] = kv.IntValue(v)
+		r[label.Key(fmt.Sprintf("key%d", v))] = label.IntValue(v)
 	}
 	return newMap(r)
 }
