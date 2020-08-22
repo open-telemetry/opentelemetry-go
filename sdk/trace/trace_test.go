@@ -60,10 +60,7 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	tp, err := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
-	if err != nil {
-		t.Fatalf("failed to create provider, err: %v\n", err)
-	}
+	tp := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
 	harness := apitest.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
 		return tp.Tracer("")
@@ -78,11 +75,15 @@ type testExporter struct {
 	spans []*export.SpanData
 }
 
+func NewTestExporter() *testExporter {
+	return &testExporter{idx: make(map[string]int)}
+}
+
 func (te *testExporter) ExportSpans(_ context.Context, spans []*export.SpanData) error {
 	te.mu.Lock()
 	defer te.mu.Unlock()
 
-	i := len(spans)
+	i := len(te.spans)
 	for _, s := range spans {
 		te.idx[s.Name] = i
 		te.spans = append(te.spans, s)
@@ -116,7 +117,14 @@ func (te *testExporter) Len() int {
 	return len(te.spans)
 }
 
-func (te *testExporter) Shutdown(context.Context) {}
+func (te *testExporter) Shutdown(context.Context) { te.Reset() }
+
+func (te *testExporter) Reset() {
+	te.mu.Lock()
+	defer te.mu.Unlock()
+	te.idx = make(map[string]int)
+	te.spans = te.spans[:0]
+}
 
 type testSampler struct {
 	callCount int
@@ -140,7 +148,7 @@ func (ts testSampler) Description() string {
 
 func TestSetName(t *testing.T) {
 	fooSampler := &testSampler{prefix: "foo", t: t}
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
+	tp := NewProvider(WithConfig(Config{DefaultSampler: fooSampler}))
 
 	type testCase struct {
 		name          string
@@ -195,7 +203,7 @@ func TestSetName(t *testing.T) {
 }
 
 func TestRecordingIsOn(t *testing.T) {
-	tp, _ := NewProvider()
+	tp := NewProvider()
 	_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
 	defer span.End()
 	if span.IsRecording() == false {
@@ -236,10 +244,7 @@ func TestSampling(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			p, err := NewProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
-			if err != nil {
-				t.Fatal("unexpected error:", err)
-			}
+			p := NewProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
@@ -277,7 +282,7 @@ func TestSampling(t *testing.T) {
 }
 
 func TestStartSpanWithParent(t *testing.T) {
-	tp, _ := NewProvider()
+	tp := NewProvider()
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
@@ -320,8 +325,8 @@ func TestStartSpanWithParent(t *testing.T) {
 }
 
 func TestSetSpanAttributesOnStart(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	span := startSpan(tp,
 		"StartSpanAttribute",
 		apitrace.WithAttributes(label.String("key1", "value1")),
@@ -353,8 +358,8 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 }
 
 func TestSetSpanAttributes(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "SpanAttribute")
 	span.SetAttributes(label.String("key1", "value1"))
 	got, err := endSpan(te, span)
@@ -382,9 +387,9 @@ func TestSetSpanAttributes(t *testing.T) {
 }
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
-	te := &testExporter{}
+	te := NewTestExporter()
 	cfg := Config{MaxAttributesPerSpan: 2}
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
@@ -420,8 +425,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 }
 
 func TestEvents(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "Events")
 	k1v1 := label.String("key1", "value1")
@@ -465,9 +470,9 @@ func TestEvents(t *testing.T) {
 }
 
 func TestEventsOverLimit(t *testing.T) {
-	te := &testExporter{}
+	te := NewTestExporter()
 	cfg := Config{MaxEventsPerSpan: 2}
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
 	k1v1 := label.String("key1", "value1")
@@ -517,8 +522,8 @@ func TestEventsOverLimit(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 
 	k1v1 := label.String("key1", "value1")
 	k2v2 := label.String("key2", "value2")
@@ -561,14 +566,14 @@ func TestLinks(t *testing.T) {
 }
 
 func TestLinksOverLimit(t *testing.T) {
-	te := &testExporter{}
+	te := NewTestExporter()
 	cfg := Config{MaxLinksPerSpan: 2}
 
 	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc3 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
-	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
+	tp := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
 		apitrace.LinkedTo(sc1, label.String("key1", "value1")),
@@ -606,8 +611,8 @@ func TestLinksOverLimit(t *testing.T) {
 }
 
 func TestSetSpanName(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	ctx := context.Background()
 
 	want := "SpanName-1"
@@ -628,8 +633,8 @@ func TestSetSpanName(t *testing.T) {
 }
 
 func TestSetSpanStatus(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
 	span.SetStatus(otelcodes.Canceled, "canceled")
@@ -732,10 +737,10 @@ func endSpan(te *testExporter, span apitrace.Span) (*export.SpanData, error) {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
 	span.End()
-	if len(te.spans) != 1 {
-		return nil, fmt.Errorf("got exported spans %#v, want one span", te.spans)
+	if te.Len() != 1 {
+		return nil, fmt.Errorf("got %d exported spans, want one span", te.Len())
 	}
-	got := te.spans[0]
+	got := te.Spans()[0]
 	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
@@ -759,8 +764,8 @@ func checkTime(x *time.Time) bool {
 }
 
 func TestEndSpanTwice(t *testing.T) {
-	te := new(testExporter)
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 
 	span := startSpan(tp, "EndSpanTwice")
 	span.End()
@@ -771,8 +776,8 @@ func TestEndSpanTwice(t *testing.T) {
 }
 
 func TestStartSpanAfterEnd(t *testing.T) {
-	te := new(testExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
@@ -816,8 +821,8 @@ func TestStartSpanAfterEnd(t *testing.T) {
 }
 
 func TestChildSpanCount(t *testing.T) {
-	te := new(testExporter)
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
 	ctx, span0 := tr.Start(context.Background(), "parent")
@@ -851,16 +856,16 @@ func TestChildSpanCount(t *testing.T) {
 	}
 
 	if got, want := gotSpan3.ChildSpanCount, 0; got != want {
-		t.Errorf("span-3.ChildSpanCount=%q; want %q", got, want)
+		t.Errorf("span-3.ChildSpanCount=%d; want %d", got, want)
 	}
 	if got, want := gotSpan2.ChildSpanCount, 0; got != want {
-		t.Errorf("span-2.ChildSpanCount=%q; want %q", got, want)
+		t.Errorf("span-2.ChildSpanCount=%d; want %d", got, want)
 	}
 	if got, want := gotSpan1.ChildSpanCount, 1; got != want {
-		t.Errorf("span-1.ChildSpanCount=%q; want %q", got, want)
+		t.Errorf("span-1.ChildSpanCount=%d; want %d", got, want)
 	}
 	if got, want := gotParent.ChildSpanCount, 2; got != want {
-		t.Errorf("parent.ChildSpanCount=%q; want %q", got, want)
+		t.Errorf("parent.ChildSpanCount=%d; want %d", got, want)
 	}
 }
 
@@ -871,7 +876,7 @@ func TestNilSpanEnd(t *testing.T) {
 
 func TestExecutionTracerTaskEnd(t *testing.T) {
 	var n uint64
-	tp, _ := NewProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
+	tp := NewProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
 	tr := tp.Tracer("Execution Tracer Task End")
 
 	executionTracerTaskEnd := func() {
@@ -919,8 +924,8 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 }
 
 func TestCustomStartEndTime(t *testing.T) {
-	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
 
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
@@ -931,10 +936,10 @@ func TestCustomStartEndTime(t *testing.T) {
 	)
 	span.End(apitrace.WithEndTime(endTime))
 
-	if len(te.spans) != 1 {
-		t.Fatalf("got exported spans %#v, want one span", te.spans)
+	if te.Len() != 1 {
+		t.Fatalf("got %d exported spans, want one span", te.Len())
 	}
-	got := te.spans[0]
+	got := te.Spans()[0]
 	if got.StartTime != startTime {
 		t.Errorf("expected start time to be %s, got %s", startTime, got.StartTime)
 	}
@@ -962,8 +967,8 @@ func TestRecordError(t *testing.T) {
 	}
 
 	for _, s := range scenarios {
-		te := &testExporter{}
-		tp, _ := NewProvider(WithSyncer(te))
+		te := NewTestExporter()
+		tp := NewProvider(WithSyncer(te))
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
@@ -1004,8 +1009,8 @@ func TestRecordError(t *testing.T) {
 }
 
 func TestRecordErrorWithStatus(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "RecordErrorWithStatus")
 
 	testErr := ottest.NewTestError("test error")
@@ -1050,8 +1055,8 @@ func TestRecordErrorWithStatus(t *testing.T) {
 }
 
 func TestRecordErrorNil(t *testing.T) {
-	te := &testExporter{}
-	tp, _ := NewProvider(WithSyncer(te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	span := startSpan(tp, "RecordErrorNil")
 
 	span.RecordError(context.Background(), nil)
@@ -1080,12 +1085,12 @@ func TestRecordErrorNil(t *testing.T) {
 }
 
 func TestWithSpanKind(t *testing.T) {
-	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
 	tr := tp.Tracer("withSpanKind")
 
 	_, span := tr.Start(context.Background(), "WithoutSpanKind")
-	spanData, err := endSpan(&te, span)
+	spanData, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -1103,10 +1108,10 @@ func TestWithSpanKind(t *testing.T) {
 	}
 
 	for _, sk := range sks {
-		te.spans = nil
+		te.Reset()
 
 		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), apitrace.WithSpanKind(sk))
-		spanData, err := endSpan(&te, span)
+		spanData, err := endSpan(te, span)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -1118,13 +1123,13 @@ func TestWithSpanKind(t *testing.T) {
 }
 
 func TestWithResource(t *testing.T) {
-	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te),
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te),
 		WithConfig(Config{DefaultSampler: AlwaysSample()}),
 		WithResource(resource.New(label.String("rk1", "rv1"), label.Int64("rk2", 5))))
 	span := startSpan(tp, "WithResource")
 	span.SetAttributes(label.String("key1", "value1"))
-	got, err := endSpan(&te, span)
+	got, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -1150,8 +1155,8 @@ func TestWithResource(t *testing.T) {
 }
 
 func TestWithInstrumentationVersion(t *testing.T) {
-	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 
 	ctx := context.Background()
 	ctx = apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
@@ -1159,7 +1164,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		"WithInstrumentationVersion",
 		apitrace.WithInstrumentationVersion("v0.1.0"),
 	).Start(ctx, "span0", apitrace.WithRecord())
-	got, err := endSpan(&te, span)
+	got, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -1184,8 +1189,8 @@ func TestWithInstrumentationVersion(t *testing.T) {
 }
 
 func TestSpanCapturesPanic(t *testing.T) {
-	var te testExporter
-	tp, _ := NewProvider(WithSyncer(&te))
+	te := NewTestExporter()
+	tp := NewProvider(WithSyncer(te))
 	_, span := tp.Tracer("CatchPanic").Start(
 		context.Background(),
 		"span",
@@ -1197,10 +1202,11 @@ func TestSpanCapturesPanic(t *testing.T) {
 		panic(errors.New("error message"))
 	}
 	require.PanicsWithError(t, "error message", f)
-	require.Len(t, te.spans, 1)
-	require.Len(t, te.spans[0].MessageEvents, 1)
-	assert.Equal(t, te.spans[0].MessageEvents[0].Name, errorEventName)
-	assert.Equal(t, te.spans[0].MessageEvents[0].Attributes, []label.KeyValue{
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	require.Len(t, spans[0].MessageEvents, 1)
+	assert.Equal(t, spans[0].MessageEvents[0].Name, errorEventName)
+	assert.Equal(t, spans[0].MessageEvents[0].Attributes, []label.KeyValue{
 		errorTypeKey.String("*errors.errorString"),
 		errorMessageKey.String("error message"),
 	})
