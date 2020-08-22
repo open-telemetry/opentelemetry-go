@@ -84,24 +84,24 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	pOpts := []sdktrace.ProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithBatchTimeout(15),
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
-	tp1, err := sdktrace.NewProvider(append(pOpts,
+	tp1 := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv11)"),
 			label.Int64("rk2", 5),
 		)))...)
-	assert.NoError(t, err)
 
-	tp2, err := sdktrace.NewProvider(append(pOpts,
+	tp2 := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv12)"),
 			label.Float32("rk3", 6.5),
 		)))...)
-	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
 	tr2 := tp2.Tracer("test-tracer2")
@@ -329,7 +329,13 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	// reconnect.
 	for j := 0; j < 3; j++ {
 
-		exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
+		// No endpoint up.
+		require.Error(
+			t,
+			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}),
+			"transport: Error while dialing dial tcp %s: connect: connection refused",
+			mc.address,
+		)
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old address, and the collector should reconnect automatically.
@@ -340,7 +346,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}})
+			require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}}))
 		}
 
 		nmaSpans := nmc.getSpans()
@@ -416,7 +422,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 		otlp.WithAddress(mc.address),
 		otlp.WithHeaders(map[string]string{"header1": "value1"}),
 	)
-	exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
+	require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}))
 
 	defer func() {
 		_ = exp.Stop()
@@ -446,13 +452,15 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		_ = exp.Stop()
 	}()
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithBatchTimeout(15*time.Millisecond),
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	assert.NoError(t, err)
+		),
+	)
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []label.KeyValue{

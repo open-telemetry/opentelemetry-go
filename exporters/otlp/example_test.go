@@ -36,16 +36,15 @@ func Example_insecure() {
 		_ = exp.Stop()
 	}()
 
-	tp, _ := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
 			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	if err != nil {
-		log.Fatalf("error creating trace provider: %v\n", err)
-	}
-
+		),
+	)
 	global.SetTraceProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
@@ -77,16 +76,15 @@ func Example_withTLS() {
 		_ = exp.Stop()
 	}()
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
 			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	if err != nil {
-		log.Fatalf("error creating trace provider: %v\n", err)
-	}
-
+		),
+	)
 	global.SetTraceProvider(tp)
 
 	tracer := global.Tracer("test-tracer")

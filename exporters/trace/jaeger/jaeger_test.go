@@ -339,12 +339,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exp))
-
-	assert.NoError(t, err)
-
+		sdktrace.WithSyncer(exp),
+	)
 	global.SetTraceProvider(tp)
 	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()

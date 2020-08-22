@@ -57,7 +57,7 @@ type Exporter struct {
 	metadata metadata.MD
 }
 
-var _ tracesdk.SpanBatcher = (*Exporter)(nil)
+var _ tracesdk.Exporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
 func configureOptions(cfg *Config, opts ...ExporterOption) {
@@ -195,6 +195,36 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
+// Shutdown closes all connections and releases resources currently being used
+// by the exporter. If the exporter is not started this does nothing.
+func (e *Exporter) Shutdown(ctx context.Context) {
+	e.mu.RLock()
+	cc := e.grpcClientConn
+	started := e.started
+	e.mu.RUnlock()
+
+	if !started {
+		return
+	}
+
+	if err := cc.Close(); err != nil {
+		// Nothing we can do about this failure here.
+		global.Handle(err)
+	}
+
+	// At this point we can change the state variable started
+	e.mu.Lock()
+	e.started = false
+	e.mu.Unlock()
+	close(e.stopCh)
+
+	// Ensure that the backgroundConnector returns
+	select {
+	case <-e.backgroundConnectionDoneCh:
+	case <-ctx.Done():
+	}
+}
+
 // Stop shuts down all the connections and resources
 // related to the exporter.
 // If the exporter is not started then this func does nothing.
@@ -272,27 +302,22 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk
 	return metricsdk.PassThroughExporter
 }
 
-func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {
-	e.uploadTraces(ctx, []*tracesdk.SpanData{sd})
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) error {
+	return e.uploadTraces(ctx, sds)
 }
 
-func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) {
-	e.uploadTraces(ctx, sds)
-}
-
-func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
+func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) error {
 	select {
 	case <-e.stopCh:
-		return
-
+		return nil
 	default:
 		if !e.connected() {
-			return
+			return nil
 		}
 
 		protoSpans := transform.SpanData(sdl)
 		if len(protoSpans) == 0 {
-			return
+			return nil
 		}
 
 		e.senderMu.Lock()
@@ -302,7 +327,8 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 		e.senderMu.Unlock()
 		if err != nil {
 			e.setStateDisconnected(err)
-			global.Handle(err)
+			return err
 		}
 	}
+	return nil
 }

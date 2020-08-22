@@ -31,9 +31,8 @@ type Exporter struct {
 }
 
 var (
-	_ metric.Exporter   = &Exporter{}
-	_ trace.SpanSyncer  = &Exporter{}
-	_ trace.SpanBatcher = &Exporter{}
+	_ metric.Exporter = &Exporter{}
+	_ trace.Exporter  = &Exporter{}
 )
 
 // NewExporter creates an Exporter with the passed options.
@@ -57,11 +56,7 @@ func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.Pr
 		return nil, nil, err
 	}
 
-	tp, err := sdktrace.NewProvider(sdktrace.WithSyncer(exporter))
-	if err != nil {
-		return nil, nil, err
-	}
-
+	tp := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
 	pusher := push.New(
 		basic.New(
 			simple.NewWithExactDistribution(),

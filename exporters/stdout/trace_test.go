@@ -67,7 +67,9 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
-	ex.ExportSpan(context.Background(), testSpan)
+	if err := ex.ExportSpans(context.Background(), []*export.SpanData{testSpan}); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedSerializedNow, _ := json.Marshal(now)
 

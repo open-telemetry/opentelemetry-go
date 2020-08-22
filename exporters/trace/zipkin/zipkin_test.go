@@ -339,16 +339,16 @@ func TestExportSpans(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
-	exporter.ExportSpans(ctx, spans[0:1])
+	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
 	require.Len(t, ls.Messages, 2)
 	require.Contains(t, ls.Messages[0], "send a POST request")
 	require.Contains(t, ls.Messages[1], "zipkin responded")
 	ls.Messages = nil
-	exporter.ExportSpans(ctx, nil)
+	require.NoError(t, exporter.ExportSpans(ctx, nil))
 	require.Len(t, ls.Messages, 1)
 	require.Contains(t, ls.Messages[0], "no spans to export")
 	ls.Messages = nil
-	exporter.ExportSpans(ctx, spans[1:2])
+	require.NoError(t, exporter.ExportSpans(ctx, spans[1:2]))
 	require.Contains(t, ls.Messages[0], "send a POST request")
 	require.Contains(t, ls.Messages[1], "zipkin responded")
 	checkFunc := func() bool {

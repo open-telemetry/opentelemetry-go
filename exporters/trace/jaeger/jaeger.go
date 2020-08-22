@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
@@ -158,15 +159,12 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 	if err != nil {
 		return nil, nil, err
 	}
-	syncer := sdktrace.WithSyncer(exporter)
-	tp, err := sdktrace.NewProvider(syncer)
-	if err != nil {
-		return nil, nil, err
-	}
-	if exporter.o.Config != nil {
-		tp.ApplyConfig(*exporter.o.Config)
-	}
 
+	pOpts := []sdktrace.ProviderOption{sdktrace.WithSyncer(exporter)}
+	if exporter.o.Config != nil {
+		pOpts = append(pOpts, sdktrace.WithConfig(*exporter.o.Config))
+	}
+	tp := sdktrace.NewProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }
 
@@ -200,12 +198,25 @@ type Exporter struct {
 	o        options
 }
 
-var _ export.SpanSyncer = (*Exporter)(nil)
+var _ export.Exporter = (*Exporter)(nil)
 
-// ExportSpan exports a SpanData to Jaeger.
-func (e *Exporter) ExportSpan(ctx context.Context, d *export.SpanData) {
-	_ = e.bundler.Add(spanDataToThrift(d), 1)
-	// TODO(jbd): Handle oversized bundlers.
+// ExportSpans exports SpanData to Jaeger.
+func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
+	for _, span := range spans {
+		// TODO(jbd): Handle oversized bundlers.
+		err := e.bundler.Add(spanDataToThrift(span), 1)
+		if err != nil {
+			return fmt.Errorf("failed to bundle %q: %w", span.Name, err)
+		}
+	}
+	return nil
+}
+
+// Shutdown stops the exporter flushing any pending exports.
+func (e *Exporter) Shutdown(context.Context) {
+	// TODO (MrAlias): Update the uploader to accept a context so this
+	// context deadline can be honored.
+	e.Flush()
 }
 
 func spanDataToThrift(data *export.SpanData) *gen.Span {
