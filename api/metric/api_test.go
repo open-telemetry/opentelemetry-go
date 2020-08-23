@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/metric/metrictest"
 	mockTest "go.opentelemetry.io/otel/api/metric/metrictest"
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/label"
@@ -30,6 +31,33 @@ import (
 )
 
 var Must = metric.Must
+
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *mockTest.MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
+	t.Helper()
+
+	batchesCount := len(mock.MeasurementBatches)
+	if len(mock.MeasurementBatches) != len(expected) {
+		t.Errorf("Expected %d recorded measurement batches, got %d", batchesCount, len(mock.MeasurementBatches))
+	}
+	recorded := metrictest.AsStructs(mock.MeasurementBatches)
+
+	for i, batch := range mock.MeasurementBatches {
+		if len(batch.Measurements) != 1 {
+			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(batch.Measurements))
+		}
+
+		measurement := batch.Measurements[0]
+		descriptor := measurement.Instrument.Descriptor()
+
+		expected := metrictest.Measured{
+			Name:                descriptor.Name(),
+			InstrumentationName: descriptor.InstrumentationName(),
+			Labels:              metrictest.LabelsToMap(labels...),
+			Number:              metrictest.ResolveNumberByKind(t, nkind, expected[i]),
+		}
+		require.Equal(t, expected, recorded[i])
+	}
+}
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
@@ -103,7 +131,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.CounterKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.CounterKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
@@ -116,7 +144,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.CounterKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.CounterKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
@@ -130,7 +158,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
@@ -143,7 +171,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.UpDownCounterKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -159,7 +187,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Float64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
@@ -172,7 +200,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		mockTest.CheckSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, metric.Int64NumberKind, metric.ValueRecorderKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})

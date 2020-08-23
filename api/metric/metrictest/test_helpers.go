@@ -1,16 +1,61 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package metrictest
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/api/metric"
-	kv "go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/label"
 )
+
+// Measured is the helper struct which provides flat representation of recorded measurements
+// to simplify testing
+type Measured struct {
+	Name                   string
+	InstrumentationName    string
+	InstrumentationVersion string
+	Labels                 map[label.Key]label.Value
+	Number                 metric.Number
+}
+
+// LabelsToMap converts label set to keyValue map, to be easily used in tests
+func LabelsToMap(kvs ...label.KeyValue) map[label.Key]label.Value {
+	m := map[label.Key]label.Value{}
+	for _, label := range kvs {
+		m[label.Key] = label.Value
+	}
+	return m
+}
+
+// AsStructs converts recorded batches to array of flat, readable Measured helper structures
+func AsStructs(batches []Batch) []Measured {
+	var r []Measured
+	for _, batch := range batches {
+		for _, m := range batch.Measurements {
+			r = append(r, Measured{
+				Name:                   m.Instrument.Descriptor().Name(),
+				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
+				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
+				Labels:                 LabelsToMap(batch.Labels...),
+				Number:                 m.Number,
+			})
+		}
+	}
+	return r
+}
 
 // ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
 func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
@@ -22,47 +67,4 @@ func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) me
 		return metric.NewFloat64Number(value)
 	}
 	panic("invalid number kind")
-}
-
-// CheckSyncBatches tests batch metric recording using provided context, mock meter, instrumentation and expected values
-func CheckSyncBatches(ctx context.Context, t *testing.T, labels []kv.KeyValue, mock *MeterImpl, nkind metric.NumberKind, mkind metric.Kind, instrument metric.InstrumentImpl, expected ...float64) {
-	t.Helper()
-	if len(mock.MeasurementBatches) != 3 {
-		t.Errorf("Expected 3 recorded measurement batches, got %d", len(mock.MeasurementBatches))
-	}
-	ourInstrument := instrument.Implementation().(*Sync)
-	for i, got := range mock.MeasurementBatches {
-		if got.Ctx != ctx {
-			d := func(c context.Context) string {
-				return fmt.Sprintf("(ptr: %p, ctx %#v)", c, c)
-			}
-			t.Errorf("Wrong recorded context in batch %d, expected %s, got %s", i, d(ctx), d(got.Ctx))
-		}
-		if !assert.Equal(t, got.Labels, labels) {
-			t.Errorf("Wrong recorded label set in batch %d, expected %v, got %v", i, labels, got.Labels)
-		}
-		if len(got.Measurements) != 1 {
-			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(got.Measurements))
-		}
-		minMLen := 1
-		if minMLen > len(got.Measurements) {
-			minMLen = len(got.Measurements)
-		}
-		for j := 0; j < minMLen; j++ {
-			measurement := got.Measurements[j]
-			require.Equal(t, mkind, measurement.Instrument.Descriptor().MetricKind())
-
-			if measurement.Instrument.Implementation() != ourInstrument {
-				d := func(iface interface{}) string {
-					i := iface.(*Instrument)
-					return fmt.Sprintf("(ptr: %p, instrument %#v)", i, i)
-				}
-				t.Errorf("Wrong recorded instrument in measurement %d in batch %d, expected %s, got %s", j, i, d(ourInstrument), d(measurement.Instrument.Implementation()))
-			}
-			expect := ResolveNumberByKind(t, nkind, expected[i])
-			if measurement.Number.CompareNumber(nkind, expect) != 0 {
-				t.Errorf("Wrong recorded value in measurement %d in batch %d, expected %s, got %s", j, i, expect.Emit(nkind), measurement.Number.Emit(nkind))
-			}
-		}
-	}
 }
