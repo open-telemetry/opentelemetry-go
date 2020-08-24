@@ -135,8 +135,8 @@ func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors
 func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
-	mu.Lock()
-	defer mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	new := make(spanProcessorMap)
 	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
 		for k, v := range old {
