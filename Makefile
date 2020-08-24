@@ -70,7 +70,6 @@ test-with-coverage:
 		go tool cover -html=coverage.out -o coverage.html); \
       [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
-	ls -l; \
 	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt
 
 

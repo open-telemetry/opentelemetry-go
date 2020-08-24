@@ -27,7 +27,7 @@ build-template: &build-template
         name: "Precommit and Coverage Report"
         command: |
           make ci
-          mv coverage.html $TEST_RESULTS/
+          mv coverage.{out,txt,html} $TEST_RESULTS/
 
     - codecov/upload:
         file: "coverage.txt"
