@@ -3,6 +3,7 @@ codecov:
 
 ignore:
   - "exporters/otlp/internal/opentelemetry-proto-gen/**/*"
+  - "exporters/trace/jaeger/internal/gen-go/**/*"
 
 coverage:
   precision: 1
