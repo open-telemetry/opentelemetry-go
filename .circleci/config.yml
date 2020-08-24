@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  codecov: codecov/codecov@1.1.1
 executors:
   current-go:
     resource_class: large
@@ -25,7 +27,10 @@ build-template: &build-template
         name: "Precommit and Coverage Report"
         command: |
           make ci
-          mv coverage.html $TEST_RESULTS/
+          cp coverage.{out,txt,html} $TEST_RESULTS/
+
+    - codecov/upload:
+        file: "coverage.txt"
 
     - save_cache:
         key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
