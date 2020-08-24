@@ -30,7 +30,7 @@ build-template: &build-template
           mv coverage.{out,txt,html} $TEST_RESULTS/
 
     - codecov/upload:
-        file: "coverage.txt"
+        file: "../coverage.txt"
 
     - save_cache:
         key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
