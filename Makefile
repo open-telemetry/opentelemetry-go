@@ -68,8 +68,9 @@ test-with-coverage:
 	  (cd "$${dir}" && \
 	 	$(GOTEST_WITH_COVERAGE) ./... && \
 		go tool cover -html=coverage.txt -o coverage.html); \
-      [ -f "$${dir}/profile.out" ] && cat "$${dir}/profile.out" >> coverage.txt; \
+      [ -f "$${dir}/coverage.txt" ] && cat "$${dir}/coverage.txt" >> coverage.txt; \
 	done; \
+	ls -l; \
 	sed -i '' -e '2,$$ { /^mode: /d; }' coverage.txt
 
 
