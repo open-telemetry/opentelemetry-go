@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // The file is organized as follows:
@@ -52,7 +52,7 @@ type Meter struct {
 }
 
 // RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []kv.KeyValue, ms ...Measurement) {
+func (m Meter) RecordBatch(ctx context.Context, ls []label.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
 		return
 	}

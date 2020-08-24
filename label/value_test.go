@@ -12,78 +12,78 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kv_test
+package label_test
 
 import (
 	"testing"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/kv"
-
 	"github.com/google/go-cmp/cmp"
+
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestValue(t *testing.T) {
-	k := kv.Key("test")
+	k := label.Key("test")
 	bli := getBitlessInfo(42)
 	for _, testcase := range []struct {
 		name      string
-		value     kv.Value
-		wantType  kv.Type
+		value     label.Value
+		wantType  label.Type
 		wantValue interface{}
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
 			value:     k.Bool(true).Value,
-			wantType:  kv.BOOL,
+			wantType:  label.BOOL,
 			wantValue: true,
 		},
 		{
 			name:      "Key.Array([]bool) correctly return key's internal bool values",
 			value:     k.Array([]bool{true, false}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []bool{true, false},
 		},
 		{
 			name:      "Key.Int64() correctly returns keys's internal int64 value",
 			value:     k.Int64(42).Value,
-			wantType:  kv.INT64,
+			wantType:  label.INT64,
 			wantValue: int64(42),
 		},
 		{
 			name:      "Key.Uint64() correctly returns keys's internal uint64 value",
 			value:     k.Uint64(42).Value,
-			wantType:  kv.UINT64,
+			wantType:  label.UINT64,
 			wantValue: uint64(42),
 		},
 		{
 			name:      "Key.Float64() correctly returns keys's internal float64 value",
 			value:     k.Float64(42.1).Value,
-			wantType:  kv.FLOAT64,
+			wantType:  label.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			name:      "Key.Int32() correctly returns keys's internal int32 value",
 			value:     k.Int32(42).Value,
-			wantType:  kv.INT32,
+			wantType:  label.INT32,
 			wantValue: int32(42),
 		},
 		{
 			name:      "Key.Uint32() correctly returns keys's internal uint32 value",
 			value:     k.Uint32(42).Value,
-			wantType:  kv.UINT32,
+			wantType:  label.UINT32,
 			wantValue: uint32(42),
 		},
 		{
 			name:      "Key.Float32() correctly returns keys's internal float32 value",
 			value:     k.Float32(42.1).Value,
-			wantType:  kv.FLOAT32,
+			wantType:  label.FLOAT32,
 			wantValue: float32(42.1),
 		},
 		{
 			name:      "Key.String() correctly returns keys's internal string value",
 			value:     k.String("foo").Value,
-			wantType:  kv.STRING,
+			wantType:  label.STRING,
 			wantValue: "foo",
 		},
 		{
@@ -101,61 +101,61 @@ func TestValue(t *testing.T) {
 		{
 			name:      "Key.Array([]int64) correctly returns keys's internal int64 values",
 			value:     k.Array([]int64{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []int64{42, 43},
 		},
 		{
 			name:      "KeyArray([]uint64) correctly returns keys's internal uint64 values",
 			value:     k.Array([]uint64{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []uint64{42, 43},
 		},
 		{
 			name:      "Key.Array([]float64) correctly returns keys's internal float64 values",
 			value:     k.Array([]float64{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []float64{42, 43},
 		},
 		{
 			name:      "Key.Array([]int32) correctly returns keys's internal int32 values",
 			value:     k.Array([]int32{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []int32{42, 43},
 		},
 		{
 			name:      "Key.Array([]uint32) correctly returns keys's internal uint32 values",
 			value:     k.Array([]uint32{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []uint32{42, 43},
 		},
 		{
 			name:      "Key.Array([]float32) correctly returns keys's internal float32 values",
 			value:     k.Array([]float32{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []float32{42, 43},
 		},
 		{
 			name:      "Key.Array([]string) correctly return key's internal string values",
 			value:     k.Array([]string{"foo", "bar"}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []string{"foo", "bar"},
 		},
 		{
 			name:      "Key.Array([]int) correctly returns keys's internal signed integral values",
 			value:     k.Array([]int{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []int{42, 43},
 		},
 		{
 			name:      "Key.Array([]uint) correctly returns keys's internal unsigned integral values",
 			value:     k.Array([]uint{42, 43}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: []uint{42, 43},
 		},
 		{
 			name:      "Key.Array([][]int) correctly return key's multi dimensional array",
 			value:     k.Array([][]int{{1, 2}, {3, 4}}).Value,
-			wantType:  kv.ARRAY,
+			wantType:  label.ARRAY,
 			wantValue: [][]int{{1, 2}, {3, 4}},
 		},
 	} {
@@ -173,8 +173,8 @@ func TestValue(t *testing.T) {
 type bitlessInfo struct {
 	intValue      int
 	uintValue     uint
-	signedType    kv.Type
-	unsignedType  kv.Type
+	signedType    label.Type
+	unsignedType  label.Type
 	signedValue   interface{}
 	unsignedValue interface{}
 }
@@ -184,8 +184,8 @@ func getBitlessInfo(i int) bitlessInfo {
 		return bitlessInfo{
 			intValue:      i,
 			uintValue:     uint(i),
-			signedType:    kv.INT32,
-			unsignedType:  kv.UINT32,
+			signedType:    label.INT32,
+			unsignedType:  label.UINT32,
 			signedValue:   int32(i),
 			unsignedValue: uint32(i),
 		}
@@ -193,8 +193,8 @@ func getBitlessInfo(i int) bitlessInfo {
 	return bitlessInfo{
 		intValue:      i,
 		uintValue:     uint(i),
-		signedType:    kv.INT64,
-		unsignedType:  kv.UINT64,
+		signedType:    label.INT64,
+		unsignedType:  label.UINT64,
 		signedValue:   int64(i),
 		unsignedValue: uint64(i),
 	}

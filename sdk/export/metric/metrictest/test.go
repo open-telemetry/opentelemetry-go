@@ -21,9 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -92,7 +91,7 @@ func (p *CheckpointSet) Reset() {
 //
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
-func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...kv.KeyValue) (agg export.Aggregator, added bool) {
+func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...label.KeyValue) (agg export.Aggregator, added bool) {
 	elabels := label.NewSet(labels...)
 
 	key := mapkey{

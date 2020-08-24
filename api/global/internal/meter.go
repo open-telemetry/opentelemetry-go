@@ -20,9 +20,9 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/label"
 )
 
 // This file contains the forwarding implementation of metric.Provider
@@ -108,7 +108,7 @@ type syncHandle struct {
 	delegate unsafe.Pointer // (*metric.HandleImpl)
 
 	inst   *syncImpl
-	labels []kv.KeyValue
+	labels []label.KeyValue
 
 	initialize sync.Once
 }
@@ -227,7 +227,7 @@ func (inst *syncImpl) Implementation() interface{} {
 	return inst
 }
 
-func (inst *syncImpl) Bind(labels []kv.KeyValue) metric.BoundSyncImpl {
+func (inst *syncImpl) Bind(labels []label.KeyValue) metric.BoundSyncImpl {
 	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
 	}
@@ -299,13 +299,13 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, measurements ...metric.Measurement) {
+func (m *meterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...metric.Measurement) {
 	if delegatePtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
 
-func (inst *syncImpl) RecordOne(ctx context.Context, number metric.Number, labels []kv.KeyValue) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number metric.Number, labels []label.KeyValue) {
 	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}

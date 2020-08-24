@@ -14,25 +14,25 @@
 
 package semconv
 
-import "go.opentelemetry.io/otel/api/kv"
+import "go.opentelemetry.io/otel/label"
 
 // Semantic conventions for service resource attribute keys.
 const (
 	// Name of the service.
-	ServiceNameKey = kv.Key("service.name")
+	ServiceNameKey = label.Key("service.name")
 
 	// A namespace for `service.name`. This needs to have meaning that helps
 	// to distinguish a group of services. For example, the team name that
 	// owns a group of services. `service.name` is expected to be unique
 	// within the same namespace.
-	ServiceNamespaceKey = kv.Key("service.namespace")
+	ServiceNamespaceKey = label.Key("service.namespace")
 
 	// A unique identifier of the service instance. In conjunction with the
 	// `service.name` and `service.namespace` this must be unique.
-	ServiceInstanceIDKey = kv.Key("service.instance.id")
+	ServiceInstanceIDKey = label.Key("service.instance.id")
 
 	// The version of the service API.
-	ServiceVersionKey = kv.Key("service.version")
+	ServiceVersionKey = label.Key("service.version")
 )
 
 // Semantic conventions for telemetry SDK resource attribute keys.
@@ -47,13 +47,13 @@ const (
 	//
 	// The value `opentelemetry` is reserved and MUST NOT be used by
 	// non-OpenTelemetry SDKs.
-	TelemetrySDKNameKey = kv.Key("telemetry.sdk.name")
+	TelemetrySDKNameKey = label.Key("telemetry.sdk.name")
 
 	// The language of the telemetry SDK.
-	TelemetrySDKLanguageKey = kv.Key("telemetry.sdk.language")
+	TelemetrySDKLanguageKey = label.Key("telemetry.sdk.language")
 
 	// The version string of the telemetry SDK.
-	TelemetrySDKVersionKey = kv.Key("telemetry.sdk.version")
+	TelemetrySDKVersionKey = label.Key("telemetry.sdk.version")
 )
 
 // Semantic conventions for telemetry SDK resource attributes.
@@ -64,60 +64,60 @@ var (
 // Semantic conventions for container resource attribute keys.
 const (
 	// A uniquely identifying name for the Container.
-	ContainerNameKey = kv.Key("container.name")
+	ContainerNameKey = label.Key("container.name")
 
 	// Container ID, usually a UUID, as for example used to
 	// identify Docker containers. The UUID might be abbreviated.
-	ContainerIDKey = kv.Key("container.id")
+	ContainerIDKey = label.Key("container.id")
 
 	// Name of the image the container was built on.
-	ContainerImageNameKey = kv.Key("container.image.name")
+	ContainerImageNameKey = label.Key("container.image.name")
 
 	// Container image tag.
-	ContainerImageTagKey = kv.Key("container.image.tag")
+	ContainerImageTagKey = label.Key("container.image.tag")
 )
 
 // Semantic conventions for Function-as-a-Service resource attribute keys.
 const (
 	// A uniquely identifying name for the FaaS.
-	FaaSNameKey = kv.Key("faas.name")
+	FaaSNameKey = label.Key("faas.name")
 
 	// The unique name of the function being executed.
-	FaaSIDKey = kv.Key("faas.id")
+	FaaSIDKey = label.Key("faas.id")
 
 	// The version of the function being executed.
-	FaaSVersionKey = kv.Key("faas.version")
+	FaaSVersionKey = label.Key("faas.version")
 
 	// The execution environment identifier.
-	FaaSInstanceKey = kv.Key("faas.instance")
+	FaaSInstanceKey = label.Key("faas.instance")
 )
 
 // Semantic conventions for operating system process resource attribute keys.
 const (
 	// Process identifier (PID).
-	ProcessPIDKey = kv.Key("process.pid")
+	ProcessPIDKey = label.Key("process.pid")
 	// The name of the process executable. On Linux based systems, can be
 	// set to the `Name` in `proc/[pid]/status`. On Windows, can be set to
 	// the base name of `GetProcessImageFileNameW`.
-	ProcessExecutableNameKey = kv.Key("process.executable.name")
+	ProcessExecutableNameKey = label.Key("process.executable.name")
 	// The full path to the process executable. On Linux based systems, can
 	// be set to the target of `proc/[pid]/exe`. On Windows, can be set to
 	// the result of `GetProcessImageFileNameW`.
-	ProcessExecutablePathKey = kv.Key("process.executable.path")
+	ProcessExecutablePathKey = label.Key("process.executable.path")
 	// The command used to launch the process (i.e. the command name). On
 	// Linux based systems, can be set to the zeroth string in
 	// `proc/[pid]/cmdline`. On Windows, can be set to the first parameter
 	// extracted from `GetCommandLineW`.
-	ProcessCommandKey = kv.Key("process.command")
+	ProcessCommandKey = label.Key("process.command")
 	// The full command used to launch the process. The value can be either
 	// a list of strings representing the ordered list of arguments, or a
 	// single string representing the full command. On Linux based systems,
 	// can be set to the list of null-delimited strings extracted from
 	// `proc/[pid]/cmdline`. On Windows, can be set to the result of
 	// `GetCommandLineW`.
-	ProcessCommandLineKey = kv.Key("process.command_line")
+	ProcessCommandLineKey = label.Key("process.command_line")
 	// The username of the user that owns the process.
-	ProcessOwnerKey = kv.Key("process.owner")
+	ProcessOwnerKey = label.Key("process.owner")
 )
 
 // Semantic conventions for Kubernetes resource attribute keys.
@@ -126,55 +126,55 @@ const (
 	// does not have cluster names as an internal concept so this may be
 	// set to any meaningful value within the environment. For example,
 	// GKE clusters have a name which can be used for this label.
-	K8SClusterNameKey = kv.Key("k8s.cluster.name")
+	K8SClusterNameKey = label.Key("k8s.cluster.name")
 
 	// The name of the namespace that the pod is running in.
-	K8SNamespaceNameKey = kv.Key("k8s.namespace.name")
+	K8SNamespaceNameKey = label.Key("k8s.namespace.name")
 
 	// The name of the pod.
-	K8SPodNameKey = kv.Key("k8s.pod.name")
+	K8SPodNameKey = label.Key("k8s.pod.name")
 
 	// The name of the deployment.
-	K8SDeploymentNameKey = kv.Key("k8s.deployment.name")
+	K8SDeploymentNameKey = label.Key("k8s.deployment.name")
 )
 
 // Semantic conventions for host resource attribute keys.
 const (
 	// A uniquely identifying name for the host.
-	HostNameKey = kv.Key("host.name")
+	HostNameKey = label.Key("host.name")
 
 	// A hostname as returned by the 'hostname' command on host machine.
-	HostHostNameKey = kv.Key("host.hostname")
+	HostHostNameKey = label.Key("host.hostname")
 
 	// Unique host ID. For cloud environments this will be the instance ID.
-	HostIDKey = kv.Key("host.id")
+	HostIDKey = label.Key("host.id")
 
 	// Type of host. For cloud environments this will be the machine type.
-	HostTypeKey = kv.Key("host.type")
+	HostTypeKey = label.Key("host.type")
 
 	// Name of the OS or VM image the host is running.
-	HostImageNameKey = kv.Key("host.image.name")
+	HostImageNameKey = label.Key("host.image.name")
 
 	// Identifier of the image the host is running.
-	HostImageIDKey = kv.Key("host.image.id")
+	HostImageIDKey = label.Key("host.image.id")
 
 	// Version of the image the host is running.
-	HostImageVersionKey = kv.Key("host.image.version")
+	HostImageVersionKey = label.Key("host.image.version")
 )
 
 // Semantic conventions for cloud environment resource attribute keys.
 const (
 	// Name of the cloud provider.
-	CloudProviderKey = kv.Key("cloud.provider")
+	CloudProviderKey = label.Key("cloud.provider")
 
 	// The account ID from the cloud provider used for authorization.
-	CloudAccountIDKey = kv.Key("cloud.account.id")
+	CloudAccountIDKey = label.Key("cloud.account.id")
 
 	// Geographical region where this resource is.
-	CloudRegionKey = kv.Key("cloud.region")
+	CloudRegionKey = label.Key("cloud.region")
 
 	// Zone of the region where this resource is.
-	CloudZoneKey = kv.Key("cloud.zone")
+	CloudZoneKey = label.Key("cloud.zone")
 )
 
 var (

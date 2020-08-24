@@ -17,7 +17,7 @@ package correlation
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 type correlationsType struct{}
@@ -150,7 +150,7 @@ func ContextWithMap(ctx context.Context, m Map) context.Context {
 
 // NewContext returns a context with the map from passed context
 // updated with the passed key-value pairs.
-func NewContext(ctx context.Context, keyvalues ...kv.KeyValue) context.Context {
+func NewContext(ctx context.Context, keyvalues ...label.KeyValue) context.Context {
 	return ContextWithMap(ctx, MapFromContext(ctx).Apply(MapUpdate{
 		MultiKV: keyvalues,
 	}))

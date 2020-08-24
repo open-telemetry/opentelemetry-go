@@ -16,13 +16,13 @@ package transform
 
 import (
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	"go.opentelemetry.io/otel/label"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
-func Attributes(attrs []kv.KeyValue) []*commonpb.KeyValue {
+func Attributes(attrs []label.KeyValue) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
@@ -48,33 +48,33 @@ func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
 	return out
 }
 
-func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
+func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 	result := &commonpb.KeyValue{
 		Key:   string(v.Key),
 		Value: new(commonpb.AnyValue),
 	}
 	switch v.Value.Type() {
-	case kv.BOOL:
+	case label.BOOL:
 		result.Value.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.Value.AsBool(),
 		}
-	case kv.INT64, kv.INT32, kv.UINT32, kv.UINT64:
+	case label.INT64, label.INT32, label.UINT32, label.UINT64:
 		result.Value.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.Value.AsInt64(),
 		}
-	case kv.FLOAT32:
+	case label.FLOAT32:
 		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: float64(v.Value.AsFloat32()),
 		}
-	case kv.FLOAT64:
+	case label.FLOAT64:
 		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.Value.AsFloat64(),
 		}
-	case kv.STRING:
+	case label.STRING:
 		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.Value.AsString(),
 		}
-	case kv.ARRAY:
+	case label.ARRAY:
 		result.Value.Value = toArrayAttribute(v)
 	default:
 		result.Value.Value = &commonpb.AnyValue_StringValue{
@@ -84,7 +84,7 @@ func toAttribute(v kv.KeyValue) *commonpb.KeyValue {
 	return result
 }
 
-func toArrayAttribute(v kv.KeyValue) *commonpb.AnyValue_ArrayValue {
+func toArrayAttribute(v label.KeyValue) *commonpb.AnyValue_ArrayValue {
 	array := v.Value.AsArray()
 	var resultValues []*commonpb.AnyValue
 

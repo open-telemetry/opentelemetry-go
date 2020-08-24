@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Provider is a standard metric.Provider for wrapping `MeterImpl`
@@ -75,7 +75,7 @@ func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 }
 
 // RecordBatch implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []kv.KeyValue, ms ...metric.Measurement) {
+func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 

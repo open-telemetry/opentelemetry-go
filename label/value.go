@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kv
+package label
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/internal"
+	"go.opentelemetry.io/otel/internal"
 )
 
 //go:generate stringer -type=Type

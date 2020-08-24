@@ -30,11 +30,11 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -205,8 +205,8 @@ func TestNewRawExporter(t *testing.T) {
 				WithProcess(
 					Process{
 						ServiceName: "jaeger-test",
-						Tags: []kv.KeyValue{
-							kv.String("key", "val"),
+						Tags: []label.KeyValue{
+							label.String("key", "val"),
 						},
 					},
 				),
@@ -331,8 +331,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []kv.KeyValue{
-				kv.String(tagKey, tagVal),
+			Tags: []label.KeyValue{
+				label.String(tagKey, tagVal),
 			},
 		}),
 	)
@@ -400,19 +400,19 @@ func Test_spanDataToThrift(t *testing.T) {
 						},
 					},
 				},
-				Attributes: []kv.KeyValue{
-					kv.String("key", keyValue),
-					kv.Float64("double", doubleValue),
-					kv.Uint64("uint", uint64(uintValue)),
-					kv.Uint64("overflows", math.MaxUint64),
+				Attributes: []label.KeyValue{
+					label.String("key", keyValue),
+					label.Float64("double", doubleValue),
+					label.Uint64("uint", uint64(uintValue)),
+					label.Uint64("overflows", math.MaxUint64),
 				},
 				MessageEvents: []export.Event{
-					{Name: eventNameValue, Attributes: []kv.KeyValue{kv.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,
 				SpanKind:      apitrace.SpanKindClient,
-				Resource:      resource.New(kv.String("rk1", rv1), kv.Int64("rk2", rv2)),
+				Resource:      resource.New(label.String("rk1", rv1), label.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,

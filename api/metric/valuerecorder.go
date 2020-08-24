@@ -17,7 +17,7 @@ package metric
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Float64ValueRecorder is a metric that records float64 values.
@@ -46,14 +46,14 @@ type BoundInt64ValueRecorder struct {
 
 // Bind creates a bound instrument for this ValueRecorder. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Float64ValueRecorder) Bind(labels ...kv.KeyValue) (h BoundFloat64ValueRecorder) {
+func (c Float64ValueRecorder) Bind(labels ...label.KeyValue) (h BoundFloat64ValueRecorder) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Bind creates a bound instrument for this ValueRecorder. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Int64ValueRecorder) Bind(labels ...kv.KeyValue) (h BoundInt64ValueRecorder) {
+func (c Int64ValueRecorder) Bind(labels ...label.KeyValue) (h BoundInt64ValueRecorder) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
@@ -73,14 +73,14 @@ func (c Int64ValueRecorder) Measurement(value int64) Measurement {
 // Record adds a new value to the list of ValueRecorder's records. The
 // labels should contain the keys and values to be associated with
 // this value.
-func (c Float64ValueRecorder) Record(ctx context.Context, value float64, labels ...kv.KeyValue) {
+func (c Float64ValueRecorder) Record(ctx context.Context, value float64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the ValueRecorder's distribution. The
 // labels should contain the keys and values to be associated with
 // this value.
-func (c Int64ValueRecorder) Record(ctx context.Context, value int64, labels ...kv.KeyValue) {
+func (c Int64ValueRecorder) Record(ctx context.Context, value int64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 
