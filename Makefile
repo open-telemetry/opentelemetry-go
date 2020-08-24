@@ -33,7 +33,7 @@ endif
 
 GOTEST_MIN = go test -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=profile.out -covermode=atomic -coverpkg=./...
 
 .DEFAULT_GOAL := precommit
 
@@ -67,8 +67,8 @@ test-with-coverage:
 	  echo "go test ./... + coverage in $${dir}"; \
 	  (cd "$${dir}" && \
 	 	$(GOTEST_WITH_COVERAGE) ./... && \
-		go tool cover -html=coverage.txt -o coverage.html); \
-      [ -f "$${dir}/coverage.txt" ] && cat "$${dir}/coverage.txt" >> coverage.txt; \
+		go tool cover -html=profile.out -o coverage.html); \
+      [ -f "$${dir}/profile.out" ] && cat "$${dir}/profile.out" >> coverage.txt; \
 	done; \
 	ls -l; \
 	sed -i '' -e '2,$$ { /^mode: /d; }' coverage.txt
