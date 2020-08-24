@@ -27,10 +27,10 @@ build-template: &build-template
         name: "Precommit and Coverage Report"
         command: |
           make ci
-          mv coverage.{out,txt,html} $TEST_RESULTS/
+          cp coverage.{out,txt,html} $TEST_RESULTS/
 
     - codecov/upload:
-        file: "../coverage.txt"
+        file: "coverage.txt"
 
     - save_cache:
         key: cimg-go-pkg-mod-{{ checksum "go.sum" }}
