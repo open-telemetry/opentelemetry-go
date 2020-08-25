@@ -20,11 +20,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest` (#1049)
-- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest` (#1049)
-- Rename `api/testharness` to `api/apitest` (#1049)
-- Rename `api/trace/testtrace` to `api/trace/tracetest` (#1049)
-- Change Metric Processor to merge multiple observations (#1024)
+- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`. (#1049)
+- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest`. (#1049)
+- Rename `api/testharness` to `api/apitest`. (#1049)
+- Rename `api/trace/testtrace` to `api/trace/tracetest`. (#1049)
+- Change Metric Processor to merge multiple observations. (#1024)
 - The `go.opentelemetry.io/otel/bridge/opentracing` bridge package has been made into its own module.
    This removes the package dependencies of this bridge from the rest of the OpenTelemetry based project. (#1038)
 - Renamed `go.opentelemetry.io/otel/api/standard` package to `go.opentelemetry.io/otel/semconv` to avoid the ambiguous and generic name `standard` and better describe the package as containing OpenTelemetry semantic conventions. (#1016)
