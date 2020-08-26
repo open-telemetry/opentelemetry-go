@@ -48,7 +48,7 @@ func initTracer() {
 	if err != nil {
 		log.Panicf("failed to initialize trace provider %v\n", err)
 	}
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 }
 
 func main() {

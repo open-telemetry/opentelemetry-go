@@ -47,15 +47,15 @@ var (
 	delegateTraceOnce sync.Once
 )
 
-// TraceProvider is the internal implementation for global.TraceProvider.
-func TraceProvider() trace.Provider {
+// TracerProvider is the internal implementation for global.TracerProvider.
+func TracerProvider() trace.Provider {
 	return globalTracer.Load().(traceProviderHolder).tp
 }
 
-// SetTraceProvider is the internal implementation for global.SetTraceProvider.
-func SetTraceProvider(tp trace.Provider) {
+// SetTracerProvider is the internal implementation for global.SetTracerProvider.
+func SetTracerProvider(tp trace.Provider) {
 	delegateTraceOnce.Do(func() {
-		current := TraceProvider()
+		current := TracerProvider()
 		if current == tp {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the

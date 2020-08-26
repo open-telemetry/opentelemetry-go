@@ -92,7 +92,7 @@ func InstallNewPipeline(exportOpts []Option, pushOpts []push.Option) (*push.Cont
 	if err != nil {
 		return controller, err
 	}
-	global.SetTraceProvider(traceProvider)
+	global.SetTracerProvider(traceProvider)
 	global.SetMeterProvider(controller.Provider())
 	return controller, err
 }

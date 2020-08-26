@@ -29,14 +29,14 @@ func TestTraceWithSDK(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	gtp := global.TraceProvider()
+	gtp := global.TracerProvider()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
 	sr := new(tracetest.StandardSpanRecorder)
 	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
 	span1.End()
