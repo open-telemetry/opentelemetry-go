@@ -5,35 +5,86 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions"
+    # Workflow files stored in the
+    # default location of `.github/workflows`
+    directory: "/"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/tools" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/bridge/opentracing" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/bridge/opentracing"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/otlp" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/basic"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/stdout" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/jaeger"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/metric/prometheus" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/namedtracer"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/trace/zipkin" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/otel-collector"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/trace/jaeger" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/prometheus"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/example/zipkin"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/prometheus"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/otlp"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/stdout"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/trace/jaeger"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/trace/zipkin"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/sdk"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+
