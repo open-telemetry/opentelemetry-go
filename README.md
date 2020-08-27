@@ -9,9 +9,9 @@ The Go [OpenTelemetry](https://opentelemetry.io/) implementation.
 
 ## Getting Started
 
-OpenTelemetry's goal is to provides a single set of APIs to capture distributed
+OpenTelemetry's goal is to provide a single set of APIs to capture distributed
 traces and metrics from your application and send them to an observability
-platform. This project allows you to do just that for application written in
+platform. This project allows you to do just that for applications written in
 Go. There are two steps to this process: instrument your application, and
 configure an exporter.
 
