@@ -57,7 +57,7 @@ $(TOOLS_DIR)/gojq: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_D
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/gojq github.com/itchyny/gojq/cmd/gojq
 
-precommit: generate build lint examples test
+precommit: dependabot-check license-check generate build lint examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -74,7 +74,7 @@ test-with-coverage:
 
 
 .PHONY: ci
-ci: precommit check-clean-work-tree license-check test-with-coverage test-386
+ci: precommit check-clean-work-tree test-with-coverage test-386
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
@@ -155,3 +155,16 @@ license-check:
 	           echo "license header checking failed:"; echo "$${licRes}"; \
 	           exit 1; \
 	   fi
+
+.PHONY: dependabot-check
+dependabot-check:
+	@result=$$( \
+		for f in $$( find -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
+			do grep -q "$$f" .github/dependabot.yml \
+			|| echo "$$f"; \
+		done; \
+	); \
+	if [ -n "$$result" ]; then \
+		echo "missing go.mod dependabot check:"; echo "$$result"; \
+		exit 1; \
+	fi
