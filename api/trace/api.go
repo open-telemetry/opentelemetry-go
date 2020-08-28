@@ -140,6 +140,11 @@ type SpanConfig struct {
 }
 
 // SpanConfigure applies all the options to a returned SpanConfig.
+// The default value for all the fields of the returned SpanConfig are the
+// default zero value of the type. Also, this does not perform any validation
+// on the returned SpanConfig (e.g. no uniqueness checking or bounding of
+// data), instead it is left to the implementations of the SDK to perform this
+// action.
 func SpanConfigure(options []SpanOption) *SpanConfig {
 	config := new(SpanConfig)
 	for _, option := range options {
@@ -162,9 +167,7 @@ func (o attributeSpanOption) Apply(c *SpanConfig) {
 // WithAttributes adds the attributes to a span. These attributes are meant to
 // provide additional information about the work the Span represents. The
 // attributes are added to the existing Span attributes, i.e. this does not
-// overwrite. There is no guarantee of uniqueness of the final set of
-// attributes made by the API, instead it is left to implementations of the
-// SDK to determine this.
+// overwrite.
 func WithAttributes(attributes ...label.KeyValue) SpanOption {
 	return attributeSpanOption(attributes)
 }
@@ -184,9 +187,7 @@ type linksSpanOption []Link
 func (o linksSpanOption) Apply(c *SpanConfig) { c.Links = append(c.Links, []Link(o)...) }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
-// links, i.e. this does not overwrite. There is no guarantee of uniqueness of
-// the final set of links made by the API, instead it is left to the
-// implementations of the SDK to determine this.
+// links, i.e. this does not overwrite.
 func WithLinks(links ...Link) SpanOption {
 	return linksSpanOption(links)
 }
