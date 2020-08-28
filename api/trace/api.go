@@ -139,18 +139,11 @@ type SpanConfig struct {
 	SpanKind SpanKind
 }
 
-// SpanConfigure applies all the options to a returned SpanConfig. This sets a
-// default value for the following SpanConfig fields if they are not set,
-// otherwise a field can be assumed to be the zero-value:
-//
-//    * Timestamp: set to the time this function is called at.
+// SpanConfigure applies all the options to a returned SpanConfig.
 func SpanConfigure(options []SpanOption) *SpanConfig {
 	config := new(SpanConfig)
 	for _, option := range options {
 		option.Apply(config)
-	}
-	if config.Timestamp.IsZero() {
-		config.Timestamp = time.Now()
 	}
 	return config
 }
