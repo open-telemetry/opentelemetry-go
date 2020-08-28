@@ -155,12 +155,14 @@ type SpanOption interface {
 
 type attributeSpanOption []label.KeyValue
 
-func (o attributeSpanOption) Apply(c *SpanConfig) { c.Attributes = []label.KeyValue(o) }
+func (o attributeSpanOption) Apply(c *SpanConfig) {
+	c.Attributes = append(c.Attributes, []label.KeyValue(o)...)
+}
 
-// WithAttributes sets the attributes of a span. These attributes are meant to
+// WithAttributes adds the attributes to a span. These attributes are meant to
 // provide additional information about the work the Span represents.
-func WithAttributes(attrs ...label.KeyValue) SpanOption {
-	return attributeSpanOption(attrs)
+func WithAttributes(attributes ...label.KeyValue) SpanOption {
+	return attributeSpanOption(attributes)
 }
 
 type timestampSpanOption time.Time
