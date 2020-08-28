@@ -116,7 +116,7 @@ func (t *tracer) setDelegate(provider trace.Provider) {
 
 // Start implements trace.Tracer by forwarding the call to t.delegate if
 // set, otherwise it forwards the call to a NoopTracer.
-func (t *tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
+func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
 	if t.delegate != nil {
 		return t.delegate.Start(ctx, name, opts...)
 	}

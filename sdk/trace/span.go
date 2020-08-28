@@ -109,7 +109,7 @@ func (s *span) SetAttribute(k string, v interface{}) {
 }
 
 // End ends the span adding an error event if it was called while panicking.
-func (s *span) End(options ...apitrace.EndOption) {
+func (s *span) End(options ...apitrace.SpanOption) {
 	if s == nil {
 		return
 	}
@@ -131,19 +131,16 @@ func (s *span) End(options ...apitrace.EndOption) {
 	if !s.IsRecording() {
 		return
 	}
-	opts := apitrace.EndConfig{}
-	for _, opt := range options {
-		opt(&opts)
-	}
+	config := apitrace.SpanConfigure(options)
 	s.endOnce.Do(func() {
 		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
-			if opts.EndTime.IsZero() {
+			if config.Timestamp.IsZero() {
 				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 			} else {
-				sd.EndTime = opts.EndTime
+				sd.EndTime = config.Timestamp
 			}
 			for sp := range sps {
 				sp.OnEnd(sd)
@@ -324,7 +321,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o *apitrace.SpanConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
@@ -355,7 +352,7 @@ func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, rem
 		return span
 	}
 
-	startTime := o.StartTime
+	startTime := o.Timestamp
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}

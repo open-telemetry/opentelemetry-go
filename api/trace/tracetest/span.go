@@ -55,7 +55,7 @@ func (s *Span) Tracer() trace.Tracer {
 	return s.tracer
 }
 
-func (s *Span) End(opts ...trace.EndOption) {
+func (s *Span) End(opts ...trace.SpanOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -63,14 +63,9 @@ func (s *Span) End(opts ...trace.EndOption) {
 		return
 	}
 
-	var c trace.EndConfig
-	for _, opt := range opts {
-		opt(&c)
-	}
-
+	c := trace.SpanConfigure(opts)
 	s.endTime = time.Now()
-
-	if endTime := c.EndTime; !endTime.IsZero() {
+	if endTime := c.Timestamp; !endTime.IsZero() {
 		s.endTime = endTime
 	}
 

@@ -47,15 +47,12 @@ var _ apitrace.Tracer = (*MockTracer)(nil)
 // TracdID is used from Parent Span Context and SpanID is assigned.
 // If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
-func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
-	var opts apitrace.StartConfig
-	for _, op := range o {
-		op(&opts)
-	}
+func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
+	config := apitrace.SpanConfigure(o)
 	var span *MockSpan
 	var sc apitrace.SpanContext
 
-	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
 	if !parentSpanContext.IsValid() {
 		sc = apitrace.SpanContext{}

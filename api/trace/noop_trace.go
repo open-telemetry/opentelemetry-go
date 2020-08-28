@@ -23,7 +23,7 @@ type NoopTracer struct{}
 var _ Tracer = NoopTracer{}
 
 // Start starts a noop span.
-func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (context.Context, Span) {
+func (NoopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
 	span := NoopSpan{}
 	return ContextWithSpan(ctx, span), span
 }

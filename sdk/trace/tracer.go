@@ -29,14 +29,10 @@ type tracer struct {
 
 var _ apitrace.Tracer = &tracer{}
 
-func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
-	var opts apitrace.StartConfig
+func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
+	config := apitrace.SpanConfigure(o)
 
-	for _, op := range o {
-		op(&opts)
-	}
-
-	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
 	if p := apitrace.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*span); ok {
@@ -44,14 +40,14 @@ func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.StartOpt
 		}
 	}
 
-	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, opts)
+	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, config)
 	for _, l := range links {
 		span.addLink(l)
 	}
-	for _, l := range opts.Links {
+	for _, l := range config.Links {
 		span.addLink(l)
 	}
-	span.SetAttributes(opts.Attributes...)
+	span.SetAttributes(config.Attributes...)
 
 	span.tracer = tr
 
