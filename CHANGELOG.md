@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- In the `go.opentelemetry.io/otel/api/trace` package a new `TracerConfigure` function was added to configure a new `TracerConfig`.
+   This addition was made to conform with our project option conventions. (#1109)
+
+### Changed
+
+- The `go.opentelemetry.io/otel/api/trace` `TracerOption` was changed to an interface to conform to project option conventions. (#1109)
+
 ## [0.11.0] - 2020-08-24
 
 ### Added
