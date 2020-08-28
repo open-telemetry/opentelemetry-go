@@ -34,20 +34,20 @@ func TestTracerConfigure(t *testing.T) {
 		},
 		{
 			[]TracerOption{
-				WithVersion(v1),
+				WithInstrumentationVersion(v1),
 			},
 			&TracerConfig{
-				Version: v1,
+				InstrumentationVersion: v1,
 			},
 		},
 		{
 			[]TracerOption{
 				// Multiple calls should overwrite.
-				WithVersion(v1),
-				WithVersion(v2),
+				WithInstrumentationVersion(v1),
+				WithInstrumentationVersion(v2),
 			},
 			&TracerConfig{
-				Version: v2,
+				InstrumentationVersion: v2,
 			},
 		},
 	}

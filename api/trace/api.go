@@ -24,18 +24,18 @@ import (
 
 type Provider interface {
 	// Tracer creates an implementation of the Tracer interface.
-	// The passed name must be the package name of the instrumentation
-	// library, this is the library that provids instrumentation. It should
-	// not be the name of the library being instrumented unless that code
-	// itself is providing built-in instrumentation. If the name is empty,
-	// then an implementation defined default name will be used instead.
-	Tracer(name string, options ...TracerOption) Tracer
+	// The instrumentationName must be the name of the library providing
+	// instrumentation. This name may be the same as the instrumented code
+	// only if that code provides built-in instrumentation. If the
+	// instrumentationName is empty, then a implementation defined default
+	// name will be used instead.
+	Tracer(instrumentationName string, opts ...TracerOption) Tracer
 }
 
 // TracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
-	// Version is the version of the instrumentation library.
-	Version string
+	// InstrumentationVersion is the version of the instrumentation library.
+	InstrumentationVersion string
 }
 
 // TracerConfigure applies all the options to a returned TracerConfig.
@@ -57,13 +57,13 @@ type TracerOption interface {
 	Apply(*TracerConfig)
 }
 
-type versionTracerOption string
+type instVersionTracerOption string
 
-func (o versionTracerOption) Apply(c *TracerConfig) { c.Version = string(o) }
+func (o instVersionTracerOption) Apply(c *TracerConfig) { c.InstrumentationVersion = string(o) }
 
-// WithVersion sets the instrumentation version for a Tracer.
-func WithVersion(version string) TracerOption {
-	return versionTracerOption(version)
+// WithInstrumentationVersion sets the instrumentation version for a Tracer.
+func WithInstrumentationVersion(version string) TracerOption {
+	return instVersionTracerOption(version)
 }
 
 type Tracer interface {
