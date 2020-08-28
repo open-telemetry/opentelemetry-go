@@ -24,30 +24,46 @@ import (
 
 type Provider interface {
 	// Tracer creates an implementation of the Tracer interface.
-	// The instrumentationName must be the name of the library providing
-	// instrumentation. This name may be the same as the instrumented code
-	// only if that code provides built-in instrumentation. If the
-	// instrumentationName is empty, then a implementation defined default
-	// name will be used instead.
-	Tracer(instrumentationName string, opts ...TracerOption) Tracer
+	// The passed name must be the package name of the instrumentation
+	// library, this is the library that provids instrumentation. It should
+	// not be the name of the library being instrumented unless that code
+	// itself is providing built-in instrumentation. If the name is empty,
+	// then an implementation defined default name will be used instead.
+	Tracer(name string, options ...TracerOption) Tracer
 }
 
-// TODO (MrAlias): unify this API option design:
-// https://github.com/open-telemetry/opentelemetry-go/issues/536
-
-// TracerConfig contains options for a Tracer.
+// TracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
-	InstrumentationVersion string
+	// Version is the version of the instrumentation library.
+	Version string
 }
 
-// TracerOption configures a TracerConfig option.
-type TracerOption func(*TracerConfig)
-
-// WithInstrumentationVersion sets the instrumentation version for a Tracer.
-func WithInstrumentationVersion(version string) TracerOption {
-	return func(c *TracerConfig) {
-		c.InstrumentationVersion = version
+// TracerConfigure applies all the options to a returned TracerConfig.
+// The default value for all the fields of the returned TracerConfig are the
+// default zero value of the type. Also, this does not perform any validation
+// on the returned TracerConfig (e.g. no uniqueness checking or bounding of
+// data), instead it is left to the implementations of the SDK to perform this
+// action.
+func TracerConfigure(options []TracerOption) *TracerConfig {
+	config := new(TracerConfig)
+	for _, option := range options {
+		option.Apply(config)
 	}
+	return config
+}
+
+// TracerOption applies an options to a TracerConfig.
+type TracerOption interface {
+	Apply(*TracerConfig)
+}
+
+type versionTracerOption string
+
+func (o versionTracerOption) Apply(c *TracerConfig) { c.Version = string(o) }
+
+// WithVersion sets the instrumentation version for a Tracer.
+func WithVersion(version string) TracerOption {
+	return versionTracerOption(version)
 }
 
 type Tracer interface {
