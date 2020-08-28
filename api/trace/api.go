@@ -160,7 +160,11 @@ func (o attributeSpanOption) Apply(c *SpanConfig) {
 }
 
 // WithAttributes adds the attributes to a span. These attributes are meant to
-// provide additional information about the work the Span represents.
+// provide additional information about the work the Span represents. The
+// attributes are added to the existing Span attributes, i.e. this does not
+// overwrite. There is no guarantee of uniqueness of the final set of
+// attributes made by the API, instead it is left to implementations of the
+// SDK to determine this.
 func WithAttributes(attributes ...label.KeyValue) SpanOption {
 	return attributeSpanOption(attributes)
 }
@@ -179,7 +183,10 @@ type linksSpanOption []Link
 
 func (o linksSpanOption) Apply(c *SpanConfig) { c.Links = append(c.Links, []Link(o)...) }
 
-// WithLinks adds links to a Span.
+// WithLinks adds links to a Span. The links are added to the existing Span
+// links, i.e. this does not overwrite. There is no guarantee of uniqueness of
+// the final set of links made by the API, instead it is left to the
+// implementations of the SDK to determine this.
 func WithLinks(links ...Link) SpanOption {
 	return linksSpanOption(links)
 }
