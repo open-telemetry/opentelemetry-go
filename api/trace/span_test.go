@@ -125,7 +125,7 @@ func TestSpanConfigure(t *testing.T) {
 		},
 		{
 			[]SpanOption{
-				// Multiple calls should not change record state.
+				// Multiple calls should not change Record state.
 				WithRecord(),
 				WithRecord(),
 			},
@@ -143,7 +143,7 @@ func TestSpanConfigure(t *testing.T) {
 		},
 		{
 			[]SpanOption{
-				// Multiple calls should not change record state.
+				// Multiple calls should not change NewRoot state.
 				WithNewRoot(),
 				WithNewRoot(),
 			},
