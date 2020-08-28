@@ -29,8 +29,14 @@ type tracer struct {
 
 var _ apitrace.Tracer = &tracer{}
 
-func (tr *tracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	config := apitrace.SpanConfigure(o)
+// Start starts a Span and returns it along with a context containing it.
+//
+// The Span is created with the provided name and as a child of any existing
+// span context found in the passed context. The created Span will be
+// configured appropriately by any SpanOption passed. Any Timestamp option
+// passed will be used as the start time of the Span's life-cycle.
+func (tr *tracer) Start(ctx context.Context, name string, options ...apitrace.SpanOption) (context.Context, apitrace.Span) {
+	config := apitrace.SpanConfigure(options)
 
 	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
 

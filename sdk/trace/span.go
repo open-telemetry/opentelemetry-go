@@ -108,7 +108,13 @@ func (s *span) SetAttribute(k string, v interface{}) {
 	}
 }
 
-// End ends the span adding an error event if it was called while panicking.
+// End ends the span.
+//
+// The only SpanOption currently supported is WithTimestamp which will set the
+// end time for a Span's life-cycle.
+//
+// If this method is called while panicking an error event is added to the
+// Span before ending it and the panic is continued.
 func (s *span) End(options ...apitrace.SpanOption) {
 	if s == nil {
 		return
