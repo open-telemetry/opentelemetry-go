@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 const (
@@ -238,7 +238,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	var id uint64
-	mockTracer := &mocktrace.MockTracer{
+	mockTracer := &tracetest.MockTracer{
 		Sampled:     false,
 		StartSpanID: &id,
 	}
