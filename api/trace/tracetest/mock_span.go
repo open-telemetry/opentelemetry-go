@@ -25,11 +25,11 @@ import (
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
-	sc        apitrace.SpanContext
-	tracer    apitrace.Tracer
+	StatusMsg string
 	Name      string
 	Status    codes.Code
-	StatusMsg string
+	sc        apitrace.SpanContext
+	tracer    apitrace.Tracer
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)
