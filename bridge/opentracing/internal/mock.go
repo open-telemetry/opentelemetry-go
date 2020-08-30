@@ -23,11 +23,10 @@ import (
 
 	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
-
-	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 var (

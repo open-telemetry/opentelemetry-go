@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/internal/trace/parent"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 // MockTracer is a simple tracer used for testing purpose only.
@@ -55,7 +55,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Star
 	var span *MockSpan
 	var sc apitrace.SpanContext
 
-	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
+	parentSpanContext, _, _ := otelparent.GetSpanContextAndLinks(ctx, opts.NewRoot)
 
 	if !parentSpanContext.IsValid() {
 		sc = apitrace.SpanContext{}
