@@ -44,7 +44,7 @@ type MockTracer struct {
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
 // Start starts a MockSpan. It creates a new Span based on Parent SpanContext option.
-// TracdID is used from Parent Span Context and SpanID is assigned.
+// TraceID is used from Parent Span Context and SpanID is assigned.
 // If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
 func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.StartOption) (context.Context, apitrace.Span) {
