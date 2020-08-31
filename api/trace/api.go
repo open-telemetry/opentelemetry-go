@@ -143,7 +143,7 @@ type SpanConfig struct {
 // The default value for all the fields of the returned SpanConfig are the
 // default zero value of the type. Also, this does not perform any validation
 // on the returned SpanConfig (e.g. no uniqueness checking or bounding of
-// data), instead it is left to the implementations of the SDK to perform this
+// data). Instead, it is left to the implementations of the SDK to perform this
 // action.
 func SpanConfigure(options []SpanOption) *SpanConfig {
 	config := new(SpanConfig)
@@ -153,7 +153,7 @@ func SpanConfigure(options []SpanOption) *SpanConfig {
 	return config
 }
 
-// SpanOption applies an options to a SpanConfig.
+// SpanOption applies an option to a SpanConfig.
 type SpanOption interface {
 	Apply(*SpanConfig)
 }
@@ -207,8 +207,8 @@ type newRootSpanOption bool
 
 func (o newRootSpanOption) Apply(c *SpanConfig) { c.NewRoot = bool(o) }
 
-// WithNewRoot specifies that the Span should be treated as a root Span. The
-// parent span context should be ignored when defining the Span's trace
+// WithNewRoot specifies that the Span should be treated as a root Span. Any
+// existing parent span context will be ignored when defining the Span's trace
 // identifiers.
 func WithNewRoot() SpanOption {
 	return newRootSpanOption(true)
