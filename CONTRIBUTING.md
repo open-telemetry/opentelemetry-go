@@ -349,6 +349,7 @@ Approvers:
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Sam Xie](https://github.com/XSAM)
 
 Maintainers:
 
