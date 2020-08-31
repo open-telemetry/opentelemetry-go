@@ -135,7 +135,7 @@ type SpanConfig struct {
 	// commonly used when an existing trace crosses trust boundaries and the
 	// remote parent span context should be ignored for security.
 	NewRoot bool
-	// SpanKind is the SpanKind a Span is.
+	// SpanKind is the role a Span has in a trace.
 	SpanKind SpanKind
 }
 
