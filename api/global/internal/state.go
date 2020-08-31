@@ -25,7 +25,7 @@ import (
 )
 
 type (
-	traceProviderHolder struct {
+	tracerProviderHolder struct {
 		tp trace.Provider
 	}
 
@@ -47,26 +47,26 @@ var (
 	delegateTraceOnce sync.Once
 )
 
-// TraceProvider is the internal implementation for global.TraceProvider.
-func TraceProvider() trace.Provider {
-	return globalTracer.Load().(traceProviderHolder).tp
+// TracerProvider is the internal implementation for global.TracerProvider.
+func TracerProvider() trace.Provider {
+	return globalTracer.Load().(tracerProviderHolder).tp
 }
 
-// SetTraceProvider is the internal implementation for global.SetTraceProvider.
-func SetTraceProvider(tp trace.Provider) {
+// SetTracerProvider is the internal implementation for global.SetTracerProvider.
+func SetTracerProvider(tp trace.Provider) {
 	delegateTraceOnce.Do(func() {
-		current := TraceProvider()
+		current := TracerProvider()
 		if current == tp {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
 			panic("invalid Provider, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*traceProvider); ok {
+		} else if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
 
 	})
-	globalTracer.Store(traceProviderHolder{tp: tp})
+	globalTracer.Store(tracerProviderHolder{tp: tp})
 }
 
 // MeterProvider is the internal implementation for global.MeterProvider.
@@ -103,7 +103,7 @@ func SetPropagators(pr propagation.Propagators) {
 
 func defaultTracerValue() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(traceProviderHolder{tp: &traceProvider{}})
+	v.Store(tracerProviderHolder{tp: &tracerProvider{}})
 	return v
 }
 

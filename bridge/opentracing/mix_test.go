@@ -130,7 +130,7 @@ func TestMixedAPIs(t *testing.T) {
 			t.Log(msg)
 		})
 
-		otelglobal.SetTraceProvider(otelProvider)
+		otelglobal.SetTracerProvider(otelProvider)
 		ot.SetGlobalTracer(otTracer)
 
 		tc.setup(t, mockOtelTracer)
