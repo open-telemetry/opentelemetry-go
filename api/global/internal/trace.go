@@ -38,18 +38,18 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// traceProvider is a placeholder for a configured SDK Provider.
+// tracerProvider is a placeholder for a configured SDK Provider.
 //
 // All Provider functionality is forwarded to a delegate once configured.
-type traceProvider struct {
+type tracerProvider struct {
 	mtx     sync.Mutex
 	tracers []*tracer
 
 	delegate trace.Provider
 }
 
-// Compile-time guarantee that traceProvider implements the trace.Provider interface.
-var _ trace.Provider = &traceProvider{}
+// Compile-time guarantee that tracerProvider implements the trace.Provider interface.
+var _ trace.Provider = &tracerProvider{}
 
 // setDelegate configures p to delegate all Provider functionality to provider.
 //
@@ -58,7 +58,7 @@ var _ trace.Provider = &traceProvider{}
 //
 // Delegation only happens on the first call to this method. All subsequent
 // calls result in no delegation changes.
-func (p *traceProvider) setDelegate(provider trace.Provider) {
+func (p *tracerProvider) setDelegate(provider trace.Provider) {
 	if p.delegate != nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (p *traceProvider) setDelegate(provider trace.Provider) {
 }
 
 // Tracer implements trace.Provider.
-func (p *traceProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 

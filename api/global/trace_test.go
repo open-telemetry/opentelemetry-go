@@ -21,16 +21,16 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-type testTraceProvider struct{}
+type testTracerProvider struct{}
 
-var _ trace.Provider = &testTraceProvider{}
+var _ trace.Provider = &testTracerProvider{}
 
-func (*testTraceProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
 	return &trace.NoopTracer{}
 }
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {
-	p1 := testTraceProvider{}
+	p1 := testTracerProvider{}
 	p2 := trace.NoopProvider{}
 	global.SetTracerProvider(&p1)
 	global.SetTracerProvider(&p2)
