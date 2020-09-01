@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package tracetest
 
 import (
 	"context"
@@ -25,11 +25,11 @@ import (
 
 // MockSpan is a mock span used in association with MockTracer for testing purpose only.
 type MockSpan struct {
-	sc        apitrace.SpanContext
-	tracer    apitrace.Tracer
+	StatusMsg string
 	Name      string
 	Status    codes.Code
-	StatusMsg string
+	sc        apitrace.SpanContext
+	tracer    apitrace.Tracer
 }
 
 var _ apitrace.Span = (*MockSpan)(nil)

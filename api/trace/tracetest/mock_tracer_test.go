@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package tracetest_test
 
 import (
 	"os"
 	"testing"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
@@ -27,7 +28,7 @@ func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
 			Name:   "MockTracer.StartSpanID",
-			Offset: unsafe.Offsetof(MockTracer{}.StartSpanID),
+			Offset: unsafe.Offsetof(tracetest.MockTracer{}.StartSpanID),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {

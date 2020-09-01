@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package tracetest
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/internal/trace/parent"
+	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 )
 
 // MockTracer is a simple tracer used for testing purpose only.
@@ -44,7 +44,7 @@ type MockTracer struct {
 var _ apitrace.Tracer = (*MockTracer)(nil)
 
 // Start starts a MockSpan. It creates a new Span based on Parent SpanContext option.
-// TracdID is used from Parent Span Context and SpanID is assigned.
+// TraceID is used from Parent Span Context and SpanID is assigned.
 // If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
 func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
@@ -52,7 +52,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 	var span *MockSpan
 	var sc apitrace.SpanContext
 
-	parentSpanContext, _, _ := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
+	parentSpanContext, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
 	if !parentSpanContext.IsValid() {
 		sc = apitrace.SpanContext{}
