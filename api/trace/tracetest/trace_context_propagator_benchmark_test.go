@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/trace"
-	mocktrace "go.opentelemetry.io/otel/internal/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 func BenchmarkInject(b *testing.B) {
@@ -41,7 +41,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 
-		mockTracer := &mocktrace.MockTracer{
+		mockTracer := &tracetest.MockTracer{
 			Sampled:     false,
 			StartSpanID: &id,
 		}

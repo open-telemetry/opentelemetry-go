@@ -82,9 +82,9 @@ func TestInstallNewPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, global.TraceProvider())
+			assert.IsType(t, tc.expectedProvider, global.TracerProvider())
 
-			global.SetTraceProvider(nil)
+			global.SetTracerProvider(nil)
 		})
 	}
 }
@@ -145,7 +145,7 @@ func TestNewExportPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TraceProvider())
+			assert.NotEqual(t, tp, global.TracerProvider())
 			assert.IsType(t, tc.expectedProviderType, tp)
 
 			if tc.testSpanSampling {
@@ -345,7 +345,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 

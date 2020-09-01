@@ -178,7 +178,7 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 		return nil, err
 	}
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 	return flushFn, nil
 }
 

@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	tracer = global.TraceProvider().Tracer(
+	tracer = global.TracerProvider().Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(instrumentationVersion),
 	)

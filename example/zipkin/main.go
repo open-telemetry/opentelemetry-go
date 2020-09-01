@@ -57,7 +57,7 @@ func main() {
 
 	ctx := context.Background()
 
-	tr := global.TraceProvider().Tracer("component-main")
+	tr := global.TracerProvider().Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
 	<-time.After(6 * time.Millisecond)
 	bar(ctx)
@@ -69,7 +69,7 @@ func main() {
 }
 
 func bar(ctx context.Context) {
-	tr := global.TraceProvider().Tracer("component-bar")
+	tr := global.TracerProvider().Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
 	<-time.After(6 * time.Millisecond)
 	span.End()
