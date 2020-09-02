@@ -15,9 +15,12 @@
 package zipkin
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -25,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 func TestModelConversion(t *testing.T) {
@@ -655,4 +659,124 @@ func TestModelConversion(t *testing.T) {
 func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	id := zkmodel.ID(n)
 	return &id
+}
+
+func Test_toZipkinTags(t *testing.T) {
+	keyValue := "value"
+	doubleValue := 123.456
+	uintValue := int64(123)
+	statusMessage := "this is a problem"
+	instrLibName := "instrumentation-library"
+	instrLibVersion := "semver:1.0.0"
+
+	tests := []struct {
+		name string
+		data *export.SpanData
+		want map[string]string
+	}{
+		{
+			name: "attributes",
+			data: &export.SpanData{
+				Attributes: []label.KeyValue{
+					label.String("key", keyValue),
+					label.Float64("double", doubleValue),
+					label.Uint64("uint", uint64(uintValue)),
+					label.Bool("ok", true),
+				},
+			},
+			want: map[string]string{
+				"double":                fmt.Sprint(doubleValue),
+				"key":                   keyValue,
+				"ok":                    "true",
+				"uint":                  strconv.FormatInt(uintValue, 10),
+				"ot.status_code":        codes.OK.String(),
+				"ot.status_description": "",
+			},
+		},
+		{
+			name: "no attributes",
+			data: &export.SpanData{},
+			want: map[string]string{
+				"ot.status_code":        codes.OK.String(),
+				"ot.status_description": "",
+			},
+		},
+		{
+			name: "omit-noerror",
+			data: &export.SpanData{
+				Attributes: []label.KeyValue{
+					label.Bool("error", false),
+				},
+			},
+			want: map[string]string{
+				"ot.status_code":        codes.OK.String(),
+				"ot.status_description": "",
+			},
+		},
+		{
+			name: "statusCode",
+			data: &export.SpanData{
+				Attributes: []label.KeyValue{
+					label.String("key", keyValue),
+					label.Bool("error", true),
+				},
+				StatusCode:    codes.Unknown,
+				StatusMessage: statusMessage,
+			},
+			want: map[string]string{
+				"error":                 "true",
+				"key":                   keyValue,
+				"ot.status_code":        codes.Unknown.String(),
+				"ot.status_description": statusMessage,
+			},
+		},
+		{
+			name: "instrLib-empty",
+			data: &export.SpanData{
+				InstrumentationLibrary: instrumentation.Library{},
+			},
+			want: map[string]string{
+				"ot.status_code":        codes.OK.String(),
+				"ot.status_description": "",
+			},
+		},
+		{
+			name: "instrLib-noversion",
+			data: &export.SpanData{
+				Attributes: []label.KeyValue{},
+				InstrumentationLibrary: instrumentation.Library{
+					Name: instrLibName,
+				},
+			},
+			want: map[string]string{
+				"otel.instrumentation_library.name": instrLibName,
+				"ot.status_code":                    codes.OK.String(),
+				"ot.status_description":             "",
+			},
+		},
+		{
+			name: "instrLib-with-version",
+			data: &export.SpanData{
+				Attributes: []label.KeyValue{},
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: map[string]string{
+				"otel.instrumentation_library.name":    instrLibName,
+				"otel.instrumentation_library.version": instrLibVersion,
+				"ot.status_code":                       codes.OK.String(),
+				"ot.status_description":                "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toZipkinTags(tt.data)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("Diff%v", diff)
+			}
+		})
+	}
 }
