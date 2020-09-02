@@ -32,22 +32,38 @@ type Provider interface {
 	Tracer(instrumentationName string, opts ...TracerOption) Tracer
 }
 
-// TODO (MrAlias): unify this API option design:
-// https://github.com/open-telemetry/opentelemetry-go/issues/536
-
-// TracerConfig contains options for a Tracer.
+// TracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
+	// InstrumentationVersion is the version of the instrumentation library.
 	InstrumentationVersion string
 }
 
-// TracerOption configures a TracerConfig option.
-type TracerOption func(*TracerConfig)
+// TracerConfigure applies all the options to a returned TracerConfig.
+// The default value for all the fields of the returned TracerConfig are the
+// default zero value of the type. Also, this does not perform any validation
+// on the returned TracerConfig (e.g. no uniqueness checking or bounding of
+// data), instead it is left to the implementations of the SDK to perform this
+// action.
+func TracerConfigure(options []TracerOption) *TracerConfig {
+	config := new(TracerConfig)
+	for _, option := range options {
+		option.Apply(config)
+	}
+	return config
+}
+
+// TracerOption applies an options to a TracerConfig.
+type TracerOption interface {
+	Apply(*TracerConfig)
+}
+
+type instVersionTracerOption string
+
+func (o instVersionTracerOption) Apply(c *TracerConfig) { c.InstrumentationVersion = string(o) }
 
 // WithInstrumentationVersion sets the instrumentation version for a Tracer.
 func WithInstrumentationVersion(version string) TracerOption {
-	return func(c *TracerConfig) {
-		c.InstrumentationVersion = version
-	}
+	return instVersionTracerOption(version)
 }
 
 type Tracer interface {

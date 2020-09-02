@@ -10,9 +10,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- In the `go.opentelemetry.io/otel/api/trace` package a new `TracerConfigure` function was added to configure a new `TracerConfig`.
+   This addition was made to conform with our project option conventions. (#1109)
+
+### Changed
+
 - Add reconnecting udp connection type to Jaeger exporter.
    This change adds a new optional implementation of the udp conn interface used to detect changes to an agent's host dns record.
    It then adopts the new destination address to ensure the exporter doesn't get stuck. This change was ported from jaegertracing/jaeger-client-go#520. (#1063)
+- The `go.opentelemetry.io/otel/api/trace` `TracerOption` was changed to an interface to conform to project option conventions. (#1109)
 
 ## [0.11.0] - 2020-08-24
 
