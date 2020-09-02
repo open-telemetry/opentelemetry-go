@@ -55,32 +55,28 @@ type SamplingResult struct {
 	Attributes []label.KeyValue
 }
 
-type probabilitySampler struct {
+type traceIdRatioSampler struct {
 	traceIDUpperBound uint64
 	description       string
 }
 
-func (ps probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
-	if p.ParentContext.IsSampled() {
-		return SamplingResult{Decision: RecordAndSampled}
-	}
-
+func (ts traceIdRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
-	if x < ps.traceIDUpperBound {
+	if x < ts.traceIDUpperBound {
 		return SamplingResult{Decision: RecordAndSampled}
 	}
 	return SamplingResult{Decision: NotRecord}
 }
 
-func (ps probabilitySampler) Description() string {
-	return ps.description
+func (ts traceIdRatioSampler) Description() string {
+	return ts.description
 }
 
-// ProbabilitySampler samples a given fraction of traces. Fractions >= 1 will
-// always sample. If the parent span is sampled, then it's child spans will
-// automatically be sampled. Fractions < 0 are treated as zero, but spans may
-// still be sampled if their parent is.
-func ProbabilitySampler(fraction float64) Sampler {
+// TraceIdRatioBased samples a given fraction of traces. Fractions >= 1 will
+// always sample. Fractions < 0 are treated as zero. To respect the
+// parent trace's `SampledFlag`, the `TraceIdRatioBased` sampler should be used
+// as a delegate of a `Parent` sampler.
+func TraceIdRatioBased(fraction float64) Sampler {
 	if fraction >= 1 {
 		return AlwaysSample()
 	}
@@ -89,9 +85,9 @@ func ProbabilitySampler(fraction float64) Sampler {
 		fraction = 0
 	}
 
-	return &probabilitySampler{
+	return &traceIdRatioSampler{
 		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("ProbabilitySampler{%g}", fraction),
+		description:       fmt.Sprintf("TraceIdRatioBased{%g}", fraction),
 	}
 }
 
