@@ -79,26 +79,22 @@ const (
 	B3Unspecified B3Encoding = 0
 )
 
-// B3 propagator serializes SpanContext to/from B3 Headers.
-// This propagator supports both versions of B3 headers,
-//  1. Single Header:
-//    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
-//  2. Multiple Headers:
-//    x-b3-traceid: {TraceId}
-//    x-b3-parentspanid: {ParentSpanId}
-//    x-b3-spanid: {SpanId}
-//    x-b3-sampled: {SamplingState}
-//    x-b3-flags: {DebugFlag}
+// B3 is a propagator that supports the B3 HTTP encoding.
+//
+// Both single (https://github.com/openzipkin/b3-propagation#single-header)
+// and multiple (https://github.com/openzipkin/b3-propagation#single-header)
+// header encoding are supported.
 type B3 struct {
 	// InjectEncoding are the B3 encodings used when injecting trace
 	// information. If no encoding is specified (i.e. `B3Unspecified`)
-	// `B3MultipleHeader` will be used as the default.
+	// `B3MultipleHeader` will be used as the default as it is the most
+	// backwards compatible.
 	InjectEncoding B3Encoding
 }
 
 var _ propagation.HTTPPropagator = B3{}
 
-// Inject injects a context into the supplier as B3 headers.
+// Inject injects a context into the supplier as B3 HTTP headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
@@ -142,7 +138,8 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	}
 }
 
-// Extract extracts a context from the supplier if it contains B3 headers.
+// Extract extracts a context from the supplier if it contains B3 HTTP
+// headers.
 func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	var (
 		sc  trace.SpanContext
@@ -172,6 +169,8 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
+// GetAllKeys returns the HTTP header names this propagator will use when
+// injecting.
 func (b3 B3) GetAllKeys() []string {
 	header := []string{}
 	if b3.InjectEncoding.supports(B3SingleHeader) {
