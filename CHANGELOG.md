@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This change adds a new optional implementation of the udp conn interface used to detect changes to an agent's host dns record.
    It then adopts the new destination address to ensure the exporter doesn't get stuck. This change was ported from jaegertracing/jaeger-client-go#520. (#1063)
 
+### Changed
+
+- Rename `ProbabilitySampler` to `TraceIdRatioBased` and change semantics to ignore parent span sampling status. (#1115)
+
 ## [0.11.0] - 2020-08-24
 
 ### Added
