@@ -55,12 +55,12 @@ type SamplingResult struct {
 	Attributes []label.KeyValue
 }
 
-type traceIdRatioSampler struct {
+type traceIDRatioSampler struct {
 	traceIDUpperBound uint64
 	description       string
 }
 
-func (ts traceIdRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 	if x < ts.traceIDUpperBound {
 		return SamplingResult{Decision: RecordAndSampled}
@@ -68,15 +68,16 @@ func (ts traceIdRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 	return SamplingResult{Decision: NotRecord}
 }
 
-func (ts traceIdRatioSampler) Description() string {
+func (ts traceIDRatioSampler) Description() string {
 	return ts.description
 }
 
-// TraceIdRatioBased samples a given fraction of traces. Fractions >= 1 will
+// TraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
 // always sample. Fractions < 0 are treated as zero. To respect the
-// parent trace's `SampledFlag`, the `TraceIdRatioBased` sampler should be used
+// parent trace's `SampledFlag`, the `TraceIDRatioBased` sampler should be used
 // as a delegate of a `Parent` sampler.
-func TraceIdRatioBased(fraction float64) Sampler {
+//nolint:golint // golint complains about stutter of `trace.TraceIDRatioBased`
+func TraceIDRatioBased(fraction float64) Sampler {
 	if fraction >= 1 {
 		return AlwaysSample()
 	}
@@ -85,9 +86,9 @@ func TraceIdRatioBased(fraction float64) Sampler {
 		fraction = 0
 	}
 
-	return &traceIdRatioSampler{
+	return &traceIDRatioSampler{
 		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("TraceIdRatioBased{%g}", fraction),
+		description:       fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
 

@@ -79,13 +79,13 @@ func TestParentSampleWithNoParent(t *testing.T) {
 }
 
 // TraceIDRatioBased sampler requirements state
-//  "A TraceIdRatioBased sampler with a given sampling rate MUST also sample
-//   all traces that any TraceIdRatioBased sampler with a lower sampling rate
+//  "A TraceIDRatioBased sampler with a given sampling rate MUST also sample
+//   all traces that any TraceIDRatioBased sampler with a lower sampling rate
 //   would sample."
 func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 	const (
 		numSamplers = 1000
-		numTraces = 100
+		numTraces   = 100
 	)
 	idg := defIDGenerator()
 
@@ -94,8 +94,8 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		if ratioHi < ratioLo {
 			ratioLo, ratioHi = ratioHi, ratioLo
 		}
-		samplerHi := TraceIdRatioBased(ratioHi)
-		samplerLo := TraceIdRatioBased(ratioLo)
+		samplerHi := TraceIDRatioBased(ratioHi)
+		samplerLo := TraceIDRatioBased(ratioLo)
 		for j := 0; j < numTraces; j++ {
 			traceID := idg.NewTraceID()
 
