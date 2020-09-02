@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/propagators"
-	"go.opentelemetry.io/otel/propagators/internal/propagatorstest"
 )
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
@@ -39,16 +38,16 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
 			wantSc: trace.SpanContext{
-				TraceID: propagatorstest.TraceID,
-				SpanID:  propagatorstest.SpanID,
+				TraceID: traceID,
+				SpanID:  spanID,
 			},
 		},
 		{
 			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -56,8 +55,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future version",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -65,8 +64,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future options with sampled bit set",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -74,16 +73,16 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future options with sampled bit cleared",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08",
 			wantSc: trace.SpanContext{
-				TraceID: propagatorstest.TraceID,
-				SpanID:  propagatorstest.SpanID,
+				TraceID: traceID,
+				SpanID:  spanID,
 			},
 		},
 		{
 			name:   "future additional data",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -91,8 +90,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -100,8 +99,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
 			wantSc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -225,8 +224,8 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		{
 			name: "valid spancontext, sampled",
 			sc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-01",
@@ -234,16 +233,16 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		{
 			name: "valid spancontext, not sampled",
 			sc: trace.SpanContext{
-				TraceID: propagatorstest.TraceID,
-				SpanID:  propagatorstest.SpanID,
+				TraceID: traceID,
+				SpanID:  spanID,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-00",
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
 			sc: trace.SpanContext{
-				TraceID:    propagatorstest.TraceID,
-				SpanID:     propagatorstest.SpanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: 0xff,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-01",
