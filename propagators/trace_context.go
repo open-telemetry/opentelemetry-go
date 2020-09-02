@@ -37,13 +37,21 @@ const (
 	tracestateKey traceContextPropagatorKeyType = 0
 )
 
-// TraceContext propagates SpanContext in W3C TraceContext format.
-//nolint:golint
+// TraceContext is a propagator that supports the W3C Trace Context format
+// (https://www.w3.org/TR/trace-context/)
+//
+// This propagator will propagate the traceparent and tracestate headers to
+// guarantee traces are not broken. It is up to the users of this propagator
+// to choose if they want to participate in a trace by modifying the
+// traceparent header and relevant parts of the tracestate header containing
+// their proprietary information.
 type TraceContext struct{}
 
 var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
+// Inject injects a context into the supplier as W3C Trace Context HTTP
+// headers.
 func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
@@ -62,6 +70,8 @@ func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplie
 	supplier.Set(traceparentHeader, h)
 }
 
+// Extract extracts a context from the supplier if it contains W3C Trace
+// Context headers.
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	state := supplier.Get(tracestateHeader)
 	if state != "" {
@@ -143,6 +153,8 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext
 	return sc
 }
 
+// GetAllKeys returns the HTTP header names this propagator will use when
+// injecting.
 func (TraceContext) GetAllKeys() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }
