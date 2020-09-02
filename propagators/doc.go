@@ -18,4 +18,4 @@ Package propagators contains OpenTelemetry context propagators.
 OpenTelemetry propagators are used to extract and inject context data from and
 into messages exchanged by applications.
 */
-package otel // import "go.opentelemetry.io/otel/propagators"
+package propagators // import "go.opentelemetry.io/otel/propagators"

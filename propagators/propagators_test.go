@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 type outOfThinAirPropagator struct {
@@ -66,9 +67,9 @@ func TestMultiplePropagators(t *testing.T) {
 	ns := nilSupplier{}
 	testProps := []propagation.HTTPPropagator{
 		trace.TraceContext{},
-		trace.B3{},
-		trace.B3{InjectEncoding: trace.B3SingleHeader},
-		trace.B3{InjectEncoding: trace.B3SingleHeader | trace.B3MultipleHeader},
+		propagators.B3{},
+		propagators.B3{InjectEncoding: propagators.B3SingleHeader},
+		propagators.B3{InjectEncoding: propagators.B3SingleHeader | propagators.B3MultipleHeader},
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really

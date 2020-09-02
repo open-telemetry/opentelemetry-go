@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestExtractB3(t *testing.T) {
@@ -41,7 +42,7 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{}
+		propagator := propagators.B3{}
 		props := propagation.New(propagation.WithExtractors(propagator))
 
 		for _, tt := range tg.tests {
@@ -88,7 +89,7 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		for _, tt := range tg.tests {
-			propagator := trace.B3{InjectEncoding: tt.encoding}
+			propagator := propagators.B3{InjectEncoding: tt.encoding}
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
@@ -117,12 +118,12 @@ func TestInjectB3(t *testing.T) {
 func TestB3Propagator_GetAllKeys(t *testing.T) {
 	tests := []struct {
 		name       string
-		propagator trace.B3
+		propagator propagators.B3
 		want       []string
 	}{
 		{
 			name:       "no encoding specified",
-			propagator: trace.B3{},
+			propagator: propagators.B3{},
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -132,7 +133,7 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 		},
 		{
 			name:       "B3MultipleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.B3MultipleHeader},
+			propagator: propagators.B3{InjectEncoding: propagators.B3MultipleHeader},
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -142,14 +143,14 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 		},
 		{
 			name:       "B3SingleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader},
+			propagator: propagators.B3{InjectEncoding: propagators.B3SingleHeader},
 			want: []string{
 				b3Context,
 			},
 		},
 		{
 			name:       "B3SingleHeader and B3MultipleHeader encoding specified",
-			propagator: trace.B3{InjectEncoding: trace.B3SingleHeader | trace.B3MultipleHeader},
+			propagator: propagators.B3{InjectEncoding: propagators.B3SingleHeader | propagators.B3MultipleHeader},
 			want: []string{
 				b3Context,
 				b3TraceID,
