@@ -120,3 +120,7 @@ func TestMultiplePropagators(t *testing.T) {
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
 }
+
+func TestDefaultHTTPPropagator(t *testing.T) {
+	assert.IsType(t, propagators.TraceContext{}, propagators.DefaultHTTPPropagator())
+}
