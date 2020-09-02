@@ -44,11 +44,6 @@ type TraceContext struct{}
 var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
-// DefaultHTTPPropagator returns the default trace HTTP propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
-	return TraceContext{}
-}
-
 func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
