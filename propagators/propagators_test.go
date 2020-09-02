@@ -66,7 +66,7 @@ func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}
 	ns := nilSupplier{}
 	testProps := []propagation.HTTPPropagator{
-		trace.TraceContext{},
+		propagators.TraceContext{},
 		propagators.B3{},
 		propagators.B3{InjectEncoding: propagators.B3SingleHeader},
 		propagators.B3{InjectEncoding: propagators.B3SingleHeader | propagators.B3MultipleHeader},

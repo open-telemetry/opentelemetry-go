@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -24,38 +24,12 @@ import (
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagators/internal/propagatorstest"
 )
-
-const (
-	traceIDStr = "4bf92f3577b34da6a3ce929d0e0e4736"
-	spanIDStr  = "00f067aa0ba902b7"
-)
-
-var (
-	traceID = mustTraceIDFromHex(traceIDStr)
-	spanID  = mustSpanIDFromHex(spanIDStr)
-)
-
-func mustTraceIDFromHex(s string) (t trace.ID) {
-	var err error
-	t, err = trace.IDFromHex(s)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func mustSpanIDFromHex(s string) (t trace.SpanID) {
-	var err error
-	t, err = trace.SpanIDFromHex(s)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -65,16 +39,16 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
 			wantSc: trace.SpanContext{
-				TraceID: traceID,
-				SpanID:  spanID,
+				TraceID: propagatorstest.TraceID,
+				SpanID:  propagatorstest.SpanID,
 			},
 		},
 		{
 			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -82,8 +56,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future version",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -91,8 +65,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future options with sampled bit set",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -100,16 +74,16 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future options with sampled bit cleared",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08",
 			wantSc: trace.SpanContext{
-				TraceID: traceID,
-				SpanID:  spanID,
+				TraceID: propagatorstest.TraceID,
+				SpanID:  propagatorstest.SpanID,
 			},
 		},
 		{
 			name:   "future additional data",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -117,8 +91,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -126,8 +100,8 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
 			wantSc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 		},
@@ -150,7 +124,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	wantSc := trace.EmptySpanContext()
-	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -242,7 +216,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}))
 	tests := []struct {
 		name       string
 		sc         trace.SpanContext
@@ -251,8 +225,8 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		{
 			name: "valid spancontext, sampled",
 			sc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: trace.FlagsSampled,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-01",
@@ -260,16 +234,16 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		{
 			name: "valid spancontext, not sampled",
 			sc: trace.SpanContext{
-				TraceID: traceID,
-				SpanID:  spanID,
+				TraceID: propagatorstest.TraceID,
+				SpanID:  propagatorstest.SpanID,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-00",
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
 			sc: trace.SpanContext{
-				TraceID:    traceID,
-				SpanID:     spanID,
+				TraceID:    propagatorstest.TraceID,
+				SpanID:     propagatorstest.SpanID,
 				TraceFlags: 0xff,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-01",
@@ -299,7 +273,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator trace.TraceContext
+	var propagator propagators.TraceContext
 	want := []string{"traceparent", "tracestate"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -308,7 +282,7 @@ func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 }
 
 func TestTraceStatePropagation(t *testing.T) {
-	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}), propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}), propagation.WithExtractors(propagators.TraceContext{}))
 	want := "opaquevalue"
 	headerName := "tracestate"
 
