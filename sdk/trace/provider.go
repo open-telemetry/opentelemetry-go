@@ -82,10 +82,7 @@ func NewProvider(opts ...ProviderOption) *Provider {
 // Tracer with the given name. If a tracer for the given name does not exist,
 // it is created first. If the name is empty, DefaultTracerName is used.
 func (p *Provider) Tracer(name string, opts ...apitrace.TracerOption) apitrace.Tracer {
-	c := new(apitrace.TracerConfig)
-	for _, o := range opts {
-		o(c)
-	}
+	c := apitrace.TracerConfigure(opts)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {
@@ -122,8 +119,8 @@ func (p *Provider) RegisterSpanProcessor(s SpanProcessor) {
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors
 func (p *Provider) UnregisterSpanProcessor(s SpanProcessor) {
-	mu.Lock()
-	defer mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	new := make(spanProcessorMap)
 	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
 		for k, v := range old {

@@ -82,9 +82,9 @@ func TestInstallNewPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, global.TraceProvider())
+			assert.IsType(t, tc.expectedProvider, global.TracerProvider())
 
-			global.SetTraceProvider(nil)
+			global.SetTracerProvider(nil)
 		})
 	}
 }
@@ -145,7 +145,7 @@ func TestNewExportPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TraceProvider())
+			assert.NotEqual(t, tp, global.TracerProvider())
 			assert.IsType(t, tc.expectedProviderType, tp)
 
 			if tc.testSpanSampling {
@@ -343,7 +343,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp),
 	)
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 
@@ -428,8 +428,8 @@ func Test_spanDataToThrift(t *testing.T) {
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
 					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "instrumentation.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "instrumentation.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},

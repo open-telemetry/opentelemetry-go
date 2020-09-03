@@ -45,7 +45,7 @@ func Example_insecure() {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
 
@@ -85,7 +85,7 @@ func Example_withTLS() {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
 

@@ -10,15 +10,45 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- A `SpanConfigure` function in `go.opentelemetry.io/otel/api/trace` to create a new `SpanConfig` from `SpanOption`s. (#1108)
+- In the `go.opentelemetry.io/otel/api/trace` package a new `TracerConfigure` function was added to configure a new `TracerConfig`.
+   This addition was made to conform with our project option conventions. (#1109)
+- Instrumentation library information was added to the Zipkin exporter. (#1119)
+
+### Changed
+
+- Add reconnecting udp connection type to Jaeger exporter.
+   This change adds a new optional implementation of the udp conn interface used to detect changes to an agent's host dns record.
+   It then adopts the new destination address to ensure the exporter doesn't get stuck. This change was ported from jaegertracing/jaeger-client-go#520. (#1063)
+- Replace `StartOption` and `EndOption` in `go.opentelemetry.io/otel/api/trace` with `SpanOption`.
+   This change is matched by replacing the `StartConfig` and `EndConfig` with a unified `SpanConfig`. (#1108)
+- Replace the `LinkedTo` span option in `go.opentelemetry.io/otel/api/trace` with `WithLinks`.
+   This is be more consistent with our other option patterns, i.e. passing the item to be configured directly instead of its component parts, and provides a cleaner function signature. (#1108)
+- The `go.opentelemetry.io/otel/api/trace` `TracerOption` was changed to an interface to conform to project option conventions. (#1109)
+- Rename Jaeger tags used for instrumentation library information to reflect changes in OpenTelemetry specification. (#1119)
+
+### Changed
+
+- Rename `ProbabilitySampler` to `TraceIDRatioBased` and change semantics to ignore parent span sampling status. (#1115)
+
+## [0.11.0] - 2020-08-24
+
+### Added
+
+- Support for exporting array-valued attributes via OTLP. (#992)
+- `Noop` and `InMemory` `SpanBatcher` implementations to help with testing integrations. (#994)
+- Support for filtering metric label sets. (#1047)
+- A dimensionality-reducing metric Processor. (#1057)
 - Integration tests for more OTel Collector Attribute types. (#1062)
 - A new `WithSpanProcessor` `ProviderOption` is added to the `go.opentelemetry.io/otel/sdk/trace` package to create a `Provider` and automatically register the `SpanProcessor`. (#1078)
 
 ### Changed
 
-- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`
-- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest`
-- Rename `api/testharness` to `api/apitest`
-- Rename `api/trace/testtrace` to `api/trace/tracetest`
+- Rename `sdk/metric/processor/test` to `sdk/metric/processor/processortest`. (#1049)
+- Rename `sdk/metric/controller/test` to `sdk/metric/controller/controllertest`. (#1049)
+- Rename `api/testharness` to `api/apitest`. (#1049)
+- Rename `api/trace/testtrace` to `api/trace/tracetest`. (#1049)
+- Change Metric Processor to merge multiple observations. (#1024)
 - The `go.opentelemetry.io/otel/bridge/opentracing` bridge package has been made into its own module.
    This removes the package dependencies of this bridge from the rest of the OpenTelemetry based project. (#1038)
 - Renamed `go.opentelemetry.io/otel/api/standard` package to `go.opentelemetry.io/otel/semconv` to avoid the ambiguous and generic name `standard` and better describe the package as containing OpenTelemetry semantic conventions. (#1016)
@@ -28,6 +58,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Merge the `go.opentelemetry.io/otel/api/label` and `go.opentelemetry.io/otel/api/kv` into the new `go.opentelemetry.io/otel/label` package. (#1060)
 - Unify Callback Function Naming.
    Rename `*Callback` with `*Func`. (#1061)
+- CI builds validate against last two versions of Go, dropping 1.13 and adding 1.15. (#1064)
 - The `go.opentelemetry.io/otel/sdk/export/trace` interfaces `SpanSyncer` and `SpanBatcher` have been replaced with a specification compliant `Exporter` interface.
    This interface still supports the export of `SpanData`, but only as a slice.
    Implementation are also required now to return any error from `ExportSpans` if one occurs as well as implement a `Shutdown` method for exporter clean-up. (#1078)
@@ -38,11 +69,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Duplicate, unused API sampler interface. (#999)
+   Use the [`Sampler` interface](https://github.com/open-telemetry/opentelemetry-go/blob/v0.11.0/sdk/trace/sampling.go) provided by the SDK instead.
 - The `grpctrace` instrumentation was moved to the `go.opentelemetry.io/contrib` repository and out of this repository.
    This move includes moving the `grpc` example to the `go.opentelemetry.io/contrib` as well. (#1027)
 - The `WithSpan` method of the `Tracer` interface.
    The functionality this method provided was limited compared to what a user can provide themselves.
    It was removed with the understanding that if there is sufficient user need it can be added back based on actual user usage. (#1043)
+- The `RegisterSpanProcessor` and `UnregisterSpanProcessor` functions.
+   These were holdovers from an approach prior to the TracerProvider design. They were not used anymore. (#1077)
+- The `oterror` package. (#1026)
+- The `othttp` and `httptrace` instrumentations were moved to `go.opentelemetry.io/contrib`. (#1032)
 
 ### Fixed
 
@@ -50,6 +87,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Correct instrumentation version tag in Jaeger exporter. (#1037)
 - The SDK span will now set an error event if the `End` method is called during a panic (i.e. it was deferred). (#1043)
 - Move internally generated protobuf code from the `go.opentelemetry.io/otel` to the OTLP exporter to reduce dependency overhead. (#1050)
+- The `otel-collector` example referenced outdated collector processors. (#1006)
 
 ## [0.10.0] - 2020-07-29
 
@@ -773,7 +811,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.11.0
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0

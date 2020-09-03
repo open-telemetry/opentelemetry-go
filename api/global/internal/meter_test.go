@@ -24,44 +24,11 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/metric"
-	metrictest "go.opentelemetry.io/otel/internal/metric"
+	metrictest "go.opentelemetry.io/otel/api/metric/metrictest"
 	"go.opentelemetry.io/otel/label"
 )
 
 var Must = metric.Must
-
-// Note: Maybe this should be factored into ../../../internal/metric?
-type measured struct {
-	Name                   string
-	InstrumentationName    string
-	InstrumentationVersion string
-	Labels                 map[label.Key]label.Value
-	Number                 metric.Number
-}
-
-func asStructs(batches []metrictest.Batch) []measured {
-	var r []measured
-	for _, batch := range batches {
-		for _, m := range batch.Measurements {
-			r = append(r, measured{
-				Name:                   m.Instrument.Descriptor().Name(),
-				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
-				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
-				Labels:                 asMap(batch.Labels...),
-				Number:                 m.Number,
-			})
-		}
-	}
-	return r
-}
-
-func asMap(kvs ...label.KeyValue) map[label.Key]label.Value {
-	m := map[label.Key]label.Value{}
-	for _, label := range kvs {
-		m[label.Key] = label.Value
-	}
-	return m
-}
 
 var asInt = metric.NewInt64Number
 var asFloat = metric.NewFloat64Number
@@ -107,56 +74,56 @@ func TestDirect(t *testing.T) {
 
 	mock.RunAsyncInstruments()
 
-	measurements := asStructs(mock.MeasurementBatches)
+	measurements := metrictest.AsStructs(mock.MeasurementBatches)
 
 	require.EqualValues(t,
-		[]measured{
+		[]metrictest.Measured{
 			{
 				Name:                   "test.counter",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valuerecorder",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asFloat(3),
 			},
 			{
 				Name:                "test.second",
 				InstrumentationName: "test2",
-				Labels:              asMap(labels3...),
+				Labels:              metrictest.LabelsToMap(labels3...),
 				Number:              asFloat(3),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asFloat(1),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels2...),
+				Labels:                 metrictest.LabelsToMap(labels2...),
 				Number:                 asFloat(2),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 asMap(labels2...),
+				Labels:                 metrictest.LabelsToMap(labels2...),
 				Number:                 asInt(2),
 			},
 		},
@@ -190,21 +157,21 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 3)
 
 	require.EqualValues(t,
-		[]measured{
+		[]metrictest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "test",
-				Labels:              asMap(labels1...),
+				Labels:              metrictest.LabelsToMap(labels1...),
 				Number:              asFloat(1),
 			},
 			{
 				Name:                "test.valuerecorder",
 				InstrumentationName: "test",
-				Labels:              asMap(labels1...),
+				Labels:              metrictest.LabelsToMap(labels1...),
 				Number:              asInt(3),
 			},
 		},
-		asStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(mock.MeasurementBatches))
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -347,13 +314,13 @@ func TestRecordBatchMock(t *testing.T) {
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
 	require.EqualValues(t,
-		[]measured{
+		[]metrictest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "builtin",
-				Labels:              asMap(),
+				Labels:              metrictest.LabelsToMap(),
 				Number:              asInt(1),
 			},
 		},
-		asStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(mock.MeasurementBatches))
 }

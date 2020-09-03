@@ -129,7 +129,7 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 		return err
 	}
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 	return nil
 }
 

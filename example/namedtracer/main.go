@@ -51,7 +51,7 @@ func initTracer() {
 		),
 		sdktrace.WithBatcher(exp),
 	)
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 }
 
 func main() {

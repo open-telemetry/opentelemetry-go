@@ -48,7 +48,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		serviceName,
 	)
 	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.Provider{}, global.TraceProvider())
+	assert.IsType(t, &sdktrace.Provider{}, global.TracerProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {
@@ -90,7 +90,7 @@ func TestNewExportPipeline(t *testing.T) {
 				tc.options...,
 			)
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TraceProvider())
+			assert.NotEqual(t, tp, global.TracerProvider())
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)

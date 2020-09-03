@@ -60,7 +60,7 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	tp := NewProvider(WithConfig(Config{DefaultSampler: ProbabilitySampler(0)}))
+	tp := NewProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
 	harness := apitest.NewHarness(t)
 	subjectFactory := func() trace.Tracer {
 		return tp.Tracer("")
@@ -221,25 +221,37 @@ func TestSampling(t *testing.T) {
 		sampledParent bool
 	}{
 		// Span w/o a parent
-		"NeverSample":            {sampler: NeverSample(), expect: 0},
-		"AlwaysSample":           {sampler: AlwaysSample(), expect: 1.0},
-		"ProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0},
-		"ProbabilitySampler_.25": {sampler: ProbabilitySampler(0.25), expect: .25},
-		"ProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5},
-		"ProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75},
-		"ProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1},
-		// Spans with a parent that is *not* sampled act like spans w/o a parent
-		"UnsampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 0, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: .25, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.50": {sampler: ProbabilitySampler(0.50), expect: .5, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_.75": {sampler: ProbabilitySampler(0.75), expect: .75, parent: true},
-		"UnsampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, parent: true},
-		// Spans with a parent that is sampled, will always sample, regardless of the probability
-		"SampledParentSpanWithProbabilitySampler_-1":  {sampler: ProbabilitySampler(-1.0), expect: 1, parent: true, sampledParent: true},
-		"SampledParentSpanWithProbabilitySampler_.25": {sampler: ProbabilitySampler(.25), expect: 1, parent: true, sampledParent: true},
-		"SampledParentSpanWithProbabilitySampler_2.0": {sampler: ProbabilitySampler(2.0), expect: 1, parent: true, sampledParent: true},
-		// Spans with a sampled parent, but when using the NeverSample Sampler, aren't sampled
+		"NeverSample":           {sampler: NeverSample(), expect: 0},
+		"AlwaysSample":          {sampler: AlwaysSample(), expect: 1.0},
+		"TraceIdRatioBased_-1":  {sampler: TraceIDRatioBased(-1.0), expect: 0},
+		"TraceIdRatioBased_.25": {sampler: TraceIDRatioBased(0.25), expect: .25},
+		"TraceIdRatioBased_.50": {sampler: TraceIDRatioBased(0.50), expect: .5},
+		"TraceIdRatioBased_.75": {sampler: TraceIDRatioBased(0.75), expect: .75},
+		"TraceIdRatioBased_2.0": {sampler: TraceIDRatioBased(2.0), expect: 1},
+
+		// Spans w/o a parent and using ParentSample(DelegateSampler()) Sampler, receive DelegateSampler's sampling decision
+		"ParentNeverSample":           {sampler: ParentSample(NeverSample()), expect: 0},
+		"ParentAlwaysSample":          {sampler: ParentSample(AlwaysSample()), expect: 1},
+		"ParentTraceIdRatioBased_.50": {sampler: ParentSample(TraceIDRatioBased(0.50)), expect: .5},
+
+		// An unadorned TraceIDRatioBased sampler ignores parent spans
+		"UnsampledParentSpanWithTraceIdRatioBased_.25": {sampler: TraceIDRatioBased(0.25), expect: .25, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.25":   {sampler: TraceIDRatioBased(0.25), expect: .25, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithTraceIdRatioBased_.50": {sampler: TraceIDRatioBased(0.50), expect: .5, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.50":   {sampler: TraceIDRatioBased(0.50), expect: .5, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithTraceIdRatioBased_.75": {sampler: TraceIDRatioBased(0.75), expect: .75, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.75":   {sampler: TraceIDRatioBased(0.75), expect: .75, parent: true, sampledParent: true},
+
+		// Spans with a sampled parent but using NeverSample Sampler, are not sampled
 		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, parent: true, sampledParent: true},
+
+		// Spans with a sampled parent and using ParentSample(DelegateSampler()) Sampler, inherit the parent span's sampling status
+		"SampledParentSpanWithParentNeverSample":             {sampler: ParentSample(NeverSample()), expect: 1, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithParentNeverSampler":          {sampler: ParentSample(NeverSample()), expect: 0, parent: true, sampledParent: false},
+		"SampledParentSpanWithParentAlwaysSampler":           {sampler: ParentSample(AlwaysSample()), expect: 1, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithParentAlwaysSampler":         {sampler: ParentSample(AlwaysSample()), expect: 0, parent: true, sampledParent: false},
+		"SampledParentSpanWithParentTraceIdRatioBased_.50":   {sampler: ParentSample(TraceIDRatioBased(0.50)), expect: 1, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithParentTraceIdRatioBased_.50": {sampler: ParentSample(TraceIDRatioBased(0.50)), expect: 0, parent: true, sampledParent: false},
 	} {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
@@ -532,13 +544,11 @@ func TestLinks(t *testing.T) {
 	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
-	span := startSpan(tp, "Links",
-		apitrace.LinkedTo(sc1, label.String("key1", "value1")),
-		apitrace.LinkedTo(sc2,
-			label.String("key2", "value2"),
-			label.String("key3", "value3"),
-		),
-	)
+	links := []apitrace.Link{
+		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
+		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
+	}
+	span := startSpan(tp, "Links", apitrace.WithLinks(links...))
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -550,13 +560,10 @@ func TestLinks(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		HasRemoteParent: true,
-		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
-		},
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		HasRemoteParent:        true,
+		Links:                  links,
 		SpanKind:               apitrace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
@@ -576,9 +583,11 @@ func TestLinksOverLimit(t *testing.T) {
 	tp := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
-		apitrace.LinkedTo(sc1, label.String("key1", "value1")),
-		apitrace.LinkedTo(sc2, label.String("key2", "value2")),
-		apitrace.LinkedTo(sc3, label.String("key3", "value3")),
+		apitrace.WithLinks(
+			apitrace.Link{SpanContext: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
+			apitrace.Link{SpanContext: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
+			apitrace.Link{SpanContext: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
+		),
 	)
 
 	k2v2 := label.String("key2", "value2")
@@ -700,7 +709,7 @@ func checkChild(p apitrace.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitrace.Span {
+func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -708,7 +717,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitra
 // passed name and with remote span context as parent. The remote span
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
 	ctx := context.Background()
 	ctx = apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
 	args = append(args, apitrace.WithRecord())
@@ -932,9 +941,9 @@ func TestCustomStartEndTime(t *testing.T) {
 	_, span := tp.Tracer("Custom Start and End time").Start(
 		context.Background(),
 		"testspan",
-		apitrace.WithStartTime(startTime),
+		apitrace.WithTimestamp(startTime),
 	)
-	span.End(apitrace.WithEndTime(endTime))
+	span.End(apitrace.WithTimestamp(endTime))
 
 	if te.Len() != 1 {
 		t.Fatalf("got %d exported spans, want one span", te.Len())

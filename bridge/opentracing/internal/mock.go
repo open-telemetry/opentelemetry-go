@@ -70,17 +70,14 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
-	spanOpts := oteltrace.StartConfig{}
-	for _, opt := range opts {
-		opt(&spanOpts)
-	}
-	startTime := spanOpts.StartTime
+func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
+	config := oteltrace.SpanConfigure(opts)
+	startTime := config.Timestamp
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
 	spanContext := oteltrace.SpanContext{
-		TraceID:    t.getTraceID(ctx, &spanOpts),
+		TraceID:    t.getTraceID(ctx, config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
 	}
@@ -88,15 +85,15 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		recording:      spanOpts.Record,
+		recording:      config.Record,
 		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{
-			MultiKV: spanOpts.Attributes,
+			MultiKV: config.Attributes,
 		}),
 		StartTime:    startTime,
 		EndTime:      time.Time{},
-		ParentSpanID: t.getParentSpanID(ctx, &spanOpts),
+		ParentSpanID: t.getParentSpanID(ctx, config),
 		Events:       nil,
-		SpanKind:     oteltrace.ValidateSpanKind(spanOpts.SpanKind),
+		SpanKind:     oteltrace.ValidateSpanKind(config.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = oteltrace.ContextWithSpan(ctx, span)
@@ -118,8 +115,8 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartConfig) oteltrace.ID {
-	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
+func (t *MockTracer) getTraceID(ctx context.Context, config *oteltrace.SpanConfig) oteltrace.ID {
+	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.TraceID
 	}
 	if len(t.SpareTraceIDs) > 0 {
@@ -133,15 +130,15 @@ func (t *MockTracer) getTraceID(ctx context.Context, spanOpts *oteltrace.StartCo
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, spanOpts *oteltrace.StartConfig) oteltrace.SpanID {
-	if parent := t.getParentSpanContext(ctx, spanOpts); parent.IsValid() {
+func (t *MockTracer) getParentSpanID(ctx context.Context, config *oteltrace.SpanConfig) oteltrace.SpanID {
+	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.SpanID
 	}
 	return oteltrace.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, spanOpts *oteltrace.StartConfig) oteltrace.SpanContext {
-	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, spanOpts.NewRoot)
+func (t *MockTracer) getParentSpanContext(ctx context.Context, config *oteltrace.SpanConfig) oteltrace.SpanContext {
+	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
 	return spanCtx
 }
 
@@ -239,17 +236,12 @@ func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
-func (s *MockSpan) End(options ...oteltrace.EndOption) {
+func (s *MockSpan) End(options ...oteltrace.SpanOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	endOpts := oteltrace.EndConfig{}
-
-	for _, opt := range options {
-		opt(&endOpts)
-	}
-
-	endTime := endOpts.EndTime
+	config := oteltrace.SpanConfigure(options)
+	endTime := config.Timestamp
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
