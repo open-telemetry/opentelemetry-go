@@ -207,10 +207,8 @@ func (e *Exporter) Shutdown(ctx context.Context) {
 		return
 	}
 
-	if err := cc.Close(); err != nil {
-		// Nothing we can do about this failure here.
-		global.Handle(err)
-	}
+	// Clean things up before checking this error.
+	err := cc.Close()
 
 	// At this point we can change the state variable started
 	e.mu.Lock()
@@ -222,6 +220,11 @@ func (e *Exporter) Shutdown(ctx context.Context) {
 	select {
 	case <-e.backgroundConnectionDoneCh:
 	case <-ctx.Done():
+	}
+
+	if err != nil {
+		// Nothing we can do about this failure here.
+		global.Handle(err)
 	}
 }
 
