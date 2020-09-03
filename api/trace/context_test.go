@@ -101,7 +101,7 @@ func (mockSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.
-func (mockSpan) End(options ...trace.EndOption) {
+func (mockSpan) End(options ...trace.SpanOption) {
 }
 
 // RecordError does nothing.

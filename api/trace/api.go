@@ -68,23 +68,7 @@ func WithInstrumentationVersion(version string) TracerOption {
 
 type Tracer interface {
 	// Start a span.
-	Start(ctx context.Context, spanName string, opts ...StartOption) (context.Context, Span)
-}
-
-// EndConfig provides options to set properties of span at the time of ending
-// the span.
-type EndConfig struct {
-	EndTime time.Time
-}
-
-// EndOption applies changes to EndConfig that sets options when the span is ended.
-type EndOption func(*EndConfig)
-
-// WithEndTime sets the end time of the span to provided time t, when it is ended.
-func WithEndTime(t time.Time) EndOption {
-	return func(c *EndConfig) {
-		c.EndTime = t
-	}
+	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
 }
 
 // ErrorConfig provides options to set properties of an error event at the time it is recorded.
@@ -116,7 +100,7 @@ type Span interface {
 
 	// End completes the span. No updates are allowed to span after it
 	// ends. The only exception is setting status of the span.
-	End(options ...EndOption)
+	End(options ...SpanOption)
 
 	// AddEvent adds an event to the span.
 	AddEvent(ctx context.Context, name string, attrs ...label.KeyValue)
@@ -153,18 +137,106 @@ type Span interface {
 	SetAttribute(string, interface{})
 }
 
-// StartOption applies changes to StartConfig that sets options at span start time.
-type StartOption func(*StartConfig)
-
-// StartConfig provides options to set properties of span at the time of starting
-// a new span.
-type StartConfig struct {
+// SpanConfig is a group of options for a Span.
+type SpanConfig struct {
+	// Attributes describe the associated qualities of a Span.
 	Attributes []label.KeyValue
-	StartTime  time.Time
-	Links      []Link
-	Record     bool
-	NewRoot    bool
-	SpanKind   SpanKind
+	// Timestamp is a time in a Span life-cycle.
+	Timestamp time.Time
+	// Links are the associations a Span has with other Spans.
+	Links []Link
+	// Record is the recording state of a Span.
+	Record bool
+	// NewRoot identifies a Span as the root Span for a new trace. This is
+	// commonly used when an existing trace crosses trust boundaries and the
+	// remote parent span context should be ignored for security.
+	NewRoot bool
+	// SpanKind is the role a Span has in a trace.
+	SpanKind SpanKind
+}
+
+// SpanConfigure applies all the options to a returned SpanConfig.
+// The default value for all the fields of the returned SpanConfig are the
+// default zero value of the type. Also, this does not perform any validation
+// on the returned SpanConfig (e.g. no uniqueness checking or bounding of
+// data). Instead, it is left to the implementations of the SDK to perform this
+// action.
+func SpanConfigure(options []SpanOption) *SpanConfig {
+	config := new(SpanConfig)
+	for _, option := range options {
+		option.Apply(config)
+	}
+	return config
+}
+
+// SpanOption applies an option to a SpanConfig.
+type SpanOption interface {
+	Apply(*SpanConfig)
+}
+
+type attributeSpanOption []label.KeyValue
+
+func (o attributeSpanOption) Apply(c *SpanConfig) {
+	c.Attributes = append(c.Attributes, []label.KeyValue(o)...)
+}
+
+// WithAttributes adds the attributes to a span. These attributes are meant to
+// provide additional information about the work the Span represents. The
+// attributes are added to the existing Span attributes, i.e. this does not
+// overwrite.
+func WithAttributes(attributes ...label.KeyValue) SpanOption {
+	return attributeSpanOption(attributes)
+}
+
+type timestampSpanOption time.Time
+
+func (o timestampSpanOption) Apply(c *SpanConfig) { c.Timestamp = time.Time(o) }
+
+// WithTimestamp sets the time of a Span life-cycle moment (e.g. started or
+// stopped).
+func WithTimestamp(t time.Time) SpanOption {
+	return timestampSpanOption(t)
+}
+
+type linksSpanOption []Link
+
+func (o linksSpanOption) Apply(c *SpanConfig) { c.Links = append(c.Links, []Link(o)...) }
+
+// WithLinks adds links to a Span. The links are added to the existing Span
+// links, i.e. this does not overwrite.
+func WithLinks(links ...Link) SpanOption {
+	return linksSpanOption(links)
+}
+
+type recordSpanOption bool
+
+func (o recordSpanOption) Apply(c *SpanConfig) { c.Record = bool(o) }
+
+// WithRecord specifies that the span should be recorded. It is important to
+// note that implementations may override this option, i.e. if the span is a
+// child of an un-sampled trace.
+func WithRecord() SpanOption {
+	return recordSpanOption(true)
+}
+
+type newRootSpanOption bool
+
+func (o newRootSpanOption) Apply(c *SpanConfig) { c.NewRoot = bool(o) }
+
+// WithNewRoot specifies that the Span should be treated as a root Span. Any
+// existing parent span context will be ignored when defining the Span's trace
+// identifiers.
+func WithNewRoot() SpanOption {
+	return newRootSpanOption(true)
+}
+
+type spanKindSpanOption SpanKind
+
+func (o spanKindSpanOption) Apply(c *SpanConfig) { c.SpanKind = SpanKind(o) }
+
+// WithSpanKind sets the SpanKind of a Span.
+func WithSpanKind(kind SpanKind) SpanOption {
+	return spanKindSpanOption(kind)
 }
 
 // Link is used to establish relationship between two spans within the same Trace or
@@ -233,57 +305,5 @@ func (sk SpanKind) String() string {
 		return "consumer"
 	default:
 		return "unspecified"
-	}
-}
-
-// WithStartTime sets the start time of the span to provided time t, when it is started.
-// In absence of this option, wall clock time is used as start time.
-// This option is typically used when starting of the span is delayed.
-func WithStartTime(t time.Time) StartOption {
-	return func(c *StartConfig) {
-		c.StartTime = t
-	}
-}
-
-// WithAttributes sets attributes to span. These attributes provides additional
-// data about the span.
-// Multiple `WithAttributes` options appends the attributes preserving the order.
-func WithAttributes(attrs ...label.KeyValue) StartOption {
-	return func(c *StartConfig) {
-		c.Attributes = append(c.Attributes, attrs...)
-	}
-}
-
-// WithRecord specifies that the span should be recorded.
-// Note that the implementation may still override this preference,
-// e.g., if the span is a child in an unsampled trace.
-func WithRecord() StartOption {
-	return func(c *StartConfig) {
-		c.Record = true
-	}
-}
-
-// WithNewRoot specifies that the current span or remote span context
-// in context passed to `Start` should be ignored when deciding about
-// a parent, which effectively means creating a span with new trace
-// ID. The current span and the remote span context may be added as
-// links to the span by the implementation.
-func WithNewRoot() StartOption {
-	return func(c *StartConfig) {
-		c.NewRoot = true
-	}
-}
-
-// LinkedTo allows instantiating a Span with initial Links.
-func LinkedTo(sc SpanContext, attrs ...label.KeyValue) StartOption {
-	return func(c *StartConfig) {
-		c.Links = append(c.Links, Link{sc, attrs})
-	}
-}
-
-// WithSpanKind specifies the role a Span on a Trace.
-func WithSpanKind(sk SpanKind) StartOption {
-	return func(c *StartConfig) {
-		c.SpanKind = sk
 	}
 }

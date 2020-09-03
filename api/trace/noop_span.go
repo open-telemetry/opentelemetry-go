@@ -54,7 +54,7 @@ func (NoopSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.
-func (NoopSpan) End(options ...EndOption) {
+func (NoopSpan) End(options ...SpanOption) {
 }
 
 // RecordError does nothing.

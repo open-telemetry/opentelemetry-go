@@ -500,13 +500,11 @@ func TestLinks(t *testing.T) {
 	sc1 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 	sc2 := apitrace.SpanContext{TraceID: apitrace.ID([16]byte{1, 1}), SpanID: apitrace.SpanID{3}}
 
-	span := startSpan(tp, "Links",
-		apitrace.LinkedTo(sc1, label.String("key1", "value1")),
-		apitrace.LinkedTo(sc2,
-			label.String("key2", "value2"),
-			label.String("key3", "value3"),
-		),
-	)
+	links := []apitrace.Link{
+		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
+		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
+	}
+	span := startSpan(tp, "Links", apitrace.WithLinks(links...))
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -518,13 +516,10 @@ func TestLinks(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		HasRemoteParent: true,
-		Links: []apitrace.Link{
-			{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
-		},
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		HasRemoteParent:        true,
+		Links:                  links,
 		SpanKind:               apitrace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
@@ -544,9 +539,11 @@ func TestLinksOverLimit(t *testing.T) {
 	tp, _ := NewProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
-		apitrace.LinkedTo(sc1, label.String("key1", "value1")),
-		apitrace.LinkedTo(sc2, label.String("key2", "value2")),
-		apitrace.LinkedTo(sc3, label.String("key3", "value3")),
+		apitrace.WithLinks(
+			apitrace.Link{SpanContext: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
+			apitrace.Link{SpanContext: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
+			apitrace.Link{SpanContext: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
+		),
 	)
 
 	k2v2 := label.String("key2", "value2")
@@ -668,7 +665,7 @@ func checkChild(p apitrace.SpanContext, apiSpan apitrace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitrace.Span {
+func startSpan(tp *Provider, trName string, args ...apitrace.SpanOption) apitrace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -676,7 +673,7 @@ func startSpan(tp *Provider, trName string, args ...apitrace.StartOption) apitra
 // passed name and with remote span context as parent. The remote span
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
-func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.StartOption) apitrace.Span {
+func startNamedSpan(tp *Provider, trName, name string, args ...apitrace.SpanOption) apitrace.Span {
 	ctx := context.Background()
 	ctx = apitrace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
 	args = append(args, apitrace.WithRecord())
@@ -906,9 +903,9 @@ func TestCustomStartEndTime(t *testing.T) {
 	_, span := tp.Tracer("Custom Start and End time").Start(
 		context.Background(),
 		"testspan",
-		apitrace.WithStartTime(startTime),
+		apitrace.WithTimestamp(startTime),
 	)
-	span.End(apitrace.WithEndTime(endTime))
+	span.End(apitrace.WithTimestamp(endTime))
 
 	if len(te.spans) != 1 {
 		t.Fatalf("got exported spans %#v, want one span", te.spans)
