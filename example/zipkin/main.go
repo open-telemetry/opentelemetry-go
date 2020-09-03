@@ -36,8 +36,8 @@ func initTracer(url string) {
 	// Create Zipkin Exporter and install it as a global tracer.
 	//
 	// For demoing purposes, always sample. In a production application, you should
-	// configure the sampler to a trace.ProbabilitySampler set at the desired
-	// probability.
+	// configure the sampler to a trace.ParentSampler(trace.TraceIDRatioBased) set at the desired
+	// ratio.
 	err := zipkin.InstallNewPipeline(
 		url,
 		"zipkin-test",
