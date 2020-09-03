@@ -29,7 +29,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-const defaultServiceName = "OpenTelemetry"
+const (
+	defaultServiceName = "OpenTelemetry"
+
+	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
+	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
+)
 
 type Option func(*options)
 
@@ -228,11 +233,10 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 			}
 		}
 	}
-
 	if il := data.InstrumentationLibrary; il.Name != "" {
-		tags = append(tags, getStringTag("instrumentation.name", il.Name))
+		tags = append(tags, getStringTag(keyInstrumentationLibraryName, il.Name))
 		if il.Version != "" {
-			tags = append(tags, getStringTag("instrumentation.version", il.Version))
+			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, il.Version))
 		}
 	}
 
