@@ -222,6 +222,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	select {
 	case <-e.backgroundConnectionDoneCh:
 	case <-ctx.Done():
+		return ctx.Err()
 	}
 
 	return err

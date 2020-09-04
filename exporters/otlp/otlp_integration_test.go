@@ -592,18 +592,3 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		assert.Equal(t, expected[i], actual)
 	}
 }
-
-func TestExporterShutdown(t *testing.T) {
-	mc := runMockCol(t)
-
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	exp, _ := otlp.NewExporter(
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address),
-	)
-	_ = exp.Shutdown(context.Background())
-}
