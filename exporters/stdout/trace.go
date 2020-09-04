@@ -41,7 +41,7 @@ func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData)
 }
 
 // Shutdown is called to stop the exporter, it preforms no action.
-func (e *traceExporter) Shutdown(ctx context.Context) {}
+func (e *traceExporter) Shutdown(ctx context.Context) error { return nil }
 
 // marshal v with approriate indentation.
 func (e *traceExporter) marshal(v interface{}) ([]byte, error) {

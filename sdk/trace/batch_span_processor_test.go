@@ -43,7 +43,7 @@ func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanD
 	return nil
 }
 
-func (t *testBatchExporter) Shutdown(context.Context) {}
+func (t *testBatchExporter) Shutdown(context.Context) error { return nil }
 
 func (t *testBatchExporter) len() int {
 	t.mu.Lock()
@@ -57,7 +57,7 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-var _ export.Exporter = (*testBatchExporter)(nil)
+var _ export.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(nil)

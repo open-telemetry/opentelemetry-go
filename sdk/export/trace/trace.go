@@ -26,9 +26,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Exporter handles the delivery of SpanData to external receivers. This is
+// SpanExporter handles the delivery of SpanData to external receivers. This is
 // the final component in the trace export pipeline.
-type Exporter interface {
+type SpanExporter interface {
 	// ExportSpans exports a batch of SpanData.
 	//
 	// This function is called synchronously, so there is no concurrency
@@ -45,7 +45,7 @@ type Exporter interface {
 	// exporter is expected to preform any cleanup or synchronization it
 	// requires while honoring all timeouts and cancellations contained in
 	// the passed context.
-	Shutdown(context.Context)
+	Shutdown(context.Context) error
 }
 
 // SpanData contains all the information collected by a completed span.

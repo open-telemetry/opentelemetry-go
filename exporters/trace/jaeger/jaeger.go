@@ -203,7 +203,7 @@ type Exporter struct {
 	o        options
 }
 
-var _ export.Exporter = (*Exporter)(nil)
+var _ export.SpanExporter = (*Exporter)(nil)
 
 // ExportSpans exports SpanData to Jaeger.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
@@ -218,10 +218,18 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) er
 }
 
 // Shutdown stops the exporter flushing any pending exports.
-func (e *Exporter) Shutdown(context.Context) {
-	// TODO (MrAlias): Update the uploader to accept a context so this
-	// context deadline can be honored.
-	e.Flush()
+func (e *Exporter) Shutdown(ctx context.Context) error {
+	done := make(chan struct{}, 1)
+	go func() {
+		e.bundler.Flush()
+		done <- struct{}{}
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-done:
+	}
+	return nil
 }
 
 func spanDataToThrift(data *export.SpanData) *gen.Span {

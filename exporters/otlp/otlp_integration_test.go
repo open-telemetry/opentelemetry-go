@@ -79,7 +79,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			panic(err)
+		}
 	}()
 
 	pOpts := []sdktrace.ProviderOption{
@@ -186,7 +190,9 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	if err := exp.Stop(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
 	}
 
@@ -287,7 +293,9 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		t.Fatalf("error creating exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		if err := exp.Shutdown(context.Background()); err != nil {
+			panic(err)
+		}
 	}()
 
 	// Invoke Start numerous times, should return errAlreadyStarted
@@ -297,10 +305,12 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		}
 	}
 
-	_ = exp.Stop()
-	// Invoke Stop numerous times
+	if err := exp.Shutdown(context.Background()); err != nil {
+		t.Fatalf("failed to Shutdown the exporter: %v", err)
+	}
+	// Invoke Shutdown numerous times
 	for i := 0; i < 10; i++ {
-		if err := exp.Stop(); err != nil {
+		if err := exp.Shutdown(context.Background()); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
 	}
@@ -317,7 +327,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	// We'll now stop the collector right away to simulate a connection
@@ -387,7 +397,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
-	_ = exp.Stop()
+	_ = exp.Shutdown(context.Background())
 }
 
 func TestNewExporter_withAddress(t *testing.T) {
@@ -402,7 +412,7 @@ func TestNewExporter_withAddress(t *testing.T) {
 		otlp.WithAddress(mc.address))
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	if err := exp.Start(); err != nil {
@@ -425,7 +435,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}))
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	headers := mc.getHeaders()
@@ -449,7 +459,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	)
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	tp := sdktrace.NewProvider(
@@ -488,7 +498,9 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	if err := exp.Stop(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
 	}
 
@@ -579,4 +591,19 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		}
 		assert.Equal(t, expected[i], actual)
 	}
+}
+
+func TestExporterShutdown(t *testing.T) {
+	mc := runMockCol(t)
+
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	exp, _ := otlp.NewExporter(
+		otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address),
+	)
+	_ = exp.Shutdown(context.Background())
 }

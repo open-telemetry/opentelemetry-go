@@ -24,7 +24,7 @@ import (
 // SimpleSpanProcessor is a SpanProcessor that synchronously sends all
 // SpanData to a trace.Exporter when the span finishes.
 type SimpleSpanProcessor struct {
-	e export.Exporter
+	e export.SpanExporter
 }
 
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
@@ -33,7 +33,7 @@ var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 // SpanData batches to the exporters with the supplied options. It returns an
 // NewSimpleSpanProcessor returns a new SimpleSpanProcessor that will
 // synchronously send SpanData to the exporter.
-func NewSimpleSpanProcessor(exporter export.Exporter) *SimpleSpanProcessor {
+func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 	ssp := &SimpleSpanProcessor{
 		e: exporter,
 	}

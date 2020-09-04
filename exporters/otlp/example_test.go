@@ -33,7 +33,11 @@ func Example_insecure() {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			global.Handle(err)
+		}
 	}()
 
 	tp := sdktrace.NewProvider(
@@ -73,7 +77,11 @@ func Example_withTLS() {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			global.Handle(err)
+		}
 	}()
 
 	tp := sdktrace.NewProvider(

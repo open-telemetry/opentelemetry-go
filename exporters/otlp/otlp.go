@@ -28,7 +28,6 @@ import (
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -57,7 +56,7 @@ type Exporter struct {
 	metadata metadata.MD
 }
 
-var _ tracesdk.Exporter = (*Exporter)(nil)
+var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
 func configureOptions(cfg *Config, opts ...ExporterOption) {
@@ -197,18 +196,21 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 
 // Shutdown closes all connections and releases resources currently being used
 // by the exporter. If the exporter is not started this does nothing.
-func (e *Exporter) Shutdown(ctx context.Context) {
+func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.mu.RLock()
 	cc := e.grpcClientConn
 	started := e.started
 	e.mu.RUnlock()
 
 	if !started {
-		return
+		return nil
 	}
 
-	// Clean things up before checking this error.
-	err := cc.Close()
+	var err error
+	if cc != nil {
+		// Clean things up before checking this error.
+		err = cc.Close()
+	}
 
 	// At this point we can change the state variable started
 	e.mu.Lock()
@@ -221,40 +223,6 @@ func (e *Exporter) Shutdown(ctx context.Context) {
 	case <-e.backgroundConnectionDoneCh:
 	case <-ctx.Done():
 	}
-
-	if err != nil {
-		// Nothing we can do about this failure here.
-		global.Handle(err)
-	}
-}
-
-// Stop shuts down all the connections and resources
-// related to the exporter.
-// If the exporter is not started then this func does nothing.
-func (e *Exporter) Stop() error {
-	e.mu.RLock()
-	cc := e.grpcClientConn
-	started := e.started
-	e.mu.RUnlock()
-
-	if !started {
-		return nil
-	}
-
-	// Now close the underlying gRPC connection.
-	var err error
-	if cc != nil {
-		err = cc.Close()
-	}
-
-	// At this point we can change the state variable started
-	e.mu.Lock()
-	e.started = false
-	e.mu.Unlock()
-	close(e.stopCh)
-
-	// Ensure that the backgroundConnector returns
-	<-e.backgroundConnectionDoneCh
 
 	return err
 }

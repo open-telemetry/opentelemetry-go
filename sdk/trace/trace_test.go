@@ -117,7 +117,10 @@ func (te *testExporter) Len() int {
 	return len(te.spans)
 }
 
-func (te *testExporter) Shutdown(context.Context) { te.Reset() }
+func (te *testExporter) Shutdown(context.Context) error {
+	te.Reset()
+	return nil
+}
 
 func (te *testExporter) Reset() {
 	te.mu.Lock()

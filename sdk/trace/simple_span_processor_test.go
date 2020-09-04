@@ -32,9 +32,9 @@ func (t *testExporter) ExportSpans(ctx context.Context, spans []*export.SpanData
 	return nil
 }
 
-func (t *testExporter) Shutdown(context.Context) {}
+func (t *testExporter) Shutdown(context.Context) error { return nil }
 
-var _ export.Exporter = (*testExporter)(nil)
+var _ export.SpanExporter = (*testExporter)(nil)
 
 func TestNewSimpleSpanProcessor(t *testing.T) {
 	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})

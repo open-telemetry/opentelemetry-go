@@ -60,7 +60,7 @@ type BatchSpanProcessorOptions struct {
 // BatchSpanProcessor is a SpanProcessor that batches asynchronously received
 // SpanData and sends it to a trace.Exporter when complete.
 type BatchSpanProcessor struct {
-	e export.Exporter
+	e export.SpanExporter
 	o BatchSpanProcessorOptions
 
 	queue   chan *export.SpanData
@@ -82,7 +82,7 @@ var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 // the RegisterSpanProcessor method for it to process spans.
 //
 // If the exporter is nil, the span processor will preform no action.
-func NewBatchSpanProcessor(exporter export.Exporter, options ...BatchSpanProcessorOption) *BatchSpanProcessor {
+func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanProcessorOption) *BatchSpanProcessor {
 	o := BatchSpanProcessorOptions{
 		BatchTimeout:       DefaultBatchTimeout,
 		MaxQueueSize:       DefaultMaxQueueSize,

@@ -42,7 +42,7 @@ type Exporter struct {
 }
 
 var (
-	_ export.Exporter = &Exporter{}
+	_ export.SpanExporter = &Exporter{}
 )
 
 // Options contains configuration for the exporter.
@@ -171,8 +171,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 }
 
 // Shutdown stops the exporter flushing any pending exports.
-func (e *Exporter) Shutdown(context.Context) {
-}
+func (e *Exporter) Shutdown(context.Context) error { return nil }
 
 func (e *Exporter) logf(format string, args ...interface{}) {
 	if e.logger != nil {

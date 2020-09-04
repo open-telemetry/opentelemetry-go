@@ -165,13 +165,13 @@ func (p *Provider) ApplyConfig(cfg Config) {
 
 // WithSyncer registers the exporter with the Provider using a
 // SimpleSpanProcessor.
-func WithSyncer(e export.Exporter) ProviderOption {
+func WithSyncer(e export.SpanExporter) ProviderOption {
 	return WithSpanProcessor(NewSimpleSpanProcessor(e))
 }
 
 // WithBatcher registers the exporter with the Provider using a
 // BatchSpanProcessor configured with the passed opts.
-func WithBatcher(e export.Exporter, opts ...BatchSpanProcessorOption) ProviderOption {
+func WithBatcher(e export.SpanExporter, opts ...BatchSpanProcessorOption) ProviderOption {
 	return WithSpanProcessor(NewBatchSpanProcessor(e, opts...))
 }
 

@@ -83,7 +83,9 @@ func main() {
 	log.Printf("Waiting for connection...")
 
 	exp, pusher := initProvider()
-	defer func() { handleErr(exp.Stop(), "failed to stop exporter") }()
+	defer func() {
+		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
+	}()
 	defer pusher.Stop() // pushes any last exports to the receiver
 
 	tracer := global.Tracer("test-tracer")

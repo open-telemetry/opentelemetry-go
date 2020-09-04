@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-var _ trace.Exporter = (*NoopExporter)(nil)
+var _ trace.SpanExporter = (*NoopExporter)(nil)
 
 // NewNoopExporter returns a new no-op exporter.
 func NewNoopExporter() *NoopExporter {
@@ -38,9 +38,9 @@ type NoopExporter struct{}
 func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanData) error { return nil }
 
 // Shutdown stops the exporter by doing nothing.
-func (nsb *NoopExporter) Shutdown(context.Context) {}
+func (nsb *NoopExporter) Shutdown(context.Context) error { return nil }
 
-var _ trace.Exporter = (*InMemoryExporter)(nil)
+var _ trace.SpanExporter = (*InMemoryExporter)(nil)
 
 // NewInMemoryExporter returns a new InMemoryExporter.
 func NewInMemoryExporter() *InMemoryExporter {
@@ -62,8 +62,9 @@ func (imsb *InMemoryExporter) ExportSpans(_ context.Context, sds []*trace.SpanDa
 }
 
 // Shutdown stops the exporter by clearing SpanData held in memory.
-func (imsb *InMemoryExporter) Shutdown(context.Context) {
+func (imsb *InMemoryExporter) Shutdown(context.Context) error {
 	imsb.Reset()
+	return nil
 }
 
 // Reset the current in-memory storage.

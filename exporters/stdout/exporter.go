@@ -31,8 +31,8 @@ type Exporter struct {
 }
 
 var (
-	_ metric.Exporter = &Exporter{}
-	_ trace.Exporter  = &Exporter{}
+	_ metric.Exporter    = &Exporter{}
+	_ trace.SpanExporter = &Exporter{}
 )
 
 // NewExporter creates an Exporter with the passed options.
