@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// metric package provides an API for reporting diagnostic
-// measurements using instruments categorized as follows:
+// Package metric provides support for reporting measurements using instruments.
+//
+// Instruments are categorized as below:
 //
 // Synchronous instruments are called by the user with a Context.
 // Asynchronous instruments are called by the SDK during collection.
