@@ -579,7 +579,6 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 
 // fakeSpan is just a holder of span context, nothing more. It's for
 // propagators, so they can get the span context from Go context.
-// Other calls on fakeSpan is going to fail.
 type fakeSpan struct {
 	oteltrace.Span
 	sc oteltrace.SpanContext
