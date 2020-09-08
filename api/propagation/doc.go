@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package propagation contains interface definition for HTTP propagators.
+// Package propagation provides support for propagating context over HTTP.
 package propagation // import "go.opentelemetry.io/otel/api/propagation"
