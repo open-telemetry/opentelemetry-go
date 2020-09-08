@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"math"
 	"os"
 	"sort"
@@ -478,4 +479,25 @@ func Test_spanDataToThrift(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	orig := flush
+	flush = func(e *Exporter) {
+		<-ctx.Done()
+	}
+
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	var innerCancel context.CancelFunc
+	ctx, innerCancel = context.WithCancel(ctx)
+	innerCancel()
+	if err := e.Shutdown(ctx); err == nil {
+		t.Error("expected context canceled error, got nil")
+	} else if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context canceled error, got %v", err)
+	}
+	flush = orig
 }

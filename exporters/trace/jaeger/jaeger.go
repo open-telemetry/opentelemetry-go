@@ -221,7 +221,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) er
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	done := make(chan struct{}, 1)
 	go func() {
-		e.bundler.Flush()
+		e.Flush()
 		done <- struct{}{}
 	}()
 	select {
@@ -407,7 +407,7 @@ func getBoolTag(k string, b bool) *gen.Tag {
 //
 // This is useful if your program is ending and you do not want to lose recent spans.
 func (e *Exporter) Flush() {
-	e.bundler.Flush()
+	flush(e)
 }
 
 func (e *Exporter) upload(spans []*gen.Span) error {
@@ -417,4 +417,9 @@ func (e *Exporter) upload(spans []*gen.Span) error {
 	}
 
 	return e.uploader.upload(batch)
+}
+
+// flush is used to wrap the bundler's Flush method for testing.
+var flush = func(e *Exporter) {
+	e.bundler.Flush()
 }
