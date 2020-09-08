@@ -26,17 +26,17 @@ type testTracerProvider struct{}
 var _ trace.Provider = &testTracerProvider{}
 
 func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
-	return &trace.NoopTracer{}
+	return trace.NoopProvider().Tracer("")
 }
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {
 	p1 := testTracerProvider{}
-	p2 := trace.NoopProvider{}
+	p2 := trace.NoopProvider()
 	global.SetTracerProvider(&p1)
-	global.SetTracerProvider(&p2)
+	global.SetTracerProvider(p2)
 
 	got := global.TracerProvider()
-	want := &p2
+	want := p2
 	if got != want {
 		t.Fatalf("Provider: got %p, want %p\n", got, want)
 	}

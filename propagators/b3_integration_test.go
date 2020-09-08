@@ -64,7 +64,7 @@ func TestExtractB3(t *testing.T) {
 }
 
 type testSpan struct {
-	trace.NoopSpan
+	trace.Span
 	sc trace.SpanContext
 }
 

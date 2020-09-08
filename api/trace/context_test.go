@@ -25,10 +25,9 @@ import (
 )
 
 func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
-	originalSpan := trace.NoopSpan{}
-	expectedSpan := mockSpan{}
-
 	ctx := context.Background()
+	_, originalSpan := trace.NoopProvider().Tracer("").Start(ctx, "")
+	expectedSpan := mockSpan{}
 
 	ctx = trace.ContextWithSpan(ctx, originalSpan)
 	ctx = trace.ContextWithSpan(ctx, expectedSpan)
@@ -39,6 +38,9 @@ func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
 }
 
 func TestCurrentSpan(t *testing.T) {
+	ctx := context.Background()
+	_, noopSpan := trace.NoopProvider().Tracer("").Start(ctx, "")
+
 	for _, testcase := range []struct {
 		name string
 		ctx  context.Context
@@ -47,7 +49,7 @@ func TestCurrentSpan(t *testing.T) {
 		{
 			name: "CurrentSpan() returns a NoopSpan{} from an empty context",
 			ctx:  context.Background(),
-			want: trace.NoopSpan{},
+			want: noopSpan,
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
@@ -110,7 +112,7 @@ func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorO
 
 // Tracer returns noop implementation of Tracer.
 func (mockSpan) Tracer() trace.Tracer {
-	return trace.NoopTracer{}
+	return trace.NoopProvider().Tracer("")
 }
 
 // Event does nothing.

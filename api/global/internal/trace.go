@@ -120,5 +120,5 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if t.delegate != nil {
 		return t.delegate.Start(ctx, name, opts...)
 	}
-	return trace.NoopTracer{}.Start(ctx, name, opts...)
+	return trace.NoopProvider().Tracer("").Start(ctx, name, opts...)
 }
