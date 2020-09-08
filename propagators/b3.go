@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package propagators
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -43,7 +44,7 @@ const (
 )
 
 var (
-	empty = EmptySpanContext()
+	empty = trace.EmptySpanContext()
 
 	errInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	errInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
@@ -78,30 +79,26 @@ const (
 	B3Unspecified B3Encoding = 0
 )
 
-// B3 propagator serializes SpanContext to/from B3 Headers.
-// This propagator supports both versions of B3 headers,
-//  1. Single Header:
-//    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
-//  2. Multiple Headers:
-//    x-b3-traceid: {TraceId}
-//    x-b3-parentspanid: {ParentSpanId}
-//    x-b3-spanid: {SpanId}
-//    x-b3-sampled: {SamplingState}
-//    x-b3-flags: {DebugFlag}
+// B3 is a propagator that supports the B3 HTTP encoding.
+//
+// Both single (https://github.com/openzipkin/b3-propagation#single-header)
+// and multiple (https://github.com/openzipkin/b3-propagation#single-header)
+// header encoding are supported.
 type B3 struct {
 	// InjectEncoding are the B3 encodings used when injecting trace
 	// information. If no encoding is specified (i.e. `B3Unspecified`)
-	// `B3MultipleHeader` will be used as the default.
+	// `B3MultipleHeader` will be used as the default as it is the most
+	// backwards compatible.
 	InjectEncoding B3Encoding
 }
 
 var _ propagation.HTTPPropagator = B3{}
 
-// Inject injects a context into the supplier as B3 headers.
+// Inject injects a context into the supplier as B3 HTTP headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
 func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
-	sc := SpanFromContext(ctx).SpanContext()
+	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.InjectEncoding.supports(B3SingleHeader) {
 		header := []string{}
@@ -109,9 +106,9 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			header = append(header, sc.TraceID.String(), sc.SpanID.String())
 		}
 
-		if sc.isDebug() {
+		if sc.IsDebug() {
 			header = append(header, "d")
-		} else if !sc.isDeferred() {
+		} else if !sc.IsDeferred() {
 			if sc.IsSampled() {
 				header = append(header, "1")
 			} else {
@@ -128,10 +125,10 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			supplier.Set(b3SpanIDHeader, sc.SpanID.String())
 		}
 
-		if sc.isDebug() {
+		if sc.IsDebug() {
 			// Since Debug implies deferred, don't also send "X-B3-Sampled".
 			supplier.Set(b3DebugFlagHeader, "1")
-		} else if !sc.isDeferred() {
+		} else if !sc.IsDeferred() {
 			if sc.IsSampled() {
 				supplier.Set(b3SampledHeader, "1")
 			} else {
@@ -141,10 +138,11 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	}
 }
 
-// Extract extracts a context from the supplier if it contains B3 headers.
+// Extract extracts a context from the supplier if it contains B3 HTTP
+// headers.
 func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	var (
-		sc  SpanContext
+		sc  trace.SpanContext
 		err error
 	)
 
@@ -152,7 +150,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	if h := supplier.Get(b3ContextHeader); h != "" {
 		sc, err = extractSingle(h)
 		if err == nil && sc.IsValid() {
-			return ContextWithRemoteSpanContext(ctx, sc)
+			return trace.ContextWithRemoteSpanContext(ctx, sc)
 		}
 		// The Single Header value was invalid, fallback to Multiple Header.
 	}
@@ -168,9 +166,11 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	if err != nil || !sc.IsValid() {
 		return ctx
 	}
-	return ContextWithRemoteSpanContext(ctx, sc)
+	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
+// GetAllKeys returns the HTTP header names this propagator will use when
+// injecting.
 func (b3 B3) GetAllKeys() []string {
 	header := []string{}
 	if b3.InjectEncoding.supports(B3SingleHeader) {
@@ -186,11 +186,11 @@ func (b3 B3) GetAllKeys() []string {
 // Multiple header. It is based on the implementation found here:
 // https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
 // and adapted to support a SpanContext.
-func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (SpanContext, error) {
+func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trace.SpanContext, error) {
 	var (
 		err           error
 		requiredCount int
-		sc            = SpanContext{}
+		sc            = trace.SpanContext{}
 	)
 
 	// correct values for an existing sampled header are "0" and "1".
@@ -200,9 +200,9 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 	case "0", "false":
 		// Zero value for TraceFlags sample bit is unset.
 	case "1", "true":
-		sc.TraceFlags = FlagsSampled
+		sc.TraceFlags = trace.FlagsSampled
 	case "":
-		sc.TraceFlags = FlagsDeferred
+		sc.TraceFlags = trace.FlagsDeferred
 	default:
 		return empty, errInvalidSampledHeader
 	}
@@ -210,7 +210,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 	// The only accepted value for Flags is "1". This will set Debug to
 	// true. All other values and omission of header will be ignored.
 	if flags == "1" {
-		sc.TraceFlags |= FlagsDebug
+		sc.TraceFlags |= trace.FlagsDebug
 	}
 
 	if traceID != "" {
@@ -220,14 +220,14 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 			// Pad 64-bit trace IDs.
 			id = b3TraceIDPadding + traceID
 		}
-		if sc.TraceID, err = IDFromHex(id); err != nil {
+		if sc.TraceID, err = trace.IDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
 
 	if spanID != "" {
 		requiredCount++
-		if sc.SpanID, err = SpanIDFromHex(spanID); err != nil {
+		if sc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
 			return empty, errInvalidSpanIDHeader
 		}
 	}
@@ -241,7 +241,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 			return empty, errInvalidScopeParent
 		}
 		// Validate parent span ID but we do not use it so do not save it.
-		if _, err = SpanIDFromHex(parentSpanID); err != nil {
+		if _, err = trace.SpanIDFromHex(parentSpanID); err != nil {
 			return empty, errInvalidParentSpanIDHeader
 		}
 	}
@@ -253,13 +253,13 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (Span
 // Single header. It is based on the implementation found here:
 // https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
 // and adapted to support a SpanContext.
-func extractSingle(contextHeader string) (SpanContext, error) {
+func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	if contextHeader == "" {
 		return empty, errEmptyContext
 	}
 
 	var (
-		sc       = SpanContext{}
+		sc       = trace.SpanContext{}
 		sampling string
 	)
 
@@ -285,13 +285,13 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 			return empty, errInvalidTraceIDValue
 		}
 		var err error
-		sc.TraceID, err = IDFromHex(traceID)
+		sc.TraceID, err = trace.IDFromHex(traceID)
 		if err != nil {
 			return empty, errInvalidTraceIDValue
 		}
 		pos += separatorWidth // {traceID}-
 
-		sc.SpanID, err = SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
+		sc.SpanID, err = trace.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
 		if err != nil {
 			return empty, errInvalidSpanIDValue
 		}
@@ -315,7 +315,7 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 
 				// Validate parent span ID but we do not use it so do not
 				// save it.
-				_, err = SpanIDFromHex(contextHeader[pos:])
+				_, err = trace.SpanIDFromHex(contextHeader[pos:])
 				if err != nil {
 					return empty, errInvalidParentSpanIDValue
 				}
@@ -328,11 +328,11 @@ func extractSingle(contextHeader string) (SpanContext, error) {
 	}
 	switch sampling {
 	case "":
-		sc.TraceFlags = FlagsDeferred
+		sc.TraceFlags = trace.FlagsDeferred
 	case "d":
-		sc.TraceFlags = FlagsDebug
+		sc.TraceFlags = trace.FlagsDebug
 	case "1":
-		sc.TraceFlags = FlagsSampled
+		sc.TraceFlags = trace.FlagsSampled
 	case "0":
 		// Zero value for TraceFlags sample bit is unset.
 	default:

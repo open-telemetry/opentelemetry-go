@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 const (
@@ -500,7 +501,7 @@ var extractInvalidHeaders = []extractTest{
 
 type injectTest struct {
 	name             string
-	encoding         trace.B3Encoding
+	encoding         propagators.B3Encoding
 	sc               trace.SpanContext
 	wantHeaders      map[string]string
 	doNotWantHeaders []string
@@ -614,7 +615,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: sampled",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -633,7 +634,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: not sampled",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -651,7 +652,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: unset sampled",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -670,7 +671,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: sampled only",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -687,7 +688,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: debug",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -706,7 +707,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "multiple: debug omitting sample",
-		encoding: trace.B3MultipleHeader,
+		encoding: propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -725,7 +726,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: sampled",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -744,7 +745,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: not sampled",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -762,7 +763,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: unset sampled",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -781,7 +782,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: sampled only",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -799,7 +800,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: debug",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -819,7 +820,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single: debug omitting sample",
-		encoding: trace.B3SingleHeader,
+		encoding: propagators.B3SingleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -839,7 +840,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: sampled",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -858,7 +859,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: not sampled",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -876,7 +877,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: unset sampled",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -895,7 +896,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: sampled only",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -912,7 +913,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: debug",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -931,7 +932,7 @@ var injectHeader = []injectTest{
 	},
 	{
 		name:     "single+multiple: debug omitting sample",
-		encoding: trace.B3SingleHeader | trace.B3MultipleHeader,
+		encoding: propagators.B3SingleHeader | propagators.B3MultipleHeader,
 		sc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -1000,19 +1001,19 @@ func init() {
 		})
 		injectInvalidHeader = append(injectInvalidHeader, injectTest{
 			name:             "multiple: " + t.name,
-			encoding:         trace.B3MultipleHeader,
+			encoding:         propagators.B3MultipleHeader,
 			sc:               t.sc,
 			doNotWantHeaders: allHeaders,
 		})
 		injectInvalidHeader = append(injectInvalidHeader, injectTest{
 			name:             "single: " + t.name,
-			encoding:         trace.B3SingleHeader,
+			encoding:         propagators.B3SingleHeader,
 			sc:               t.sc,
 			doNotWantHeaders: allHeaders,
 		})
 		injectInvalidHeader = append(injectInvalidHeader, injectTest{
 			name:             "single+multiple: " + t.name,
-			encoding:         trace.B3SingleHeader | trace.B3MultipleHeader,
+			encoding:         propagators.B3SingleHeader | propagators.B3MultipleHeader,
 			sc:               t.sc,
 			doNotWantHeaders: allHeaders,
 		})

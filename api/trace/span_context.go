@@ -181,13 +181,13 @@ func (sc SpanContext) HasSpanID() bool {
 	return sc.SpanID.IsValid()
 }
 
-// isDeferred returns if the deferred bit is set in the trace flags.
-func (sc SpanContext) isDeferred() bool {
+// IsDeferred returns if the deferred bit is set in the trace flags.
+func (sc SpanContext) IsDeferred() bool {
 	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
 }
 
-// isDebug returns if the debug bit is set in the trace flags.
-func (sc SpanContext) isDebug() bool {
+// IsDebug returns if the debug bit is set in the trace flags.
+func (sc SpanContext) IsDebug() bool {
 	return sc.TraceFlags&FlagsDebug == FlagsDebug
 }
 
