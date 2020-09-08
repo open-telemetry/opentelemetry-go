@@ -42,7 +42,7 @@ func NewExporter(options ...Option) (*Exporter, error) {
 		return nil, err
 	}
 	return &Exporter{
-		traceExporter:  traceExporter{config},
+		traceExporter:  traceExporter{config: config},
 		metricExporter: metricExporter{config},
 	}, nil
 }

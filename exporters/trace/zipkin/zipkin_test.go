@@ -357,3 +357,35 @@ func TestExportSpans(t *testing.T) {
 	require.Eventually(t, checkFunc, time.Second, 10*time.Millisecond)
 	require.Equal(t, models, collector.StealModels())
 }
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+	defer innerCancel()
+	<-innerCtx.Done()
+	assert.Errorf(t, exp.Shutdown(innerCtx), context.DeadlineExceeded.Error())
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	innerCancel()
+	assert.Errorf(t, exp.Shutdown(innerCtx), context.Canceled.Error())
+}
+
+func TestErrorOnExportShutdownExporter(t *testing.T) {
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+	assert.NoError(t, exp.Shutdown(context.Background()))
+	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+}

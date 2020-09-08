@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -39,6 +40,9 @@ type Exporter struct {
 	client      *http.Client
 	logger      *log.Logger
 	o           options
+
+	stoppedMu sync.RWMutex
+	stopped   bool
 }
 
 var (
@@ -135,6 +139,14 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 
 // ExportSpans exports SpanData to a Zipkin receiver.
 func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) error {
+	e.stoppedMu.RLock()
+	stopped := e.stopped
+	e.stoppedMu.RUnlock()
+	if stopped {
+		e.logf("exporter stopped, not exporting span batch")
+		return nil
+	}
+
 	if len(batch) == 0 {
 		e.logf("no spans to export")
 		return nil
@@ -171,7 +183,18 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 }
 
 // Shutdown stops the exporter flushing any pending exports.
-func (e *Exporter) Shutdown(context.Context) error { return nil }
+func (e *Exporter) Shutdown(ctx context.Context) error {
+	e.stoppedMu.Lock()
+	e.stopped = true
+	e.stoppedMu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	return nil
+}
 
 func (e *Exporter) logf(format string, args ...interface{}) {
 	if e.logger != nil {

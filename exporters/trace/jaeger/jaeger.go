@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"sync"
 
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
@@ -201,12 +202,22 @@ type Exporter struct {
 	bundler  *bundler.Bundler
 	uploader batchUploader
 	o        options
+
+	stoppedMu sync.RWMutex
+	stopped   bool
 }
 
 var _ export.SpanExporter = (*Exporter)(nil)
 
 // ExportSpans exports SpanData to Jaeger.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
+	e.stoppedMu.RLock()
+	stopped := e.stopped
+	e.stoppedMu.RUnlock()
+	if stopped {
+		return nil
+	}
+
 	for _, span := range spans {
 		// TODO(jbd): Handle oversized bundlers.
 		err := e.bundler.Add(spanDataToThrift(span), 1)
@@ -224,6 +235,10 @@ var flush = func(e *Exporter) {
 
 // Shutdown stops the exporter flushing any pending exports.
 func (e *Exporter) Shutdown(ctx context.Context) error {
+	e.stoppedMu.Lock()
+	e.stopped = true
+	e.stoppedMu.Unlock()
+
 	done := make(chan struct{}, 1)
 	// Shadow so if the goroutine is leaked in testing it doesn't cause a race
 	// condition when the file level var is reset.

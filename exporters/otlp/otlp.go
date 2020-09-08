@@ -194,6 +194,11 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
+// closeStopCh is used to wrap the exporters stopCh channel closing for testing.
+var closeStopCh = func(stopCh chan bool) {
+	close(stopCh)
+}
+
 // Shutdown closes all connections and releases resources currently being used
 // by the exporter. If the exporter is not started this does nothing.
 func (e *Exporter) Shutdown(ctx context.Context) error {
@@ -216,7 +221,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.mu.Lock()
 	e.started = false
 	e.mu.Unlock()
-	close(e.stopCh)
+	closeStopCh(e.stopCh)
 
 	// Ensure that the backgroundConnector returns
 	select {

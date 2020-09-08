@@ -22,13 +22,48 @@ import (
 )
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+	orig := closeStopCh
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer func() {
+		cancel()
+		closeStopCh = orig
+	}()
+	closeStopCh = func(stopCh chan bool) {
+		go func() {
+			<-ctx.Done()
+			close(stopCh)
+		}()
+	}
 
-	// Set the reconnect period to be longer than this test should last so the
-	// exporter will be in a continuous state of trying to reconnect and will
-	// not shutdown.
-	e := NewUnstartedExporter(WithReconnectionPeriod(1 * time.Minute))
+	e := NewUnstartedExporter()
+	if err := e.Start(); err != nil {
+		t.Fatalf("failed to start exporter: %v", err)
+	}
+
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond)
+	if err := e.Shutdown(innerCtx); err == nil {
+		t.Error("expected context DeadlineExceeded error, got nil")
+	} else if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	}
+	innerCancel()
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	orig := closeStopCh
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer func() {
+		cancel()
+		closeStopCh = orig
+	}()
+	closeStopCh = func(stopCh chan bool) {
+		go func() {
+			<-ctx.Done()
+			close(stopCh)
+		}()
+	}
+
+	e := NewUnstartedExporter()
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -40,5 +75,19 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		t.Error("expected context canceled error, got nil")
 	} else if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context canceled error, got %v", err)
+	}
+}
+
+func TestExporterShutdownNoError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	e := NewUnstartedExporter()
+	if err := e.Start(); err != nil {
+		t.Fatalf("failed to start exporter: %v", err)
+	}
+
+	if err := e.Shutdown(ctx); err != nil {
+		t.Errorf("shutdown errored: expected nil, got %v", err)
 	}
 }

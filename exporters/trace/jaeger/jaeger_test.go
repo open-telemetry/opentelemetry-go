@@ -17,7 +17,6 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"math"
 	"os"
 	"sort"
@@ -498,11 +497,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	require.NoError(t, err)
 	innerCtx, innerCancel := context.WithCancel(ctx)
 	go innerCancel()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context Canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context Canceled error, got %v", err)
-	}
+	assert.Errorf(t, e.Shutdown(innerCtx), context.Canceled.Error())
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -521,10 +516,13 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond*10)
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("expected context DeadlineExceeded error, got %v", err)
-	}
+	assert.Errorf(t, e.Shutdown(innerCtx), context.DeadlineExceeded.Error())
 	innerCancel()
+}
+
+func TestErrorOnExportShutdownExporter(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	assert.NoError(t, e.Shutdown(context.Background()))
+	assert.NoError(t, e.ExportSpans(context.Background(), nil))
 }
