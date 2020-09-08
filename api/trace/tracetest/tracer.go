@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tracetest provides testing utilities for tracing.
 package tracetest
 
 import (

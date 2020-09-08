@@ -125,16 +125,16 @@ type Span interface {
 	// The default span status is OK, so it is not necessary to
 	// explicitly set an OK status on successful Spans unless it
 	// is to add an OK message or to override a previous status on the Span.
-	SetStatus(codes.Code, string)
+	SetStatus(code codes.Code, msg string)
 
 	// SetName sets the name of the span.
 	SetName(name string)
 
 	// Set span attributes
-	SetAttributes(...label.KeyValue)
+	SetAttributes(kv ...label.KeyValue)
 
 	// Set singular span attribute, with type inference.
-	SetAttribute(string, interface{})
+	SetAttribute(k string, v interface{})
 }
 
 // SpanConfig is a group of options for a Span.

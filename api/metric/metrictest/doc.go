@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package correlation provides types and utilities for correlation features.
-package correlation // import "go.opentelemetry.io/otel/api/correlation"
+// Package metrictest contains utilities for testing metrics.
+package metrictest // import "go.opentelemetry.io/otel/api/metric/metrictest"
