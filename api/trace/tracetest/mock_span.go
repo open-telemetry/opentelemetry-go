@@ -67,7 +67,7 @@ func (ms *MockSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.
-func (ms *MockSpan) End(options ...apitrace.EndOption) {
+func (ms *MockSpan) End(options ...apitrace.SpanOption) {
 }
 
 // RecordError does nothing.

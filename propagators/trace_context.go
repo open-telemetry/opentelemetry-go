@@ -52,7 +52,7 @@ var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[
 
 // Inject injects a context into the supplier as W3C Trace Context HTTP
 // headers.
-func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
 		supplier.Set(tracestateHeader, state)
@@ -85,7 +85,7 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext {
+func (tc TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return trace.EmptySpanContext()
@@ -155,6 +155,6 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext
 
 // GetAllKeys returns the HTTP header names this propagator will use when
 // injecting.
-func (TraceContext) GetAllKeys() []string {
+func (tc TraceContext) GetAllKeys() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }

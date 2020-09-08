@@ -47,7 +47,7 @@ func TestTracer(t *testing.T) {
 			return span, nil
 		})
 
-		t.Run("uses the start time from WithStartTime", func(t *testing.T) {
+		t.Run("uses the start time from WithTimestamp", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -55,7 +55,7 @@ func TestTracer(t *testing.T) {
 			expectedStartTime := time.Now().AddDate(5, 0, 0)
 
 			subject := tp.Tracer(t.Name())
-			_, span := subject.Start(context.Background(), "test", trace.WithStartTime(expectedStartTime))
+			_, span := subject.Start(context.Background(), "test", trace.WithTimestamp(expectedStartTime))
 
 			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -223,7 +223,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(gotLinks).ToMatchInAnyOrder(expectedLinks)
 		})
 
-		t.Run("uses the links provided through LinkedTo", func(t *testing.T) {
+		t.Run("uses the links provided through WithLinks", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -246,7 +246,7 @@ func TestTracer(t *testing.T) {
 				},
 			}
 
-			_, span = subject.Start(context.Background(), "test", trace.LinkedTo(link1.SpanContext, link1.Attributes...), trace.LinkedTo(link2.SpanContext, link2.Attributes...))
+			_, span = subject.Start(context.Background(), "test", trace.WithLinks(link1, link2))
 
 			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tracetest provides testing utilities for tracing.
 package tracetest
 
 import (
@@ -34,14 +35,10 @@ type Tracer struct {
 	config *config
 }
 
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
-	var c trace.StartConfig
-	for _, opt := range opts {
-		opt(&c)
-	}
-
+func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+	c := trace.SpanConfigure(opts)
 	startTime := time.Now()
-	if st := c.StartTime; !st.IsZero() {
+	if st := c.Timestamp; !st.IsZero() {
 		startTime = st
 	}
 

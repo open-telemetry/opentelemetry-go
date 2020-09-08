@@ -101,7 +101,7 @@ func TestSpan(t *testing.T) {
 			e.Expect(endTime).ToEqual(expectedEndTime)
 		})
 
-		t.Run("uses the time from WithEndTime", func(t *testing.T) {
+		t.Run("uses the time from WithTimestamp", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -113,7 +113,7 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			expectedEndTime := time.Now().AddDate(5, 0, 0)
-			subject.End(trace.WithEndTime(expectedEndTime))
+			subject.End(trace.WithTimestamp(expectedEndTime))
 
 			e.Expect(subject.Ended()).ToBeTrue()
 

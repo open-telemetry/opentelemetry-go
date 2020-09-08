@@ -99,10 +99,10 @@ func (s *bridgeSpan) Finish() {
 }
 
 func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
-	var otelOpts []oteltrace.EndOption
+	var otelOpts []oteltrace.SpanOption
 
 	if !opts.FinishTime.IsZero() {
-		otelOpts = append(otelOpts, oteltrace.WithEndTime(opts.FinishTime))
+		otelOpts = append(otelOpts, oteltrace.WithTimestamp(opts.FinishTime))
 	}
 	for _, record := range opts.LogRecords {
 		s.logRecord(record)
@@ -389,14 +389,15 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	if parentBridgeSC != nil {
 		checkCtx = oteltrace.ContextWithRemoteSpanContext(checkCtx, parentBridgeSC.otelSpanContext)
 	}
-	checkCtx2, otelSpan := t.setTracer.tracer().Start(checkCtx, operationName, func(opts *oteltrace.StartConfig) {
-		opts.Attributes = attributes
-		opts.StartTime = sso.StartTime
-		opts.Links = links
-		opts.Record = true
-		opts.NewRoot = false
-		opts.SpanKind = kind
-	})
+	checkCtx2, otelSpan := t.setTracer.tracer().Start(
+		checkCtx,
+		operationName,
+		oteltrace.WithAttributes(attributes...),
+		oteltrace.WithTimestamp(sso.StartTime),
+		oteltrace.WithLinks(links...),
+		oteltrace.WithRecord(),
+		oteltrace.WithSpanKind(kind),
+	)
 	if checkCtx != checkCtx2 {
 		t.warnOnce.Do(func() {
 			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n")
