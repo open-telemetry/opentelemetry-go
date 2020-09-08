@@ -48,7 +48,7 @@ func DefaultHTTPPropagator() propagation.HTTPPropagator {
 	return TraceContext{}
 }
 
-func (TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
 		supplier.Set(tracestateHeader, state)
@@ -79,7 +79,7 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 	return ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
+func (tc TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return EmptySpanContext()
@@ -147,6 +147,6 @@ func (TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
 	return sc
 }
 
-func (TraceContext) GetAllKeys() []string {
+func (tc TraceContext) GetAllKeys() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }
