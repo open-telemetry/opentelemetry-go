@@ -21,12 +21,13 @@ import (
 
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/label"
 )
 
 func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
 	ctx := context.Background()
-	_, originalSpan := trace.NoopProvider().Tracer("").Start(ctx, "")
+	originalSpan := noop.Span
 	expectedSpan := mockSpan{}
 
 	ctx = trace.ContextWithSpan(ctx, originalSpan)
@@ -38,9 +39,6 @@ func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
 }
 
 func TestCurrentSpan(t *testing.T) {
-	ctx := context.Background()
-	_, noopSpan := trace.NoopProvider().Tracer("").Start(ctx, "")
-
 	for _, testcase := range []struct {
 		name string
 		ctx  context.Context
@@ -49,7 +47,7 @@ func TestCurrentSpan(t *testing.T) {
 		{
 			name: "CurrentSpan() returns a NoopSpan{} from an empty context",
 			ctx:  context.Background(),
-			want: noopSpan,
+			want: noop.Span,
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
@@ -112,7 +110,7 @@ func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorO
 
 // Tracer returns noop implementation of Tracer.
 func (mockSpan) Tracer() trace.Tracer {
-	return trace.NoopProvider().Tracer("")
+	return noop.Tracer
 }
 
 // Event does nothing.
