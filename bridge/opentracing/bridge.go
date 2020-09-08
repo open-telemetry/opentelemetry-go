@@ -609,7 +609,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	header := http.Header(hhcarrier)
 	fs := fakeSpan{
-		Span: nil,
+		Span: noop.Span,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := oteltrace.ContextWithSpan(context.Background(), fs)
