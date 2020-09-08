@@ -481,23 +481,50 @@ func Test_spanDataToThrift(t *testing.T) {
 	}
 }
 
-func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+func TestExporterShutdownHonorsCancel(t *testing.T) {
 	orig := flush
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// Do this after the parent context is canceled to avoid a race.
+	defer func() {
+		<-ctx.Done()
+		flush = orig
+	}()
+	defer cancel()
 	flush = func(e *Exporter) {
 		<-ctx.Done()
 	}
 
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
-	var innerCancel context.CancelFunc
-	ctx, innerCancel = context.WithCancel(ctx)
-	innerCancel()
-	if err := e.Shutdown(ctx); err == nil {
-		t.Error("expected context canceled error, got nil")
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	go innerCancel()
+	if err := e.Shutdown(innerCtx); err == nil {
+		t.Error("expected context Canceled error, got nil")
 	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context canceled error, got %v", err)
+		t.Errorf("expected context Canceled error, got %v", err)
 	}
-	flush = orig
+}
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	orig := flush
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// Do this after the parent context is canceled to avoid a race.
+	defer func() {
+		<-ctx.Done()
+		flush = orig
+	}()
+	defer cancel()
+	flush = func(e *Exporter) {
+		<-ctx.Done()
+	}
+
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond*10)
+	if err := e.Shutdown(innerCtx); err == nil {
+		t.Error("expected context DeadlineExceeded error, got nil")
+	} else if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	}
+	innerCancel()
 }

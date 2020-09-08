@@ -217,13 +217,25 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) er
 	return nil
 }
 
+// flush is used to wrap the bundler's Flush method for testing.
+var flush = func(e *Exporter) {
+	e.bundler.Flush()
+}
+
 // Shutdown stops the exporter flushing any pending exports.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	done := make(chan struct{}, 1)
-	go func() {
-		e.Flush()
+	// Shadow so if the goroutine is leaked in testing it doesn't cause a race
+	// condition when the file level var is reset.
+	go func(FlushFunc func(*Exporter)) {
+		// The OpenTelemetry specification is explicit in not having this
+		// method block so the preference here is to orphan this goroutine if
+		// the context is canceled or times out while this flushing is
+		// occurring. This is a consequence of the bundler Flush method not
+		// supporting a context.
+		FlushFunc(e)
 		done <- struct{}{}
-	}()
+	}(flush)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -417,9 +429,4 @@ func (e *Exporter) upload(spans []*gen.Span) error {
 	}
 
 	return e.uploader.upload(batch)
-}
-
-// flush is used to wrap the bundler's Flush method for testing.
-var flush = func(e *Exporter) {
-	e.bundler.Flush()
 }
