@@ -460,3 +460,43 @@ func TestResolvedUDPConnChanges(t *testing.T) {
 	resolver.AssertExpectations(t)
 	dialer.AssertExpectations(t)
 }
+
+func TestResolvedUDPConnLoopWithoutChanges(t *testing.T) {
+	hostPort := "blahblah:34322"
+
+	mockServer, clientConn, err := newUDPConn()
+	require.NoError(t, err)
+	defer mockServer.Close()
+
+	mockUDPAddr := newMockUDPAddr(t, 34322)
+
+	resolver := mockResolver{}
+	resolver.
+		On("ResolveUDPAddr", "udp", hostPort).
+		Return(mockUDPAddr, nil)
+
+	dialer := mockDialer{}
+	dialer.
+		On("DialUDP", "udp", (*net.UDPAddr)(nil), mockUDPAddr).
+		Return(clientConn, nil).
+		Once()
+
+	resolveTimeout := 500 * time.Millisecond
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, resolveTimeout, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	assert.NoError(t, err)
+	require.NotNil(t, conn)
+	assert.Equal(t, mockUDPAddr, conn.destAddr)
+
+	// Waiting for one round of loop
+	time.Sleep(3 * resolveTimeout)
+	assert.Equal(t, mockUDPAddr, conn.destAddr)
+
+	err = conn.Close()
+	assert.NoError(t, err)
+
+	// assert the actual connection was closed
+	assert.Error(t, clientConn.Close())
+
+	resolver.AssertExpectations(t)
+	dialer.AssertExpectations(t)
+}
