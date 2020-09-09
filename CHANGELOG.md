@@ -29,18 +29,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     This removal of the propagators is reflective of the OpenTelemetry specification for these propagators as well as cleans up the `go.opentelemetry.io/otel/api/trace` API. (#1118)
 - Rename Jaeger tags used for instrumentation library information to reflect changes in OpenTelemetry specification. (#1119)
 - Rename `ProbabilitySampler` to `TraceIDRatioBased` and change semantics to ignore parent span sampling status. (#1115)
-- Move `go.opentelemetry.io/otel/api/correlation` package to `go.opentelemetry.io/otel/api/baggage`.
+- Move `tools` package under `internal`. (#1141)
+- Move `go.opentelemetry.io/otel/api/correlation` package to `go.opentelemetry.io/otel/api/baggage`. (#1142)
    The `correlation.CorrelationContext` propagator has been renamed `baggage.Baggage`.  Other exported functions and types are unchanged.
 
 ## [0.11.0] - 2020-08-24
 
 ### Added
 
-- `Noop` and `InMemory` `SpanBatcher` implementations to help with testing integrations. (#994)
-- Integration tests for more OTel Collector Attribute types. (#1062)
-- A dimensionality-reducing metric Processor. (#1057)
-- Support for filtering metric label sets. (#1047)
 - Support for exporting array-valued attributes via OTLP. (#992)
+- `Noop` and `InMemory` `SpanBatcher` implementations to help with testing integrations. (#994)
+- Support for filtering metric label sets. (#1047)
+- A dimensionality-reducing metric Processor. (#1057)
+- Integration tests for more OTel Collector Attribute types. (#1062)
+- A new `WithSpanProcessor` `ProviderOption` is added to the `go.opentelemetry.io/otel/sdk/trace` package to create a `Provider` and automatically register the `SpanProcessor`. (#1078)
 
 ### Changed
 
@@ -59,6 +61,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Unify Callback Function Naming.
    Rename `*Callback` with `*Func`. (#1061)
 - CI builds validate against last two versions of Go, dropping 1.13 and adding 1.15. (#1064)
+- The `go.opentelemetry.io/otel/sdk/export/trace` interfaces `SpanSyncer` and `SpanBatcher` have been replaced with a specification compliant `Exporter` interface.
+   This interface still supports the export of `SpanData`, but only as a slice.
+   Implementation are also required now to return any error from `ExportSpans` if one occurs as well as implement a `Shutdown` method for exporter clean-up. (#1078)
+- The `go.opentelemetry.io/otel/sdk/trace` `NewBatchSpanProcessor` function no longer returns an error.
+   If a `nil` exporter is passed as an argument to this function, instead of it returning an error, it now returns a `BatchSpanProcessor` that handles the export of `SpanData` by not taking any action. (#1078)
+- The `go.opentelemetry.io/otel/sdk/trace` `NewProvider` function to create a `Provider` no longer returns an error, instead only a `*Provider`.
+   This change is related to `NewBatchSpanProcessor` not returning an error which was the only error this function would return. (#1078)
 
 ### Removed
 

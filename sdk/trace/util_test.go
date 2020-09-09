@@ -23,9 +23,6 @@ import (
 var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}
 
 func basicProvider(t *testing.T) *sdktrace.Provider {
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
-	if err != nil {
-		t.Fatalf("failed to create provider, err: %v\n", err)
-	}
+	tp := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
 	return tp
 }

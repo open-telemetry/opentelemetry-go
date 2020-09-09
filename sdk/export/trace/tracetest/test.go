@@ -23,51 +23,48 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-var _ trace.SpanBatcher = (*NoopExporter)(nil)
-var _ trace.SpanSyncer = (*NoopExporter)(nil)
+var _ trace.SpanExporter = (*NoopExporter)(nil)
 
 // NewNoopExporter returns a new no-op exporter.
-// It implements both trace.SpanBatcher and trace.SpanSyncer.
 func NewNoopExporter() *NoopExporter {
 	return new(NoopExporter)
 }
 
-// NoopExporter is an exporter that does nothing.
+// NoopExporter is an exporter that drops all received SpanData and performs
+// no action.
 type NoopExporter struct{}
 
-// ExportSpans implements the trace.SpanBatcher interface.
-func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanData) {}
+// ExportSpans handles export of SpanData by dropping it.
+func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanData) error { return nil }
 
-// ExportSpan implements the trace.SpanSyncer interface.
-func (nsb *NoopExporter) ExportSpan(context.Context, *trace.SpanData) {}
+// Shutdown stops the exporter by doing nothing.
+func (nsb *NoopExporter) Shutdown(context.Context) error { return nil }
 
-var _ trace.SpanBatcher = (*InMemoryExporter)(nil)
-var _ trace.SpanSyncer = (*InMemoryExporter)(nil)
+var _ trace.SpanExporter = (*InMemoryExporter)(nil)
 
-// NewInMemoryExporter returns a new trace.SpanBatcher that stores in-memory all exported spans.
-// It implements both trace.SpanBatcher and trace.SpanSyncer.
+// NewInMemoryExporter returns a new InMemoryExporter.
 func NewInMemoryExporter() *InMemoryExporter {
 	return new(InMemoryExporter)
 }
 
-// InMemoryExporter is an exporter that stores in-memory all exported spans.
+// InMemoryExporter is an exporter that stores all received spans in-memory.
 type InMemoryExporter struct {
 	mu  sync.Mutex
 	sds []*trace.SpanData
 }
 
-// ExportSpans implements the trace.SpanBatcher interface.
-func (imsb *InMemoryExporter) ExportSpans(_ context.Context, sds []*trace.SpanData) {
+// ExportSpans handles export of SpanData by storing it in memory.
+func (imsb *InMemoryExporter) ExportSpans(_ context.Context, sds []*trace.SpanData) error {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
 	imsb.sds = append(imsb.sds, sds...)
+	return nil
 }
 
-// ExportSpan implements the trace.SpanSyncer interface.
-func (imsb *InMemoryExporter) ExportSpan(_ context.Context, sd *trace.SpanData) {
-	imsb.mu.Lock()
-	defer imsb.mu.Unlock()
-	imsb.sds = append(imsb.sds, sd)
+// Shutdown stops the exporter by clearing SpanData held in memory.
+func (imsb *InMemoryExporter) Shutdown(context.Context) error {
+	imsb.Reset()
+	return nil
 }
 
 // Reset the current in-memory storage.

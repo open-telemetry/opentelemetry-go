@@ -353,7 +353,7 @@ func TestExportSpans(t *testing.T) {
 		},
 	} {
 		tsc.Reset()
-		exp.ExportSpans(context.Background(), test.sd)
+		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd))
 		assert.ElementsMatch(t, test.want, tsc.ResourceSpans())
 	}
 }
