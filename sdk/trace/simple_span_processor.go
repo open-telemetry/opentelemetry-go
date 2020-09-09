@@ -29,8 +29,6 @@ type SimpleSpanProcessor struct {
 
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 
-// NewBatchSpanProcessor creates a new BatchSpanProcessor that will send
-// SpanData batches to the exporters with the supplied options. It returns an
 // NewSimpleSpanProcessor returns a new SimpleSpanProcessor that will
 // synchronously send SpanData to the exporter.
 func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
