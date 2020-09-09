@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package correlation_test
+package baggage_test
 
 import (
 	"context"
@@ -22,13 +22,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/label"
 )
 
 func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(correlation.CorrelationContext{}))
+	props := propagation.New(propagation.WithExtractors(baggage.CorrelationContext{}))
 	tests := []struct {
 		name    string
 		header  string
@@ -91,8 +91,8 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
-			gotCorCtx := correlation.MapFromContext(ctx)
-			wantCorCtx := correlation.NewMap(correlation.MapUpdate{MultiKV: tt.wantKVs})
+			gotCorCtx := baggage.MapFromContext(ctx)
+			wantCorCtx := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
 			if gotCorCtx.Len() != wantCorCtx.Len() {
 				t.Errorf(
 					"Got and Want CorCtx are not the same size %d != %d",
@@ -117,7 +117,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(correlation.CorrelationContext{}))
+	props := propagation.New(propagation.WithExtractors(baggage.CorrelationContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -150,10 +150,10 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			req.Header.Set("otcorrelations", tt.header)
 
-			ctx := correlation.NewContext(context.Background(), tt.hasKVs...)
-			wantCorCtx := correlation.MapFromContext(ctx)
+			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
+			wantCorCtx := baggage.MapFromContext(ctx)
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
-			gotCorCtx := correlation.MapFromContext(ctx)
+			gotCorCtx := baggage.MapFromContext(ctx)
 			if gotCorCtx.Len() != wantCorCtx.Len() {
 				t.Errorf(
 					"Got and Want CorCtx are not the same size %d != %d",
@@ -174,8 +174,8 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	}
 }
 
-func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
-	propagator := correlation.CorrelationContext{}
+func TestInjectBaggageToHTTPReq(t *testing.T) {
+	propagator := baggage.CorrelationContext{}
 	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
@@ -228,7 +228,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			ctx := correlation.ContextWithMap(context.Background(), correlation.NewMap(correlation.MapUpdate{MultiKV: tt.kvs}))
+			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
 			propagation.InjectHTTP(ctx, props, req.Header)
 
 			gotHeader := req.Header.Get("otcorrelations")
@@ -250,7 +250,7 @@ func TestInjectCorrelationContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator correlation.CorrelationContext
+	var propagator baggage.CorrelationContext
 	want := []string{"otcorrelations"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {

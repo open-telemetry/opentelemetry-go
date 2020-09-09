@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package correlation provides types and utilities for correlation features.
-package correlation // import "go.opentelemetry.io/otel/api/correlation"
+// Package baggage provides types and utilities for baggage features.
+package baggage // import "go.opentelemetry.io/otel/api/baggage"
