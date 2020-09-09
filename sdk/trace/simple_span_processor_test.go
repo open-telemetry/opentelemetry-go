@@ -27,11 +27,14 @@ type testExporter struct {
 	spans []*export.SpanData
 }
 
-func (t *testExporter) ExportSpan(ctx context.Context, s *export.SpanData) {
-	t.spans = append(t.spans, s)
+func (t *testExporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
+	t.spans = append(t.spans, spans...)
+	return nil
 }
 
-var _ export.SpanSyncer = (*testExporter)(nil)
+func (t *testExporter) Shutdown(context.Context) error { return nil }
+
+var _ export.SpanExporter = (*testExporter)(nil)
 
 func TestNewSimpleSpanProcessor(t *testing.T) {
 	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})

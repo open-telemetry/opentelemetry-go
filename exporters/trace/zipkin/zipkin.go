@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -39,10 +40,13 @@ type Exporter struct {
 	client      *http.Client
 	logger      *log.Logger
 	o           options
+
+	stoppedMu sync.RWMutex
+	stopped   bool
 }
 
 var (
-	_ export.SpanBatcher = &Exporter{}
+	_ export.SpanExporter = &Exporter{}
 )
 
 // Options contains configuration for the exporter.
@@ -113,11 +117,7 @@ func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktr
 		return nil, err
 	}
 
-	batcher := sdktrace.WithBatcher(exp)
-	tp, err := sdktrace.NewProvider(batcher)
-	if err != nil {
-		return nil, err
-	}
+	tp := sdktrace.NewProvider(sdktrace.WithBatcher(exp))
 	if exp.o.config != nil {
 		tp.ApplyConfig(*exp.o.config)
 	}
@@ -137,46 +137,72 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 	return nil
 }
 
-// ExportSpans is a part of an implementation of the SpanBatcher
-// interface.
-func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) {
+// ExportSpans exports SpanData to a Zipkin receiver.
+func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) error {
+	e.stoppedMu.RLock()
+	stopped := e.stopped
+	e.stoppedMu.RUnlock()
+	if stopped {
+		e.logf("exporter stopped, not exporting span batch")
+		return nil
+	}
+
 	if len(batch) == 0 {
 		e.logf("no spans to export")
-		return
+		return nil
 	}
 	models := toZipkinSpanModels(batch, e.serviceName)
 	body, err := json.Marshal(models)
 	if err != nil {
-		e.logf("failed to serialize zipkin models to JSON: %v", err)
-		return
+		return e.errf("failed to serialize zipkin models to JSON: %v", err)
 	}
 	e.logf("about to send a POST request to %s with body %s", e.url, body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.url, bytes.NewBuffer(body))
 	if err != nil {
-		e.logf("failed to create request to %s: %v", e.url, err)
-		return
+		return e.errf("failed to create request to %s: %v", e.url, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := e.client.Do(req)
 	if err != nil {
-		e.logf("request to %s failed: %v", e.url, err)
-		return
+		return e.errf("request to %s failed: %v", e.url, err)
 	}
 	e.logf("zipkin responded with status %d", resp.StatusCode)
 
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		e.logf("failed to read response body: %v", err)
+		// Best effort to clean up here.
+		resp.Body.Close()
+		return e.errf("failed to read response body: %v", err)
 	}
 
 	err = resp.Body.Close()
 	if err != nil {
-		e.logf("failed to close response body: %v", err)
+		return e.errf("failed to close response body: %v", err)
 	}
+	return nil
+}
+
+// Shutdown stops the exporter flushing any pending exports.
+func (e *Exporter) Shutdown(ctx context.Context) error {
+	e.stoppedMu.Lock()
+	e.stopped = true
+	e.stoppedMu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	return nil
 }
 
 func (e *Exporter) logf(format string, args ...interface{}) {
 	if e.logger != nil {
 		e.logger.Printf(format, args...)
 	}
+}
+
+func (e *Exporter) errf(format string, args ...interface{}) error {
+	e.logf(format, args...)
+	return fmt.Errorf(format, args...)
 }

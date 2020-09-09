@@ -26,28 +26,29 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// SpanSyncer is a type for functions that receive a single sampled trace span.
-//
-// The ExportSpan method is called synchronously. Therefore, it should not take
-// forever to process the span.
-//
-// The SpanData should not be modified.
-type SpanSyncer interface {
-	ExportSpan(context.Context, *SpanData)
+// SpanExporter handles the delivery of SpanData to external receivers. This is
+// the final component in the trace export pipeline.
+type SpanExporter interface {
+	// ExportSpans exports a batch of SpanData.
+	//
+	// This function is called synchronously, so there is no concurrency
+	// safety requirement. However, due to the synchronous calling pattern,
+	// it is critical that all timeouts and cancellations contained in the
+	// passed context must be honored.
+	//
+	// Any retry logic must be contained in this function. The SDK that
+	// calls this function will not implement any retry logic. All errors
+	// returned by this function are considered unrecoverable and will be
+	// reported to a configured error Handler.
+	ExportSpans(context.Context, []*SpanData) error
+	// Shutdown notifies the exporter of a pending halt to operations. The
+	// exporter is expected to preform any cleanup or synchronization it
+	// requires while honoring all timeouts and cancellations contained in
+	// the passed context.
+	Shutdown(context.Context) error
 }
 
-// SpanBatcher is a type for functions that receive batched of sampled trace
-// spans.
-//
-// The ExportSpans method is called asynchronously. However its should not take
-// forever to process the spans.
-//
-// The SpanData should not be modified.
-type SpanBatcher interface {
-	ExportSpans(context.Context, []*SpanData)
-}
-
-// SpanData contains all the information collected by a span.
+// SpanData contains all the information collected by a completed span.
 type SpanData struct {
 	SpanContext  apitrace.SpanContext
 	ParentSpanID apitrace.SpanID
@@ -74,17 +75,16 @@ type SpanData struct {
 	Resource *resource.Resource
 
 	// InstrumentationLibrary defines the instrumentation library used to
-	// providing instrumentation.
+	// provide instrumentation.
 	InstrumentationLibrary instrumentation.Library
 }
 
-// Event is used to describe an Event with a message string and set of
-// Attributes.
+// Event is thing that happened during a Span's lifetime.
 type Event struct {
 	// Name is the name of this event
 	Name string
 
-	// Attributes contains a list of key-value pairs.
+	// Attributes describe the aspects of the event.
 	Attributes []label.KeyValue
 
 	// Time is the time at which this event was recorded.

@@ -29,17 +29,13 @@ const (
 	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 )
 
-// batcher contains export.SpanBatcher and its options.
-type batcher struct {
-	b    export.SpanBatcher
-	opts []BatchSpanProcessorOption
-}
+// TODO (MrAlias): unify this API option design:
+// https://github.com/open-telemetry/opentelemetry-go/issues/536
 
 // ProviderOptions
 type ProviderOptions struct {
-	syncers  []export.SpanSyncer
-	batchers []batcher
-	config   Config
+	processors []SpanProcessor
+	config     Config
 }
 
 type ProviderOption func(*ProviderOptions)
@@ -56,7 +52,7 @@ var _ apitrace.Provider = &Provider{}
 // NewProvider creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
 // to all tracer instances that will be created by this provider.
-func NewProvider(opts ...ProviderOption) (*Provider, error) {
+func NewProvider(opts ...ProviderOption) *Provider {
 	o := &ProviderOptions{}
 
 	for _, opt := range opts {
@@ -74,22 +70,13 @@ func NewProvider(opts ...ProviderOption) (*Provider, error) {
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
 	})
 
-	for _, syncer := range o.syncers {
-		ssp := NewSimpleSpanProcessor(syncer)
-		tp.RegisterSpanProcessor(ssp)
-	}
-
-	for _, batcher := range o.batchers {
-		bsp, err := NewBatchSpanProcessor(batcher.b, batcher.opts...)
-		if err != nil {
-			return nil, err
-		}
-		tp.RegisterSpanProcessor(bsp)
+	for _, sp := range o.processors {
+		tp.RegisterSpanProcessor(sp)
 	}
 
 	tp.ApplyConfig(o.config)
 
-	return tp, nil
+	return tp
 }
 
 // Tracer with the given name. If a tracer for the given name does not exist,
@@ -176,23 +163,22 @@ func (p *Provider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
-// WithSyncer options appends the syncer to the existing list of Syncers.
-// This option can be used multiple times.
-// The Syncers are wrapped into SimpleSpanProcessors and registered
-// with the provider.
-func WithSyncer(syncer export.SpanSyncer) ProviderOption {
-	return func(opts *ProviderOptions) {
-		opts.syncers = append(opts.syncers, syncer)
-	}
+// WithSyncer registers the exporter with the Provider using a
+// SimpleSpanProcessor.
+func WithSyncer(e export.SpanExporter) ProviderOption {
+	return WithSpanProcessor(NewSimpleSpanProcessor(e))
 }
 
-// WithBatcher options appends the batcher to the existing list of Batchers.
-// This option can be used multiple times.
-// The Batchers are wrapped into BatchedSpanProcessors and registered
-// with the provider.
-func WithBatcher(b export.SpanBatcher, bopts ...BatchSpanProcessorOption) ProviderOption {
+// WithBatcher registers the exporter with the Provider using a
+// BatchSpanProcessor configured with the passed opts.
+func WithBatcher(e export.SpanExporter, opts ...BatchSpanProcessorOption) ProviderOption {
+	return WithSpanProcessor(NewBatchSpanProcessor(e, opts...))
+}
+
+// WithSpanProcessor registers the SpanProcessor with a Provider.
+func WithSpanProcessor(sp SpanProcessor) ProviderOption {
 	return func(opts *ProviderOptions) {
-		opts.batchers = append(opts.batchers, batcher{b, bopts})
+		opts.processors = append(opts.processors, sp)
 	}
 }
 

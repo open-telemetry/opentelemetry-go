@@ -54,7 +54,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	)
 	handleErr(err, "failed to create exporter")
 
-	tracerProvider, err := sdktrace.NewProvider(
+	tracerProvider := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
@@ -62,7 +62,6 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		)),
 		sdktrace.WithBatcher(exp),
 	)
-	handleErr(err, "failed to create trace provider")
 
 	pusher := push.New(
 		basic.New(
@@ -84,7 +83,9 @@ func main() {
 	log.Printf("Waiting for connection...")
 
 	exp, pusher := initProvider()
-	defer func() { handleErr(exp.Stop(), "failed to stop exporter") }()
+	defer func() {
+		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
+	}()
 	defer pusher.Stop() // pushes any last exports to the receiver
 
 	tracer := global.Tracer("test-tracer")
