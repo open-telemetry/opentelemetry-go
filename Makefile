@@ -13,7 +13,7 @@
 # limitations under the License.
 
 EXAMPLES := $(shell ./get_main_pkgs.sh ./example)
-TOOLS_MOD_DIR := ./tools
+TOOLS_MOD_DIR := ./internal/tools
 
 # All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
