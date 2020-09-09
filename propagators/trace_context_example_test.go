@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package propagators_test
 
 import (
-	"context"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/propagators"
 )
 
-type noopTracer struct{}
-
-var _ Tracer = noopTracer{}
-
-// Start starts a noop span.
-func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
+func ExampleTraceContext() {
+	tc := propagators.TraceContext{}
+	// Register the TraceContext propagator globally.
+	global.SetPropagators(propagation.New(
+		propagation.WithExtractors(tc),
+		propagation.WithInjectors(tc),
+	))
 }

@@ -158,7 +158,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 		opt(&o)
 	}
 	if o.Disabled {
-		return &apitrace.NoopProvider{}, func() {}, nil
+		return apitrace.NoopProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)

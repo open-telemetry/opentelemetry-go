@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -24,38 +24,11 @@ import (
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/propagators"
 )
-
-const (
-	traceIDStr = "4bf92f3577b34da6a3ce929d0e0e4736"
-	spanIDStr  = "00f067aa0ba902b7"
-)
-
-var (
-	traceID = mustTraceIDFromHex(traceIDStr)
-	spanID  = mustSpanIDFromHex(spanIDStr)
-)
-
-func mustTraceIDFromHex(s string) (t trace.ID) {
-	var err error
-	t, err = trace.IDFromHex(s)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func mustSpanIDFromHex(s string) (t trace.SpanID) {
-	var err error
-	t, err = trace.SpanIDFromHex(s)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -150,7 +123,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	wantSc := trace.EmptySpanContext()
-	props := propagation.New(propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
 	tests := []struct {
 		name   string
 		header string
@@ -242,7 +215,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}))
 	tests := []struct {
 		name       string
 		sc         trace.SpanContext
@@ -299,7 +272,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator trace.TraceContext
+	var propagator propagators.TraceContext
 	want := []string{"traceparent", "tracestate"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -308,7 +281,7 @@ func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 }
 
 func TestTraceStatePropagation(t *testing.T) {
-	props := propagation.New(propagation.WithInjectors(trace.TraceContext{}), propagation.WithExtractors(trace.TraceContext{}))
+	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}), propagation.WithExtractors(propagators.TraceContext{}))
 	want := "opaquevalue"
 	headerName := "tracestate"
 

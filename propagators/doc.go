@@ -12,18 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+/*
+Package propagators contains OpenTelemetry context propagators.
 
-import (
-	"context"
-)
-
-type noopTracer struct{}
-
-var _ Tracer = noopTracer{}
-
-// Start starts a noop span.
-func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
-}
+OpenTelemetry propagators are used to extract and inject context data from and
+into messages exchanged by applications. The propagators supported by this
+package includes are the B3 single and multiple header HTTP encoding
+(https://github.com/openzipkin/b3-propagation) and the W3C Trace Context
+encoding (https://www.w3.org/TR/trace-context/).
+*/
+package propagators // import "go.opentelemetry.io/otel/propagators"

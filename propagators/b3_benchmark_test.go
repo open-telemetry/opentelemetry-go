@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func BenchmarkExtractB3(b *testing.B) {
@@ -38,7 +39,7 @@ func BenchmarkExtractB3(b *testing.B) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := trace.B3{}
+		propagator := propagators.B3{}
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -73,7 +74,7 @@ func BenchmarkInjectB3(b *testing.B) {
 
 	for _, tg := range testGroup {
 		for _, tt := range tg.tests {
-			propagator := trace.B3{InjectEncoding: tt.encoding}
+			propagator := propagators.B3{InjectEncoding: tt.encoding}
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(

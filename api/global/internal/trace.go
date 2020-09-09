@@ -36,6 +36,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/noop"
 )
 
 // tracerProvider is a placeholder for a configured SDK Provider.
@@ -120,5 +121,5 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if t.delegate != nil {
 		return t.delegate.Start(ctx, name, opts...)
 	}
-	return trace.NoopTracer{}.Start(ctx, name, opts...)
+	return noop.Tracer.Start(ctx, name, opts...)
 }

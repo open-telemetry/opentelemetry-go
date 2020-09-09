@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package propagators_test
 
 import (
 	"context"
@@ -23,7 +23,36 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
+
+const (
+	traceIDStr = "4bf92f3577b34da6a3ce929d0e0e4736"
+	spanIDStr  = "00f067aa0ba902b7"
+)
+
+var (
+	traceID = mustTraceIDFromHex(traceIDStr)
+	spanID  = mustSpanIDFromHex(spanIDStr)
+)
+
+func mustTraceIDFromHex(s string) (t trace.ID) {
+	var err error
+	t, err = trace.IDFromHex(s)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func mustSpanIDFromHex(s string) (t trace.SpanID) {
+	var err error
+	t, err = trace.SpanIDFromHex(s)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
 
 type outOfThinAirPropagator struct {
 	t *testing.T
@@ -32,10 +61,6 @@ type outOfThinAirPropagator struct {
 var _ propagation.HTTPPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	traceID, err := trace.IDFromHex("938753245abe987f098c0987a9873987")
-	require.NoError(p.t, err)
-	spanID, err := trace.SpanIDFromHex("2345f98c0987a09d")
-	require.NoError(p.t, err)
 	sc := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
@@ -65,10 +90,10 @@ func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}
 	ns := nilSupplier{}
 	testProps := []propagation.HTTPPropagator{
-		trace.TraceContext{},
-		trace.B3{},
-		trace.B3{InjectEncoding: trace.B3SingleHeader},
-		trace.B3{InjectEncoding: trace.B3SingleHeader | trace.B3MultipleHeader},
+		propagators.TraceContext{},
+		propagators.B3{},
+		propagators.B3{InjectEncoding: propagators.B3SingleHeader},
+		propagators.B3{InjectEncoding: propagators.B3SingleHeader | propagators.B3MultipleHeader},
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really
@@ -94,4 +119,8 @@ func TestMultiplePropagators(t *testing.T) {
 		sc := trace.RemoteSpanContextFromContext(ctx)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
+}
+
+func TestDefaultHTTPPropagator(t *testing.T) {
+	assert.IsType(t, propagators.TraceContext{}, propagators.DefaultHTTPPropagator())
 }

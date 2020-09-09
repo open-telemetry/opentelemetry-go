@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 type (
@@ -122,7 +123,7 @@ func defaultPropagatorsValue() *atomic.Value {
 // getDefaultPropagators returns a default Propagators, configured
 // with W3C trace and correlation context propagation.
 func getDefaultPropagators() propagation.Propagators {
-	tcPropagator := trace.TraceContext{}
+	tcPropagator := propagators.TraceContext{}
 	ccPropagator := correlation.CorrelationContext{}
 	return propagation.New(
 		propagation.WithExtractors(tcPropagator, ccPropagator),

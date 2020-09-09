@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package propagators
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
-	traceID    = ID{0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0, 0x1, 0xc8}
+	traceID    = trace.ID{0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0, 0x1, 0xc8}
 	traceIDStr = "000000000000007b00000000000001c8"
-	spanID     = SpanID{0, 0, 0, 0, 0, 0, 0, 0x7b}
+	spanID     = trace.SpanID{0, 0, 0, 0, 0, 0, 0, 0x7b}
 	spanIDStr  = "000000000000007b"
 )
 
@@ -34,64 +36,64 @@ func TestExtractMultiple(t *testing.T) {
 		parentSpanID string
 		sampled      string
 		flags        string
-		expected     SpanContext
+		expected     trace.SpanContext
 		err          error
 	}{
 		{
 			"", "", "", "0", "",
-			SpanContext{},
+			trace.SpanContext{},
 			nil,
 		},
 		{
 			"", "", "", "", "",
-			SpanContext{TraceFlags: FlagsDeferred},
+			trace.SpanContext{TraceFlags: trace.FlagsDeferred},
 			nil,
 		},
 		{
 			"", "", "", "1", "",
-			SpanContext{TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		{
 			"", "", "", "", "1",
-			SpanContext{TraceFlags: FlagsDeferred | FlagsDebug},
+			trace.SpanContext{TraceFlags: trace.FlagsDeferred | trace.FlagsDebug},
 			nil,
 		},
 		{
 			"", "", "", "0", "1",
-			SpanContext{TraceFlags: FlagsDebug},
+			trace.SpanContext{TraceFlags: trace.FlagsDebug},
 			nil,
 		},
 		{
 			"", "", "", "1", "1",
-			SpanContext{TraceFlags: FlagsSampled | FlagsDebug},
+			trace.SpanContext{TraceFlags: trace.FlagsSampled | trace.FlagsDebug},
 			nil,
 		},
 		{
 			traceIDStr, spanIDStr, "", "", "",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsDeferred},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsDeferred},
 			nil,
 		},
 		{
 			traceIDStr, spanIDStr, "", "0", "",
-			SpanContext{TraceID: traceID, SpanID: spanID},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID},
 			nil,
 		},
 		// Ensure backwards compatibility.
 		{
 			traceIDStr, spanIDStr, "", "false", "",
-			SpanContext{TraceID: traceID, SpanID: spanID},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID},
 			nil,
 		},
 		{
 			traceIDStr, spanIDStr, "", "1", "",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		// Ensure backwards compatibility.
 		{
 			traceIDStr, spanIDStr, "", "true", "",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		{
@@ -101,20 +103,20 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			traceIDStr, spanIDStr, "", "1", "1",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled | FlagsDebug},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled | trace.FlagsDebug},
 			nil,
 		},
 		// Invalid flags are discarded.
 		{
 			traceIDStr, spanIDStr, "", "1", "invalid",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		// Support short trace IDs.
 		{
 			"00000000000001c8", spanIDStr, "", "0", "",
-			SpanContext{
-				TraceID: ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
+			trace.SpanContext{
+				TraceID: trace.ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:  spanID,
 			},
 			nil,
@@ -166,7 +168,7 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			traceIDStr, spanIDStr, "00000000000001c8", "0", "",
-			SpanContext{TraceID: traceID, SpanID: spanID},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID},
 			nil,
 		},
 		{
@@ -207,12 +209,12 @@ func TestExtractMultiple(t *testing.T) {
 func TestExtractSingle(t *testing.T) {
 	tests := []struct {
 		header   string
-		expected SpanContext
+		expected trace.SpanContext
 		err      error
 	}{
-		{"0", SpanContext{}, nil},
-		{"1", SpanContext{TraceFlags: FlagsSampled}, nil},
-		{"d", SpanContext{TraceFlags: FlagsDebug}, nil},
+		{"0", trace.SpanContext{}, nil},
+		{"1", trace.SpanContext{TraceFlags: trace.FlagsSampled}, nil},
+		{"d", trace.SpanContext{TraceFlags: trace.FlagsDebug}, nil},
 		{"a", empty, errInvalidSampledByte},
 		{"3", empty, errInvalidSampledByte},
 		{"000000000000007b", empty, errInvalidScope},
@@ -220,19 +222,19 @@ func TestExtractSingle(t *testing.T) {
 		// Support short trace IDs.
 		{
 			"00000000000001c8-000000000000007b",
-			SpanContext{
-				TraceID:    ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
+			trace.SpanContext{
+				TraceID:    trace.ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:     spanID,
-				TraceFlags: FlagsDeferred,
+				TraceFlags: trace.FlagsDeferred,
 			},
 			nil,
 		},
 		{
 			"000000000000007b00000000000001c8-000000000000007b",
-			SpanContext{
+			trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: FlagsDeferred,
+				TraceFlags: trace.FlagsDeferred,
 			},
 			nil,
 		},
@@ -253,14 +255,14 @@ func TestExtractSingle(t *testing.T) {
 		},
 		{
 			"000000000000007b00000000000001c8-000000000000007b-1",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		// ParentSpanID is discarded, but should still restult in a parsable
 		// header.
 		{
 			"000000000000007b00000000000001c8-000000000000007b-1-00000000000001c8",
-			SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: FlagsSampled},
+			trace.SpanContext{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled},
 			nil,
 		},
 		{

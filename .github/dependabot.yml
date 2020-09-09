@@ -83,8 +83,7 @@ updates:
       interval: "weekly"
       day: "sunday"
   - package-ecosystem: "gomod"
-    directory: "/tools"
+    directory: "/internal/tools"
     schedule:
       interval: "weekly"
       day: "sunday"
-

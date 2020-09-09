@@ -69,7 +69,7 @@ func TestInstallNewPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProvider: &apitrace.NoopProvider{},
+			expectedProvider: apitrace.NoopProvider(),
 		},
 	}
 
@@ -108,7 +108,7 @@ func TestNewExportPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProviderType: &apitrace.NoopProvider{},
+			expectedProviderType: apitrace.NoopProvider(),
 		},
 		{
 			name:     "always on",
@@ -173,7 +173,7 @@ func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
 	)
 	defer fn()
 	assert.NoError(t, err)
-	assert.IsType(t, &apitrace.NoopProvider{}, tp)
+	assert.IsType(t, apitrace.NoopProvider(), tp)
 }
 
 func TestNewRawExporter(t *testing.T) {

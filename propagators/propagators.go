@@ -12,18 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package propagators
 
-import (
-	"context"
-)
+import "go.opentelemetry.io/otel/api/propagation"
 
-type noopTracer struct{}
-
-var _ Tracer = noopTracer{}
-
-// Start starts a noop span.
-func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
+// DefaultHTTPPropagator returns the default OpenTelemetry HTTP propagator,
+// the W3C Trace Context propagator.
+func DefaultHTTPPropagator() propagation.HTTPPropagator {
+	// As specified here:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/context/api-propagators.md#global-propagators
+	return TraceContext{}
 }

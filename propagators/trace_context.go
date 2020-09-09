@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package propagators
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"regexp"
 
 	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -36,25 +37,28 @@ const (
 	tracestateKey traceContextPropagatorKeyType = 0
 )
 
-// TraceContext propagates SpanContext in W3C TraceContext format.
-//nolint:golint
+// TraceContext is a propagator that supports the W3C Trace Context format
+// (https://www.w3.org/TR/trace-context/)
+//
+// This propagator will propagate the traceparent and tracestate headers to
+// guarantee traces are not broken. It is up to the users of this propagator
+// to choose if they want to participate in a trace by modifying the
+// traceparent header and relevant parts of the tracestate header containing
+// their proprietary information.
 type TraceContext struct{}
 
 var _ propagation.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
-// DefaultHTTPPropagator returns the default trace HTTP propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
-	return TraceContext{}
-}
-
+// Inject injects a context into the supplier as W3C Trace Context HTTP
+// headers.
 func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
 		supplier.Set(tracestateHeader, state)
 	}
 
-	sc := SpanFromContext(ctx).SpanContext()
+	sc := trace.SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
 		return
 	}
@@ -62,10 +66,12 @@ func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupp
 		supportedVersion,
 		sc.TraceID,
 		sc.SpanID,
-		sc.TraceFlags&FlagsSampled)
+		sc.TraceFlags&trace.FlagsSampled)
 	supplier.Set(traceparentHeader, h)
 }
 
+// Extract extracts a context from the supplier if it contains W3C Trace
+// Context headers.
 func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	state := supplier.Get(tracestateHeader)
 	if state != "" {
@@ -76,77 +82,79 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 	if !sc.IsValid() {
 		return ctx
 	}
-	return ContextWithRemoteSpanContext(ctx, sc)
+	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (tc TraceContext) extract(supplier propagation.HTTPSupplier) SpanContext {
+func (tc TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	matches := traceCtxRegExp.FindStringSubmatch(h)
 
 	if len(matches) == 0 {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if len(matches) < 5 { // four subgroups plus the overall match
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if len(matches[1]) != 2 {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 	ver, err := hex.DecodeString(matches[1])
 	if err != nil {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if len(matches[2]) != 32 {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
-	var sc SpanContext
+	var sc trace.SpanContext
 
-	sc.TraceID, err = IDFromHex(matches[2][:32])
+	sc.TraceID, err = trace.IDFromHex(matches[2][:32])
 	if err != nil {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if len(matches[3]) != 16 {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
-	sc.SpanID, err = SpanIDFromHex(matches[3])
+	sc.SpanID, err = trace.SpanIDFromHex(matches[3])
 	if err != nil {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	if len(matches[4]) != 2 {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 	opts, err := hex.DecodeString(matches[4])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
-	sc.TraceFlags = opts[0] & FlagsSampled
+	sc.TraceFlags = opts[0] & trace.FlagsSampled
 
 	if !sc.IsValid() {
-		return EmptySpanContext()
+		return trace.EmptySpanContext()
 	}
 
 	return sc
 }
 
+// GetAllKeys returns the HTTP header names this propagator will use when
+// injecting.
 func (tc TraceContext) GetAllKeys() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }
