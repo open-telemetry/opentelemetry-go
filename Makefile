@@ -33,7 +33,7 @@ endif
 
 GOTEST_MIN = go test -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=./...
 
 .DEFAULT_GOAL := precommit
 
@@ -57,19 +57,24 @@ $(TOOLS_DIR)/gojq: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_D
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/gojq github.com/itchyny/gojq/cmd/gojq
 
-precommit: generate build lint examples test
+precommit: dependabot-check license-check generate build lint examples test
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	set -e; for dir in $(ALL_COVERAGE_MOD_DIRS); do \
+	set -e; \
+	printf "" > coverage.txt; \
+	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOTEST_WITH_COVERAGE) ./... && \
-	    go tool cover -html=coverage.txt -o coverage.html); \
-	done
+	 	$(GOTEST_WITH_COVERAGE) ./... && \
+		go tool cover -html=coverage.out -o coverage.html); \
+      [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
+	done; \
+	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt
+
 
 .PHONY: ci
-ci: precommit check-clean-work-tree license-check test-with-coverage test-386
+ci: precommit check-clean-work-tree test-with-coverage test-386
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
@@ -150,3 +155,16 @@ license-check:
 	           echo "license header checking failed:"; echo "$${licRes}"; \
 	           exit 1; \
 	   fi
+
+.PHONY: dependabot-check
+dependabot-check:
+	@result=$$( \
+		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
+			do grep -q "$$f" .github/dependabot.yml \
+			|| echo "$$f"; \
+		done; \
+	); \
+	if [ -n "$$result" ]; then \
+		echo "missing go.mod dependabot check:"; echo "$$result"; \
+		exit 1; \
+	fi

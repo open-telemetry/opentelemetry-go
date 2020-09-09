@@ -46,7 +46,7 @@ func Example_insecure() {
 		log.Fatalf("error creating trace provider: %v\n", err)
 	}
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
 
@@ -87,7 +87,7 @@ func Example_withTLS() {
 		log.Fatalf("error creating trace provider: %v\n", err)
 	}
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
 

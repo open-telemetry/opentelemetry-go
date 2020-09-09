@@ -18,12 +18,12 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 var (
-	lemonsKey = kv.Key("ex.com/lemons")
+	lemonsKey = label.Key("ex.com/lemons")
 )
 
 // SubOperation is an example to demonstrate the use of named tracer.

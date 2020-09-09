@@ -21,9 +21,14 @@ import (
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+)
+
+const (
+	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
+	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
 )
 
 func toZipkinSpanModels(batch []*export.SpanData, serviceName string) []zkmodel.SpanModel {
@@ -122,7 +127,7 @@ func toZipkinAnnotations(events []export.Event) []zkmodel.Annotation {
 	return annotations
 }
 
-func attributesToJSONMapString(attributes []kv.KeyValue) string {
+func attributesToJSONMapString(attributes []label.KeyValue) string {
 	m := make(map[string]interface{}, len(attributes))
 	for _, attribute := range attributes {
 		m[(string)(attribute.Key)] = attribute.Value.AsInterface()
@@ -132,9 +137,16 @@ func attributesToJSONMapString(attributes []kv.KeyValue) string {
 	return (string)(jsonBytes)
 }
 
+// extraZipkinTags are those that may be added to every outgoing span
+var extraZipkinTags = []string{
+	"ot.status_code",
+	"ot.status_description",
+	keyInstrumentationLibraryName,
+	keyInstrumentationLibraryVersion,
+}
+
 func toZipkinTags(data *export.SpanData) map[string]string {
-	// +2 for status code and for status message
-	m := make(map[string]string, len(data.Attributes)+2)
+	m := make(map[string]string, len(data.Attributes)+len(extraZipkinTags))
 	for _, kv := range data.Attributes {
 		m[(string)(kv.Key)] = kv.Value.Emit()
 	}
@@ -143,5 +155,12 @@ func toZipkinTags(data *export.SpanData) map[string]string {
 	}
 	m["ot.status_code"] = data.StatusCode.String()
 	m["ot.status_description"] = data.StatusMessage
+
+	if il := data.InstrumentationLibrary; il.Name != "" {
+		m[keyInstrumentationLibraryName] = il.Name
+		if il.Version != "" {
+			m[keyInstrumentationLibraryVersion] = il.Version
+		}
+	}
 	return m
 }

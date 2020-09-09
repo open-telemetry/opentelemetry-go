@@ -41,13 +41,13 @@ func main() {
 	}()
 
 	// Note: The exporter can also be used as a Batcher. E.g.
-	//   traceProvider, err := sdktrace.NewProvider(
+	//   tracerProvider, err := sdktrace.NewProvider(
 	//   	sdktrace.WithBatcher(exporter,
 	//   		sdktrace.WithBatchTimeout(time.Second*15),
 	//   		sdktrace.WithMaxExportBatchSize(100),
 	//   	),
 	//   )
-	traceProvider, err := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
+	tracerProvider, err := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
 	if err != nil {
 		log.Fatal("failed to create trace provider: %v", err)
 	}

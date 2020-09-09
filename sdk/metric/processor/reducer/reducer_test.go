@@ -20,9 +20,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -32,22 +31,22 @@ import (
 )
 
 var (
-	kvs1 = []kv.KeyValue{
-		kv.Int("A", 1),
-		kv.Int("B", 2),
-		kv.Int("C", 3),
+	kvs1 = []label.KeyValue{
+		label.Int("A", 1),
+		label.Int("B", 2),
+		label.Int("C", 3),
 	}
-	kvs2 = []kv.KeyValue{
-		kv.Int("A", 1),
-		kv.Int("B", 0),
-		kv.Int("C", 3),
+	kvs2 = []label.KeyValue{
+		label.Int("A", 1),
+		label.Int("B", 0),
+		label.Int("C", 3),
 	}
 )
 
 type testFilter struct{}
 
 func (testFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
-	return func(label kv.KeyValue) bool {
+	return func(label label.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}
 }
@@ -77,7 +76,7 @@ func TestFilterProcessor(t *testing.T) {
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, processorTest.Checkpointer(testProc)),
 		metricsdk.WithResource(
-			resource.New(kv.String("R", "V")),
+			resource.New(label.String("R", "V")),
 		),
 	)
 	generateData(accum)
@@ -96,7 +95,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 		metricsdk.WithResource(
-			resource.New(kv.String("R", "V")),
+			resource.New(label.String("R", "V")),
 		),
 	)
 	exporter := processorTest.NewExporter(basicProc, label.DefaultEncoder())

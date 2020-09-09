@@ -23,16 +23,16 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
 )
 
 const (
-	errorTypeKey    = kv.Key("error.type")
-	errorMessageKey = kv.Key("error.message")
+	errorTypeKey    = label.Key("error.type")
+	errorMessageKey = label.Key("error.message")
 	errorEventName  = "error"
 )
 
@@ -94,7 +94,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 	s.mu.Unlock()
 }
 
-func (s *span) SetAttributes(attributes ...kv.KeyValue) {
+func (s *span) SetAttributes(attributes ...label.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
@@ -102,14 +102,20 @@ func (s *span) SetAttributes(attributes ...kv.KeyValue) {
 }
 
 func (s *span) SetAttribute(k string, v interface{}) {
-	attr := kv.Any(k, v)
-	if attr.Value.Type() != kv.INVALID {
+	attr := label.Any(k, v)
+	if attr.Value.Type() != label.INVALID {
 		s.SetAttributes(attr)
 	}
 }
 
-// End ends the span adding an error event if it was called while panicking.
-func (s *span) End(options ...apitrace.EndOption) {
+// End ends the span.
+//
+// The only SpanOption currently supported is WithTimestamp which will set the
+// end time for a Span's life-cycle.
+//
+// If this method is called while panicking an error event is added to the
+// Span before ending it and the panic is continued.
+func (s *span) End(options ...apitrace.SpanOption) {
 	if s == nil {
 		return
 	}
@@ -131,19 +137,16 @@ func (s *span) End(options ...apitrace.EndOption) {
 	if !s.IsRecording() {
 		return
 	}
-	opts := apitrace.EndConfig{}
-	for _, opt := range options {
-		opt(&opts)
-	}
+	config := apitrace.SpanConfigure(options)
 	s.endOnce.Do(func() {
 		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
-			if opts.EndTime.IsZero() {
+			if config.Timestamp.IsZero() {
 				sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 			} else {
-				sd.EndTime = opts.EndTime
+				sd.EndTime = config.Timestamp
 			}
 			for sp := range sps {
 				sp.OnEnd(sd)
@@ -194,21 +197,21 @@ func (s *span) Tracer() apitrace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (s *span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(time.Now(), name, attrs...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEventWithTimestamp(timestamp, name, attrs...)
 }
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
@@ -305,11 +308,11 @@ func (s *span) interfaceArrayToMessageEventArray() []export.Event {
 	return messageEventArr
 }
 
-func (s *span) copyToCappedAttributes(attributes ...kv.KeyValue) {
+func (s *span) copyToCappedAttributes(attributes ...label.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		if a.Value.Type() != kv.INVALID {
+		if a.Value.Type() != label.INVALID {
 			s.attributes.add(a)
 		}
 	}
@@ -324,7 +327,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o apitrace.StartConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o *apitrace.SpanConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
@@ -355,7 +358,7 @@ func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, rem
 		return span
 	}
 
-	startTime := o.StartTime
+	startTime := o.Timestamp
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
@@ -396,7 +399,7 @@ type samplingData struct {
 	name         string
 	cfg          *Config
 	span         *span
-	attributes   []kv.KeyValue
+	attributes   []label.KeyValue
 	links        []apitrace.Link
 	kind         apitrace.SpanKind
 }

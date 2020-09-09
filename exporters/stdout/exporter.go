@@ -88,11 +88,11 @@ func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.Pr
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(exportOpts []Option, pushOpts []push.Option) (*push.Controller, error) {
-	traceProvider, controller, err := NewExportPipeline(exportOpts, pushOpts)
+	tracerProvider, controller, err := NewExportPipeline(exportOpts, pushOpts)
 	if err != nil {
 		return controller, err
 	}
-	global.SetTraceProvider(traceProvider)
+	global.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(controller.Provider())
 	return controller, err
 }

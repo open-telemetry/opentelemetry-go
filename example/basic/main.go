@@ -20,17 +20,17 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 )
 
 var (
-	fooKey     = kv.Key("ex.com/foo")
-	barKey     = kv.Key("ex.com/bar")
-	lemonsKey  = kv.Key("ex.com/lemons")
-	anotherKey = kv.Key("ex.com/another")
+	fooKey     = label.Key("ex.com/foo")
+	barKey     = label.Key("ex.com/bar")
+	lemonsKey  = label.Key("ex.com/lemons")
+	anotherKey = label.Key("ex.com/another")
 )
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
-	commonLabels := []kv.KeyValue{lemonsKey.Int(10), kv.String("A", "1"), kv.String("B", "2"), kv.String("C", "3")}
+	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
 	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
@@ -72,7 +72,7 @@ func main() {
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
-		span.AddEvent(ctx, "Nice operation!", kv.Key("bogons").Int(100))
+		span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(

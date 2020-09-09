@@ -17,7 +17,9 @@ package jaeger
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 
@@ -32,41 +34,76 @@ type agentClientUDP struct {
 	gen.Agent
 	io.Closer
 
-	connUDP       *net.UDPConn
+	connUDP       udpConn
 	client        *gen.AgentClient
 	maxPacketSize int                   // max size of datagram in bytes
 	thriftBuffer  *thrift.TMemoryBuffer // buffer used to calculate byte size of a span
 }
 
+type udpConn interface {
+	Write([]byte) (int, error)
+	SetWriteBuffer(int) error
+	Close() error
+}
+
+type agentClientUDPParams struct {
+	HostPort                 string
+	MaxPacketSize            int
+	Logger                   *log.Logger
+	AttemptReconnecting      bool
+	AttemptReconnectInterval time.Duration
+}
+
 // newAgentClientUDP creates a client that sends spans to Jaeger Agent over UDP.
-func newAgentClientUDP(hostPort string, maxPacketSize int) (*agentClientUDP, error) {
-	if maxPacketSize == 0 {
-		maxPacketSize = udpPacketMaxLength
+func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
+	// validate hostport
+	if _, _, err := net.SplitHostPort(params.HostPort); err != nil {
+		return nil, err
 	}
 
-	thriftBuffer := thrift.NewTMemoryBufferLen(maxPacketSize)
+	if params.MaxPacketSize <= 0 {
+		params.MaxPacketSize = udpPacketMaxLength
+	}
+
+	if params.AttemptReconnecting && params.AttemptReconnectInterval <= 0 {
+		params.AttemptReconnectInterval = time.Second * 30
+	}
+
+	thriftBuffer := thrift.NewTMemoryBufferLen(params.MaxPacketSize)
 	protocolFactory := thrift.NewTCompactProtocolFactory()
 	client := gen.NewAgentClientFactory(thriftBuffer, protocolFactory)
 
-	destAddr, err := net.ResolveUDPAddr("udp", hostPort)
-	if err != nil {
+	var connUDP udpConn
+	var err error
+
+	if params.AttemptReconnecting {
+		// host is hostname, setup resolver loop in case host record changes during operation
+		connUDP, err = newReconnectingUDPConn(params.HostPort, params.MaxPacketSize, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		destAddr, err := net.ResolveUDPAddr("udp", params.HostPort)
+		if err != nil {
+			return nil, err
+		}
+
+		connUDP, err = net.DialUDP(destAddr.Network(), nil, destAddr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := connUDP.SetWriteBuffer(params.MaxPacketSize); err != nil {
 		return nil, err
 	}
 
-	connUDP, err := net.DialUDP(destAddr.Network(), nil, destAddr)
-	if err != nil {
-		return nil, err
-	}
-	if err := connUDP.SetWriteBuffer(maxPacketSize); err != nil {
-		return nil, err
-	}
-
-	clientUDP := &agentClientUDP{
+	return &agentClientUDP{
 		connUDP:       connUDP,
 		client:        client,
-		maxPacketSize: maxPacketSize,
-		thriftBuffer:  thriftBuffer}
-	return clientUDP, nil
+		maxPacketSize: params.MaxPacketSize,
+		thriftBuffer:  thriftBuffer,
+	}, nil
 }
 
 // EmitBatch implements EmitBatch() of Agent interface

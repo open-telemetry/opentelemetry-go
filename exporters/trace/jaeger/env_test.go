@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/kv"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/label"
 )
 
 func Test_parseTags(t *testing.T) {
@@ -38,78 +38,78 @@ func Test_parseTags(t *testing.T) {
 	testCases := []struct {
 		name          string
 		tagStr        string
-		expectedTags  []kv.KeyValue
+		expectedTags  []label.KeyValue
 		expectedError error
 	}{
 		{
 			name:   "string",
 			tagStr: "key=value",
-			expectedTags: []kv.KeyValue{
+			expectedTags: []label.KeyValue{
 				{
 					Key:   "key",
-					Value: kv.StringValue("value"),
+					Value: label.StringValue("value"),
 				},
 			},
 		},
 		{
 			name:   "int64",
 			tagStr: "k=9223372036854775807,k2=-9223372036854775808",
-			expectedTags: []kv.KeyValue{
+			expectedTags: []label.KeyValue{
 				{
 					Key:   "k",
-					Value: kv.Int64Value(math.MaxInt64),
+					Value: label.Int64Value(math.MaxInt64),
 				},
 				{
 					Key:   "k2",
-					Value: kv.Int64Value(math.MinInt64),
+					Value: label.Int64Value(math.MinInt64),
 				},
 			},
 		},
 		{
 			name:   "float64",
 			tagStr: "k=1.797693134862315708145274237317043567981e+308,k2=4.940656458412465441765687928682213723651e-324,k3=-1.2",
-			expectedTags: []kv.KeyValue{
+			expectedTags: []label.KeyValue{
 				{
 					Key:   "k",
-					Value: kv.Float64Value(math.MaxFloat64),
+					Value: label.Float64Value(math.MaxFloat64),
 				},
 				{
 					Key:   "k2",
-					Value: kv.Float64Value(math.SmallestNonzeroFloat64),
+					Value: label.Float64Value(math.SmallestNonzeroFloat64),
 				},
 				{
 					Key:   "k3",
-					Value: kv.Float64Value(-1.2),
+					Value: label.Float64Value(-1.2),
 				},
 			},
 		},
 		{
 			name:   "multiple type values",
 			tagStr: "k=v,k2=123, k3=v3 ,k4=-1.2, k5=${existing:default},k6=${nonExisting:default}",
-			expectedTags: []kv.KeyValue{
+			expectedTags: []label.KeyValue{
 				{
 					Key:   "k",
-					Value: kv.StringValue("v"),
+					Value: label.StringValue("v"),
 				},
 				{
 					Key:   "k2",
-					Value: kv.Int64Value(123),
+					Value: label.Int64Value(123),
 				},
 				{
 					Key:   "k3",
-					Value: kv.StringValue("v3"),
+					Value: label.StringValue("v3"),
 				},
 				{
 					Key:   "k4",
-					Value: kv.Float64Value(-1.2),
+					Value: label.Float64Value(-1.2),
 				},
 				{
 					Key:   "k5",
-					Value: kv.StringValue("not-default"),
+					Value: label.StringValue("not-default"),
 				},
 				{
 					Key:   "k6",
-					Value: kv.StringValue("default"),
+					Value: label.StringValue("default"),
 				},
 			},
 		},
@@ -144,52 +144,52 @@ func Test_parseValue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		str      string
-		expected kv.Value
+		expected label.Value
 	}{
 		{
 			name:     "bool: true",
 			str:      "true",
-			expected: kv.BoolValue(true),
+			expected: label.BoolValue(true),
 		},
 		{
 			name:     "bool: false",
 			str:      "false",
-			expected: kv.BoolValue(false),
+			expected: label.BoolValue(false),
 		},
 		{
 			name:     "int64: 012340",
 			str:      "012340",
-			expected: kv.Int64Value(12340),
+			expected: label.Int64Value(12340),
 		},
 		{
 			name:     "int64: -012340",
 			str:      "-012340",
-			expected: kv.Int64Value(-12340),
+			expected: label.Int64Value(-12340),
 		},
 		{
 			name:     "int64: 0",
 			str:      "0",
-			expected: kv.Int64Value(0),
+			expected: label.Int64Value(0),
 		},
 		{
 			name:     "float64: -0.1",
 			str:      "-0.1",
-			expected: kv.Float64Value(-0.1),
+			expected: label.Float64Value(-0.1),
 		},
 		{
 			name:     "float64: 00.001",
 			str:      "00.001",
-			expected: kv.Float64Value(0.001),
+			expected: label.Float64Value(0.001),
 		},
 		{
 			name:     "float64: 1E23",
 			str:      "1E23",
-			expected: kv.Float64Value(1e23),
+			expected: label.Float64Value(1e23),
 		},
 		{
 			name:     "string: foo",
 			str:      "foo",
-			expected: kv.StringValue("foo"),
+			expected: label.StringValue("foo"),
 		},
 	}
 
@@ -408,9 +408,9 @@ func TestProcessFromEnv(t *testing.T) {
 			tags:        "key=value,key2=123",
 			expectedProcess: Process{
 				ServiceName: "test-service",
-				Tags: []kv.KeyValue{
-					kv.String("key", "value"),
-					kv.Int64("key2", 123),
+				Tags: []label.KeyValue{
+					label.String("key", "value"),
+					label.Int64("key2", 123),
 				},
 			},
 		},
@@ -455,16 +455,16 @@ func TestWithProcessFromEnv(t *testing.T) {
 			options: options{
 				Process: Process{
 					ServiceName: "old-name",
-					Tags: []kv.KeyValue{
-						kv.String("old-key", "old-value"),
+					Tags: []label.KeyValue{
+						label.String("old-key", "old-value"),
 					},
 				},
 			},
 			expectedOptions: options{
 				Process: Process{
 					ServiceName: "service-name",
-					Tags: []kv.KeyValue{
-						kv.String("key", "value"),
+					Tags: []label.KeyValue{
+						label.String("key", "value"),
 					},
 				},
 			},
@@ -476,16 +476,16 @@ func TestWithProcessFromEnv(t *testing.T) {
 			options: options{
 				Process: Process{
 					ServiceName: "old-name",
-					Tags: []kv.KeyValue{
-						kv.String("old-key", "old-value"),
+					Tags: []label.KeyValue{
+						label.String("old-key", "old-value"),
 					},
 				},
 			},
 			expectedOptions: options{
 				Process: Process{
 					ServiceName: "old-name",
-					Tags: []kv.KeyValue{
-						kv.String("old-key", "old-value"),
+					Tags: []label.KeyValue{
+						label.String("old-key", "old-value"),
 					},
 				},
 			},

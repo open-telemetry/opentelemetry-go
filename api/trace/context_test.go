@@ -19,16 +19,16 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/trace/noop"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
-	originalSpan := trace.NoopSpan{}
-	expectedSpan := mockSpan{}
-
 	ctx := context.Background()
+	originalSpan := noop.Span
+	expectedSpan := mockSpan{}
 
 	ctx = trace.ContextWithSpan(ctx, originalSpan)
 	ctx = trace.ContextWithSpan(ctx, expectedSpan)
@@ -47,7 +47,7 @@ func TestCurrentSpan(t *testing.T) {
 		{
 			name: "CurrentSpan() returns a NoopSpan{} from an empty context",
 			ctx:  context.Background(),
-			want: trace.NoopSpan{},
+			want: noop.Span,
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
@@ -93,7 +93,7 @@ func (mockSpan) SetError(v bool) {
 }
 
 // SetAttributes does nothing.
-func (mockSpan) SetAttributes(attributes ...kv.KeyValue) {
+func (mockSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // SetAttribute does nothing.
@@ -101,7 +101,7 @@ func (mockSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.
-func (mockSpan) End(options ...trace.EndOption) {
+func (mockSpan) End(options ...trace.SpanOption) {
 }
 
 // RecordError does nothing.
@@ -110,13 +110,13 @@ func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorO
 
 // Tracer returns noop implementation of Tracer.
 func (mockSpan) Tracer() trace.Tracer {
-	return trace.NoopTracer{}
+	return noop.Tracer
 }
 
 // Event does nothing.
-func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...kv.KeyValue) {
+func (mockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
 // AddEventWithTimestamp does nothing.
-func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...kv.KeyValue) {
+func (mockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }

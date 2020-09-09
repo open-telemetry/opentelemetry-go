@@ -18,12 +18,12 @@ import (
 	"context"
 )
 
-type NoopTracer struct{}
+type noopTracer struct{}
 
-var _ Tracer = NoopTracer{}
+var _ Tracer = noopTracer{}
 
 // Start starts a noop span.
-func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (context.Context, Span) {
-	span := NoopSpan{}
+func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+	span := noopSpan{}
 	return ContextWithSpan(ctx, span), span
 }

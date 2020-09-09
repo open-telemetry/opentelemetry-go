@@ -21,9 +21,8 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -60,8 +59,8 @@ func (f *benchFixture) meterMust() metric.MeterMust {
 	return metric.Must(f.meter)
 }
 
-func makeManyLabels(n int) [][]kv.KeyValue {
-	r := make([][]kv.KeyValue, n)
+func makeManyLabels(n int) [][]label.KeyValue {
+	r := make([][]label.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -70,9 +69,9 @@ func makeManyLabels(n int) [][]kv.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []kv.KeyValue {
+func makeLabels(n int) []label.KeyValue {
 	used := map[string]bool{}
-	l := make([]kv.KeyValue, n)
+	l := make([]label.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -82,7 +81,7 @@ func makeLabels(n int) []kv.KeyValue {
 				break
 			}
 		}
-		l[i] = kv.Key(k).String(fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = label.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -169,7 +168,7 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-var benchmarkIteratorVar kv.KeyValue
+var benchmarkIteratorVar label.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
 	labels := label.NewSet(makeLabels(n)...)
@@ -218,7 +217,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	sdk := global.Meter("test")
 	global.SetMeterProvider(fix)
 
-	labs := []kv.KeyValue{kv.String("A", "B")}
+	labs := []label.KeyValue{label.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
 	b.ResetTimer()
@@ -539,7 +538,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	fix := newFixture(b)
 
 	c := fix.meterMust().NewInt64Counter("int64.counter")
-	k := kv.String("bench", "true")
+	k := label.String("bench", "true")
 
 	b.ResetTimer()
 

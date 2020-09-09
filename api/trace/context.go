@@ -36,7 +36,7 @@ func SpanFromContext(ctx context.Context) Span {
 	if span, has := ctx.Value(currentSpanKey).(Span); has {
 		return span
 	}
-	return NoopSpan{}
+	return noopSpan{}
 }
 
 // ContextWithRemoteSpanContext creates a new context with a remote

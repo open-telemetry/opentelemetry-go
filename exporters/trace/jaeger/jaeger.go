@@ -22,14 +22,19 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-const defaultServiceName = "OpenTelemetry"
+const (
+	defaultServiceName = "OpenTelemetry"
+
+	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
+	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
+)
 
 type Option func(*options)
 
@@ -151,7 +156,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 		opt(&o)
 	}
 	if o.Disabled {
-		return &apitrace.NoopProvider{}, func() {}, nil
+		return apitrace.NoopProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
@@ -178,7 +183,7 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 		return nil, err
 	}
 
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 	return flushFn, nil
 }
 
@@ -189,7 +194,7 @@ type Process struct {
 	ServiceName string
 
 	// Tags are added to Jaeger Process exports
-	Tags []kv.KeyValue
+	Tags []label.KeyValue
 }
 
 // Exporter is an implementation of trace.SpanSyncer that uploads spans to Jaeger.
@@ -228,11 +233,10 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 			}
 		}
 	}
-
 	if il := data.InstrumentationLibrary; il.Name != "" {
-		tags = append(tags, getStringTag("instrumentation.name", il.Name))
+		tags = append(tags, getStringTag(keyInstrumentationLibraryName, il.Name))
 		if il.Version != "" {
-			tags = append(tags, getStringTag("instrumentation.version", il.Version))
+			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, il.Version))
 		}
 	}
 
@@ -291,45 +295,45 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 }
 
-func keyValueToTag(keyValue kv.KeyValue) *gen.Tag {
+func keyValueToTag(keyValue label.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch keyValue.Value.Type() {
-	case kv.STRING:
+	case label.STRING:
 		s := keyValue.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
-	case kv.BOOL:
+	case label.BOOL:
 		b := keyValue.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case kv.INT32:
+	case label.INT32:
 		i := int64(keyValue.Value.AsInt32())
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case kv.INT64:
+	case label.INT64:
 		i := keyValue.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case kv.UINT32:
+	case label.UINT32:
 		i := int64(keyValue.Value.AsUint32())
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case kv.UINT64:
+	case label.UINT64:
 		// we'll ignore the value if it overflows
 		if i := int64(keyValue.Value.AsUint64()); i >= 0 {
 			tag = &gen.Tag{
@@ -338,14 +342,14 @@ func keyValueToTag(keyValue kv.KeyValue) *gen.Tag {
 				VType: gen.TagType_LONG,
 			}
 		}
-	case kv.FLOAT32:
+	case label.FLOAT32:
 		f := float64(keyValue.Value.AsFloat32())
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
 		}
-	case kv.FLOAT64:
+	case label.FLOAT64:
 		f := keyValue.Value.AsFloat64()
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),

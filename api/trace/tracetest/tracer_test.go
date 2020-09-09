@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/apitest"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/internal/matchers"
+	"go.opentelemetry.io/otel/label"
 )
 
 func TestTracer(t *testing.T) {
@@ -47,7 +47,7 @@ func TestTracer(t *testing.T) {
 			return span, nil
 		})
 
-		t.Run("uses the start time from WithStartTime", func(t *testing.T) {
+		t.Run("uses the start time from WithTimestamp", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -55,7 +55,7 @@ func TestTracer(t *testing.T) {
 			expectedStartTime := time.Now().AddDate(5, 0, 0)
 
 			subject := tp.Tracer(t.Name())
-			_, span := subject.Start(context.Background(), "test", trace.WithStartTime(expectedStartTime))
+			_, span := subject.Start(context.Background(), "test", trace.WithTimestamp(expectedStartTime))
 
 			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -68,8 +68,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := kv.String("a", "1")
-			attr2 := kv.String("b", "2")
+			attr1 := label.String("a", "1")
+			attr2 := label.String("b", "2")
 
 			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
@@ -201,14 +201,14 @@ func TestTracer(t *testing.T) {
 			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
-					Attributes: []kv.KeyValue{
-						kv.String("ignored-on-demand", "current"),
+					Attributes: []label.KeyValue{
+						label.String("ignored-on-demand", "current"),
 					},
 				},
 				{
 					SpanContext: remoteParentSpanContext,
-					Attributes: []kv.KeyValue{
-						kv.String("ignored-on-demand", "remote"),
+					Attributes: []label.KeyValue{
+						label.String("ignored-on-demand", "remote"),
 					},
 				},
 			}
@@ -223,7 +223,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(gotLinks).ToMatchInAnyOrder(expectedLinks)
 		})
 
-		t.Run("uses the links provided through LinkedTo", func(t *testing.T) {
+		t.Run("uses the links provided through WithLinks", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -233,20 +233,20 @@ func TestTracer(t *testing.T) {
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []kv.KeyValue{
-					kv.String("a", "1"),
+				Attributes: []label.KeyValue{
+					label.String("a", "1"),
 				},
 			}
 
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []kv.KeyValue{
-					kv.String("b", "2"),
+				Attributes: []label.KeyValue{
+					label.String("b", "2"),
 				},
 			}
 
-			_, span = subject.Start(context.Background(), "test", trace.LinkedTo(link1.SpanContext, link1.Attributes...), trace.LinkedTo(link2.SpanContext, link2.Attributes...))
+			_, span = subject.Start(context.Background(), "test", trace.WithLinks(link1, link2))
 
 			testSpan, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()

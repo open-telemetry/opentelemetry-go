@@ -12,67 +12,98 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package trace
 
 import (
+	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"github.com/stretchr/testify/require"
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	api "go.opentelemetry.io/otel/api/trace"
 )
 
 func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
-	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
-	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.SpanContext{
+	sampler := ParentSample(AlwaysSample())
+	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := api.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
+		TraceFlags: api.FlagsSampled,
 	}
-	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")
 	}
 }
 
 func TestNeverParentSampleWithParentSampled(t *testing.T) {
-	sampler := sdktrace.ParentSample(sdktrace.NeverSample())
-	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.SpanContext{
+	sampler := ParentSample(NeverSample())
+	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := api.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
+		TraceFlags: api.FlagsSampled,
 	}
-	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.RecordAndSampled {
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")
 	}
 }
 
 func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
-	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
-	traceID, _ := trace.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.SpanContext{
+	sampler := ParentSample(AlwaysSample())
+	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := api.SpanContext{
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
-	if sampler.ShouldSample(sdktrace.SamplingParameters{ParentContext: parentCtx}).Decision != sdktrace.NotRecord {
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != NotRecord {
 		t.Error("Sampling decision should be NotRecord")
 	}
 }
 
 func TestParentSampleWithNoParent(t *testing.T) {
-	params := sdktrace.SamplingParameters{}
+	params := SamplingParameters{}
 
-	sampler := sdktrace.ParentSample(sdktrace.AlwaysSample())
-	if sampler.ShouldSample(params).Decision != sdktrace.RecordAndSampled {
+	sampler := ParentSample(AlwaysSample())
+	if sampler.ShouldSample(params).Decision != RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")
 	}
 
-	sampler = sdktrace.ParentSample(sdktrace.NeverSample())
-	if sampler.ShouldSample(params).Decision != sdktrace.NotRecord {
+	sampler = ParentSample(NeverSample())
+	if sampler.ShouldSample(params).Decision != NotRecord {
 		t.Error("Sampling decision should be NotRecord")
+	}
+}
+
+// TraceIDRatioBased sampler requirements state
+//  "A TraceIDRatioBased sampler with a given sampling rate MUST also sample
+//   all traces that any TraceIDRatioBased sampler with a lower sampling rate
+//   would sample."
+func TestTraceIdRatioSamplesInclusively(t *testing.T) {
+	const (
+		numSamplers = 1000
+		numTraces   = 100
+	)
+	idg := defIDGenerator()
+
+	for i := 0; i < numSamplers; i++ {
+		ratioLo, ratioHi := rand.Float64(), rand.Float64()
+		if ratioHi < ratioLo {
+			ratioLo, ratioHi = ratioHi, ratioLo
+		}
+		samplerHi := TraceIDRatioBased(ratioHi)
+		samplerLo := TraceIDRatioBased(ratioLo)
+		for j := 0; j < numTraces; j++ {
+			traceID := idg.NewTraceID()
+
+			params := SamplingParameters{TraceID: traceID}
+			if samplerLo.ShouldSample(params).Decision == RecordAndSampled {
+				require.Equal(t, RecordAndSampled, samplerHi.ShouldSample(params).Decision,
+					"%s sampled but %s did not", samplerLo.Description(), samplerHi.Description())
+			}
+		}
 	}
 }

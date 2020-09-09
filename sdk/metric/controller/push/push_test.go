@@ -25,9 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
@@ -37,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var testResource = resource.New(kv.String("R", "V"))
+var testResource = resource.New(label.String("R", "V"))
 
 type handler struct {
 	sync.Mutex
@@ -201,7 +200,7 @@ func TestPushExportError(t *testing.T) {
 			p.Start()
 			runtime.Gosched()
 
-			counter1.Add(ctx, 3, kv.String("X", "Y"))
+			counter1.Add(ctx, 3, label.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, exporter.ExportCount())

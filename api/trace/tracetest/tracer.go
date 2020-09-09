@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tracetest provides testing utilities for tracing.
 package tracetest
 
 import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 var _ trace.Tracer = (*Tracer)(nil)
@@ -34,34 +35,30 @@ type Tracer struct {
 	config *config
 }
 
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.StartOption) (context.Context, trace.Span) {
-	var c trace.StartConfig
-	for _, opt := range opts {
-		opt(&c)
-	}
-
+func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+	c := trace.SpanConfigure(opts)
 	startTime := time.Now()
-	if st := c.StartTime; !st.IsZero() {
+	if st := c.Timestamp; !st.IsZero() {
 		startTime = st
 	}
 
 	span := &Span{
 		tracer:     t,
 		startTime:  startTime,
-		attributes: make(map[kv.Key]kv.Value),
-		links:      make(map[trace.SpanContext][]kv.KeyValue),
+		attributes: make(map[label.Key]label.Value),
+		links:      make(map[trace.SpanContext][]label.KeyValue),
 		spanKind:   c.SpanKind,
 	}
 
 	if c.NewRoot {
 		span.spanContext = trace.EmptySpanContext()
 
-		iodKey := kv.Key("ignored-on-demand")
+		iodKey := label.Key("ignored-on-demand")
 		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
-			span.links[lsc] = []kv.KeyValue{iodKey.String("current")}
+			span.links[lsc] = []label.KeyValue{iodKey.String("current")}
 		}
 		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.links[rsc] = []kv.KeyValue{iodKey.String("remote")}
+			span.links[rsc] = []label.KeyValue{iodKey.String("remote")}
 		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)

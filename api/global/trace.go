@@ -22,23 +22,23 @@ import (
 // Tracer creates a named tracer that implements Tracer interface.
 // If the name is an empty string then provider uses default name.
 //
-// This is short for TraceProvider().Tracer(name)
+// This is short for TracerProvider().Tracer(name)
 func Tracer(name string) trace.Tracer {
-	return TraceProvider().Tracer(name)
+	return TracerProvider().Tracer(name)
 }
 
-// TraceProvider returns the registered global trace provider.
+// TracerProvider returns the registered global trace provider.
 // If none is registered then an instance of trace.NoopProvider is returned.
 //
 // Use the trace provider to create a named tracer. E.g.
-//     tracer := global.TraceProvider().Tracer("example.com/foo")
+//     tracer := global.TracerProvider().Tracer("example.com/foo")
 // or
 //     tracer := global.Tracer("example.com/foo")
-func TraceProvider() trace.Provider {
-	return internal.TraceProvider()
+func TracerProvider() trace.Provider {
+	return internal.TracerProvider()
 }
 
-// SetTraceProvider registers `tp` as the global trace provider.
-func SetTraceProvider(tp trace.Provider) {
-	internal.SetTraceProvider(tp)
+// SetTracerProvider registers `tp` as the global trace provider.
+func SetTracerProvider(tp trace.Provider) {
+	internal.SetTracerProvider(tp)
 }

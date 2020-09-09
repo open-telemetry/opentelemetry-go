@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	"go.opentelemetry.io/otel/label"
 
-	"go.opentelemetry.io/otel/api/kv"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -77,12 +77,12 @@ func TestEmptySpanEvent(t *testing.T) {
 }
 
 func TestSpanEvent(t *testing.T) {
-	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
+	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
 	eventTime := time.Date(2020, 5, 20, 0, 0, 0, 0, time.UTC)
 	got := spanEvents([]export.Event{
 		{
 			Name:       "test 1",
-			Attributes: []kv.KeyValue{},
+			Attributes: []label.KeyValue{},
 			Time:       eventTime,
 		},
 		{
@@ -121,7 +121,7 @@ func TestEmptyLinks(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	attrs := []kv.KeyValue{kv.Int("one", 1), kv.Int("two", 2)}
+	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
 	l := []apitrace.Link{
 		{},
 		{
@@ -283,13 +283,13 @@ func TestSpanData(t *testing.T) {
 		EndTime:      endTime,
 		MessageEvents: []export.Event{
 			{Time: startTime,
-				Attributes: []kv.KeyValue{
-					kv.Uint64("CompressedByteSize", 512),
+				Attributes: []label.KeyValue{
+					label.Uint64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
-				Attributes: []kv.KeyValue{
-					kv.String("MessageEventType", "Recv"),
+				Attributes: []label.KeyValue{
+					label.String("MessageEventType", "Recv"),
 				},
 			},
 		},
@@ -300,8 +300,8 @@ func TestSpanData(t *testing.T) {
 					SpanID:     apitrace.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
 					TraceFlags: 0,
 				},
-				Attributes: []kv.KeyValue{
-					kv.String("LinkType", "Parent"),
+				Attributes: []label.KeyValue{
+					label.String("LinkType", "Parent"),
 				},
 			},
 			{
@@ -310,21 +310,21 @@ func TestSpanData(t *testing.T) {
 					SpanID:     apitrace.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
 					TraceFlags: 0,
 				},
-				Attributes: []kv.KeyValue{
-					kv.String("LinkType", "Child"),
+				Attributes: []label.KeyValue{
+					label.String("LinkType", "Child"),
 				},
 			},
 		},
 		StatusCode:      codes.Internal,
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
-		Attributes: []kv.KeyValue{
-			kv.Int64("timeout_ns", 12e9),
+		Attributes: []label.KeyValue{
+			label.Int64("timeout_ns", 12e9),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
-		Resource:                 resource.New(kv.String("rk1", "rv1"), kv.Int64("rk2", 5)),
+		Resource:                 resource.New(label.String("rk1", "rv1"), label.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
 			Name:    "go.opentelemetry.io/test/otel",
 			Version: "v0.0.1",
