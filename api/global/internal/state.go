@@ -124,10 +124,10 @@ func defaultPropagatorsValue() *atomic.Value {
 // with W3C trace and baggage propagation.
 func getDefaultPropagators() propagation.Propagators {
 	tcPropagator := propagators.TraceContext{}
-	ccPropagator := baggage.CorrelationContext{}
+	bagPropagator := baggage.Baggage{}
 	return propagation.New(
-		propagation.WithExtractors(tcPropagator, ccPropagator),
-		propagation.WithInjectors(tcPropagator, ccPropagator),
+		propagation.WithExtractors(tcPropagator, bagPropagator),
+		propagation.WithInjectors(tcPropagator, bagPropagator),
 	)
 }
 

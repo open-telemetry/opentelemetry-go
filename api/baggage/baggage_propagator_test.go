@@ -27,8 +27,8 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(baggage.CorrelationContext{}))
+func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
+	props := propagation.New(propagation.WithExtractors(baggage.Baggage{}))
 	tests := []struct {
 		name    string
 		header  string
@@ -91,18 +91,18 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
-			gotCorCtx := baggage.MapFromContext(ctx)
-			wantCorCtx := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
-			if gotCorCtx.Len() != wantCorCtx.Len() {
+			gotBaggage := baggage.MapFromContext(ctx)
+			wantBaggage := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
+			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
-					"Got and Want CorCtx are not the same size %d != %d",
-					gotCorCtx.Len(),
-					wantCorCtx.Len(),
+					"Got and Want Baggage are not the same size %d != %d",
+					gotBaggage.Len(),
+					wantBaggage.Len(),
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(keyValue label.KeyValue) bool {
-				val, _ := gotCorCtx.Value(keyValue.Key)
+			wantBaggage.Foreach(func(keyValue label.KeyValue) bool {
+				val, _ := gotBaggage.Value(keyValue.Key)
 				diff := cmp.Diff(keyValue, label.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(label.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
@@ -117,7 +117,7 @@ func TestExtractValidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(baggage.CorrelationContext{}))
+	props := propagation.New(propagation.WithExtractors(baggage.Baggage{}))
 	tests := []struct {
 		name   string
 		header string
@@ -151,19 +151,19 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
-			wantCorCtx := baggage.MapFromContext(ctx)
+			wantBaggage := baggage.MapFromContext(ctx)
 			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
-			gotCorCtx := baggage.MapFromContext(ctx)
-			if gotCorCtx.Len() != wantCorCtx.Len() {
+			gotBaggage := baggage.MapFromContext(ctx)
+			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
-					"Got and Want CorCtx are not the same size %d != %d",
-					gotCorCtx.Len(),
-					wantCorCtx.Len(),
+					"Got and Want Baggage are not the same size %d != %d",
+					gotBaggage.Len(),
+					wantBaggage.Len(),
 				)
 			}
 			totalDiff := ""
-			wantCorCtx.Foreach(func(keyValue label.KeyValue) bool {
-				val, _ := gotCorCtx.Value(keyValue.Key)
+			wantBaggage.Foreach(func(keyValue label.KeyValue) bool {
+				val, _ := gotBaggage.Value(keyValue.Key)
 				diff := cmp.Diff(keyValue, label.KeyValue{Key: keyValue.Key, Value: val}, cmp.AllowUnexported(label.Value{}))
 				if diff != "" {
 					totalDiff += diff + "\n"
@@ -175,7 +175,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectBaggageToHTTPReq(t *testing.T) {
-	propagator := baggage.CorrelationContext{}
+	propagator := baggage.Baggage{}
 	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
@@ -250,7 +250,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator baggage.CorrelationContext
+	var propagator baggage.Baggage
 	want := []string{"otcorrelations"}
 	got := propagator.GetAllKeys()
 	if diff := cmp.Diff(got, want); diff != "" {
