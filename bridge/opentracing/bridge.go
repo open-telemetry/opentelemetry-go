@@ -30,6 +30,7 @@ import (
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
 
@@ -300,7 +301,7 @@ var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			otelTracer: oteltrace.NoopTracer{},
+			otelTracer: noop.Tracer,
 		},
 		warningHandler: func(msg string) {},
 		propagators:    nil,
@@ -579,8 +580,7 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 // fakeSpan is just a holder of span context, nothing more. It's for
 // propagators, so they can get the span context from Go context.
 type fakeSpan struct {
-	oteltrace.NoopSpan
-
+	oteltrace.Span
 	sc oteltrace.SpanContext
 }
 
@@ -609,7 +609,8 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	header := http.Header(hhcarrier)
 	fs := fakeSpan{
-		sc: bridgeSC.otelSpanContext,
+		Span: noop.Span,
+		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := oteltrace.ContextWithSpan(context.Background(), fs)
 	ctx = otelcorrelation.ContextWithMap(ctx, bridgeSC.baggageItems)

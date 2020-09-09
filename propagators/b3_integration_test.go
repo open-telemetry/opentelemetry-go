@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/propagators"
 )
 
@@ -64,7 +65,7 @@ func TestExtractB3(t *testing.T) {
 }
 
 type testSpan struct {
-	trace.NoopSpan
+	trace.Span
 	sc trace.SpanContext
 }
 
@@ -94,7 +95,10 @@ func TestInjectB3(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
 					context.Background(),
-					testSpan{sc: tt.sc},
+					testSpan{
+						Span: noop.Span,
+						sc:   tt.sc,
+					},
 				)
 				propagator.Inject(ctx, req.Header)
 
