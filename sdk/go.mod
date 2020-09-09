@@ -11,5 +11,5 @@ require (
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/otel v0.11.0
-	google.golang.org/grpc v1.31.1
+	google.golang.org/grpc v1.32.0
 )
