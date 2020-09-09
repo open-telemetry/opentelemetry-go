@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package correlation
+package baggage
 
 import (
 	"context"
@@ -25,27 +25,27 @@ import (
 
 // Temporary header name until W3C finalizes format.
 // https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
-const correlationContextHeader = "otcorrelations"
+const baggageHeader = "otcorrelations"
 
-// CorrelationContext propagates Key:Values in W3C CorrelationContext
+// Baggage propagates Key:Values in W3C CorrelationContext
 // format.
 // nolint:golint
-type CorrelationContext struct{}
+type Baggage struct{}
 
-var _ propagation.HTTPPropagator = CorrelationContext{}
+var _ propagation.HTTPPropagator = Baggage{}
 
 // DefaultHTTPPropagator returns the default context correlation HTTP
 // propagator.
 func DefaultHTTPPropagator() propagation.HTTPPropagator {
-	return CorrelationContext{}
+	return Baggage{}
 }
 
 // Inject implements HTTPInjector.
-func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
-	correlationCtx := MapFromContext(ctx)
+func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+	baggageMap := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
-	correlationCtx.Foreach(func(kv label.KeyValue) bool {
+	baggageMap.Foreach(func(kv label.KeyValue) bool {
 		if !firstIter {
 			headerValueBuilder.WriteRune(',')
 		}
@@ -57,21 +57,21 @@ func (CorrelationContext) Inject(ctx context.Context, supplier propagation.HTTPS
 	})
 	if headerValueBuilder.Len() > 0 {
 		headerString := headerValueBuilder.String()
-		supplier.Set(correlationContextHeader, headerString)
+		supplier.Set(baggageHeader, headerString)
 	}
 }
 
 // Extract implements HTTPExtractor.
-func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	correlationContext := supplier.Get(correlationContextHeader)
-	if correlationContext == "" {
+func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+	baggage := supplier.Get(baggageHeader)
+	if baggage == "" {
 		return ctx
 	}
 
-	contextValues := strings.Split(correlationContext, ",")
-	keyValues := make([]label.KeyValue, 0, len(contextValues))
-	for _, contextValue := range contextValues {
-		valueAndProps := strings.Split(contextValue, ";")
+	baggageValues := strings.Split(baggage, ",")
+	keyValues := make([]label.KeyValue, 0, len(baggageValues))
+	for _, baggageValue := range baggageValues {
+		valueAndProps := strings.Split(baggageValue, ";")
 		if len(valueAndProps) < 1 {
 			continue
 		}
@@ -113,6 +113,6 @@ func (CorrelationContext) Extract(ctx context.Context, supplier propagation.HTTP
 }
 
 // GetAllKeys implements HTTPPropagator.
-func (CorrelationContext) GetAllKeys() []string {
-	return []string{correlationContextHeader}
+func (b Baggage) GetAllKeys() []string {
+	return []string{baggageHeader}
 }

@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	otelcorrelation "go.opentelemetry.io/otel/api/correlation"
+	otelbaggage "go.opentelemetry.io/otel/api/baggage"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
@@ -45,7 +45,7 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             otelcorrelation.Map
+	Resources             otelbaggage.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []oteltrace.ID
 	SpareSpanIDs          []oteltrace.SpanID
@@ -60,7 +60,7 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             otelcorrelation.NewEmptyMap(),
+		Resources:             otelbaggage.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -86,7 +86,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.S
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      config.Record,
-		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{
+		Attributes: otelbaggage.NewMap(otelbaggage.MapUpdate{
 			MultiKV: config.Attributes,
 		}),
 		StartTime:    startTime,
@@ -179,10 +179,10 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span oteltrac
 }
 
 type MockEvent struct {
-	CtxAttributes otelcorrelation.Map
+	CtxAttributes otelbaggage.Map
 	Timestamp     time.Time
 	Name          string
-	Attributes    otelcorrelation.Map
+	Attributes    otelbaggage.Map
 }
 
 type MockSpan struct {
@@ -192,7 +192,7 @@ type MockSpan struct {
 	SpanKind       oteltrace.SpanKind
 	recording      bool
 
-	Attributes   otelcorrelation.Map
+	Attributes   otelbaggage.Map
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID oteltrace.SpanID
@@ -223,7 +223,7 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
-	s.applyUpdate(otelcorrelation.MapUpdate{
+	s.applyUpdate(otelbaggage.MapUpdate{
 		MultiKV: attributes,
 	})
 }
@@ -232,7 +232,7 @@ func (s *MockSpan) SetAttribute(k string, v interface{}) {
 	s.SetAttributes(label.Any(k, v))
 }
 
-func (s *MockSpan) applyUpdate(update otelcorrelation.MapUpdate) {
+func (s *MockSpan) applyUpdate(update otelbaggage.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
@@ -288,10 +288,10 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.Key
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: otelcorrelation.MapFromContext(ctx),
+		CtxAttributes: otelbaggage.MapFromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
-		Attributes: otelcorrelation.NewMap(otelcorrelation.MapUpdate{
+		Attributes: otelbaggage.NewMap(otelbaggage.MapUpdate{
 			MultiKV: attrs,
 		}),
 	})

@@ -30,6 +30,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename Jaeger tags used for instrumentation library information to reflect changes in OpenTelemetry specification. (#1119)
 - Rename `ProbabilitySampler` to `TraceIDRatioBased` and change semantics to ignore parent span sampling status. (#1115)
 - Move `tools` package under `internal`. (#1141)
+- Move `go.opentelemetry.io/otel/api/correlation` package to `go.opentelemetry.io/otel/api/baggage`. (#1142)
+   The `correlation.CorrelationContext` propagator has been renamed `baggage.Baggage`.  Other exported functions and types are unchanged.
 
 ## [0.11.0] - 2020-08-24
 
