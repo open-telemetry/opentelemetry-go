@@ -28,7 +28,6 @@ import (
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -57,7 +56,7 @@ type Exporter struct {
 	metadata metadata.MD
 }
 
-var _ tracesdk.SpanBatcher = (*Exporter)(nil)
+var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
 func configureOptions(cfg *Config, opts ...ExporterOption) {
@@ -195,10 +194,14 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
-// Stop shuts down all the connections and resources
-// related to the exporter.
-// If the exporter is not started then this func does nothing.
-func (e *Exporter) Stop() error {
+// closeStopCh is used to wrap the exporters stopCh channel closing for testing.
+var closeStopCh = func(stopCh chan bool) {
+	close(stopCh)
+}
+
+// Shutdown closes all connections and releases resources currently being used
+// by the exporter. If the exporter is not started this does nothing.
+func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.mu.RLock()
 	cc := e.grpcClientConn
 	started := e.started
@@ -208,9 +211,9 @@ func (e *Exporter) Stop() error {
 		return nil
 	}
 
-	// Now close the underlying gRPC connection.
 	var err error
 	if cc != nil {
+		// Clean things up before checking this error.
 		err = cc.Close()
 	}
 
@@ -218,10 +221,14 @@ func (e *Exporter) Stop() error {
 	e.mu.Lock()
 	e.started = false
 	e.mu.Unlock()
-	close(e.stopCh)
+	closeStopCh(e.stopCh)
 
 	// Ensure that the backgroundConnector returns
-	<-e.backgroundConnectionDoneCh
+	select {
+	case <-e.backgroundConnectionDoneCh:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
 	return err
 }
@@ -272,27 +279,22 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk
 	return metricsdk.PassThroughExporter
 }
 
-func (e *Exporter) ExportSpan(ctx context.Context, sd *tracesdk.SpanData) {
-	e.uploadTraces(ctx, []*tracesdk.SpanData{sd})
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) error {
+	return e.uploadTraces(ctx, sds)
 }
 
-func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) {
-	e.uploadTraces(ctx, sds)
-}
-
-func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
+func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) error {
 	select {
 	case <-e.stopCh:
-		return
-
+		return nil
 	default:
 		if !e.connected() {
-			return
+			return nil
 		}
 
 		protoSpans := transform.SpanData(sdl)
 		if len(protoSpans) == 0 {
-			return
+			return nil
 		}
 
 		e.senderMu.Lock()
@@ -302,7 +304,8 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) {
 		e.senderMu.Unlock()
 		if err != nil {
 			e.setStateDisconnected(err)
-			global.Handle(err)
+			return err
 		}
 	}
+	return nil
 }

@@ -33,14 +33,17 @@ type testBatchExporter struct {
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.spans = append(t.spans, sds...)
 	t.sizes = append(t.sizes, len(sds))
 	t.batchCount++
+	return nil
 }
+
+func (t *testBatchExporter) Shutdown(context.Context) error { return nil }
 
 func (t *testBatchExporter) len() int {
 	t.mu.Lock()
@@ -54,13 +57,14 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-var _ export.SpanBatcher = (*testBatchExporter)(nil)
+var _ export.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
-	_, err := sdktrace.NewBatchSpanProcessor(nil)
-	if err == nil {
-		t.Errorf("Expected error while creating processor with nil exporter")
-	}
+	bsp := sdktrace.NewBatchSpanProcessor(nil)
+	// These should not panic.
+	bsp.OnStart(&export.SpanData{})
+	bsp.OnEnd(&export.SpanData{})
+	bsp.Shutdown()
 }
 
 type testOption struct {
@@ -149,7 +153,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		t.Run(option.name, func(t *testing.T) {
 			te := testBatchExporter{}
 			tp := basicProvider(t)
-			ssp := createAndRegisterBatchSP(t, option, &te)
+			ssp := createAndRegisterBatchSP(option, &te)
 			if ssp == nil {
 				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 			}
@@ -176,14 +180,10 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 }
 
-func createAndRegisterBatchSP(t *testing.T, option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
+func createAndRegisterBatchSP(option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
 	// Always use blocking queue to avoid flaky tests.
 	options := append(option.o, sdktrace.WithBlocking())
-	ssp, err := sdktrace.NewBatchSpanProcessor(te, options...)
-	if ssp == nil {
-		t.Errorf("%s: Error creating new instance of BatchSpanProcessor, error: %v\n", option.name, err)
-	}
-	return ssp
+	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
 func generateSpan(t *testing.T, parallel bool, tr apitrace.Tracer, option testOption) {
@@ -219,14 +219,7 @@ func getSpanContext() apitrace.SpanContext {
 }
 
 func TestBatchSpanProcessorShutdown(t *testing.T) {
-	bsp, err := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
-	if err != nil {
-		t.Errorf("Unexpected error while creating processor\n")
-	}
-
-	if bsp == nil {
-		t.Fatalf("Error creating new instance of BatchSpanProcessor\n")
-	}
+	bsp := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
 
 	bsp.Shutdown()
 

@@ -339,12 +339,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exp))
-
-	assert.NoError(t, err)
-
+		sdktrace.WithSyncer(exp),
+	)
 	global.SetTracerProvider(tp)
 	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
@@ -480,4 +478,51 @@ func Test_spanDataToThrift(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	orig := flush
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// Do this after the parent context is canceled to avoid a race.
+	defer func() {
+		<-ctx.Done()
+		flush = orig
+	}()
+	defer cancel()
+	flush = func(e *Exporter) {
+		<-ctx.Done()
+	}
+
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	go innerCancel()
+	assert.Errorf(t, e.Shutdown(innerCtx), context.Canceled.Error())
+}
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	orig := flush
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// Do this after the parent context is canceled to avoid a race.
+	defer func() {
+		<-ctx.Done()
+		flush = orig
+	}()
+	defer cancel()
+	flush = func(e *Exporter) {
+		<-ctx.Done()
+	}
+
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond*10)
+	assert.Errorf(t, e.Shutdown(innerCtx), context.DeadlineExceeded.Error())
+	innerCancel()
+}
+
+func TestErrorOnExportShutdownExporter(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	assert.NoError(t, e.Shutdown(context.Background()))
+	assert.NoError(t, e.ExportSpans(context.Background(), nil))
 }

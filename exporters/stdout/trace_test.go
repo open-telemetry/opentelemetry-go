@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -67,7 +68,9 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
-	ex.ExportSpan(context.Background(), testSpan)
+	if err := ex.ExportSpans(context.Background(), []*export.SpanData{testSpan}); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedSerializedNow, _ := json.Marshal(now)
 
@@ -131,5 +134,53 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	if got != expectedOutput {
 		t.Errorf("Want: %v but got: %v", expectedOutput, got)
+	}
+}
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	e, err := stdout.NewExporter()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+	defer innerCancel()
+	<-innerCtx.Done()
+	if err := e.Shutdown(innerCtx); err == nil {
+		t.Error("expected context DeadlineExceeded error, got nil")
+	} else if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	}
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	e, err := stdout.NewExporter()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	innerCancel()
+	if err := e.Shutdown(innerCtx); err == nil {
+		t.Error("expected context canceled error, got nil")
+	} else if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context canceled error, got %v", err)
+	}
+}
+
+func TestExporterShutdownNoError(t *testing.T) {
+	e, err := stdout.NewExporter()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	if err := e.Shutdown(context.Background()); err != nil {
+		t.Errorf("shutdown errored: expected nil, got %v", err)
 	}
 }

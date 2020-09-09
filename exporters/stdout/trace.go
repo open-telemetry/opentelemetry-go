@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -25,28 +26,43 @@ import (
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type traceExporter struct {
 	config Config
-}
 
-// ExportSpan writes a SpanData in json format to stdout.
-func (e *traceExporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
-	if e.config.DisableTraceExport {
-		return
-	}
-	e.ExportSpans(ctx, []*trace.SpanData{data})
+	stoppedMu sync.RWMutex
+	stopped   bool
 }
 
 // ExportSpans writes SpanData in json format to stdout.
-func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) {
+func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) error {
+	e.stoppedMu.RLock()
+	stopped := e.stopped
+	e.stoppedMu.RUnlock()
+	if stopped {
+		return nil
+	}
+
 	if e.config.DisableTraceExport || len(data) == 0 {
-		return
+		return nil
 	}
 	out, err := e.marshal(data)
 	if err != nil {
-		fmt.Fprintf(e.config.Writer, "error converting spanData to json: %v", err)
-		return
-
+		return err
 	}
-	fmt.Fprintln(e.config.Writer, string(out))
+	_, err = fmt.Fprintln(e.config.Writer, string(out))
+	return err
+}
+
+// Shutdown is called to stop the exporter, it preforms no action.
+func (e *traceExporter) Shutdown(ctx context.Context) error {
+	e.stoppedMu.Lock()
+	e.stopped = true
+	e.stoppedMu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	return nil
 }
 
 // marshal v with approriate indentation.

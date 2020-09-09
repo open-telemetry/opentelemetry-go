@@ -166,9 +166,6 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Trac
 }
 
 func tracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
-	if err != nil {
-		b.Fatalf("Failed to create trace provider for test %s\n", name)
-	}
+	tp := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	return tp.Tracer(name)
 }

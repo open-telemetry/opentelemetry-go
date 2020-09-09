@@ -16,12 +16,12 @@ package trace
 
 import (
 	"context"
-	"errors"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -29,10 +29,6 @@ const (
 	DefaultMaxQueueSize       = 2048
 	DefaultBatchTimeout       = 5000 * time.Millisecond
 	DefaultMaxExportBatchSize = 512
-)
-
-var (
-	errNilExporter = errors.New("exporter is nil")
 )
 
 type BatchSpanProcessorOption func(o *BatchSpanProcessorOptions)
@@ -61,11 +57,10 @@ type BatchSpanProcessorOptions struct {
 	BlockOnQueueFull bool
 }
 
-// BatchSpanProcessor implements SpanProcessor interfaces. It is used by
-// exporters to receive export.SpanData asynchronously.
-// Use BatchSpanProcessorOptions to change the behavior of the processor.
+// BatchSpanProcessor is a SpanProcessor that batches asynchronously received
+// SpanData and sends it to a trace.Exporter when complete.
 type BatchSpanProcessor struct {
-	e export.SpanBatcher
+	e export.SpanExporter
 	o BatchSpanProcessorOptions
 
 	queue   chan *export.SpanData
@@ -80,25 +75,24 @@ type BatchSpanProcessor struct {
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
 
-// NewBatchSpanProcessor creates a new instance of BatchSpanProcessor
-// for a given export. It returns an error if exporter is nil.
-// The newly created BatchSpanProcessor should then be registered with sdk
-// using RegisterSpanProcessor.
-func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOption) (*BatchSpanProcessor, error) {
-	if e == nil {
-		return nil, errNilExporter
-	}
-
+// NewBatchSpanProcessor creates a new BatchSpanProcessor that will send
+// SpanData batches to the exporters with the supplied options.
+//
+// The returned BatchSpanProcessor needs to be registered with the SDK using
+// the RegisterSpanProcessor method for it to process spans.
+//
+// If the exporter is nil, the span processor will preform no action.
+func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanProcessorOption) *BatchSpanProcessor {
 	o := BatchSpanProcessorOptions{
 		BatchTimeout:       DefaultBatchTimeout,
 		MaxQueueSize:       DefaultMaxQueueSize,
 		MaxExportBatchSize: DefaultMaxExportBatchSize,
 	}
-	for _, opt := range opts {
+	for _, opt := range options {
 		opt(&o)
 	}
 	bsp := &BatchSpanProcessor{
-		e:      e,
+		e:      exporter,
 		o:      o,
 		batch:  make([]*export.SpanData, 0, o.MaxExportBatchSize),
 		timer:  time.NewTimer(o.BatchTimeout),
@@ -113,15 +107,18 @@ func NewBatchSpanProcessor(e export.SpanBatcher, opts ...BatchSpanProcessorOptio
 		bsp.drainQueue()
 	}()
 
-	return bsp, nil
+	return bsp
 }
 
 // OnStart method does nothing.
-func (bsp *BatchSpanProcessor) OnStart(sd *export.SpanData) {
-}
+func (bsp *BatchSpanProcessor) OnStart(sd *export.SpanData) {}
 
 // OnEnd method enqueues export.SpanData for later processing.
 func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
+	// Do not enqueue spans if we are just going to drop them.
+	if bsp.e == nil {
+		return
+	}
 	bsp.enqueue(sd)
 }
 
@@ -163,7 +160,9 @@ func (bsp *BatchSpanProcessor) exportSpans() {
 	bsp.timer.Reset(bsp.o.BatchTimeout)
 
 	if len(bsp.batch) > 0 {
-		bsp.e.ExportSpans(context.Background(), bsp.batch)
+		if err := bsp.e.ExportSpans(context.Background(), bsp.batch); err != nil {
+			global.Handle(err)
+		}
 		bsp.batch = bsp.batch[:0]
 	}
 }

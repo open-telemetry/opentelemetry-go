@@ -33,19 +33,22 @@ func Example_insecure() {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			global.Handle(err)
+		}
 	}()
 
-	tp, _ := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
 			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	if err != nil {
-		log.Fatalf("error creating trace provider: %v\n", err)
-	}
-
+		),
+	)
 	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")
@@ -74,19 +77,22 @@ func Example_withTLS() {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			global.Handle(err)
+		}
 	}()
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
 			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	if err != nil {
-		log.Fatalf("error creating trace provider: %v\n", err)
-	}
-
+		),
+	)
 	global.SetTracerProvider(tp)
 
 	tracer := global.Tracer("test-tracer")

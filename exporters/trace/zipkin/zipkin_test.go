@@ -339,16 +339,16 @@ func TestExportSpans(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
-	exporter.ExportSpans(ctx, spans[0:1])
+	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
 	require.Len(t, ls.Messages, 2)
 	require.Contains(t, ls.Messages[0], "send a POST request")
 	require.Contains(t, ls.Messages[1], "zipkin responded")
 	ls.Messages = nil
-	exporter.ExportSpans(ctx, nil)
+	require.NoError(t, exporter.ExportSpans(ctx, nil))
 	require.Len(t, ls.Messages, 1)
 	require.Contains(t, ls.Messages[0], "no spans to export")
 	ls.Messages = nil
-	exporter.ExportSpans(ctx, spans[1:2])
+	require.NoError(t, exporter.ExportSpans(ctx, spans[1:2]))
 	require.Contains(t, ls.Messages[0], "send a POST request")
 	require.Contains(t, ls.Messages[1], "zipkin responded")
 	checkFunc := func() bool {
@@ -356,4 +356,36 @@ func TestExportSpans(t *testing.T) {
 	}
 	require.Eventually(t, checkFunc, time.Second, 10*time.Millisecond)
 	require.Equal(t, models, collector.StealModels())
+}
+
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+	defer innerCancel()
+	<-innerCtx.Done()
+	assert.Errorf(t, exp.Shutdown(innerCtx), context.DeadlineExceeded.Error())
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	innerCancel()
+	assert.Errorf(t, exp.Shutdown(innerCtx), context.Canceled.Error())
+}
+
+func TestErrorOnExportShutdownExporter(t *testing.T) {
+	exp, err := NewRawExporter(collectorURL, serviceName)
+	require.NoError(t, err)
+	assert.NoError(t, exp.Shutdown(context.Background()))
+	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
 }

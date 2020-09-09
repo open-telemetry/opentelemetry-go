@@ -79,29 +79,33 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			panic(err)
+		}
 	}()
 
 	pOpts := []sdktrace.ProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithBatchTimeout(15),
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
-	tp1, err := sdktrace.NewProvider(append(pOpts,
+	tp1 := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv11)"),
 			label.Int64("rk2", 5),
 		)))...)
-	assert.NoError(t, err)
 
-	tp2, err := sdktrace.NewProvider(append(pOpts,
+	tp2 := sdktrace.NewProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv12)"),
 			label.Float32("rk3", 6.5),
 		)))...)
-	assert.NoError(t, err)
 
 	tr1 := tp1.Tracer("test-tracer1")
 	tr2 := tp2.Tracer("test-tracer2")
@@ -186,7 +190,9 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	if err := exp.Stop(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
 	}
 
@@ -287,7 +293,9 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		t.Fatalf("error creating exporter: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		if err := exp.Shutdown(context.Background()); err != nil {
+			panic(err)
+		}
 	}()
 
 	// Invoke Start numerous times, should return errAlreadyStarted
@@ -297,10 +305,12 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		}
 	}
 
-	_ = exp.Stop()
-	// Invoke Stop numerous times
+	if err := exp.Shutdown(context.Background()); err != nil {
+		t.Fatalf("failed to Shutdown the exporter: %v", err)
+	}
+	// Invoke Shutdown numerous times
 	for i := 0; i < 10; i++ {
-		if err := exp.Stop(); err != nil {
+		if err := exp.Shutdown(context.Background()); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
 	}
@@ -317,7 +327,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	// We'll now stop the collector right away to simulate a connection
@@ -329,7 +339,13 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	// reconnect.
 	for j := 0; j < 3; j++ {
 
-		exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
+		// No endpoint up.
+		require.Error(
+			t,
+			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}),
+			"transport: Error while dialing dial tcp %s: connect: connection refused",
+			mc.address,
+		)
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old address, and the collector should reconnect automatically.
@@ -340,7 +356,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}})
+			require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}}))
 		}
 
 		nmaSpans := nmc.getSpans()
@@ -381,7 +397,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
-	_ = exp.Stop()
+	_ = exp.Shutdown(context.Background())
 }
 
 func TestNewExporter_withAddress(t *testing.T) {
@@ -396,7 +412,7 @@ func TestNewExporter_withAddress(t *testing.T) {
 		otlp.WithAddress(mc.address))
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	if err := exp.Start(); err != nil {
@@ -416,10 +432,10 @@ func TestNewExporter_withHeaders(t *testing.T) {
 		otlp.WithAddress(mc.address),
 		otlp.WithHeaders(map[string]string{"header1": "value1"}),
 	)
-	exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}})
+	require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}))
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
 	headers := mc.getHeaders()
@@ -443,16 +459,18 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	)
 
 	defer func() {
-		_ = exp.Stop()
+		_ = exp.Shutdown(context.Background())
 	}()
 
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exp, // add following two options to ensure flush
-			sdktrace.WithBatchTimeout(15*time.Millisecond),
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
+			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
-	assert.NoError(t, err)
+		),
+	)
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []label.KeyValue{
@@ -480,7 +498,9 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	if err := exp.Stop(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
 	}
 
