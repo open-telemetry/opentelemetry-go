@@ -16,5 +16,5 @@ require (
 	go.opentelemetry.io/otel/sdk v0.11.0
 	golang.org/x/net v0.0.0-20191002035440-2ec189313ef0 // indirect
 	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884 // indirect
-	google.golang.org/grpc v1.31.1
+	google.golang.org/grpc v1.32.0
 )
