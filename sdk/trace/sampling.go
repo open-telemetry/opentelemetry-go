@@ -125,29 +125,101 @@ func NeverSample() Sampler {
 	return alwaysOffSampler{}
 }
 
-// ParentSample returns a Sampler that samples a trace only
-// if the the span has a parent span and it is sampled. If the span has
-// parent span but it is not sampled, neither will this span. If the span
-// does not have a parent the fallback Sampler is used to determine if the
-// span should be sampled.
-func ParentSample(fallback Sampler) Sampler {
-	return parentSampler{fallback}
-}
-
-type parentSampler struct {
-	fallback Sampler
-}
-
-func (ps parentSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	if p.ParentContext.IsValid() {
-		if p.ParentContext.IsSampled() {
-			return SamplingResult{Decision: RecordAndSampled}
-		}
-		return SamplingResult{Decision: NotRecord}
+// ParentBased returns a composite sampler which behaves differently,
+// based on the parent of the span. If the span has no parent,
+// the root(Sampler) is used to make sampling decision. If the span has
+// a parent, depending on whether the parent is remote and whether it
+// is sampled, one of the following samplers will apply:
+// - remoteParentSampled(Sampler) (default: AlwaysOn)
+// - remoteParentNotSampled(Sampler) (default: AlwaysOff)
+// - localParentSampled(Sampler) (default: AlwaysOn)
+// - localParentNotSampled(Sampler) (default: AlwaysOff)
+func ParentBased(root Sampler, samplers ...SamplerOption) Sampler {
+	return parentBased{
+		root:     root,
+		samplers: configureSamplersForParentBased(samplers),
 	}
-	return ps.fallback.ShouldSample(p)
 }
 
-func (ps parentSampler) Description() string {
-	return fmt.Sprintf("ParentOrElse{%s}", ps.fallback.Description())
+type parentBased struct {
+	root     Sampler
+	samplers parentBasedSamplers
+}
+
+type SamplerOption func(*parentBasedSamplers)
+
+type parentBasedSamplers struct {
+	remoteParentSampled, remoteParentNotSampled Sampler
+	localParentSampled, localParentNotSampled   Sampler
+}
+
+func configureSamplersForParentBased(samplers []SamplerOption) parentBasedSamplers {
+	o := parentBasedSamplers{}
+	for _, s := range samplers {
+		s(&o)
+	}
+
+	if o.remoteParentSampled == nil {
+		o.remoteParentSampled = AlwaysSample()
+	}
+	if o.remoteParentNotSampled == nil {
+		o.remoteParentNotSampled = NeverSample()
+	}
+	if o.localParentSampled == nil {
+		o.localParentSampled = AlwaysSample()
+	}
+	if o.localParentNotSampled == nil {
+		o.localParentNotSampled = NeverSample()
+	}
+
+	return o
+}
+
+func WithRemoteParentSampled(s Sampler) SamplerOption {
+	return func(o *parentBasedSamplers) {
+		o.remoteParentSampled = s
+	}
+}
+func WithRemoteParentNotSampled(s Sampler) SamplerOption {
+	return func(o *parentBasedSamplers) {
+		o.remoteParentNotSampled = s
+	}
+}
+func WithLocalParentSampled(s Sampler) SamplerOption {
+	return func(o *parentBasedSamplers) {
+		o.localParentSampled = s
+	}
+}
+func WithLocalParentNotSampled(s Sampler) SamplerOption {
+	return func(o *parentBasedSamplers) {
+		o.localParentNotSampled = s
+	}
+}
+
+func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
+	if p.ParentContext.IsValid() {
+		if p.HasRemoteParent {
+			if p.ParentContext.IsSampled() {
+				return pb.samplers.remoteParentSampled.ShouldSample(p)
+			}
+			return pb.samplers.remoteParentNotSampled.ShouldSample(p)
+		}
+
+		if p.ParentContext.IsSampled() {
+			return pb.samplers.localParentSampled.ShouldSample(p)
+		}
+		return pb.samplers.localParentNotSampled.ShouldSample(p)
+	}
+	return pb.root.ShouldSample(p)
+}
+
+func (pb parentBased) Description() string {
+	return fmt.Sprintf("ParentBased{root:%s,remoteParentSampled:%s,"+
+		"remoteParentNotSampled:%s,localParentSampled:%s,localParentNotSampled:%s}",
+		pb.root.Description(),
+		pb.samplers.remoteParentSampled.Description(),
+		pb.samplers.remoteParentNotSampled.Description(),
+		pb.samplers.localParentSampled.Description(),
+		pb.samplers.localParentNotSampled.Description(),
+	)
 }
