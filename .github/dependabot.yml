@@ -12,78 +12,45 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+    labels:
+      - "dependencies"
+      - "actions"
+      - "Skip Changelog"
+  - &gomod
+    package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+    labels:
+      - "dependencies"
+      - "go"
+      - "Skip Changelog"
+  - <<: *gomod
     directory: "/bridge/opentracing"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/basic"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/jaeger"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/namedtracer"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/otel-collector"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/prometheus"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/example/zipkin"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/exporters/metric/prometheus"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/exporters/otlp"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/exporters/stdout"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/exporters/trace/jaeger"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/exporters/trace/zipkin"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/sdk"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
+  - <<: *gomod
     directory: "/internal/tools"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
