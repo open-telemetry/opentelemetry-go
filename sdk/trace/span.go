@@ -137,7 +137,7 @@ func (s *span) End(options ...apitrace.SpanOption) {
 	if !s.IsRecording() {
 		return
 	}
-	config := apitrace.SpanConfigure(options)
+	config := apitrace.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
 		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
 		mustExportOrProcess := len(sps) > 0

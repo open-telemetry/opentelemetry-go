@@ -36,7 +36,7 @@ var _ apitrace.Tracer = &tracer{}
 // configured appropriately by any SpanOption passed. Any Timestamp option
 // passed will be used as the start time of the Span's life-cycle.
 func (tr *tracer) Start(ctx context.Context, name string, options ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	config := apitrace.SpanConfigure(options)
+	config := apitrace.NewSpanConfig(options...)
 
 	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
