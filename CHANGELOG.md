@@ -11,8 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - A `SpanConfigure` function in `go.opentelemetry.io/otel/api/trace` to create a new `SpanConfig` from `SpanOption`s. (#1108)
-- In the `go.opentelemetry.io/otel/api/trace` package a new `TracerConfigure` function was added to configure a new `TracerConfig`.
-   This addition was made to conform with our project option conventions. (#1109)
+- In the `go.opentelemetry.io/otel/api/trace` package, `NewTracerConfig` was added to construct new `TracerConfig`s.
+   This addition was made to conform with our project option conventions. (#1155)
 - Instrumentation library information was added to the Zipkin exporter. (#1119)
 
 ### Changed
@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move `tools` package under `internal`. (#1141)
 - Move `go.opentelemetry.io/otel/api/correlation` package to `go.opentelemetry.io/otel/api/baggage`. (#1142)
    The `correlation.CorrelationContext` propagator has been renamed `baggage.Baggage`.  Other exported functions and types are unchanged.
+- In the `go.opentelemetry.io/otel/api/trace` package, `SpanConfigure` was renamed to `NewSpanConfig`. (#1155)
 
 ## [0.11.0] - 2020-08-24
 
