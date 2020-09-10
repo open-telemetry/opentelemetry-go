@@ -22,7 +22,7 @@
 // This package was added to this project, instead of using that existing
 // package, to avoid the large package size it includes and not impose that
 // burden on projects using this package.
-package codes
+package codes // import "go.opentelemetry.io/otel/codes"
 
 // Code is an 32-bit representation of a status state.
 type Code uint32
