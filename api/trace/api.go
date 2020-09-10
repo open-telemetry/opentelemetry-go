@@ -33,20 +33,22 @@ type Provider interface {
 }
 
 // TracerConfig is a group of options for a Tracer.
+//
+// Most users will use the tracer options instead.
 type TracerConfig struct {
 	// InstrumentationVersion is the version of the instrumentation library.
 	InstrumentationVersion string
 }
 
-// TracerConfigure applies all the options to a returned TracerConfig.
+// NewTracerConfig applies all the options to a returned TracerConfig.
 // The default value for all the fields of the returned TracerConfig are the
 // default zero value of the type. Also, this does not perform any validation
 // on the returned TracerConfig (e.g. no uniqueness checking or bounding of
 // data), instead it is left to the implementations of the SDK to perform this
 // action.
-func TracerConfigure(options []TracerOption) *TracerConfig {
+func NewTracerConfig(opts ...TracerOption) *TracerConfig {
 	config := new(TracerConfig)
-	for _, option := range options {
+	for _, option := range opts {
 		option.Apply(config)
 	}
 	return config
@@ -71,7 +73,10 @@ type Tracer interface {
 	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
 }
 
-// ErrorConfig provides options to set properties of an error event at the time it is recorded.
+// ErrorConfig provides options to set properties of an error
+// event at the time it is recorded.
+//
+// Most users will use the error options instead.
 type ErrorConfig struct {
 	Timestamp  time.Time
 	StatusCode codes.Code
@@ -138,6 +143,8 @@ type Span interface {
 }
 
 // SpanConfig is a group of options for a Span.
+//
+// Most users will use span options instead.
 type SpanConfig struct {
 	// Attributes describe the associated qualities of a Span.
 	Attributes []label.KeyValue
@@ -155,18 +162,18 @@ type SpanConfig struct {
 	SpanKind SpanKind
 }
 
-// SpanConfigure applies all the options to a returned SpanConfig.
+// NewSpanConfig applies all the options to a returned SpanConfig.
 // The default value for all the fields of the returned SpanConfig are the
 // default zero value of the type. Also, this does not perform any validation
 // on the returned SpanConfig (e.g. no uniqueness checking or bounding of
 // data). Instead, it is left to the implementations of the SDK to perform this
 // action.
-func SpanConfigure(options []SpanOption) *SpanConfig {
-	config := new(SpanConfig)
-	for _, option := range options {
-		option.Apply(config)
+func NewSpanConfig(opts ...SpanOption) *SpanConfig {
+	c := new(SpanConfig)
+	for _, option := range opts {
+		option.Apply(c)
 	}
-	return config
+	return c
 }
 
 // SpanOption applies an option to a SpanConfig.

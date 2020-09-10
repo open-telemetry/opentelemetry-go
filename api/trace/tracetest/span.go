@@ -63,7 +63,7 @@ func (s *Span) End(opts ...trace.SpanOption) {
 		return
 	}
 
-	c := trace.SpanConfigure(opts)
+	c := trace.NewSpanConfig(opts...)
 	s.endTime = time.Now()
 	if endTime := c.Timestamp; !endTime.IsZero() {
 		s.endTime = endTime
