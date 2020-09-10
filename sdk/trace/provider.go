@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -82,7 +83,8 @@ func NewProvider(opts ...ProviderOption) *Provider {
 // Tracer with the given name. If a tracer for the given name does not exist,
 // it is created first. If the name is empty, DefaultTracerName is used.
 func (p *Provider) Tracer(name string, opts ...apitrace.TracerOption) apitrace.Tracer {
-	c := apitrace.TracerConfigure(opts)
+	c := trace.NewTracerConfig(opts...)
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if name == "" {

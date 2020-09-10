@@ -2,88 +2,167 @@
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
 # https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# \todo Eliminate duplication when/if Dependabot supports YAML anchors
 
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    # Workflow files stored in the
-    # default location of `.github/workflows`
-    directory: "/"
+  -
+    package-ecosystem: github-actions
+    directory: /
+    labels:
+      - dependencies
+      - actions
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/bridge/opentracing"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /bridge/opentracing
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/basic"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/basic
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/jaeger"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/jaeger
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/namedtracer"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/namedtracer
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/otel-collector"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/otel-collector
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/prometheus"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/prometheus
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/example/zipkin"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/zipkin
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/exporters/metric/prometheus"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/metric/prometheus
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/exporters/otlp"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/otlp
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/exporters/stdout"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/stdout
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/exporters/trace/jaeger"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/trace/jaeger
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/exporters/trace/zipkin"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/trace/zipkin
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/sdk"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /sdk
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/internal/tools"
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /internal/tools
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      day: sunday
+      interval: weekly

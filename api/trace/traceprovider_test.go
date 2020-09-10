@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTracerConfigure(t *testing.T) {
+func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
 	tests := []struct {
@@ -52,6 +52,7 @@ func TestTracerConfigure(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, TracerConfigure(test.options))
+		config := NewTracerConfig(test.options...)
+		assert.Equal(t, test.expected, config)
 	}
 }
