@@ -59,6 +59,8 @@ type Exporter struct {
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
+// NewConfig initializes a Config struct with default values and applies
+// any ExporterOptions provided.
 func NewConfig(opts ...ExporterOption) Config {
 	cfg := Config{
 		numWorkers:        DefaultNumWorkers,
@@ -70,6 +72,7 @@ func NewConfig(opts ...ExporterOption) Config {
 	return cfg
 }
 
+// NewExporter constructs a new Exporter and starts it.
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 	exp := NewUnstartedExporter(opts...)
 	if err := exp.Start(); err != nil {
@@ -78,6 +81,7 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 	return exp, nil
 }
 
+// NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
 	e.c = NewConfig(opts...)
