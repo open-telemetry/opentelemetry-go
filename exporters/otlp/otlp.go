@@ -59,10 +59,15 @@ type Exporter struct {
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
-func configureOptions(cfg *Config, opts ...ExporterOption) {
-	for _, opt := range opts {
-		opt(cfg)
+func NewConfig(opts ...ExporterOption) Config {
+	cfg := Config{
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
 	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
 }
 
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
@@ -75,11 +80,7 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
-	e.c = Config{
-		numWorkers:        DefaultNumWorkers,
-		grpcServiceConfig: DefaultGRPCServiceConfig,
-	}
-	configureOptions(&e.c, opts...)
+	e.c = NewConfig(opts...)
 	if len(e.c.headers) > 0 {
 		e.metadata = metadata.New(e.c.headers)
 	}

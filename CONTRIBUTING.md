@@ -187,13 +187,13 @@ how the user can extend the configuration.
 It is important that `config` are not shared across package boundaries.
 Meaning a `config` from one package should not be directly used by another.
 
-Optionally, it is common to include a `configure` function (with the same
+Optionally, it is common to include a `newConfig` function (with the same
 naming scheme). This function wraps any defaults setting and looping over
 all options to create a configured `config`.
 
 ```go
-// configure returns an appropriately configured config.
-func configure([]Option) config {
+// newConfig returns an appropriately configured config.
+func newConfig([]Option) config {
     // Set default values for config.
     config := config{/* […] */}
     for _, option := range options {
@@ -209,7 +209,7 @@ error as well that is expected to be handled by the instantiation function
 or propagated to the user.
 
 Given the design goal of not having the user need to work with the `config`,
-the `configure` function should also be unexported.
+the `newConfig` function should also be unexported.
 
 #### `Option`
 
@@ -218,7 +218,7 @@ To set the value of the options a `config` contains, a corresponding
 
 ```go
 type Option interface {
-  Apply(*Config)
+  Apply(*config)
 }
 ```
 
@@ -244,7 +244,7 @@ func With*(…) Option { … }
 ```go
 type defaultFalseOption bool
 
-func (o defaultFalseOption) Apply(c *Config) {
+func (o defaultFalseOption) Apply(c *config) {
     c.Bool = bool(o)
 }
 
@@ -257,7 +257,7 @@ func WithOption() Option {
 ```go
 type defaultTrueOption bool
 
-func (o defaultTrueOption) Apply(c *Config) {
+func (o defaultTrueOption) Apply(c *config) {
     c.Bool = bool(o)
 }
 
@@ -274,7 +274,7 @@ type myTypeOption struct {
     MyType MyType
 }
 
-func (o myTypeOption) Apply(c *Config) {
+func (o myTypeOption) Apply(c *config) {
     c.MyType = o.MyType
 }
 

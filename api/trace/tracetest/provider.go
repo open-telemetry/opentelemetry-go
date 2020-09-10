@@ -31,7 +31,7 @@ var _ trace.Provider = (*Provider)(nil)
 
 func NewProvider(opts ...Option) *Provider {
 	return &Provider{
-		config:  configure(opts...),
+		config:  newConfig(opts...),
 		tracers: make(map[instrumentation]*Tracer),
 	}
 }
