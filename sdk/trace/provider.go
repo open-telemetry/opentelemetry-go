@@ -64,7 +64,7 @@ func NewProvider(opts ...ProviderOption) *Provider {
 		namedTracer: make(map[instrumentation.Library]*tracer),
 	}
 	tp.config.Store(&Config{
-		DefaultSampler:       ParentSample(AlwaysSample()),
+		DefaultSampler:       ParentBased(AlwaysSample()),
 		IDGenerator:          defIDGenerator(),
 		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,

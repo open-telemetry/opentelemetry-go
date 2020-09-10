@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -23,8 +24,8 @@ import (
 	api "go.opentelemetry.io/otel/api/trace"
 )
 
-func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
-	sampler := ParentSample(AlwaysSample())
+func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
+	sampler := ParentBased(AlwaysSample())
 	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := api.SpanContext{
@@ -37,22 +38,8 @@ func TestAlwaysParentSampleWithParentSampled(t *testing.T) {
 	}
 }
 
-func TestNeverParentSampleWithParentSampled(t *testing.T) {
-	sampler := ParentSample(NeverSample())
-	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := api.SpanContext{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: api.FlagsSampled,
-	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSampled {
-		t.Error("Sampling decision should be RecordAndSampled")
-	}
-}
-
-func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
-	sampler := ParentSample(AlwaysSample())
+func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
+	sampler := ParentBased(AlwaysSample())
 	traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := api.SpanContext{
@@ -64,18 +51,112 @@ func TestAlwaysParentSampleWithParentNotSampled(t *testing.T) {
 	}
 }
 
-func TestParentSampleWithNoParent(t *testing.T) {
+func TestParentBasedWithNoParent(t *testing.T) {
 	params := SamplingParameters{}
 
-	sampler := ParentSample(AlwaysSample())
+	sampler := ParentBased(AlwaysSample())
 	if sampler.ShouldSample(params).Decision != RecordAndSampled {
 		t.Error("Sampling decision should be RecordAndSampled")
 	}
 
-	sampler = ParentSample(NeverSample())
+	sampler = ParentBased(NeverSample())
 	if sampler.ShouldSample(params).Decision != NotRecord {
 		t.Error("Sampling decision should be NotRecord")
 	}
+}
+
+func TestParentBasedWithSamplerOptions(t *testing.T) {
+	testCases := []struct {
+		name                            string
+		samplerOption                   ParentBasedSamplerOption
+		isParentRemote, isParentSampled bool
+		expectedDecision                SamplingDecision
+	}{
+		{
+			"localParentSampled",
+			WithLocalParentSampled(NeverSample()),
+			false,
+			true,
+			NotRecord,
+		},
+		{
+			"localParentNotSampled",
+			WithLocalParentNotSampled(AlwaysSample()),
+			false,
+			false,
+			RecordAndSampled,
+		},
+		{
+			"remoteParentSampled",
+			WithRemoteParentSampled(NeverSample()),
+			true,
+			true,
+			NotRecord,
+		},
+		{
+			"remoteParentNotSampled",
+			WithRemoteParentNotSampled(AlwaysSample()),
+			true,
+			false,
+			RecordAndSampled,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			traceID, _ := api.IDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+			spanID, _ := api.SpanIDFromHex("00f067aa0ba902b7")
+			parentCtx := api.SpanContext{
+				TraceID: traceID,
+				SpanID:  spanID,
+			}
+
+			if tc.isParentSampled {
+				parentCtx.TraceFlags = api.FlagsSampled
+			}
+
+			params := SamplingParameters{ParentContext: parentCtx}
+			if tc.isParentRemote {
+				params.HasRemoteParent = true
+			}
+
+			sampler := ParentBased(
+				nil,
+				tc.samplerOption,
+			)
+
+			switch tc.expectedDecision {
+			case RecordAndSampled:
+				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
+					t.Error("Sampling decision should be RecordAndSampled")
+				}
+			case NotRecord:
+				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
+					t.Error("Sampling decision should be NotRecord")
+				}
+			}
+		})
+	}
+}
+
+func TestParentBasedDefaultDescription(t *testing.T) {
+	sampler := ParentBased(AlwaysSample())
+
+	expectedDescription := fmt.Sprintf("ParentBased{root:%s,remoteParentSampled:%s,"+
+		"remoteParentNotSampled:%s,localParentSampled:%s,localParentNotSampled:%s}",
+		AlwaysSample().Description(),
+		AlwaysSample().Description(),
+		NeverSample().Description(),
+		AlwaysSample().Description(),
+		NeverSample().Description())
+
+	if sampler.Description() != expectedDescription {
+		t.Error(fmt.Sprintf("Sampler description should be %s, got '%s' instead",
+			expectedDescription,
+			sampler.Description(),
+		))
+	}
+
 }
 
 // TraceIDRatioBased sampler requirements state
