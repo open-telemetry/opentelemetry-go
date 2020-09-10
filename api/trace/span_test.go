@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-func TestSpanConfigure(t *testing.T) {
+func TestNewSpanConfig(t *testing.T) {
 	k1v1 := label.String("key1", "value1")
 	k1v2 := label.String("key1", "value2")
 	k2v2 := label.String("key2", "value2")
@@ -190,6 +190,6 @@ func TestSpanConfigure(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, SpanConfigure(test.options))
+		assert.Equal(t, test.expected, NewSpanConfig(test.options...))
 	}
 }

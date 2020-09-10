@@ -41,7 +41,8 @@ type instrumentation struct {
 }
 
 func (p *Provider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
-	conf := trace.TracerConfigure(opts)
+	conf := trace.NewTracerConfig(opts...)
+
 	inst := instrumentation{
 		Name:    instName,
 		Version: conf.InstrumentationVersion,

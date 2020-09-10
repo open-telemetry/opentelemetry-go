@@ -71,7 +71,7 @@ func NewMockTracer() *MockTracer {
 }
 
 func (t *MockTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
-	config := oteltrace.SpanConfigure(opts)
+	config := oteltrace.NewSpanConfig(opts...)
 	startTime := config.Timestamp
 	if startTime.IsZero() {
 		startTime = time.Now()
@@ -240,7 +240,7 @@ func (s *MockSpan) End(options ...oteltrace.SpanOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	config := oteltrace.SpanConfigure(options)
+	config := oteltrace.NewSpanConfig(options...)
 	endTime := config.Timestamp
 	if endTime.IsZero() {
 		endTime = time.Now()
@@ -259,7 +259,6 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 	}
 
 	cfg := oteltrace.ErrorConfig{}
-
 	for _, o := range opts {
 		o(&cfg)
 	}
