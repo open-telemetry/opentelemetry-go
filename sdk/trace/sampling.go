@@ -134,81 +134,111 @@ func NeverSample() Sampler {
 // - remoteParentNotSampled(Sampler) (default: AlwaysOff)
 // - localParentSampled(Sampler) (default: AlwaysOn)
 // - localParentNotSampled(Sampler) (default: AlwaysOff)
-func ParentBased(root Sampler, samplers ...SamplerOption) Sampler {
+func ParentBased(root Sampler, samplers ...ParentBasedSamplerOption) Sampler {
 	return parentBased{
-		root:     root,
-		samplers: configureSamplersForParentBased(samplers),
+		root:   root,
+		config: configureSamplersForParentBased(samplers),
 	}
 }
 
 type parentBased struct {
-	root     Sampler
-	samplers parentBasedSamplers
+	root   Sampler
+	config config
 }
 
-type SamplerOption func(*parentBasedSamplers)
+func configureSamplersForParentBased(samplers []ParentBasedSamplerOption) config {
+	c := config{
+		remoteParentSampled:    AlwaysSample(),
+		remoteParentNotSampled: NeverSample(),
+		localParentSampled:     AlwaysSample(),
+		localParentNotSampled:  NeverSample(),
+	}
 
-type parentBasedSamplers struct {
+	for _, so := range samplers {
+		so.Apply(&c)
+	}
+
+	return c
+}
+
+// config is a group of options for parentBased sampler
+type config struct {
 	remoteParentSampled, remoteParentNotSampled Sampler
 	localParentSampled, localParentNotSampled   Sampler
 }
 
-func configureSamplersForParentBased(samplers []SamplerOption) parentBasedSamplers {
-	o := parentBasedSamplers{}
-	for _, s := range samplers {
-		s(&o)
-	}
-
-	if o.remoteParentSampled == nil {
-		o.remoteParentSampled = AlwaysSample()
-	}
-	if o.remoteParentNotSampled == nil {
-		o.remoteParentNotSampled = NeverSample()
-	}
-	if o.localParentSampled == nil {
-		o.localParentSampled = AlwaysSample()
-	}
-	if o.localParentNotSampled == nil {
-		o.localParentNotSampled = NeverSample()
-	}
-
-	return o
+// ParentBasedSamplerOption configures the sampler for a particular sampling case
+type ParentBasedSamplerOption interface {
+	Apply(*config)
 }
 
-func WithRemoteParentSampled(s Sampler) SamplerOption {
-	return func(o *parentBasedSamplers) {
-		o.remoteParentSampled = s
-	}
+// WithRemoteParentSampled sets the sampler for the case of sampled remote parent
+func WithRemoteParentSampled(s Sampler) ParentBasedSamplerOption {
+	return remoteParentSampledOption{s}
 }
-func WithRemoteParentNotSampled(s Sampler) SamplerOption {
-	return func(o *parentBasedSamplers) {
-		o.remoteParentNotSampled = s
-	}
+
+type remoteParentSampledOption struct {
+	s Sampler
 }
-func WithLocalParentSampled(s Sampler) SamplerOption {
-	return func(o *parentBasedSamplers) {
-		o.localParentSampled = s
-	}
+
+func (o remoteParentSampledOption) Apply(config *config) {
+	config.remoteParentSampled = o.s
 }
-func WithLocalParentNotSampled(s Sampler) SamplerOption {
-	return func(o *parentBasedSamplers) {
-		o.localParentNotSampled = s
-	}
+
+// WithRemoteParentNotSampled sets the sampler for the case of remote parent
+// which is not sampled
+func WithRemoteParentNotSampled(s Sampler) ParentBasedSamplerOption {
+	return remoteParentNotSampledOption{s}
+}
+
+type remoteParentNotSampledOption struct {
+	s Sampler
+}
+
+func (o remoteParentNotSampledOption) Apply(config *config) {
+	config.remoteParentNotSampled = o.s
+}
+
+// WithLocalParentSampled sets the sampler for the case of sampled local parent
+func WithLocalParentSampled(s Sampler) ParentBasedSamplerOption {
+	return localParentSampledOption{s}
+}
+
+type localParentSampledOption struct {
+	s Sampler
+}
+
+func (o localParentSampledOption) Apply(config *config) {
+	config.localParentSampled = o.s
+}
+
+// WithLocalParentNotSampled sets the sampler for the case of local parent
+// which is not sampled
+func WithLocalParentNotSampled(s Sampler) ParentBasedSamplerOption {
+	return localParentNotSampledOption{s}
+}
+
+type localParentNotSampledOption struct {
+	s Sampler
+}
+
+func (o localParentNotSampledOption) Apply(config *config) {
+	config.localParentNotSampled = o.s
 }
 
 func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
 	if p.ParentContext.IsValid() {
 		if p.HasRemoteParent {
 			if p.ParentContext.IsSampled() {
-				return pb.samplers.remoteParentSampled.ShouldSample(p)
+				return pb.config.remoteParentSampled.ShouldSample(p)
 			}
-			return pb.samplers.remoteParentNotSampled.ShouldSample(p)
+			return pb.config.remoteParentNotSampled.ShouldSample(p)
 		}
 
 		if p.ParentContext.IsSampled() {
-			return pb.samplers.localParentSampled.ShouldSample(p)
+			return pb.config.localParentSampled.ShouldSample(p)
 		}
-		return pb.samplers.localParentNotSampled.ShouldSample(p)
+		return pb.config.localParentNotSampled.ShouldSample(p)
 	}
 	return pb.root.ShouldSample(p)
 }
@@ -217,9 +247,9 @@ func (pb parentBased) Description() string {
 	return fmt.Sprintf("ParentBased{root:%s,remoteParentSampled:%s,"+
 		"remoteParentNotSampled:%s,localParentSampled:%s,localParentNotSampled:%s}",
 		pb.root.Description(),
-		pb.samplers.remoteParentSampled.Description(),
-		pb.samplers.remoteParentNotSampled.Description(),
-		pb.samplers.localParentSampled.Description(),
-		pb.samplers.localParentNotSampled.Description(),
+		pb.config.remoteParentSampled.Description(),
+		pb.config.remoteParentNotSampled.Description(),
+		pb.config.localParentSampled.Description(),
+		pb.config.localParentNotSampled.Description(),
 	)
 }

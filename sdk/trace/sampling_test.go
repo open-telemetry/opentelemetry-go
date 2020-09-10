@@ -68,7 +68,7 @@ func TestParentBasedWithNoParent(t *testing.T) {
 func TestParentBasedWithSamplerOptions(t *testing.T) {
 	testCases := []struct {
 		name                            string
-		samplerOption                   SamplerOption
+		samplerOption                   ParentBasedSamplerOption
 		isParentRemote, isParentSampled bool
 		expectedDecision                SamplingDecision
 	}{
