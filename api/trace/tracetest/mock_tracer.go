@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/api/trace"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 )
@@ -48,7 +49,8 @@ var _ apitrace.Tracer = (*MockTracer)(nil)
 // If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
 func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	config := apitrace.SpanConfigure(o)
+	config := trace.NewSpanConfig(o...)
+
 	var span *MockSpan
 	var sc apitrace.SpanContext
 

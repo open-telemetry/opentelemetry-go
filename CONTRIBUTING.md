@@ -19,6 +19,8 @@ You can view and edit the source code by cloning this repository:
 git clone https://github.com/open-telemetry/opentelemetry-go.git
 ```
 
+Run `make test` to run the tests instead of `go test`. 
+
 There are some generated files checked into the repo. To make sure
 that the generated files are up-to-date, run `make` (or `make
 precommit` - the `precommit` target is the default).
@@ -95,19 +97,20 @@ request ID to the entry you added to `CHANGELOG.md`.
 A PR is considered to be **ready to merge** when:
 
 * It has received two approvals from Collaborators/Maintainers (at
-  different companies).
+  different companies). This is not enforced through technical means
+  and a PR may be **ready to merge** with a single approval if the change
+  and its approach have been discussed and consensus reached.
 * Major feedbacks are resolved.
 * It has been open for review for at least one working day. This gives
   people reasonable time to review.
-* Trivial change (typo, cosmetic, doc, etc.) doesn't have to wait for
-  one day.
+* Trivial changes (typo, cosmetic, doc, etc.) do not have to wait for
+  one day and may be merged with a single Maintainer's approval.
 * `CHANGELOG.md` has been updated to reflect what has been
   added, changed, removed, or fixed.
 * Urgent fix can take exception as long as it has been actively
   communicated.
 
-Any Collaborator/Maintainer can merge the PR once it is **ready to
-merge**.
+Any Maintainer can merge the PR once it is **ready to merge**.
 
 ## Design Choices
 

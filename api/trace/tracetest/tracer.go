@@ -36,7 +36,7 @@ type Tracer struct {
 }
 
 func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	c := trace.SpanConfigure(opts)
+	c := trace.NewSpanConfig(opts...)
 	startTime := time.Now()
 	if st := c.Timestamp; !st.IsZero() {
 		startTime = st
