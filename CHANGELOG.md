@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change `dependabot.yml` to add a `Skip Changelog` label to dependabot-sourced PRs. (#1161)
 - The [configuration style guide](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#config) has been updated to
    recommend the use of `newConfig()` instead of `configure()`. (#1163)
+- The `otlp.Config` type has been unexported and changed to `otlp.config`, along with its initializer. (#1163)
 
 ## [0.11.0] - 2020-08-24
 
