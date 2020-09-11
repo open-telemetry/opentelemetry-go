@@ -37,7 +37,7 @@ var (
 
 // NewExporter creates an Exporter with the passed options.
 func NewExporter(options ...Option) (*Exporter, error) {
-	config, err := Configure(options...)
+	config, err := NewConfig(options...)
 	if err != nil {
 		return nil, err
 	}

@@ -49,7 +49,7 @@ type config struct {
 	SpanRecorder SpanRecorder
 }
 
-func configure(opts ...Option) config {
+func newConfig(opts ...Option) config {
 	conf := config{}
 	for _, opt := range opts {
 		opt.Apply(&conf)

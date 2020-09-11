@@ -64,8 +64,8 @@ type Config struct {
 	DisableMetricExport bool
 }
 
-// Configure creates a validated Config configured with options.
-func Configure(options ...Option) (Config, error) {
+// NewConfig creates a validated Config configured with options.
+func NewConfig(options ...Option) (Config, error) {
 	config := Config{
 		Writer:              defaultWriter,
 		PrettyPrint:         defaultPrettyPrint,
