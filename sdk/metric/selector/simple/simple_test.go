@@ -24,15 +24,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 var (
-	testCounterDesc       = metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
-	testValueRecorderDesc = metric.NewDescriptor("valuerecorder", metric.ValueRecorderKind, metric.Int64NumberKind)
-	testValueObserverDesc = metric.NewDescriptor("valueobserver", metric.ValueObserverKind, metric.Int64NumberKind)
+	testCounterDesc           = metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
+	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", metric.UpDownCounterKind, metric.Int64NumberKind)
+	testSumObserverDesc       = metric.NewDescriptor("sumobserver", metric.SumObserverKind, metric.Int64NumberKind)
+	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverKind, metric.Int64NumberKind)
+	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", metric.ValueRecorderKind, metric.Int64NumberKind)
+	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverKind, metric.Int64NumberKind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
@@ -41,30 +45,34 @@ func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggre
 	return agg
 }
 
+func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
+	require.NotPanics(t, func() { _ = oneAgg(sel, &testValueObserverDesc).(*lastvalue.Aggregator) })
+	require.NotPanics(t, func() { _ = oneAgg(sel, &testCounterDesc).(*sum.Aggregator) })
+	require.NotPanics(t, func() { _ = oneAgg(sel, &testUpDownCounterDesc).(*sum.Aggregator) })
+	require.NotPanics(t, func() { _ = oneAgg(sel, &testSumObserverDesc).(*sum.Aggregator) })
+	require.NotPanics(t, func() { _ = oneAgg(sel, &testUpDownSumObserverDesc).(*sum.Aggregator) })
+}
+
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.NotPanics(t, func() { _ = oneAgg(inex, &testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = oneAgg(inex, &testValueRecorderDesc).(*minmaxsumcount.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(inex, &testValueObserverDesc).(*minmaxsumcount.Aggregator) })
+	testFixedSelectors(t, inex)
 }
 
 func TestSketchDistribution(t *testing.T) {
 	sk := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
-	require.NotPanics(t, func() { _ = oneAgg(sk, &testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = oneAgg(sk, &testValueRecorderDesc).(*ddsketch.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(sk, &testValueObserverDesc).(*ddsketch.Aggregator) })
+	testFixedSelectors(t, sk)
 }
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testCounterDesc).(*sum.Aggregator) })
 	require.NotPanics(t, func() { _ = oneAgg(ex, &testValueRecorderDesc).(*array.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testValueObserverDesc).(*array.Aggregator) })
+	testFixedSelectors(t, ex)
 }
 
 func TestHistogramDistribution(t *testing.T) {
-	ex := simple.NewWithHistogramDistribution(nil)
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testCounterDesc).(*sum.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testValueRecorderDesc).(*histogram.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testValueObserverDesc).(*histogram.Aggregator) })
+	hist := simple.NewWithHistogramDistribution(nil)
+	require.NotPanics(t, func() { _ = oneAgg(hist, &testValueRecorderDesc).(*histogram.Aggregator) })
+	testFixedSelectors(t, hist)
 }
