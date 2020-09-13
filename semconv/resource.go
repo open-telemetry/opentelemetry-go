@@ -131,11 +131,50 @@ const (
 	// The name of the namespace that the pod is running in.
 	K8SNamespaceNameKey = label.Key("k8s.namespace.name")
 
+	// The uid of the Pod.
+	K8SPodUIDKey = label.Key("k8s.pod.uid")
+
 	// The name of the pod.
 	K8SPodNameKey = label.Key("k8s.pod.name")
 
+	// The name of the Container in a Pod template.
+	K8SContainerNameKey = label.Key("k8s.container.name")
+
+	// The uid of the ReplicaSet.
+	K8SReplicaSetUIDKey = label.Key("k8s.replicaset.uid")
+
+	// The name of the ReplicaSet.
+	K8SReplicaSetNameKey = label.Key("k8s.replicaset.name")
+
+	// The uid of the Deployment.
+	K8SDeploymentUIDKey = label.Key("k8s.deployment.uid")
+
 	// The name of the deployment.
 	K8SDeploymentNameKey = label.Key("k8s.deployment.name")
+
+	// The uid of the StatefulSet.
+	K8SStatefulSetUIDKey = label.Key("k8s.statefulset.uid")
+
+	// The name of the StatefulSet.
+	K8SStatefulSetNameKey = label.Key("k8s.statefulset.name")
+
+	// The uid of the DaemonSet.
+	K8SDaemonSetUIDKey = label.Key("k8s.daemonset.uid")
+
+	// The name of the DaemonSet.
+	K8SDaemonSetNameKey = label.Key("k8s.daemonset.name")
+
+	// The uid of the Job.
+	K8SJobUIDKey = label.Key("k8s.job.uid")
+
+	// The name of the Job.
+	K8SJobNameKey = label.Key("k8s.job.name")
+
+	// The uid of the CronJob.
+	K8SCronJobUIDKey = label.Key("k8s.cronjob.uid")
+
+	// The name of the CronJob.
+	K8SCronJobNameKey = label.Key("k8s.cronjob.name")
 )
 
 // Semantic conventions for host resource attribute keys.
