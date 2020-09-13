@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -46,33 +45,33 @@ func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggre
 }
 
 func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
-	require.NotPanics(t, func() { _ = oneAgg(sel, &testValueObserverDesc).(*lastvalue.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(sel, &testCounterDesc).(*sum.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(sel, &testUpDownCounterDesc).(*sum.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(sel, &testSumObserverDesc).(*sum.Aggregator) })
-	require.NotPanics(t, func() { _ = oneAgg(sel, &testUpDownSumObserverDesc).(*sum.Aggregator) })
+	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testValueObserverDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testCounterDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownCounterDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testSumObserverDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownSumObserverDesc))
 }
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.NotPanics(t, func() { _ = oneAgg(inex, &testValueRecorderDesc).(*minmaxsumcount.Aggregator) })
+	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testValueRecorderDesc))
 	testFixedSelectors(t, inex)
 }
 
 func TestSketchDistribution(t *testing.T) {
 	sk := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
-	require.NotPanics(t, func() { _ = oneAgg(sk, &testValueRecorderDesc).(*ddsketch.Aggregator) })
+	require.IsType(t, (*ddsketch.Aggregator)(nil), oneAgg(sk, &testValueRecorderDesc))
 	testFixedSelectors(t, sk)
 }
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.NotPanics(t, func() { _ = oneAgg(ex, &testValueRecorderDesc).(*array.Aggregator) })
+	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
 	testFixedSelectors(t, ex)
 }
 
 func TestHistogramDistribution(t *testing.T) {
 	hist := simple.NewWithHistogramDistribution(nil)
-	require.NotPanics(t, func() { _ = oneAgg(hist, &testValueRecorderDesc).(*histogram.Aggregator) })
+	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testValueRecorderDesc))
 	testFixedSelectors(t, hist)
 }
