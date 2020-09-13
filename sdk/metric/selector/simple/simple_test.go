@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -66,7 +67,7 @@ func TestSketchDistribution(t *testing.T) {
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
+	require.IsType(t, (*array.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
 	testFixedSelectors(t, ex)
 }
 
