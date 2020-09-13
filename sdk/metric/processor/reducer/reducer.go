@@ -31,7 +31,7 @@ type (
 	// LabelFilterSelector is the interface used to configure a
 	// specific Filter to an instrument.
 	LabelFilterSelector interface {
-		LabelFilterFor(*metric.Descriptor) label.Filter
+		LabelFilterFor(descriptor *metric.Descriptor) label.Filter
 	}
 )
 

@@ -18,5 +18,5 @@ package otel
 type ErrorHandler interface {
 	// Handle handles any error deemed irremediable by an OpenTelemetry
 	// component.
-	Handle(error)
+	Handle(err error)
 }
