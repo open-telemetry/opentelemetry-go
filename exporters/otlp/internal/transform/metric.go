@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
@@ -39,6 +40,11 @@ var (
 	// ErrUnimplementedAgg is returned when a transformation of an unimplemented
 	// aggregator is attempted.
 	ErrUnimplementedAgg = errors.New("unimplemented aggregator")
+
+	// ErrIncompatibleAggregation is returned when
+	// aggregation.Kind implies an interface conversion that has
+	// failed
+	ErrIncompatibleAggregation = errors.New("incompatible aggregation type")
 
 	// ErrUnknownValueType is returned when a transformation of an unknown value
 	// is attempted.
@@ -234,24 +240,44 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 // Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
-	switch a := r.Aggregation().(type) {
-	case aggregation.MinMaxSumCount:
-		return minMaxSumCount(r, a)
-	case aggregation.Sum:
-		return sum(r, a)
+	agg := r.Aggregation()
+	switch agg.Kind() {
+	case aggregation.MinMaxSumCountKind:
+		return minMaxSumCount(r, agg.(aggregation.MinMaxSumCount))
+
+	case aggregation.SumKind:
+		s, ok := agg.(aggregation.Sum)
+
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAggregation, agg)
+		}
+		sum, err := s.Sum()
+		if err != nil {
+			return nil, err
+		}		
+		return scalar(r, sum, r.StartTime(), r.EndTime())
+		
+	case aggregation.LastValueKind:
+		lv, ok := agg.(aggregation.LastValue)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAggregation, agg)
+		}
+		value, tm, err := lv.LastValue()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(r, value, time.Time{}, tm)
+
 	default:
-		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
+		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
 }
 
-// sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
+// scalar transforms a Sum or LastValue Aggregator into an OTLP Metric.
+// For LastValue (Gauge), use start==time.Time{}.
+func scalar(record export.Record, num metric.Number, start, end time.Time) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
-	sum, err := a.Sum()
-	if err != nil {
-		return nil, err
-	}
 
 	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
@@ -266,20 +292,20 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{
-				Value:             sum.CoerceToInt64(n),
+				Value:             num.CoerceToInt64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: uint64(start.UnixNano()),
+				TimeUnixNano:      uint64(end.UnixNano()),
 			},
 		}
 	case metric.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{
-				Value:             sum.CoerceToFloat64(n),
+				Value:             num.CoerceToFloat64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: uint64(start.UnixNano()),
+				TimeUnixNano:      uint64(end.UnixNano()),
 			},
 		}
 	default:
@@ -288,6 +314,7 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 
 	return m, nil
 }
+
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.

@@ -264,7 +264,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 		labels := label.NewSet(test.labels...)
 		emptyAgg := &sumAgg.New(1)[0]
 		record := export.NewRecord(&desc, &labels, nil, emptyAgg, intervalStart, intervalEnd)
-		got, err := sum(record, emptyAgg)
+		got, err := scalar(record, 0, time.Time{}, time.Time{})
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.expected, got.MetricDescriptor)
 		}
@@ -278,7 +278,14 @@ func TestSumInt64DataPoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
+	sum, ok := ckpt.(aggregation.Sum)
+	if !ok {
+		t.Errorf("ckpt is not an aggregation.Sum: %T", ckpt)
+	}
+	value, err := sum.Sum()
+	require.NoError(t, err)
+	
+	if m, err := scalar(record, value, record.StartTime(), record.EndTime()); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{
 			Value:             1,
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
@@ -297,7 +304,14 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
+	sum, ok := ckpt.(aggregation.Sum)
+	if !ok {
+		t.Errorf("ckpt is not an aggregation.Sum: %T", ckpt)
+	}
+	value, err := sum.Sum()
+	require.NoError(t, err)
+
+	if m, err := scalar(record, value, record.StartTime(), record.EndTime()); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint(nil), m.Int64DataPoints)
 		assert.Equal(t, []*metricpb.DoubleDataPoint{{
 			Value:             1,
@@ -314,7 +328,10 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	labels := label.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)
-	_, err := sum(record, s)
+	value, err := s.Sum()
+	require.NoError(t, err)
+
+	_, err = scalar(record, value, record.StartTime(), record.EndTime())
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)
