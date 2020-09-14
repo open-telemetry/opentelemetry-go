@@ -110,7 +110,7 @@ func TestOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		if diff := cmp.Diff(metric.ConfigureInstrument(tt.opts), metric.InstrumentConfig{
+		if diff := cmp.Diff(metric.NewInstrumentConfig(tt.opts...), metric.InstrumentConfig{
 			Description: tt.desc,
 			Unit:        tt.unit,
 		}); diff != "" {
