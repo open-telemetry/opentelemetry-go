@@ -41,6 +41,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `otlp.Config` type has been unexported and changed to `otlp.config`, along with its initializer. (#1163)
 - Don't consider unset environment variable for resource detection to be an error. (#1170)
 
+### Fixed
+
+- Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
+
 ## [0.11.0] - 2020-08-24
 
 ### Added
