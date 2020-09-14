@@ -66,6 +66,14 @@ type result struct {
 	Err                    error
 }
 
+// toNanos returns the number of nanoseconds since the UNIX epoch.
+func toNanos(t time.Time) uint64 {
+	if t.IsZero() {
+		return 0
+	}
+	return uint64(t.UnixNano())
+}
+
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
 func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
@@ -294,8 +302,8 @@ func scalar(record export.Record, num metric.Number, start, end time.Time) (*met
 			{
 				Value:             num.CoerceToInt64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(start.UnixNano()),
-				TimeUnixNano:      uint64(end.UnixNano()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
 			},
 		}
 	case metric.Float64NumberKind:
@@ -304,8 +312,8 @@ func scalar(record export.Record, num metric.Number, start, end time.Time) (*met
 			{
 				Value:             num.CoerceToFloat64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(start.UnixNano()),
-				TimeUnixNano:      uint64(end.UnixNano()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
 			},
 		}
 	default:
@@ -365,8 +373,8 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
 			},
 		},
 	}, nil

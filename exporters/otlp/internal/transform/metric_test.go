@@ -32,6 +32,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
+	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -242,7 +243,7 @@ func TestSumMetricDescriptor(t *testing.T) {
 		},
 		{
 			"sum-test-b",
-			metric.ValueRecorderKind, // This shouldn't change anything.
+			metric.ValueObserverKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Milliseconds,
 			metric.Float64NumberKind,
@@ -318,6 +319,32 @@ func TestSumFloat64DataPoints(t *testing.T) {
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 		}}, m.DoubleDataPoints)
+		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
+		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
+	}
+}
+
+func TestLastValueInt64DataPoints(t *testing.T) {
+	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	labels := label.NewSet()
+	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
+	assert.NoError(t, s.Update(context.Background(), metric.Number(100), &desc))
+	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	sum, ok := ckpt.(aggregation.LastValue)
+	if !ok {
+		t.Errorf("ckpt is not an aggregation.LastValue: %T", ckpt)
+	}
+	value, timestamp, err := sum.LastValue()
+	require.NoError(t, err)
+
+	if m, err := scalar(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
+		assert.Equal(t, []*metricpb.Int64DataPoint{{
+			Value:             100,
+			StartTimeUnixNano: 0,
+			TimeUnixNano:      uint64(timestamp.UnixNano()),
+		}}, m.Int64DataPoints)
+		assert.Equal(t, []*metricpb.DoubleDataPoint(nil), m.DoubleDataPoints)
 		assert.Equal(t, []*metricpb.HistogramDataPoint(nil), m.HistogramDataPoints)
 		assert.Equal(t, []*metricpb.SummaryDataPoint(nil), m.SummaryDataPoints)
 	}
