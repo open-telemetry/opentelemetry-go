@@ -43,7 +43,7 @@ func (d *FromEnv) Detect(context.Context) (*Resource, error) {
 	labels := strings.TrimSpace(os.Getenv(envVar))
 
 	if labels == "" {
-		return Empty(), ErrMissingResource
+		return Empty(), nil
 	}
 	return constructOTResources(labels)
 }
