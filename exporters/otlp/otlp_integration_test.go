@@ -121,7 +121,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		span.End()
 	}
 
-	selector := simple.NewWithExactDistribution()
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.PassThroughExporter)
 	pusher := push.New(processor, exp)
 	pusher.Start()
@@ -488,7 +488,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	span.SetAttributes(testKvs...)
 	span.End()
 
-	selector := simple.NewWithExactDistribution()
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.PassThroughExporter)
 	pusher := push.New(processor, exp)
 	pusher.Start()

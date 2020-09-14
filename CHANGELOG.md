@@ -40,6 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    recommend the use of `newConfig()` instead of `configure()`. (#1163)
 - The `otlp.Config` type has been unexported and changed to `otlp.config`, along with its initializer. (#1163)
 - ValueObserver instruments use LastValue aggregator by default (#1165)
+- OTLP Metric exporter supports LastValue aggregation (#1165)
 
 ## [0.11.0] - 2020-08-24
 

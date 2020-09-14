@@ -254,9 +254,9 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		sum, err := s.Sum()
 		if err != nil {
 			return nil, err
-		}		
+		}
 		return scalar(r, sum, r.StartTime(), r.EndTime())
-		
+
 	case aggregation.LastValueKind:
 		lv, ok := agg.(aggregation.LastValue)
 		if !ok {
@@ -314,7 +314,6 @@ func scalar(record export.Record, num metric.Number, start, end time.Time) (*met
 
 	return m, nil
 }
-
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.

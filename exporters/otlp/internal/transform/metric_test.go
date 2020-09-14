@@ -284,7 +284,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	}
 	value, err := sum.Sum()
 	require.NoError(t, err)
-	
+
 	if m, err := scalar(record, value, record.StartTime(), record.EndTime()); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.Int64DataPoint{{
 			Value:             1,
