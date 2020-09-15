@@ -18,12 +18,12 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 var (
@@ -59,7 +59,7 @@ func main() {
 
 	ctx := context.Background()
 
-	ctx = baggage.NewContext(ctx,
+	ctx = propagators.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
@@ -77,7 +77,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			baggage.NewContext(ctx, anotherKey.String("xyz")),
+			propagators.NewContext(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			valuerecorderTwo.Measurement(2.0),
