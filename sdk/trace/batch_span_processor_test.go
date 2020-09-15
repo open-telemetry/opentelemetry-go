@@ -205,11 +205,16 @@ func TestBatchSpanProcessorForceFlush(t *testing.T) {
 
 	generateSpan(t, true, tr, option)
 
-	// a small sleep allows for all of the generated spans to be added to the queue
-	time.Sleep(1 * time.Millisecond)
 	ssp.ForceFlush()
 
 	gotNumOfSpans := te.len()
+	if 0 == gotNumOfSpans {
+		t.Errorf("number of flushed spans is zero")
+	}
+
+	tp.UnregisterSpanProcessor(ssp)
+
+	gotNumOfSpans = te.len()
 	if option.wantNumSpans != gotNumOfSpans {
 		t.Errorf("number of exported span: got %+v, want %+v\n",
 			gotNumOfSpans, option.wantNumSpans)
