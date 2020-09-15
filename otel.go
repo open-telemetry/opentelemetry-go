@@ -25,3 +25,10 @@ type Tracer = trace.Tracer
 type Meter = metric.Meter
 
 type Propagators = propagation.Propagators
+
+// ErrorHandler handles irremediable events.
+type ErrorHandler interface {
+	// Handle handles any error deemed irremediable by an OpenTelemetry
+	// component.
+	Handle(error)
+}

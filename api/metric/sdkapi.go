@@ -89,6 +89,6 @@ func WrapMeterImpl(impl MeterImpl, instrumentationName string, opts ...MeterOpti
 	return Meter{
 		impl:    impl,
 		name:    instrumentationName,
-		version: ConfigureMeter(opts).InstrumentationVersion,
+		version: NewMeterConfig(opts...).InstrumentationVersion,
 	}
 }
